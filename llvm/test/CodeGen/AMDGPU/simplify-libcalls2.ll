@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
 ; RUN: opt -S -passes=amdgpu-simplifylib -debug-only=amdgpu-simplifylib -mtriple=amdgcn-unknown-amdhsa -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -passes=amdgpu-simplifylib -debug-only=amdgpu-simplifylib -mtriple=amdgcn-unknown-amdhsa -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.lifetime.start.p0
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.lifetime.end.p0
@@ -21,5 +20,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !DIFile(filename: "1", directory: "1"))
 !1 = !{i32 2, !"Debug Info Version", i32 3}
-!2 = distinct !DISubprogram(unit: !0)
+!2 = distinct !DISubprogram(unit: !0, type: !5)
 !3 = !DILocation(line: 1, column: 1, scope: !2)
+!4 = !{null}
+!5 = !DISubroutineType(types: !4)

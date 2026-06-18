@@ -8,6 +8,8 @@
 ; CHECK-DAG: OpDecorate [[float_const:%[0-9]+]] SpecId 8
 ; CHECK-DAG: OpDecorate [[double_const:%[0-9]+]] SpecId 9
 ; CHECK-DAG: OpDecorate [[enum_const:%[0-9]+]] SpecId 10
+; CHECK-DAG: OpDecorate [[named_bool_const_true:%[0-9]+]] SpecId 11
+; CHECK-DAG: OpDecorate [[named_bool_const_false:%[0-9]+]] SpecId 12
 
 ; CHECK-DAG: [[bool_const]] = OpSpecConstantTrue {{%[0-9]+}}
 ; CHECK-DAG: [[short_const]] = OpSpecConstant {{%[0-9]+}} 4
@@ -16,6 +18,8 @@
 ; CHECK-DAG: [[float_const]] = OpSpecConstant {{%[0-9]+}} 1112014848
 ; CHECK-DAG: [[double_const]] = OpSpecConstant {{%[0-9]+}} 0 1079574528
 ; CHECK-DAG: [[enum_const]] = OpSpecConstant {{%[0-9]+}} 30
+; CHECK-DAG: [[named_bool_const_true:%[0-9]+]] = OpSpecConstantTrue {{%[0-9]+}}
+; CHECK-DAG: [[named_bool_const_false:%[0-9]+]] = OpSpecConstantFalse {{%[0-9]+}}
 
 @_ZL10bool_const = internal addrspace(10) global i32 0, align 4
 @_ZL11short_const = internal addrspace(10) global i16 0, align 2
@@ -58,6 +62,18 @@ entry:
   ; CHECK: OpStore {{%[0-9]+}} [[enum_const]]
   %18 = tail call spir_func i32 @_Z20__spirv_SpecConstantii(i32 10, i32 30)
   store i32 %18, ptr addrspace(10) @_ZL10enum_const, align 4
+
+  ; CHECK: [[bt:%[0-9]+]] = OpSelect {{%[0-9]+}} [[named_bool_const_true]]
+  ; CHECK: OpStore {{%[0-9]+}} [[bt]]
+  %19 = tail call spir_func i1 @llvm.spv.named.boolean.spec.constant(i32 11, i1 true, metadata !{})
+  %zext_0 = zext i1 %19 to i32
+  store i32 %zext_0, ptr addrspace(10) @_ZL10bool_const, align 4
+
+  ; CHECK: [[bf:%[0-9]+]] = OpSelect {{%[0-9]+}} [[named_bool_const_false]]
+  ; CHECK: OpStore {{%[0-9]+}} [[bf]]
+  %20 = tail call spir_func i1 @llvm.spv.named.boolean.spec.constant(i32 12, i1 false, metadata !{})
+  %zext_1 = zext i1 %20 to i32
+  store i32 %zext_1, ptr addrspace(10) @_ZL10bool_const, align 4
   ret void
 }
 
@@ -69,5 +85,8 @@ declare i32 @_Z20__spirv_SpecConstantii(i32, i32)
 declare i64 @_Z20__spirv_SpecConstantix(i32, i64)
 declare float @_Z20__spirv_SpecConstantif(i32, float)
 declare double @_Z20__spirv_SpecConstantid(i32, double)
+declare i1 @llvm.spv.named.boolean.spec.constant(i32, i1, metadata)
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
+
+!0 = !{ !"" }

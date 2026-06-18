@@ -193,9 +193,9 @@ using RegionBranchInverseSuccessorMapping =
     DenseMap<Value, SmallVector<OpOperand *>>;
 
 /// This class represents a successor of a region. A region successor can either
-/// be another region, or the parent operation (i.e., the operation that
-/// implements the `RegionBranchOpInterface`). In the latter case, the control
-/// flow branches after/out of the region branch operation.
+/// target another region or target an ancestor operation (at the moment,
+/// limited to the immediate parent operation). In the latter case, the control
+/// flow branches after/out of the target operation.
 class RegionSuccessor {
 public:
   /// Initialize a successor that branches to a region of the parent operation.
@@ -203,31 +203,47 @@ public:
     assert(region && "Region must not be null");
   }
 
-  /// Initialize a successor that branches after/out of the parent operation.
-  static RegionSuccessor parent() { return RegionSuccessor(); }
+  /// Initialize a successor that branches after/out of an operation.
+  RegionSuccessor(Operation *operation) : successor(operation) {
+    assert(operation && "Operation must not be null");
+  }
 
-  /// Return the given region successor. Returns nullptr if the successor is the
-  /// parent operation.
-  Region *getSuccessor() const { return successor; }
+  /// Return the given region successor. Returns nullptr if the successor is an
+  /// operation.
+  Region *getSuccessor() const {
+    return dyn_cast_if_present<Region *>(successor);
+  }
 
-  /// Return true if the successor is the parent operation.
-  bool isParent() const { return successor == nullptr; }
+  /// Return the given operation successor. Returns nullptr if the successor is
+  /// a region.
+  Operation *getSuccessorOp() const {
+    return dyn_cast_if_present<Operation *>(successor);
+  }
+
+  /// Return true if the successor is a region.
+  bool isRegion() const { return isa<Region *>(successor); }
+
+  /// Return true if the successor is an operation.
+  bool isOperation() const { return isa<Operation *>(successor); }
 
   bool operator==(RegionSuccessor rhs) const {
     return successor == rhs.successor;
   }
 
-  bool operator==(const Region *region) const { return successor == region; }
+  bool operator==(const Region *region) const {
+    return getSuccessor() == region;
+  }
+
+  bool operator==(const Operation *operation) const {
+    return getSuccessorOp() == operation;
+  }
 
   friend bool operator!=(RegionSuccessor lhs, RegionSuccessor rhs) {
     return !(lhs == rhs);
   }
 
 private:
-  /// Private constructor to encourage the use of `RegionSuccessor::parent`.
-  RegionSuccessor() : successor(nullptr) {}
-
-  Region *successor = nullptr;
+  llvm::PointerUnion<Region *, Operation *> successor;
 };
 
 /// This class represents a point being branched from in the methods of the
@@ -252,8 +268,9 @@ public:
   bool isParent() const { return predecessor == nullptr; }
 
   /// Returns the terminator if branching from a region.
-  /// A null pointer otherwise.
-  Operation *getTerminatorPredecessorOrNull() const { return predecessor; }
+  /// A "null" operation otherwise.
+  inline RegionBranchTerminatorOpInterface
+  getTerminatorPredecessorOrNull() const;
 
   /// Returns true if the two branch points are equal.
   friend bool operator==(RegionBranchPoint lhs, RegionBranchPoint rhs) {
@@ -268,32 +285,6 @@ private:
   /// op and the region terminator being branched from otherwise.
   Operation *predecessor = nullptr;
 };
-
-inline bool operator!=(RegionBranchPoint lhs, RegionBranchPoint rhs) {
-  return !(lhs == rhs);
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     RegionBranchPoint point) {
-  if (point.isParent())
-    return os << "<from parent>";
-  return os << "<region #"
-            << point.getTerminatorPredecessorOrNull()
-                   ->getParentRegion()
-                   ->getRegionNumber()
-            << ", terminator "
-            << OpWithFlags(point.getTerminatorPredecessorOrNull(),
-                           OpPrintingFlags().skipRegions())
-            << ">";
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     RegionSuccessor successor) {
-  if (successor.isParent())
-    return os << "<to parent>";
-  return os << "<to region #" << successor.getSuccessor()->getRegionNumber()
-            << ">";
-}
 
 /// This class represents upper and lower bounds on the number of times a region
 /// of a `RegionBranchOpInterface` can be invoked. The lower bound is at least
@@ -345,6 +336,45 @@ Region *getEnclosingRepetitiveRegion(Value value);
 void populateRegionBranchOpInterfaceCanonicalizationPatterns(
     RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit = 1);
 
+/// Helper function for the region branch op inlining pattern that builds
+/// replacement values for non-successor-input values.
+using NonSuccessorInputReplacementBuilderFn =
+    std::function<Value(OpBuilder &, Location, Value)>;
+/// Helper function for the region branch op inlining pattern that checks if the
+/// pattern is applicable to the given operation.
+using PatternMatcherFn = std::function<LogicalResult(Operation *)>;
+
+namespace detail {
+/// Default implementation of the non-successor-input replacement builder
+/// function. This default implemention assumes that all block arguments and
+/// op results are successor inputs.
+static inline Value defaultReplBuilderFn(OpBuilder &builder, Location loc,
+                                         Value value) {
+  llvm_unreachable("defaultReplBuilderFn not implemented");
+}
+
+/// Default implementation of the pattern matcher function.
+static inline LogicalResult defaultMatcherFn(Operation *op) {
+  return success();
+}
+} // namespace detail
+
+/// Populate a pattern that inlines the body of region branch ops when there is
+/// a single acyclic path through the region branch op, starting from "parent"
+/// and ending at "parent". For details, refer to the documentation of the
+/// pattern.
+///
+/// `replBuilderFn` is a function that builds replacement values for
+/// non-successor-input values of the region branch op. `matcherFn` is a
+/// function that checks if the pattern is applicable to the given operation.
+/// Both functions are optional.
+void populateRegionBranchOpInterfaceInliningPattern(
+    RewritePatternSet &patterns, StringRef opName,
+    NonSuccessorInputReplacementBuilderFn replBuilderFn =
+        detail::defaultReplBuilderFn,
+    PatternMatcherFn matcherFn = detail::defaultMatcherFn,
+    PatternBenefit benefit = 1);
+
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//
@@ -381,6 +411,41 @@ namespace mlir {
 inline RegionBranchPoint::RegionBranchPoint(
     RegionBranchTerminatorOpInterface predecessor)
     : predecessor(predecessor.getOperation()) {}
+
+inline RegionBranchTerminatorOpInterface
+RegionBranchPoint::getTerminatorPredecessorOrNull() const {
+  if (!predecessor)
+    return nullptr;
+  return cast<RegionBranchTerminatorOpInterface>(predecessor);
+}
+
+inline bool operator!=(RegionBranchPoint lhs, RegionBranchPoint rhs) {
+  return !(lhs == rhs);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     RegionBranchPoint point) {
+  if (point.isParent())
+    return os << "<from parent>";
+  return os << "<region #"
+            << point.getTerminatorPredecessorOrNull()
+                   ->getParentRegion()
+                   ->getRegionNumber()
+            << ", terminator "
+            << OpWithFlags(point.getTerminatorPredecessorOrNull(),
+                           OpPrintingFlags().skipRegions())
+            << ">";
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     RegionSuccessor successor) {
+  if (Region *region = successor.getSuccessor())
+    return os << "<to region #" << region->getRegionNumber() << ">";
+  return os << "<to operation "
+            << OpWithFlags(successor.getSuccessorOp(),
+                           OpPrintingFlags().skipRegions())
+            << ">";
+}
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

@@ -111,7 +111,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
                             std::optional<int8_t> GuardKind) {
   if (!DebugTrapBB)
-    return IRB.CreateIntrinsic(Intrinsic::trap, {});
+    return IRB.CreateIntrinsicWithoutFolding(Intrinsic::trap, {});
 
   uint64_t ImmArg = GuardKind.has_value()
                         ? GuardKind.value()
@@ -121,8 +121,8 @@ static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
   if (ImmArg > 255)
     ImmArg = 255;
 
-  return IRB.CreateIntrinsic(Intrinsic::ubsantrap,
-                             ConstantInt::get(IRB.getInt8Ty(), ImmArg));
+  return IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::ubsantrap, ConstantInt::get(IRB.getInt8Ty(), ImmArg));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {
@@ -167,12 +167,12 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(TrapBB, OldBB);
+    UncondBrInst::Create(TrapBB, OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(TrapBB, Cont, Or, OldBB);
+  CondBrInst::Create(Or, TrapBB, Cont, OldBB);
 }
 
 static std::string

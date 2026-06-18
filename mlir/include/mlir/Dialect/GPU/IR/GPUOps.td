@@ -38,18 +38,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class GPU_Op<string mnemonic, list<Trait> traits = []> :
     Op<GPU_Dialect, mnemonic, traits>;
 
-def GPU_Dimension : I32EnumAttr<"Dimension",
-    "a dimension, either 'x', 'y', or 'z'",
-    [
-      I32EnumAttrCase<"x", 0>,
-      I32EnumAttrCase<"y", 1>,
-      I32EnumAttrCase<"z", 2>
-    ]>{
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::gpu";
-}
-def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
-
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
         Pure,
@@ -348,8 +336,14 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
 }
 
 def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
-  [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
-    "with 3 elements (if present)">]>;
+  [AttrConstraint<Or<[IsNullAttr.predicate, And<[DenseArrayCount<3>.predicate,
+      CPred<"([](mlir::Attribute a) { "
+            "  auto arr = ::llvm::cast<::mlir::DenseI32ArrayAttr>(a).asArrayRef();"
+            "  return ::llvm::all_of(arr, [](int32_t v) { return v >= 1; });"
+            "})($_self)">]>]>,
+    "with 3 elements (if present) and all elements >= 1"
+  >]
+>;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
@@ -432,7 +426,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
                        GPU_OptionalDimSizeHintAttr:$known_grid_size,
-                       GPU_OptionalDimSizeHintAttr:$known_cluster_size);
+                       GPU_OptionalDimSizeHintAttr:$known_cluster_size,
+                       OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions,
+                       UnitAttr:$kernel);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -446,22 +442,24 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
   let extraClassDeclaration = [{
     /// Returns `true` if the GPU function defined by this Op is a kernel, i.e.
-    /// it is intended to be launched from host.
+    /// it is intended to be launched from host. Also accepts legacy discardable
+    /// `gpu.kernel` for compatibility with older generic IR.
     bool isKernel() {
+      if (getKernel())
+        return true;
       return (*this)->getAttrOfType<UnitAttr>(
           GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      auto attr = (*this)->getAttrOfType<IntegerAttr>(
-          getNumWorkgroupAttributionsAttrName());
-      if (!attr)
+      std::optional<int64_t> v = getWorkgroupAttributions();
+      if (!v)
         return 0;
-      int64_t value = attr.getInt();
-      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+      int64_t value = *v;
+      assert(value < std::numeric_limits<uint32_t>::max() &&
              "invalid workgroup attribution count");
-      return value;
+      return static_cast<unsigned>(value);
     }
 
     /// Return the index of the first workgroup attribution in the block argument
@@ -472,7 +470,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Returns a list of block arguments that correspond to buffers located in
     /// the workgroup memory
-    ArrayRef<BlockArgument> getWorkgroupAttributions() {
+    ArrayRef<BlockArgument> getWorkgroupAttributionBBArgs() {
       auto begin =
           std::next(getBody().args_begin(), getFirstWorkgroupAttributionIndex());
       auto end = std::next(begin, getNumWorkgroupAttributions());
@@ -554,12 +552,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
       return setPrivateAttributionAttr(index, StringAttr::get((*this)->getContext(), name), value);
     }
 
-    /// Returns the name of the attribute containing the number of buffers
-    /// located in the workgroup memory.
-    static StringRef getNumWorkgroupAttributionsAttrName() {
-      return "workgroup_attributions";
-    }
-
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
@@ -612,6 +604,7 @@ def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       GPU_AsyncOpInterface, AttrSizedOperandSegments,
+      DeclareOpInterfaceMethods<SymbolUserOpInterface>,
       AllTypesMatch<["gridSizeX", "gridSizeY", "gridSizeZ", "blockSizeX",
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
@@ -626,6 +619,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
                Optional<LaunchIndx>:$clusterSizeY,
                Optional<LaunchIndx>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
+               UnitAttr:$cooperative,
                Variadic<AnyType>:$kernelOperands,
                Optional<AnyType>:$asyncObject)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
@@ -667,6 +661,11 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     `clusterSizeX`, `clusterSizeY`, and `clusterSizeZ` arguments. When these
     arguments are present, the Op launches a kernel that clusters the given
     thread blocks. This feature is exclusive to certain architectures.
+
+    The `cooperative` attribute indicates that the kernel should be launched
+    cooperatively, guaranteeing that all thread blocks in the grid are
+    co-resident on the GPU simultaneously. This enables grid-wide
+    synchronization patterns.
 
     Example:
 
@@ -794,6 +793,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       `threads` `in` ` ` `(` $blockSizeX `,` $blockSizeY `,` $blockSizeZ `)`
       custom<LaunchDimType>(type($gridSizeX), ref($clusterSizeX), type($clusterSizeX), type($clusterSizeY), type($clusterSizeZ))
       (`dynamic_shared_memory_size` $dynamicSharedMemorySize^)?
+      (`cooperative` $cooperative^)?
       custom<LaunchFuncOperands>($kernelOperands, type($kernelOperands)) attr-dict
   }];
   let hasVerifier = 1;
@@ -810,8 +810,10 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
+               UnitAttr:$cooperative,
                OptionalAttr<FlatSymbolRefAttr>:$module,
-               OptionalAttr<FlatSymbolRefAttr>:$function)>,
+               OptionalAttr<FlatSymbolRefAttr>:$function,
+               OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$workgroup_attributions)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -1009,19 +1011,17 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      auto attr = (*this)->getAttrOfType<IntegerAttr>(
-          getNumWorkgroupAttributionsAttrName());
-      if (!attr)
+      std::optional<int64_t> v = getWorkgroupAttributions();
+      if (!v)
         return 0;
-      int64_t value = attr.getInt();
-      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+      int64_t value = *v;
+      assert(value < std::numeric_limits<uint32_t>::max() &&
              "invalid workgroup attribution count");
-      return value;
+      return static_cast<unsigned>(value);
     }
 
-    /// Returns a list of block arguments that correspond to buffers located in
-    /// the workgroup memory
-    ArrayRef<BlockArgument> getWorkgroupAttributions() {
+    /// Block arguments for workgroup memory buffers
+    ArrayRef<BlockArgument> getWorkgroupAttributionBBArgs() {
       auto begin =
           std::next(getBody().args_begin(), getNumConfigRegionAttributes());
       auto end = std::next(begin, getNumWorkgroupAttributions());
@@ -1052,12 +1052,6 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// Adds a new block argument that corresponds to buffers located in
     /// private memory.
     BlockArgument addPrivateAttribution(Type type, Location loc);
-
-    /// Returns the name of the attribute containing the number of buffers
-    /// located in the workgroup memory.
-    static StringRef getNumWorkgroupAttributionsAttrName() {
-      return "workgroup_attributions";
-    }
   }];
 
   let hasCanonicalizer = 1;
@@ -1226,7 +1220,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
-def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType, NoMemoryEffect]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the values of lanes (work items) across a
@@ -1432,27 +1426,117 @@ def GPU_RotateOp : GPU_Op<
   let hasVerifier = 1;
 }
 
-def GPU_BarrierOp : GPU_Op<"barrier"> {
-  let summary = "Synchronizes all work items of a workgroup.";
+def GPU_BarrierOp : GPU_Op<"barrier">,
+    Arguments<(ins
+      OptionalAttr<GPU_AddressSpaceAttrArray>:$address_spaces,
+      Optional<GPU_NamedBarrier>:$named_barrier,
+      DefaultValuedAttr<GPU_BarrierScopeAttr,
+        "::mlir::gpu::BarrierScope::Workgroup">:$scope
+    )> {
+  let summary = "Synchronizes work items within an execution scope.";
   let description = [{
-    The `barrier` op synchronizes all work items of a workgroup. It is used
-    to coordinate communication between the work items of the workgroup.
+    The `barrier` op synchronizes work items within the specified execution
+    scope. By default, the scope is `workgroup`, synchronizing all work items
+    in a workgroup.
 
     ```mlir
+    // Synchronize all work items in the workgroup, making all prior
+    // memory accesses visible.
     gpu.barrier
     ```
 
-    waits until all work items in the workgroup have reached this point
+    waits until all work items in the workgroup have reached the operation
     and all memory accesses made by these work items prior to the op are
     visible to all work items in the workgroup. Data hazards between work items
     accessing the same memory can be avoided by synchronizing work items
     in-between these accesses.
 
-    Either none or all work items of a workgroup need to execute this op
-    in convergence.
+    The `scope` attribute controls the execution scope of the barrier:
+
+    ```mlir
+    // Synchronize within a subgroup (warp/wavefront).
+    gpu.barrier scope <subgroup>
+    // Synchronize within a cluster.
+    gpu.barrier scope <cluster>
+    ```
+
+    A `named` barrier allows synchronizing a specific subset of subgroups
+    that have been associated with a named barrier handle. Named barriers
+    require workgroup scope.
+
+    ```mlir
+    // Initialize a named barrier for 4 participating members.
+    %nb = gpu.initialize_named_barrier %c4 : i32 -> !gpu.named_barrier
+    // Wait on the named barrier.
+    gpu.barrier named(%nb : !gpu.named_barrier)
+    ```
+
+    If the `memfence` attribute is specified, the set of memory accesses that
+    must be completed after the barrier resolves is limited to only those
+    accesses that read from or write to the specified address spaces. In
+    particular, specifying `memfence []` creates a barrier that is not required
+    to affect the visibility of any memory operations and is purely used for
+    synchronizing work items.
+
+    ```mlir
+    // Only workgroup address space accesses required to be visible.
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    // No memory accesses required to be visible.
+    gpu.barrier memfence []
+    // All memory accesses required to be visible.
+    gpu.barrier
+    ```
+
+    The three clauses can be combined in any order, but not all combinations may
+    be supported on a given target:
+
+    ```mlir
+    // Named barrier with a workgroup-only memory fence.
+    gpu.barrier named(%nb : !gpu.named_barrier) memfence [#gpu.address_space<workgroup>]
+    // Subgroup barrier with a global fence.
+    gpu.barrier memfence [#gpu.address_space<global>] scope <subgroup>
+    ```
+
+    Once one thread of execution in a given scope (say, thread in a workgroup)
+    has executed a particular dynamic instance of `gpu.barrier`, all other threads
+    in that scope are required to execute the same dynamic instance of `gpu.barrier`
+    before any thread executes any other instance of it. That is, you cannot, for
+    example, have the two subgroups of a workgroup arrive at `gpu.barrier` ops in
+    different branches of an if statement and have this work.
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = [{
+    oilist(
+        `named` `(` $named_barrier `:` type($named_barrier) `)`
+      | `memfence` $address_spaces
+      | `scope` $scope
+    ) attr-dict
+  }];
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+  let builders = [OpBuilder<(
+                      ins CArg<"std::optional<::mlir::gpu::AddressSpace>",
+                               "std::nullopt">:$addressSpace)>,
+                  OpBuilder<(ins "Value":$memrefToFence)>];
+}
+
+def GPU_InitializeNamedBarrierOp
+    : GPU_Op<"initialize_named_barrier",
+             [MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Initialize a named barrier with a member count.";
+  let description = [{
+    Initializes a named barrier object with the given number of participating
+    members (subgroups) and returns a handle to it. All members that will
+    synchronize on this barrier must be accounted for in the count.
+
+    ```mlir
+    %nb = gpu.initialize_named_barrier %num_members : i32 -> !gpu.named_barrier
+    ```
+  }];
+  let arguments = (ins I32:$member_count);
+  let results = (outs GPU_NamedBarrier:$result);
+  let assemblyFormat = [{
+    $member_count attr-dict `:` type($member_count) `->` type($result)
+  }];
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
@@ -1810,6 +1894,7 @@ def GPU_SetDefaultDeviceOp : GPU_Op<"set_default_device",
   let assemblyFormat = "attr-dict $devIndex";
 }
 
+// Promises IndexedAccessOpInterface.
 def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     [MemoryEffects<[MemRead]>]>{
 
@@ -1826,6 +1911,9 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     `leadDimension` attribute specifies the leading dimension size of the source
     matrix which eventually allows the lowering to determine the size of each
     row.  If the `transpose` attribute is present then the op does a transposed load.
+
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
 
     For integer types, the resulting `!gpu.mma_matrix` type needs to specify the
     signedness of the data if the matrix type is an `A` or `B` operand for
@@ -1856,6 +1944,7 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     [MemoryEffects<[MemWrite]>]>{
 
@@ -1874,6 +1963,9 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
 
     This op is often meant to be used along with `gpu.subgroup_mma_load_matrix` and
     `gpu.subgroup_mma_compute`.
+
+    The memory indices along each dimension must be in-bounds for that dimension
+    as with an ordinary `memref.load`.
 
     Example:
 
@@ -2092,6 +2184,7 @@ def GPU_ElementwiseOpDivU : I32EnumAttrCase<"DIVU", 10, "divu">;
 def GPU_ElementwiseOpNEGF : I32EnumAttrCase<"NEGATEF", 11, "negatef">;
 def GPU_ElementwiseOpNEGS : I32EnumAttrCase<"NEGATES", 12, "negates">;
 def GPU_ElementwiseOpEXTF : I32EnumAttrCase<"EXTF", 13, "extf">;
+def GPU_ElementwiseOpTRUNCF : I32EnumAttrCase<"TRUNCF", 14, "truncf">;
 
 def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
   "elementwise operation to apply to mma matrix", [
@@ -2108,7 +2201,8 @@ def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
     GPU_ElementwiseOpDivU,
     GPU_ElementwiseOpNEGF,
     GPU_ElementwiseOpNEGS,
-    GPU_ElementwiseOpEXTF
+    GPU_ElementwiseOpEXTF,
+    GPU_ElementwiseOpTRUNCF
   ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
@@ -3266,6 +3360,27 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   }];
   let hasFolder = 1;
   let hasVerifier = 1;
+}
+
+def GPU_BallotOp : GPU_Op<"ballot", [NoMemoryEffect]>,
+    Arguments<(ins I1:$predicate)>,
+    Results<(outs AnySignlessInteger:$result)> {
+  let summary = "Collects predicate values from all threads in a subgroup.";
+  let description = [{
+    The `ballot` op performs a ballot operation across all threads in a subgroup.
+    Each thread contributes its predicate value as a single bit. The result is an
+    integer where the Nth bit is set iff the Nth thread's predicate is true.
+
+    The result type must be a signless integer type. The exact supported widths
+    are target-dependent. Common GPU targets support i32 and i64.
+
+    Example:
+    ```mlir
+    %0 = gpu.ballot %pred : i32
+    %1 = gpu.ballot %pred : i64
+    ```
+  }];
+  let assemblyFormat = "$predicate attr-dict `:` type($result)";
 }
 
 #endif // GPU_OPS

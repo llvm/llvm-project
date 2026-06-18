@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Matchers.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -239,7 +240,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+  } else if (auto ms = options.defaultMemorySpaceFn(
+                 cast<TensorLikeType>(getType()))) {
     memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
@@ -357,13 +359,13 @@ void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 LogicalResult AllocTensorOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  auto shapes = llvm::to_vector<4>(
-      llvm::map_range(llvm::seq<int64_t>(0, getType().getRank()),
-                      [&](int64_t dim) -> OpFoldResult {
-                        if (isDynamicDim(dim))
-                          return getDynamicSize(builder, dim);
-                        return builder.getIndexAttr(getStaticSize(dim));
-                      }));
+  auto shapes =
+      llvm::map_to_vector<4>(llvm::seq<int64_t>(0, getType().getRank()),
+                             [&](int64_t dim) -> OpFoldResult {
+                               if (isDynamicDim(dim))
+                                 return getDynamicSize(builder, dim);
+                               return builder.getIndexAttr(getStaticSize(dim));
+                             });
   reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
 }
@@ -907,7 +909,7 @@ std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
 
 LogicalResult DeallocOp::inferReturnTypes(
     MLIRContext *context, std::optional<::mlir::Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
   inferredReturnTypes = SmallVector<Type>(adaptor.getRetained().size(),

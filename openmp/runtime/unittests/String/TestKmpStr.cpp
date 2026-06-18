@@ -111,6 +111,33 @@ TEST(KmpStrTest, BasicStrToIntInvalid) {
   EXPECT_EQ(__kmp_basic_str_to_int("7.5"), 7);
 }
 
+// Test basic string to int conversion with maxlen parameter
+TEST(KmpStrTest, BasicStrToIntMaxLen) {
+  // maxlen limits how many characters are parsed
+  EXPECT_EQ(__kmp_basic_str_to_int("12345", 3), 123);
+  EXPECT_EQ(__kmp_basic_str_to_int("12345", 1), 1);
+  EXPECT_EQ(__kmp_basic_str_to_int("12345", 5), 12345);
+
+  // maxlen larger than string length parses entire string
+  EXPECT_EQ(__kmp_basic_str_to_int("42", 10), 42);
+  EXPECT_EQ(__kmp_basic_str_to_int("123", 100), 123);
+
+  // maxlen of 0 returns 0 (no characters parsed)
+  EXPECT_EQ(__kmp_basic_str_to_int("12345", 0), 0);
+
+  // maxlen with mixed content: stops at maxlen or non-digit, whichever first
+  EXPECT_EQ(__kmp_basic_str_to_int("123abc", 2), 12);
+  EXPECT_EQ(__kmp_basic_str_to_int("123abc", 5),
+            123); // stops at 'a' before maxlen
+
+  // maxlen with leading zeros
+  EXPECT_EQ(__kmp_basic_str_to_int("007", 2), 0);
+  EXPECT_EQ(__kmp_basic_str_to_int("007", 3), 7);
+
+  // Default maxlen (INT_MAX) behaves like before
+  EXPECT_EQ(__kmp_basic_str_to_int("999"), 999);
+}
+
 // Test string match
 TEST(KmpStrTest, StrMatch) {
   const char *data = "Hello World";

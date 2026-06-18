@@ -1,15 +1,15 @@
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=small \
 ; RUN: -stop-after=machine-cp -print-before=register-coalescer 2>&1 < \
 ; RUN: %s | FileCheck --check-prefix=SMALL %s
 
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -code-model=medium \
+; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=medium \
 ; RUN: -stop-after=machine-cp 2>&1 < %s | FileCheck --check-prefix=MEDIUM %s
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=large \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=large \
 ; RUN: -stop-after=machine-cp -print-before=register-coalescer 2>&1 < \
 ; RUN: %s | FileCheck --check-prefix=LARGE %s
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -stop-after=machine-cp \
 ; RUN: -print-before=register-coalescer 2>&1 < %s | FileCheck \
 ; RUN: --check-prefix=SMALL %s
 

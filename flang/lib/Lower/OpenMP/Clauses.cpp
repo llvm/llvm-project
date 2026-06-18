@@ -730,10 +730,31 @@ Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,
       m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
   return Depend{{/*DependenceType=*/makeDepType(*m1),
                  /*Iterator=*/std::move(maybeIter),
+                 /*Vector=*/std::nullopt,
                  /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
+// depend(source) / depend(sink: vec) on ordered (4.5..5.1 spelling, deprecated
+// in 5.2 in favor of the dedicated doacross clause). Internally modelled as a
+// Depend with the optional iteration Vector populated and an empty
+// LocatorList, mirroring the shape of Doacross.
+Depend makeDependDoacross(const parser::OmpDoacross &doa,
+                          semantics::SemanticsContext &semaCtx) {
+  Doacross doacross = makeDoacross(doa, semaCtx);
+  return Depend{
+      {/*DependenceType=*/std::get<Doacross::DependenceType>(doacross.t),
+       /*Iterator=*/std::nullopt,
+       /*Vector=*/std::get<Doacross::Vector>(std::move(doacross.t)),
+       /*LocatorList=*/{}}};
+}
+
 // Depobj: empty
+
+Depth make(const parser::OmpClause::Depth &inp,
+           semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::ScalarIntConstantExpr
+  return Depth{/*DepthExpr=*/makeExpr(inp.v, semaCtx)};
+}
 
 Destroy make(const parser::OmpClause::Destroy &inp,
              semantics::SemanticsContext &semaCtx) {
@@ -1249,8 +1270,8 @@ Nocontext make(const parser::OmpClause::Nocontext &inp,
 
 Nontemporal make(const parser::OmpClause::Nontemporal &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> std::list<parser::Name>
-  return Nontemporal{/*List=*/makeList(inp.v, makeObjectFn(semaCtx))};
+  // inp.v -> parser::OmpObjectList
+  return Nontemporal{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
 // NoOpenmp: empty
@@ -1280,19 +1301,38 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpNumTeamsClause
-  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
-  assert(!t1.empty());
-  List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
-                            /*UpperBound=*/makeExpr(t1.front(), semaCtx)}}};
-  return NumTeams{/*List=*/v};
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *lowerBound =
+      semantics::OmpGetUniqueModifier<parser::OmpLowerBound>(mods);
+  auto &values = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!values.empty());
+
+  // Extract optional lower bound (only valid without dims modifier)
+  auto lb = maybeApplyToV(makeExprFn(semaCtx), lowerBound);
+
+  // Extract all upper bounds
+  NumTeams::UpperBoundList upperBounds;
+  for (const auto &val : values) {
+    upperBounds.push_back(makeExpr(val, semaCtx));
+  }
+
+  return NumTeams{
+      {/*LowerBound=*/lb, /*UpperBoundList=*/std::move(upperBounds)}};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
                 semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpNumThreadsClause
-  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
-  assert(!t1.empty());
-  return NumThreads{/*Nthreads=*/makeExpr(t1.front(), semaCtx)};
+  // With dims modifier (OpenMP 6.1): multiple values
+  // Without dims modifier: single value
+  auto &values = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!values.empty());
+
+  List<NumThreads::Nthreads> v;
+  for (const auto &val : values) {
+    v.push_back(makeExpr(val, semaCtx));
+  }
+  return NumThreads{/*Nthreads=*/v};
 }
 
 // OmpxAttribute: empty
@@ -1542,9 +1582,16 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpThreadLimitClause
-  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
-  assert(!t1.empty());
-  return ThreadLimit{/*Threadlim=*/makeExpr(t1.front(), semaCtx)};
+  // With dims modifier: multiple values
+  // Without dims modifier: single value
+  auto &values = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!values.empty());
+
+  List<ThreadLimit::Threadlim> v;
+  for (const auto &val : values) {
+    v.push_back(makeExpr(val, semaCtx));
+  }
+  return ThreadLimit{/*Threadlim=*/std::move(v)};
 }
 
 Threadset make(const parser::OmpClause::Threadset &inp,
@@ -1701,8 +1748,14 @@ Clause makeClause(const parser::OmpClause &cls,
               return makeClause(llvm::omp::Clause::OMPC_depend,
                                 clause::makeDepend(*dep, semaCtx), cls.source);
             } else if (auto *doa = std::get_if<parser::OmpDoacross>(&s.v.u)) {
-              return makeClause(llvm::omp::Clause::OMPC_doacross,
-                                clause::makeDoacross(*doa, semaCtx),
+              // depend(source) / depend(sink:) on ordered is the
+              // 4.5 - 5.1 spelling of what 5.2 renamed to the doacross
+              // clause. Represent it as OMPC_depend (the surface clause is
+              // depend) rather than rewriting to OMPC_doacross, otherwise
+              // construct decomposition rejects the clause at OpenMP < 5.2
+              // even though the construct itself is valid since 4.5.
+              return makeClause(llvm::omp::Clause::OMPC_depend,
+                                clause::makeDependDoacross(*doa, semaCtx),
                                 cls.source);
             } else {
               llvm_unreachable("Unexpected alternative");

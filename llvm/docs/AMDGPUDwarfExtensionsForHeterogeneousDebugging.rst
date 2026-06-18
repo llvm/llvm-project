@@ -4775,14 +4775,14 @@ entry attributes.
    ================================== ====== ===================================
    Attribute Name                     Value  Classes
    ================================== ====== ===================================
-   ``DW_AT_LLVM_active_lane``         0x3e08 exprloc, loclist
-   ``DW_AT_LLVM_augmentation``        0x3e09 string
-   ``DW_AT_LLVM_lanes``               0x3e0a constant
-   ``DW_AT_LLVM_lane_pc``             0x3e0b exprloc, loclist
-   ``DW_AT_LLVM_vector_size``         0x3e0c constant
-   ``DW_AT_LLVM_iterations``          0x3e0a constant, exprloc, loclist
-   ``DW_AT_LLVM_address_space``       TBA    constant
-   ``DW_AT_LLVM_memory_space``        TBA    constant
+   ``DW_AT_LLVM_memory_space``        0x3e0f constant
+   ``DW_AT_LLVM_address_space``       0x3e10 constant
+   ``DW_AT_LLVM_lanes``               0x3e11 constant
+   ``DW_AT_LLVM_lane_pc``             0x3e12 exprloc, loclist
+   ``DW_AT_LLVM_vector_size``         0x3e13 constant
+   ``DW_AT_LLVM_iterations``          TBA    constant, exprloc, loclist
+   ``DW_AT_LLVM_active_lane``         TBA    exprloc, loclist
+   ``DW_AT_LLVM_augmentation``        TBA    string
    ================================== ====== ===================================
 
 .. _amdgpu-dwarf-classes-and-forms:

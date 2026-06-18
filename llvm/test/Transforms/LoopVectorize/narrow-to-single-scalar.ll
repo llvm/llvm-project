@@ -14,9 +14,6 @@ define void @narrow_select_to_single_scalar(i1 %invar.cond, ptr noalias %A, ptr 
 ; VF4IC1:       [[VECTOR_BODY]]:
 ; VF4IC1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC1-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; VF4IC1-NEXT:    [[TMP2:%.*]] = add i16 [[OFFSET_IDX]], 0
-; VF4IC1-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], 1
-; VF4IC1-NEXT:    [[TMP4:%.*]] = add i16 [[OFFSET_IDX]], 2
 ; VF4IC1-NEXT:    [[TMP5:%.*]] = add i16 [[OFFSET_IDX]], 3
 ; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i16 [[TMP5]]
 ; VF4IC1-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP6]], align 1
@@ -41,7 +38,6 @@ define void @narrow_select_to_single_scalar(i1 %invar.cond, ptr noalias %A, ptr 
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; VF2IC2-NEXT:    [[TMP2:%.*]] = add i16 [[OFFSET_IDX]], 2
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], 3
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i16 [[TMP3]]
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP4]], align 1
@@ -86,20 +82,19 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF4IC1:       [[VECTOR_BODY]]:
 ; VF4IC1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4IC1-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; VF4IC1-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; VF4IC1-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; VF4IC1-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
 ; VF4IC1-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[VEC_IND]], splat (i32 1)
-; VF4IC1-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; VF4IC1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
-; VF4IC1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
-; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
+; VF4IC1-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
+; VF4IC1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i64 1
+; VF4IC1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP4]], i64 2
+; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
 ; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP5]]
 ; VF4IC1-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP7]]
 ; VF4IC1-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP9]]
 ; VF4IC1-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP11]]
-; VF4IC1-NEXT:    store i32 [[TMP0]], ptr [[TMP6]], align 4
+; VF4IC1-NEXT:    store i32 [[INDEX]], ptr [[TMP6]], align 4
 ; VF4IC1-NEXT:    store i32 [[TMP1]], ptr [[TMP8]], align 4
 ; VF4IC1-NEXT:    store i32 [[TMP2]], ptr [[TMP10]], align 4
 ; VF4IC1-NEXT:    store i32 [[TMP3]], ptr [[TMP12]], align 4
@@ -120,11 +115,10 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 2
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 3
-; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP7]], 1
+; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP0]], 1
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP2]]
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP3]]
@@ -239,7 +233,7 @@ define void @narrow_scatter_with_uniform_addr_to_scalar(ptr noalias %src, ptr no
 ; VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[TMP0]], i64 0
 ; VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; VF4IC1-NEXT:    [[TMP1:%.*]] = trunc <4 x i16> [[BROADCAST_SPLAT]] to <4 x i8>
-; VF4IC1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; VF4IC1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i8> [[TMP1]], i64 3
 ; VF4IC1-NEXT:    store i8 [[TMP2]], ptr [[DST2]], align 1
 ; VF4IC1-NEXT:    store i8 [[TMP2]], ptr [[DST]], align 1
 ; VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -262,7 +256,7 @@ define void @narrow_scatter_with_uniform_addr_to_scalar(ptr noalias %src, ptr no
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT]] to <2 x i8>
-; VF2IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; VF2IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i8> [[TMP1]], i64 1
 ; VF2IC2-NEXT:    store i8 [[TMP2]], ptr [[DST2]], align 1
 ; VF2IC2-NEXT:    store i8 [[TMP2]], ptr [[DST]], align 1
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -303,10 +297,10 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF4IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC1-NEXT:    [[TMP0:%.*]] = lshr <4 x i64> [[VEC_IND]], splat (i64 1)
-; VF4IC1-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i32 0
-; VF4IC1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i32 1
-; VF4IC1-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP0]], i32 2
-; VF4IC1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP0]], i32 3
+; VF4IC1-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
+; VF4IC1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i64 1
+; VF4IC1-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP0]], i64 2
+; VF4IC1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP0]], i64 3
 ; VF4IC1-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP1]]
 ; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP2]]
 ; VF4IC1-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP3]]
@@ -324,11 +318,11 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF4IC1-NEXT:    [[TMP19:%.*]] = insertelement <4 x i16> [[TMP18]], i16 [[TMP25]], i32 2
 ; VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x i16> [[TMP19]], i16 [[TMP16]], i32 3
 ; VF4IC1-NEXT:    [[TMP10:%.*]] = trunc <4 x i16> [[BROADCAST_SPLAT]] to <4 x i8>
-; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[TMP10]], i32 3
+; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[TMP10]], i64 3
 ; VF4IC1-NEXT:    store i8 [[TMP11]], ptr [[DST2]], align 4
-; VF4IC1-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP10]], i32 0
-; VF4IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP10]], i32 1
-; VF4IC1-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP10]], i32 2
+; VF4IC1-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP10]], i64 0
+; VF4IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP10]], i64 1
+; VF4IC1-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP10]], i64 2
 ; VF4IC1-NEXT:    store i8 [[TMP12]], ptr [[TMP5]], align 4
 ; VF4IC1-NEXT:    store i8 [[TMP13]], ptr [[TMP6]], align 4
 ; VF4IC1-NEXT:    store i8 [[TMP14]], ptr [[TMP7]], align 4
@@ -364,10 +358,10 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i16> poison, i16 [[TMP13]], i64 0
 ; VF2IC2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT1]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT1]] to <2 x i8>
-; VF2IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i32 1
+; VF2IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
 ; VF2IC2-NEXT:    store i8 [[TMP7]], ptr [[DST2]], align 4
 ; VF2IC2-NEXT:    [[TMP11:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT]] to <2 x i8>
-; VF2IC2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP11]], i32 1
+; VF2IC2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP11]], i64 1
 ; VF2IC2-NEXT:    store i8 [[TMP12]], ptr [[TMP3]], align 4
 ; VF2IC2-NEXT:    store i8 [[TMP7]], ptr [[TMP4]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

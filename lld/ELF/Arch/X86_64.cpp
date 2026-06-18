@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Relocations.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -27,7 +28,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
-  int getTlsGdRelaxSkip(RelType type) const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -47,10 +48,14 @@ public:
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
-  bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+  bool deleteFallThruJmpInsn(InputSection &is,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -80,7 +85,7 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_X86_64_JUMP_SLOT;
   relativeRel = R_X86_64_RELATIVE;
   iRelativeRel = R_X86_64_IRELATIVE;
-  symbolicRel = R_X86_64_64;
+  symbolicRel = ctx.arg.is64 ? R_X86_64_64 : R_X86_64_32;
   tlsDescRel = R_X86_64_TLSDESC;
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
@@ -96,15 +101,6 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   defaultImageBase = 0x200000;
-}
-
-int X86_64::getTlsGdRelaxSkip(RelType type) const {
-  // TLSDESC relocations are processed separately. See relaxTlsGdToLe below.
-  return type == R_X86_64_GOTPC32_TLSDESC ||
-                 type == R_X86_64_CODE_4_GOTPC32_TLSDESC ||
-                 type == R_X86_64_TLSDESC_CALL
-             ? 1
-             : 2;
 }
 
 // Opcodes for the different X86_64 jmp instructions.
@@ -184,8 +180,8 @@ static bool isRelocationForJmpInsn(Relocation &R) {
 // next section.
 // TODO: Delete this once psABI reserves a new relocation type for fall thru
 // jumps.
-static bool isFallThruRelocation(InputSection &is, InputFile *file,
-                                 InputSection *nextIS, Relocation &r) {
+static bool isFallThruRelocation(InputSection &is, InputSection *nextIS,
+                                 Relocation &r) {
   if (!isRelocationForJmpInsn(r))
     return false;
 
@@ -246,7 +242,7 @@ static JmpInsnOpcode invertJmpOpcode(const JmpInsnOpcode opcode) {
 //   10: je bar  #jne flipped to je and the jmp is deleted.
 // aa.BB.foo:
 //   ...
-bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+bool X86_64::deleteFallThruJmpInsn(InputSection &is,
                                    InputSection *nextIS) const {
   const unsigned sizeOfDirectJmpInsn = 5;
 
@@ -270,7 +266,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
 
-  if (isFallThruRelocation(is, file, nextIS, r)) {
+  if (isFallThruRelocation(is, nextIS, r)) {
     // This is a fall thru and can be deleted.
     r.expr = R_NONE;
     r.offset = 0;
@@ -297,7 +293,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (jmpOpcodeB == J_UNKNOWN)
     return false;
 
-  if (!isFallThruRelocation(is, file, nextIS, rB))
+  if (!isFallThruRelocation(is, nextIS, rB))
     return false;
 
   // jmpCC jumps to the fall thru block, the branch can be flipped and the
@@ -317,6 +313,196 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   return true;
 }
 
+void X86_64::relaxCFIJumpTables() const {
+  // Relax CFI jump tables.
+  // - Split jump table into pieces and place target functions inside the jump
+  //   table if small enough.
+  // - Move jump table before last called function and delete last branch
+  //   instruction.
+  DenseMap<InputSection *, SmallVector<InputSection *, 0>> sectionReplacements;
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (sec->type != SHT_LLVM_CFI_JUMP_TABLE || sec->entsize == 0 ||
+          sec->size % sec->entsize != 0)
+        continue;
+
+      // We're going to replace the jump table with this list of sections. This
+      // list will be made up of slices of the original section and function
+      // bodies that were moved into the jump table.
+      SmallVector<InputSection *, 0> replacements;
+
+      // r is the only relocation in a jump table entry. Figure out whether it
+      // is a branch pointing to the start of a statically known section that
+      // hasn't already been moved while processing a different jump table
+      // section, and if so return it.
+      auto getMovableSection = [&](Relocation &r) -> InputSection * {
+        if (r.type != R_X86_64_PC32 && r.type != R_X86_64_PLT32)
+          return nullptr;
+        auto *sym = dyn_cast<Defined>(r.sym);
+        if (!sym || sym->isPreemptible || sym->isGnuIFunc() ||
+            sym->value + r.addend != -4ull) // Usual addend for branch targets.
+          return nullptr;
+        auto *target = dyn_cast_or_null<InputSection>(sym->section);
+        if (!target || sectionReplacements.count(target))
+          return nullptr;
+        return target;
+      };
+
+      // Figure out the movable section for the last entry. We do this first
+      // because the last entry controls which output section the jump table is
+      // placed into, which affects move eligibility for other sections.
+      auto *lastSec = [&]() -> InputSection * {
+        // If the jump table section is more aligned than the entry size, skip
+        // this because there's no guarantee that we'll be able to emit a
+        // padding section that places the last entry at a correctly aligned
+        // address.
+        if (sec->addralign > sec->entsize)
+          return nullptr;
+
+        auto rels = sec->relocs();
+        if (rels.empty() || rels.back().offset < sec->size - sec->entsize)
+          return nullptr;
+        if (rels.size() >= 2 &&
+            rels[rels.size() - 2].offset >= sec->size - sec->entsize)
+          return nullptr;
+        return getMovableSection(rels.back());
+      }();
+      OutputSection *targetOutputSec;
+      if (lastSec) {
+        // If the last section is more aligned than the jump table, we need
+        // to emit a padding section before the jump table to ensure that the
+        // last section ends up at the correct alignment.
+        if (lastSec->addralign > sec->addralign) {
+          // We need to add enough padding to make this equal to zero.
+          size_t mod = (sec->size - sec->entsize) % lastSec->addralign;
+          if (mod != 0) {
+            auto *pad = make<PaddingSection>(ctx, lastSec->addralign - mod,
+                                             lastSec->getParent());
+            pad->addralign = lastSec->addralign;
+            replacements.push_back(pad);
+          } else {
+            sec->addralign = lastSec->addralign;
+          }
+        }
+
+        // We've already decided to move the output section so make sure that we
+        // don't try to move it again.
+        sectionReplacements[lastSec] = {};
+        targetOutputSec = lastSec->getParent();
+      } else {
+        targetOutputSec = sec->getParent();
+      }
+
+      // First, push the original jump table section. This is only so that it
+      // can act as a relocation target. Later on, we will set the size of the
+      // jump table section to 0 so that the slices and moved function bodies
+      // become the actual relocation targets.
+      replacements.push_back(sec);
+
+      // Add the slice [begin, end) of the original section to the replacement
+      // list. [rbegin, rend) is the slice of the relocation list that covers
+      // [begin, end).
+      auto addSectionSlice = [&](size_t begin, size_t end, Relocation *rbegin,
+                                 Relocation *rend) {
+        auto *slice = make<InputSection>(
+            sec->file, sec->name, sec->type, sec->flags, sec->entsize,
+            sec->entsize,
+            sec->contentMaybeDecompress().slice(begin, end - begin));
+        for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
+          slice->relocations.push_back(
+              Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
+        }
+        replacements.push_back(slice);
+      };
+
+      // Walk the jump table entries other than the last one looking for
+      // sections that are small enough to be moved into the jump table and in
+      // the same section as the jump table's destination.
+      size_t begin = 0, cur = 0;
+      Relocation *rbegin = sec->relocs().begin(), *rcur = rbegin;
+      while (cur != sec->size - sec->entsize) {
+        size_t next = cur + sec->entsize;
+        Relocation *rnext = rcur;
+        while (rnext != sec->relocs().end() && rnext->offset < next)
+          ++rnext;
+        if (rcur + 1 == rnext) {
+          if (InputSection *target = getMovableSection(*rcur);
+              target && target->size != 0 && target->size <= sec->entsize &&
+              target->addralign <= sec->entsize &&
+              target->getParent() == targetOutputSec) {
+            // Okay, we found a small enough section. Move it into the jump
+            // table. First add a slice for the unmodified jump table entries
+            // before this one. This slice may be of zero size if two
+            // consecutive functions are moved to the jump table, and is
+            // used to correctly align the target function.
+            addSectionSlice(begin, cur, rbegin, rcur);
+            // Add the target to our replacement list, and set the target's
+            // replacement list to the empty list. This removes it from its
+            // original position and adds it here, as well as causing
+            // future getMovableSection() queries to return nullptr.
+            replacements.push_back(target);
+            sectionReplacements[target] = {};
+            begin = next;
+            rbegin = rnext;
+          }
+        }
+        cur = next;
+        rcur = rnext;
+      }
+
+      // Finally, process the last entry. If it is movable, move the entire
+      // jump table behind it and delete the last entry (so that the last
+      // function's body acts as the last jump table entry), otherwise leave the
+      // jump table where it is and keep the last entry.
+      if (lastSec) {
+        addSectionSlice(begin, cur, rbegin, rcur);
+        replacements.push_back(lastSec);
+        sectionReplacements[sec] = {};
+        for (auto *s : replacements)
+          s->parent = lastSec->parent;
+        sectionReplacements[lastSec] = std::move(replacements);
+      } else {
+        addSectionSlice(begin, sec->size, rbegin, sec->relocs().end());
+        for (auto *s : replacements)
+          s->parent = sec->parent;
+        sectionReplacements[sec] = std::move(replacements);
+      }
+
+      // Everything from the original section has been recreated, so delete the
+      // original contents.
+      sec->relocations.clear();
+      sec->size = 0;
+    }
+  }
+
+  if (sectionReplacements.empty())
+    return;
+
+  // Now that we have the complete mapping of replacements, go through the input
+  // section lists and apply the replacements.
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (SectionCommand *cmd : osec->commands) {
+      auto *isd = dyn_cast<InputSectionDescription>(cmd);
+      if (!isd)
+        continue;
+      SmallVector<InputSection *, 0> newSections;
+      for (auto *sec : isd->sections) {
+        auto i = sectionReplacements.find(sec);
+        if (i == sectionReplacements.end())
+          newSections.push_back(sec);
+        else
+          newSections.append(i->second.begin(), i->second.end());
+      }
+      isd->sections = std::move(newSections);
+    }
+  }
+}
+
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
@@ -325,7 +511,7 @@ bool X86_64::relaxOnce(int pass) const {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
+  // If the max VA is under 2^31, GOTPCRELX relocations cannot overflow. In
   // -pie/-shared, the condition can be relaxed to test the max VA difference as
   // there is no R_RELAX_GOT_PC_NOPIC.
   if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && ctx.arg.isPic))
@@ -361,6 +547,14 @@ bool X86_64::relaxOnce(int pass) const {
   return changed;
 }
 
+void X86_64::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
+}
+
+// Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
   switch (type) {
@@ -370,46 +564,19 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_32S:
   case R_X86_64_64:
     return R_ABS;
-  case R_X86_64_DTPOFF32:
-  case R_X86_64_DTPOFF64:
-    return R_DTPREL;
-  case R_X86_64_TPOFF32:
-  case R_X86_64_TPOFF64:
-    return R_TPREL;
-  case R_X86_64_TLSDESC_CALL:
-    return R_TLSDESC_CALL;
-  case R_X86_64_TLSLD:
-    return R_TLSLD_PC;
-  case R_X86_64_TLSGD:
-    return R_TLSGD_PC;
   case R_X86_64_SIZE32:
   case R_X86_64_SIZE64:
     return R_SIZE;
-  case R_X86_64_PLT32:
-    return R_PLT_PC;
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_DTPOFF64:
+    return R_DTPREL;
   case R_X86_64_PC8:
   case R_X86_64_PC16:
   case R_X86_64_PC32:
   case R_X86_64_PC64:
     return R_PC;
-  case R_X86_64_GOT32:
-  case R_X86_64_GOT64:
-    return R_GOTPLT;
-  case R_X86_64_GOTPC32_TLSDESC:
-  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
-    return R_TLSDESC_PC;
-  case R_X86_64_GOTPCREL:
-  case R_X86_64_GOTPCRELX:
-  case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_CODE_4_GOTPCRELX:
-  case R_X86_64_GOTTPOFF:
-  case R_X86_64_CODE_4_GOTTPOFF:
-  case R_X86_64_CODE_6_GOTTPOFF:
-    return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
-  case R_X86_64_PLTOFF64:
-    return R_PLT_GOTPLT;
   case R_X86_64_GOTPC32:
   case R_X86_64_GOTPC64:
     return R_GOTPLTONLY_PC;
@@ -427,7 +594,7 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
   // in the psABI and glibc before Aug 2021 used the entry to compute run-time
   // load address of the shared object (note that this is relevant for linking
   // ld.so, not any other program).
-  write64le(buf, ctx.mainPart->dynamic->getVA());
+  write64le(buf, ctx.in.dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -469,10 +636,144 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType X86_64::getDynRel(RelType type) const {
-  if (type == R_X86_64_64 || type == R_X86_64_PC64 || type == R_X86_64_SIZE32 ||
-      type == R_X86_64_SIZE64)
+  if (type == symbolicRel || type == R_X86_64_SIZE32 || type == R_X86_64_SIZE64)
     return type;
   return R_X86_64_NONE;
+}
+
+template <class ELFT, class RelTy>
+void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_X86_64_NONE:
+      continue;
+
+      // Absolute relocations:
+    case R_X86_64_8:
+    case R_X86_64_16:
+    case R_X86_64_32:
+    case R_X86_64_32S:
+    case R_X86_64_64:
+      expr = R_ABS;
+      break;
+
+      // PC-relative relocations:
+    case R_X86_64_PC8:
+    case R_X86_64_PC16:
+    case R_X86_64_PC32:
+    case R_X86_64_PC64:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+      // GOT-generating relocations:
+    case R_X86_64_GOTPC32:
+    case R_X86_64_GOTPC64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTONLY_PC;
+      break;
+    case R_X86_64_GOTOFF64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTREL;
+      break;
+    case R_X86_64_GOT32:
+    case R_X86_64_GOT64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLT;
+      break;
+    case R_X86_64_PLTOFF64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_PLT_GOTPLT;
+      break;
+    case R_X86_64_GOTPCREL:
+    case R_X86_64_GOTPCRELX:
+    case R_X86_64_REX_GOTPCRELX:
+    case R_X86_64_CODE_4_GOTPCRELX:
+      expr = R_GOT_PC;
+      break;
+
+      // PLT-generating relocation:
+    case R_X86_64_PLT32:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+      // TLS relocations:
+    case R_X86_64_TPOFF32:
+    case R_X86_64_TPOFF64:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_X86_64_GOTTPOFF:
+    case R_X86_64_CODE_4_GOTTPOFF:
+    case R_X86_64_CODE_6_GOTTPOFF:
+      rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_X86_64_TLSGD:
+      if (rs.handleTlsGd(R_TLSGD_PC, R_GOT_PC, R_TPREL, type, offset, addend,
+                         sym))
+        ++it;
+      continue;
+    case R_X86_64_TLSLD:
+      if (rs.handleTlsLd(R_TLSLD_PC, type, offset, addend, sym))
+        ++it;
+      continue;
+    case R_X86_64_DTPOFF32:
+    case R_X86_64_DTPOFF64:
+      sec.addReloc(
+          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_X86_64_TLSDESC_CALL:
+      // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
+      // rewrites for this relocation are identical.
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_X86_64_GOTPC32_TLSDESC:
+    case R_X86_64_CODE_4_GOTPC32_TLSDESC:
+      rs.handleTlsDesc(R_TLSDESC_PC, R_GOT_PC, type, offset, addend, sym);
+      continue;
+
+      // Misc relocations:
+    case R_X86_64_SIZE32:
+    case R_X86_64_SIZE64:
+      expr = R_SIZE;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  if (ctx.arg.branchToBranch)
+    llvm::stable_sort(sec.relocs(),
+                      [](auto &l, auto &r) { return l.offset < r.offset; });
+}
+
+void X86_64::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<X86_64, ELF64LE>(*this, sec);
+  else // ilp32
+    elf::scanSection1<X86_64, ELF32LE>(*this, sec);
 }
 
 void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
@@ -558,11 +859,6 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     }
     loc[-2] = 0x8b;
     write32le(loc, val);
-  } else {
-    // Convert call *x@tlsdesc(%rax) to xchg ax, ax.
-    assert(rel.type == R_X86_64_TLSDESC_CALL);
-    loc[0] = 0x66;
-    loc[1] = 0x90;
   }
 }
 
@@ -915,9 +1211,9 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_CODE_4_GOTPC32_TLSDESC:
   case R_X86_64_TLSDESC_CALL:
   case R_X86_64_TLSGD:
-    if (rel.expr == R_RELAX_TLS_GD_TO_LE) {
+    if (rel.expr == R_TPREL) {
       relaxTlsGdToLe(loc, rel, val);
-    } else if (rel.expr == R_RELAX_TLS_GD_TO_IE) {
+    } else if (rel.expr == R_GOT_PC) {
       relaxTlsGdToIe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);
@@ -925,7 +1221,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_TLSLD:
-    if (rel.expr == R_RELAX_TLS_LD_TO_LE) {
+    if (rel.expr == R_TPREL) {
       relaxTlsLdToLe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);
@@ -935,7 +1231,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_GOTTPOFF:
   case R_X86_64_CODE_4_GOTTPOFF:
   case R_X86_64_CODE_6_GOTTPOFF:
-    if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
+    if (rel.expr == R_TPREL) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);

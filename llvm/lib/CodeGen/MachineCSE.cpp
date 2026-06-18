@@ -136,9 +136,7 @@ class MachineCSELegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  MachineCSELegacy() : MachineFunctionPass(ID) {
-    initializeMachineCSELegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineCSELegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -519,7 +517,7 @@ void MachineCSEImpl::EnterScope(MachineBasicBlock *MBB) {
 
 void MachineCSEImpl::ExitScope(MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Exiting: " << MBB->getName() << '\n');
-  DenseMap<MachineBasicBlock*, ScopeType*>::iterator SI = ScopeMap.find(MBB);
+  auto SI = ScopeMap.find(MBB);
   assert(SI != ScopeMap.end());
   delete SI->second;
   ScopeMap.erase(SI);

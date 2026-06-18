@@ -283,3 +283,41 @@ func.func @test_forall_op_control_flow(%num_threads: index) {
   } {tag = "test_forall_op_control_flow"}
   return
 }
+
+func.func @test_for_op_control_flow() {
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c6 = arith.constant 6 : index
+  %c7 = arith.constant 7 : index
+
+  // Test case 1: Zero loop iterations.
+  // CHECK: test_for_op_control_flow_zero:
+  // CHECK:  region #0
+  // CHECK:   ^bb0 = dead
+  // CHECK: op_preds: (all) predecessors:
+  // CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %c1 {...} {tag = "test_for_op_control_flow_zero"}
+  scf.for %iv = %c5 to %c5 step %c1 {} {tag = "test_for_op_control_flow_zero"}
+
+  // Test case 2: One loop iteration.
+  // CHECK: test_for_op_control_flow_one:
+  // CHECK:  region #0
+  // CHECK:   ^bb0 = live
+  // CHECK: region_preds: (all) predecessors:
+  // CHECK:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {...} {tag = "test_for_op_control_flow_one"}
+  // CHECK: op_preds: (all) predecessors:
+  // CHECK:   scf.yield
+  scf.for %iv = %c5 to %c6 step %c1 {} {tag = "test_for_op_control_flow_one"}
+
+  // Test case 3: More than one loop iteration.
+  // CHECK: test_for_op_control_flow_multi:
+  // CHECK:  region #0
+  // CHECK:   ^bb0 = live
+  // CHECK: region_preds: (all) predecessors:
+  // CHECK:   scf.for %arg0 = %{{.*}} to %{{.*}} step %{{.*}} {...} {tag = "test_for_op_control_flow_multi"}
+  // CHECK:   scf.yield
+  // CHECK: op_preds: (all) predecessors:
+  // CHECK:   scf.yield
+  scf.for %iv = %c5 to %c7 step %c1 {} {tag = "test_for_op_control_flow_multi"}
+
+  return
+}

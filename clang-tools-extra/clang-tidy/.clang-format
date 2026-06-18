@@ -7,3 +7,4 @@ KeepEmptyLines:
 LineEnding: LF
 QualifierAlignment: Left
 RemoveBracesLLVM: true
+RemoveSemicolon: true

@@ -17,7 +17,7 @@ define void @memmove_p0_p0(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[6:7]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow35
@@ -165,7 +165,7 @@ define void @memmove_p0_p1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[6:7]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow37
@@ -315,7 +315,7 @@ define void @memmove_p0_p3(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[7:8]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v9, -1, v0, vcc_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[5:6]
-; CHECK-NEXT:    v_cmpx_ge_u32_e64 v2, v9
+; CHECK-NEXT:    v_cmpx_ge_u32_e32 v2, v9
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB2_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow39
@@ -457,7 +457,7 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[6:7]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow36
@@ -607,7 +607,7 @@ define void @memmove_p0_p5(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[7:8]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v9, -1, v0, vcc_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[5:6]
-; CHECK-NEXT:    v_cmpx_ge_u32_e64 v2, v9
+; CHECK-NEXT:    v_cmpx_ge_u32_e32 v2, v9
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB4_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow39
@@ -758,7 +758,7 @@ define void @memmove_p1_p0(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[6:7]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow37
@@ -904,7 +904,7 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[6:7]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow39
@@ -1113,7 +1113,7 @@ define void @memmove_p1_p4(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[6:7]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB8_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow38
@@ -1332,7 +1332,7 @@ define void @memmove_p3_p0(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    v_cndmask_b32_e32 v9, 0, v0, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[7:8]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[1:2], v[9:10]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[1:2], v[9:10]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB10_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow39
@@ -1536,7 +1536,7 @@ define void @memmove_p3_p3(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[4:5]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[6:7]
-; CHECK-NEXT:    v_cmpx_ge_u32_e64 v1, v0
+; CHECK-NEXT:    v_cmpx_ge_u32_e32 v1, v0
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB12_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow46
@@ -1799,7 +1799,7 @@ define void @memmove_p5_p0(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    v_cndmask_b32_e32 v9, 0, v0, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[7:8]
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[1:2], v[9:10]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[1:2], v[9:10]
 ; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB15_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow39
@@ -2142,7 +2142,7 @@ define void @memmove_p5_p5(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
 ; CHECK-NEXT:    v_cmp_ne_u64_e64 s4, 0, v[4:5]
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[6:7]
-; CHECK-NEXT:    v_cmpx_ge_u32_e64 v1, v0
+; CHECK-NEXT:    v_cmpx_ge_u32_e32 v1, v0
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_execnz .LBB19_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow46

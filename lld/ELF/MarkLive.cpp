@@ -30,6 +30,7 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <variant>
 #include <vector>
@@ -55,10 +56,9 @@ struct LiveReason {
 
 template <class ELFT, bool TrackWhyLive> class MarkLive {
 public:
-  MarkLive(Ctx &ctx, unsigned partition) : ctx(ctx), partition(partition) {}
+  MarkLive(Ctx &ctx) : ctx(ctx) {}
 
   void run();
-  void moveToMain();
   void printWhyLive(Symbol *s) const;
 
 private:
@@ -66,6 +66,7 @@ private:
                LiveReason reason);
   void markSymbol(Symbol *sym, StringRef reason);
   void mark();
+  void markParallel();
 
   template <class RelTy>
   void resolveReloc(InputSectionBase &sec, const RelTy &rel, bool fromFDE);
@@ -73,8 +74,6 @@ private:
   void scanEhFrameSection(EhInputSection &eh);
 
   Ctx &ctx;
-  // The index of the partition that we are currently processing.
-  unsigned partition;
 
   // A list of sections to visit.
   SmallVector<InputSection *, 0> queue;
@@ -124,7 +123,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
   } else {
     sym = &sec.file->getRelocTargetSym(rel);
   }
-  sym->used = true;
+  sym->setFlags(USED);
 
   LiveReason reason;
   if (TrackWhyLive) {
@@ -145,6 +144,11 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
         offset += rel.addend;
       else
         offset += getAddend<ELFT>(ctx, sec, rel);
+      // Skip out-of-bounds offsets to avoid an assertion failure in
+      // getSectionPiece.
+      if (auto *ms = dyn_cast<MergeInputSection>(relSec);
+          ms && offset >= ms->content().size())
+        return;
     }
 
     // fromFDE being true means this is referenced by a FDE in a .eh_frame
@@ -174,13 +178,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     return;
   }
 
-  if (auto *ss = dyn_cast<SharedSymbol>(sym)) {
-    if (!ss->isWeak()) {
-      cast<SharedFile>(ss->file)->isNeeded = true;
-      if (TrackWhyLive)
-        whyLive.try_emplace(sym, reason);
-    }
-  }
+  if (auto *ss = dyn_cast<SharedSymbol>(sym))
+    if (!ss->isWeak() && TrackWhyLive)
+      whyLive.try_emplace(sym, reason);
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym->getName()))
     enqueue(sec, /*offset=*/0, /*sym=*/nullptr, reason);
@@ -202,6 +202,9 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
 // LSDAs and personality functions if we found that they were unused.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
+  if (TrackWhyLive)
+    whyLive.try_emplace(&eh,
+                        LiveReason{std::nullopt, "exception handling frame"});
   ArrayRef<Relocation> rels = eh.rels;
   for (const EhSectionPiece &cie : eh.cies)
     if (cie.firstRelocation != unsigned(-1))
@@ -249,12 +252,9 @@ void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
   if (auto *ms = dyn_cast<MergeInputSection>(sec))
     ms->getSectionPiece(offset).live = true;
 
-  // Set Sec->Partition to the meet (i.e. the "minimum") of Partition and
-  // Sec->Partition in the following lattice: 1 < other < 0. If Sec->Partition
-  // doesn't change, we don't need to do anything.
-  if (sec->partition == 1 || sec->partition == partition)
+  if (sec->partition)
     return;
-  sec->partition = sec->partition ? 1 : partition;
+  sec->partition = 1;
 
   if (TrackWhyLive) {
     if (sym) {
@@ -349,14 +349,8 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->isExported && sym->partition == partition)
-      markSymbol(sym, "externally visible symbol; may interpose");
-
-  // If this isn't the main partition, that's all that we need to preserve.
-  if (partition != 1) {
-    mark();
-    return;
-  }
+    if (sym->isExported)
+      markSymbol(sym, "externally visible symbol");
 
   markSymbol(ctx.symtab->find(ctx.arg.entry), "entry point");
   markSymbol(ctx.symtab->find(ctx.arg.init), "initializer function");
@@ -443,16 +437,23 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
 
     for (Symbol *sym : ctx.symtab->getSymbols())
       handleSym(sym);
+    // Handle local symbols, skipping the symbol at index 0 and section
+    // symbols, which usually have empty names and technically not live. Note:
+    // a live section may lack an associated section symbol, making them
+    // unreliable liveness indicators.
     for (ELFFileBase *file : ctx.objectFiles)
       for (Symbol *sym : file->getSymbols())
-        if (sym->isLocal())
+        if (sym->isLocal() && sym->isDefined() && !sym->isSection())
           handleSym(sym);
   }
 }
 
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::mark() {
-  // Mark all reachable sections.
+  if constexpr (!TrackWhyLive) {
+    markParallel();
+    return;
+  }
   while (!queue.empty()) {
     InputSectionBase &sec = *queue.pop_back_val();
 
@@ -475,33 +476,95 @@ void MarkLive<ELFT, TrackWhyLive>::mark() {
   }
 }
 
-// Move the sections for some symbols to the main partition, specifically ifuncs
-// (because they can result in an IRELATIVE being added to the main partition's
-// GOT, which means that the ifunc must be available when the main partition is
-// loaded) and TLS symbols (because we only know how to correctly process TLS
-// relocations for the main partition).
-//
-// We also need to move sections whose names are C identifiers that are referred
-// to from __start_/__stop_ symbols because there will only be one set of
-// symbols for the whole program.
+// Helper function for markParallel. Walk all GC edges from sec, marking
+// everything that needs to be live. Call fn(target section, offset) for each
+// edge, which will mark the section live and handle further processing of edges
+// from that section.
+template <class ELFT, class Fn>
+static void processSectionEdges(
+    Ctx &ctx, InputSectionBase &sec,
+    const DenseMap<StringRef, SmallVector<InputSectionBase *, 0>>
+        &cNamedSections,
+    Fn fn) {
+  auto resolveEdge = [&](const auto &rel) {
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
+    if (!sym.hasFlag(USED))
+      sym.setFlags(USED);
+    if (auto *d = dyn_cast<Defined>(&sym)) {
+      if (auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section)) {
+        uint64_t offset = d->value;
+        if (d->isSection()) {
+          offset += getAddend<ELFT>(ctx, sec, rel);
+          if (auto *ms = dyn_cast<MergeInputSection>(relSec);
+              ms && offset >= ms->content().size())
+            return;
+        }
+        if (auto *ms = dyn_cast<MergeInputSection>(relSec)) {
+          auto &piece = ms->getSectionPiece(offset);
+          auto *word =
+              reinterpret_cast<std::atomic<uint32_t> *>(&piece.inputOff + 1);
+          constexpr uint32_t liveBit = sys::IsBigEndianHost ? (1U << 31) : 1U;
+          word->fetch_or(liveBit, std::memory_order_relaxed);
+        }
+        fn(relSec, offset);
+      }
+      return;
+    }
+    for (InputSectionBase *csec : cNamedSections.lookup(sym.getName()))
+      fn(csec, 0);
+  };
+  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+  for (const typename ELFT::Rel &rel : rels.rels)
+    resolveEdge(rel);
+  for (const typename ELFT::Rela &rel : rels.relas)
+    resolveEdge(rel);
+  for (const typename ELFT::Crel &rel : rels.crels)
+    resolveEdge(rel);
+  for (InputSectionBase *isec : sec.dependentSections)
+    fn(isec, 0);
+  if (sec.nextInSectionGroup)
+    fn(sec.nextInSectionGroup, 0);
+}
+
+// Parallel mark using level-synchronized BFS with depth-limited inline
+// recursion. Each parallelFor iteration processes a subtree up to depth 3
+// (DFS for cache locality), then queues deeper discoveries for the next level.
 template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::moveToMain() {
-  for (ELFFileBase *file : ctx.objectFiles)
-    for (Symbol *s : file->getSymbols())
-      if (auto *d = dyn_cast<Defined>(s))
-        if ((d->type == STT_GNU_IFUNC || d->type == STT_TLS) && d->section &&
-            d->section->isLive())
-          markSymbol(s, /*reason=*/{});
+void MarkLive<ELFT, TrackWhyLive>::markParallel() {
+  const size_t numThreads = parallel::getThreadCount();
+  auto visit = [&](InputSection *sec, int depth,
+                   SmallVector<InputSection *, 0> &localQueue,
+                   auto &self) -> void {
+    processSectionEdges<ELFT>(
+        ctx, *sec, cNamedSections,
+        [&](InputSectionBase *target, uint64_t offset) {
+          auto &part =
+              reinterpret_cast<std::atomic<uint8_t> &>(target->partition);
+          // Optimistic load-then-exchange avoids expensive atomic
+          // RMW on already-visited sections.
+          if (part.load(std::memory_order_relaxed) != 0 ||
+              part.exchange(1, std::memory_order_relaxed) != 0)
+            return;
+          if (auto *s = dyn_cast<InputSection>(target)) {
+            if (depth < 3)
+              self(s, depth + 1, localQueue, self);
+            else
+              localQueue.push_back(s);
+          }
+        });
+  };
 
-  for (InputSectionBase *sec : ctx.inputSections) {
-    if (!sec->isLive() || !isValidCIdentifier(sec->name))
-      continue;
-    if (ctx.symtab->find(("__start_" + sec->name).str()) ||
-        ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, /*reason=*/{});
+  while (!queue.empty()) {
+    auto queues =
+        std::make_unique<SmallVector<InputSection *, 0>[]>(numThreads);
+    parallelFor(0, queue.size(), [&](size_t i) {
+      const unsigned tid = parallel::getThreadIndex();
+      visit(queue[i], 0, queues[tid], visit);
+    });
+    queue.clear();
+    for (size_t t = 0; t < numThreads; ++t)
+      queue.append(std::move(queues[t]));
   }
-
-  mark();
 }
 
 // Before calling this function, Live bits are off for all
@@ -519,21 +582,22 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
     return;
   }
 
-  for (InputSectionBase *sec : ctx.inputSections)
-    sec->markDead();
+  parallelForEach(ctx.inputSections,
+                  [](InputSectionBase *sec) { sec->markDead(); });
 
   // Follow the graph to mark all live sections.
-  for (unsigned i = 1, e = ctx.partitions.size(); i <= e; ++i)
-    if (ctx.arg.whyLive.empty())
-      MarkLive<ELFT, false>(ctx, i).run();
-    else
-      MarkLive<ELFT, true>(ctx, i).run();
+  if (ctx.arg.whyLive.empty())
+    MarkLive<ELFT, false>(ctx).run();
+  else
+    MarkLive<ELFT, true>(ctx).run();
 
-  // If we have multiple partitions, some sections need to live in the main
-  // partition even if they were allocated to a loadable partition. Move them
-  // there now.
-  if (ctx.partitions.size() != 1)
-    MarkLive<ELFT, false>(ctx, 1).moveToMain();
+  // Determine which DSOs are needed. A DSO is needed if a non-weak SharedSymbol
+  // is used from a live section.
+  parallelForEach(ctx.symtab->getSymbols(), [](Symbol *sym) {
+    if (auto *ss = dyn_cast<SharedSymbol>(sym))
+      if (ss->hasFlag(USED) && !ss->isWeak())
+        cast<SharedFile>(ss->file)->isNeeded = true;
+  });
 
   // Report garbage-collected sections.
   if (ctx.arg.printGcSections.empty())

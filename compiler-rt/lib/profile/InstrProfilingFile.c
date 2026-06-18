@@ -41,6 +41,23 @@
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
+/* Weak so non-HIP programs do not force InstrProfilingPlatformROCm.o (and its
+ * transitive sanitizer_common / interception dependencies) into the host link
+ * out of libclang_rt.profile.a. HIP programs emit strong references to other
+ * ROCm-runtime symbols (e.g. __llvm_profile_offload_register_shadow_variable)
+ * that pull in the strong definition.
+ * No COMPILER_RT_VISIBILITY: a hidden weak-undefined symbol is non-preemptible
+ * and the address test at the call site would fold to true.
+ * Windows: __declspec(selectany) is data-only, and the ROCm interceptor path
+ * is not used there, so keep the original strong extern. */
+#if COMPILER_RT_BUILD_PROFILE_ROCM
+#if defined(_WIN32)
+extern int __llvm_profile_hip_collect_device_data(void);
+#else
+__attribute__((weak)) int __llvm_profile_hip_collect_device_data(void);
+#endif
+#endif
+
 /* From where is profile name specified.
  * The order the enumerators define their
  * precedence. Re-order them may lead to
@@ -1198,6 +1215,19 @@ int __llvm_profile_write_file(void) {
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
 
+  /* On non-Windows the declaration is weak: only invoked when
+   * InstrProfilingPlatformROCm.o is in the link, which happens when the program
+   * references other ROCm-runtime symbols (HIP-with-PGO). Warning on failure is
+   * handled inside the callee. */
+#if COMPILER_RT_BUILD_PROFILE_ROCM
+#if defined(_WIN32)
+  (void)__llvm_profile_hip_collect_device_data();
+#else
+  if (&__llvm_profile_hip_collect_device_data)
+    (void)__llvm_profile_hip_collect_device_data();
+#endif
+#endif
+
   // Restore SIGKILL.
   if (PDeathSig == 1)
     lprofRestoreSigKill();
@@ -1353,7 +1383,7 @@ int __llvm_write_custom_profile(const char *Target,
   TargetFilename[FilenameLength + 1 + TargetLength] = 0;
 
   /* Open and truncate target-specific PGO file */
-  FILE *OutputFile = fopen(TargetFilename, "w");
+  FILE *OutputFile = fopen(TargetFilename, "wb");
   setProfileFile(OutputFile);
 
   if (!OutputFile) {
@@ -1374,11 +1404,10 @@ int __llvm_write_custom_profile(const char *Target,
   if (VersionOverride)
     Version = *VersionOverride;
 
-  /* Write custom data to the file */
-  ReturnValue =
-      lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
-                         CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
-                         NULL, NULL, NULL, NamesBegin, NamesEnd, 0, Version);
+  ReturnValue = lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd,
+                                   CountersBegin, CountersEnd, NULL, NULL,
+                                   lprofGetVPDataReader(), NamesBegin, NamesEnd,
+                                   NULL, NULL, NULL, NULL, 0, Version);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.

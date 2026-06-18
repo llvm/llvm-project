@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace llvm;
@@ -68,12 +69,14 @@ public:
 
   // Get the delay type for a MachineInstr.
   DelayType getDelayType(const MachineInstr &MI) {
-    if (SIInstrInfo::isTRANS(MI))
+    // Non-F64 TRANS instructions use a separate delay type.
+    if (SIInstrInfo::isTRANS(MI) &&
+        !AMDGPU::isDPMACCInstruction(MI.getOpcode()))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (AMDGPU::isGFX1250(*ST) && SII->isXDLWMMA(MI))
+    if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI))
+    if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
@@ -237,22 +240,13 @@ public:
     // Advance the delay info for each regunit, erasing any that are no longer
     // useful.
     void advance(DelayType Type, unsigned Cycles) {
-      iterator Next;
-      for (auto I = begin(), E = end(); I != E; I = Next) {
-        Next = std::next(I);
-        if (I->second.advance(Type, Cycles))
-          erase(I);
-      }
+      remove_if([&](auto &P) { return P.second.advance(Type, Cycles); });
     }
 
     void advanceByVALUNum(unsigned VALUNum) {
-      iterator Next;
-      for (auto I = begin(), E = end(); I != E; I = Next) {
-        Next = std::next(I);
-        if (I->second.VALUNum >= VALUNum && I->second.VALUCycles > 0) {
-          erase(I);
-        }
-      }
+      remove_if([&](auto &P) {
+        return P.second.VALUNum >= VALUNum && P.second.VALUCycles > 0;
+      });
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -325,6 +319,13 @@ public:
       for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
                 E = MachineBasicBlock::instr_iterator(MI);
            ++I != E;) {
+        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+          // It is not deterministic whether the skip count counts
+          // S_SET_VGPR_MSB instructions or not, so do not include them in a
+          // skip region.
+          Skip = 6;
+          break;
+        }
         if (!I->isBundle() && !I->isMetaInstruction())
           ++Skip;
       }
@@ -409,7 +410,7 @@ public:
           }
         }
 
-        if (SII->isVALU(MI.getOpcode())) {
+        if (SII->isVALU(MI.getOpcode(), /*AllowLDSDMA=*/true)) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {
@@ -464,6 +465,11 @@ public:
 
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasDelayAlu())
+      return false;
+
+    SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+
+    if (MFI.getMaxWavesPerEU() == 1)
       return false;
 
     SII = ST->getInstrInfo();

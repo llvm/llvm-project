@@ -77,11 +77,11 @@ FakeStack* FakeStack::Create(uptr stack_size_log) {
   VReport(1,
           "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
           "mmapped %zdK, noreserve=%d, true_start: %p, start of first frame: "
-          "0x%zx\n",
+          "%p\n",
           GetCurrentTidOrInvalid(), (void*)p,
           (void*)(p + FakeStack::RequiredSize(stack_size_log)), stack_size_log,
           size >> 10, flags()->uar_noreserve, res->true_start,
-          res->GetFrame(stack_size_log, /*class_id*/ 0, /*pos*/ 0));
+          (void*)res->GetFrame(stack_size_log, /*class_id*/ 0, /*pos*/ 0));
   return res;
 }
 

@@ -151,11 +151,11 @@ declare void @use(i64, i32)
 
 define void @logical_and_select_inverted(i1 %cmp, ptr %start, ptr %end) {
 ; CHECK: LV: Checking a loop in 'logical_and_select_inverted'
-; CHECK: Cost of 6 for VF 2: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
-; CHECK: Cost of 12 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
-; CHECK: Cost of 24 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
-; CHECK: Cost of 48 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
-; CHECK: LV: Selecting VF: 1.
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: Cost of 1 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: Cost of 1 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: LV: Selecting VF: 16.
 
 entry:
   br label %loop
@@ -183,11 +183,11 @@ exit:
 
 define void @logical_or_select_inverted(i1 %cmp, ptr %start, ptr %end) {
 ; CHECK: LV: Checking a loop in 'logical_or_select_inverted'
-; CHECK: Cost of 6 for VF 2: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
-; CHECK: Cost of 12 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
-; CHECK: Cost of 24 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
-; CHECK: Cost of 48 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
-; CHECK: LV: Selecting VF: 1.
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: Cost of 1 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: Cost of 1 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: LV: Selecting VF: 16.
 
 entry:
   br label %loop

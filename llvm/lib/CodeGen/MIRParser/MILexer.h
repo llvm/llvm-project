@@ -99,6 +99,10 @@ struct MIToken {
     kw_cfi_window_save,
     kw_cfi_aarch64_negate_ra_sign_state,
     kw_cfi_aarch64_negate_ra_sign_state_with_pc,
+    kw_cfi_llvm_register_pair,
+    kw_cfi_llvm_vector_registers,
+    kw_cfi_llvm_vector_offset,
+    kw_cfi_llvm_vector_register_mask,
     kw_blockaddress,
     kw_intrinsic,
     kw_target_index,
@@ -147,6 +151,7 @@ struct MIToken {
     kw_machine_block_address_taken,
     kw_call_frame_size,
     kw_noconvergent,
+    kw_mmra,
 
     // Metadata types.
     kw_distinct,

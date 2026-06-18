@@ -1,4 +1,4 @@
-//===-- X86FixupInstTunings.cpp - replace instructions -----------===//
+//===-- X86FixupInstTuning.cpp - replace instructions -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +23,7 @@
 
 #include "X86.h"
 #include "X86InstrInfo.h"
+#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -49,6 +50,7 @@ private:
   const X86InstrInfo *TII = nullptr;
   const X86Subtarget *ST = nullptr;
   const MCSchedModel *SM = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
 };
 
 class X86FixupInstTuningLegacy : public MachineFunctionPass {
@@ -253,12 +255,38 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
+  // If we're permuting the lower halves of the 256-bit registers, use a
+  // subvector insertion instead.
+  auto ProcessVPERM2x128ToVINSERT128 = [&](unsigned InsertOpc) -> bool {
+    unsigned PermImm = MI.getOperand(NumOperands - 1).getImm();
+    // TODO: Handle 0x00/0x02/0x22 when we have test coverage.
+    if (PermImm != 0x20 || !NewOpcPreferable(InsertOpc))
+      return false;
+    Register RHSRegYMM = MI.getOperand(NumOperands - 2).getReg();
+    Register RHSRegXMM = TRI->getSubReg(RHSRegYMM, X86::sub_xmm);
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(InsertOpc));
+      MI.removeOperand(NumOperands - 1);
+      MI.removeOperand(NumOperands - 2);
+      // Add the XMM subregister operand.
+      MI.addOperand(MachineOperand::CreateReg(RHSRegXMM, /*isDef=*/false,
+                                              /*isImp=*/false,
+                                              /*isKill=*/false));
+      // Add the immediate (1 = insert into high 128-bits).
+      MI.addOperand(MachineOperand::CreateImm(1));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
   auto ProcessBLENDWToBLENDD = [&](unsigned MovOpc, unsigned NumElts) -> bool {
     if (!ST->hasAVX2() || !NewOpcPreferable(MovOpc))
       return false;
     // Convert to VPBLENDD if scaling the VPBLENDW mask down/up loses no bits.
     APInt MaskW =
-        APInt(8, MI.getOperand(NumOperands - 1).getImm(), /*IsSigned=*/false);
+        APInt(8, MI.getOperand(NumOperands - 1).getImm(), /*IsSigned=*/false,
+              /*implicitTrunc=*/true);
     APInt MaskD = APIntOps::ScaleBitMask(MaskW, 4, /*MatchAllBits=*/true);
     if (MaskW != APIntOps::ScaleBitMask(MaskD, 8, /*MatchAllBits=*/true))
       return false;
@@ -301,7 +329,41 @@ bool X86FixupInstTuningImpl::processInstruction(
       MI.addOperand(MI.getOperand(NumOperands - 2));
     }
     LLVM_DEBUG(dbgs() << "     With: " << MI);
-    return false;
+    return true;
+  };
+
+  // `vpermq ymm, ymm, 0x44` -> `vinserti128 ymm, ymm, xmm, 1`
+  // `vpermpd ymm, ymm, 0x44` -> `vinsertf128 ymm, ymm, xmm, 1`
+  // When the immediate is 0x44, VPERMQ/VPERMPD duplicates the lower 128-bit
+  // lane to both lanes. 0x44 = 0b01_00_01_00 means qwords[3:0] = {src[1],
+  // src[0], src[1], src[0]} This is equivalent to inserting the lower 128-bits
+  // into the upper 128-bit position.
+  auto ProcessVPERMQToVINSERT128 = [&](unsigned NewOpc) -> bool {
+    if (MI.getOperand(NumOperands - 1).getImm() != 0x44)
+      return false;
+    if (!NewOpcPreferable(NewOpc, /*ReplaceInTie*/ false))
+      return false;
+
+    // Get the XMM subregister of the source YMM register.
+    Register SrcReg = MI.getOperand(1).getReg();
+    Register XmmReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
+
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      // Transform: VPERMQ $dst, $src, $0x44
+      // Into:      VINSERTI128 $dst, $src, $xmm_src, $1
+      MI.setDesc(TII->get(NewOpc));
+      // Remove the immediate operand.
+      MI.removeOperand(NumOperands - 1);
+      // Add the XMM subregister operand.
+      MI.addOperand(MachineOperand::CreateReg(XmmReg, /*isDef=*/false,
+                                              /*isImp=*/false,
+                                              /*isKill=*/false));
+      // Add the immediate (1 = insert into high 128-bits).
+      MI.addOperand(MachineOperand::CreateImm(1));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
   };
 
   switch (Opc) {
@@ -322,6 +384,11 @@ bool X86FixupInstTuningImpl::processInstruction(
     // TODO: Add X86::VPBLENDWYrri handling
     // TODO: Add X86::VPBLENDWYrmi handling
     return ProcessBLENDWToBLENDD(X86::VPBLENDDrri, 4);
+
+  case X86::VPERM2F128rri:
+    return ProcessVPERM2x128ToVINSERT128(X86::VINSERTF128rri);
+  case X86::VPERM2I128rri:
+    return ProcessVPERM2x128ToVINSERT128(X86::VINSERTI128rri);
 
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);
@@ -392,7 +459,10 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessVPERMILPSmi(X86::VPSHUFDZ256mik);
   case X86::VPERMILPSZmik:
     return ProcessVPERMILPSmi(X86::VPSHUFDZmik);
-
+  case X86::VPERMQYri:
+    return ProcessVPERMQToVINSERT128(X86::VINSERTI128rri);
+  case X86::VPERMPDYri:
+    return ProcessVPERMQToVINSERT128(X86::VINSERTF128rri);
   case X86::MOVLHPSrr:
   case X86::UNPCKLPDrr:
     return ProcessUNPCKLPDrr(X86::PUNPCKLQDQrr, X86::SHUFPDrri);
@@ -638,6 +708,7 @@ bool X86FixupInstTuningImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
   TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
   SM = &ST->getSchedModel();
 
   for (MachineBasicBlock &MBB : MF) {

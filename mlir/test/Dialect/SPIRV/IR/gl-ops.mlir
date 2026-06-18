@@ -320,6 +320,32 @@ func.func @atanhvec(%arg0 : vector<3xf16>) -> () {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Atan2
+//===----------------------------------------------------------------------===//
+
+func.func @atan2(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.GL.Atan2 {{%.*}}, {{%.*}} : f32
+  %2 = spirv.GL.Atan2 %arg0, %arg1 : f32
+  return
+}
+
+func.func @atan2vec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Atan2 {{%.*}}, {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Atan2 %arg0, %arg1 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @atan2_error(%arg0 : i32, %arg1 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
+  %2 = spirv.GL.Atan2 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Pow
 //===----------------------------------------------------------------------===//
 
@@ -366,6 +392,24 @@ func.func @round_even(%arg0 : f32) -> () {
 func.func @round_even_vec(%arg0 : vector<3xf16>) -> () {
   // CHECK: spirv.GL.RoundEven {{%.*}} : vector<3xf16>
   %2 = spirv.GL.RoundEven %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Trunc
+//===----------------------------------------------------------------------===//
+
+func.func @trunc(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Trunc {{%.*}} : f32
+  %2 = spirv.GL.Trunc %arg0 : f32
+  return
+}
+
+func.func @trunc_vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Trunc {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Trunc %arg0 : vector<3xf16>
   return
 }
 
@@ -736,7 +780,7 @@ func.func @cross(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 // -----
 
 func.func @cross_invalid_type(%arg0 : vector<3xi32>, %arg1 : vector<3xi32>) {
-  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xi32>'}}
   %0 = spirv.GL.Cross %arg0, %arg1 : vector<3xi32>
   return
 }
@@ -1126,7 +1170,7 @@ func.func @lengthvec(%arg0 : vector<3xf32>) -> () {
 // -----
 
 func.func @length_i32_in(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'i32'}}
   %0 = spirv.GL.Length %arg0 : i32 -> f32
   return
 }
@@ -1142,7 +1186,7 @@ func.func @length_f16_in(%arg0 : f16) -> () {
 // -----
 
 func.func @length_i32vec_in(%arg0 : vector<3xi32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xi32>'}}
   %0 = spirv.GL.Length %arg0 : vector<3xi32> -> f32
   return
 }
@@ -1168,5 +1212,57 @@ func.func @length_i32_out(%arg0 : vector<3xf32>) -> () {
 func.func @length_vec_out(%arg0 : vector<3xf32>) -> () {
   // expected-error @+1 {{op result #0 must be 16/32/64-bit float, but got 'vector<3xf32>'}}
   %0 = spirv.GL.Length %arg0 : vector<3xf32> -> vector<3xf32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Radians
+//===----------------------------------------------------------------------===//
+
+func.func @radians(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Radians {{%.*}} : f32
+  %2 = spirv.GL.Radians %arg0 : f32
+  return
+}
+
+func.func @radiansvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Radians {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Radians %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @radians(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
+  %2 = spirv.GL.Radians %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Degrees
+//===----------------------------------------------------------------------===//
+
+func.func @degrees(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Degrees {{%.*}} : f32
+  %2 = spirv.GL.Degrees %arg0 : f32
+  return
+}
+
+func.func @degreesvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Degrees {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Degrees %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @degrees(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
+  %2 = spirv.GL.Degrees %arg0 : i32
   return
 }

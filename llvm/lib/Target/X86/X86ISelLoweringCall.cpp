@@ -126,7 +126,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return MVT::i32;
 
   if (isTypeLegal(MVT::f16)) {
-    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    if (VT.isVectorOf(MVT::bf16))
       return getRegisterTypeForCallingConv(
           Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -165,8 +165,7 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(
         Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -177,8 +176,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Break wide or odd vXi1 vectors into scalars to match avx2 behavior.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      Subtarget.hasAVX512() &&
+  if (VT.isVectorOf(MVT::i1) && Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() == 64 && !Subtarget.hasBWI()) ||
        VT.getVectorNumElements() > 64)) {
@@ -198,8 +196,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -558,7 +555,9 @@ static Constant* SegmentOffset(IRBuilderBase &IRB,
       IRB.getPtrTy(AddressSpace));
 }
 
-Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
+Value *
+X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
+                                   const LibcallLoweringInfo &Libcalls) const {
   // glibc, bionic, and Fuchsia have a special slot for the stack guard in
   // tcbhead_t; use it instead of the usual global variable (see
   // sysdeps/{i386,x86_64}/nptl/tls.h)
@@ -602,16 +601,17 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
     return SegmentOffset(IRB, Offset, AddressSpace);
   }
-  return TargetLowering::getIRStackGuard(IRB);
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
-void X86TargetLowering::insertSSPDeclarations(Module &M) const {
+void X86TargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT provides functionalities for stack protection.
@@ -638,11 +638,11 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   if ((GuardMode == "tls" || GuardMode.empty()) &&
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
-Value *
-X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+Value *X86TargetLowering::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
   // definition of TLS_SLOT_SAFESTACK in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
@@ -659,7 +659,7 @@ X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
     return SegmentOffset(IRB, 0x18, getAddressSpace());
   }
 
-  return TargetLowering::getSafeStackPointerLocation(IRB);
+  return TargetLowering::getSafeStackPointerLocation(IRB, Libcalls);
 }
 
 //===----------------------------------------------------------------------===//
@@ -782,7 +782,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = lowerMasksToReg(ValToCopy, VA.getLocVT(), dl, DAG);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), ValToCopy);
@@ -943,10 +943,10 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  X86ISD::NodeType opcode = X86ISD::RET_GLUE;
+  unsigned RetOpcode = X86ISD::RET_GLUE;
   if (CallConv == CallingConv::X86_INTR)
-    opcode = X86ISD::IRET;
-  return DAG.getNode(opcode, dl, MVT::Other, RetOps);
+    RetOpcode = X86ISD::IRET;
+  return DAG.getNode(RetOpcode, dl, MVT::Other, RetOps);
 }
 
 bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
@@ -1205,50 +1205,31 @@ SDValue X86TargetLowering::LowerCallResult(
   return Chain;
 }
 
-//===----------------------------------------------------------------------===//
-//                C & StdCall & Fast Calling Convention implementation
-//===----------------------------------------------------------------------===//
-//  StdCall calling convention seems to be standard for many Windows' API
-//  routines and around. It differs from C calling convention just a little:
-//  callee should clean up the stack, not caller. Symbols should be also
-//  decorated in some fancy way :) It doesn't support any vector arguments.
-//  For info on fast calling convention see Fast Calling Convention (tail call)
-//  implementation LowerX86_32FastCCCallTo.
-
 /// Determines whether Args, either a set of outgoing arguments to a call, or a
 /// set of incoming args of a call, contains an sret pointer that the callee
-/// pops
+/// pops. This happens on most x86-32, System V platforms, unless register
+/// parameters are in use (-mregparm=1+, regcallcc, etc).
 template <typename T>
 static bool hasCalleePopSRet(const SmallVectorImpl<T> &Args,
+                             const SmallVectorImpl<CCValAssign> &ArgLocs,
                              const X86Subtarget &Subtarget) {
   // Not C++20 (yet), so no concepts available.
   static_assert(std::is_same_v<T, ISD::OutputArg> ||
                     std::is_same_v<T, ISD::InputArg>,
                 "requires ISD::OutputArg or ISD::InputArg");
 
-  // Only 32-bit pops the sret.  It's a 64-bit world these days, so early-out
-  // for most compilations.
-  if (!Subtarget.is32Bit())
+  // Popping the sret pointer only happens on x86-32 System V ABI platforms
+  // (Linux, Cygwin, BSDs, Mac, etc). That excludes Windows-minus-Cygwin and
+  // MCU.
+  const Triple &TT = Subtarget.getTargetTriple();
+  if (!TT.isX86_32() || TT.isOSMSVCRT() || TT.isOSIAMCU())
     return false;
 
-  if (Args.empty())
-    return false;
-
-  // Most calls do not have an sret argument, check the arg next.
-  const ISD::ArgFlagsTy &Flags = Args[0].Flags;
-  if (!Flags.isSRet() || Flags.isInReg())
-    return false;
-
-  // The MSVCabi does not pop the sret.
-  if (Subtarget.getTargetTriple().isOSMSVCRT())
-    return false;
-
-  // MCUs don't pop the sret
-  if (Subtarget.isTargetMCU())
-    return false;
-
-  // Callee pops argument
-  return true;
+  // Check if the first argument is marked sret and if it is passed in memory.
+  bool IsSRetInMem = false;
+  if (!Args.empty())
+    IsSRetInMem = Args.front().Flags.isSRet() && ArgLocs.front().isMemLoc();
+  return IsSRetInMem;
 }
 
 /// Make a copy of an aggregate at address specified by "Src" to address
@@ -1258,11 +1239,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getIntPtrConstant(Flags.getByValSize(), dl);
-
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile*/ false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -1705,6 +1686,19 @@ SDValue X86TargetLowering::LowerFormalArguments(
   bool Is64Bit = Subtarget.is64Bit();
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
 
+  // On x86_64 with x87 disabled, x86_fp80 cannot be handled: the type would
+  // need to be returned/passed in x87 registers (FP0/FP1) which are
+  // unavailable. Emit a clear diagnostic instead of crashing later with
+  // "Cannot select: build_pair".
+  if (Is64Bit && !Subtarget.hasX87()) {
+    if (F.getReturnType()->isX86_FP80Ty() ||
+        any_of(F.args(), [](const Argument &Arg) {
+          return Arg.getType()->isX86_FP80Ty();
+        }))
+      reportFatalUsageError(
+          "cannot use x86_fp80 type with x87 disabled on x86_64 target");
+  }
+
   assert(
       !(IsVarArg && canGuaranteeTCO(CallConv)) &&
       "Var args not supported with calling conv' regcall, fastcc, ghc or hipe");
@@ -1894,7 +1888,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   } else {
     FuncInfo->setBytesToPopOnReturn(0); // Callee pops nothing.
     // If this is an sret function, the return should pop the hidden pointer.
-    if (!canGuaranteeTCO(CallConv) && hasCalleePopSRet(Ins, Subtarget))
+    if (hasCalleePopSRet(Ins, ArgLocs, Subtarget))
       FuncInfo->setBytesToPopOnReturn(4);
   }
 
@@ -2073,8 +2067,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
   bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
       CallConv, MF.getTarget().Options.GuaranteedTailCallOpt);
-  bool IsCalleePopSRet =
-      !ShouldGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
@@ -2096,8 +2088,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("X86 interrupts may not be called directly");
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   if (IsIndirectCall && !IsWin64 &&
       M->getModuleFlag("import-call-optimization"))
@@ -2121,24 +2112,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
   }
 
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  bool IsSibcall = false;
+  // We cannot guarantee TCO for mismatched calling conventions.
   if (isTailCall && ShouldGuaranteeTCO) {
-    // If we need to guarantee TCO for a non-musttail call, we just need to make
-    // sure the conventions match. If a tail call uses one of the supported TCO
-    // conventions and the caller and callee match, we can tail call any
-    // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    IsSibcall = IsMustTail;
-  } else if (isTailCall) {
-    // Check if this tail call is a "sibling" call, which is loosely defined to
-    // be a tail call that doesn't require heroics like moving the return
-    // address or swapping byval arguments. We treat some musttail calls as
-    // sibling calls to avoid unnecessary argument copies.
-    IsSibcall =
-        isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs, IsCalleePopSRet);
-    isTailCall = IsSibcall || IsMustTail;
+  }
+
+  // Check if this tail call is a "sibling" call, which is loosely defined to
+  // be a tail call that doesn't require heroics like moving the return
+  // address or swapping byval arguments. We treat some musttail calls as
+  // sibling calls to avoid unnecessary argument copies.
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool IsSibcall = false;
+  if (isTailCall) {
+    IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
+    isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
   }
 
   if (isTailCall)
@@ -2244,6 +2232,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         SDValue CopyChain =
             CreateCopyOfByValArgument(Src, Temp, Chain, Flags, DAG, dl);
         ByValCopyChains.push_back(CopyChain);
+        ByValTemporaries[ArgIdx] = Temp;
       }
     }
     if (!ByValCopyChains.empty())
@@ -2403,12 +2392,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
-    // GOT pointer (except regcall).
+    // GOT pointer.
     if (!isTailCall) {
-      // Indirect call with RegCall calling convertion may use up all the
-      // general registers, so it is not suitable to bind EBX reister for
-      // GOT address, just let register allocator handle it.
-      if (CallConv != CallingConv::X86_RegCall)
+      // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
+      // EBX. Indirect calls through a register or an absolute address do not
+      // go through the PLT and do not need EBX to hold the GOT base.
+      if ((Callee->getOpcode() == ISD::GlobalAddress ||
+           Callee->getOpcode() == ISD::ExternalSymbol))
         RegsToPass.push_back(std::make_pair(
           Register(X86::EBX), DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                                           getPointerTy(DAG.getDataLayout()))));
@@ -2735,12 +2725,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop = 0; // Callee pops nothing.
   if (X86::isCalleePop(CallConv, Is64Bit, isVarArg,
-                       DAG.getTarget().Options.GuaranteedTailCallOpt))
+                       DAG.getTarget().Options.GuaranteedTailCallOpt)) {
     NumBytesForCalleeToPop = NumBytes;    // Callee pops everything
-  else if (!canGuaranteeTCO(CallConv) && IsCalleePopSRet)
+  } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget)) {
     // If this call passes a struct-return pointer, the callee
     // pops that struct pointer.
     NumBytesForCalleeToPop = 4;
+  }
 
   // Returns a glue for retval copy to use.
   if (!IsSibcall) {
@@ -2947,7 +2938,7 @@ mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
 /// emission in all cases.
 bool X86TargetLowering::isEligibleForSiblingCallOpt(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
-    SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
+    SmallVectorImpl<CCValAssign> &ArgLocs) const {
   SelectionDAG &DAG = CLI.DAG;
   const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
@@ -3012,7 +3003,7 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
     // sret. Condition #b is harder to determine.
     if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
       return false;
-  } else if (IsCalleePopSRet)
+  } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget))
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't
     // expect that.
     return false;

@@ -30,8 +30,8 @@ Expected<ValidationResult> cas::validateOnDiskUnifiedCASDatabasesIfNeeded(
 #if LLVM_ENABLE_ONDISK_CAS
   return ondisk::UnifiedOnDiskCache::validateIfNeeded(
       Path, builtin::BuiltinCASContext::getHashName(),
-      sizeof(builtin::HashType), CheckHash, AllowRecovery, ForceValidation,
-      LLVMCasBinary);
+      sizeof(builtin::HashType), CheckHash, builtin::hashingFunc, AllowRecovery,
+      ForceValidation, LLVMCasBinary);
 #else
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 #endif

@@ -488,6 +488,30 @@ TEST_F(OpenACCUtilsTest, getVariableNameFromCopyin) {
   EXPECT_EQ(varName, name);
 }
 
+TEST_F(OpenACCUtilsTest, getVariableNameConstantInt) {
+  // Create a constant integer value
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(42));
+
+  Value constVal = constOp->getResult();
+
+  // Test that getVariableName returns the constant value as a string
+  std::string varName = getVariableName(constVal);
+  EXPECT_EQ(varName, "42");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameNegativeConstantInt) {
+  // Create a negative constant integer value
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(-123));
+
+  Value constVal = constOp->getResult();
+
+  // Test that getVariableName returns the negative constant value as a string
+  std::string varName = getVariableName(constVal);
+  EXPECT_EQ(varName, "-123");
+}
+
 //===----------------------------------------------------------------------===//
 // getRecipeName Tests
 //===----------------------------------------------------------------------===//
@@ -1374,6 +1398,33 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
 // isDeviceValue Tests
 //===----------------------------------------------------------------------===//
 
+namespace {
+static Value memrefViewFromBlockArgWithDeclare(OpBuilder &builder, Location loc,
+                                               MLIRContext *ctx,
+                                               DataClause clause,
+                                               ModuleOp module,
+                                               StringRef funcName) {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(module.getBody());
+
+  auto i8BufTy = MemRefType::get({40}, builder.getI8Type());
+  auto viewTy = MemRefType::get({10}, builder.getI32Type());
+  auto funcType = builder.getFunctionType({i8BufTy}, {});
+  func::FuncOp funcOp = func::FuncOp::create(builder, loc, funcName, funcType);
+  Block *entry = funcOp.addEntryBlock();
+
+  builder.setInsertionPointToStart(entry);
+  Value buf = entry->getArgument(0);
+  Value c0 = arith::ConstantIndexOp::create(builder, loc, 0);
+  memref::ViewOp viewOp =
+      memref::ViewOp::create(builder, loc, viewTy, buf, c0, ValueRange{});
+  viewOp->setAttr(getDeclareAttrName(),
+                  DeclareAttr::get(ctx, DataClauseAttr::get(ctx, clause)));
+  func::ReturnOp::create(builder, loc);
+  return viewOp.getResult();
+}
+} // namespace
+
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefGlobalAddressSpace) {
   // Test that a memref with GPU global address space is considered device data
   auto gpuAddressSpace =
@@ -1498,6 +1549,26 @@ TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithoutGPUAddressSpace) {
   Value val = getGlobalOp->getResult();
 
   // Should return false since the global has no GPU address space
+  EXPECT_FALSE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareDeviceptr) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+  Value val = memrefViewFromBlockArgWithDeclare(
+      b, loc, &context, DataClause::acc_deviceptr, module.get(),
+      "test_memref_view_declare_devptr");
+  EXPECT_TRUE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareNonDeviceptr) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+  Value val = memrefViewFromBlockArgWithDeclare(
+      b, loc, &context, DataClause::acc_copyin, module.get(),
+      "test_memref_view_declare_copyin");
   EXPECT_FALSE(isDeviceValue(val));
 }
 

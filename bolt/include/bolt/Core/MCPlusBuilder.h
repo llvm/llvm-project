@@ -138,10 +138,8 @@ private:
 
   MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
     for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
-      if (Iter->isInst()) {
-        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+      if (MCPlus::isAnnotationSentinel(*Iter))
         return Iter;
-      }
     }
     return Inst.end();
   }
@@ -545,6 +543,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                                  MCContext *Ctx) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
   virtual unsigned getShortBranchOpcode(unsigned Opcode) const {
@@ -858,12 +861,7 @@ public:
     return false;
   }
 
-  virtual bool isLDRWl(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
-  virtual bool isLDRXl(const MCInst &Inst) const {
+  virtual bool isLoadLiteralGPR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1590,13 +1588,18 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Similar to getDefaultDefIn
+  /// Registers which may contain a meaningful value after a function returns.
   virtual void getDefaultLiveOut(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
   /// Change \p Regs with a bitmask with all general purpose regs
   virtual void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Remove non scavengeable special registers from \p Regs
+  virtual void removeNonScavengeableRegs(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1747,6 +1750,12 @@ public:
     return false;
   }
 
+  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  virtual bool isShortRangeBranch(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.
@@ -1784,6 +1793,26 @@ public:
   }
 
   virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                        MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *Symbol,
+                                     MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                                   BinaryFunction *TgtFunction,
+                                   BinaryBasicBlock *TgtBB, MCInst &Call) {
     llvm_unreachable("not implemented");
   }
 
@@ -1854,6 +1883,14 @@ public:
   virtual bool matchAbsLongVeneer(const BinaryFunction &BF,
                                   uint64_t &TargetAddress) const {
     llvm_unreachable("not implemented");
+  }
+
+  /// Match Cortex-A53 erratum 843419 workaround veneer. Such veneers have
+  /// exactly one BB with two instructions: a load/store and an unconditional
+  /// branch back to the call site. Returns true if BF matches this pattern
+  /// (name e843419* or __CortexA53843419_*, 2-instruction body).
+  virtual bool matchE843419Veneer(const BinaryFunction &BF) const {
+    return false;
   }
 
   virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
@@ -2378,7 +2415,7 @@ public:
 
   virtual InstructionListType
   createInstrumentedIndirectCall(MCInst &&CallInst, MCSymbol *HandlerFuncAddr,
-                                 int CallSiteID, MCContext *Ctx) {
+                                 size_t CallSiteID, MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }

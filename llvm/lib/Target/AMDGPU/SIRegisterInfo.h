@@ -80,6 +80,8 @@ public:
     return SpillSGPRToVGPR;
   }
 
+  bool isCFISavedRegsSpillEnabled() const;
+
   /// Return the largest available SGPR aligned to \p Align for the register
   /// class \p RC.
   MCRegister getAlignedHighSGPRForRC(const MachineFunction &MF,
@@ -107,9 +109,7 @@ public:
 
   // Stack access is very expensive. CSRs are also the high registers, and we
   // want to minimize the number of used registers.
-  unsigned getCSRFirstUseCost() const override {
-    return 100;
-  }
+  unsigned getCSRCost() const override { return 100; }
 
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
@@ -120,6 +120,13 @@ public:
   // load instruction, so liveness analysis knows they're unavailable.
   void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                       Register BlockReg) const;
+
+  // Iterate over all VGPRs in the given BlockReg and emit CFI for each VGPR
+  // as-needed depending on the (statically known) mask, relative to the given
+  // base Offset.
+  void buildCFIForBlockCSRStore(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                Register BlockReg, int64_t Offset) const;
 
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
@@ -176,8 +183,8 @@ public:
   /// free VGPR lane to spill.
   bool spillSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                  SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
-                 bool OnlyToVGPR = false,
-                 bool SpillToPhysVGPRLane = false) const;
+                 bool OnlyToVGPR = false, bool SpillToPhysVGPRLane = false,
+                 bool NeedsCFI = false) const;
 
   bool restoreSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                    SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
@@ -452,8 +459,8 @@ public:
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
-                           RegScavenger *RS,
-                           LiveRegUnits *LiveUnits = nullptr) const;
+                           RegScavenger *RS, LiveRegUnits *LiveUnits = nullptr,
+                           bool NeedsCFI = false) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {

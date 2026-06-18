@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX1010-SDAG %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX1100-SDAG %s
 
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx802 -global-isel -new-reg-bank-select -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -global-isel -new-reg-bank-select -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 -global-isel -new-reg-bank-select -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.writelane.i64(i64, i32, i64) #0
@@ -661,9 +661,9 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i32(ptr addrspace(1) %out, p
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX802-SDAG-NEXT:    s_nop 2
-; GFX802-SDAG-NEXT:    v_writelane_b32 v2, 12, s2
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX802-SDAG-NEXT:    s_nop 1
+; GFX802-SDAG-NEXT:    v_writelane_b32 v2, 12, s2
 ; GFX802-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;
@@ -724,9 +724,9 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i32(ptr addrspace(1) %out, p
 ; GFX802-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX802-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX802-GISEL-NEXT:    s_nop 2
-; GFX802-GISEL-NEXT:    v_writelane_b32 v2, 12, s2
 ; GFX802-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX802-GISEL-NEXT:    s_nop 1
+; GFX802-GISEL-NEXT:    v_writelane_b32 v2, 12, s2
 ; GFX802-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GFX802-GISEL-NEXT:    s_endpgm
 ;
@@ -797,10 +797,10 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i64(ptr addrspace(1) %out, p
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; GFX802-SDAG-NEXT:    s_nop 2
+; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX802-SDAG-NEXT:    s_nop 1
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v1, 0, s2
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v0, 12, s2
-; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;
@@ -944,10 +944,9 @@ define amdgpu_kernel void @test_writelane_vreg_lane_f64(ptr addrspace(1) %out, p
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; GFX802-SDAG-NEXT:    s_nop 1
-; GFX802-SDAG-NEXT:    v_writelane_b32 v0, 0, s2
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v1, s4, m0
 ; GFX802-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v0, 0, s2
 ; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX802-SDAG-NEXT:    s_endpgm
 ;
@@ -1017,9 +1016,9 @@ define amdgpu_kernel void @test_writelane_vreg_lane_f64(ptr addrspace(1) %out, p
 ; GFX802-GISEL-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX802-GISEL-NEXT:    s_mov_b32 m0, s2
-; GFX802-GISEL-NEXT:    s_nop 2
-; GFX802-GISEL-NEXT:    v_writelane_b32 v1, 0, s2
 ; GFX802-GISEL-NEXT:    v_writelane_b32 v2, s4, m0
+; GFX802-GISEL-NEXT:    s_nop 1
+; GFX802-GISEL-NEXT:    v_writelane_b32 v1, 0, s2
 ; GFX802-GISEL-NEXT:    flat_store_dwordx2 v[3:4], v[1:2]
 ; GFX802-GISEL-NEXT:    s_endpgm
 ;

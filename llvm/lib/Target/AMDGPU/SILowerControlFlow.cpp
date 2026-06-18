@@ -378,8 +378,8 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   bool SkipAnding = false;
   if (MI.getOperand(1).isReg()) {
     if (MachineInstr *Def = MRI->getUniqueVRegDef(MI.getOperand(1).getReg())) {
-      SkipAnding = Def->getParent() == MI.getParent()
-          && SIInstrInfo::isVALU(*Def);
+      SkipAnding = Def->getParent() == MI.getParent() &&
+                   SIInstrInfo::isVALU(*Def, /*AllowLDSDMA=*/true);
     }
   }
 
@@ -743,6 +743,11 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
     MDT->applyUpdates(DTUpdates);
   if (PDT)
     PDT->applyUpdates(DTUpdates);
+
+  if (MDT && MDT->getNode(&MBB))
+    MDT->eraseNode(&MBB);
+  if (PDT && PDT->getNode(&MBB))
+    PDT->eraseNode(&MBB);
 
   MBB.clear();
   MBB.eraseFromParent();

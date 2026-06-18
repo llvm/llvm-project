@@ -12,7 +12,6 @@
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/Support/Chrono.h"
 
 namespace clang {
 namespace dependencies {
@@ -28,22 +27,6 @@ enum class ScanningMode {
   /// with special kind of lexing after scanning header and source files to get
   /// the minimum necessary preprocessor directives for evaluating includes.
   DependencyDirectivesScan,
-};
-
-/// The format that is output by the dependency scanner.
-enum class ScanningOutputFormat {
-  /// This is the Makefile compatible dep format. This will include all of the
-  /// deps necessary for an implicit modules build, but won't include any
-  /// intermodule dependency information.
-  Make,
-
-  /// This outputs the full clang module dependency graph suitable for use for
-  /// explicitly building modules.
-  Full,
-
-  /// This outputs the dependency graph for standard c++ modules in P1689R5
-  /// format.
-  P1689,
 };
 
 #define DSS_LAST_BITMASK_ENUM(Id)                                              \
@@ -77,26 +60,59 @@ enum class ScanningOptimizations {
 
 #undef DSS_LAST_BITMASK_ENUM
 
+bool shouldCacheNegativeStatsDefault();
+
+/// \return true if failed stats for files with this name should be cached,
+///         false otherwise.
+bool shouldCacheNegativeStatsForPath(StringRef Path);
+
+/// The configuration knobs for the dependency scanning service.
+struct DependencyScanningServiceOptions {
+  DependencyScanningServiceOptions();
+
+  /// The function invoked to create each worker's VFS. This function and the
+  /// VFS itself must be thread-safe whenever using multiple workers
+  /// concurrently or whenever \c AsyncScanModules is true.
+  std::function<IntrusiveRefCntPtr<llvm::vfs::FileSystem>()>
+      MakeVFS; // = [] { return llvm::vfs::createPhysicalFileSystem(); }
+  /// Whether to use optimized dependency directive scan or full preprocessing.
+  ScanningMode Mode = ScanningMode::DependencyDirectivesScan;
+  /// How to optimize resulting explicit module command lines.
+  ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
+  /// Whether the scanner should emit warnings.
+  bool EmitWarnings = true;
+  /// Whether to make reported file paths absolute.
+  bool ReportAbsolutePaths = true;
+  /// Whether to report modules visible from modules that are imported directly.
+  bool ReportVisibleModules = false;
+  /// Whether the resulting command lines should load explicit PCMs eagerly.
+  bool EagerLoadModules = false;
+  /// Whether to trace VFS accesses during the scan.
+  bool TraceVFS = false;
+  /// Whether to scan modules asynchronously.
+  bool AsyncScanModules = false;
+  /// The build session timestamp for validate-once-per-build-session logic.
+  std::time_t BuildSessionTimestamp; // = std::chrono::system_clock::now();
+  /// Whether to automatically flush the module cache from memory to disk at the
+  /// end of the service lifetime.
+  bool FlushModuleCache = true;
+  /// Whether the caching VFS should cache missing filesystem entries.
+  bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
+};
+
 /// The dependency scanning service contains shared configuration and state that
 /// is used by the individual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(
-      ScanningMode Mode, ScanningOutputFormat Format,
-      ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false, bool TraceVFS = false,
-      std::time_t BuildSessionTimestamp =
-          llvm::sys::toTimeT(std::chrono::system_clock::now()));
+  explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
+      : Opts(std::move(Opts)) {}
 
-  ScanningMode getMode() const { return Mode; }
+  ~DependencyScanningService() {
+    if (Opts.FlushModuleCache)
+      ModCacheEntries.flush();
+  }
 
-  ScanningOutputFormat getFormat() const { return Format; }
-
-  ScanningOptimizations getOptimizeArgs() const { return OptimizeArgs; }
-
-  bool shouldEagerLoadModules() const { return EagerLoadModules; }
-
-  bool shouldTraceVFS() const { return TraceVFS; }
+  const DependencyScanningServiceOptions &getOpts() const { return Opts; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
     return SharedCache;
@@ -104,23 +120,13 @@ public:
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
-  std::time_t getBuildSessionTimestamp() const { return BuildSessionTimestamp; }
-
 private:
-  const ScanningMode Mode;
-  const ScanningOutputFormat Format;
-  /// Whether to optimize the modules' command-line arguments.
-  const ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  const bool EagerLoadModules;
-  /// Whether to trace VFS accesses.
-  const bool TraceVFS;
+  /// The options customizing dependency scanning behavior.
+  DependencyScanningServiceOptions Opts;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
-  /// The build session timestamp.
-  std::time_t BuildSessionTimestamp;
 };
 
 } // end namespace dependencies

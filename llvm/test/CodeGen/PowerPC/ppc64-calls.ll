@@ -19,7 +19,7 @@ define dso_local void @test_direct() nounwind readnone {
   tail call void @foo() nounwind
 ; Because of tail call optimization, it can be 'b' instruction.
 ; CHECK: [[BR:b[l]?]] foo
-; CHECK-NOT: nop
+; CHECK-NOT: {{^[[:space:]]+}}nop
   ret void
 }
 

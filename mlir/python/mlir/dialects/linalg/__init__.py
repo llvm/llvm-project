@@ -308,9 +308,12 @@ def pack(
         _inner_tiles,
         static_inner_tiles,
     ) = _dispatch_mixed_values(inner_tiles)
+    dest = _get_op_result_or_value(dest)
+    result_type = dest.type if isinstance(dest.type, RankedTensorType) else None
 
     return _get_op_result_or_op_results(
         PackOp(
+            result=result_type,
             source=source,
             dest=dest,
             inner_dims_pos=inner_dims_pos,
@@ -340,9 +343,11 @@ def unpack(
         _inner_tiles,
         static_inner_tiles,
     ) = _dispatch_mixed_values(inner_tiles)
-
+    dest = _get_op_result_or_value(dest)
+    result_type = dest.type if isinstance(dest.type, RankedTensorType) else None
     return _get_op_result_or_op_results(
         UnPackOp(
+            result=result_type,
             source=source,
             dest=dest,
             inner_dims_pos=inner_dims_pos,
