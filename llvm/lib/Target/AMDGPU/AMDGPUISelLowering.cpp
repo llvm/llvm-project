@@ -2423,9 +2423,9 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
       return Res;
   }
 
-  // LHS must have > 33 sign-bits to ensure that LHS != -0x80000000LL
+  // LHS must have > 33 sign-bits to ensure that LHS != -2147483648
   // Otherwise 32-bit division cannot be used safely.
-  // -0x80000000LL/1 and -0x80000000LL/-1 are not equal,
+  // -2147483648/1 and -2147483648/-1 are not equal,
   // but they produce the same lower 32-bit result.
   if (VT == MVT::i64 && DAG.ComputeNumSignBits(LHS) > 33 &&
       DAG.ComputeNumSignBits(RHS) > 32) {
