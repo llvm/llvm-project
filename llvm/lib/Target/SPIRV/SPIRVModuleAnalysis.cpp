@@ -1660,8 +1660,39 @@ void addInstrRequirements(const MachineInstr &MI,
       addPrintfRequirements(MI, Reqs, ST);
       break;
     }
-    // TODO: handle bfloat16 extended instructions when
-    // SPV_INTEL_bfloat16_arithmetic is enabled.
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::OpenCL_std)) {
+      MachineFunction *MF = const_cast<MachineFunction *>(MI.getMF());
+      const MachineRegisterInfo &MRI = MF->getRegInfo();
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+
+      auto IsBFloat16 = [&](SPIRVTypeInst TypeDef) {
+        if (TypeDef && TypeDef->getOpcode() == SPIRV::OpTypeVector)
+          TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+        return isBFloat16Type(TypeDef);
+      };
+
+      // Result type is operand 1; arguments start at operand 4.
+      bool UsesBFloat16 = IsBFloat16(MRI.getVRegDef(MI.getOperand(1).getReg()));
+      for (unsigned I = 4, E = MI.getNumOperands(); I < E && !UsesBFloat16;
+           ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
+        if (MO.isReg())
+          UsesBFloat16 = IsBFloat16(GR->getResultType(MO.getReg(), MF));
+      }
+
+      // The OpenCL extended instruction set operates on IEEE-754 encoding only,
+      // but can be allowed with SPV_INTEL_bfloat16_arithmetic
+      if (UsesBFloat16) {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
+          report_fatal_error(
+              "Extended instructions with bfloat16 arguments require the "
+              "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
+              false);
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+      }
+    }
     break;
   }
   case SPIRV::OpAliasDomainDeclINTEL:
