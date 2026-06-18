@@ -33,6 +33,16 @@
 // function definition on unsupported platforms so that it can be used to define functions
 // regardless of whether detection is actually supported.
 //
+// How does this work?
+// -------------------
+//
+// Let's say we want to check whether a weak function `f` has been overridden by the user.
+// The general mechanism works by defining a local symbol `ImplRef<f>::Impl` with the same
+// address as `f` as a constant expression using direct PC-relative materialization thus
+// pointing at the symbol defined in the same TU. At runtime, it compares the address of
+// `ImplRef<f>::Impl` with the address of `f` loaded from GOT: if `f` was overridden by
+// the user in another TU, the addresses will be different.
+//
 // Important note
 // --------------
 //
@@ -63,18 +73,21 @@ struct ImplRef<_Func> {
 #  define OVERRIDABLE_FUNCTION [[gnu::weak]]
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+// This takes a function type template argument first so that the second
+// non-type template argument (pointer to the public function) gets the benefit
+// of type-aware overload resolution, rather than having to use a static_cast.
 template <typename T, T* _Func>
 _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
-  // This just has the compiler compare the two symbols.  For PIC mode, this will
-  // do a direct PC-relative materialization for ImplRef<...>::Impl and a GOT
-  // load for the _Func symbol.  The compiler thinks ImplRef<...>::Impl is
-  // defined elsewhere at link time and will be an undefined symbol.  It doesn't
-  // know that the __asm__ tells the assembler to define it as a local symbol.
 #  if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
   __asm__("%cc0 = %cc1" : : "X"(ImplRef<_Func>::Impl), "X"(_Func));
 #  else
   __asm__("%c0 = %c1" : : "X"(ImplRef<_Func>::Impl), "X"(_Func));
 #  endif
+  // This just has the compiler compare the two symbols. For PIC mode, this will
+  // do a direct PC-relative materialization for ImplRef<...>::Impl and a GOT
+  // load for the _Func symbol. The compiler thinks ImplRef<...>::Impl is
+  // defined elsewhere at link time and will be an undefined symbol. It doesn't
+  // know that the __asm__ tells the assembler to define it as a local symbol.
   return _Func != ImplRef<_Func>::Impl;
 }
 _LIBCPP_END_NAMESPACE_STD
