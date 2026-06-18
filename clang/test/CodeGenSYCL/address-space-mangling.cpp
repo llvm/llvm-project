@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - -Wno-deprecated-attributes | FileCheck %s --check-prefix=SPIR
+// RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=SPIR
 
 // REQUIRES: x86-registered-target
 
