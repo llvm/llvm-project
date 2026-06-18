@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers, std-at-least-c++26
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <inplace_vector>
-
-// No member named 'regex'.
-// XFAIL: LLVM-LIBC-FIXME
 
 #include <inplace_vector>
 #include <utility>
@@ -21,14 +20,19 @@
 int main(int, char**) {
   std::inplace_vector<int, 0> c;
 
-  EXPECT_ANY_DEATH((void)c[0]);
-  EXPECT_ANY_DEATH((void)c.front());
-  EXPECT_ANY_DEATH((void)c.back());
-  EXPECT_ANY_DEATH(c.pop_back());
-  EXPECT_ANY_DEATH(c.erase(c.begin()));
-  EXPECT_ANY_DEATH((void)std::as_const(c)[0]);
-  EXPECT_ANY_DEATH((void)std::as_const(c).front());
-  EXPECT_ANY_DEATH((void)std::as_const(c).back());
+  TEST_LIBCPP_ASSERT_FAILURE((void)c[0], "inplace_vector<T,0>::operator[]: access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c)[0], "inplace_vector<T,0>::operator[] const: access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE((void)c.at(0), "inplace_vector<T,0>::at(size_type n): access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      (void)std::as_const(c).at(0), "inplace_vector<T,0>::at(size_type n) const: access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE((void)c.front(), "inplace_vector<T,0>::front(): access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c).front(), "inplace_vector<T,0>::front() const: access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE((void)c.back(), "inplace_vector<T,0>::back(): access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c).back(), "inplace_vector<T,0>::back() const: access with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE(c.pop_back(), "inplace_vector<T,0>::erase(): use with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE(c.erase(c.begin()), "inplace_vector<T,0>::erase(): use with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.erase(c.begin(), c.begin() + 1), "inplace_vector<T,0>::erase(const_iterator, const_iterator): use with N == 0");
 
   return 0;
 }
