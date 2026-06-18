@@ -2017,6 +2017,13 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
+defm experimental_lifetime_safety_c : BoolFOption<
+    "experimental-lifetime-safety-c",
+    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
+    PosFlag<SetTrue, [], [CC1Option], "Enable">,
+    NegFlag<SetFalse, [], [CC1Option], "Disable">,
+    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
+
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
       Group<m_Group>,
@@ -4814,9 +4821,9 @@ defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 defm split_lto_unit : BoolFOption<"split-lto-unit",
   CodeGenOpts<"EnableSplitLTOUnit">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Enables splitting of the LTO unit">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, FlangOption, FC1Option]>>;
 defm force_emit_vtables : BoolFOption<"force-emit-vtables",
   CodeGenOpts<"ForceEmitVTables">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -8914,6 +8921,11 @@ def fno_modules_check_relocated
       Group<f_Group>,
       HelpText<"Skip checks for relocated modules when loading PCM files">,
       MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
+def init_datetime_macros_EQ : Joined<["-"], "init-datetime-macros=">,
+  HelpText<"Change __DATE__, __TIME__, and __TIMESTAMP__ macros initialization and expansion">,
+  Values<"default,literalone,undefined">,
+  NormalizedValues<["Default", "LiteralOne", "Undefined"]>,
+  MarshallingInfoEnum<PreprocessorOpts<"InitDateTimeMacros">, "Default">;
 
 } // let Visibility = [CC1Option]
 
@@ -9352,6 +9364,12 @@ def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
       HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
+def _SLASH_experimental_deterministic : CLJoined<"experimental:deterministic">,
+      HelpText<"Emit warnings on usage of non-deterministic macros __DATE__, __TIME__ and __TIMESTAMP__">;
+def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
+      HelpText<"Undefine the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
+def _SLASH_d1nodatetime_ : CLFlag<"d1nodatetime-">,
+      HelpText<"Disable undefinition of the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
 
 // Non-aliases:
 

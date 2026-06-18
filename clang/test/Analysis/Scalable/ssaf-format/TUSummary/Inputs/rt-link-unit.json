@@ -6,5 +6,6 @@
   "tu_namespace": {
     "kind": "LinkUnit",
     "name": "libtest.so"
-  }
+  },
+  "type": "TUSummary"
 }

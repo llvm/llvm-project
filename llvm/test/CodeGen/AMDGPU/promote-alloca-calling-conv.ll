@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=IR %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=ASM %s
 
 ; IR-LABEL: define amdgpu_vs void @promote_alloca_shaders(ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %in) #0 {

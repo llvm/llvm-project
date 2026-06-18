@@ -209,3 +209,12 @@ namespace IncNonDereferencable {
       ;
   }
 }
+
+namespace InvalidVirtualCast {
+  struct X {};
+  struct Y : virtual X {};
+  struct Z {
+  } z;
+  static_assert((X *)(Y *)&z, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}

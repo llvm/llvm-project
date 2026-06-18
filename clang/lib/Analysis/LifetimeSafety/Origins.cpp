@@ -222,6 +222,13 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
     return getOrCreateList(EWC->getSubExpr());
 
+  // An OpaqueValueExpr is a placeholder for an already-evaluated subexpression
+  // (e.g. the common operand of `a ?: b`) and is not itself a CFG statement, so
+  // reuse its source's origins rather than flowing into a fresh node.
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    if (const Expr *Src = OVE->getSourceExpr())
+      return getOrCreateList(Src);
+
   if (!hasOrigins(E))
     return nullptr;
 

@@ -220,6 +220,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
       "name": "test.cpp"
     },
     "target_triple": "arm64-apple-macosx",
+    "type": "TUSummary",
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -255,6 +256,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
       "name": "test.cpp"
     },
     "target_triple": "arm64-apple-macosx",
+    "type": "TUSummary",
     "id_table": [],
     "linkage_table": [],
     "data": [

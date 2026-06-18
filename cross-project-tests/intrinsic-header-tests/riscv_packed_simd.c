@@ -1772,3 +1772,73 @@ uint16x4_t test_pasubu_u16x4(uint16x4_t a, uint16x4_t b) {
 uint32x2_t test_pasubu_u32x2(uint32x2_t a, uint32x2_t b) {
   return __riscv_pasubu_u32x2(a, b);
 }
+
+// CHECK-LABEL: test_pabs_i8x4:
+// CHECK:       pabs.b
+uint8x4_t test_pabs_i8x4(int8x4_t a) { return __riscv_pabs_i8x4(a); }
+
+// CHECK-LABEL: test_pabs_i16x2:
+// CHECK:       pabs.h
+uint16x2_t test_pabs_i16x2(int16x2_t a) { return __riscv_pabs_i16x2(a); }
+
+// CHECK-LABEL: test_pabd_i8x4:
+// CHECK:       pabd.b
+uint8x4_t test_pabd_i8x4(int8x4_t a, int8x4_t b) {
+  return __riscv_pabd_i8x4(a, b);
+}
+
+// CHECK-LABEL: test_pabd_i16x2:
+// CHECK:       pabd.h
+uint16x2_t test_pabd_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pabd_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pabdu_u8x4:
+// CHECK:       pabdu.b
+uint8x4_t test_pabdu_u8x4(uint8x4_t a, uint8x4_t b) {
+  return __riscv_pabdu_u8x4(a, b);
+}
+
+// CHECK-LABEL: test_pabdu_u16x2:
+// CHECK:       pabdu.h
+uint16x2_t test_pabdu_u16x2(uint16x2_t a, uint16x2_t b) {
+  return __riscv_pabdu_u16x2(a, b);
+}
+
+// CHECK-LABEL: test_pabs_i8x8:
+// RV32:        pabs.db
+// RV64:        pabs.b
+uint8x8_t test_pabs_i8x8(int8x8_t a) { return __riscv_pabs_i8x8(a); }
+
+// CHECK-LABEL: test_pabs_i16x4:
+// RV32:        pabs.dh
+// RV64:        pabs.h
+uint16x4_t test_pabs_i16x4(int16x4_t a) { return __riscv_pabs_i16x4(a); }
+
+// CHECK-LABEL: test_pabd_i8x8:
+// RV32:        pabd.db
+// RV64:        pabd.b
+uint8x8_t test_pabd_i8x8(int8x8_t a, int8x8_t b) {
+  return __riscv_pabd_i8x8(a, b);
+}
+
+// CHECK-LABEL: test_pabd_i16x4:
+// RV32:        pabd.dh
+// RV64:        pabd.h
+uint16x4_t test_pabd_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pabd_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pabdu_u8x8:
+// RV32:        pabdu.db
+// RV64:        pabdu.b
+uint8x8_t test_pabdu_u8x8(uint8x8_t a, uint8x8_t b) {
+  return __riscv_pabdu_u8x8(a, b);
+}
+
+// CHECK-LABEL: test_pabdu_u16x4:
+// RV32:        pabdu.dh
+// RV64:        pabdu.h
+uint16x4_t test_pabdu_u16x4(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pabdu_u16x4(a, b);
+}

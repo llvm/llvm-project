@@ -8920,6 +8920,38 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-loader-replaceable-function=") + FuncOverride));
   }
+
+  if (Args.hasArg(options::OPT__SLASH_experimental_deterministic)) {
+    CmdArgs.push_back("-Wdate-time");
+
+    if (Args.hasArg(options::OPT_mincremental_linker_compatible)) {
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << "/experimental:deterministic"
+          << "/Brepro-";
+    }
+    // CL's sets COFF's OBJ timestamp to a hash of the source file path to get
+    // deterministic result, but we force this timestamp to 0, which also
+    // produces deterministic result.
+    CmdArgs.push_back("-mno-incremental-linker-compatible");
+  }
+
+  bool HasNoDateTime = Args.hasFlag(options::OPT__SLASH_d1nodatetime,
+                                    options::OPT__SLASH_d1nodatetime_, false);
+
+  if (HasNoDateTime)
+    CmdArgs.push_back("-init-datetime-macros=undefined");
+
+  // /Brepro is an alias for -mincremental-linker-compatible option.
+  if (!Args.hasFlag(options::OPT_mincremental_linker_compatible,
+                    options::OPT_mno_incremental_linker_compatible,
+                    getToolChain()
+                        .getTriple()
+                        .isDefaultIncrementalLinkerCompatibleByDefault())) {
+    // Redefine the date/time macros only if /d1nodatetime wasn't specified.
+    // This option does not allow the user redefinitions for these macros.
+    if (!HasNoDateTime)
+      CmdArgs.push_back("-init-datetime-macros=literalone");
+  }
 }
 
 const char *Clang::getBaseInputName(const ArgList &Args,

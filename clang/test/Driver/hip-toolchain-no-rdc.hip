@@ -37,12 +37,12 @@
 // RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
-// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -no-use-spirv-backend \
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver \
-// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -no-use-spirv-backend \
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV-NEW %s
 

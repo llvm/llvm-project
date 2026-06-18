@@ -381,7 +381,7 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
     constructFromUnit(*DU);
   }
 }
-void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
+void DIEBuilder::buildCompileUnits(const SmallVector<DWARFUnit *> &CUs) {
   BuilderState.reset(new State());
   // Allocating enough for current batch being processed.
   // In real use cases we either processing a batch of CUs with no cross

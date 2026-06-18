@@ -7,5 +7,7 @@ if (NOT EXISTS "${OUTPUT_FILE}")
 
   # This could also be the symlink but its small size is not worth the effort
   # handling platform differences.
-  file(COPY_FILE "${INPUT_FILE}" "${OUTPUT_FILE}")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E copy "${INPUT_FILE}" "${OUTPUT_FILE}"
+  )
 endif ()

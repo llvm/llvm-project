@@ -395,10 +395,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
       result = todo("reduction with modifier");
   };
-  auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
-        op.getTaskReductionSyms())
-      result = todo("task_reduction");
+  auto checkTaskReductionByref = [&todo](auto op, LogicalResult &result) {
+    if (auto byrefAttr = op.getTaskReductionByref())
+      for (bool isByRef : *byrefAttr)
+        if (isByRef) {
+          result = todo("task_reduction with byref modifier");
+          return;
+        }
   };
   auto checkNumTeams = [&todo](auto op, LogicalResult &result) {
     if (op.hasNumTeamsMultiDim())
@@ -455,7 +458,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
-        checkTaskReduction(op, result);
+        checkTaskReductionByref(op, result);
       })
       .Case([&](omp::TaskwaitOp op) {
         checkDepend(op, result);
@@ -3680,6 +3683,202 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   return success();
 }
 
+/// Build an outlined init helper for a task_reduction declare_reduction op.
+/// Signature: void(ptr %priv, ptr %orig). For non-byref reductions, the init
+/// region's mold argument is mapped following the same rule as the regular
+/// reduction path (`mapInitializationArgs`): a non-pointer mold loads the
+/// value from %orig, while a pointer-typed mold receives %orig directly. The
+/// yielded value is stored into %priv.
+static llvm::Function *
+emitTaskReductionInitFn(omp::DeclareReductionOp decl, StringRef baseName,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::LLVMContext &ctx = llvmModule->getContext();
+  llvm::Type *voidTy = llvm::Type::getVoidTy(ctx);
+  llvm::Type *ptrTy = llvm::PointerType::getUnqual(ctx);
+  llvm::FunctionType *fty =
+      llvm::FunctionType::get(voidTy, {ptrTy, ptrTy}, false);
+  llvm::Function *fn =
+      llvm::Function::Create(fty, llvm::GlobalValue::InternalLinkage,
+                             baseName + ".red.init", llvmModule);
+  fn->setDoesNotRecurse();
+  fn->getArg(0)->setName("priv");
+  fn->getArg(1)->setName("orig");
+
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "entry", fn);
+  llvm::IRBuilder<> b(entry);
+
+  // Map the initializer's mold argument the same way the regular reduction
+  // path does in `mapInitializationArgs`: only load the original value when a
+  // non-pointer mold is expected. For a pointer-typed mold the storage pointer
+  // (%orig) is passed through directly, so a mold-yielding initializer lowers
+  // to `store ptr %orig, ptr %priv` rather than emitting a spurious load.
+  Value moldArg = decl.getInitializerMoldArg();
+  llvm::Value *origVal = fn->getArg(1);
+  if (!isa<LLVM::LLVMPointerType>(moldArg.getType()))
+    origVal = b.CreateLoad(moduleTranslation.convertType(moldArg.getType()),
+                           fn->getArg(1), "omp.orig");
+  moduleTranslation.mapValue(moldArg, origVal);
+  SmallVector<llvm::Value *, 1> phis;
+  if (failed(inlineConvertOmpRegions(decl.getInitializerRegion(),
+                                     "omp.taskred.init", b, moduleTranslation,
+                                     &phis))) {
+    fn->eraseFromParent();
+    return nullptr;
+  }
+  assert(phis.size() == 1 &&
+         "expected one value yielded from reduction initializer");
+  b.CreateStore(phis[0], fn->getArg(0));
+  b.CreateRetVoid();
+
+  moduleTranslation.forgetMapping(decl.getInitializerRegion());
+  return fn;
+}
+
+/// Build an outlined combiner helper for a task_reduction declare_reduction op.
+/// Signature: void(ptr %lhs, ptr %rhs). For non-byref reductions, the values
+/// at *%lhs and *%rhs are loaded, fed into the combiner region, and the
+/// yielded scalar is stored back into *%lhs.
+static llvm::Function *
+emitTaskReductionCombFn(omp::DeclareReductionOp decl, StringRef baseName,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::LLVMContext &ctx = llvmModule->getContext();
+  llvm::Type *voidTy = llvm::Type::getVoidTy(ctx);
+  llvm::Type *ptrTy = llvm::PointerType::getUnqual(ctx);
+  llvm::FunctionType *fty =
+      llvm::FunctionType::get(voidTy, {ptrTy, ptrTy}, false);
+  llvm::Function *fn =
+      llvm::Function::Create(fty, llvm::GlobalValue::InternalLinkage,
+                             baseName + ".red.comb", llvmModule);
+  fn->setDoesNotRecurse();
+  fn->getArg(0)->setName("lhs");
+  fn->getArg(1)->setName("rhs");
+
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(ctx, "entry", fn);
+  llvm::IRBuilder<> b(entry);
+
+  llvm::Type *elemTy = moduleTranslation.convertType(decl.getType());
+  Block &combBlock = decl.getReductionRegion().front();
+  assert(combBlock.getNumArguments() == 2 &&
+         "expected two arguments in declare_reduction combiner");
+  llvm::Value *lhsVal = b.CreateLoad(elemTy, fn->getArg(0), "omp.lhs");
+  llvm::Value *rhsVal = b.CreateLoad(elemTy, fn->getArg(1), "omp.rhs");
+  moduleTranslation.mapValue(combBlock.getArgument(0), lhsVal);
+  moduleTranslation.mapValue(combBlock.getArgument(1), rhsVal);
+
+  SmallVector<llvm::Value *, 1> phis;
+  if (failed(inlineConvertOmpRegions(decl.getReductionRegion(),
+                                     "omp.taskred.comb", b, moduleTranslation,
+                                     &phis))) {
+    fn->eraseFromParent();
+    return nullptr;
+  }
+  assert(phis.size() == 1 &&
+         "expected one value yielded from reduction combiner");
+  b.CreateStore(phis[0], fn->getArg(0));
+  b.CreateRetVoid();
+
+  moduleTranslation.forgetMapping(decl.getReductionRegion());
+  return fn;
+}
+
+/// Emit the per-taskgroup task_reduction descriptor array and the
+/// `__kmpc_taskred_init` runtime call. Must be called with `builder` set to a
+/// point inside the taskgroup body (after `__kmpc_taskgroup`). The descriptor
+/// array itself is allocated at \p allocaIP.
+///
+/// Only the non-byref form is handled here. Byref task_reduction has already
+/// been rejected by `checkImplementationStatus`.
+static LogicalResult emitTaskgroupTaskReductionInit(
+    omp::TaskgroupOp tgOp, ArrayRef<omp::DeclareReductionOp> redDecls,
+    llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
+    LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::LLVMContext &ctx = llvmModule->getContext();
+  const llvm::DataLayout &dl = llvmModule->getDataLayout();
+
+  llvm::Type *ptrTy = llvm::PointerType::getUnqual(ctx);
+  llvm::Type *i32Ty = llvm::Type::getInt32Ty(ctx);
+  llvm::Type *sizeTy =
+      llvm::Type::getIntNTy(ctx, dl.getPointerSizeInBits(/*AddrSpace=*/0));
+
+  // Identified `kmp_taskred_input_t` struct, matching the layout used by
+  // Clang's CGOpenMPRuntime::emitTaskReductionInit.
+  llvm::StructType *redInputTy =
+      llvm::StructType::getTypeByName(ctx, "kmp_taskred_input_t");
+  if (!redInputTy)
+    redInputTy = llvm::StructType::create(
+        ctx, {ptrTy, ptrTy, sizeTy, ptrTy, ptrTy, ptrTy, i32Ty},
+        "kmp_taskred_input_t");
+
+  unsigned n = redDecls.size();
+  llvm::ArrayType *arrTy = llvm::ArrayType::get(redInputTy, n);
+
+  // Allocate the descriptor array in the enclosing function's alloca block.
+  llvm::AllocaInst *arrAlloca;
+  {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.restoreIP(allocaIP);
+    arrAlloca =
+        builder.CreateAlloca(arrTy, /*ArraySize=*/nullptr, ".taskred.input");
+  }
+
+  // Fill each descriptor entry inside the taskgroup body.
+  llvm::Value *zero = builder.getInt32(0);
+  for (unsigned i = 0; i < n; ++i) {
+    omp::DeclareReductionOp decl = redDecls[i];
+    llvm::Value *orig =
+        moduleTranslation.lookupValue(tgOp.getTaskReductionVars()[i]);
+    if (auto *origPtrTy = llvm::dyn_cast<llvm::PointerType>(orig->getType());
+        origPtrTy && origPtrTy->getAddressSpace() != 0)
+      orig = builder.CreateAddrSpaceCast(orig, ptrTy);
+    llvm::Type *elemTy = moduleTranslation.convertType(decl.getType());
+    uint64_t size = dl.getTypeAllocSize(elemTy).getFixedValue();
+
+    std::string baseName =
+        (llvm::Twine("__omp_taskred_") + decl.getSymName()).str();
+    llvm::Function *initFn =
+        emitTaskReductionInitFn(decl, baseName, moduleTranslation);
+    llvm::Function *combFn =
+        emitTaskReductionCombFn(decl, baseName, moduleTranslation);
+    if (!initFn || !combFn)
+      return failure();
+    llvm::Value *elemPtr = builder.CreateInBoundsGEP(
+        arrTy, arrAlloca, {zero, builder.getInt32(i)}, ".taskred.elem");
+    auto storeField = [&](unsigned fieldIdx, llvm::Value *val) {
+      llvm::Value *fieldPtr =
+          builder.CreateStructGEP(redInputTy, elemPtr, fieldIdx);
+      builder.CreateStore(val, fieldPtr);
+    };
+    storeField(0, orig);                                  // reduce_shar
+    storeField(1, orig);                                  // reduce_orig
+    storeField(2, llvm::ConstantInt::get(sizeTy, size));  // reduce_size
+    storeField(3, initFn);                                // reduce_init
+    storeField(4, llvm::ConstantPointerNull::get(ptrTy)); // reduce_fini
+    storeField(5, combFn);                                // reduce_comb
+    storeField(6, llvm::ConstantInt::get(i32Ty, 0));      // flags
+  }
+
+  // Emit call: __kmpc_taskred_init(gtid, num, &arr).
+  uint32_t srcLocSize;
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::Constant *srcLocStr =
+      ompBuilder->getOrCreateSrcLocStr(ompLoc, srcLocSize);
+  llvm::Value *ident = ompBuilder->getOrCreateIdent(srcLocStr, srcLocSize);
+  llvm::Value *gtid = ompBuilder->getOrCreateThreadID(ident);
+  llvm::FunctionCallee taskredInit = ompBuilder->getOrCreateRuntimeFunction(
+      *llvmModule, llvm::omp::OMPRTL___kmpc_taskred_init);
+  // The handle returned by __kmpc_taskred_init is intentionally unused here.
+  // The runtime associates the descriptor array with the current taskgroup
+  // (kmp_taskgroup_t::reduce_data), and __kmpc_end_taskgroup consumes that
+  // taskgroup state to perform the reduction. Lowering for constructs that
+  // participate in this task_reduction is handled by downstream patches.
+  builder.CreateCall(taskredInit, {gtid, builder.getInt32(n), arrAlloca});
+  return success();
+}
+
 /// Converts an OpenMP taskgroup construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
@@ -3688,9 +3887,58 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
   if (failed(checkImplementationStatus(*tgOp)))
     return failure();
 
-  auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
-                    llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks) {
+  // Resolve and validate task_reduction declarations up front. We only handle
+  // declare_reduction ops shaped like a non-byref scalar reduction in this
+  // first cut; richer shapes (two-argument initializer, cleanup region,
+  // missing combiner) require additional infrastructure.
+  SmallVector<omp::DeclareReductionOp> redDecls;
+  if (auto syms = tgOp.getTaskReductionSyms()) {
+    redDecls.reserve(syms->size());
+    for (auto sym : syms->getAsRange<SymbolRefAttr>()) {
+      auto decl = SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
+          tgOp, sym);
+      if (!decl)
+        return tgOp.emitError()
+               << "failed to resolve task_reduction declare_reduction symbol "
+               << sym.getRootReference() << " in omp.taskgroup";
+      if (decl.getInitializerRegion().front().getNumArguments() != 1)
+        return tgOp.emitError("not yet implemented: task_reduction with "
+                              "two-argument initializer in omp.taskgroup");
+      if (!decl.getCleanupRegion().empty())
+        return tgOp.emitError("not yet implemented: task_reduction with "
+                              "cleanup region in omp.taskgroup");
+      if (decl.getReductionRegion().empty())
+        return tgOp.emitError("task_reduction declare_reduction is missing a "
+                              "combiner region");
+      redDecls.push_back(decl);
+    }
+  }
+
+  auto bodyCB =
+      [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
+          llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks) -> llvm::Error {
     builder.restoreIP(codegenIP);
+
+    if (!redDecls.empty()) {
+      if (failed(emitTaskgroupTaskReductionInit(tgOp, redDecls, builder,
+                                                allocaIP, moduleTranslation)))
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "failed to emit task_reduction initialization for omp.taskgroup");
+    }
+
+    // Inside the taskgroup body, each task_reduction block argument refers to
+    // the same shared/original storage that the runtime now knows about via
+    // the descriptor array. Inner tasks that declare in_reduction look up
+    // per-task private copies through the runtime; the taskgroup body itself
+    // uses the original variable.
+    for (auto [i, blockArg] :
+         llvm::enumerate(tgOp.getRegion().getArguments())) {
+      llvm::Value *orig =
+          moduleTranslation.lookupValue(tgOp.getTaskReductionVars()[i]);
+      moduleTranslation.mapValue(blockArg, orig);
+    }
+
     return convertOmpOpRegions(tgOp.getRegion(), "omp.taskgroup.region",
                                builder, moduleTranslation)
         .takeError();

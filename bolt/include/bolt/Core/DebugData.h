@@ -175,7 +175,7 @@ public:
 
   /// Returns an offset of an empty address ranges list that is always written
   /// to .debug_ranges
-  uint64_t getEmptyRangesOffset() const { return EmptyRangesOffset; }
+  static uint64_t getEmptyRangesOffset() { return EmptyRangesOffset; }
 
   /// Returns the SectionOffset.
   uint64_t getSectionOffset();
@@ -571,6 +571,13 @@ public:
   /// Offset of an empty location list.
   static constexpr uint32_t EmptyListOffset = 0;
 
+  /// Returns the current size (in bytes) of the serialized location buffer.
+  uint64_t getLocBufferSize() const { return LocBuffer->size(); }
+
+  /// Applies an additional base offset to all non-empty location list offsets
+  /// recorded for this CU.
+  void applyBase(DIEBuilder &DIEBldr, uint64_t Base);
+
   LocWriterKind getKind() const { return Kind; }
 
   static bool classof(const DebugLocWriter *Writer) {
@@ -580,11 +587,6 @@ public:
 protected:
   std::unique_ptr<DebugBufferVector> LocBuffer;
   std::unique_ptr<raw_svector_ostream> LocStream;
-  /// Current offset in the section (updated as new entries are written).
-  /// Starts with 0 here since this only writes part of a full location lists
-  /// section. In the final section, for DWARF4, the first 16 bytes are reserved
-  /// for an empty list.
-  static uint32_t LocSectionOffset;
   uint8_t DwarfVersion{4};
   LocWriterKind Kind{LocWriterKind::DebugLocWriter};
 
@@ -600,6 +602,14 @@ private:
   /// The list of debug info patches to be made once individual
   /// location list writers have been filled
   VectorLocListDebugInfoPatchType LocListDebugInfoPatches;
+  /// Location list attribute patches pending base-address relocation.
+  struct LocListPatch {
+    DIE *Die;
+    dwarf::Attribute Attr;
+    dwarf::Form Form;
+  };
+  /// Accumulated location list patches awaiting base-address adjustment.
+  std::vector<LocListPatch> LocListPatches;
 };
 
 class DebugLoclistWriter : public DebugLocWriter {
@@ -613,11 +623,6 @@ public:
     if (DwarfVersion >= 5) {
       LocBodyBuffer = std::make_unique<DebugBufferVector>();
       LocBodyStream = std::make_unique<raw_svector_ostream>(*LocBodyBuffer);
-    } else {
-      // Writing out empty location list to which all references to empty
-      // location lists will point.
-      const char Zeroes[16] = {0};
-      *LocStream << StringRef(Zeroes, 16);
     }
   }
 
@@ -657,7 +662,6 @@ private:
   std::unique_ptr<raw_svector_ostream> LocBodyStream;
   std::vector<uint32_t> RelativeLocListOffsets;
   uint32_t NumberOfEntries{0};
-  static uint32_t LoclistBaseOffset;
 };
 
 /// Abstract interface for classes that apply modifications to a binary string.

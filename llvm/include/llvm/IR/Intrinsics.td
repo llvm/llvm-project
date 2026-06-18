@@ -2632,8 +2632,8 @@ def int_loop_dependence_war_mask:
             [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_get_active_lane_mask:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_anyint_ty, LLVMMatchType<1>],
+  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
+            [llvm_any_scalar_int_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrSpeculatable]>;
 
 def int_experimental_get_vector_length:

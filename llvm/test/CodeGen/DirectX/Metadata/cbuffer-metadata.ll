@@ -1,6 +1,6 @@
 ; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="dxil-pretty-printer" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
-; RUN: llc %s -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
+; RUN: llc %s -o - -disable-dxil-remove-unused-resources < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 

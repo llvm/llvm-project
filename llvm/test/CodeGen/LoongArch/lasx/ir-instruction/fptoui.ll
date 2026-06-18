@@ -43,6 +43,26 @@ define void @fptoui_v4f64_v4i32(ptr %res, ptr %in){
   ret void
 }
 
+define void @fptoui_v8f64_v8i32(ptr %res, ptr %in){
+; CHECK-LABEL: fptoui_v8f64_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 32
+; CHECK-NEXT:    xvld $xr1, $a1, 0
+; CHECK-NEXT:    xvftintrz.lu.d $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 238
+; CHECK-NEXT:    xvpickev.w $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvftintrz.lu.d $xr1, $xr1
+; CHECK-NEXT:    xvpermi.d $xr2, $xr1, 238
+; CHECK-NEXT:    xvpickev.w $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 2
+; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x double>, ptr %in
+  %v1 = fptoui <8 x double> %v0 to <8 x i32>
+  store <8 x i32> %v1, ptr %res
+  ret void
+}
+
 define void @fptoui_v4f32_v4i64(ptr %res, ptr %in){
 ; CHECK-LABEL: fptoui_v4f32_v4i64:
 ; CHECK:       # %bb.0:

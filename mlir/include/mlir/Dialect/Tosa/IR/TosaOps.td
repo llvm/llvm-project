@@ -116,6 +116,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";

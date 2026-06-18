@@ -36,14 +36,29 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
         .build();
   }
 
-  const Object &RootObject = *RootObjectPtr;
+  if (auto Err = checkSummaryType(*RootObjectPtr, JSONTypeValueLUSummary)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
+        .build();
+  }
 
+  auto ExpectedSummary = readLUSummaryFromObject(*RootObjectPtr);
+  if (!ExpectedSummary) {
+    return ErrorBuilder::wrap(ExpectedSummary.takeError())
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
+        .build();
+  }
+
+  return std::move(*ExpectedSummary);
+}
+
+llvm::Expected<LUSummary>
+JSONFormat::readLUSummaryFromObject(const Object &RootObject) {
   auto OptTargetTriple = RootObject.getString("target_triple");
   if (!OptTargetTriple) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
                                 "TargetTriple", "target_triple", "string")
-        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
@@ -51,7 +66,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
     return ErrorBuilder::wrap(std::move(Err))
         .context(ErrorMessages::ReadingFromField, "TargetTriple",
                  "target_triple")
-        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
@@ -62,7 +76,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
                                 "NestedBuildNamespace", "lu_namespace", "array")
-        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
@@ -71,7 +84,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
     return ErrorBuilder::wrap(ExpectedLUNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
                  "lu_namespace")
-        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
@@ -83,7 +95,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -91,7 +102,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -104,7 +114,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "LinkageTable", "linkage_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -121,7 +130,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
                    "linkage_table")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -134,7 +142,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "SummaryData entries", "data", "array")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -144,7 +151,6 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedSummaryDataMap.takeError())
           .context(ErrorMessages::ReadingFromField, "SummaryData entries",
                    "data")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -157,6 +163,8 @@ llvm::Expected<LUSummary> JSONFormat::readLUSummary(llvm::StringRef Path) {
 llvm::Error JSONFormat::writeLUSummary(const LUSummary &S,
                                        llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject[JSONTypeKey] = JSONTypeValueLUSummary;
 
   RootObject["target_triple"] =
       llvm::Triple::normalize(getTargetTriple(S).str());

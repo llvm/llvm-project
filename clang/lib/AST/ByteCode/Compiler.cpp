@@ -168,19 +168,6 @@ private:
   CaseMap OldCaseLabels;
 };
 
-template <class Emitter> class StmtExprScope final {
-public:
-  StmtExprScope(Compiler<Emitter> *Ctx) : Ctx(Ctx), OldFlag(Ctx->InStmtExpr) {
-    Ctx->InStmtExpr = true;
-  }
-
-  ~StmtExprScope() { Ctx->InStmtExpr = OldFlag; }
-
-private:
-  Compiler<Emitter> *Ctx;
-  bool OldFlag;
-};
-
 /// When generating code for e.g. implicit field initializers in constructors,
 /// we don't have anything to point to in case the initializer causes an error.
 /// In that case, we need to disable location tracking for the initializer so
@@ -4605,7 +4592,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   LocalScope<Emitter> BS(this);
-  StmtExprScope<Emitter> SS(this);
+  llvm::SaveAndRestore StmtExprSAR(this->InStmtExpr, true);
 
   const CompoundStmt *CS = E->getSubStmt();
   const Stmt *Result = CS->body_back();
@@ -4619,6 +4606,8 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     assert(S == Result);
     if (const Expr *ResultExpr = dyn_cast<Expr>(S))
       return this->delegate(ResultExpr);
+    if (!this->visitStmt(S))
+      return false;
     return this->emitUnsupported(E);
   }
 
@@ -6599,6 +6588,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
 
   PrimType CondT = this->classifyPrim(Cond->getType());
   LocalScope<Emitter> LS(this);
+  llvm::SaveAndRestore StmtExprSAR(this->SwitchInStmtExpr, this->InStmtExpr);
 
   LabelTy EndLabel = this->getLabel();
   UnsignedOrNone DefaultLabel = std::nullopt;
@@ -6705,6 +6695,12 @@ template <class Emitter>
 bool Compiler<Emitter>::visitCaseStmt(const CaseStmt *S) {
   this->fallthrough(CaseLabels[S]);
   this->emitLabel(CaseLabels[S]);
+
+  // We can't jump from an outer switch statement to a case label
+  // that's inside a StmtExpr.
+  if (this->InStmtExpr && !this->SwitchInStmtExpr)
+    return this->emitUnsupported(S);
+
   return this->visitStmt(S->getSubStmt());
 }
 
@@ -7806,10 +7802,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       // Whether or not the evaluation is successul doesn't really matter
       // here -- we will create a global variable in any case, and that
       // will have the state of initializer evaluation attached.
-      APValue V;
-      SmallVector<PartialDiagnosticAt> Notes;
-      (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
-                                        true);
+      Expr::EvalResult Result;
+      (void)Init->EvaluateAsInitializer(Ctx.getASTContext(), VD, Result, true);
       return this->visitDeclRef(D, E);
     }
     return revisit(VD, !VD->isConstexpr() && DeclType->isReferenceType());

@@ -1556,8 +1556,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                               ? Intrinsic::lifetime_start
                               : Intrinsic::lifetime_end;
       rename(F);
+      // Old 2 argument form of these intrinsics have [Size, Ptr] as arguments.
+      // Use the Ptr argument to create new declaration.
       NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                F->getArg(0)->getType());
+                                                F->getArg(1)->getType());
       return true;
     }
     break;

@@ -52,10 +52,10 @@ RVYCapabilityFormat<AddressType, MW, MAX_E>::getAlignmentMask(uint64_t Length) {
 
 template struct CHERICapabilityFormatBase<RVYCapabilityFormat<uint32_t, 10, 24>,
                                           uint32_t>;
-template struct CHERICapabilityFormatBase<RVYCapabilityFormat<uint64_t, 14, 24>,
+template struct CHERICapabilityFormatBase<RVYCapabilityFormat<uint64_t, 14, 52>,
                                           uint64_t>;
 template struct RVYCapabilityFormat<uint32_t, 10, 24>;
-template struct RVYCapabilityFormat<uint64_t, 14, 24>;
+template struct RVYCapabilityFormat<uint64_t, 14, 52>;
 
 uint32_t CHERIoTCapabilityFormat::getAlignmentMask(uint32_t Length) {
   // Per section 7.13.4 and table 7.4 in the v1.0 CHERIoT specification.

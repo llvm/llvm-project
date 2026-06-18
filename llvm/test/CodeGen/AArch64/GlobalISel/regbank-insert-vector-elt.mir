@@ -63,6 +63,34 @@ body:             |
 
 ...
 ---
+name:            v8s8_gpr_narrow
+alignment:       4
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0, $w0
+
+    ; CHECK-LABEL: name: v8s8_gpr_narrow
+    ; CHECK: liveins: $d0, $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
+    ; CHECK-NEXT: %trunc:gpr(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:fpr(<8 x s8>) = G_INSERT_VECTOR_ELT [[COPY1]], %trunc(s8), [[C]](s64)
+    ; CHECK-NEXT: $d0 = COPY [[IVEC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %0:_(s32) = COPY $w0
+    %trunc:_(s8) = G_TRUNC %0
+    %1:_(<8 x s8>) = COPY $d0
+    %3:_(s64) = G_CONSTANT i64 1
+    %2:_(<8 x s8>) = G_INSERT_VECTOR_ELT %1, %trunc(s8), %3(s64)
+    $d0 = COPY %2(<8 x s8>)
+    RET_ReallyLR implicit $d0
+
+...
+---
 name:            v2s64_fpr
 alignment:       4
 legalized:       true

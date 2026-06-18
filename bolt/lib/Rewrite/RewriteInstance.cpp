@@ -38,6 +38,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -2415,7 +2416,7 @@ void RewriteInstance::adjustCommandLineOptions() {
   }
 
   if (opts::Instrument && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT &&
-      !BC->HasInterpHeader) {
+      !BC->HasInterpHeader && !BC->IsStaticExecutable) {
     BC->errs()
         << "BOLT-WARNING: adjusted runtime-lib-init-hook to 'init' due to "
            "absence of INTERP header\n";
@@ -6070,7 +6071,6 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
 
   if (!DynamicPhdr) {
     BC->outs() << "BOLT-INFO: static input executable detected\n";
-    // TODO: static PIE executable might have dynamic header
     BC->IsStaticExecutable = true;
     return Error::success();
   }
@@ -6087,6 +6087,14 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
 
   for (const Elf_Dyn &Dyn : DynamicEntries) {
     switch (Dyn.d_tag) {
+    case ELF::DT_FLAGS_1: {
+      auto Flags = Dyn.getVal();
+      if (Flags & ELF::DF_1_PIE && !BC->HasInterpHeader) {
+        BC->outs() << "BOLT-INFO: static pie executable detected\n";
+        BC->IsStaticExecutable = true;
+      }
+      break;
+    }
     case ELF::DT_INIT:
       BC->InitAddress = Dyn.getPtr();
       break;

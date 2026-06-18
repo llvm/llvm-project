@@ -317,7 +317,6 @@ namespace AnonUnionDtor {
   void bar() { foo(); }
 }
 
-/// FIXME: The two interpreters disagree about there to diagnose the non-constexpr destructor call.
 namespace NonLiteralDtorInParam {
   class NonLiteral { // all20-note {{is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   public:

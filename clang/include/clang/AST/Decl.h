@@ -1426,7 +1426,7 @@ public:
   APValue *evaluateValue() const;
 
 private:
-  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
                              bool IsConstantInitialization) const;
 
 public:

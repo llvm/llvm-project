@@ -1804,6 +1804,14 @@ def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
 
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
+def SDT_RISCVPackedWideningMul : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                                      SDTCisSameAs<1, 2>,
+                                                      SDTCisOpSmallerThanOp<1, 0>,
+                                                      SDTCisSameNumEltsAs<0, 1>]>;
+def riscv_pwmul   : RVSDNode<"PWMUL",   SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
+def riscv_pwmulu  : RVSDNode<"PWMULU",  SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
+def riscv_pwmulsu : RVSDNode<"PWMULSU", SDT_RISCVPackedWideningMul>;
+
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
                                                       SDTCisSameAs<0, 1>,
                                                       SDTCisSameAs<0, 2>,
@@ -2165,21 +2173,20 @@ let append Predicates = [IsRV32] in {
             (PACK zexti16:$rs1,
                   (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
-  // 8/16-bit multiply low patterns
-  // FIXME: Can we use Promote?
-  def : Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
-            (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
-  def : Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
-            (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
-
-  // 8-bit multiply high patterns
-  // FIXME: We can expand to this.
-  def : Pat<(v4i8 (mulhs GPR:$rs1, GPR:$rs2)),
-            (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 8)>;
-  def : Pat<(v4i8 (mulhu GPR:$rs1, GPR:$rs2)),
-            (PNSRLI_B (PWMULU_B GPR:$rs1, GPR:$rs2), 8)>;
-  def : Pat<(v4i8 (riscv_mulhsu GPR:$rs1, GPR:$rs2)),
-            (PNSRLI_B (PWMULSU_B GPR:$rs1, GPR:$rs2), 8)>;
+  // Packed widening multiply patterns.
+  // The v2i32 patterns are not needed yet.
+  def : Pat<(v4i16 (riscv_pwmul (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PWMUL_B   GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmul (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMUL_H  GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pwmulu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PWMULU_B  GPR:$rs1, GPR:$rs2)>;
+  //def : Pat<(v2i32 (riscv_pwmulu  (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+  //          (PWMULU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pwmulsu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (PWMULSU_B GPR:$rs1, GPR:$rs2)>;
+  //def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+  //          (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
   // FIXME: Use BREV8 with Zbkb.

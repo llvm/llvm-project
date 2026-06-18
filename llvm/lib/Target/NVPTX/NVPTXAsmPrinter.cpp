@@ -1082,8 +1082,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           if (aggBuffer.numSymbols()) {
             const unsigned int ptrSize = MAI.getCodePointerSize();
             if (ElementSize % ptrSize ||
-                !aggBuffer.allSymbolsAligned(ptrSize) ||
-                !aggBuffer.allSymbolsFullPtrSize(ptrSize)) {
+                !aggBuffer.allSymbolsAligned(ptrSize)) {
               // Print in bytes and use the mask() operator for pointers.
               if (!STI.hasMaskOperator())
                 report_fatal_error(
@@ -1153,6 +1152,7 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
@@ -1181,18 +1181,13 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
     std::string symText;
     llvm::raw_string_ostream oss(symText);
     printSymbol(nSym, oss);
-    // A symbol occupies SymbolSizes[nSym] bytes, which is the pointer size for
-    // a plain pointer but may be narrower for a ptrtoint to a smaller integer.
-    // Emit only that many low bytes; the dropped high bytes are the part the
-    // truncation discards.
-    unsigned symSize = SymbolSizes[nSym];
-    for (unsigned i = 0; i < symSize; ++i) {
+    for (unsigned i = 0; i < ptrSize; ++i) {
       if (i)
         os << ", ";
       llvm::write_hex(os, 0xFFULL << i * 8, HexPrintStyle::PrefixUpper);
       os << "(" << symText << ")";
     }
-    pos += symSize;
+    pos += ptrSize;
     nextSymbolPos = symbolPosInBuffer[++nSym];
     assert(nextSymbolPos >= pos);
   }
@@ -1682,7 +1677,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
       }
       if (Cexpr->getOpcode() == Instruction::PtrToInt) {
         Value *V = Cexpr->getOperand(0)->stripPointerCasts();
-        AggBuffer->addSymbol(V, Cexpr->getOperand(0), AllocSize);
+        AggBuffer->addSymbol(V, Cexpr->getOperand(0));
         AggBuffer->addZeros(AllocSize);
         break;
       }
@@ -1690,7 +1685,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
       // ptrtoint, e.g. add(ptrtoint(@g), C). It can't fold to a ConstantInt
       // because it references a symbol; emit it through lowerConstantForGV, the
       // same path scalar symbol-relative integer globals use.
-      AggBuffer->addSymbol(Cexpr, Cexpr, AllocSize);
+      AggBuffer->addSymbol(Cexpr, Cexpr);
       AggBuffer->addZeros(AllocSize);
       break;
     }
@@ -1706,10 +1701,10 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
 
   case Type::PointerTyID: {
     if (const GlobalValue *GVar = dyn_cast<GlobalValue>(CPV)) {
-      AggBuffer->addSymbol(GVar, GVar, AllocSize);
+      AggBuffer->addSymbol(GVar, GVar);
     } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
       const Value *v = Cexpr->stripPointerCasts();
-      AggBuffer->addSymbol(v, Cexpr, AllocSize);
+      AggBuffer->addSymbol(v, Cexpr);
     }
     AggBuffer->addZeros(AllocSize);
     break;

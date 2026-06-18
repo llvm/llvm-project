@@ -478,6 +478,7 @@ protected:
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
 
+  bool SwitchInStmtExpr = false;
   bool InStmtExpr = false;
   bool ToLValue = false;
 

@@ -19,6 +19,25 @@ struct CtorSet {
   CtorSet(std::string s) { view = s; } // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
 };
 
+// A field escape on some-but-not-all paths (or in a loop) must still be caught:
+// the field's origin only spans blocks via the exit escape, so it must survive
+// the join.
+struct CtorSetConditional {
+  std::string_view view;  // expected-note {{this field dangles}}
+  CtorSetConditional(std::string s, bool c) {
+    if (c)
+      view = s; // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
+  }
+};
+
+struct CtorSetInLoop {
+  std::string_view view;  // expected-note {{this field dangles}}
+  CtorSetInLoop(std::string s, int n) {
+    for (int i = 0; i < n; ++i)
+      view = s; // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
+  }
+};
+
 struct CtorInitLifetimeBound {
   std::string_view view;  // expected-note {{this field dangles}}
   CtorInitLifetimeBound(std::string s) : view(construct_view(s)) {} // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}

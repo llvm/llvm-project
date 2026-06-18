@@ -301,10 +301,62 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause task_reduction in omp.taskgroup operation}}
+llvm.func @taskgroup_task_reduction_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause task_reduction with byref modifier in omp.taskgroup operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup task_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.taskgroup task_reduction(byref @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
+omp.declare_reduction @add_i32_cleanup : i32
+init {
+^bb0(%arg: i32):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  omp.yield(%c0 : i32)
+}
+combiner {
+^bb0(%a: i32, %b: i32):
+  %s = llvm.add %a, %b : i32
+  omp.yield(%s : i32)
+}
+cleanup {
+^bb0(%a: i32):
+  omp.yield
+}
+llvm.func @taskgroup_task_reduction_cleanup(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: task_reduction with cleanup region in omp.taskgroup}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup task_reduction(@add_i32_cleanup %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
+omp.declare_reduction @add_i32_2arg_init : !llvm.ptr
+alloc {
+^bb0(%mold: !llvm.ptr):
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
+}
+init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %c0, %alloc : i32, !llvm.ptr
+  omp.yield(%alloc : !llvm.ptr)
+}
+combiner {
+^bb0(%a: !llvm.ptr, %b: !llvm.ptr):
+  omp.yield(%a : !llvm.ptr)
+}
+llvm.func @taskgroup_task_reduction_two_arg_init(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: task_reduction with two-argument initializer in omp.taskgroup}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup task_reduction(@add_i32_2arg_init %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return

@@ -1924,7 +1924,7 @@ bool DevirtModule::tryVirtualConstProp(
     if (!Fn)
       return false;
 
-    if (Fn->isDeclaration() ||
+    if (Fn->isDeclaration() || Fn->isInterposable() ||
         !computeFunctionBodyMemoryAccess(*Fn, FAM.getResult<AAManager>(*Fn))
              .doesNotAccessMemory() ||
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||

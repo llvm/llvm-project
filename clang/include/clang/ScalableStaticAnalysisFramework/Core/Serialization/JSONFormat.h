@@ -52,6 +52,16 @@ public:
   llvm::Error writeLUSummary(const LUSummary &Summary,
                              llvm::StringRef Path) override;
 
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override;
+
+  llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override;
+
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &E,
+                                    llvm::StringRef Path) override;
+
   llvm::Expected<LUSummaryEncoding>
   readLUSummaryEncoding(llvm::StringRef Path) override;
 
@@ -92,6 +102,29 @@ public:
 private:
   static std::map<SummaryName, FormatInfo> initFormatInfos();
   const std::map<SummaryName, FormatInfo> FormatInfos = initFormatInfos();
+
+  /// Parses a TUSummary from an already-validated root JSON object. The
+  /// caller is responsible for verifying the self-describing type field
+  /// and for wrapping any returned error with file-path context.
+  llvm::Expected<TUSummary> readTUSummaryFromObject(const Object &Root);
+
+  /// Parses an LUSummary from an already-validated root JSON object. See
+  /// \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<LUSummary> readLUSummaryFromObject(const Object &Root);
+
+  /// Parses a TUSummaryEncoding from an already-validated root JSON
+  /// object. See \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<TUSummaryEncoding>
+  readTUSummaryEncodingFromObject(const Object &Root);
+
+  /// Parses an LUSummaryEncoding from an already-validated root JSON
+  /// object. See \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<LUSummaryEncoding>
+  readLUSummaryEncodingFromObject(const Object &Root);
+
+  /// Parses a WPASuite from an already-validated root JSON object. See
+  /// \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<WPASuite> readWPASuiteFromObject(const Object &Root);
 
   EntityId entityIdFromJSON(const uint64_t EntityIdIndex) const;
   uint64_t entityIdToJSON(EntityId EI) const;
