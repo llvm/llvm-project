@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s -fexperimental-new-constant-interpreter
 
 typedef int (*fp)(int);
 int surrogate(int);
