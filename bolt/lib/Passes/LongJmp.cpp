@@ -452,8 +452,7 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
 
   if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
     uint64_t TextAlign =
-        std::max<uint64_t>(opts::AlignText, opts::AlignFunctions);
-    TextAlign = std::max<uint64_t>(TextAlign, BC.MaxMainCodeAlignment.load());
+        std::max<uint64_t>(opts::AlignText, BC.MaxMainCodeAlignment.load());
     DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
   }
 
