@@ -545,11 +545,13 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
         // Can't update the instruction.
         InsertSub = true;
       }
-    } else if (definesCPSR(*MBBI) || MBBI->isCall() || MBBI->isBranch()) {
+    } else if (definesCPSR(*MBBI) || MBBI->isCall()) {
       // Since SUBS sets the condition flags, we can't place the base reset
       // after an instruction that has a live CPSR def.
       // The base register might also contain an argument for a function call.
       InsertSub = true;
+    } else if (MBBI->isTerminator()) {
+      break;
     }
 
     if (InsertSub) {
@@ -570,12 +572,9 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
   }
 
   // End of block was reached.
-  if (!MBB.succ_empty()) {
-    // FIXME: Because of a bug, live registers are sometimes missing from
-    // the successor blocks' live-in sets. This means we can't trust that
-    // information and *always* have to reset at the end of a block.
-    // See PR21029.
-    if (MBBI != MBB.end()) --MBBI;
+  if (llvm::any_of(MBB.successors(), [Base](MachineBasicBlock *Succ) {
+        return Succ->isLiveIn(Base);
+      })) {
     BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBi8), Base)
         .add(t1CondCodeOp(true))
         .addReg(Base)

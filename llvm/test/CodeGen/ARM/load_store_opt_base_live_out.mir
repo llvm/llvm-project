@@ -5,13 +5,7 @@
 # to any successor block. Before the PR21029 workaround was removed, the
 # base register was reset unconditionally at the end of the block.
 
-# CHECK-LABEL: bb.0:
-# CHECK: $r4 = tLDMIA_UPD $r4, 14 /* CC::al */, $noreg, def $r0, def $r1
-# CHECK-NOT: tSUBi8 $r4
 
-# CHECK-LABEL: bb.1:
-# CHECK: $r4 = tLDMIA_UPD $r4, 14 /* CC::al */, $noreg, def $r0, def $r1
-# CHECK: $r4, dead $cpsr = tSUBi8 $r4, 8, 14 /* CC::al */, $noreg
 
 ---
 name:            foo
@@ -23,7 +17,6 @@ body:             |
   ; CHECK-NEXT:   liveins: $r4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r4 = tLDMIA_UPD $r4, 14 /* CC::al */, $noreg, def $r0, def $r1 :: (load (s32))
-  ; CHECK-NEXT:   $r4, dead $cpsr = tSUBi8 $r4, 8, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tB %bb.2, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
