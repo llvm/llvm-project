@@ -89,30 +89,20 @@ protected:
         if (InductionDescriptor::isInductionPHI(&Phi, L, PSE, ID))
           Inductions[&Phi] = ID;
       }
+      VPDominatorTree VPDT(*Plan);
       VPlanTransforms::createHeaderPhiRecipes(
-          *Plan, PSE, *L, Inductions,
+          *Plan, PSE, *L, VPDT, Inductions,
           MapVector<PHINode *, RecurrenceDescriptor>(),
           SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
           /*AllowReordering=*/false);
     }
 
     VPlanTransforms::handleEarlyExits(*Plan, Style, L, PSE, *DT, AC.get());
-    VPlanTransforms::addMiddleCheck(*Plan, false);
+    VPlanTransforms::addMiddleCheck(*Plan);
 
     if (CreateLoopRegions)
       VPlanTransforms::createLoopRegions(*Plan, {});
     return Plan;
-  }
-
-  VPlanPtr buildVPlan0(BasicBlock *LoopHeader) {
-    Function &F = *LoopHeader->getParent();
-    assert(!verifyFunction(F) && "input function must be valid");
-    doAnalysis(F);
-
-    Loop *L = LI->getLoopFor(LoopHeader);
-    PredicatedScalarEvolution PSE(*SE, *L);
-    return VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
-                                        PSE);
   }
 };
 

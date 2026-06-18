@@ -100,10 +100,11 @@ private:
 
 } // namespace
 
-bool OriginManager::hasOrigins(QualType QT) const {
+bool OriginManager::hasOrigins(QualType QT, bool IntrinsicOnly) const {
   if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
     return true;
-  if (LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
+  if (!IntrinsicOnly &&
+      LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
     return true;
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
@@ -117,7 +118,7 @@ bool OriginManager::hasOrigins(QualType QT) const {
   if (!RD->isLambda())
     return false;
   for (const auto *FD : RD->fields())
-    if (hasOrigins(FD->getType()))
+    if (hasOrigins(FD->getType(), IntrinsicOnly))
       return true;
   return false;
 }

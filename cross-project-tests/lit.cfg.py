@@ -16,7 +16,7 @@ from lit.llvm.subst import ToolSubst
 config.name = "cross-project-tests"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".c", ".cl", ".cpp", ".m", ".test"]
@@ -43,7 +43,7 @@ python_exec_path = sys.executable
 tools = [
     ToolSubst(
         "%test_debuginfo",
-        command="PYTHON_EXEC_PATH="
+        command="env PYTHON_EXEC_PATH="
         + python_exec_path
         + " LLDB_PYTHON_PATH="
         + lldb_python_path

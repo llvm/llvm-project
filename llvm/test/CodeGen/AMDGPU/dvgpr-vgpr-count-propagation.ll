@@ -27,14 +27,14 @@
 ; NODVGPR:  .set .Lgfx_func_a.num_vgpr, 40
 ; NODVGPR:  .set .Lgfx_func_b2.num_vgpr, 80
 ; NODVGPR:  .set .Lgfx_func_b.num_vgpr, max(61, .Lgfx_func_b2.num_vgpr)
-; NODVGPR:  .set .Lamdgpu_cs_main.num_vgpr, max(42, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc.0.num_vgpr, max(13, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc.1.num_vgpr, max(14, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc.2.num_vgpr, max(16, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc.3.num_vgpr, max(15, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc.4.num_vgpr, max(100, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lretry_vgpr_alloc.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfirst_retry_wrapper.num_vgpr, max(11, amdgpu.max_num_vgpr)
+; NODVGPR:  .set .Lamdgpu_cs_main.num_vgpr, min(192, max(42, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc.0.num_vgpr, min(192, max(13, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc.1.num_vgpr, min(192, max(14, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc.2.num_vgpr, min(192, max(16, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc.3.num_vgpr, min(192, max(15, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc.4.num_vgpr, min(192, max(100, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lretry_vgpr_alloc.num_vgpr, min(192, max(11, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfirst_retry_wrapper.num_vgpr, min(192, max(11, amdgpu.max_num_vgpr))
 ; NODVGPR:  .set amdgpu.max_num_vgpr, 100
 
 ; DVGPR:  - .hardware_stages:
