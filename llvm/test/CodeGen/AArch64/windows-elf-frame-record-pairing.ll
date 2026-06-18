@@ -8,9 +8,10 @@ target triple = "aarch64-pc-windows-msvc-elf"
 ; callee-saves.
 
 ; This test checks we do not attempt to pair x28 with the frame pointer (x29).
-; Previously we did not recognize aarch64-pc-windows-msvc-elf as Windows,
-; and failed to invalidate the pairing because the code assumed it was using the
-; default CSR_AArch64_AAPCS_SaveList instead of CSR_Win_AArch64_AAPCS_SaveList.
+; Previously we did not recognize aarch64-pc-windows-msvc-elf as Windows
+; (in FrameLowering), and failed to invalidate the pairing because the code
+; assumed it was using the default CSR_AArch64_AAPCS_SaveList instead of
+; CSR_Win_AArch64_AAPCS_SaveList.
 define i32 @large_stack_requires_frame_record() "frame-pointer"="all" nounwind {
 ; CHECK-LABEL: large_stack_requires_frame_record:
 ; CHECK:       // %bb.0:
