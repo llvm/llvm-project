@@ -48,18 +48,20 @@ static constexpr unsigned MaxV3PrologOps = 31;
 static constexpr unsigned MaxV3Epilogs = 7;
 static constexpr unsigned MaxV3EpilogOps = 31;
 
-/// Approximate-instruction-count distance between an epilog and its fragment
-/// tail beyond which the funclet is split into a new chained sub-fragment.
-/// The V3 EpilogOffset field is a signed 16-bit byte offset measured from the
-/// fragment tail, so each fragment must span less than 32 KiB of code. The
-/// exact byte offsets aren't known until MC layout, so the approximate
-/// instruction count is used as a proxy, with margin for the average emitted
-/// instruction size.
+/// Maximum approximate instruction distance allowed between two adjacent
+/// epilogs, and between the last epilog and the funclet end, before the
+/// funclet is split into a new chained sub-fragment. V3 encodes each epilog's
+/// position as a signed 16-bit EpilogOffset: a delta from the previous epilog,
+/// with the tail-closest epilog encoded relative to the fragment end. The exact
+/// byte offsets aren't known until MC layout, so the approximate instruction
+/// count is used as a proxy, with margin for the average emitted instruction
+/// size.
 static cl::opt<unsigned> EpilogDistanceThreshold(
     "x86-wineh-unwindv3-epilog-distance-threshold", cl::Hidden,
-    cl::desc("Maximum approximate instruction distance between an epilog and "
-             "its fragment tail before splitting into a new chained unwind "
-             "info for Unwind v3."),
+    cl::desc(
+        "Maximum approximate instruction distance between adjacent epilogs "
+        "(or between the last epilog and the funclet end) before "
+        "splitting into a new chained unwind info for Unwind v3."),
     cl::init(3000));
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
@@ -278,8 +280,9 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
 
     // Split the funclet into chained sub-fragments so that each fragment's
     // UNWIND_INFO stays within the V3 capacity limits: at most 7 epilogs per
-    // fragment, and every epilog close enough to its fragment tail that the
-    // tail-relative EpilogOffset fits in the signed 16-bit field.
+    // fragment, and each adjacent-epilog gap (plus the gap from the last epilog
+    // to the fragment tail) small enough that the corresponding signed-16-bit
+    // EpilogOffset delta fits.
     //
     // A SEH_SplitChainedAtEndOfBlock inserted at the start of an epilog's
     // block makes the AsmPrinter emit the actual .seh_splitchained at the
@@ -296,18 +299,18 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
     };
 
-    unsigned FragmentFirstPos = 0;
     unsigned EpilogsInFragment = 0;
     const EpilogSplitPoint *LastEpilog = nullptr;
     unsigned LastEpilogIdx = 0;
     for (unsigned Idx = 0; Idx < Info.Epilogs.size(); ++Idx) {
       const EpilogSplitPoint &Epilog = Info.Epilogs[Idx];
-      // If adding this epilog would exceed a fragment limit, end the current
-      // fragment after the previous epilog and start a new one here.
+      // If adding this epilog would exceed a fragment limit or is too far, end
+      // the current fragment after the previous epilog and start a new one.
       if (EpilogsInFragment > 0) {
         bool ExceedsEpilogCount = EpilogsInFragment >= MaxV3Epilogs;
         bool ExceedsDistance =
-            Epilog.ApproxInstrPos - FragmentFirstPos >= EpilogDistanceThreshold;
+            Epilog.ApproxInstrPos - LastEpilog->ApproxInstrPos >=
+            EpilogDistanceThreshold;
         if (ExceedsEpilogCount || ExceedsDistance) {
           LLVM_DEBUG({
             dbgs() << "  splitting after epilog " << LastEpilogIdx
@@ -315,31 +318,28 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
             if (ExceedsEpilogCount)
               dbgs() << "7-epilog-per-fragment limit\n";
             else
-              dbgs() << "fragment distance threshold (epilog at "
-                     << Epilog.ApproxInstrPos << " vs fragment start "
-                     << FragmentFirstPos << ")\n";
+              dbgs() << "epilog distance threshold (gap from previous epilog "
+                        "at "
+                     << LastEpilog->ApproxInstrPos << " to epilog at "
+                     << Epilog.ApproxInstrPos << ")\n";
           });
           SplitAfter(*LastEpilog);
           EpilogsInFragment = 0;
         }
       }
-      if (EpilogsInFragment == 0)
-        FragmentFirstPos = Epilog.ApproxInstrPos;
       EpilogsInFragment++;
       LastEpilog = &Epilog;
       LastEpilogIdx = Idx;
     }
 
-    // If the last fragment's first epilog is too far from the funclet end,
-    // split after the last epilog so the trailing code becomes its own
-    // epilog-free chained fragment, keeping the last fragment's epilogs close
-    // to their tail.
-    if (LastEpilog &&
-        Info.EndInstrPos - FragmentFirstPos >= EpilogDistanceThreshold) {
+    // If the last epilog is too far from the funclet end, split after it so the
+    // trailing code becomes its own epilog-free chained fragment.
+    if (LastEpilog && Info.EndInstrPos - LastEpilog->ApproxInstrPos >=
+                          EpilogDistanceThreshold) {
       LLVM_DEBUG(dbgs() << "  splitting after last epilog " << LastEpilogIdx
-                        << " to isolate the trailing tail (funclet end "
-                        << Info.EndInstrPos << " vs fragment start "
-                        << FragmentFirstPos << ")\n");
+                        << " to isolate the trailing tail (gap from epilog at "
+                        << LastEpilog->ApproxInstrPos << " to funclet end "
+                        << Info.EndInstrPos << ")\n");
       SplitAfter(*LastEpilog);
     }
   }
