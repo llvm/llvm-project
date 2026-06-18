@@ -16,7 +16,8 @@ int main() {
   std::thread t1(worker), t2(worker);
   t1.join();
   t2.join();
+  fprintf(stderr, "DONE\n");
 }
 
 // CHECK-NOT: ThreadSanitizer: data race
-// CHECK: ThreadSanitizer: no issues found
+// CHECK: DONE
