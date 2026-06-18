@@ -9,6 +9,4 @@ ARCH_CXXFLAGS += \
 
 ARCH_LDFLAGS += \
 	$(if $(RESOURCE_DIR),-resource-dir $(RESOURCE_DIR)) \
-	-Wl,--export-all \
-	-Wl,--no-entry \
 	-Wl,--allow-undefined
