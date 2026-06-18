@@ -57,15 +57,12 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     iceArguments |= (1 << 2);
 
   for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
-  }
-
-  for (auto [idx, arg] : llvm::enumerate(e->arguments())) {
     // Handle aggregate argument, namely RVV tuple types in segment load/store
     if (hasAggregateEvaluationKind(arg->getType())) {
       LValue lv = emitAggExprToLValue(arg);
       ops.push_back(builder.createLoad(loc, lv.getAddress()));
       continue;
-  }
+    }
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
   }
 
