@@ -469,8 +469,7 @@ struct MIFThisImageOpConversion
                                              dim, teamArg, result);
         fir::CallOp::create(builder, loc, funcOp, args);
         result = fir::LoadOp::create(builder, loc, result).getResult();
-        if (result.getType() != op.getType())
-          result = builder.createConvert(loc, op.getType(), result);
+        result = builder.createConvert(loc, op.getType(), result);
       } else {
         std::int64_t corank = getCorank(builder, loc, op.getCoarray());
         mlir::Type resTy = fir::SequenceType::get({corank}, i64Ty);
