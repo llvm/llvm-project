@@ -18,8 +18,7 @@ define void @align_on_i128_offset(ptr %p) {
 define void @align_on_i128_offset_unaligned(ptr %p) {
 ; CHECK-LABEL: define void @align_on_i128_offset_unaligned(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i128 18446744073709551615
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i64 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 16, i64 1) ]
 ; CHECK-NEXT:    ret void
 ;
   %gep = getelementptr i8, ptr %p, i128 18446744073709551615
