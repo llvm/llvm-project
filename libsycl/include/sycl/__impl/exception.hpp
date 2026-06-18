@@ -113,6 +113,13 @@ private:
   std::error_code MErrC = make_error_code(sycl::errc::invalid);
 };
 
+namespace detail {
+// Forward declarations needed for friend declaration in exception_list
+class QueueImpl;
+void reportAsyncException(const std::shared_ptr<QueueImpl> &,
+                          const std::exception_ptr &);
+} // namespace detail
+
 /// \brief Used as a container for a list of asynchronous exceptions.
 class _LIBSYCL_EXPORT exception_list {
 public:
@@ -141,8 +148,21 @@ public:
   iterator end() const;
 
 private:
+  void pushBack(const_reference Value);
+  void pushBack(value_type &&Value);
+
   std::vector<std::exception_ptr> MList;
+
+  friend void
+  detail::reportAsyncException(const std::shared_ptr<detail::QueueImpl> &,
+                               const std::exception_ptr &);
 };
+
+namespace detail {
+// Default implementation of async_handler used by queue and context when no
+// user-defined async_handler is specified.
+_LIBSYCL_EXPORT void defaultAsyncHandler(exception_list Exceptions);
+} // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 

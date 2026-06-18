@@ -21,11 +21,13 @@
 #include <OffloadAPI.h>
 
 #include <memory>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 class PlatformImpl;
+class QueueImpl;
 
 class EventImpl {
   // Helper to limit EventImpl creation.
@@ -42,9 +44,25 @@ public:
   EventImpl(ol_event_handle_t Event, PlatformImpl &Platform, PrivateTag)
       : MOffloadEvent(Event), MPlatform(Platform) {}
 
+  /// Constructs a default, immediately ready event.
+  /// The event is constructed as though it were created from a
+  /// default-constructed queue. Therefore, its backend is the same as the
+  /// backend of the device selected by default_selector_v.
+  /// \throw sycl::exception with errc::runtime if no default device is
+  /// available.
+  EventImpl(PrivateTag);
+
   static std::shared_ptr<EventImpl>
-  createEventWithHandle(ol_event_handle_t Event, PlatformImpl &Platform) {
-    return std::make_shared<EventImpl>(Event, Platform, PrivateTag{});
+  createEventWithHandle(ol_event_handle_t Event, PlatformImpl &Platform,
+                        std::vector<std::shared_ptr<EventImpl>> &&WaitList) {
+    auto E = std::make_shared<EventImpl>(Event, Platform, PrivateTag{});
+    E->MWaitList =
+        std::forward<std::vector<std::shared_ptr<EventImpl>>>(WaitList);
+    return E;
+  }
+
+  static std::shared_ptr<EventImpl> createDefaultEvent() {
+    return std::make_shared<EventImpl>(PrivateTag{});
   }
 
   /// Releases the handle to the corresponding liboffload event.
@@ -62,9 +80,17 @@ public:
   /// \return the platform implementation object this event belongs to.
   const PlatformImpl &getPlatformImpl() const { return MPlatform; }
 
+  void waitAndThrow();
+
+  const std::vector<std::shared_ptr<EventImpl>> &getWaitList() const {
+    return MWaitList;
+  }
+
 private:
   ol_event_handle_t MOffloadEvent{};
   PlatformImpl &MPlatform;
+
+  std::vector<std::shared_ptr<EventImpl>> MWaitList;
 };
 
 } // namespace detail

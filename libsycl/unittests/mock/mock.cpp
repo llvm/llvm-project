@@ -84,8 +84,13 @@ ol_result_t olWaitEvents(ol_queue_handle_t Queue, ol_event_handle_t *Events,
   return mock::getMockLiboffload().olWaitEvents(Queue, Events, NumEvents);
 }
 
-ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_handle_t *Event) {
-  return mock::getMockLiboffload().olCreateEvent(Queue, Event);
+ol_result_t olSyncEvent(ol_event_handle_t Event) {
+  return mock::getMockLiboffload().olSyncEvent(Event);
+}
+
+ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
+                          ol_event_handle_t *Event) {
+  return mock::getMockLiboffload().olCreateEvent(Queue, Flags, Event);
 }
 
 ol_result_t olDestroyEvent(ol_event_handle_t Event) {

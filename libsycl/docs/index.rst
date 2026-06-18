@@ -125,7 +125,7 @@ TODO for added SYCL classes
   * forward templated funcs to alignment methods (rewrite current impl)
   * handle sub devices once they are implemented (blocked by liboffload support)
 
-* ``event``: get_wait_list, get_info, get_profiling_info, wait_and_throw & default ctor are not implemented
+* ``event``: get_info, get_profiling_info (no liboffload support) are not implemented
 * ``range``, ``id`` - to add operators
 * general opens:
 

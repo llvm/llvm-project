@@ -254,13 +254,21 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olSyncEvent)
+      .WillByDefault([this](ol_event_handle_t Event) -> ol_result_t {
+        if (!Event)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olCreateEvent)
-      .WillByDefault([this](ol_queue_handle_t Queue,
+      .WillByDefault([this](ol_queue_handle_t Queue, ol_event_flags_t Flags,
                             ol_event_handle_t *Event) -> ol_result_t {
         if (!Queue)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         if (!Event)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        std::ignore = Flags;
         *Event = mock::createDummyHandleWithData<ol_event_handle_t>(
             reinterpret_cast<unsigned char *>(&Queue), sizeof(Queue));
         return OL_SUCCESS;

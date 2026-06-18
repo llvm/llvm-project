@@ -21,11 +21,11 @@
 #include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
-#include <sycl/__impl/detail/default_async_handler.hpp>
 #include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/detail/kernel_arg_helpers.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
+#include <sycl/__impl/exception.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -164,6 +164,17 @@ public:
   /// queue have completed. Synchronous errors are reported through SYCL
   /// exceptions.
   void wait();
+
+  /// Blocks the calling thread until all commands previously submitted to this
+  /// queue have completed. Synchronous errors are reported through SYCL
+  /// exceptions. At least all unconsumed asynchronous errors held by this queue
+  /// are passed to the appropriate async_handler.
+  void wait_and_throw();
+
+  /// Checks to see if any unconsumed asynchronous errors have been produced by
+  /// the queue and if so reports them by passing them to the async_handler
+  /// associated with the queue.
+  void throw_asynchronous();
 
   /// Defines and invokes a SYCL kernel function as a lambda expression or a
   /// named function object type.
