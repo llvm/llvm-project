@@ -40,6 +40,7 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
@@ -1876,6 +1877,96 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
     }
   }
   return sb_sc_list;
+}
+
+lldb::SBType SBTarget::FindExpressionTypeForLanguage(
+    const char *typename_cstr, lldb::LanguageType language, SBError &sb_error) {
+  LLDB_INSTRUMENT_VA(this, typename_cstr, language, sb_error);
+  sb_error.Clear();
+
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    sb_error.SetErrorString("no target.");
+    return {};
+  }
+
+  if (!typename_cstr || !typename_cstr[0]) {
+    sb_error.SetErrorString("empty type name for search.");
+    return {};
+  }
+
+  if (language == eLanguageTypeUnknown) {
+    sb_error.SetErrorString("eLanguageTypeUnknown can't define expression "
+                            "types.");
+    return {};
+  }
+
+  PersistentExpressionState *persistent =
+      target_sp->GetPersistentExpressionStateForLanguage(language);
+
+  if (!persistent) {
+    sb_error.SetErrorString(
+        llvm::formatv("language {0} does not support expression defined types",
+                      language)
+            .str()
+            .c_str());
+    return {};
+  }
+
+  ConstString const_typename(typename_cstr);
+  std::optional<CompilerType> type_op =
+      persistent->GetCompilerTypeFromPersistentDecl(const_typename);
+  if (type_op && (*type_op)) {
+    return SBType(*type_op);
+  }
+  sb_error.SetErrorString(
+      llvm::formatv("no type {0} found in expression types for language {1}",
+                    typename_cstr, language)
+          .str()
+          .c_str());
+  return {};
+}
+
+lldb::SBValue
+SBTarget::FindExpressionVariableForLanguage(const char *varname_cstr,
+                                            lldb::LanguageType language) {
+  LLDB_INSTRUMENT_VA(this, varname_cstr, language);
+  TargetSP target_sp = GetSP();
+  if (!target_sp)
+    return ValueObjectConstResult::Create(
+        nullptr,
+        Status::FromErrorStringWithFormatv(
+            "no variable {0} found for language {1}", varname_cstr, language));
+
+  if (!varname_cstr || !varname_cstr[0])
+    return ValueObjectConstResult::Create(
+        target_sp.get(),
+        Status::FromErrorString("empty variable name for search."));
+
+  if (language == eLanguageTypeUnknown)
+    return ValueObjectConstResult::Create(
+        nullptr, Status::FromErrorString("eLanguageTypeUnknown doesn't support "
+                                         "expression variables."));
+
+  PersistentExpressionState *persistent =
+      target_sp->GetPersistentExpressionStateForLanguage(language);
+  if (!persistent) {
+    return ValueObjectConstResult::Create(
+        target_sp.get(),
+        Status::FromErrorStringWithFormatv(
+            "language: {0} doesn't support expression variables.", language));
+  }
+
+  ConstString const_varname(varname_cstr);
+  lldb::ExpressionVariableSP expr_var_sp =
+      persistent->GetVariable(const_varname);
+  if (expr_var_sp)
+    return expr_var_sp->GetValueObject();
+
+  return ValueObjectConstResult::Create(
+      target_sp.get(),
+      Status::FromErrorStringWithFormatv(
+          "no variable {0} found for language {1}", varname_cstr, language));
 }
 
 lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {

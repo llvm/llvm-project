@@ -590,6 +590,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_sys_resource_macros",
+    hdrs = ["hdr/sys_resource_macros.h"],
+)
+
+libc_support_library(
     name = "hdr_elf_proxy",
     hdrs = ["staging/hdr/elf_proxy.h"],
     includes = ["staging"],
@@ -2488,6 +2493,21 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":hdr_fcntl_macros",
         ":types_mode_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sysinfo",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sysinfo.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
     ],
 )
 
@@ -8963,8 +8983,14 @@ libc_support_library(
     hdrs = ["src/__support/math/hypot.h"],
     deps = [
         ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
         ":__support_fputil_hypot",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
         ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -14704,10 +14730,14 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_linux_auxv",
+        ":__support_osutil_linux_syscall_wrappers_prlimit",
+        ":__support_osutil_linux_syscall_wrappers_sysinfo",
         ":__support_osutil_linux_sysinfo",
         ":errno",
         ":hdr_sys_auxv_macros",
+        ":hdr_sys_resource_macros",
         ":hdr_unistd_macros",
+        ":types_struct_rlimit",
     ],
 )
 

@@ -2884,6 +2884,13 @@ void AsmParser::handleMacroExit() {
 }
 
 bool AsmParser::parseAssignment(StringRef Name, AssignmentKind Kind) {
+  // If the LTO library has asked us to discard this symbol, skip the
+  // assignment without ever calling parseAssignmentExpression.
+  if (discardLTOSymbol(Name)) {
+    eatToEndOfStatement();
+    return false;
+  }
+
   MCSymbol *Sym;
   const MCExpr *Value;
   SMLoc ExprLoc = getTok().getLoc();
@@ -2899,9 +2906,6 @@ bool AsmParser::parseAssignment(StringRef Name, AssignmentKind Kind) {
     // should just return out.
     return false;
   }
-
-  if (discardLTOSymbol(Name))
-    return false;
 
   // Do the assignment.
   switch (Kind) {
