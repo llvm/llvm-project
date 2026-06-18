@@ -42,36 +42,29 @@ TEST_F(LlvmLibcRealpathTest, ErrorsWithNoEntryIfEmptyPath) {
   ASSERT_ERRNO_EQ(ENOENT);
 }
 
-TEST_F(LlvmLibcRealpathTest, OkIfPathIsExactlyMaxSize) {
+TEST_F(LlvmLibcRealpathTest, OkIfPathArgIsExactlyMaxSize) {
+  // PATH_MAX counts null terminator, so construct a path of size PATH_MAX-1.
+  cpp::string s(PATH_MAX - 1, '/');
+  for (size_t i = 1; i < s.size(); i += 2)
+    s[i] = '.';
+
+  ASSERT_STREQ(realpath_buffered(s), "/");
+}
+
+TEST_F(LlvmLibcRealpathTest, OkIfResolvedPathIsExactlyMaxSize) {
   // PATH_MAX counts null terminator, so construct a path of size PATH_MAX-1.
   cpp::string s(PATH_MAX - 1, 'a');
-  for (size_t i = 0; i < s.size(); i += NAME_MAX + 1)
+  for (size_t i = 0; i < s.size() - 1; i += 8)
     s[i] = '/';
 
   ASSERT_STREQ(realpath_buffered(s), s.c_str());
 }
 
-TEST_F(LlvmLibcRealpathTest, ErrorsWithNameTooLongIfPathExceedsMaxSize) {
+TEST_F(LlvmLibcRealpathTest, ErrorsWithNameTooLongIfPathArgExceedsMaxSize) {
   // PATH_MAX counts null terminator, so construct a path of size PATH_MAX.
-  cpp::string s(PATH_MAX, 'a');
-  for (size_t i = 0; i < s.size(); i += NAME_MAX + 1)
-    s[i] = '/';
-
-  ASSERT_EQ(realpath_buffered(s), nullptr);
-  ASSERT_ERRNO_EQ(ENAMETOOLONG);
-}
-
-TEST_F(LlvmLibcRealpathTest, OkWhenComponentLengthIsExactlyNameMax) {
-  cpp::string s(NAME_MAX + 1, 'a'); // +1 for leading "/"
-  s[0] = '/';
-
-  ASSERT_STREQ(realpath_buffered(s), s.c_str());
-}
-
-TEST_F(LlvmLibcRealpathTest, ErrorsIfComponentExceedsNameMax) {
-  constexpr size_t COMPONENT_SIZE = NAME_MAX + 1;
-  cpp::string s(COMPONENT_SIZE + 1, 'a'); // +1 for leading "/"
-  s[0] = '/';
+  cpp::string s(PATH_MAX, '/');
+  for (size_t i = 1; i < s.size(); i += 2)
+    s[i] = '.';
 
   ASSERT_EQ(realpath_buffered(s), nullptr);
   ASSERT_ERRNO_EQ(ENAMETOOLONG);

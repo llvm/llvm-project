@@ -64,9 +64,6 @@ public:
 
   // Adds a single component to the end of this path.
   ErrorOr<Ok> push_component(cpp::string_view component) {
-    if (component.size() > NAME_MAX)
-      return Error(ENAMETOOLONG);
-
     if (!is_root()) {
       if (ErrorOr<Ok> res = push_raw(PATH_SEP); !res)
         return res;
