@@ -10413,8 +10413,8 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // Implicitly treat allocatable arrays as pinned when feature is
         // enabled.
         else if (IsAllocatable(symbol) &&
-                 context().languageFeatures().IsEnabled(
-                     common::LanguageFeature::CudaPinned))
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
       }
     }
