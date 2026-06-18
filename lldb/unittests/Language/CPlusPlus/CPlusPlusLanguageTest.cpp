@@ -39,6 +39,8 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "(class AClass)", "", "a::b::c"},
       {"struct ns::AStruct const & A::f(void) const",
        "struct ns::AStruct const &", "A", "f", "(void)", "const", "A::f"},
+      {"union AUnion A<enum AEnum>::fn(void)", "union AUnion", "A<enum AEnum>",
+       "fn", "(void)", "", "A<enum AEnum>::fn"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
