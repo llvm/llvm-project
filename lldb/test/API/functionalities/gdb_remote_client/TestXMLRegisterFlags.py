@@ -1005,9 +1005,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         expected_info = [
             dedent(
                 """\
-             f2: 1 = valid
-
-             f1: 1 = valid$"""
+             f2, f1: 1 = valid$"""
             )
         ]
         self.expect("register info x0", patterns=expected_info)

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 
+#include <algorithm>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -286,9 +287,14 @@ static void DumpEnumerators(StreamString &strm, size_t indent,
 }
 
 std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
-  StreamString strm;
-  bool printed_enumerators_once = false;
+  struct TypeToFields {
+    const FieldEnum *enum_type;
+    std::string field_names;
+  };
+  std::vector<TypeToFields> enum_types;
 
+  // Accumulate all fields that use the same enum, so that each enum is only
+  // printed once.
   for (const auto &field : m_fields) {
     const FieldEnum *enum_type = field.GetEnum();
     if (!enum_type)
@@ -298,19 +304,36 @@ std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
     if (enumerators.empty())
       continue;
 
-    // Break between enumerators of different fields.
+    auto existing = std::find_if(enum_types.begin(), enum_types.end(),
+                                 [enum_type](const TypeToFields &entry) {
+                                   return entry.enum_type == enum_type;
+                                 });
+    if (existing != enum_types.end()) {
+      existing->field_names += ", " + field.GetName();
+      continue;
+    }
+
+    enum_types.push_back({enum_type, field.GetName()});
+  }
+
+  StreamString strm;
+  bool printed_enumerators_once = false;
+
+  for (const TypeToFields &entry : enum_types) {
+    // Break between unique enumerator types.
     if (printed_enumerators_once)
       strm << "\n\n";
     else
       printed_enumerators_once = true;
 
-    std::string name_string = field.GetName() + ": ";
+    std::string name_string = entry.field_names + ": ";
     size_t indent = name_string.size();
     size_t current_width = indent;
 
     strm << name_string;
 
-    DumpEnumerators(strm, indent, current_width, max_width, enumerators);
+    DumpEnumerators(strm, indent, current_width, max_width,
+                    entry.enum_type->GetEnumerators());
   }
 
   return strm.GetString().str();
