@@ -156,11 +156,13 @@ protected:
 struct uArch {
   enum class Kind {
     // Xe2 family
-    Xe2Plus_First,
-    PVC = Xe2Plus_First,
+    Xe2_First,
+    PVC = Xe2_First,
     BMG,
-    CRI,
-    Xe2Plus_Last = CRI,
+    Xe2_Last = BMG,
+    Xe3_First,
+    CRI = Xe3_First,
+    Xe3_Last = CRI
   };
 
   // Constructor
@@ -182,6 +184,8 @@ struct uArch {
       return "bmg";
     case Kind::CRI:
       return "cri";
+    default:
+      return "";
     }
     llvm_unreachable("Unknown uArch::Kind");
   }
@@ -331,6 +335,14 @@ struct StoreScatterInstructionInterface : public Instruction {
 
   virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
   virtual ~StoreScatterInstructionInterface() = default;
+};
+
+struct SpirvLoadGatherInstruction : public LoadGatherInstructionInterface {
+  int32_t getMaxLaneLoadSize(int32_t bitWidth) const override { return 16; }
+};
+
+struct SpirvStoreScatterInstruction : public StoreScatterInstructionInterface {
+  int32_t getMaxLaneStoreSize(int32_t bitWidth) const override { return 16; }
 };
 
 } // namespace uArch
