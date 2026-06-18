@@ -1939,7 +1939,10 @@ inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt, LLVMContext &Ctx,
                DenseMap<const MDNode *, MDNode *> &InlineLocCache) {
   if (MDNode *Cached = InlineLocCache.lookup(OrigDL.get()))
     return DebugLoc(cast<DILocation>(Cached));
-  auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
+  DILocation *IA =
+      OrigDL->getInlinedAt()
+          ? DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes).get()
+          : InlinedAt;
   DILocation *Result = DILocation::getDistinct(
       Ctx, OrigDL.getLine(), OrigDL.getCol(), OrigDL.getScope(), IA,
       OrigDL.isImplicitCode(), OrigDL->getAtomGroup(), OrigDL->getAtomRank());
