@@ -444,13 +444,17 @@ public:
 private:
   std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,
                                         bool AllowGNUAttrMacro = true) {
+    const bool IsC = !S.getLangOpts().CPlusPlus;
+    const StringRef Fallback =
+        IsC ? "__attribute__((lifetimebound))" : "[[clang::lifetimebound]]";
     StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
     if (Spelling.empty() && Loc.isValid()) {
       const Preprocessor &PP = S.getPreprocessor();
-      Spelling = PP.getLastMacroWithSpelling(
-          Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
-                tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
-                tok::r_square, tok::r_square});
+      if (!IsC)
+        Spelling = PP.getLastMacroWithSpelling(
+            Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
+                  tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
+                  tok::r_square, tok::r_square});
 
       if (Spelling.empty() && AllowGNUAttrMacro)
         Spelling = PP.getLastMacroWithSpelling(
@@ -458,8 +462,7 @@ private:
                   PP.getIdentifierInfo("lifetimebound"), tok::r_paren,
                   tok::r_paren});
     }
-    const std::string Text =
-        Spelling.empty() ? "[[clang::lifetimebound]]" : Spelling.str();
+    const std::string Text = Spelling.empty() ? Fallback.str() : Spelling.str();
     return LeadingSpace ? " " + Text : Text + " ";
   }
 
