@@ -239,14 +239,6 @@ const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (Value *RV = RI->getReturnValue()) {
     if (RV != Prev)
       return nullptr;
-
-    // Look through the optional bitcast.
-    if (auto *BI = dyn_cast<BitCastInst>(Prev)) {
-      RV = BI->getOperand(0);
-      Prev = BI->getPrevNode();
-      if (!Prev || RV != Prev)
-        return nullptr;
-    }
   }
 
   if (auto *CI = dyn_cast<CallInst>(Prev)) {

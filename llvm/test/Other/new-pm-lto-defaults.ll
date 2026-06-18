@@ -26,6 +26,9 @@
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='lto<O3>' -S  %s -passes-ep-peephole='no-op-function' 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23,CHECK-EP-PEEPHOLE
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='lto<O3>' -S  %s -passes-ep-cgscc-optimizer-late='no-op-cgscc' 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23,CHECK-EP-CGSCC-LATE
 
 ; CHECK-EP: Running pass: NoOpModulePass
 ; CHECK-O: Running pass: CrossDSOCFIPass
@@ -84,6 +87,7 @@
 ; CHECK-O23-NEXT: Running pass: ArgumentPromotionPass on (foo)
 ; CHECK-O23-NEXT: CoroSplitPass on (foo)
 ; CHECK-O23-NEXT: CoroAnnotationElidePass on (foo)
+; CHECK-EP-CGSCC-LATE-NEXT: Running pass: NoOpCGSCCPass on (foo)
 ; CHECK-O23-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass

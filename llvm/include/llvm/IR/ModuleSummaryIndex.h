@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +46,6 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -301,16 +301,10 @@ inline bool operator<(const ValueInfo &A, const ValueInfo &B) {
 }
 
 template <> struct DenseMapInfo<ValueInfo> {
-  static inline ValueInfo getEmptyKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
-  }
-
-  static inline bool isSpecialKey(ValueInfo V) { return V == getEmptyKey(); }
-
   static bool isEqual(ValueInfo L, ValueInfo R) {
     // We are not supposed to mix ValueInfo(s) with different HaveGVs flag
     // in a same container.
-    assert(isSpecialKey(L) || isSpecialKey(R) || (L.haveGVs() == R.haveGVs()));
+    assert(L.haveGVs() == R.haveGVs());
     return L.getRef() == R.getRef();
   }
   static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
@@ -1125,8 +1119,6 @@ public:
 };
 
 template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
-  static FunctionSummary::VFuncId getEmptyKey() { return {0, uint64_t(-1)}; }
-
   static bool isEqual(FunctionSummary::VFuncId L, FunctionSummary::VFuncId R) {
     return L.GUID == R.GUID && L.Offset == R.Offset;
   }
@@ -1135,10 +1127,6 @@ template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
 };
 
 template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
-  static FunctionSummary::ConstVCall getEmptyKey() {
-    return {{0, uint64_t(-1)}, {}};
-  }
-
   static bool isEqual(FunctionSummary::ConstVCall L,
                       FunctionSummary::ConstVCall R) {
     return DenseMapInfo<FunctionSummary::VFuncId>::isEqual(L.VFunc, R.VFunc) &&
@@ -1413,7 +1401,7 @@ using ModuleToSummariesForIndexTy =
     std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
+using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 0>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
@@ -1573,7 +1561,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 13;
+  static constexpr uint64_t BitcodeSummaryVersion = 14;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {

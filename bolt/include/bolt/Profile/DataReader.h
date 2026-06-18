@@ -236,8 +236,10 @@ struct FuncBasicSampleData {
 ///
 class DataReader : public ProfileReaderBase {
 public:
-  explicit DataReader(StringRef Filename)
-      : ProfileReaderBase(Filename), Diag(errs()) {}
+  explicit DataReader(StringRef Filename) : DataReader(Filename, errs()) {}
+
+  DataReader(StringRef Filename, raw_ostream &Diag)
+      : ProfileReaderBase(Filename), Diag(Diag) {}
 
   StringRef getReaderName() const override { return "branch profile reader"; }
 
@@ -488,9 +490,6 @@ public:
 /// DenseMapInfo allows us to use the DenseMap LLVM data structure to store
 /// Locations
 template <> struct DenseMapInfo<bolt::Location> {
-  static inline bolt::Location getEmptyKey() {
-    return bolt::Location(true, StringRef(), static_cast<uint64_t>(-1LL));
-  }
   static unsigned getHashValue(const bolt::Location &L) {
     return (unsigned(DenseMapInfo<StringRef>::getHashValue(L.Name)) >> 4) ^
            (unsigned(L.Offset));

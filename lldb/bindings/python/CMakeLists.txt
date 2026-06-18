@@ -103,6 +103,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "utils"
     FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
           "${LLDB_SOURCE_DIR}/examples/python/symbolication.py"
+          "${LLDB_SOURCE_DIR}/examples/python/delayed_enable.py"
   )
 
   create_python_package(
@@ -181,6 +182,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
 
   add_dependencies(${swig_target} swig_wrapper_python liblldb lldb-argdumper)
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
+  endif()
   set_target_properties(${swig_target} swig_wrapper_python PROPERTIES FOLDER "lldb misc")
 
   # Ensure we do the python post-build step when building lldb.

@@ -633,8 +633,6 @@ void FunctionSpecializer::cleanUpSSA() {
 }
 
 template <> struct llvm::DenseMapInfo<SpecSig> {
-  static inline SpecSig getEmptyKey() { return {~0U, {}}; }
-
   static unsigned getHashValue(const SpecSig &S) {
     return static_cast<unsigned>(hash_value(S));
   }
@@ -1036,6 +1034,9 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
 
 bool FunctionSpecializer::isCandidateFunction(Function *F) {
   if (F->isDeclaration() || F->arg_empty())
+    return false;
+
+  if (F->isInterposable())
     return false;
 
   if (F->hasFnAttribute(Attribute::NoDuplicate))
