@@ -15,8 +15,8 @@
 
 void empty() {}
 
-// NOT-MATCHING-THE-PATTERN: error: failed to parse the value of '--ssaf-tu-summary-file=foobar' the value must follow the '<path>.<format>' pattern [-Wscalable-static-analysis-framework]
-// UNKNOWN-FILE-FORMAT:      error: unknown output summary file format 'unknownfmt' specified by '--ssaf-tu-summary-file={{.+}}.ssaf.unknownfmt' [-Wscalable-static-analysis-framework]
-// NO-EXTRACTORS-ENABLED:    error: must enable some summary extractors using the '--ssaf-extract-summaries=' option [-Wscalable-static-analysis-framework]
-// NO-EXTRACTOR-WITH-NAME:   error: no summary extractor was registered with name: extractor1 [-Wscalable-static-analysis-framework]
-// NO-EXTRACTORS-WITH-NAME:  error: no summary extractors were registered with name: extractor1, extractor2 [-Wscalable-static-analysis-framework]
+// NOT-MATCHING-THE-PATTERN: error: failed to parse the value of '--ssaf-tu-summary-file=foobar' the value must follow the '<path>.<format>' pattern [-Wscalable-static-analysis]
+// UNKNOWN-FILE-FORMAT:      error: unknown output summary file format 'unknownfmt' specified by '--ssaf-tu-summary-file={{.+}}.ssaf.unknownfmt' [-Wscalable-static-analysis]
+// NO-EXTRACTORS-ENABLED:    error: must enable some summary extractors using the '--ssaf-extract-summaries=' option [-Wscalable-static-analysis]
+// NO-EXTRACTOR-WITH-NAME:   error: no summary extractor was registered with name: extractor1 [-Wscalable-static-analysis]
+// NO-EXTRACTORS-WITH-NAME:  error: no summary extractors were registered with name: extractor1, extractor2 [-Wscalable-static-analysis]

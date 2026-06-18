@@ -1,0 +1,11 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
+add_clang_library(clangScalableStaticAnalysisTool
+  Utils.cpp
+
+  LINK_LIBS
+  clangBasic
+  clangScalableStaticAnalysisCore
+  )
