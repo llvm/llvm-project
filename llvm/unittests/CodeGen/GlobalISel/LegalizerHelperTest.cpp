@@ -4402,4 +4402,37 @@ TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
   LLT::setUseExtended(false);
 }
 
+TEST_F(AArch64GISelMITest, WidenScalarUnmergeValuesFloat) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, {});
+
+  LLT S8 = LLT::scalar(8);
+  LLT S16 = LLT::scalar(16);
+  LLT BF16 = LLT::bfloat16();
+
+  auto Src = B.buildInstr(TargetOpcode::G_IMPLICIT_DEF, {BF16}, {});
+  auto Unmerge = B.buildInstr(TargetOpcode::G_UNMERGE_VALUES, {S8, S8}, {Src});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Unmerge, 0, S16));
+
+  const auto *CheckStr = R"(
+  CHECK: [[SRC:%[0-9]+]]:_(bf16) = G_IMPLICIT_DEF
+  CHECK: [[BC:%[0-9]+]]:_(i16) = G_BITCAST [[SRC]]:_(bf16)
+  CHECK: [[LO:%[0-9]+]]:_(s8) = G_TRUNC [[BC]]:_(i16)
+  CHECK: [[C8:%[0-9]+]]:_(i16) = G_CONSTANT i16 8
+  CHECK: [[SHR:%[0-9]+]]:_(i16) = G_LSHR [[BC]]:_, [[C8]]:_(i16)
+  CHECK: [[HI:%[0-9]+]]:_(s8) = G_TRUNC [[SHR]]:_(i16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace
