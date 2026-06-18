@@ -925,6 +925,26 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   }
 
+  // The mlfi option configures LFI subtarget features.
+  if (const Arg *A = Args.getLastArg(options::OPT_mlfi_EQ)) {
+    if (!Triple.isLFI()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+    } else {
+      for (StringRef Value : A->getValues()) {
+        StringRef Feature = llvm::StringSwitch<StringRef>(Value)
+                                .Case("no-loads", "+no-lfi-loads")
+                                .Case("no-stores", "+no-lfi-stores")
+                                .Default("");
+        if (Feature.empty())
+          D.Diag(diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Value;
+        else
+          Features.push_back(Feature);
+      }
+    }
+  }
+
   for (auto Feature : unifyTargetFeatures(Features)) {
     CmdArgs.push_back(IsAux ? "-aux-target-feature" : "-target-feature");
     CmdArgs.push_back(Feature.data());

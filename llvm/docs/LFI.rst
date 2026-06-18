@@ -115,7 +115,8 @@ Example:
 Compiler Options
 ++++++++++++++++
 
-The LFI target has several configuration options, specified via ``-mattr=``:
+The LFI target has several configuration options. At the LLVM level they are
+specified as subtarget features via ``-mattr=``:
 
 * ``+no-lfi-loads``: Disable sandboxing for load instructions (stores-only mode).
 * ``+no-lfi-stores``: Disable sandboxing for store instructions.
@@ -127,6 +128,26 @@ Use ``+no-lfi-loads,+no-lfi-stores`` to create a "jumps-only" sandbox that may
 read/write outside the sandbox region but may not transfer control outside
 (e.g., may not execute system calls directly). This is primarily useful in
 combination with some other form of memory sandboxing, such as Intel MPK.
+
+When driving the compiler with Clang, these same options are exposed through the
+``-mlfi=`` flag, which takes a comma-separated list of configuration
+knobs and lowers them to the corresponding subtarget features:
+
+* ``-mlfi=no-loads``.
+* ``-mlfi=no-stores``.
+
+Preprocessor Macros
++++++++++++++++++++
+
+When compiling for an LFI target, Clang predefines ``__LFI__``. The enabled LFI
+configuration knobs are additionally communicated to the preprocessor so that
+source code can adapt to the sandbox configuration. Each macro is defined only
+when the corresponding feature is active:
+
+* ``__LFI_NO_LOADS__``: defined when load sandboxing is disabled
+  (``-mlfi=no-loads`` / ``+no-lfi-loads``).
+* ``__LFI_NO_STORES__``: defined when store sandboxing is disabled
+  (``-mlfi=no-stores`` / ``+no-lfi-stores``).
 
 AArch64
 +++++++
