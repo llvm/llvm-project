@@ -32,7 +32,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c) {
   Container c2;
 
   for (int i = 0; i != 10; ++i) {
-    auto node = nf(c2, i, i + 1);
+    typename Container::node_type node = nf(c2, i, i + 1);
     assert(!node.empty());
     typename Container::iterator it = c.insert(std::move(node));
     assert(node.empty());
@@ -49,7 +49,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c) {
   }
 
   { // Insert duplicate node.
-    auto dupl                          = nf(c2, 0, 42);
+    typename Container::node_type dupl = nf(c2, 0, 42);
     auto it                            = c.insert(std::move(dupl));
     assert(dupl.empty());
     assert(it != c.end());
@@ -65,7 +65,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c) {
 }
 
 TEST_CONSTEXPR_CXX26
-bool test_insert_node_type() {
+bool test() {
   std::multimap<int, int> m;
   test(m);
   std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
@@ -75,10 +75,10 @@ bool test_insert_node_type() {
 }
 
 int main(int, char**) {
-  assert(test_insert_node_type());
+  test();
 
 #if TEST_STD_VER >= 26
-  static_assert(test_insert_node_type());
+  static_assert(test());
 #endif
   return 0;
 }

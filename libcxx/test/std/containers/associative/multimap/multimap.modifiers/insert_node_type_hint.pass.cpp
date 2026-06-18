@@ -31,7 +31,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c) {
   Container c2;
 
   for (int i = 0; i != 10; ++i) {
-    auto node = nf(c2, i, i + 1);
+    typename Container::node_type node = nf(c2, i, i + 1);
     assert(!node.empty());
     std::size_t prev = c.size();
     auto it          = c.insert(c.end(), std::move(node));
