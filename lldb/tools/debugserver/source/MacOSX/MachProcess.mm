@@ -3066,7 +3066,8 @@ pid_t MachProcess::AttachForDebug(
       // signal instead, so report a useful error rather than crashing.
       snprintf(err_str, err_len,
                "cannot attach to process %d because it has disabled debugging "
-               "via ptrace(PT_DENY_ATTACH)",
+               "via ptrace(PT_DENY_ATTACH). Attach earlier, put a breakpoint "
+               "on ptrace and return 0.",
                pid);
       DNBLogError("[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d "
                   "denied attach via ptrace(PT_DENY_ATTACH)",
