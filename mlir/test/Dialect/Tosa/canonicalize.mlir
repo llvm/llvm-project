@@ -1768,6 +1768,18 @@ func.func @dont_canonicalize_unit_avg_pool2d_non_unit_kernel(%arg0: tensor<1x32x
 
 // -----
 
+// CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_non_unit_kernel
+// CHECK: tosa.avg_pool2d
+func.func @dont_canonicalize_unit_avg_pool2d_non_unit_kernel(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x?x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x?x32x8xf32>
+  return %0 : tensor<1x?x32x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_dynamic_zp
 // CHECK: tosa.avg_pool2d
 func.func @dont_canonicalize_unit_avg_pool2d_dynamic_zp(%arg0: tensor<1x32x32x8xf32>, %zp: tensor<1xf32>) -> tensor<1x?x32x8xf32> {

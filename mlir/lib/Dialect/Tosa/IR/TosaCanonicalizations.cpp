@@ -276,11 +276,18 @@ struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
                                 PatternRewriter &rewriter) const override {
+    // Prevent canonicalization if input/output shapes don't align
+    if (op.getInput().getType() != op.getOutput().getType())
+      return rewriter.notifyMatchFailure(
+          op, "expected input and output types to match");
+
     const auto inputType = llvm::cast<ShapedType>(op.getInput().getType());
     if (!llvm::isa<FloatType>(inputType.getElementType()))
       return rewriter.notifyMatchFailure(op,
                                          "expected floating-point input type");
 
+    // For statically known zero points, the verifier ensures zero points are
+    // zero for floating-point types
     if (!matchPattern(op.getInputZp(), m_Constant()) ||
         !matchPattern(op.getOutputZp(), m_Constant()))
       return rewriter.notifyMatchFailure(
