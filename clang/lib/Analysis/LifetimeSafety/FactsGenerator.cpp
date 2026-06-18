@@ -482,10 +482,13 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
-void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+void FactsGenerator::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *CO) {
   if (!hasOrigins(CO))
     return;
 
+  // For the GNU binary conditional `a ?: b`, getTrueExpr() is the
+  // OpaqueValueExpr wrapping the common subexpression.
   const Expr *TrueExpr = CO->getTrueExpr();
   const Expr *FalseExpr = CO->getFalseExpr();
 
@@ -500,13 +503,17 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   case 0:
     return;
   case 1: {
-    TBHasEdge = llvm::any_of(**Preds.begin(),
-                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
-                                 const CFGElement &Elt) {
-                               if (auto CS = Elt.getAs<CFGStmt>())
-                                 return CS->getStmt() == ExpectedStmt;
-                               return false;
-                             });
+    // For `a ?: b`, getTrueExpr() is the OpaqueValueExpr; the common
+    // subexpression it wraps is what appears in the predecessor block.
+    const Expr *TrueArm = TrueExpr->IgnoreParenImpCasts();
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(TrueArm))
+      if (const Expr *Src = OVE->getSourceExpr())
+        TrueArm = Src->IgnoreParenImpCasts();
+    TBHasEdge = llvm::any_of(**Preds.begin(), [TrueArm](const CFGElement &Elt) {
+      if (auto CS = Elt.getAs<CFGStmt>())
+        return CS->getStmt() == TrueArm;
+      return false;
+    });
     FBHasEdge = !TBHasEdge;
     break;
   }
