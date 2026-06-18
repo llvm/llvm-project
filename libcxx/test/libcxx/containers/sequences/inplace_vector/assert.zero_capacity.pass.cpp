@@ -26,7 +26,7 @@ int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c).front(), "inplace_vector<T,0>::front() const: access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE((void)c.back(), "inplace_vector<T,0>::back(): access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c).back(), "inplace_vector<T,0>::back() const: access with N == 0");
-  TEST_LIBCPP_ASSERT_FAILURE(c.pop_back(), "inplace_vector<T,0>::erase(): use with N == 0");
+  TEST_LIBCPP_ASSERT_FAILURE(c.pop_back(), "inplace_vector<T,0>::pop_back(): use with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE(c.erase(c.begin()), "inplace_vector<T,0>::erase(): use with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE(
       c.erase(c.begin(), c.begin() + 1), "inplace_vector<T,0>::erase(const_iterator, const_iterator): use with N == 0");
