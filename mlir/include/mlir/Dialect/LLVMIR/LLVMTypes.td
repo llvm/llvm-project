@@ -61,6 +61,32 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
 }
 
 //===----------------------------------------------------------------------===//
+// LLVMByteType
+//===----------------------------------------------------------------------===//
+
+def LLVMByteType : LLVMType<"LLVMByte", "byte", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+                                ["getTypeSizeInBits", "getABIAlignment"]>,
+    VectorElementTypeInterface]> {
+  let summary = "LLVM byte type";
+  let description = [{
+    The `!llvm.byte` type represents raw memory data in SSA registers, mirroring
+    LLVM's builtin byte type.
+    It should be used when it cannot be determined whether a value holds a
+    pointer or another type at run time, or if the value contains uninitialized
+    or poison data.
+    Unlike integer types, copying byte types preserves all poison bits and the
+    provenance of pointers.
+  }];
+
+  let parameters = (ins "unsigned":$bitWidth);
+  let assemblyFormat = [{
+    `<` $bitWidth `>`
+  }];
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMFunctionType
 //===----------------------------------------------------------------------===//
 
@@ -104,7 +130,8 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
     bool isVarArg() const { return getVarArg(); }
 
     /// Returns a clone of this function type with the given argument
-    /// and result types.
+    /// and result types. Returns null if the resulting function type would
+    /// not verify.
     LLVMFunctionType clone(TypeRange inputs, TypeRange results) const;
 
     /// Returns the result type of the function as an ArrayRef, enabling better

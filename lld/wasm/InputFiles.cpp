@@ -12,7 +12,6 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -92,7 +91,7 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
     auto *obj = cast<WasmObjectFile>(bin.get());
     if (obj->hasUnmodeledTypes())
       fatal(toString(mb.getBufferIdentifier()) +
-            "file has unmodeled reference or GC types");
+            " file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
     return make<ObjFile>(mb, archiveName, lazy);
@@ -133,6 +132,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
@@ -144,7 +144,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 // Translate from the relocation's index into the final linked output value.
 uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
                                const InputChunk *chunk) const {
-  const Symbol* sym = nullptr;
+  const Symbol *sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
 
@@ -182,12 +182,14 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64: {
     if (isa<UndefinedData>(sym) || sym->isShared() || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
     uint64_t value = D->getVA() + reloc.Addend;
-    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
+    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32 ||
+        reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I64) {
       const auto *segment = cast<InputSegment>(chunk);
       uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
                    reloc.Offset - segment->getInputSectionOffset();
@@ -209,7 +211,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     return getTagSymbol(reloc.Index)->getTagIndex();
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64: {
-    if (isa<UndefinedFunction>(sym)) {
+    if (isa<UndefinedFunction>(sym) || sym->isShared()) {
       return tombstone ? tombstone : reloc.Addend;
     }
     auto *f = cast<DefinedFunction>(sym);
@@ -423,8 +425,10 @@ ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
   // https://github.com/llvm/llvm-project/issues/98778
   checkArch(wasmObj->getArch());
 
-  // If this isn't part of an archive, it's eagerly linked, so mark it live.
-  if (archiveName.empty())
+  // Unless we are processing this as a lazy object file (e.g. part of an
+  // archive file or within `--start-lib`/`--end-lib`, it's eagerly linked, so
+  // mark it live.
+  if (!lazy)
     markLive();
 }
 
@@ -451,6 +455,9 @@ void SharedFile::parse() {
         break;
       case WASM_SYMBOL_TYPE_DATA:
         s = symtab->addSharedData(name, flags, this);
+        break;
+      case WASM_SYMBOL_TYPE_TAG:
+        s = symtab->addSharedTag(name, flags, this, wasmSym.Signature);
         break;
       default:
         continue;
@@ -560,7 +567,6 @@ void ObjFile::parse(bool ignoreComdats) {
 
   typeMap.resize(getWasmObj()->types().size());
   typeIsUsed.resize(getWasmObj()->types().size(), false);
-
 
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
@@ -885,7 +891,8 @@ void BitcodeFile::parseLazy() {
 
 void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {
-    error(toString(this) + ": attempt to add bitcode file after LTO (" + symName + ")");
+    error(toString(this) + ": attempt to add bitcode file after LTO (" +
+          symName + ")");
     return;
   }
 

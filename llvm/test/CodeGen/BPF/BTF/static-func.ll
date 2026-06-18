@@ -9,18 +9,18 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @test2() local_unnamed_addr #0 !dbg !12 {
+define dso_local i32 @test2() local_unnamed_addr !dbg !12 {
 entry:
   %call = tail call fastcc i32 @test1(), !dbg !13
   ret i32 %call, !dbg !14
 }
 ; Function Attrs: noinline nounwind
-define internal fastcc i32 @test1() unnamed_addr #1 !dbg !15 {
+define internal fastcc i32 @test1() unnamed_addr !dbg !15 {
 entry:
-  %call = tail call i32 @foo() #3, !dbg !16
+  %call = tail call i32 @foo(), !dbg !16
   ret i32 %call, !dbg !17
 }
-declare !dbg !4 dso_local i32 @foo() local_unnamed_addr #2
+declare !dbg !4 dso_local i32 @foo() local_unnamed_addr
 
 ; CHECK:             .section        .BTF,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
@@ -66,11 +66,6 @@ declare !dbg !4 dso_local i32 @foo() local_unnamed_addr #2
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "foo"                   # string offset=60
 ; CHECK-NEXT:        .byte   0
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9, !10}

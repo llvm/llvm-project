@@ -535,3 +535,59 @@ define %struct.uint8x8x2_t @vuzp_extract_subvector(<16 x i8> %t) #0 {
   %.fca.0.1.insert = insertvalue %struct.uint8x8x2_t %.fca.0.0.insert, <8 x i8> %vuzp1.i, 0, 1
   ret %struct.uint8x8x2_t %.fca.0.1.insert
 }
+
+define void @test_15xi16(ptr %next.gep, ptr %next.gep13) {
+; CHECK-LABEL: test_15xi16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    add r2, r0, #2
+; CHECK-NEXT:    add r3, r0, #6
+; CHECK-NEXT:    vld1.16 {d20, d21}, [r2]!
+; CHECK-NEXT:    vld1.16 {d16}, [r2]!
+; CHECK-NEXT:    vmov.u16 r12, d16[0]
+; CHECK-NEXT:    ldr r2, [r2]
+; CHECK-NEXT:    vmov.u16 r4, d20[0]
+; CHECK-NEXT:    vld1.16 {d22, d23}, [r3]!
+; CHECK-NEXT:    vld1.16 {d24}, [r3]!
+; CHECK-NEXT:    vmov.u16 lr, d16[2]
+; CHECK-NEXT:    vmov.u16 r5, d22[0]
+; CHECK-NEXT:    vmov.u16 r6, d21[0]
+; CHECK-NEXT:    vmov.16 d17[0], r12
+; CHECK-NEXT:    vmov.16 d16[0], r4
+; CHECK-NEXT:    vmov.u16 r4, d24[0]
+; CHECK-NEXT:    vmov.u16 r12, d24[2]
+; CHECK-NEXT:    vmov.16 d17[1], lr
+; CHECK-NEXT:    vmov.16 d18[0], r5
+; CHECK-NEXT:    vmov.u16 r5, d20[2]
+; CHECK-NEXT:    vmov.u16 lr, d23[0]
+; CHECK-NEXT:    vmov.16 d19[0], r4
+; CHECK-NEXT:    vmov.u16 r4, d22[2]
+; CHECK-NEXT:    vmov.16 d16[1], r5
+; CHECK-NEXT:    vmov.u16 r5, d21[2]
+; CHECK-NEXT:    vmov.16 d17[2], r2
+; CHECK-NEXT:    ldr r2, [r3]
+; CHECK-NEXT:    vmov.16 d16[2], r6
+; CHECK-NEXT:    vmov.16 d18[1], r4
+; CHECK-NEXT:    vmov.u16 r4, d23[2]
+; CHECK-NEXT:    vmov.16 d19[1], r12
+; CHECK-NEXT:    vmov.16 d18[2], lr
+; CHECK-NEXT:    vmov.16 d19[2], r2
+; CHECK-NEXT:    add r2, r0, #30
+; CHECK-NEXT:    add r0, r0, #34
+; CHECK-NEXT:    vld1.16 {d17[3]}, [r2:16]
+; CHECK-NEXT:    vmov.16 d16[3], r5
+; CHECK-NEXT:    vmov.16 d18[3], r4
+; CHECK-NEXT:    vld1.16 {d19[3]}, [r0:16]
+; CHECK-NEXT:    vst1.16 {d16, d17}, [r1]!
+; CHECK-NEXT:    vst1.16 {d18, d19}, [r1]
+; CHECK-NEXT:    pop {r4, r5, r6, lr}
+; CHECK-NEXT:    mov pc, lr
+  %a = getelementptr inbounds nuw i8, ptr %next.gep, i32 2
+  %b = load <15 x i16>, ptr %a, align 2
+  %c = getelementptr inbounds nuw i8, ptr %next.gep, i32 6
+  %d = load <15 x i16>, ptr %c, align 2
+  %interleaved.vec = shufflevector <15 x i16> %b, <15 x i16> %d, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29>
+  store <16 x i16> %interleaved.vec, ptr %next.gep13, align 2
+  ret void
+}

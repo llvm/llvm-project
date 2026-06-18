@@ -40,9 +40,9 @@ program coshape_tests
   !ERROR: 'coarray=' argument must have corank > 0 for intrinsic 'coshape'
   codimensions = coshape(derived_scalar_coarray[1]%x)
   !ERROR: 'coarray=' argument must have corank > 0 for intrinsic 'coshape'
-  codimensions = coshape(derived_array_coarray[1]%x)
+  codimensions = coshape(derived_array_coarray(:)[1]%x)
   !ERROR: 'coarray=' argument must have corank > 0 for intrinsic 'coshape'
-  codimensions = coshape(array_coarray[1])
+  codimensions = coshape(array_coarray(:)[1])
   !ERROR: 'coarray=' argument must have corank > 0 for intrinsic 'coshape'
   codimensions = coshape(scalar_coarray[1])
 

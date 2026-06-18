@@ -14,8 +14,9 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -24,8 +25,6 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -33,20 +32,16 @@
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -123,15 +118,15 @@ static cl::opt<bool> PrintPassNumbers(
     "print-pass-numbers", cl::init(false), cl::Hidden,
     cl::desc("Print pass names and their ordinals"));
 
-static cl::opt<unsigned> PrintBeforePassNumber(
-    "print-before-pass-number", cl::init(0), cl::Hidden,
-    cl::desc("Print IR before the pass with this number as "
+static cl::list<unsigned> PrintBeforePassNumber(
+    "print-before-pass-number", cl::CommaSeparated, cl::Hidden,
+    cl::desc("Print IR before the passes with specified numbers as "
              "reported by print-pass-numbers"));
 
-static cl::opt<unsigned>
-    PrintAfterPassNumber("print-after-pass-number", cl::init(0), cl::Hidden,
-                         cl::desc("Print IR after the pass with this number as "
-                                  "reported by print-pass-numbers"));
+static cl::list<unsigned> PrintAfterPassNumber(
+    "print-after-pass-number", cl::CommaSeparated, cl::Hidden,
+    cl::desc("Print IR after the passes with specified numbers as "
+             "reported by print-pass-numbers"));
 
 static cl::opt<std::string> IRDumpDirectory(
     "ir-dump-directory",
@@ -342,7 +337,8 @@ bool isIgnored(StringRef PassID) {
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
                         "VerifierPass", "PrintModulePass", "PrintMIRPass",
-                        "PrintMIRPreparePass"});
+                        "PrintMIRPreparePass", "RequireAnalysisPass",
+                        "InvalidateAnalysisPass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -542,7 +538,7 @@ void IRChangedPrinter::handleAfter(StringRef PassID, std::string &Name,
   Out << "*** IR Dump After " << PassID << " on " << Name << " ***\n" << After;
 }
 
-IRChangedTester::~IRChangedTester() {}
+IRChangedTester::~IRChangedTester() = default;
 
 void IRChangedTester::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (TestChanged != "")
@@ -989,12 +985,12 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
 
 bool PrintIRInstrumentation::shouldPrintBeforeCurrentPassNumber() {
   return shouldPrintBeforeSomePassNumber() &&
-         (CurrentPassNumber == PrintBeforePassNumber);
+         (is_contained(PrintBeforePassNumber, CurrentPassNumber));
 }
 
 bool PrintIRInstrumentation::shouldPrintAfterCurrentPassNumber() {
   return shouldPrintAfterSomePassNumber() &&
-         (CurrentPassNumber == PrintAfterPassNumber);
+         (is_contained(PrintAfterPassNumber, CurrentPassNumber));
 }
 
 bool PrintIRInstrumentation::shouldPrintPassNumbers() {
@@ -1002,11 +998,11 @@ bool PrintIRInstrumentation::shouldPrintPassNumbers() {
 }
 
 bool PrintIRInstrumentation::shouldPrintBeforeSomePassNumber() {
-  return PrintBeforePassNumber > 0;
+  return !PrintBeforePassNumber.empty();
 }
 
 bool PrintIRInstrumentation::shouldPrintAfterSomePassNumber() {
-  return PrintAfterPassNumber > 0;
+  return !PrintAfterPassNumber.empty();
 }
 
 void PrintIRInstrumentation::registerCallbacks(
@@ -1079,13 +1075,17 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
 
 void OptPassGateInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  OptPassGate &PassGate = Context.getOptPassGate();
+  const OptPassGate &PassGate = Context.getOptPassGate();
   if (!PassGate.isEnabled())
     return;
 
-  PIC.registerShouldRunOptionalPassCallback([this](StringRef PassName, Any IR) {
-    return this->shouldRun(PassName, IR);
-  });
+  PIC.registerShouldRunOptionalPassCallback(
+      [this, &PIC](StringRef ClassName, Any IR) {
+        StringRef PassName = PIC.getPassNameForClassName(ClassName);
+        if (PassName.empty())
+          return this->shouldRun(ClassName, IR);
+        return this->shouldRun(PassName, IR);
+      });
 }
 
 raw_ostream &PrintPassInstrumentation::print() {
@@ -1567,7 +1567,7 @@ void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     TextChangeReporter<IRDataT<EmptyData>>::registerRequiredCallbacks(PIC);
 }
 
-TimeProfilingPassesHandler::TimeProfilingPassesHandler() {}
+TimeProfilingPassesHandler::TimeProfilingPassesHandler() = default;
 
 void TimeProfilingPassesHandler::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
@@ -1636,9 +1636,9 @@ public:
       : DisplayElement(Colour), Content(Content) {}
 
   // Iterator to the child nodes.  Required by GraphWriter.
-  using ChildIterator = std::unordered_set<DisplayNode *>::const_iterator;
-  ChildIterator children_begin() const { return Children.cbegin(); }
-  ChildIterator children_end() const { return Children.cend(); }
+  using ChildIterator = SmallPtrSet<DisplayNode *, 0>::const_iterator;
+  ChildIterator children_begin() const { return Children.begin(); }
+  ChildIterator children_end() const { return Children.end(); }
 
   // Iterator for the edges.  Required by GraphWriter.
   using EdgeIterator = std::vector<DisplayEdge *>::const_iterator;
@@ -1674,8 +1674,8 @@ protected:
   std::vector<DisplayEdge> Edges;
 
   std::vector<DisplayEdge *> EdgePtrs;
-  std::unordered_set<DisplayNode *> Children;
-  std::unordered_map<const DisplayNode *, const DisplayEdge *> EdgeMap;
+  SmallPtrSet<DisplayNode *, 0> Children;
+  DenseMap<const DisplayNode *, const DisplayEdge *> EdgeMap;
 
   // Safeguard adding of edges.
   bool AllEdgesCreated = false;
@@ -2001,14 +2001,12 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
   for (auto &A : After.getData()) {
     StringRef Label = A.getKey();
     const BlockDataT<DCData> &BD = A.getValue();
-    unsigned C = NodePosition.count(Label);
-    if (C == 0)
+    auto It = NodePosition.find(Label);
+    if (It == NodePosition.end())
       // This only exists in the after IR.  Create the node.
       createNode(Label, BD, AfterColour);
-    else {
-      assert(C == 1 && "Unexpected multiple nodes.");
-      Nodes[NodePosition[Label]].setCommon(BD);
-    }
+    else
+      Nodes[It->second].setCommon(BD);
     // Add in the edges between the nodes (as common or only in after).
     for (StringMap<std::string>::const_iterator Sink = BD.getData().begin(),
                                                 E = BD.getData().end();
@@ -2195,14 +2193,10 @@ namespace llvm {
 DCData::DCData(const BasicBlock &B) {
   // Build up transition labels.
   const Instruction *Term = B.getTerminator();
-  if (const BranchInst *Br = dyn_cast<const BranchInst>(Term))
-    if (Br->isUnconditional())
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "");
-    else {
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
-      addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
-    }
-  else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
+  if (const CondBrInst *Br = dyn_cast<const CondBrInst>(Term)) {
+    addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
+    addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
+  } else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
     addSuccessorLabel(Sw->case_default()->getCaseSuccessor()->getName().str(),
                       "default");
     for (auto &C : Sw->cases()) {
@@ -2502,7 +2496,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
       [&PIC, this](StringRef PassID, Any IR) {
         SavedIR.clear();
         raw_string_ostream OS(SavedIR);
-        OS << formatv("*** Dump of {0}IR Before Last Pass {1}",
+        OS << formatv("; *** Dump of {0}IR Before Last Pass {1}",
                       llvm::forcePrintModuleIR() ? "Module " : "", PassID);
         if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
           OS << " Filtered Out ***\n";

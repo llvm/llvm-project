@@ -92,8 +92,7 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GCN-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
-    ; GCN-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 20
-    ; GCN-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; GCN-NEXT: $vgpr0 = COPY [[ASHR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 16
     %2:_(s32) = G_ASHR %0, %1(s32)

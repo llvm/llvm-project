@@ -272,6 +272,8 @@ void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
 
 ContextRoot *FunctionData::getOrAllocateContextRoot() {
   auto *Root = CtxRoot;
+  if (!canBeRoot(Root))
+    return Root;
   if (Root)
     return Root;
   __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
@@ -328,8 +330,10 @@ ContextNode *getUnhandledContext(FunctionData &Data, void *Callee, GUID Guid,
   if (!CtxRoot) {
     if (auto *RAD = getRootDetector())
       RAD->sample();
-    else if (auto *CR = Data.CtxRoot)
-      return tryStartContextGivenRoot(CR, Guid, NumCounters, NumCallsites);
+    else if (auto *CR = Data.CtxRoot) {
+      if (canBeRoot(CR))
+        return tryStartContextGivenRoot(CR, Guid, NumCounters, NumCallsites);
+    }
     if (IsUnderContext || !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
       return TheScratchContext;
     else
@@ -404,20 +408,21 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
 ContextNode *__llvm_ctx_profile_start_context(FunctionData *FData, GUID Guid,
                                               uint32_t Counters,
                                               uint32_t Callsites) {
-
-  return tryStartContextGivenRoot(FData->getOrAllocateContextRoot(), Guid,
-                                  Counters, Callsites);
+  auto *Root = FData->getOrAllocateContextRoot();
+  assert(canBeRoot(Root));
+  return tryStartContextGivenRoot(Root, Guid, Counters, Callsites);
 }
 
 void __llvm_ctx_profile_release_context(FunctionData *FData)
     SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   const auto *CurrentRoot = __llvm_ctx_profile_current_context_root;
-  if (!CurrentRoot || FData->CtxRoot != CurrentRoot)
+  auto *CR = FData->CtxRoot;
+  if (!CurrentRoot || CR != CurrentRoot)
     return;
   IsUnderContext = false;
-  assert(FData->CtxRoot);
+  assert(CR && canBeRoot(CR));
   __llvm_ctx_profile_current_context_root = nullptr;
-  FData->CtxRoot->Taken.Unlock();
+  CR->Taken.Unlock();
 }
 
 void __llvm_ctx_profile_start_collection(unsigned AutodetectDuration) {
@@ -481,10 +486,13 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
   // traversing it.
   const auto *Pos = reinterpret_cast<const FunctionData *>(
       __sanitizer::atomic_load_relaxed(&AllFunctionsData));
-  for (; Pos; Pos = Pos->Next)
-    if (!Pos->CtxRoot)
-      Writer.writeFlat(Pos->FlatCtx->guid(), Pos->FlatCtx->counters(),
-                       Pos->FlatCtx->counters_size());
+  for (; Pos; Pos = Pos->Next) {
+    const auto *CR = Pos->CtxRoot;
+    if (!CR && canBeRoot(CR)) {
+      const auto *FP = Pos->FlatCtx;
+      Writer.writeFlat(FP->guid(), FP->counters(), FP->counters_size());
+    }
+  }
   Writer.endFlatSection();
   return true;
 }

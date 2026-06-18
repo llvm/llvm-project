@@ -23,36 +23,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_constructible : public integral_constant<bool, __is_constructible(_Tp, _Args...)> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, class... _Args>
-inline constexpr bool is_constructible_v = __is_constructible(_Tp, _Args...);
-#endif
-
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_copy_constructible
     : public integral_constant<bool, __is_constructible(_Tp, __add_lvalue_reference_t<const _Tp>)> {};
-
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_copy_constructible_v = is_copy_constructible<_Tp>::value;
-#endif
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_move_constructible
     : public integral_constant<bool, __is_constructible(_Tp, __add_rvalue_reference_t<_Tp>)> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_move_constructible_v = is_move_constructible<_Tp>::value;
-#endif
-
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_default_constructible : public integral_constant<bool, __is_constructible(_Tp)> {};
-
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_default_constructible_v = __is_constructible(_Tp);
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

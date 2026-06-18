@@ -10,7 +10,6 @@
 #include "CFBasicHash.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
@@ -52,8 +51,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 private:
   struct DataDescriptor_32 {
     uint32_t _used : 26;
@@ -88,8 +85,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 private:
   struct SetItemDescriptor {
     lldb::addr_t item_ptr;
@@ -118,8 +113,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
 
@@ -386,16 +379,6 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::~NSSetISyntheticFrontEnd() {
   m_data_64 = nullptr;
 }
 
-size_t
-lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
-
 llvm::Expected<uint32_t>
 lldb_private::formatters::NSSetISyntheticFrontEnd::CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)
@@ -412,8 +395,6 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   m_data_64 = nullptr;
   m_ptr_size = 0;
   ValueObjectSP valobj_sp = m_backend.GetSP();
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
@@ -506,7 +487,7 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(
                        process_sp->GetByteOrder(),
                        process_sp->GetAddressByteSize());
 
-    set_item.valobj_sp = CreateValueObjectFromData(
+    set_item.valobj_sp = CreateChildValueObjectFromData(
         idx_name.GetString(), data, m_exe_ctx_ref,
         m_backend.GetCompilerType().GetBasicTypeFromAST(
             lldb::eBasicTypeObjCID));
@@ -518,16 +499,6 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::NSCFSetSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_hashtable(),
       m_pair_type() {}
-
-size_t
-lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
-  const char *item_name = name.GetCString();
-  const uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
 
 llvm::Expected<uint32_t>
 lldb_private::formatters::NSCFSetSyntheticFrontEnd::CalculateNumChildren() {
@@ -626,7 +597,7 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
 
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
 
-    set_item.valobj_sp = CreateValueObjectFromData(
+    set_item.valobj_sp = CreateChildValueObjectFromData(
         idx_name.GetString(), data, m_exe_ctx_ref,
         m_backend.GetCompilerType().GetBasicTypeFromAST(
             lldb::eBasicTypeObjCID));
@@ -651,18 +622,6 @@ lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<D32, D64>::
   m_data_32 = nullptr;
   delete m_data_64;
   m_data_64 = nullptr;
-}
-
-template <typename D32, typename D64>
-size_t
-lldb_private::formatters::
-  GenericNSSetMSyntheticFrontEnd<D32, D64>::GetIndexOfChildWithName(
-    ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
 }
 
 template <typename D32, typename D64>
@@ -778,7 +737,7 @@ lldb_private::formatters::
                        process_sp->GetByteOrder(),
                        process_sp->GetAddressByteSize());
 
-    set_item.valobj_sp = CreateValueObjectFromData(
+    set_item.valobj_sp = CreateChildValueObjectFromData(
         idx_name.GetString(), data, m_exe_ctx_ref,
         m_backend.GetCompilerType().GetBasicTypeFromAST(
             lldb::eBasicTypeObjCID));

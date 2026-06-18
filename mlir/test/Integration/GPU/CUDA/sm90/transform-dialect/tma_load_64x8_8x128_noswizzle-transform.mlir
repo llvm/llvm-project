@@ -19,10 +19,10 @@
 
 // Basic PTX check to make sure we are generating the right instructions.
 // CHECK-PTX: mbarrier.init.shared.b64
-// CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
-// CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
+// CHECK-PTX-DAG: mbarrier.arrive.expect_tx.shared.b64
+// CHECK-PTX-DAG: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
+// CHECK-PTX-DAG: cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes
+// CHECK-PTX-DAG: mbarrier.arrive.expect_tx.shared.b64
 // CHECK-PTX: mbarrier.try_wait.parity.shared.b64
 
 // RUN: mlir-opt %s \
@@ -91,7 +91,7 @@ func.func @main() {
     linalg.copy ins(%memref: memref<64x8xf32>) outs(%out: memref<64x8xf32, 3>)
     linalg.copy ins(%memref_1: memref<8x128xf32>) outs(%out_1: memref<8x128xf32, 3>)
 
-    %6 = gpu.thread_id  x
+    %6 = gpu.thread_id x
     %10 = arith.cmpi eq, %6, %c0 : index
     scf.if %10 {
       %11 = memref.load %out[%c45, %c7] : memref<64x8xf32, 3>

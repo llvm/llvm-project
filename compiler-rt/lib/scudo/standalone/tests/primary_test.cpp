@@ -211,8 +211,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
-  typename Primary::CacheT Cache;
-  Cache.init(nullptr, Allocator.get());
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
   const scudo::uptr NumberOfAllocations = 32U;
   for (scudo::uptr I = 0; I <= 16U; I++) {
     const scudo::uptr Size = 1UL << I;
@@ -221,18 +221,51 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
     const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
     void *Pointers[NumberOfAllocations];
     for (scudo::uptr J = 0; J < NumberOfAllocations; J++) {
-      void *P = Cache.allocate(ClassId);
+      void *P = SizeClassAllocator.allocate(ClassId);
       memset(P, 'B', Size);
       Pointers[J] = P;
     }
     for (scudo::uptr J = 0; J < NumberOfAllocations; J++)
-      Cache.deallocate(ClassId, Pointers[J]);
+      SizeClassAllocator.deallocate(ClassId, Pointers[J]);
   }
-  Cache.destroy(nullptr);
+  SizeClassAllocator.destroy(nullptr);
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator->getStats(&Str);
+    Str.output();
+  }
+}
+
+SCUDO_TYPED_TEST(ScudoPrimaryTest, FindNearestBlock) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  const scudo::uptr Size = 64U;
+  if (Primary::canAllocate(Size)) {
+    const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
+    void *P = SizeClassAllocator.allocate(ClassId);
+    ASSERT_NE(P, nullptr);
+
+    scudo::uptr Ptr = reinterpret_cast<scudo::uptr>(P);
+    scudo::BlockInfo Info = Allocator->findNearestBlock(Ptr);
+
+    if (Info.BlockSize != 0) {
+      EXPECT_EQ(Info.BlockBegin, Ptr);
+      EXPECT_EQ(Info.BlockSize,
+                Primary::SizeClassMap::getSizeByClassId(ClassId));
+
+      scudo::BlockInfo Info2 = Allocator->findNearestBlock(Ptr + 10);
+      EXPECT_EQ(Info2.BlockBegin, Ptr);
+    }
+
+    SizeClassAllocator.deallocate(ClassId, P);
+  }
+
+  SizeClassAllocator.destroy(nullptr);
 }
 
 struct SmallRegionsConfig {
@@ -261,19 +294,20 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
       scudo::SizeClassAllocator64<scudo::PrimaryConfig<SmallRegionsConfig>>;
   Primary Allocator;
   Allocator.init(/*ReleaseToOsInterval=*/-1);
-  typename Primary::CacheT Cache;
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
   scudo::GlobalStats Stats;
   Stats.init();
-  Cache.init(&Stats, &Allocator);
+  SizeClassAllocator.init(&Stats, &Allocator);
   bool AllocationFailed = false;
   std::vector<void *> Blocks;
   const scudo::uptr ClassId = Primary::SizeClassMap::LargestClassId;
   const scudo::uptr Size = Primary::getSizeByClassId(ClassId);
-  const scudo::u16 MaxCachedBlockCount = Primary::CacheT::getMaxCached(Size);
+  const scudo::u16 MaxCachedBlockCount =
+      Primary::SizeClassAllocatorT::getMaxCached(Size);
 
   for (scudo::uptr I = 0; I < 10000U; I++) {
     for (scudo::uptr J = 0; J < MaxCachedBlockCount; ++J) {
-      void *Ptr = Cache.allocate(ClassId);
+      void *Ptr = SizeClassAllocator.allocate(ClassId);
       if (Ptr == nullptr) {
         AllocationFailed = true;
         break;
@@ -284,14 +318,16 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   }
 
   for (auto *Ptr : Blocks)
-    Cache.deallocate(ClassId, Ptr);
+    SizeClassAllocator.deallocate(ClassId, Ptr);
 
-  Cache.destroy(nullptr);
+  SizeClassAllocator.destroy(nullptr);
   Allocator.releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator.getStats(&Str);
-  Str.output();
   EXPECT_EQ(AllocationFailed, true);
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator.getStats(&Str);
+    Str.output();
+  }
   Allocator.unmapTestOnly();
 }
 
@@ -299,14 +335,14 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
-  typename Primary::CacheT Cache;
-  Cache.init(nullptr, Allocator.get());
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
   std::vector<std::pair<scudo::uptr, void *>> V;
   for (scudo::uptr I = 0; I < 64U; I++) {
     const scudo::uptr Size =
         static_cast<scudo::uptr>(std::rand()) % Primary::SizeClassMap::MaxSize;
     const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
-    void *P = Cache.allocate(ClassId);
+    void *P = SizeClassAllocator.allocate(ClassId);
     V.push_back(std::make_pair(ClassId, P));
   }
   scudo::uptr Found = 0;
@@ -322,14 +358,16 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   EXPECT_EQ(Found, V.size());
   while (!V.empty()) {
     auto Pair = V.back();
-    Cache.deallocate(Pair.first, Pair.second);
+    SizeClassAllocator.deallocate(Pair.first, Pair.second);
     V.pop_back();
   }
-  Cache.destroy(nullptr);
+  SizeClassAllocator.destroy(nullptr);
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator->getStats(&Str);
+    Str.output();
+  }
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
@@ -342,8 +380,9 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++) {
     Threads[I] = std::thread([&]() {
-      static thread_local typename Primary::CacheT Cache;
-      Cache.init(nullptr, Allocator.get());
+      static thread_local
+          typename Primary::SizeClassAllocatorT SizeClassAllocator;
+      SizeClassAllocator.init(nullptr, Allocator.get());
       std::vector<std::pair<scudo::uptr, void *>> V;
       {
         std::unique_lock<std::mutex> Lock(Mutex);
@@ -355,7 +394,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
                                  Primary::SizeClassMap::MaxSize / 4;
         const scudo::uptr ClassId =
             Primary::SizeClassMap::getClassIdBySize(Size);
-        void *P = Cache.allocate(ClassId);
+        void *P = SizeClassAllocator.allocate(ClassId);
         if (P)
           V.push_back(std::make_pair(ClassId, P));
       }
@@ -365,14 +404,14 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
 
       while (!V.empty()) {
         auto Pair = V.back();
-        Cache.deallocate(Pair.first, Pair.second);
+        SizeClassAllocator.deallocate(Pair.first, Pair.second);
         V.pop_back();
-        // This increases the chance of having non-full TransferBatches and it
-        // will jump into the code path of merging TransferBatches.
+        // This increases the chance of having non-full Batches and it will jump
+        // into the code path of merging Batches.
         if (std::rand() % 8 == 0)
-          Cache.drain();
+          SizeClassAllocator.drain();
       }
-      Cache.destroy(nullptr);
+      SizeClassAllocator.destroy(nullptr);
     });
   }
   {
@@ -383,11 +422,13 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   for (auto &T : Threads)
     T.join();
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Allocator->getFragmentationInfo(&Str);
-  Allocator->getMemoryGroupFragmentationInfo(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Allocator->getStats(&Str);
+    Allocator->getFragmentationInfo(&Str);
+    Allocator->getMemoryGroupFragmentationInfo(&Str);
+    Str.output();
+  }
 }
 
 // Through a simple allocation that spans two pages, verify that releaseToOS
@@ -397,15 +438,15 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
-  typename Primary::CacheT Cache;
-  Cache.init(nullptr, Allocator.get());
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
   const scudo::uptr Size = scudo::getPageSizeCached() * 2;
   EXPECT_TRUE(Primary::canAllocate(Size));
   const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
-  void *P = Cache.allocate(ClassId);
+  void *P = SizeClassAllocator.allocate(ClassId);
   EXPECT_NE(P, nullptr);
-  Cache.deallocate(ClassId, P);
-  Cache.destroy(nullptr);
+  SizeClassAllocator.deallocate(ClassId, P);
+  SizeClassAllocator.destroy(nullptr);
   EXPECT_GT(Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll), 0U);
 }
 
@@ -413,8 +454,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
-  typename Primary::CacheT Cache;
-  Cache.init(nullptr, Allocator.get());
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
   const scudo::uptr Size = 32U;
   const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
 
@@ -434,27 +475,96 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {
   std::mt19937 R;
 
   for (scudo::uptr I = 0; I < PeakNumberOfAllocations; ++I)
-    Blocks.push_back(reinterpret_cast<scudo::uptr>(Cache.allocate(ClassId)));
+    Blocks.push_back(
+        reinterpret_cast<scudo::uptr>(SizeClassAllocator.allocate(ClassId)));
 
   std::shuffle(Blocks.begin(), Blocks.end(), R);
 
   // Release all the allocated blocks, including those held by local cache.
   while (!Blocks.empty()) {
-    Cache.deallocate(ClassId, reinterpret_cast<void *>(Blocks.back()));
+    SizeClassAllocator.deallocate(ClassId,
+                                  reinterpret_cast<void *>(Blocks.back()));
     Blocks.pop_back();
   }
-  Cache.drain();
+  SizeClassAllocator.drain();
 
   for (scudo::uptr I = 0; I < FinalNumberOfAllocations; ++I)
-    Blocks.push_back(reinterpret_cast<scudo::uptr>(Cache.allocate(ClassId)));
+    Blocks.push_back(
+        reinterpret_cast<scudo::uptr>(SizeClassAllocator.allocate(ClassId)));
 
   EXPECT_LE(*std::max_element(Blocks.begin(), Blocks.end()) -
                 *std::min_element(Blocks.begin(), Blocks.end()),
             GroupSizeMem * 2);
 
   while (!Blocks.empty()) {
-    Cache.deallocate(ClassId, reinterpret_cast<void *>(Blocks.back()));
+    SizeClassAllocator.deallocate(ClassId,
+                                  reinterpret_cast<void *>(Blocks.back()));
     Blocks.pop_back();
   }
-  Cache.drain();
+  SizeClassAllocator.drain();
 }
+
+#if !defined(GWP_ASAN_HOOKS)
+// This test doesn't work when GWP-Asan is enabled.
+TEST(ScudoPrimaryTest, PushBlocksDifferentGroups) {
+  using Primary = TestAllocator<TestConfig2, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  static_assert(
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::GroupSizeLog <
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::RegionSizeLog);
+
+  const scudo::uptr GroupScale =
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::GroupSizeLog -
+      TestConfig2<scudo::DefaultSizeClassMap>::Primary::CompactPtrScale;
+  const scudo::uptr Mask = (static_cast<scudo::uptr>(1) << GroupScale) - 1;
+
+  scudo::uptr ClassId = 1;
+  for (scudo::uptr C = 1; C < Primary::SizeClassMap::NumClasses; ++C) {
+    if (Primary::SizeClassMap::getSizeByClassId(C) >= 64 * 1024) {
+      ClassId = C;
+      break;
+    }
+  }
+  EXPECT_NE(1U, ClassId);
+
+  std::vector<void *> Pointers;
+  size_t SecondGroupIndex = 0;
+  for (scudo::uptr FirstGroup = 0, I = 0; I < 100; ++I) {
+    void *P = SizeClassAllocator.allocate(ClassId);
+    EXPECT_NE(P, nullptr);
+    Pointers.push_back(P);
+    typename Primary::CompactPtrT CompactP =
+        Allocator->compactPtr(ClassId, reinterpret_cast<scudo::uptr>(P));
+    scudo::uptr Group = static_cast<scudo::uptr>(CompactP) & ~Mask;
+    if (I == 0) {
+      FirstGroup = Group;
+    } else if (Group != FirstGroup) {
+      SecondGroupIndex = I;
+      break;
+    }
+  }
+  EXPECT_NE(0U, SecondGroupIndex);
+
+  std::vector<typename Primary::CompactPtrT> Array;
+  for (void *P : Pointers) {
+    Array.push_back(
+        Allocator->compactPtr(ClassId, reinterpret_cast<scudo::uptr>(P)));
+  }
+  EXPECT_GT(Array.size(), 1U);
+
+  std::swap(Array[0], Array[SecondGroupIndex]);
+
+  Allocator->pushBlocks(&SizeClassAllocator, ClassId, Array.data(),
+                        static_cast<scudo::u32>(Array.size()));
+
+  for (size_t I = 1; I < Array.size(); I++)
+    EXPECT_LE(Array[I - 1] & ~Mask, Array[I] & ~Mask)
+        << "Array not ordered: index " << I - 1 << " is < index " << I;
+
+  SizeClassAllocator.destroy(nullptr);
+}
+#endif

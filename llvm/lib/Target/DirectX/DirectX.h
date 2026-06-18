@@ -12,6 +12,7 @@
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
 namespace llvm {
+class AttributeMask;
 class FunctionPass;
 class ModulePass;
 class PassRegistry;
@@ -35,6 +36,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL CBuffer Access Pass
+void initializeDXILCBufferAccessLegacyPass(PassRegistry &);
+
+/// Pass to translate loads in the cbuffer address space to intrinsics
+ModulePass *createDXILCBufferAccessLegacyPass();
+
 /// Initializer for DXIL Data Scalarization Pass
 void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 
@@ -47,6 +54,12 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 /// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
 
+/// Initializer for DXIL Forward Handle Accesses Pass
+void initializeDXILForwardHandleAccessesLegacyPass(PassRegistry &);
+
+/// Pass to eliminate redundant stores and loads from handle globals.
+FunctionPass *createDXILForwardHandleAccessesLegacyPass();
+
 /// Initializer DXIL legalizationPass
 void initializeDXILLegalizeLegacyPass(PassRegistry &);
 
@@ -54,17 +67,35 @@ void initializeDXILLegalizeLegacyPass(PassRegistry &);
 /// elements
 FunctionPass *createDXILLegalizeLegacyPass();
 
+/// Initializer for DXIL Mem Intrinsics.
+void initializeDXILMemIntrinsicsLegacyPass(PassRegistry &);
+
+/// Pass to transform all llvm memory intrinsics to explicit loads and stores.
+ModulePass *createDXILMemIntrinsicsLegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
 
+/// Initializer for DXILRemoveUnusedResources
+void initializeDXILRemoveUnusedResourcesLegacyPass(PassRegistry &);
+
+/// Pass to update remove unsused resources.
+FunctionPass *createDXILRemoveUnusedResourcesLegacyPass();
+
 /// Initializer for DXILResourceAccess
 void initializeDXILResourceAccessLegacyPass(PassRegistry &);
 
 /// Pass to update resource accesses to use load/store directly.
 FunctionPass *createDXILResourceAccessLegacyPass();
+
+/// Initializer for DXILResourceImplicitBindingLegacyPass
+void initializeDXILResourceImplicitBindingLegacyPass(PassRegistry &);
+
+/// Pass to assign register slots to resources without binding.
+ModulePass *createDXILResourceImplicitBindingLegacyPass();
 
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
@@ -78,6 +109,12 @@ ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 /// Initializer for DXILPrettyPrinter.
 void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
 
+/// Initializer for DXILPostOptimizationValidation.
+void initializeDXILPostOptimizationValidationLegacyPass(PassRegistry &);
+
+/// Pass to lowering LLVM intrinsic call to DXIL op function call.
+ModulePass *createDXILPostOptimizationValidationLegacyPass();
+
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);
 
@@ -90,12 +127,17 @@ void initializeDXContainerGlobalsPass(PassRegistry &);
 /// Pass for generating DXContainer part globals.
 ModulePass *createDXContainerGlobalsPass();
 
+/// Initializer for DXContainerPDB pass.
+void initializeDXContainerPDBPass(PassRegistry &);
+
+/// Pass for emitting DirectX PDB files.
+ModulePass *createDXContainerPDBPass();
+
 /// Initializer for DXILFinalizeLinkage pass.
 void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
 
 /// Pass to finalize linkage of functions.
 ModulePass *createDXILFinalizeLinkageLegacyPass();
-
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

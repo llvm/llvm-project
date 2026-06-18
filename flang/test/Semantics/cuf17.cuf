@@ -1,18 +1,30 @@
-! RUN: bbc -emit-hlfir -fcuda %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
-module mod1
+module matching_two_args
+  interface two_args
+    module procedure sub_managed_device
+    module procedure sub_unified_unified
+  end interface
 contains
+  subroutine sub_managed_device(a, b)
+    integer, managed :: a(:)
+    integer, device :: b(:)
+  end
 
-attributes(device) subroutine sub1(adev)
-  real, device :: adev(10)
-end
-
-attributes(global) subroutine sub2()
-  real, shared :: adev(10)
-  !WARNING: SHARED attribute ignored
-  call sub1(adev)
-end subroutine
-
+  subroutine sub_unified_unified(a, b)
+    integer, unified :: a(:)
+    integer, unified :: b(:)
+  end
 end module
 
-! CHECK: warning: SHARED attribute ignored
+program test
+  use matching_two_args
+  integer, managed, allocatable :: a(:)
+  integer, managed, allocatable :: b(:)
+
+  allocate(a(10), b(10))
+  call two_args(a, b)
+end
+
+! CHECK: fir.call @_QMmatching_two_argsPsub_managed_device
+! CHECK-NOT: @_QMmatching_two_argsPsub_unified_unified

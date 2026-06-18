@@ -28,7 +28,7 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override {
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override {
     return m_regex.GetText();
   }
 
@@ -39,6 +39,10 @@ public:
   void Clear() override {
     m_regex = RegularExpression(m_default_regex_str);
     m_value_was_set = false;
+  }
+
+  bool IsDefault() const override {
+    return m_regex.GetText() == m_default_regex_str;
   }
 
   // Subclass specific functions

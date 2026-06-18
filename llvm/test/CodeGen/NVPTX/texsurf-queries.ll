@@ -23,7 +23,7 @@ define i32 @t0(i64 %texHandle) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [t0_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [t0_param_0];
 ; CHECK-NEXT:    txq.width.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -35,7 +35,6 @@ define i32 @t1() {
 ; CHECK-LABEL: t1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    txq.width.b32 %r1, [tex0];
@@ -54,7 +53,7 @@ define i32 @t2(i64 %texHandle) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [t2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [t2_param_0];
 ; CHECK-NEXT:    txq.height.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -66,7 +65,6 @@ define i32 @t3() {
 ; CHECK-LABEL: t3(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    txq.height.b32 %r1, [tex0];
@@ -85,7 +83,7 @@ define i32 @s0(i64 %surfHandle) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [s0_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [s0_param_0];
 ; CHECK-NEXT:    suq.width.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -97,7 +95,6 @@ define i32 @s1() {
 ; CHECK-LABEL: s1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    suq.width.b32 %r1, [surf0];
@@ -116,7 +113,7 @@ define i32 @s2(i64 %surfHandle) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [s2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [s2_param_0];
 ; CHECK-NEXT:    suq.height.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -128,7 +125,6 @@ define i32 @s3() {
 ; CHECK-LABEL: s3(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    suq.height.b32 %r1, [surf0];

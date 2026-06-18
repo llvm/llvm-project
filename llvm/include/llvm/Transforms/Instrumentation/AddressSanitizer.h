@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_ADDRESSSANITIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 
 namespace llvm {
@@ -36,16 +37,18 @@ struct AddressSanitizerOptions {
 ///
 /// This adds 'asan.module_ctor' to 'llvm.global_ctors'. This pass may also
 /// run intependently of the function address sanitizer.
-class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
+class AddressSanitizerPass
+    : public RequiredPassInfoMixin<AddressSanitizerPass> {
 public:
+  LLVM_ABI
   AddressSanitizerPass(const AddressSanitizerOptions &Options,
                        bool UseGlobalGC = true, bool UseOdrIndicator = true,
                        AsanDtorKind DestructorKind = AsanDtorKind::Global,
                        AsanCtorKind ConstructorKind = AsanCtorKind::Global);
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   AddressSanitizerOptions Options;
@@ -61,8 +64,9 @@ struct ASanAccessInfo {
   const bool IsWrite;
   const bool CompileKernel;
 
-  explicit ASanAccessInfo(int32_t Packed);
-  ASanAccessInfo(bool IsWrite, bool CompileKernel, uint8_t AccessSizeIndex);
+  LLVM_ABI explicit ASanAccessInfo(int32_t Packed);
+  LLVM_ABI ASanAccessInfo(bool IsWrite, bool CompileKernel,
+                          uint8_t AccessSizeIndex);
 };
 
 } // namespace llvm

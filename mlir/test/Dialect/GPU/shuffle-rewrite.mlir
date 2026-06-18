@@ -10,8 +10,8 @@ module {
       // CHECK-NEXT: %[[LO:.*]] = arith.trunci %[[INTVAL]] : i64 to i32
       // CHECK-NEXT: %[[HI64:.*]] = arith.shrui %[[INTVAL]], %[[C32:.*]] : i64
       // CHECK-NEXT: %[[HI:.*]] = arith.trunci %[[HI64]] : i64 to i32
-      // CHECK-NEXT: %[[SH1:.*]], %[[V1:.*]] = gpu.shuffle  xor %[[LO]], %[[OFF]], %[[WIDTH]] : i32
-      // CHECK-NEXT: %[[SH2:.*]], %[[V2:.*]] = gpu.shuffle  xor %[[HI]], %[[OFF]], %[[WIDTH]] : i32
+      // CHECK-NEXT: %[[SH1:.*]], %[[V1:.*]] = gpu.shuffle xor %[[LO]], %[[OFF]], %[[WIDTH]] : i32
+      // CHECK-NEXT: %[[SH2:.*]], %[[V2:.*]] = gpu.shuffle xor %[[HI]], %[[OFF]], %[[WIDTH]] : i32
       // CHECK-NEXT: %[[LOSH:.*]] = arith.extui %[[SH1]] : i32 to i64
       // CHECK-NEXT: %[[HISHTMP:.*]] = arith.extui %[[SH2]] : i32 to i64
       // CHECK-NEXT: %[[HISH:.*]] = arith.shli %[[HISHTMP]], %[[C32]] : i64
@@ -36,8 +36,8 @@ module {
       // CHECK: %[[LO:.*]] = arith.trunci %[[VALUE]] : i64 to i32
       // CHECK-NEXT: %[[HI64:.*]] = arith.shrui %[[VALUE]], %[[C32:.*]] : i64
       // CHECK-NEXT: %[[HI:.*]] = arith.trunci %[[HI64]] : i64 to i32
-      // CHECK-NEXT: %[[SH1:.*]], %[[V1:.*]] = gpu.shuffle  xor %[[LO]], %[[OFF]], %[[WIDTH]] : i32
-      // CHECK-NEXT: %[[SH2:.*]], %[[V2:.*]] = gpu.shuffle  xor %[[HI]], %[[OFF]], %[[WIDTH]] : i32
+      // CHECK-NEXT: %[[SH1:.*]], %[[V1:.*]] = gpu.shuffle xor %[[LO]], %[[OFF]], %[[WIDTH]] : i32
+      // CHECK-NEXT: %[[SH2:.*]], %[[V2:.*]] = gpu.shuffle xor %[[HI]], %[[OFF]], %[[WIDTH]] : i32
       // CHECK-NEXT: %[[LOSH:.*]] = arith.extui %[[SH1]] : i32 to i64
       // CHECK-NEXT: %[[HISHTMP:.*]] = arith.extui %[[SH2]] : i32 to i64
       // CHECK-NEXT: %[[HISH:.*]] = arith.shli %[[HISHTMP]], %[[C32]] : i64
@@ -48,4 +48,15 @@ module {
     }
     return
   }
+}
+
+// -----
+
+// CHECK-LABEL: @gpu_shuffle_unsupported
+func.func @gpu_shuffle_unsupported(%arg0 : vector<4xf16>) -> vector<4xf16> {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 64 : i32
+  // CHECK: gpu.shuffle xor %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf16>
+  %shfl, %pred = gpu.shuffle xor %arg0, %offset, %width : vector<4xf16>
+  return %shfl : vector<4xf16>
 }

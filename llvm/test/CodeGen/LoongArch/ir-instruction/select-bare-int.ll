@@ -7,10 +7,12 @@
 define i1 @bare_select_i1(i1 %a, i1 %b, i1 %c) {
 ; LA32-LABEL: bare_select_i1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    masknez $a2, $a2, $a0
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    andi $a3, $a0, 1
+; LA32-NEXT:    move $a0, $a1
+; LA32-NEXT:    bne $a3, $zero, .LBB0_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:  .LBB0_2:
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_i1:
@@ -27,10 +29,12 @@ define i1 @bare_select_i1(i1 %a, i1 %b, i1 %c) {
 define i8 @bare_select_i8(i1 %a, i8 %b, i8 %c) {
 ; LA32-LABEL: bare_select_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    masknez $a2, $a2, $a0
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    andi $a3, $a0, 1
+; LA32-NEXT:    move $a0, $a1
+; LA32-NEXT:    bne $a3, $zero, .LBB1_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:  .LBB1_2:
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_i8:
@@ -47,10 +51,12 @@ define i8 @bare_select_i8(i1 %a, i8 %b, i8 %c) {
 define i16 @bare_select_i16(i1 %a, i16 %b, i16 %c) {
 ; LA32-LABEL: bare_select_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    masknez $a2, $a2, $a0
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    andi $a3, $a0, 1
+; LA32-NEXT:    move $a0, $a1
+; LA32-NEXT:    bne $a3, $zero, .LBB2_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:  .LBB2_2:
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_i16:
@@ -67,10 +73,12 @@ define i16 @bare_select_i16(i1 %a, i16 %b, i16 %c) {
 define i32 @bare_select_i32(i1 %a, i32 %b, i32 %c) {
 ; LA32-LABEL: bare_select_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    masknez $a2, $a2, $a0
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
-; LA32-NEXT:    or $a0, $a0, $a2
+; LA32-NEXT:    andi $a3, $a0, 1
+; LA32-NEXT:    move $a0, $a1
+; LA32-NEXT:    bne $a3, $zero, .LBB3_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:  .LBB3_2:
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_i32:
@@ -88,12 +96,13 @@ define i64 @bare_select_i64(i1 %a, i64 %b, i64 %c) {
 ; LA32-LABEL: bare_select_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andi $a5, $a0, 1
-; LA32-NEXT:    masknez $a0, $a3, $a5
-; LA32-NEXT:    maskeqz $a1, $a1, $a5
-; LA32-NEXT:    or $a0, $a1, $a0
-; LA32-NEXT:    masknez $a1, $a4, $a5
-; LA32-NEXT:    maskeqz $a2, $a2, $a5
-; LA32-NEXT:    or $a1, $a2, $a1
+; LA32-NEXT:    move $a0, $a1
+; LA32-NEXT:    bne $a5, $zero, .LBB4_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    move $a0, $a3
+; LA32-NEXT:    move $a2, $a4
+; LA32-NEXT:  .LBB4_2:
+; LA32-NEXT:    move $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_i64:
@@ -111,13 +120,14 @@ define i16 @bare_select_zero_i16(i1 %a, i16 %b) {
 ; LA32-LABEL: bare_select_zero_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    masknez	$a0, $a1, $a0
+; LA32-NEXT:    addi.w $a0, $a0, -1
+; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_zero_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1
-; LA64-NEXT:    masknez	$a0, $a1, $a0
+; LA64-NEXT:    masknez $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %res = select i1 %a, i16 0, i16 %b
   ret i16 %res
@@ -127,7 +137,8 @@ define i32 @bare_select_zero_i32(i1 %a, i32 %b) {
 ; LA32-LABEL: bare_select_zero_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    maskeqz $a0, $a1, $a0
+; LA32-NEXT:    sub.w $a0, $zero, $a0
+; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bare_select_zero_i32:

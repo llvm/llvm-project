@@ -70,6 +70,68 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
+    const OmpClauseSet &clauses, llvm::omp::Directive dir,
+    parser::CharBlock name) const {
+  auto toLower = parser::ToLowerCaseLetters;
+
+  size_t idx{0}, size{clauses.count()};
+  clauses.IterateOverMembers([&](llvm::omp::Clause c) {
+    os << toLower(llvm::omp::getOpenMPClauseName(c, version_));
+    switch (c) {
+    case llvm::omp::Clause::OMPC_atomic_default_mem_order:
+      os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_device_type: {
+      // device_type is carried by several directives; print the value
+      // recorded for the one being emitted.
+      const std::optional<common::OmpDeviceType> &dt{
+          dir == llvm::omp::Directive::OMPD_groupprivate
+              ? ompGroupprivateDeviceType()
+              : ompDeclTargetDeviceType()};
+      os << '(' << toLower(EnumToString(*dt)) << ')';
+      break;
+    }
+    case llvm::omp::Clause::OMPC_enter:
+    case llvm::omp::Clause::OMPC_link:
+      if (!name.empty()) {
+        os << '(' << name.ToString() << ')';
+      }
+      break;
+    case llvm::omp::Clause::OMPC_indirect:
+      os << "(true)";
+      break;
+    default:
+      break;
+    }
+    if (++idx < size) {
+      os << ' ';
+    }
+  });
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const WithOmpDeclarative &x) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+
+  if (const OmpClauseSet &reqs{x.ompRequires()}; reqs.count()) {
+    os << " OmpRequirements:(";
+    x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+    os << ')';
+  }
+  if (const OmpClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+    os << " OmpDeclareTargetFlags:(";
+    x.printClauseSet(os, dtgt, llvm::omp::Directive::OMPD_declare_target);
+    os << ')';
+  }
+  if (const OmpClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
+    os << " OmpGroupprivateFlags:(";
+    x.printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
+    os << ')';
+  }
+  return os;
+}
+
 void SubprogramDetails::set_moduleInterface(Symbol &symbol) {
   CHECK(!moduleInterface_);
   moduleInterface_ = &symbol;
@@ -143,6 +205,53 @@ llvm::raw_ostream &operator<<(
     for (auto x : x.cudaClusterDims_) {
       os << ' ' << x;
     }
+  }
+  if (!x.openACCRoutineInfos_.empty()) {
+    os << " openACCRoutineInfos:";
+    for (const auto &x : x.openACCRoutineInfos_) {
+      os << x;
+    }
+  }
+  os << static_cast<const WithOmpDeclarative &>(x);
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &x) {
+  if (x.dType() != common::OpenACCDeviceType::None) {
+    os << " deviceType(" << common::EnumToString(x.dType()) << ')';
+  }
+  if (x.isSeq()) {
+    os << " seq";
+  }
+  if (x.isVector()) {
+    os << " vector";
+  }
+  if (x.isWorker()) {
+    os << " worker";
+  }
+  if (x.isGang()) {
+    os << " gang(" << x.gangDim() << ')';
+  }
+  if (const auto *bindName{x.bindName()}) {
+    if (const auto &symbol{std::get_if<std::string>(bindName)}) {
+      os << " bindName(\"" << *symbol << "\")";
+    } else {
+      const SymbolRef s{std::get<SymbolRef>(*bindName)};
+      os << " bindName(" << s->name() << ")";
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineInfo &x) {
+  if (x.isNohost()) {
+    os << " nohost";
+  }
+  os << static_cast<const OpenACCRoutineDeviceTypeInfo &>(x);
+  for (const auto &d : x.deviceTypeInfos_) {
+    os << d;
   }
   return os;
 }
@@ -246,8 +355,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
   return common::visit(
-      common::visitors{
-          [](const UnknownDetails &) { return "Unknown"; },
+      common::visitors{[](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
           [](const ModuleDetails &) { return "Module"; },
           [](const SubprogramDetails &) { return "Subprogram"; },
@@ -266,7 +374,8 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-      },
+          [](const UserReductionDetails &) { return "UserReductionDetails"; },
+          [](const MapperDetails &) { return "MapperDetails"; }},
       details);
 }
 
@@ -285,8 +394,14 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
-            [&](const ProcEntityDetails &) { return has<EntityDetails>(); },
+            [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
+              if (const auto *oldProc{this->detailsIf<ProcEntityDetails>()}) {
+                // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
+                return oldProc->isDummy() && !oldProc->procInterface() &&
+                    attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
+                    !test(Flag::Subroutine);
+              }
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
@@ -297,9 +412,11 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
-            [&](const HostAssocDetails &) {
-              return this->has<HostAssocDetails>();
+            [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
+            [&](const UserReductionDetails &) {
+              return has<UserReductionDetails>();
             },
+            [&](const MapperDetails &) { return has<MapperDetails>(); },
             [](const auto &) { return false; },
         },
         details);
@@ -454,6 +571,7 @@ llvm::raw_ostream &operator<<(
   if (x.cudaDataAttr()) {
     os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -493,12 +611,14 @@ llvm::raw_ostream &operator<<(
   if (x.isCUDAKernel()) {
     os << " isCUDAKernel";
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const DerivedTypeDetails &x) {
   DumpBool(os, "sequence", x.sequence_);
+  DumpBool(os, "isEnumerationType", x.isEnumerationType_);
   DumpList(os, "components", x.componentNames_);
   return os;
 }
@@ -528,7 +648,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
   common::visit( //
       common::visitors{
           [&](const UnknownDetails &) {},
-          [&](const MainProgramDetails &) {},
+          [&](const MainProgramDetails &x) {
+            os << static_cast<const WithOmpDeclarative &>(x);
+          },
           [&](const ModuleDetails &x) {
             if (x.isSubmodule()) {
               os << " (";
@@ -547,6 +669,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             if (x.isDefaultPrivate()) {
               os << " isDefaultPrivate";
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());
@@ -563,7 +686,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               sep = ',';
             }
           },
-          [](const HostAssocDetails &) {},
+          [&os](const HostAssocDetails &x) { os << " => " << x.symbol(); },
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
@@ -585,6 +708,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             for (const auto &object : x.objects()) {
               os << ' ' << object->name();
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
@@ -598,6 +722,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const MiscDetails &x) {
             os << ' ' << MiscDetails::EnumToString(x.kind());
           },
+          [&](const UserReductionDetails &x) {
+            for (auto &type : x.GetTypeList()) {
+              DumpType(os, type);
+            }
+          },
+          // Avoid recursive streaming for MapperDetails; nothing more to dump
+          [&](const MapperDetails &) {},
           [&](const auto &x) { os << x; },
       },
       details);
@@ -712,6 +843,11 @@ void DerivedTypeDetails::add_component(const Symbol &symbol) {
   componentNames_.push_back(symbol.name());
 }
 
+void DerivedTypeDetails::add_originalKindParameter(
+    SourceName name, const parser::Expr *expr) {
+  originalKindParameterMap_.emplace(name, expr);
+}
+
 const Symbol *DerivedTypeDetails::GetParentComponent(const Scope &scope) const {
   if (auto extends{GetParentComponentName()}) {
     if (auto iter{scope.find(*extends)}; iter != scope.cend()) {
@@ -796,6 +932,9 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpLinear:
     clauseName = "LINEAR";
     break;
+  case Symbol::Flag::OmpUniform:
+    clauseName = "UNIFORM";
+    break;
   case Symbol::Flag::OmpFirstPrivate:
     clauseName = "FIRSTPRIVATE";
     break;
@@ -805,8 +944,7 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpMapTo:
   case Symbol::Flag::OmpMapFrom:
   case Symbol::Flag::OmpMapToFrom:
-  case Symbol::Flag::OmpMapAlloc:
-  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapStorage:
   case Symbol::Flag::OmpMapDelete:
     clauseName = "MAP";
     break;

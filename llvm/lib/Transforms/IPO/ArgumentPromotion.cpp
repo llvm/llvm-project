@@ -50,6 +50,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -179,7 +180,6 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                                   F->getName());
   NF->copyAttributesFrom(F);
   NF->copyMetadata(F, 0);
-  NF->setIsNewDbgInfoFormat(F->IsNewDbgInfoFormat);
 
   // The new function will have the !dbg metadata copied from the original
   // function. The original function may not be deleted, and dbg metadata need
@@ -337,7 +337,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
     // There potentially are metadata uses for things like llvm.dbg.value.
     // Replace them with poison, after handling the other regular uses.
-    auto RauwPoisonMetadata = make_scope_exit(
+    llvm::scope_exit RauwPoisonMetadata(
         [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
     if (Arg.use_empty())
@@ -382,9 +382,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     // Cleanup the code from the dead instructions: GEPs and BitCasts in between
     // the original argument and its users: loads and stores. Retarget every
     // user to the new created alloca.
-    SmallVector<Value *, 16> Worklist;
+    SmallVector<Value *, 16> Worklist(Arg.users());
     SmallVector<Instruction *, 16> DeadInsts;
-    append_range(Worklist, Arg.users());
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
       if (isa<GetElementPtrInst>(V)) {
@@ -434,6 +433,16 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     PromoteMemToReg(Allocas, DT, &AC);
   }
 
+  // If argument(s) are dead (hence removed) or promoted, the function probably
+  // does not follow the standard calling convention anymore. Add DW_CC_nocall
+  // to DISubroutineType to inform debugger that it may not be safe to call this
+  // function.
+  DISubprogram *SP = NF->getSubprogram();
+  if (SP) {
+    auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
+    SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
+  }
+
   return NF;
 }
 
@@ -447,7 +456,9 @@ static bool allCallersPassValidPointerForArgument(
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
-  if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL))
+  if (isDereferenceableAndAlignedPointer(
+          Arg, NeededAlign, Bytes,
+          SimplifyQuery(DL, &Callee->getEntryBlock().front())))
     return true;
 
   // Look at all call sites of the function.  At this point we know we only have
@@ -482,7 +493,8 @@ static bool allCallersPassValidPointerForArgument(
       return true;
 
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
-                                              NeededAlign, Bytes, DL);
+                                              NeededAlign, Bytes,
+                                              SimplifyQuery(DL, &CB));
   });
 }
 

@@ -15,12 +15,11 @@
 #include "GISel/M68kCallLowering.h"
 #include "GISel/M68kLegalizerInfo.h"
 #include "GISel/M68kRegisterBankInfo.h"
-
 #include "M68k.h"
 #include "M68kMachineFunction.h"
 #include "M68kRegisterInfo.h"
+#include "M68kSelectionDAGInfo.h"
 #include "M68kTargetMachine.h"
-
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -50,16 +49,24 @@ void M68kSubtarget::anchor() {}
 
 M68kSubtarget::M68kSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              const M68kTargetMachine &TM)
-    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TM(TM), TSInfo(),
+    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TM(TM),
       InstrInfo(initializeSubtargetDependencies(CPU, TT, FS, TM)),
       FrameLowering(*this, this->getStackAlignment()), TLInfo(TM, *this),
       TargetTriple(TT) {
+  TSInfo = std::make_unique<M68kSelectionDAGInfo>();
+
   CallLoweringInfo.reset(new M68kCallLowering(*getTargetLowering()));
   Legalizer.reset(new M68kLegalizerInfo(*this));
 
   auto *RBI = new M68kRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
   InstSelector.reset(createM68kInstructionSelector(TM, *this, *RBI));
+}
+
+M68kSubtarget::~M68kSubtarget() = default;
+
+const SelectionDAGTargetInfo *M68kSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 const CallLowering *M68kSubtarget::getCallLowering() const {

@@ -198,7 +198,7 @@ public:
   /// Diagnostic IDs.
   const llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagIDs;
   /// Options controlling the diagnostic engine.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagnosticOpts;
+  clang::DiagnosticOptions DiagnosticOpts;
   /// Diagnostic consumer.
   clang::TextDiagnosticPrinter DC;
   /// Diagnostic engine.

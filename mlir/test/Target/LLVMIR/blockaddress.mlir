@@ -34,3 +34,32 @@ llvm.func @blockaddr0() -> !llvm.ptr {
 // CHECK: [[RET]]:
 // CHECK:   ret ptr blockaddress(@blockaddr0, %1)
 // CHECK: }
+
+// -----
+
+llvm.mlir.global private @h() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+  %0 = llvm.blockaddress <function = @h3, tag = <id = 0>> : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: @h = private global ptr blockaddress(@h3, %[[BB_ADDR:.*]])
+
+// CHECK: define void @h3() {
+// CHECK:   br label %[[BB_ADDR]]
+
+// CHECK: [[BB_ADDR]]:
+// CHECK:   ret void
+// CHECK: }
+
+// CHECK: define void @h0()
+
+llvm.func @h3() {
+  llvm.br ^bb1
+^bb1:
+  llvm.blocktag <id = 0>
+  llvm.return
+}
+
+llvm.func @h0() {
+  llvm.return
+}

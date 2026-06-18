@@ -21,6 +21,7 @@
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-P
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-Q
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-R
+// RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-S
 
 // RUN: %clang_cc1 -O3 -S -x c++ -std=c++11 -triple aarch64-linux-android31 \
 // RUN:   -fsanitize=memtag-globals -o %t.out %s
@@ -43,6 +44,7 @@
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-P
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-Q
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-R
+// RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-S
 
 /// Ensure that emulated TLS also doesn't get sanitized.
 // RUN: %clang_cc1 -S -x c++ -std=c++11 -triple aarch64-linux-android31 \
@@ -98,6 +100,10 @@ static char* global_buffer_local_end = &global_buffer[16];
 // CHECK-H: .xword global_buffer+16
 // CHECK-H: .size global_buffer_global_end, 16
 char* global_buffer_global_end = &global_buffer[16];
+
+// CHECK-S-NOT: .memtag zero_sized
+struct empty {};
+char zero_sized[0];
 
 class MyClass {
  public:

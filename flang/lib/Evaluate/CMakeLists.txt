@@ -66,6 +66,20 @@ add_flang_library(FortranEvaluate
   ${LIBPGMATH}
   ${QUADMATHLIB}
 
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["flang/Evaluate/common.h"]]
+  [["flang/Evaluate/call.h"]]
+  [["flang/Evaluate/traverse.h"]]
+  [["flang/Evaluate/shape.h"]]
+  [["flang/Evaluate/characteristics.h"]]
+  [["flang/Evaluate/variable.h"]]
+  [["flang/Evaluate/real.h"]]
+  [["flang/Evaluate/type.h"]]
+  [["flang/Evaluate/integer.h"]]
+  [["flang/Evaluate/expression.h"]]
+  [["flang/Evaluate/tools.h"]]
+
   LINK_COMPONENTS
   Support
 

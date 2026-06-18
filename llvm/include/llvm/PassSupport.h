@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Threading.h"
 #include <functional>
@@ -64,20 +65,13 @@ class Pass;
   INITIALIZE_PASS_WITH_OPTIONS_BEGIN(PassName, Arg, Name, Cfg, Analysis)       \
   INITIALIZE_PASS_END(PassName, Arg, Name, Cfg, Analysis)
 
-template <
-    class PassName,
-    std::enable_if_t<std::is_default_constructible<PassName>{}, bool> = true>
-Pass *callDefaultCtor() {
-  return new PassName();
-}
-
-template <
-    class PassName,
-    std::enable_if_t<!std::is_default_constructible<PassName>{}, bool> = true>
-Pass *callDefaultCtor() {
-  // Some codegen passes should only be testable via
-  // `llc -{start|stop}-{before|after}=<passname>`, not via `opt -<passname>`.
-  report_fatal_error("target-specific codegen-only pass");
+template <class PassName> Pass *callDefaultCtor() {
+  if constexpr (std::is_default_constructible_v<PassName>)
+    return new PassName();
+  else
+    // Some codegen passes should only be testable via
+    // `llc -{start|stop}-{before|after}=<passname>`, not via `opt -<passname>`.
+    report_fatal_error("target-specific codegen-only pass");
 }
 
 //===---------------------------------------------------------------------------
@@ -119,7 +113,7 @@ struct PassRegistrationListener {
 
   /// enumeratePasses - Iterate over the registered passes, calling the
   /// passEnumerate callback on each PassInfo object.
-  void enumeratePasses();
+  LLVM_ABI void enumeratePasses();
 
   /// passEnumerate - Callback function invoked when someone calls
   /// enumeratePasses on this PassRegistrationListener object.

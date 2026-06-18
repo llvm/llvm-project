@@ -101,8 +101,37 @@ BundledRetainClaimRVs::~BundledRetainClaimRVs() {
       // can't be tail calls.
       if (auto *CI = dyn_cast<CallInst>(CB))
         CI->setTailCallKind(CallInst::TCK_NoTail);
+
+      // We can also do one final optimization: modify the bundle in the
+      // annotated call, to change the bundle operand from
+      //   objc_retainAutoreleasedReturnValue
+      // to:
+      //   objc_claimAutoreleasedReturnValue
+      // allowing the marker to be omitted from the bundle expansion later.
+      //
+      // Note that, confusingly, ClaimRV is semantically equivalent to RetainRV,
+      // and only differs in that it doesn't require the marker.
+      // The bundle provides the guarantee that we're emitting the ClaimRV call
+      // adjacent to the original call, and providing that guarantee is the
+      // only difference between ClaimRV and RetainRV.
+      //
+      // UnsafeClaimRV has a different RC contract entirely.
+
+      // Find the clang.arc.attachedcall bundle, and rewrite its operand.
+      if (UseClaimRV) {
+        for (auto OBI : CB->bundle_op_infos()) {
+          auto OBU = CB->operandBundleFromBundleOpInfo(OBI);
+          if (OBU.getTagID() == LLVMContext::OB_clang_arc_attachedcall &&
+              OBU.Inputs[0] == EP.get(ARCRuntimeEntryPointKind::RetainRV)) {
+            CB->setOperand(OBI.Begin,
+                           EP.get(ARCRuntimeEntryPointKind::ClaimRV));
+            break;
+          }
+        }
+      }
     }
 
+    // Erase the RV call we emitted earlier: it's already in the bundle.
     EraseInstruction(P.first);
   }
 

@@ -9,9 +9,13 @@
 #include "src/search/lsearch.h"
 #include "test/UnitTest/Test.h"
 
+namespace {
+
 int compar(const void *a, const void *b) {
   return *reinterpret_cast<const int *>(a) != *reinterpret_cast<const int *>(b);
 }
+
+} // namespace
 
 TEST(LlvmLibcLsearchTest, SearchHead) {
   int list[3] = {1, 2, 3};

@@ -44,6 +44,9 @@ class IndexingContext {
 
 public:
   IndexingContext(IndexingOptions IndexOpts, IndexDataConsumer &DataConsumer);
+  // Defaulted, but defined out of line to avoid a dependency on
+  // HeuristicResolver.h (unique_ptr requires a complete type at
+  // the point where its destructor is called).
   ~IndexingContext();
 
   const IndexingOptions &getIndexOpts() const { return IndexOpts; }

@@ -30,21 +30,26 @@ struct SchedulerTest : public testing::Test {
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<BasicAAResult> BAA;
   std::unique_ptr<AAResults> AA;
+  std::unique_ptr<TargetLibraryInfoImpl> TLII;
+  std::unique_ptr<TargetLibraryInfo> TLI;
 
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    if (!M) {
       Err.print("SchedulerTest", errs());
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
+    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
   }
 
   AAResults &getAA(llvm::Function &LLVMF) {
-    TargetLibraryInfoImpl TLII;
-    TargetLibraryInfo TLI(TLII);
-    AA = std::make_unique<AAResults>(TLI);
+    AA = std::make_unique<AAResults>(*TLI);
     AC = std::make_unique<AssumptionCache>(LLVMF);
     DT = std::make_unique<DominatorTree>(LLVMF);
-    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, TLI, *AC,
+    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, *TLI, *AC,
                                           DT.get());
     AA->addAAResult(*BAA);
     return *AA;
@@ -725,6 +730,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   DAG.extend({L0});
   auto *L0N = DAG.getNode(L0);
   EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(L0N->getNumUnscheduledPreds(), 0u);
   // We should have DAG nodes for all instructions at this point
 
   // Now create a new instruction below S0.
@@ -734,6 +740,11 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   // Check that it is marked as "scheduled".
   auto *NewS1N = DAG.getNode(NewS1);
   EXPECT_TRUE(NewS1N->scheduled());
+#ifndef NDEBUG
+  // NewS1N is scheduled so unscheduled preds/succs are irrelevant.
+  EXPECT_FALSE(NewS1N->validUnscheduledPreds());
+  EXPECT_FALSE(NewS1N->validUnscheduledSuccs());
+#endif
   // Check that L0's UnscheduledSuccs are still == 0 since NewS1 is "scheduled".
   EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
 
@@ -746,6 +757,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   EXPECT_FALSE(NewS2N->scheduled());
   // Check that L0's UnscheduledSuccs got updated because of NewS2.
   EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(NewS2N->getNumUnscheduledPreds(), 0u);
 
   sandboxir::ReadyListContainer ReadyList;
   // Check empty().

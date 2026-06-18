@@ -104,7 +104,7 @@ public:
                           SynTensorBoundSetter synSetter = nullptr);
 
   /// Generates code to compute an affine expression whose variables are
-  /// `LoopId`s (i.e., `a.cast<AffineDimExpr>().getPosition()` is a valid
+  /// `LoopId`s (i.e., `cast<AffineDimExpr>(a).getPosition()` is a valid
   /// `LoopId`).
   Value genAffine(OpBuilder &builder, Location loc, AffineExpr a);
 

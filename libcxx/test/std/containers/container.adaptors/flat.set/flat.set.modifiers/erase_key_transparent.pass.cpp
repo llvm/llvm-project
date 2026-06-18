@@ -38,10 +38,10 @@ static_assert(!CanErase<const NonTransparentSet>);
 
 template <class Key, class It>
 struct HeterogeneousKey {
-  explicit HeterogeneousKey(Key key, It it) : key_(key), it_(it) {}
-  operator It() && { return it_; }
-  auto operator<=>(Key key) const { return key_ <=> key; }
-  friend bool operator<(const HeterogeneousKey&, const HeterogeneousKey&) {
+  constexpr explicit HeterogeneousKey(Key key, It it) : key_(key), it_(it) {}
+  constexpr operator It() && { return it_; }
+  constexpr auto operator<=>(Key key) const { return key_ <=> key; }
+  constexpr friend bool operator<(const HeterogeneousKey&, const HeterogeneousKey&) {
     assert(false);
     return false;
   }
@@ -50,7 +50,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer>
-void test_one() {
+constexpr void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
 
@@ -70,7 +70,7 @@ void test_one() {
 }
 
 template <class KeyContainer>
-void test_transparent_comparator() {
+constexpr void test_transparent_comparator() {
   using M = std::flat_set<std::string, TransparentComparator, KeyContainer>;
   {
     M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
@@ -95,14 +95,20 @@ void test_transparent_comparator() {
   }
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<int>>();
-  test_one<std::deque<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
   test_one<std::vector<int, min_allocator<int>>>();
 
   test_transparent_comparator<std::vector<std::string>>();
-  test_transparent_comparator<std::deque<std::string>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_transparent_comparator<std::deque<std::string>>();
   test_transparent_comparator<MinSequenceContainer<std::string>>();
   test_transparent_comparator<std::vector<std::string, min_allocator<std::string>>>();
 
@@ -138,6 +144,15 @@ void test() {
     assert(n == 1);
     assert(transparent_used);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_set<std::string, std::less<>>;
+    M m{"alpha", "beta", "epsilon", "eta", "gamma"};
+    auto n = m.erase("beta");
+    assert(n == 1);
+  }
+
+  return true;
 }
 
 void test_exception() {
@@ -152,6 +167,9 @@ void test_exception() {
 int main(int, char**) {
   test();
   test_exception();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

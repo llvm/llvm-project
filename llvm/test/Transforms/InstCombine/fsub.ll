@@ -98,7 +98,7 @@ define float @sub_sub_nsz(float %x, float %y, float %z) {
 
 define float @sub_add_neg_x(float %x, float %y) {
 ; CHECK-LABEL: @sub_add_neg_x(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -5.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -5.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %mul = fmul float %x, 5.000000e+00
@@ -920,7 +920,7 @@ define float @fmul_c1_use(float %x, float %y) {
 
 define half @fdiv_c0(half %x, half %y) {
 ; CHECK-LABEL: @fdiv_c0(
-; CHECK-NEXT:    [[M:%.*]] = fdiv half 0xH4700, [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = fdiv half 7.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub half [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    ret half [[R]]
 ;

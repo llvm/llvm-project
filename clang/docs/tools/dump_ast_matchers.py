@@ -6,11 +6,8 @@
 import collections
 import re
 import os
+from urllib.request import urlopen
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
 CLASS_INDEX_PAGE_URL = "https://clang.llvm.org/doxygen/classes.html"
 try:
@@ -524,7 +521,10 @@ Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
             if not result_types:
                 if not comment:
                     # Only overloads don't have their own doxygen comments; ignore those.
-                    print('Ignoring "%s"' % name)
+                    # Warn if this name was never successfully documented.
+                    # Overloads of an already-documented matcher are expected.
+                    if ids[name] == 0:
+                        print('Ignoring "%s"' % name)
                 else:
                     print('Cannot determine result type for "%s"' % name)
             else:

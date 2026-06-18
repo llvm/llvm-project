@@ -39,7 +39,7 @@ func.func @use_tensor_func_arg(%A : tensor<?xf32>) -> (vector<4xf32>) {
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[res:.*]] = vector.transfer_read %[[A_memref]]
   %0 = vector.transfer_read %A[%c0], %f0 : tensor<?xf32>, vector<4xf32>
 
@@ -54,7 +54,7 @@ func.func @use_tensor_func_arg(%A : tensor<?xf32>) -> (vector<4xf32>) {
 func.func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
@@ -102,7 +102,7 @@ func.func @read_after_write_conflict(%cst : f32, %idx : index, %idx2 : index)
     -> (f32, f32) {
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc
   // CHECK-DAG: %[[dummy:.*]] = "test.dummy_op"
-  // CHECK-DAG: %[[dummy_m:.*]] = bufferization.to_memref %[[dummy]]
+  // CHECK-DAG: %[[dummy_m:.*]] = bufferization.to_buffer %[[dummy]]
   %t = "test.dummy_op"() : () -> (tensor<10xf32>)
 
   // CHECK: memref.copy %[[dummy_m]], %[[alloc]]
@@ -134,7 +134,7 @@ func.func @copy_deallocated() -> tensor<10xf32> {
 // CHECK-LABEL: func @select_different_tensors(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %pos: index, %c: i1) -> f32 {
-  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : tensor<?xf32> to memref<?xf32, strided{{.*}}>
+  // CHECK-DAG: %[[m:.*]] = bufferization.to_buffer %[[t]] : tensor<?xf32> to memref<?xf32, strided{{.*}}>
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<?xf32>
   %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
@@ -154,7 +154,7 @@ func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %pos: index, 
 // moment because this would create a tensor op during bufferization. That is
 // currently forbidden.
 func.func @alloc_tensor_with_copy(%t: tensor<5xf32>) -> tensor<5xf32> {
-  // CHECK: %[[m:.*]] = bufferization.to_memref %[[t]]
+  // CHECK: %[[m:.*]] = bufferization.to_buffer %[[t]]
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
   // CHECK: memref.copy %[[m]], %[[alloc]]
   %0 = bufferization.alloc_tensor() copy(%t) : tensor<5xf32>
@@ -200,7 +200,7 @@ func.func @read_of_alias(%t: tensor<100xf32>, %pos1: index, %pos2: index,
 // CHECK-LABEL: func @from_unranked_to_unranked(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<*xi32>
 func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
-  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]] : tensor<*xi32> to memref<*xi32>
+  // CHECK: %[[m:.*]] = bufferization.to_buffer %[[arg0]] : tensor<*xi32> to memref<*xi32>
   // CHECK: %[[t:.*]] = bufferization.to_tensor %[[m]]
   // CHECK: return %[[t]] : tensor<*xi32>
   %0 = tensor.cast %arg0 : tensor<*xi32> to tensor<*xi32>
@@ -212,7 +212,7 @@ func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
 // CHECK-LABEL: func @tensor_copy(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<5xf32>)
 func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
-  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]]
+  // CHECK: %[[m:.*]] = bufferization.to_buffer %[[arg0]]
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
   // CHECK: memref.copy %[[m]], %[[alloc]]
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
@@ -227,7 +227,7 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 
 // CHECK-LABEL: func @materialize_in_destination_buffer(
 //  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>, %[[m:.*]]: memref<5xf32>)
-//       CHECK:   %[[b:.*]] = bufferization.to_memref %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[b:.*]] = bufferization.to_buffer %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
 //       CHECK:   memref.copy %[[b]], %[[m]]
 func.func @materialize_in_destination_buffer(%t: tensor<5xf32>, %m: memref<5xf32>) {
   bufferization.materialize_in_destination %t in restrict writable %m

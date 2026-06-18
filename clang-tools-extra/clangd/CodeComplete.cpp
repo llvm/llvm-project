@@ -43,6 +43,7 @@
 #include "support/Trace.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -97,6 +98,9 @@ toCompletionItemKind(index::SymbolKind Kind,
                      const llvm::StringRef *Signature = nullptr) {
   using SK = index::SymbolKind;
   switch (Kind) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case SK::IncludeDirective:
   case SK::Unknown:
     return CompletionItemKind::Missing;
   case SK::Module:
@@ -193,7 +197,11 @@ MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
     Result.value.append(Doc.asPlainText());
     break;
   case MarkupKind::Markdown:
-    Result.value.append(Doc.asMarkdown());
+    if (Config::current().Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::PlainText)
+      Result.value.append(Doc.asEscapedMarkdown());
+    else
+      Result.value.append(Doc.asMarkdown());
     break;
   }
   return Result;
@@ -226,7 +234,7 @@ struct CompletionCandidate {
   size_t overloadSet(const CodeCompleteOptions &Opts, llvm::StringRef FileName,
                      IncludeInserter *Inserter,
                      CodeCompletionContext::Kind CCContextKind) const {
-    if (!Opts.BundleOverloads.value_or(false))
+    if (!Opts.BundleOverloads)
       return 0;
 
     // Depending on the index implementation, we can see different header
@@ -469,10 +477,12 @@ struct CodeCompletionBuilder {
     BundledEntry &S = Bundled.back();
     bool IsConcept = false;
     if (C.SemaResult) {
-      getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
-                   C.SemaResult->CursorKind,
-                   /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall,
-                   /*RequiredQualifiers=*/&Completion.RequiredQualifier);
+      getSignature(
+          *SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
+          C.SemaResult->CursorKind,
+          /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall ||
+              C.SemaResult->DeclaringEntity,
+          /*RequiredQualifiers=*/&Completion.RequiredQualifier);
       S.ReturnType = getReturnType(*SemaCCS);
       if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
         if (const auto *D = C.SemaResult->getDeclaration())
@@ -582,10 +592,12 @@ private:
     if (Snippet->empty())
       return "";
 
-    bool MayHaveArgList = Completion.Kind == CompletionItemKind::Function ||
-                          Completion.Kind == CompletionItemKind::Method ||
-                          Completion.Kind == CompletionItemKind::Constructor ||
-                          Completion.Kind == CompletionItemKind::Text /*Macro*/;
+    bool MayHaveArgList =
+        Completion.Kind == CompletionItemKind::Function ||
+        Completion.Kind == CompletionItemKind::Method ||
+        Completion.Kind == CompletionItemKind::Constructor ||
+        Completion.Kind == CompletionItemKind::Text /*Macro*/ ||
+        Completion.Kind == CompletionItemKind::Variable /*Lambda*/;
     // If likely arg list already exists, don't add new parens & placeholders.
     //   Snippet: function(int x, int y)
     //   func^(1,2) -> function(1, 2)
@@ -620,7 +632,7 @@ private:
       return *Snippet;
 
     // Replace argument snippets with a simplified pattern.
-    if (MayHaveArgList) {
+    if (MayHaveArgList && llvm::StringRef(*Snippet).contains("(")) {
       // Functions snippets can be of 2 types:
       // - containing only function arguments, e.g.
       //   foo(${1:int p1}, ${2:int p2});
@@ -870,7 +882,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
 }
 
 static bool isInjectedClass(const NamedDecl &D) {
-  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(&D))
     if (R->isInjectedClassName())
       return true;
   return false;
@@ -926,7 +938,8 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // FIXME: in case there is no future sema completion callback after the
     // recovery mode, we might still want to provide some results (e.g. trivial
     // identifier-based completion).
-    if (Context.getKind() == CodeCompletionContext::CCC_Recovery) {
+    CodeCompletionContext::Kind ContextKind = Context.getKind();
+    if (ContextKind == CodeCompletionContext::CCC_Recovery) {
       log("Code complete: Ignoring sema code complete callback with Recovery "
           "context.");
       return;
@@ -950,6 +963,12 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // Retain the results we might want.
     for (unsigned I = 0; I < NumResults; ++I) {
       auto &Result = InResults[I];
+      if (Config::current().Completion.CodePatterns ==
+              Config::CodePatternsPolicy::None &&
+          Result.Kind == CodeCompletionResult::RK_Pattern &&
+          // keep allowing the include files autocomplete suggestions
+          ContextKind != CodeCompletionContext::CCC_IncludedFile)
+        continue;
       // Class members that are shadowed by subclasses are usually noise.
       if (Result.Hidden && Result.Declaration &&
           Result.Declaration->isCXXClassMember())
@@ -1365,14 +1384,17 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
 bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const clang::CodeCompleteOptions &Options,
                       const SemaCompleteInput &Input,
-                      IncludeStructure *Includes = nullptr) {
+                      IncludeStructure *Includes = nullptr,
+                      std::unique_ptr<CompilerInvocation> CI = nullptr) {
   trace::Span Tracer("Sema completion");
 
   IgnoreDiagnostics IgnoreDiags;
-  auto CI = buildCompilerInvocation(Input.ParseInput, IgnoreDiags);
   if (!CI) {
-    elog("Couldn't create CompilerInvocation");
-    return false;
+    CI = buildCompilerInvocation(Input.ParseInput, IgnoreDiags);
+    if (!CI) {
+      elog("Couldn't create CompilerInvocation");
+      return false;
+    }
   }
   auto &FrontendOpts = CI->getFrontendOpts();
   FrontendOpts.SkipFunctionBodies = true;
@@ -1401,7 +1423,8 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // overriding the preamble will break sema completion. Fortunately we can just
   // skip all includes in this case; these completions are really simple.
   PreambleBounds PreambleRegion =
-      ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
+      computePreambleBounds(CI->getLangOpts(), *ContentsBuffer,
+                            Input.ParseInput.Opts.SkipPreambleBuild);
   bool CompletingInPreamble = Input.Offset < PreambleRegion.Size ||
                               (!PreambleRegion.PreambleEndsAtStartOfLine &&
                                Input.Offset == PreambleRegion.Size);
@@ -1414,13 +1437,17 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   if (Input.Preamble.StatCache)
     VFS = Input.Preamble.StatCache->getConsumingFS(std::move(VFS));
   auto Clang = prepareCompilerInstance(
-      std::move(CI), !CompletingInPreamble ? &Input.Preamble.Preamble : nullptr,
+      std::move(CI),
+      (!CompletingInPreamble && !Input.ParseInput.Opts.SkipPreambleBuild)
+          ? &Input.Preamble.Preamble
+          : nullptr,
       std::move(ContentsBuffer), std::move(VFS), IgnoreDiags);
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
 
   if (Input.Preamble.RequiredModules)
-    Input.Preamble.RequiredModules->adjustHeaderSearchOptions(Clang->getHeaderSearchOpts());
+    Input.Preamble.RequiredModules->adjustHeaderSearchOptions(
+        Clang->getHeaderSearchOpts());
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
@@ -1455,20 +1482,15 @@ bool allowIndex(CodeCompletionContext &CC) {
   auto Scope = CC.getCXXScopeSpecifier();
   if (!Scope)
     return true;
-  NestedNameSpecifier *NameSpec = (*Scope)->getScopeRep();
-  if (!NameSpec)
-    return true;
   // We only query the index when qualifier is a namespace.
   // If it's a class, we rely solely on sema completions.
-  switch (NameSpec->getKind()) {
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
+  switch ((*Scope)->getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::Namespace:
     return true;
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::TypeSpec:
-  // Unresolved inside a template.
-  case NestedNameSpecifier::Identifier:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+  case NestedNameSpecifier::Kind::Type:
     return false;
   }
   llvm_unreachable("invalid NestedNameSpecifier kind");
@@ -1514,46 +1536,6 @@ FuzzyFindRequest speculativeFuzzyFindRequestForCompletion(
   return CachedReq;
 }
 
-// This function is similar to Lexer::findNextToken(), but assumes
-// that the input SourceLocation is the completion point (which is
-// a case findNextToken() does not handle).
-std::optional<Token>
-findTokenAfterCompletionPoint(SourceLocation CompletionPoint,
-                              const SourceManager &SM,
-                              const LangOptions &LangOpts) {
-  SourceLocation Loc = CompletionPoint;
-  if (Loc.isMacroID()) {
-    if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
-      return std::nullopt;
-  }
-
-  // Advance to the next SourceLocation after the completion point.
-  // Lexer::findNextToken() would call MeasureTokenLength() here,
-  // which does not handle the completion point (and can't, because
-  // the Lexer instance it constructs internally doesn't have a
-  // Preprocessor and so doesn't know about the completion point).
-  Loc = Loc.getLocWithOffset(1);
-
-  // Break down the source location.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
-
-  // Try to load the file buffer.
-  bool InvalidTemp = false;
-  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
-  if (InvalidTemp)
-    return std::nullopt;
-
-  const char *TokenBegin = File.data() + LocInfo.second;
-
-  // Lex from the start of the given location.
-  Lexer TheLexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
-                 TokenBegin, File.end());
-  // Find the token.
-  Token Tok;
-  TheLexer.LexFromRawLexer(Tok);
-  return Tok;
-}
-
 // Runs Sema-based (AST) and Index-based completion, returns merged results.
 //
 // There are a few tricky considerations:
@@ -1597,12 +1579,16 @@ class CodeCompleteFlow {
   // location is an opening parenthesis (tok::l_paren) because this would add
   // extra parenthesis.
   tok::TokenKind NextTokenKind = tok::eof;
+  // End of the identifier suffix after the completion cursor.
+  // Shared by NextTokenKind detection and replace-range calculation.
+  SourceLocation IdentifierSuffixEnd;
   // Counters for logging.
   int NSema = 0, NIndex = 0, NSemaAndIndex = 0, NIdent = 0;
   bool Incomplete = false; // Would more be available with a higher limit?
   CompletionPrefix HeuristicPrefix;
   std::optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
-  Range ReplacedRange;
+  Range InsertRange;
+  std::optional<Range> ReplaceRange;
   std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
   std::vector<std::string> AccessibleScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
@@ -1652,11 +1638,20 @@ public:
       auto Style = getFormatStyleForFile(SemaCCInput.FileName,
                                          SemaCCInput.ParseInput.Contents,
                                          *SemaCCInput.ParseInput.TFS, false);
-      const auto NextToken = findTokenAfterCompletionPoint(
-          Recorder->CCSema->getPreprocessor().getCodeCompletionLoc(),
-          Recorder->CCSema->getSourceManager(), Recorder->CCSema->LangOpts);
-      if (NextToken)
-        NextTokenKind = NextToken->getKind();
+      const auto &SM = Recorder->CCSema->getSourceManager();
+      const LangOptions &LangOpts = Recorder->CCSema->getLangOpts();
+      // Skip past the NUL byte inserted at the cursor, then scan through any
+      // identifier continuation characters to find where the suffix ends.
+      IdentifierSuffixEnd = Lexer::findEndOfIdentifierContinuation(
+          Recorder->CCSema->getPreprocessor()
+              .getCodeCompletionLoc()
+              .getLocWithOffset(1),
+          SM, LangOpts);
+      // Lex the token after the identifier suffix to determine NextTokenKind.
+      if (Token NextToken;
+          !Lexer::getRawToken(IdentifierSuffixEnd, NextToken, SM, LangOpts,
+                              /*IgnoreWhiteSpace=*/true))
+        NextTokenKind = NextToken.getKind();
       // If preprocessor was run, inclusions from preprocessor callback should
       // already be added to Includes.
       Inserter.emplace(
@@ -1673,7 +1668,6 @@ public:
       // that happens here (though the per-URI-scheme initialization is lazy).
       // The per-result proximity scoring is (amortized) very cheap.
       FileDistanceOptions ProxOpts{}; // Use defaults.
-      const auto &SM = Recorder->CCSema->getSourceManager();
       llvm::StringMap<SourceParams> ProxSources;
       auto MainFileID =
           Includes.getID(SM.getFileEntryForID(SM.getMainFileID()));
@@ -1737,8 +1731,19 @@ public:
     IsUsingDeclaration = false;
     Filter = FuzzyMatcher(HeuristicPrefix.Name);
     auto Pos = offsetToPosition(Content, Offset);
-    ReplacedRange.start = ReplacedRange.end = Pos;
-    ReplacedRange.start.character -= HeuristicPrefix.Name.size();
+    InsertRange.start = InsertRange.end = Pos;
+    InsertRange.start.character -= HeuristicPrefix.Name.size();
+
+    if (Opts.EnableInsertReplace) {
+      ReplaceRange.emplace();
+      ReplaceRange->start = InsertRange.start;
+      // Scan forward past ASCII identifier characters to find replace end.
+      size_t ReplaceEnd = Offset;
+      while (ReplaceEnd < Content.size() &&
+             isAsciiIdentifierContinue(Content[ReplaceEnd]))
+        ++ReplaceEnd;
+      ReplaceRange->end = offsetToPosition(Content, ReplaceEnd);
+    }
 
     llvm::StringMap<SourceParams> ProxSources;
     ProxSources[FileName].Cost = 0;
@@ -1819,19 +1824,26 @@ private:
   CodeCompleteResult runWithSema() {
     const auto &CodeCompletionRange = CharSourceRange::getCharRange(
         Recorder->CCSema->getPreprocessor().getCodeCompletionTokenRange());
+
+    const SourceManager &SM = Recorder->CCSema->getSourceManager();
+
     // When we are getting completions with an empty identifier, for example
     //    std::vector<int> asdf;
     //    asdf.^;
     // Then the range will be invalid and we will be doing insertion, use
     // current cursor position in such cases as range.
     if (CodeCompletionRange.isValid()) {
-      ReplacedRange = halfOpenToRange(Recorder->CCSema->getSourceManager(),
-                                      CodeCompletionRange);
+      InsertRange = halfOpenToRange(SM, CodeCompletionRange);
     } else {
       const auto &Pos = sourceLocToPosition(
-          Recorder->CCSema->getSourceManager(),
-          Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
-      ReplacedRange.start = ReplacedRange.end = Pos;
+          SM, Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
+      InsertRange.start = InsertRange.end = Pos;
+    }
+
+    if (Opts.EnableInsertReplace) {
+      ReplaceRange.emplace();
+      ReplaceRange->start = InsertRange.start;
+      ReplaceRange->end = getEndOfCodeCompletionReplace(SM);
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
@@ -1861,6 +1873,16 @@ private:
     return toCodeCompleteResult(Top);
   }
 
+  // Returns the LSP position at the end of the identifier suffix after the
+  // code completion cursor.
+  Position getEndOfCodeCompletionReplace(const SourceManager &SM) {
+    Position End = sourceLocToPosition(SM, IdentifierSuffixEnd);
+    // Adjust for the NUL byte inserted at the cursor by code completion,
+    // which inflates the column by 1.
+    End.character--;
+    return End;
+  }
+
   CodeCompleteResult
   toCodeCompleteResult(const std::vector<ScoredBundle> &Scored) {
     CodeCompleteResult Output;
@@ -1872,12 +1894,21 @@ private:
     for (auto &C : Scored) {
       Output.Completions.push_back(toCodeCompletion(C.first));
       Output.Completions.back().Score = C.second;
-      Output.Completions.back().CompletionTokenRange = ReplacedRange;
+      Output.Completions.back().CompletionInsertRange = InsertRange;
+      Output.Completions.back().CompletionReplaceRange = ReplaceRange;
       if (Opts.Index && !Output.Completions.back().Documentation) {
         for (auto &Cand : C.first) {
           if (Cand.SemaResult &&
               Cand.SemaResult->Kind == CodeCompletionResult::RK_Declaration) {
-            auto ID = clangd::getSymbolID(Cand.SemaResult->getDeclaration());
+            const NamedDecl *DeclToLookup = Cand.SemaResult->getDeclaration();
+            // For instantiations of members of class templates, the
+            // documentation will be stored at the member's original
+            // declaration.
+            if (const NamedDecl *Adjusted =
+                    dyn_cast<NamedDecl>(&adjustDeclToTemplate(*DeclToLookup))) {
+              DeclToLookup = Adjusted;
+            }
+            auto ID = clangd::getSymbolID(DeclToLookup);
             if (!ID)
               continue;
             Req.IDs.insert(ID);
@@ -1888,7 +1919,8 @@ private:
     }
     Output.HasMore = Incomplete;
     Output.Context = CCContextKind;
-    Output.CompletionRange = ReplacedRange;
+    Output.InsertRange = InsertRange;
+    Output.ReplaceRange = ReplaceRange;
 
     // Look up documentation from the index.
     if (Opts.Index) {
@@ -2019,13 +2051,28 @@ private:
   }
 
   std::optional<float> fuzzyScore(const CompletionCandidate &C) {
-    // Macros can be very spammy, so we only support prefix completion.
-    if (((C.SemaResult &&
+    using MacroFilterPolicy = Config::MacroFilterPolicy;
+
+    const auto IsMacroResult =
+        ((C.SemaResult &&
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
-          C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
-        !C.Name.starts_with_insensitive(Filter->pattern()))
+          C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro));
+
+    if (!IsMacroResult)
+      return Filter->match(C.Name);
+
+    // macros with underscores are probably noisy, so don't suggest them
+    bool RequireExactPrefix =
+        Opts.MacroFilter == MacroFilterPolicy::ExactPrefix ||
+        C.Name.starts_with_insensitive("_") ||
+        C.Name.ends_with_insensitive("_");
+
+    if (RequireExactPrefix &&
+        !C.Name.starts_with_insensitive(Filter->pattern())) {
       return std::nullopt;
+    }
+
     return Filter->match(C.Name);
   }
 
@@ -2153,7 +2200,8 @@ private:
 
 clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   clang::CodeCompleteOptions Result;
-  Result.IncludeCodePatterns = EnableSnippets;
+  Result.IncludeCodePatterns =
+      EnableSnippets && (CodePatterns != Config::CodePatternsPolicy::None);
   Result.IncludeMacros = true;
   Result.IncludeGlobals = true;
   // We choose to include full comments and not do doxygen parsing in
@@ -2193,15 +2241,53 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
   return Result;
 }
 
+// If Offset is inside what looks like argument comment (e.g.
+// "/*^*/" or "/* foo = ^*/"), returns the offset pointing past the closing
+// "*/".
+static std::optional<unsigned>
+maybeFunctionArgumentCommentEnd(const PathRef FileName, const unsigned Offset,
+                                const llvm::StringRef Content,
+                                const LangOptions &LangOpts) {
+  if (Offset > Content.size())
+    return std::nullopt;
+
+  SourceManagerForFile FileSM(FileName, Content);
+  const SourceManager &SM = FileSM.get();
+  const SourceLocation Cursor = SM.getComposedLoc(SM.getMainFileID(), Offset);
+  const SourceLocation EndOfSuffix =
+      Lexer::findEndOfIdentifierContinuation(Cursor, SM, LangOpts);
+  const unsigned EndOfSuffixOffset = SM.getFileOffset(EndOfSuffix);
+
+  const llvm::StringRef Rest = Content.drop_front(EndOfSuffixOffset);
+  llvm::StringRef RestTrimmed = Rest.ltrim();
+  // Comment argument pattern: `/* name = */` — skip past optional `=`.
+  if (RestTrimmed.starts_with("="))
+    RestTrimmed = RestTrimmed.drop_front(1).ltrim();
+  if (RestTrimmed.starts_with("*/"))
+    return EndOfSuffixOffset + (Rest.size() - RestTrimmed.size()) + 2;
+  return std::nullopt;
+}
+
 // Code complete the argument name on "/*" inside function call.
-// Offset should be pointing to the start of the comment, i.e.:
+// OutsideStartOffset should be pointing before the comment, i.e.:
 // foo(^/*, rather than foo(/*^) where the cursor probably is.
-CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
-                                       llvm::StringRef Prefix,
-                                       const PreambleData *Preamble,
-                                       const ParseInputs &ParseInput) {
+CodeCompleteResult
+codeCompleteComment(PathRef FileName, const unsigned CursorOffset,
+                    unsigned OutsideStartOffset, llvm::StringRef Prefix,
+                    const PreambleData *Preamble, const ParseInputs &ParseInput,
+                    const CodeCompleteOptions &Opts) {
   if (Preamble == nullptr) // Can't run without Sema.
     return CodeCompleteResult();
+
+  IgnoreDiagnostics IgnoreDiags;
+  auto CI = buildCompilerInvocation(ParseInput, IgnoreDiags);
+  if (!CI)
+    return CodeCompleteResult();
+
+  std::optional<unsigned> OutsideEndOffset;
+  if (Opts.EnableInsertReplace)
+    OutsideEndOffset = maybeFunctionArgumentCommentEnd(
+        FileName, CursorOffset, ParseInput.Contents, CI->getLangOpts());
 
   clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
@@ -2213,20 +2299,31 @@ CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
   // full patch.
   semaCodeComplete(
       std::make_unique<ParamNameCollector>(Options, ParamNames), Options,
-      {FileName, Offset, *Preamble,
+      {FileName, OutsideStartOffset, *Preamble,
        PreamblePatch::createFullPatch(FileName, ParseInput, *Preamble),
-       ParseInput});
+       ParseInput},
+      /*Includes=*/nullptr, std::move(CI));
   if (ParamNames.empty())
     return CodeCompleteResult();
 
   CodeCompleteResult Result;
-  Range CompletionRange;
+  Range InsertRange;
   // Skip /*
-  Offset += 2;
-  CompletionRange.start = offsetToPosition(ParseInput.Contents, Offset);
-  CompletionRange.end =
-      offsetToPosition(ParseInput.Contents, Offset + Prefix.size());
-  Result.CompletionRange = CompletionRange;
+  const unsigned InsideStartOffset = OutsideStartOffset + 2;
+  InsertRange.start = offsetToPosition(ParseInput.Contents, InsideStartOffset);
+  InsertRange.end =
+      offsetToPosition(ParseInput.Contents, InsideStartOffset + Prefix.size());
+  Result.InsertRange = InsertRange;
+
+  if (Opts.EnableInsertReplace) {
+    Range ReplaceRange;
+    ReplaceRange.start = InsertRange.start;
+    ReplaceRange.end = OutsideEndOffset ? offsetToPosition(ParseInput.Contents,
+                                                           *OutsideEndOffset)
+                                        : InsertRange.end;
+    Result.ReplaceRange = ReplaceRange;
+  }
+
   Result.Context = CodeCompletionContext::CCC_NaturalLanguage;
   for (llvm::StringRef Name : ParamNames) {
     if (!Name.starts_with(Prefix))
@@ -2235,7 +2332,8 @@ CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
     Item.Name = Name.str() + "=*/";
     Item.FilterText = Item.Name;
     Item.Kind = CompletionItemKind::Text;
-    Item.CompletionTokenRange = CompletionRange;
+    Item.CompletionInsertRange = InsertRange;
+    Item.CompletionReplaceRange = Result.ReplaceRange;
     Item.Origin = SymbolOrigin::AST;
     Result.Completions.push_back(Item);
   }
@@ -2275,8 +2373,8 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
     // parsing, so we must move back the position before running it, extract
     // information we need and construct completion items ourselves.
     auto CommentPrefix = Content.substr(*OffsetBeforeComment + 2).trim();
-    return codeCompleteComment(FileName, *OffsetBeforeComment, CommentPrefix,
-                               Preamble, ParseInput);
+    return codeCompleteComment(FileName, *Offset, *OffsetBeforeComment,
+                               CommentPrefix, Preamble, ParseInput, Opts);
   }
 
   auto Flow = CodeCompleteFlow(
@@ -2386,7 +2484,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   }
   LSP.sortText = sortText(Score.Total, FilterText);
   LSP.filterText = FilterText;
-  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name, ""};
+  TextEdit Edit;
+  Edit.range = CompletionInsertRange;
+  Edit.newText = RequiredQualifier + Name;
   // Merge continuous additionalTextEdits into main edit. The main motivation
   // behind this is to help LSP clients, it seems most of them are confused when
   // they are provided with additionalTextEdits that are consecutive to main
@@ -2395,19 +2495,34 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // is mainly to help LSP clients again, so that changes do not effect each
   // other.
   for (const auto &FixIt : FixIts) {
-    if (FixIt.range.end == LSP.textEdit->range.start) {
-      LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
-      LSP.textEdit->range.start = FixIt.range.start;
+    if (FixIt.range.end == Edit.range.start) {
+      Edit.newText = FixIt.newText + Edit.newText;
+      Edit.range.start = FixIt.range.start;
     } else {
       LSP.additionalTextEdits.push_back(FixIt);
     }
   }
   if (Opts.EnableSnippets)
-    LSP.textEdit->newText += SnippetSuffix;
+    Edit.newText += SnippetSuffix;
 
   // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
   // compatible with most of the editors.
-  LSP.insertText = LSP.textEdit->newText;
+  LSP.insertText = Edit.newText;
+  if (Opts.EnableInsertReplace) {
+    assert(CompletionReplaceRange &&
+           "CompletionReplaceRange must be already set before render() "
+           "when EnableInsertReplace is on");
+    InsertReplaceEdit IRE;
+    IRE.newText = std::move(Edit.newText);
+    IRE.insert = Edit.range;
+    IRE.replace = *CompletionReplaceRange;
+    // FixIt merging may have extended the insert range start; keep replace
+    // range as a superset per LSP spec.
+    IRE.replace.start = IRE.insert.start;
+    LSP.textEdit = std::move(IRE);
+  } else {
+    LSP.textEdit = std::move(Edit);
+  }
   // Some clients support snippets but work better with plaintext.
   // So if the snippet is trivial, let the client know.
   // https://github.com/clangd/clangd/issues/922
@@ -2423,6 +2538,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const CodeCompletion &C) {
+  OS << "Signature: " << "\"" << C.Signature << "\", "
+     << "SnippetSuffix: " << "\"" << C.SnippetSuffix << "\""
+     << ", Rendered:";
   // For now just lean on CompletionItem.
   return OS << C.render(CodeCompleteOptions());
 }

@@ -19,6 +19,7 @@
 #define LLVM_ADT_SLOWDYNAMICAPINT_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DynamicAPInt;
@@ -35,51 +36,54 @@ class SlowDynamicAPInt {
   APInt Val;
 
 public:
-  explicit SlowDynamicAPInt(int64_t Val);
-  SlowDynamicAPInt();
-  explicit SlowDynamicAPInt(const APInt &Val);
-  SlowDynamicAPInt &operator=(int64_t Val);
-  explicit operator int64_t() const;
-  SlowDynamicAPInt operator-() const;
-  bool operator==(const SlowDynamicAPInt &O) const;
-  bool operator!=(const SlowDynamicAPInt &O) const;
-  bool operator>(const SlowDynamicAPInt &O) const;
-  bool operator<(const SlowDynamicAPInt &O) const;
-  bool operator<=(const SlowDynamicAPInt &O) const;
-  bool operator>=(const SlowDynamicAPInt &O) const;
-  SlowDynamicAPInt operator+(const SlowDynamicAPInt &O) const;
-  SlowDynamicAPInt operator-(const SlowDynamicAPInt &O) const;
-  SlowDynamicAPInt operator*(const SlowDynamicAPInt &O) const;
-  SlowDynamicAPInt operator/(const SlowDynamicAPInt &O) const;
-  SlowDynamicAPInt operator%(const SlowDynamicAPInt &O) const;
-  SlowDynamicAPInt &operator+=(const SlowDynamicAPInt &O);
-  SlowDynamicAPInt &operator-=(const SlowDynamicAPInt &O);
-  SlowDynamicAPInt &operator*=(const SlowDynamicAPInt &O);
-  SlowDynamicAPInt &operator/=(const SlowDynamicAPInt &O);
-  SlowDynamicAPInt &operator%=(const SlowDynamicAPInt &O);
+  LLVM_ABI explicit SlowDynamicAPInt(int64_t Val);
+  LLVM_ABI SlowDynamicAPInt();
+  LLVM_ABI explicit SlowDynamicAPInt(const APInt &Val);
+  LLVM_ABI SlowDynamicAPInt &operator=(int64_t Val);
+  LLVM_ABI explicit operator int64_t() const;
+  LLVM_ABI SlowDynamicAPInt operator-() const;
+  LLVM_ABI bool operator==(const SlowDynamicAPInt &O) const;
+  LLVM_ABI bool operator!=(const SlowDynamicAPInt &O) const;
+  LLVM_ABI bool operator>(const SlowDynamicAPInt &O) const;
+  LLVM_ABI bool operator<(const SlowDynamicAPInt &O) const;
+  LLVM_ABI bool operator<=(const SlowDynamicAPInt &O) const;
+  LLVM_ABI bool operator>=(const SlowDynamicAPInt &O) const;
+  LLVM_ABI SlowDynamicAPInt operator+(const SlowDynamicAPInt &O) const;
+  LLVM_ABI SlowDynamicAPInt operator-(const SlowDynamicAPInt &O) const;
+  LLVM_ABI SlowDynamicAPInt operator*(const SlowDynamicAPInt &O) const;
+  LLVM_ABI SlowDynamicAPInt operator/(const SlowDynamicAPInt &O) const;
+  LLVM_ABI SlowDynamicAPInt operator%(const SlowDynamicAPInt &O) const;
+  LLVM_ABI SlowDynamicAPInt &operator+=(const SlowDynamicAPInt &O);
+  LLVM_ABI SlowDynamicAPInt &operator-=(const SlowDynamicAPInt &O);
+  LLVM_ABI SlowDynamicAPInt &operator*=(const SlowDynamicAPInt &O);
+  LLVM_ABI SlowDynamicAPInt &operator/=(const SlowDynamicAPInt &O);
+  LLVM_ABI SlowDynamicAPInt &operator%=(const SlowDynamicAPInt &O);
 
-  SlowDynamicAPInt &operator++();
-  SlowDynamicAPInt &operator--();
+  LLVM_ABI SlowDynamicAPInt &operator++();
+  LLVM_ABI SlowDynamicAPInt &operator--();
 
-  friend SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
-  friend SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
-                                  const SlowDynamicAPInt &RHS);
-  friend SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
-                                   const SlowDynamicAPInt &RHS);
+  LLVM_ABI friend SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
+  LLVM_ABI friend SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
+                                           const SlowDynamicAPInt &RHS);
+  LLVM_ABI friend SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
+                                            const SlowDynamicAPInt &RHS);
   /// The operands must be non-negative for gcd.
-  friend SlowDynamicAPInt gcd(const SlowDynamicAPInt &A,
-                              const SlowDynamicAPInt &B);
+  LLVM_ABI friend SlowDynamicAPInt gcd(const SlowDynamicAPInt &A,
+                                       const SlowDynamicAPInt &B);
 
   /// Overload to compute a hash_code for a SlowDynamicAPInt value.
-  friend hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
+  LLVM_ABI friend hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
 
   // Make DynamicAPInt a friend so it can access Val directly.
   friend DynamicAPInt;
 
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SlowDynamicAPInt &X) {
@@ -91,53 +95,56 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SlowDynamicAPInt &X) {
 ///
 /// The RHS is always expected to be positive, and the result
 /// is always non-negative.
-SlowDynamicAPInt mod(const SlowDynamicAPInt &LHS, const SlowDynamicAPInt &RHS);
+LLVM_ABI SlowDynamicAPInt mod(const SlowDynamicAPInt &LHS,
+                              const SlowDynamicAPInt &RHS);
 
 /// Returns the least common multiple of A and B.
-SlowDynamicAPInt lcm(const SlowDynamicAPInt &A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt lcm(const SlowDynamicAPInt &A,
+                              const SlowDynamicAPInt &B);
 
 /// Redeclarations of friend declarations above to
 /// make it discoverable by lookups.
-SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
-SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
-                         const SlowDynamicAPInt &RHS);
-SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
-                          const SlowDynamicAPInt &RHS);
-SlowDynamicAPInt gcd(const SlowDynamicAPInt &A, const SlowDynamicAPInt &B);
-hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
+LLVM_ABI SlowDynamicAPInt abs(const SlowDynamicAPInt &X);
+LLVM_ABI SlowDynamicAPInt ceilDiv(const SlowDynamicAPInt &LHS,
+                                  const SlowDynamicAPInt &RHS);
+LLVM_ABI SlowDynamicAPInt floorDiv(const SlowDynamicAPInt &LHS,
+                                   const SlowDynamicAPInt &RHS);
+LLVM_ABI SlowDynamicAPInt gcd(const SlowDynamicAPInt &A,
+                              const SlowDynamicAPInt &B);
+LLVM_ABI hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
 
 /// ---------------------------------------------------------------------------
 /// Convenience operator overloads for int64_t.
 /// ---------------------------------------------------------------------------
-SlowDynamicAPInt &operator+=(SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt &operator-=(SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt &operator*=(SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt &operator/=(SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt &operator%=(SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt &operator+=(SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt &operator-=(SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt &operator*=(SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt &operator/=(SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt &operator%=(SlowDynamicAPInt &A, int64_t B);
 
-bool operator==(const SlowDynamicAPInt &A, int64_t B);
-bool operator!=(const SlowDynamicAPInt &A, int64_t B);
-bool operator>(const SlowDynamicAPInt &A, int64_t B);
-bool operator<(const SlowDynamicAPInt &A, int64_t B);
-bool operator<=(const SlowDynamicAPInt &A, int64_t B);
-bool operator>=(const SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt operator+(const SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt operator-(const SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt operator*(const SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt operator/(const SlowDynamicAPInt &A, int64_t B);
-SlowDynamicAPInt operator%(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI bool operator==(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI bool operator!=(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI bool operator>(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI bool operator<(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI bool operator<=(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI bool operator>=(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt operator+(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt operator-(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt operator*(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt operator/(const SlowDynamicAPInt &A, int64_t B);
+LLVM_ABI SlowDynamicAPInt operator%(const SlowDynamicAPInt &A, int64_t B);
 
-bool operator==(int64_t A, const SlowDynamicAPInt &B);
-bool operator!=(int64_t A, const SlowDynamicAPInt &B);
-bool operator>(int64_t A, const SlowDynamicAPInt &B);
-bool operator<(int64_t A, const SlowDynamicAPInt &B);
-bool operator<=(int64_t A, const SlowDynamicAPInt &B);
-bool operator>=(int64_t A, const SlowDynamicAPInt &B);
-SlowDynamicAPInt operator+(int64_t A, const SlowDynamicAPInt &B);
-SlowDynamicAPInt operator-(int64_t A, const SlowDynamicAPInt &B);
-SlowDynamicAPInt operator*(int64_t A, const SlowDynamicAPInt &B);
-SlowDynamicAPInt operator/(int64_t A, const SlowDynamicAPInt &B);
-SlowDynamicAPInt operator%(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI bool operator==(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI bool operator!=(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI bool operator>(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI bool operator<(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI bool operator<=(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI bool operator>=(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt operator+(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt operator-(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt operator*(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt operator/(int64_t A, const SlowDynamicAPInt &B);
+LLVM_ABI SlowDynamicAPInt operator%(int64_t A, const SlowDynamicAPInt &B);
 } // namespace llvm::detail
 
 #endif // LLVM_ADT_SLOWDYNAMICAPINT_H

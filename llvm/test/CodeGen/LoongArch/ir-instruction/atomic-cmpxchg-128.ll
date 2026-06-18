@@ -33,7 +33,7 @@ define void @cmpxchg_i128_acquire_acquire(ptr %ptr, i128 %cmp, i128 %val) nounwi
 ; LA64-SCQ-NEXT:  # %bb.2: # in Loop: Header=BB0_1 Depth=1
 ; LA64-SCQ-NEXT:    move $a7, $a3
 ; LA64-SCQ-NEXT:    sc.q $a7, $a4, $a0
-; LA64-SCQ-NEXT:    beqz $a7, .LBB0_1
+; LA64-SCQ-NEXT:    beq $a7, $zero, .LBB0_1
 ; LA64-SCQ-NEXT:    b .LBB0_4
 ; LA64-SCQ-NEXT:  .LBB0_3:
 ; LA64-SCQ-NEXT:    dbar 20
@@ -73,7 +73,7 @@ define void @cmpxchg_i128_acquire_monotonic(ptr %ptr, i128 %cmp, i128 %val) noun
 ; LA64-SCQ-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
 ; LA64-SCQ-NEXT:    move $a7, $a3
 ; LA64-SCQ-NEXT:    sc.q $a7, $a4, $a0
-; LA64-SCQ-NEXT:    beqz $a7, .LBB1_1
+; LA64-SCQ-NEXT:    beq $a7, $zero, .LBB1_1
 ; LA64-SCQ-NEXT:    b .LBB1_4
 ; LA64-SCQ-NEXT:  .LBB1_3:
 ; LA64-SCQ-NEXT:    dbar 20
@@ -115,7 +115,7 @@ define i128 @cmpxchg_i128_acquire_acquire_reti128(ptr %ptr, i128 %cmp, i128 %val
 ; LA64-SCQ-NEXT:  # %bb.2: # in Loop: Header=BB2_1 Depth=1
 ; LA64-SCQ-NEXT:    move $a7, $a3
 ; LA64-SCQ-NEXT:    sc.q $a7, $a4, $a0
-; LA64-SCQ-NEXT:    beqz $a7, .LBB2_1
+; LA64-SCQ-NEXT:    beq $a7, $zero, .LBB2_1
 ; LA64-SCQ-NEXT:    b .LBB2_4
 ; LA64-SCQ-NEXT:  .LBB2_3:
 ; LA64-SCQ-NEXT:    dbar 20
@@ -158,7 +158,7 @@ define i1 @cmpxchg_i128_acquire_acquire_reti1(ptr %ptr, i128 %cmp, i128 %val) no
 ; LA64-SCQ-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
 ; LA64-SCQ-NEXT:    move $a7, $a3
 ; LA64-SCQ-NEXT:    sc.q $a7, $a4, $a0
-; LA64-SCQ-NEXT:    beqz $a7, .LBB3_1
+; LA64-SCQ-NEXT:    beq $a7, $zero, .LBB3_1
 ; LA64-SCQ-NEXT:    b .LBB3_4
 ; LA64-SCQ-NEXT:  .LBB3_3:
 ; LA64-SCQ-NEXT:    dbar 20
@@ -203,7 +203,7 @@ define void @cmpxchg_i128_monotonic_monotonic(ptr %ptr, i128 %cmp, i128 %val) no
 ; NO-LD-SEQ-SA-NEXT:  # %bb.2: # in Loop: Header=BB4_1 Depth=1
 ; NO-LD-SEQ-SA-NEXT:    move $a7, $a3
 ; NO-LD-SEQ-SA-NEXT:    sc.q $a7, $a4, $a0
-; NO-LD-SEQ-SA-NEXT:    beqz $a7, .LBB4_1
+; NO-LD-SEQ-SA-NEXT:    beq $a7, $zero, .LBB4_1
 ; NO-LD-SEQ-SA-NEXT:    b .LBB4_4
 ; NO-LD-SEQ-SA-NEXT:  .LBB4_3:
 ; NO-LD-SEQ-SA-NEXT:    dbar 1792
@@ -221,7 +221,7 @@ define void @cmpxchg_i128_monotonic_monotonic(ptr %ptr, i128 %cmp, i128 %val) no
 ; LD-SEQ-SA-NEXT:  # %bb.2: # in Loop: Header=BB4_1 Depth=1
 ; LD-SEQ-SA-NEXT:    move $a7, $a3
 ; LD-SEQ-SA-NEXT:    sc.q $a7, $a4, $a0
-; LD-SEQ-SA-NEXT:    beqz $a7, .LBB4_1
+; LD-SEQ-SA-NEXT:    beq $a7, $zero, .LBB4_1
 ; LD-SEQ-SA-NEXT:    b .LBB4_4
 ; LD-SEQ-SA-NEXT:  .LBB4_3:
 ; LD-SEQ-SA-NEXT:  .LBB4_4:
@@ -261,7 +261,7 @@ define i128 @cmpxchg_i128_monotonic_monotonic_reti128(ptr %ptr, i128 %cmp, i128 
 ; NO-LD-SEQ-SA-NEXT:  # %bb.2: # in Loop: Header=BB5_1 Depth=1
 ; NO-LD-SEQ-SA-NEXT:    move $a7, $a3
 ; NO-LD-SEQ-SA-NEXT:    sc.q $a7, $a4, $a0
-; NO-LD-SEQ-SA-NEXT:    beqz $a7, .LBB5_1
+; NO-LD-SEQ-SA-NEXT:    beq $a7, $zero, .LBB5_1
 ; NO-LD-SEQ-SA-NEXT:    b .LBB5_4
 ; NO-LD-SEQ-SA-NEXT:  .LBB5_3:
 ; NO-LD-SEQ-SA-NEXT:    dbar 1792
@@ -281,7 +281,7 @@ define i128 @cmpxchg_i128_monotonic_monotonic_reti128(ptr %ptr, i128 %cmp, i128 
 ; LD-SEQ-SA-NEXT:  # %bb.2: # in Loop: Header=BB5_1 Depth=1
 ; LD-SEQ-SA-NEXT:    move $a7, $a3
 ; LD-SEQ-SA-NEXT:    sc.q $a7, $a4, $a0
-; LD-SEQ-SA-NEXT:    beqz $a7, .LBB5_1
+; LD-SEQ-SA-NEXT:    beq $a7, $zero, .LBB5_1
 ; LD-SEQ-SA-NEXT:    b .LBB5_4
 ; LD-SEQ-SA-NEXT:  .LBB5_3:
 ; LD-SEQ-SA-NEXT:  .LBB5_4:
@@ -322,7 +322,7 @@ define i1 @cmpxchg_i128_monotonic_monotonic_reti1(ptr %ptr, i128 %cmp, i128 %val
 ; NO-LD-SEQ-SA-NEXT:  # %bb.2: # in Loop: Header=BB6_1 Depth=1
 ; NO-LD-SEQ-SA-NEXT:    move $a7, $a3
 ; NO-LD-SEQ-SA-NEXT:    sc.q $a7, $a4, $a0
-; NO-LD-SEQ-SA-NEXT:    beqz $a7, .LBB6_1
+; NO-LD-SEQ-SA-NEXT:    beq $a7, $zero, .LBB6_1
 ; NO-LD-SEQ-SA-NEXT:    b .LBB6_4
 ; NO-LD-SEQ-SA-NEXT:  .LBB6_3:
 ; NO-LD-SEQ-SA-NEXT:    dbar 1792
@@ -344,7 +344,7 @@ define i1 @cmpxchg_i128_monotonic_monotonic_reti1(ptr %ptr, i128 %cmp, i128 %val
 ; LD-SEQ-SA-NEXT:  # %bb.2: # in Loop: Header=BB6_1 Depth=1
 ; LD-SEQ-SA-NEXT:    move $a7, $a3
 ; LD-SEQ-SA-NEXT:    sc.q $a7, $a4, $a0
-; LD-SEQ-SA-NEXT:    beqz $a7, .LBB6_1
+; LD-SEQ-SA-NEXT:    beq $a7, $zero, .LBB6_1
 ; LD-SEQ-SA-NEXT:    b .LBB6_4
 ; LD-SEQ-SA-NEXT:  .LBB6_3:
 ; LD-SEQ-SA-NEXT:  .LBB6_4:

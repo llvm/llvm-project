@@ -58,7 +58,7 @@ private:
   uint32_t CalculateAbilities() override { return UINT32_MAX; }
   uint32_t GetNumCompileUnits() override { return 1; }
   CompUnitSP GetCompileUnitAtIndex(uint32_t) override { return m_cu_sp; }
-  Symtab *GetSymtab() override { return nullptr; }
+  Symtab *GetSymtab(bool can_create = true) override { return nullptr; }
   LanguageType ParseLanguage(CompileUnit &) override { return eLanguageTypeC; }
   size_t ParseFunctions(CompileUnit &) override { return 0; }
   bool ParseLineTable(CompileUnit &) override { return true; }
@@ -176,10 +176,12 @@ Sections:
   if (!text_sp)
     return createStringError("No .text");
 
-  auto cu_up = std::make_unique<CompileUnit>(module_sp, /*user_data=*/nullptr,
-                                             /*support_file_sp=*/nullptr,
-                                             /*uid=*/0, eLanguageTypeC,
-                                             /*is_optimized=*/eLazyBoolNo);
+  auto cu_up = std::make_unique<CompileUnit>(
+      module_sp,
+      /*user_data=*/nullptr,
+      /*support_file_nsp=*/std::make_shared<SupportFile>(),
+      /*uid=*/0, eLanguageTypeC,
+      /*is_optimized=*/eLazyBoolNo);
   LineTable *line_table = new LineTable(cu_up.get(), std::move(line_sequences));
   cu_up->SetLineTable(line_table);
   cast<FakeSymbolFile>(module_sp->GetSymbolFile())

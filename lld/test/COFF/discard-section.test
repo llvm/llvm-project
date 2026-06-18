@@ -1,0 +1,51 @@
+# RUN: yaml2obj %s -o %t.obj
+
+## By default, all sections are preserved.
+# RUN: lld-link /entry:main /subsystem:console /out:%t.exe %t.obj
+# RUN: llvm-readobj -S %t.exe | FileCheck --check-prefix=PRESERVE %s
+
+# PRESERVE: Name: .rdata
+# PRESERVE: Name: .llvmbc
+# PRESERVE: Name: .llvmcmd
+
+## /discard-section discards sections by name.
+# RUN: lld-link /entry:main /subsystem:console /discard-section:.llvmbc /discard-section:.llvmcmd /out:%t-stripped.exe %t.obj
+# RUN: llvm-readobj -S %t-stripped.exe | FileCheck --check-prefix=NOBC %s
+
+# NOBC:     Name: .rdata
+# NOBC-NOT: Name: .llvmbc
+# NOBC-NOT: Name: .llvmcmd
+
+# RUN: lld-link /entry:main /subsystem:console /discard-section:.rdata /out:%t-nordata.exe %t.obj
+# RUN: llvm-readobj -S %t-nordata.exe | FileCheck --check-prefix=NORDATA %s
+
+# NORDATA-NOT: Name: .rdata
+# NORDATA:     Name: .llvmbc
+# NORDATA:     Name: .llvmcmd
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    SectionData:     "C3"
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    SectionData:     "00000000"
+  - Name:           .llvmbc
+    Characteristics: [ IMAGE_SCN_MEM_DISCARDABLE ]
+    SectionData:     "4243C0DE"
+  - Name:           .llvmcmd
+    Characteristics: [ IMAGE_SCN_MEM_DISCARDABLE ]
+    SectionData:     "2D63633100"
+
+symbols:
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

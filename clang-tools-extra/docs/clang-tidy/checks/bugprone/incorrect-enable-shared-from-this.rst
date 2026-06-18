@@ -3,8 +3,8 @@
 bugprone-incorrect-enable-shared-from-this
 ==========================================
 
-Detect classes or structs that do not publicly inherit from 
-``std::enable_shared_from_this``, because unintended behavior will 
+Detect classes or structs that do not publicly inherit from
+``std::enable_shared_from_this``, because unintended behavior will
 otherwise occur when calling ``shared_from_this``.
 
 Consider the following code:
@@ -15,7 +15,7 @@ Consider the following code:
 
     // private inheritance
     class BadExample : std::enable_shared_from_this<BadExample> {
-    
+
     // ``shared_from_this``` unintended behaviour
     // `libstdc++` implementation returns uninitialized ``weak_ptr``
         public:
@@ -29,6 +29,6 @@ Consider the following code:
         b_ex->bar();
     }
 
-Using `libstdc++` implementation, ``shared_from_this`` will throw 
-``std::bad_weak_ptr``. When ``using_not_public()`` is called, this code will 
+Using `libstdc++` implementation, ``shared_from_this`` will throw
+``std::bad_weak_ptr``. When ``using_not_public()`` is called, this code will
 crash without exception handling.

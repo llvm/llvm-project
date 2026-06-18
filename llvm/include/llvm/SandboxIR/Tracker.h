@@ -19,13 +19,18 @@
 // are saved in the order they are registered with the tracker and are stored in
 // the `Tracker::Changes` vector. All of this is done transparently to
 // the user.
+// Calling `Tracker::save()` a second time without having accepted/reverted the
+// state, creates a second nested checkpoint.
 //
 // Reverting changes
 // -----------------
-// Calling `Tracker::revert()` will restore the state saved when
+// Calling `Tracker::revert()` will restore the state saved when the last
 // `Tracker::save()` was called. Internally this goes through the
 // change objects in `Tracker::Changes` in reverse order, calling their
 // `IRChangeBase::revert()` function one by one.
+// In the context of a nested checkpoint, this will revert the state
+// until the last `Tracker::save()` checkpoint.
+// You can revert all changes with `Tracker::revert(/*RevertAll=*/true)`.
 //
 // Accepting changes
 // -----------------
@@ -34,6 +39,9 @@
 // This is the job of `Tracker::accept()`. Internally this will go
 // through the change objects in `Tracker::Changes` in order, calling
 // `IRChangeBase::accept()`.
+// In the context of a nested checkpoint, this will leave the state unchanged
+// and will remove the last checkpoint for the stack.
+// You can accept all changes with `Tracker::accept(/*AcceptAll=*/true)`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,6 +54,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/SandboxIR/Use.h"
+#include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <memory>
 
@@ -105,10 +115,10 @@ public:
 
   /// Saves a snapshot of the current state. If there was any previous snapshot,
   /// it will be replaced with the new one.
-  void save();
+  LLVM_ABI_FOR_TEST void save();
 
   /// Checks current state against saved state, crashes if different.
-  void expectNoDiff();
+  LLVM_ABI_FOR_TEST void expectNoDiff();
 };
 
 #endif // NDEBUG
@@ -149,7 +159,7 @@ public:
 #endif
 };
 
-class PHIRemoveIncoming : public IRChangeBase {
+class LLVM_ABI PHIRemoveIncoming : public IRChangeBase {
   PHINode *PHI;
   unsigned RemovedIdx;
   Value *RemovedV;
@@ -165,7 +175,7 @@ public:
 #endif
 };
 
-class PHIAddIncoming : public IRChangeBase {
+class LLVM_ABI PHIAddIncoming : public IRChangeBase {
   PHINode *PHI;
   unsigned Idx;
 
@@ -179,7 +189,7 @@ public:
 #endif
 };
 
-class CmpSwapOperands : public IRChangeBase {
+class LLVM_ABI CmpSwapOperands : public IRChangeBase {
   CmpInst *Cmp;
 
 public:
@@ -210,7 +220,7 @@ public:
 #endif
 };
 
-class EraseFromParent : public IRChangeBase {
+class LLVM_ABI EraseFromParent : public IRChangeBase {
   /// Contains all the data we need to restore an "erased" (i.e., detached)
   /// instruction: the instruction itself and its operands in order.
   struct InstrAndOperands {
@@ -242,7 +252,7 @@ public:
 #endif
 };
 
-class RemoveFromParent : public IRChangeBase {
+class LLVM_ABI RemoveFromParent : public IRChangeBase {
   /// The instruction that is about to get removed.
   Instruction *RemovedI = nullptr;
   /// This is either the next instr, or the parent BB if at the end of the BB.
@@ -327,7 +337,7 @@ public:
 #endif
 };
 
-class CatchSwitchAddHandler : public IRChangeBase {
+class LLVM_ABI CatchSwitchAddHandler : public IRChangeBase {
   CatchSwitchInst *CSI;
   unsigned HandlerIdx;
 
@@ -344,7 +354,7 @@ public:
 #endif // NDEBUG
 };
 
-class SwitchAddCase : public IRChangeBase {
+class LLVM_ABI SwitchAddCase : public IRChangeBase {
   SwitchInst *Switch;
   ConstantInt *Val;
 
@@ -359,7 +369,7 @@ public:
 #endif // NDEBUG
 };
 
-class SwitchRemoveCase : public IRChangeBase {
+class LLVM_ABI SwitchRemoveCase : public IRChangeBase {
   SwitchInst *Switch;
   struct Case {
     ConstantInt *Val;
@@ -378,7 +388,7 @@ public:
 #endif // NDEBUG
 };
 
-class MoveInstr : public IRChangeBase {
+class LLVM_ABI MoveInstr : public IRChangeBase {
   /// The instruction that moved.
   Instruction *MovedI;
   /// This is either the next instruction in the block, or the parent BB if at
@@ -395,7 +405,7 @@ public:
 #endif // NDEBUG
 };
 
-class InsertIntoBB final : public IRChangeBase {
+class LLVM_ABI InsertIntoBB final : public IRChangeBase {
   Instruction *InsertedI = nullptr;
 
 public:
@@ -408,7 +418,7 @@ public:
 #endif // NDEBUG
 };
 
-class CreateAndInsertInst final : public IRChangeBase {
+class LLVM_ABI CreateAndInsertInst final : public IRChangeBase {
   Instruction *NewI = nullptr;
 
 public:
@@ -421,7 +431,7 @@ public:
 #endif
 };
 
-class ShuffleVectorSetMask final : public IRChangeBase {
+class LLVM_ABI ShuffleVectorSetMask final : public IRChangeBase {
   ShuffleVectorInst *SVI;
   SmallVector<int, 8> PrevMask;
 
@@ -450,10 +460,14 @@ private:
   SmallVector<std::unique_ptr<IRChangeBase>> Changes;
   /// The current state of the tracker.
   TrackerState State = TrackerState::Disabled;
+  /// Nested snapshots require us to track the index of each snapshot in the
+  /// `Changes` vector.
+  SmallVector<unsigned, 8> Snapshots;
   Context &Ctx;
 
 #ifndef NDEBUG
-  IRSnapshotChecker SnapshotChecker;
+  /// One checker per nested snapshot.
+  SmallVector<IRSnapshotChecker> SnapshotChecker;
 #endif
 
 public:
@@ -463,16 +477,9 @@ public:
   bool InMiddleOfCreatingChange = false;
 #endif // NDEBUG
 
-  explicit Tracker(Context &Ctx)
-      : Ctx(Ctx)
-#ifndef NDEBUG
-        ,
-        SnapshotChecker(Ctx)
-#endif
-  {
-  }
+  explicit Tracker(Context &Ctx) : Ctx(Ctx) {}
 
-  ~Tracker();
+  LLVM_ABI ~Tracker();
   Context &getContext() const { return Ctx; }
   /// \Returns true if there are no changes tracked.
   bool empty() const { return Changes.empty(); }
@@ -505,12 +512,18 @@ public:
   bool isTracking() const { return State == TrackerState::Record; }
   /// \Returns the current state of the tracker.
   TrackerState getState() const { return State; }
-  /// Turns on IR tracking.
-  void save();
-  /// Stops tracking and accept changes.
-  void accept();
-  /// Stops tracking and reverts to saved state.
-  void revert();
+  /// Turns on IR tracking. If tracking is already enabled this creates a new
+  /// nested checkpoint.
+  LLVM_ABI void save();
+  /// Stops tracking and accept changes. If we have nested checkpoints, this
+  /// will remove the last checkpoint from the stack without modifying the
+  /// state.
+  LLVM_ABI void accept(bool AcceptAll = false);
+  /// Stops tracking and reverts to saved state. If we have nested checkpoints
+  /// this will revert the state to the last checkpoint.
+  LLVM_ABI void revert(bool RevertAll = false);
+  /// \returns the number of nested (outstanding) checkpoints.
+  unsigned nestingDepth() const { return Snapshots.size(); }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;

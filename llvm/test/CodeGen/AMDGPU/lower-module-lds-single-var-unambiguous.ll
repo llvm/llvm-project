@@ -35,14 +35,12 @@ define void @f0() {
 ;
 ; TABLE-LABEL: @f0(
 ; TABLE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; TABLE-NEXT:    [[F0_LDS2:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; TABLE-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[F0_LDS2]], align 4
-; TABLE-NEXT:    [[F0_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; TABLE-NEXT:    [[F0_LDS2:%.*]] = getelementptr inbounds [2 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; TABLE-NEXT:    [[F0_LDS3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[F0_LDS2]], align 4
 ; TABLE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[F0_LDS3]], align 2
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 3
-; TABLE-NEXT:    [[F0_LDS:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; TABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[F0_LDS]], align 4
-; TABLE-NEXT:    [[F0_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; TABLE-NEXT:    [[F0_LDS:%.*]] = getelementptr inbounds [2 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; TABLE-NEXT:    [[F0_LDS1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[F0_LDS]], align 4
 ; TABLE-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[F0_LDS1]], align 2
 ; TABLE-NEXT:    ret void
 ;
@@ -60,7 +58,7 @@ define void @f0() {
 
 define amdgpu_kernel void @k_f0() {
 ; MODULE-LABEL: @k_f0(
-; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META5:![0-9]+]], !noalias [[META1]]
+; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META10:![0-9]+]], !noalias [[META1]]
 ; MODULE-NEXT:    call void @f0()
 ; MODULE-NEXT:    ret void
 ;
@@ -83,21 +81,19 @@ define amdgpu_kernel void @k_f0() {
 @both.lds = addrspace(3) global i32 poison
 define void @f_both() {
 ; MODULE-LABEL: @f_both(
-; MODULE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META5]], !noalias [[META4]]
+; MODULE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META10]], !noalias [[META11:![0-9]+]]
 ; MODULE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 4
-; MODULE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META5]], !noalias [[META4]]
+; MODULE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META10]], !noalias [[META11]]
 ; MODULE-NEXT:    ret void
 ;
 ; TABLE-LABEL: @f_both(
 ; TABLE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; TABLE-NEXT:    [[BOTH_LDS2:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[BOTH_LDS2]], align 4
-; TABLE-NEXT:    [[BOTH_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; TABLE-NEXT:    [[BOTH_LDS2:%.*]] = getelementptr inbounds [2 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[BOTH_LDS3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[BOTH_LDS2]], align 4
 ; TABLE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) [[BOTH_LDS3]], align 4
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 4
-; TABLE-NEXT:    [[BOTH_LDS:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[BOTH_LDS]], align 4
-; TABLE-NEXT:    [[BOTH_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; TABLE-NEXT:    [[BOTH_LDS:%.*]] = getelementptr inbounds [2 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[BOTH_LDS1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[BOTH_LDS]], align 4
 ; TABLE-NEXT:    store i32 [[MUL]], ptr addrspace(3) [[BOTH_LDS1]], align 4
 ; TABLE-NEXT:    ret void
 ;
@@ -116,9 +112,9 @@ define void @f_both() {
 define amdgpu_kernel void @k0_both() {
 ; MODULE-LABEL: @k0_both(
 ; MODULE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
-; MODULE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META5]], !noalias [[META1]]
+; MODULE-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META10]], !noalias [[META1]]
 ; MODULE-NEXT:    [[MUL:%.*]] = mul i32 [[LD]], 5
-; MODULE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META5]], !noalias [[META1]]
+; MODULE-NEXT:    store i32 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META10]], !noalias [[META1]]
 ; MODULE-NEXT:    call void @f_both()
 ; MODULE-NEXT:    ret void
 ;

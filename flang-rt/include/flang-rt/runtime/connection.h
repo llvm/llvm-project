@@ -26,10 +26,10 @@ enum class Access { Sequential, Direct, Stream };
 // established in an OPEN statement.
 struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
-  Fortran::common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
+  common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
   unsigned char internalIoCharKind{0}; // 0->external, 1/2/4->internal
-  Fortran::common::optional<std::int64_t> openRecl; // RECL= on OPEN
+  common::optional<std::int64_t> openRecl; // RECL= on OPEN
 
   RT_API_ATTRS bool IsRecordFile() const {
     // Formatted stream files are viewed as having records, at least on input
@@ -45,19 +45,43 @@ struct ConnectionAttributes {
 };
 
 struct ConnectionState : public ConnectionAttributes {
-  RT_API_ATTRS bool
-  IsAtEOF() const; // true when read has hit EOF or endfile record
-  RT_API_ATTRS bool
-  IsAfterEndfile() const; // true after ENDFILE until repositioned
+  RT_API_ATTRS bool IsAtEOF() const {
+    // true when read has hit EOF or endfile record
+    return endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber;
+  }
+  RT_API_ATTRS bool IsAfterEndfile() const {
+    // true after ENDFILE until repositioned
+    return endfileRecordNumber && currentRecordNumber > *endfileRecordNumber;
+  }
 
   // All positions and measurements are always in units of bytes,
   // not characters.  Multi-byte character encodings are possible in
   // both internal I/O (when the character kind of the variable is 2 or 4)
   // and external formatted I/O (when the encoding is UTF-8).
-  RT_API_ATTRS std::size_t RemainingSpaceInRecord() const;
-  RT_API_ATTRS bool NeedAdvance(std::size_t) const;
-  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t);
-  RT_API_ATTRS void HandleRelativePosition(std::int64_t);
+  RT_API_ATTRS std::size_t RemainingSpaceInRecord() const {
+    auto recl{recordLength.value_or(openRecl.value_or(
+        executionEnvironment.listDirectedOutputLineLengthLimit))};
+    return positionInRecord >= recl ? 0 : recl - positionInRecord;
+  }
+  RT_API_ATTRS bool NeedAdvance(std::size_t width) const {
+    return positionInRecord > 0 && width > RemainingSpaceInRecord();
+  }
+  RT_API_ATTRS bool NeedHardAdvance(std::size_t width) const {
+    auto recl{recordLength};
+    if (!recl) {
+      recl = openRecl;
+    }
+    return recl && positionInRecord > 0 &&
+        static_cast<std::int64_t>(positionInRecord + width) > *recl;
+  }
+  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t n) {
+    positionInRecord = (n < 0 ? 0 : n) + leftTabLimit.value_or(0);
+  }
+  RT_API_ATTRS void HandleRelativePosition(std::int64_t n) {
+    auto least{leftTabLimit.value_or(0)};
+    auto newPos{positionInRecord + n};
+    positionInRecord = newPos < least ? least : newPos;
+  }
 
   RT_API_ATTRS void BeginRecord() {
     positionInRecord = 0;
@@ -65,15 +89,14 @@ struct ConnectionState : public ConnectionAttributes {
     unterminatedRecord = false;
   }
 
-  RT_API_ATTRS Fortran::common::optional<std::int64_t>
-  EffectiveRecordLength() const {
+  RT_API_ATTRS common::optional<std::int64_t> EffectiveRecordLength() const {
     // When an input record is longer than an explicit RECL= from OPEN
     // it is effectively truncated on input.
     return openRecl && recordLength && *openRecl < *recordLength ? openRecl
                                                                  : recordLength;
   }
 
-  Fortran::common::optional<std::int64_t> recordLength;
+  common::optional<std::int64_t> recordLength;
 
   std::int64_t currentRecordNumber{1}; // 1 is first
 
@@ -89,12 +112,11 @@ struct ConnectionState : public ConnectionAttributes {
   std::int64_t furthestPositionInRecord{0}; // max(position+bytes)
 
   // Set at end of non-advancing I/O data transfer
-  Fortran::common::optional<std::int64_t>
-      leftTabLimit; // offset in current record
+  common::optional<std::int64_t> leftTabLimit; // offset in current record
 
   // currentRecordNumber value captured after ENDFILE/REWIND/BACKSPACE statement
   // or an end-of-file READ condition on a sequential access file
-  Fortran::common::optional<std::int64_t> endfileRecordNumber;
+  common::optional<std::int64_t> endfileRecordNumber;
 
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP

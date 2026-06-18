@@ -8,6 +8,7 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
@@ -33,6 +34,12 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static uint64_t getSize(const Section &sec) { return sec.getSize(); }
   static bool isCodeSection(const Section &sec) {
     return macho::isCodeSection(&sec);
+  }
+  static std::string getSectionName(const Section &sec) {
+    return (sec.getSegName() + sec.getName()).str();
+  }
+  static std::string getCompressionSubgroupKey(const Section &sec) {
+    return sec.isCold ? ":cold" : "";
   }
   static ArrayRef<Defined *> getSymbols(const Section &sec) {
     return sec.symbols;
@@ -61,19 +68,20 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
     // Calculate relocation hashes
     for (const auto &r : sec.relocs) {
-      if (r.length == 0 || r.referent.isNull() || r.offset >= data.size())
+      uint32_t relocLength = 1 << r.length;
+      if (r.referent.isNull() || r.offset + relocLength > data.size())
         continue;
 
       uint64_t relocHash = getRelocHash(r, sectionToIdx);
       uint32_t start = (r.offset < windowSize) ? 0 : r.offset - windowSize + 1;
-      for (uint32_t i = start; i < r.offset + r.length; i++) {
+      for (uint32_t i = start; i < r.offset + relocLength; i++) {
         auto window = data.drop_front(i).take_front(windowSize);
         hashes.push_back(xxh3_64bits(window) ^ relocHash);
       }
     }
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
   static llvm::StringRef getSymName(const Defined &sym) {
@@ -84,7 +92,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
 private:
   static uint64_t
-  getRelocHash(const Reloc &reloc,
+  getRelocHash(const Relocation &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;
@@ -106,16 +114,24 @@ private:
 } // namespace
 
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
-    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
+    StringRef profilePath, ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
+      if (sec->name == section_names::ehFrame &&
+          sec->segname == segment_names::text)
+        continue;
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
-        if (!isec || isec->data.empty())
+        if (!isec || isec->data.empty() || !isec->data.data())
+          continue;
+        // CString section order is handled by
+        // {Deduplicated}CStringSection::finalizeContents()
+        if (isa<CStringInputSection>(isec) || isec->isFinal)
           continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.
@@ -124,7 +140,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         size_t idx = sections.size();
         sections.emplace_back(isec);
         for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-          auto rootName = getRootSymbol(sym->getName());
+          auto rootName = lld::utils::getRootSymbol(sym->getName());
           rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
           if (auto linkageName =
                   BPOrdererMachO::getResolvedLinkageName(rootName))
@@ -135,8 +151,17 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
-  return BPOrdererMachO().computeOrder(profilePath, forFunctionCompression,
-                                       forDataCompression,
-                                       compressionSortStartupFunctions, verbose,
-                                       sections, rootSymbolToSectionIdxs);
+  auto result = BPOrdererMachO().computeOrder(
+      profilePath, compressionSortSpecs, forFunctionCompression,
+      forDataCompression, compressionSortStartupFunctions, verbose, sections,
+      rootSymbolToSectionIdxs);
+  // BP already orders cold sections after non-cold via separate buckets.
+  // Unset isCold on sections that received a BP priority so Writer.cpp's
+  // stable_partition doesn't re-partition them. Sections without a BP priority
+  // (e.g. non-startup cold sections when only --bp-startup-sort is used) keep
+  // their isCold flag for Writer.cpp to handle.
+  for (auto *isec : sections)
+    if (result.contains(isec))
+      isec->isCold = false;
+  return result;
 }

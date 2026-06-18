@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -20,8 +21,8 @@ using namespace llvm;
 template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::hasDivergentDefs(
     const MachineInstr &I) const {
-  for (auto &op : I.all_defs()) {
-    if (isDivergent(op.getReg()))
+  for (auto &Op : I.all_defs()) {
+    if (isDivergent(Op.getReg()))
       return true;
   }
   return false;
@@ -30,35 +31,54 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::hasDivergentDefs(
 template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
     const MachineInstr &Instr) {
-  bool insertedDivergent = false;
+  bool InsertedDivergent = false;
   const auto &MRI = F.getRegInfo();
   const auto &RBI = *F.getSubtarget().getRegBankInfo();
   const auto &TRI = *MRI.getTargetRegisterInfo();
-  for (auto &op : Instr.all_defs()) {
-    if (!op.getReg().isVirtual())
+  for (auto &Op : Instr.all_defs()) {
+    if (!Op.getReg().isVirtual())
       continue;
-    assert(!op.getSubReg());
-    if (TRI.isUniformReg(MRI, RBI, op.getReg()))
+    assert(!Op.getSubReg());
+    if (TRI.isUniformReg(MRI, RBI, Op.getReg()))
       continue;
-    insertedDivergent |= markDivergent(op.getReg());
+    InsertedDivergent |= markDivergent(Op.getReg());
   }
-  return insertedDivergent;
+  return InsertedDivergent;
 }
 
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
+  // Pre-populate UniformValues with all register defs. Physical register defs
+  // are included because they are never analyzed for divergence (initialize
+  // and markDefsDivergent skip them), so they must be in UniformValues to
+  // avoid being falsely reported as divergent.
+  for (const MachineBasicBlock &BB : F) {
+    for (const MachineInstr &MI : BB.instrs()) {
+      for (const MachineOperand &Op : MI.all_defs()) {
+        Register Reg = Op.getReg();
+        if (Reg)
+          UniformValues.insert(Reg);
+      }
+    }
+  }
+
   const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
 
-  for (const MachineBasicBlock &block : F) {
-    for (const MachineInstr &instr : block) {
-      auto uniformity = InstrInfo.getInstructionUniformity(instr);
-      if (uniformity == InstructionUniformity::AlwaysUniform) {
-        addUniformOverride(instr);
-        continue;
-      }
+  for (const MachineBasicBlock &MBB : F) {
+    for (const MachineInstr &MI : MBB) {
+      ValueUniformity VU = InstrInfo.getValueUniformity(MI);
 
-      if (uniformity == InstructionUniformity::NeverUniform) {
-        markDivergent(instr);
+      switch (VU) {
+      case ValueUniformity::AlwaysUniform:
+        addUniformOverride(MI);
+        break;
+      case ValueUniformity::NeverUniform:
+        markDivergent(MI);
+        break;
+      case ValueUniformity::Custom:
+        break;
+      case ValueUniformity::Default:
+        break;
       }
     }
   }
@@ -80,8 +100,8 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
   assert(!isAlwaysUniform(Instr));
   if (Instr.isTerminator())
     return;
-  for (const MachineOperand &op : Instr.all_defs()) {
-    auto Reg = op.getReg();
+  for (const MachineOperand &Op : Instr.all_defs()) {
+    auto Reg = Op.getReg();
     if (isDivergent(Reg))
       pushUsers(Reg);
   }
@@ -147,6 +167,12 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
   return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
 }
 
+template <>
+bool GenericUniformityAnalysisImpl<MachineSSAContext>::isCustomUniform(
+    const MachineInstr &MI) const {
+  llvm_unreachable("no MIR instructions use Custom uniformity yet");
+}
+
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<MachineSSAContext>;
@@ -154,10 +180,10 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
     llvm::GenericUniformityAnalysisImpl<MachineSSAContext>>;
 
 MachineUniformityInfo llvm::computeMachineUniformityInfo(
-    MachineFunction &F, const MachineCycleInfo &cycleInfo,
-    const MachineDominatorTree &domTree, bool HasBranchDivergence) {
+    MachineFunction &F, const MachineCycleInfo &CI,
+    const MachineDominatorTree &DT, bool HasBranchDivergence) {
   assert(F.getRegInfo().isSSA() && "Expected to be run on SSA form!");
-  MachineUniformityInfo UI(domTree, cycleInfo);
+  MachineUniformityInfo UI(DT, CI);
   if (HasBranchDivergence)
     UI.compute();
   return UI;
@@ -177,12 +203,36 @@ public:
 
 } // namespace
 
+AnalysisKey MachineUniformityAnalysis::Key;
+
+MachineUniformityAnalysis::Result
+MachineUniformityAnalysis::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &DT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineCycleInfo &CI = MFAM.getResult<MachineCycleAnalysis>(MF);
+  FunctionAnalysisManager &FAM =
+      MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+          .getManager();
+  Function &F = MF.getFunction();
+  TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  return computeMachineUniformityInfo(MF, CI, DT, TTI.hasBranchDivergence(&F));
+}
+
+PreservedAnalyses
+MachineUniformityPrinterPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MachineUniformityInfo &MUI = MFAM.getResult<MachineUniformityAnalysis>(MF);
+  OS << "MachineUniformityInfo for function: ";
+  MF.getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
+  MUI.print(OS);
+  return PreservedAnalyses::all();
+}
+
 char MachineUniformityAnalysisPass::ID = 0;
 
 MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineUniformityAnalysisPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineUniformityAnalysisPass, "machine-uniformity",
                       "Machine Uniformity Info Analysis", false, true)
@@ -199,28 +249,28 @@ void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
-  auto &DomTree = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  auto &CI = getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
+  MachineDominatorTree &DT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineCycleInfo &CI =
+      getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   // FIXME: Query TTI::hasBranchDivergence. -run-pass seems to end up with a
   // default NoTTI
-  UI = computeMachineUniformityInfo(MF, CI, DomTree, true);
+  UI = computeMachineUniformityInfo(MF, CI, DT, true);
   return false;
 }
 
 void MachineUniformityAnalysisPass::print(raw_ostream &OS,
                                           const Module *) const {
-  OS << "MachineUniformityInfo for function: " << UI.getFunction().getName()
-     << "\n";
+  OS << "MachineUniformityInfo for function: ";
+  UI.getFunction().getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
   UI.print(OS);
 }
 
 char MachineUniformityInfoPrinterPass::ID = 0;
 
 MachineUniformityInfoPrinterPass::MachineUniformityInfoPrinterPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineUniformityInfoPrinterPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineUniformityInfoPrinterPass,
                       "print-machine-uniformity",
@@ -239,7 +289,8 @@ void MachineUniformityInfoPrinterPass::getAnalysisUsage(
 
 bool MachineUniformityInfoPrinterPass::runOnMachineFunction(
     MachineFunction &F) {
-  auto &UI = getAnalysis<MachineUniformityAnalysisPass>();
+  MachineUniformityAnalysisPass &UI =
+      getAnalysis<MachineUniformityAnalysisPass>();
   UI.print(errs());
   return false;
 }

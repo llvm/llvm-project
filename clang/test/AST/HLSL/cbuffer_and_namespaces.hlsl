@@ -7,11 +7,11 @@ struct EmptyStruct {
 // CHECK: NamespaceDecl {{.*}} NS1
 namespace NS1 {
   // CHECK: CXXRecordDecl {{.*}} struct Foo definition
-  struct Foo { 
+  struct Foo {
     float a;
     EmptyStruct es;
   };
-  
+
   // CHECK: CXXRecordDecl {{.*}} struct Bar definition
   struct Bar {
     // CHECK: CXXRecordDecl {{.*}} struct Foo definition
@@ -56,16 +56,16 @@ struct CB1ExpectedShape {
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(CB1ExpectedShape, __cblayout_CB1), "");
 
 namespace NS2 {
-  struct Foo { 
+  struct Foo {
     float d[4];
     EmptyStruct es;
   };
   // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:11 cbuffer CB2
   // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
   cbuffer CB2 {
-    // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo':'hlsl_constant Foo'
+    // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo'
     ::Foo foo0;
-    // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo':'hlsl_constant NS2::Foo'
+    // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo'
     Foo foo1;
     // CHECK: VarDecl {{.*}} foo2 'hlsl_constant NS1::Foo'
     NS1::Foo foo2;

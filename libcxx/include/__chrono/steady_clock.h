@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -31,12 +32,13 @@ public:
   typedef chrono::time_point<steady_clock, duration> time_point;
   static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = true;
 
-  static time_point now() _NOEXCEPT;
+  [[__nodiscard__]] static time_point now() _NOEXCEPT;
 };
 #endif
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CHRONO_STEADY_CLOCK_H

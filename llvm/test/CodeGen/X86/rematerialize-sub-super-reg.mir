@@ -165,5 +165,25 @@ body:             |
   bb.3:
     $rax = COPY %t3
     RET 0, $rax
-
 ...
+---
+name:  rematerialize_superregister_into_subregister_def_with_impdef_physreg
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: rematerialize_superregister_into_subregister_def_with_impdef_physreg
+    ; CHECK: dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+    ; CHECK-NEXT: dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
+    ; CHECK-NEXT: FAKE_USE implicit killed $rsi, implicit killed $rdx
+    ; CHECK-NEXT: dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def dead $rax, implicit-def $al
+    ; CHECK-NEXT: FAKE_USE implicit killed $al
+    ; CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: RET 0, $eax
+    undef %1.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def %1
+    $rsi = COPY %1
+    $rdx = COPY %1
+    FAKE_USE implicit killed $rsi, implicit killed $rdx
+    %4:gr8 = COPY killed %1.sub_8bit
+    $al = COPY killed %4
+    FAKE_USE implicit killed $al
+    $eax = MOV32r0 implicit-def dead $eflags
+    RET 0, killed $eax

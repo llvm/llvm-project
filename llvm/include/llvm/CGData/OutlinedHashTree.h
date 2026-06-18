@@ -18,10 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <unordered_map>
-#include <vector>
 
 namespace llvm {
 
@@ -35,8 +33,7 @@ struct HashNode {
   /// The number of terminals in the sequence ending at this node.
   std::optional<unsigned> Terminals;
   /// The successors of this node.
-  /// We don't use DenseMap as a stable_hash value can be tombstone.
-  std::unordered_map<stable_hash, std::unique_ptr<HashNode>> Successors;
+  DenseMap<stable_hash, std::unique_ptr<HashNode>> Successors;
 };
 
 class OutlinedHashTree {
@@ -54,9 +51,9 @@ public:
   /// the source and the stable_hash of the sink for an edge. These generic
   /// callbacks can be used to traverse a OutlinedHashTree for the purpose of
   /// print debugging or serializing it.
-  void walkGraph(NodeCallbackFn CallbackNode,
-                 EdgeCallbackFn CallbackEdge = nullptr,
-                 bool SortedWalk = false) const;
+  LLVM_ABI void walkGraph(NodeCallbackFn CallbackNode,
+                          EdgeCallbackFn CallbackEdge = nullptr,
+                          bool SortedWalk = false) const;
 
   /// Release all hash nodes except the root hash node.
   void clear() {
@@ -71,10 +68,10 @@ public:
   /// \p GetTerminalCountOnly is true, it only counts the terminal nodes
   /// (meaning it returns the the number of hash sequences in the
   /// OutlinedHashTree).
-  size_t size(bool GetTerminalCountOnly = false) const;
+  LLVM_ABI size_t size(bool GetTerminalCountOnly = false) const;
 
   /// \returns the depth of a OutlinedHashTree by traversing it.
-  size_t depth() const;
+  LLVM_ABI size_t depth() const;
 
   /// \returns the root hash node of a OutlinedHashTree.
   const HashNode *getRoot() const { return &Root; }
@@ -82,13 +79,13 @@ public:
 
   /// Inserts a \p Sequence into the this tree. The last node in the sequence
   /// will increase Terminals.
-  void insert(const HashSequencePair &SequencePair);
+  LLVM_ABI void insert(const HashSequencePair &SequencePair);
 
   /// Merge a \p OtherTree into this Tree.
-  void merge(const OutlinedHashTree *OtherTree);
+  LLVM_ABI void merge(const OutlinedHashTree *OtherTree);
 
   /// \returns the matching count if \p Sequence exists in the OutlinedHashTree.
-  std::optional<unsigned> find(const HashSequence &Sequence) const;
+  LLVM_ABI std::optional<unsigned> find(const HashSequence &Sequence) const;
 
 private:
   HashNode Root;

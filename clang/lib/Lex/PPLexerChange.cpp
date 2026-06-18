@@ -91,25 +91,20 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
         CodeCompletionFileLoc.getLocWithOffset(CodeCompletionOffset);
   }
 
-  Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
-  if (getPreprocessorOpts().DependencyDirectivesForFile &&
-      FID != PredefinesFileID) {
-    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
-      if (std::optional<ArrayRef<dependency_directives_scan::Directive>>
-              DepDirectives =
-                  getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
-        TheLexer->DepDirectives = *DepDirectives;
-      }
-    }
-  }
+  auto TheLexer =
+      std::make_unique<Lexer>(FID, *InputFile, *this, IsFirstIncludeOfFile);
+  if (GetDependencyDirectives && FID != PredefinesFileID)
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
+      if (auto MaybeDepDirectives = (*GetDependencyDirectives)(*File))
+        TheLexer->DepDirectives = *MaybeDepDirectives;
 
-  EnterSourceFileWithLexer(TheLexer, CurDir);
+  EnterSourceFileWithLexer(std::move(TheLexer), CurDir);
   return false;
 }
 
 /// EnterSourceFileWithLexer - Add a source file to the top of the include stack
 ///  and start lexing tokens from it instead of the current buffer.
-void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
+void Preprocessor::EnterSourceFileWithLexer(std::unique_ptr<Lexer> TheLexer,
                                             ConstSearchDirIterator CurDir) {
   PreprocessorLexer *PrevPPLexer = CurPPLexer;
 
@@ -117,14 +112,13 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   if (CurPPLexer || CurTokenLexer)
     PushIncludeMacroStack();
 
-  CurLexer.reset(TheLexer);
-  CurPPLexer = TheLexer;
+  CurLexer = std::move(TheLexer);
+  CurPPLexer = CurLexer.get();
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
-                           ? CLK_DependencyDirectivesLexer
-                           : CLK_Lexer;
+  CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
+                         ? CLK_DependencyDirectivesLexer
+                         : CLK_Lexer;
 
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {
@@ -160,8 +154,7 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = CLK_TokenLexer;
+  CurLexerCallback = CLK_TokenLexer;
 }
 
 /// EnterTokenStream - Add a "macro" context to the top of the include stack,
@@ -215,8 +208,7 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
-    CurLexerCallback = CLK_TokenLexer;
+  CurLexerCallback = CLK_TokenLexer;
 }
 
 /// Compute the relative path that names the given file relative to
@@ -282,7 +274,7 @@ static void collectAllSubModulesWithUmbrellaHeader(
     const Module &Mod, SmallVectorImpl<const Module *> &SubMods) {
   if (Mod.getUmbrellaHeaderAsWritten())
     SubMods.push_back(&Mod);
-  for (auto *M : Mod.submodules())
+  for (Module *M : Mod.submodules())
     collectAllSubModulesWithUmbrellaHeader(*M, SubMods);
 }
 
@@ -308,7 +300,7 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
     // Check whether this entry has an extension typically associated with
     // headers.
     if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->path()))
-             .Cases(".h", ".H", ".hh", ".hpp", true)
+             .Cases({".h", ".H", ".hh", ".hpp"}, true)
              .Default(false))
       continue;
 
@@ -409,13 +401,13 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   // Complain about reaching a true EOF within arc_cf_code_audited.
   // We don't want to complain about reaching the end of a macro
   // instantiation or a _Pragma.
-  if (PragmaARCCFCodeAuditedInfo.second.isValid() && !isEndOfMacro &&
+  if (PragmaARCCFCodeAuditedInfo.getLoc().isValid() && !isEndOfMacro &&
       !(CurLexer && CurLexer->Is_PragmaLexer)) {
-    Diag(PragmaARCCFCodeAuditedInfo.second,
+    Diag(PragmaARCCFCodeAuditedInfo.getLoc(),
          diag::err_pp_eof_in_arc_cf_code_audited);
 
     // Recover by leaving immediately.
-    PragmaARCCFCodeAuditedInfo = {nullptr, SourceLocation()};
+    PragmaARCCFCodeAuditedInfo = IdentifierLoc();
   }
 
   // Complain about reaching a true EOF within assume_nonnull.
@@ -447,7 +439,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       assert(CurLexer && "Got EOF but no current lexer set!");
       Result.startToken();
       CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-      CurLexer.reset();
+      PendingDestroyLexers.push_back(std::move(CurLexer));
 
       CurPPLexer = nullptr;
       recomputeCurLexerKind();
@@ -564,9 +556,17 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
         << PPOpts.PCHThroughHeader << 0;
   }
 
-  if (!isIncrementalProcessingEnabled())
-    // We're done with lexing.
-    CurLexer.reset();
+  if (!isIncrementalProcessingEnabled()) {
+    // We're done with lexing. If we're inside a nested Lex call (LexLevel > 0),
+    // defer destruction of the lexer until Lex returns to avoid use-after-free
+    // when HandleEndOfFile is called from within Lexer methods that still need
+    // to access their members after this function returns.
+    if (LexLevel > 0 && CurLexer) {
+      PendingDestroyLexers.push_back(std::move(CurLexer));
+    } else {
+      CurLexer.reset();
+    }
+  }
 
   if (!isIncrementalProcessingEnabled())
     CurPPLexer = nullptr;
@@ -717,7 +717,7 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   ModMap.resolveConflicts(M, /*Complain=*/false);
 
   // If this is the first time we've entered this module, set up its state.
-  auto R = Submodules.insert(std::make_pair(M, SubmoduleState()));
+  auto R = Submodules.try_emplace(M);
   auto &State = R.first->second;
   bool FirstTime = R.second;
   if (FirstTime) {

@@ -19,23 +19,25 @@ On RISC-V ``n`` and ``ty`` control LMUL and SEW respectively.
 LLVM only supports ELEN=32 or ELEN=64, so ``vscale`` is defined as VLEN/64 (see ``RISCV::RVVBitsPerBlock``).
 Note this means that VLEN must be at least 64, so VLEN=32 isn't currently supported.
 
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-|                   | LMUL=⅛        | LMUL=¼         | LMUL=½           | LMUL=1            | LMUL=2            | LMUL=4            | LMUL=8            |
-+===================+===============+================+==================+===================+===================+===================+===================+
-| i64 (ELEN=64)     | N/A           | N/A            | N/A              | <v x 1 x i64>     | <v x 2 x i64>     | <v x 4 x i64>     | <v x 8 x i64>     |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-| i32               | N/A           | N/A            | <v x 1 x i32>    | <v x 2 x i32>     | <v x 4 x i32>     | <v x 8 x i32>     | <v x 16 x i32>    |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-| i16               | N/A           | <v x 1 x i16>  | <v x 2 x i16>    | <v x 4 x i16>     | <v x 8 x i16>     | <v x 16 x i16>    | <v x 32 x i16>    |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-| i8                | <v x 1 x i8>  | <v x 2 x i8>   | <v x 4 x i8>     | <v x 8 x i8>      | <v x 16 x i8>     | <v x 32 x i8>     | <v x 64 x i8>     |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-| double (ELEN=64)  | N/A           | N/A            | N/A              | <v x 1 x double>  | <v x 2 x double>  | <v x 4 x double>  | <v x 8 x double>  |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-| float             | N/A           | N/A            | <v x 1 x float>  | <v x 2 x float>   | <v x 4 x float>   | <v x 8 x float>   | <v x 16 x float>  |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
-| half              | N/A           | <v x 1 x half> | <v x 2 x half>   | <v x 4 x half>    | <v x 8 x half>    | <v x 16 x half>   | <v x 32 x half>   |
-+-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+|                   | LMUL=⅛        | LMUL=¼           | LMUL=½           | LMUL=1            | LMUL=2            | LMUL=4            | LMUL=8            |
++===================+===============+==================+==================+===================+===================+===================+===================+
+| i64 (ELEN=64)     | N/A           | N/A              | N/A              | <v x 1 x i64>     | <v x 2 x i64>     | <v x 4 x i64>     | <v x 8 x i64>     |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| i32               | N/A           | N/A              | <v x 1 x i32>    | <v x 2 x i32>     | <v x 4 x i32>     | <v x 8 x i32>     | <v x 16 x i32>    |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| i16               | N/A           | <v x 1 x i16>    | <v x 2 x i16>    | <v x 4 x i16>     | <v x 8 x i16>     | <v x 16 x i16>    | <v x 32 x i16>    |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| i8                | <v x 1 x i8>  | <v x 2 x i8>     | <v x 4 x i8>     | <v x 8 x i8>      | <v x 16 x i8>     | <v x 32 x i8>     | <v x 64 x i8>     |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| double (ELEN=64)  | N/A           | N/A              | N/A              | <v x 1 x double>  | <v x 2 x double>  | <v x 4 x double>  | <v x 8 x double>  |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| float             | N/A           | N/A              | <v x 1 x float>  | <v x 2 x float>   | <v x 4 x float>   | <v x 8 x float>   | <v x 16 x float>  |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| half              | N/A           | <v x 1 x half>   | <v x 2 x half>   | <v x 4 x half>    | <v x 8 x half>    | <v x 16 x half>   | <v x 32 x half>   |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
+| bfloat            | N/A           | <v x 1 x bfloat> | <v x 2 x bfloat> | <v x 4 x bfloat>  | <v x 8 x bfloat>  | <v x 16 x bfloat> | <v x 32 x bfloat> |
++-------------------+---------------+------------------+------------------+-------------------+-------------------+-------------------+-------------------+
 
 (Read ``<v x k x ty>`` as ``<vscale x k x ty>``)
 
@@ -60,7 +62,7 @@ For instance, two different comparisons one under SEW=64, LMUL=2 and the other u
 Representation in LLVM IR
 =========================
 
-Vector instructions can be represented in three main ways in LLVM IR:
+Vector instructions can be represented in two main ways in LLVM IR:
 
 1. Regular instructions on both scalable and fixed-length vector types
 
@@ -99,34 +101,11 @@ Vector instructions can be represented in three main ways in LLVM IR:
 
    The only valid types are scalable vector types.
 
-3. :ref:`Vector predication (VP) intrinsics <int_vp>`
+For operations that access memory, trap or otherwise have behaviour which depends on what elements are enabled, the target agnostic :ref:`llvm.masked.* <int_mload_mstore>` and :ref:`llvm.vp.* <int_vp>` intrinsics can be used to control the mask and AVL respectively.
 
-   .. code-block:: llvm
+.. note::
 
-       %c = call @llvm.vp.add.nxv4i32(
-	      <vscale x 4 x i32> %a,
-	      <vscale x 4 x i32> %b,
-	      <vscale x 4 x i1> %m
-	      i32 %evl
-	    )
-
-   Unlike RISC-V intrinsics, VP intrinsics are target agnostic so they can be emitted from other optimisation passes in the middle-end (like the loop vectorizer). They also support fixed-length vector types.
-
-   VP intrinsics also don't have passthru operands, but tail/mask undisturbed behaviour can be emulated by using the output in a ``@llvm.vp.merge``.
-   It will get lowered as a ``vmerge``, but will be merged back into the underlying instruction's mask via ``RISCVDAGToDAGISel::performCombineVMergeAndVOps``.
-
-
-The different properties of the above representations are summarized below:
-
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
-|                      | AVL          | Masking         | Passthru | Scalable vectors | Fixed-length vectors | Target agnostic |
-+======================+==============+=================+==========+==================+======================+=================+
-| LLVM IR instructions | Always VLMAX | No              | None     | Yes              | Yes                  | Yes             |
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
-| RVV intrinsics       | Yes          | Yes             | Yes      | Yes              | No                   | No              |
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
-| VP intrinsics        | Yes (EVL)    | Yes             | No       | Yes              | Yes                  | Yes             |
-+----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
+   Middle-end passes typically do not need to worry about controlling the AVL for most instructions, as :ref:`RISCVVLOptimizer` will automatically take care of reducing the AVL to avoid vsetvli toggles. Using regular LLVM IR instructions allows more generic combines and optimisations to be taken advantage of. For instructions that may access memory or trap etc., passes should use the ``llvm.vp.*`` intrinsics to set the AVL where required.
 
 SelectionDAG lowering
 =====================
@@ -255,12 +234,33 @@ The patterns in ``RISCVInstrInfoVVLPatterns.td`` only match masked pseudos to re
 
    Any ``vmset.m`` can be treated as an all ones mask since the tail elements past AVL are ``undef`` and can be replaced with ones.
 
+.. _RISCVVLOptimizer:
+
+RISCVVLOptimizer
+================
+
+After instruction selection, ``RISCVVLOptimizer.cpp`` will reduce the AVL of vector pseudos to only what is demanded from its users. This helps performance on microarchitectures which have performance characteristics dependent on ``vl``, and also avoids unnecessary ``vsetvli`` toggles.
+
+.. code-block::
+
+   %x:vr = PseudoVADD_VV_M1 undef, %a:vr, %b:vr, -1 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   %y:vr = PseudoVADD_VV_M1 undef, %%y:vr, %x:vr, -1 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   PseudoVSE32_V_M1 %y, %addr, 4 /*avl*/, 5 /*sew*/
+
+   // gets optimized to:
+
+   %x:vr = PseudoVADD_VV_M1 undef, %a:vr, %b:vr, 5 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   %y:vr = PseudoVADD_VV_M1 undef, %%y:vr, %x:vr, 5 /*avl*/, 5 /*sew*/, 3 /*policy*/
+   PseudoVSE32_V_M1 %y, %addr, 4 /*avl*/, 5 /*sew*/
+
+For a vector pseudo to be considered for AVL optimisation, its underlying instruction must specify that its output doesn't depend on ``vl`` in the ``ElementsDependOn`` TSFlag. The default for this flag is conservatively set to depending on ``vl``, so AVL optimisation will be off by default.
+
 VMV0 elimination
 =================
 
 Because masked instructions must have the mask register in ``v0``, a specific register class ``vmv0`` is used that contains only one register, ``v0``.
 
-However register coalescing may end up coleascing copies into ``vmv0``, resulting in instructions with multiple uses of ``vmv0`` that the register allocator can't allocate:
+However register coalescing may end up coalescing copies into ``vmv0``, resulting in instructions with multiple uses of ``vmv0`` that the register allocator can't allocate:
 
 .. code-block::
 
@@ -296,7 +296,7 @@ Register allocation is split between vector and scalar registers, with vector al
 
 There are four register classes for vectors:
 
-- ``VR`` for vector registers (``v0``, ``v1,``, ..., ``v32``). Used when :math:`\text{LMUL} \leq 1` and mask registers.
+- ``VR`` for vector registers (``v0``, ``v1,``, ..., ``v31``). Used when :math:`\text{LMUL} \leq 1` and mask registers.
 - ``VRM2`` for vector groups of length 2 i.e., :math:`\text{LMUL}=2` (``v0m2``, ``v2m2``, ..., ``v30m2``)
 - ``VRM4`` for vector groups of length 4 i.e., :math:`\text{LMUL}=4` (``v0m4``, ``v4m4``, ..., ``v28m4``)
 - ``VRM8`` for vector groups of length 8 i.e., :math:`\text{LMUL}=8` (``v0m8``, ``v8m8``, ..., ``v24m8``)

@@ -172,7 +172,7 @@ attributes #6 = { builtin }
 ; DOTALLOC0NONE-SAME: fillcolor="mediumorchid1",
 ; DOTALLOC0CONTEXT1-SAME: fontsize="30",fillcolor="magenta",
 ; DOTCONTEXT1-SAME: fillcolor="mediumorchid1",
-; DOTCOMMON-SAME: style="filled",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
+; DOTCOMMON-SAME: style="filled",label="{OrigId: Alloc0{{.*}}\n_Z3barv -\> _Znam}"];
 
 ; DOTCOMMON:  Node[[BAZ:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAZ]] ContextIds: 1 2 3 4",
 ;; This node is highlighted when dumping the whole graph and specifying
@@ -183,7 +183,7 @@ attributes #6 = { builtin }
 ; DOTALLOC0NONE-SAME: fillcolor="mediumorchid1",
 ; DOTALLOC0CONTEXT1-SAME: fontsize="30",fillcolor="magenta",
 ; DOTCONTEXT1-SAME: fillcolor="mediumorchid1",
-; DOTCOMMON-SAME: style="filled",label="{OrigId: 12481870273128938184\n_Z3bazv -\> _Z3barv}"];
+; DOTCOMMON-SAME: style="filled",label="{OrigId: 12481870273128938184{{.*}}\n_Z3bazv -\> _Z3barv}"];
 
 ; DOTCOMMON:  Node[[BAZ]] -> Node[[BAR]][tooltip="ContextIds: 1 2",
 ;; This edge is highlighted when dumping the whole graph and specifying
@@ -208,7 +208,7 @@ attributes #6 = { builtin }
 ; DOTALLOC0NONE-SAME: fillcolor="mediumorchid1",
 ; DOTALLOC0CONTEXT1-SAME: fontsize="30",fillcolor="magenta",
 ; DOTCONTEXT1-SAME: fillcolor="mediumorchid1",
-; DOTCOMMON-SAME: style="filled",label="{OrigId: 2732490490862098848\n_Z3foov -\> _Z3bazv}"];
+; DOTCOMMON-SAME: style="filled",label="{OrigId: 2732490490862098848{{.*}}\n_Z3foov -\> _Z3bazv}"];
 
 ; DOTCOMMON:  Node[[FOO]] -> Node[[BAZ]][tooltip="ContextIds: 1 2 3 4",
 ;; This edge is highlighted when dumping the whole graph and specifying
@@ -227,7 +227,7 @@ attributes #6 = { builtin }
 ; DOTALLALLOC0-SAME: fontsize="30",
 ; DOTALLCONTEXT1-SAME: fontsize="30",
 ; DOTALLOC0CONTEXT1-SAME: fontsize="30",
-; DOTCOMMON-SAME: fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOTCOMMON-SAME: fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414{{.*}}\nmain -\> _Z3foov}"];
 
 ; DOTCOMMON:  Node[[MAIN1]] -> Node[[FOO]][tooltip="ContextIds: 1 3",fillcolor="brown1",color="brown1"
 ;; This edge is highlighted when dumping the whole graph and specifying
@@ -248,7 +248,7 @@ attributes #6 = { builtin }
 ; DOTALLCONTEXT1-SAME: fillcolor="lightskyblue",
 ; DOTALLOC0NONE-SAME: fillcolor="cyan",
 ; DOTALLOC0CONTEXT1-SAME: fillcolor="lightskyblue",
-; DOTALLANDALLOC0-SAME: style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOTALLANDALLOC0-SAME: style="filled",label="{OrigId: 15025054523792398438{{.*}}\nmain -\> _Z3foov}"];
 
 ; DOTALLANDALLOC0:  Node[[MAIN2]] -> Node[[FOO]][tooltip="ContextIds: 2 4",
 ;; This edge is highlighted when dumping the whole graph and specifying
@@ -262,4 +262,4 @@ attributes #6 = { builtin }
 
 ;; This edge is not in alloc 0 or context 0, so only included when exporting
 ;; the whole graph (and never highlighted).
-; DOTALL:  Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc2\n_Z3barv -\> _Znam}"];
+; DOTALL:  Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 3 4",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc2{{.*}}\n_Z3barv -\> _Znam}"];

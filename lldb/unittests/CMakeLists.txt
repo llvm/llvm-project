@@ -10,15 +10,28 @@ if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
 
+if (MSVC)
+  option(LLDB_UNITTEST_STRIP_DEBUG_INFO
+    "Strip debug info from lldb unit-test binaries to cut link time and disk \
+  usage when building with MSVC. Turn OFF when you need to debug a unittest binary." OFF)
+endif()
+
 function(add_lldb_unittest test_name)
   cmake_parse_arguments(ARG
-    ""
+    "SBAPITEST"
     ""
     "LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
 
   if (NOT ${test_name} MATCHES "Tests$")
     message(FATAL_ERROR "Unit test name must end with 'Tests' for lit to find it.")
+  endif()
+
+  if ("liblldb" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
+    message(FATAL_ERROR "The ${test_name} are not allowed to link liblldb.")
+  endif()
+  if ("lldbSBUtilityHelpers" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
+    message(FATAL_ERROR "The ${test_name} are not allowed to link lldbSBUtilityHelpers.")
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
@@ -34,6 +47,16 @@ function(add_lldb_unittest test_name)
     COMMAND "${CMAKE_COMMAND}" -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Inputs)
 
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
+
+  if (MSVC)
+    if (LLDB_UNITTEST_STRIP_DEBUG_INFO)
+      target_link_options(${test_name} PRIVATE
+        "LINKER:/DEBUG:NONE"
+        "LINKER:/INCREMENTAL:NO"
+        "LINKER:/OPT:REF"
+        "LINKER:/OPT:ICF")
+    endif()
+  endif()
 endfunction()
 
 function(add_unittest_inputs test_name inputs)
@@ -47,10 +70,13 @@ function(add_unittest_inputs test_name inputs)
 endfunction()
 
 add_subdirectory(TestingSupport)
+add_subdirectory(SBTestingSupport)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  # FIXME: APITests.exe is not a valid googletest binary.
+  # FIXME: Tests linking against libLLDB don't work on Windows.
   add_subdirectory(API)
+  add_subdirectory(DAP)
 endif()
+add_subdirectory(ABI)
 add_subdirectory(Breakpoint)
 add_subdirectory(Callback)
 add_subdirectory(Core)
@@ -58,23 +84,25 @@ add_subdirectory(DataFormatter)
 add_subdirectory(Disassembler)
 add_subdirectory(Editline)
 add_subdirectory(Expression)
+add_subdirectory(Highlighter)
 add_subdirectory(Host)
-add_subdirectory(Interpreter)
 add_subdirectory(Instruction)
+add_subdirectory(Interpreter)
 add_subdirectory(Language)
 add_subdirectory(ObjectFile)
 add_subdirectory(Platform)
 add_subdirectory(Process)
+add_subdirectory(Protocol)
 add_subdirectory(ScriptInterpreter)
 add_subdirectory(Signals)
 add_subdirectory(Symbol)
 add_subdirectory(SymbolFile)
 add_subdirectory(Target)
-add_subdirectory(tools)
+add_subdirectory(Thread)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
-add_subdirectory(Thread)
 add_subdirectory(ValueObject)
+add_subdirectory(tools)
 
 if(LLDB_CAN_USE_DEBUGSERVER AND LLDB_TOOL_DEBUGSERVER_BUILD AND NOT LLDB_USE_SYSTEM_DEBUGSERVER)
   add_subdirectory(debugserver)

@@ -25,12 +25,12 @@ int test_int_scalar_inputs(int p0) {
 
 float test_int_scalar_inputs2(float p0, int p1) {
   return __builtin_spirv_smoothstep(p0, p1, p1);
-  //  expected-error@-1 {{2nd argument must be a scalar or vector of floating-point types (was 'int')}}
+  //  expected-error@-1 {{all arguments to '__builtin_spirv_smoothstep' must have the same type}}
 }
 
 float test_int_scalar_inputs3(float p0, int p1) {
   return __builtin_spirv_smoothstep(p0, p0, p1);
-  //  expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'int')}}
+  //  expected-error@-1 {{all arguments to '__builtin_spirv_smoothstep' must have the same type}}
 }
 
 float test_mismatched_arg(float p0, float2 p1) {

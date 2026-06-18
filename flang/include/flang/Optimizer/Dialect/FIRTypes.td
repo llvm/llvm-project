@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -313,7 +314,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RecordType : FIR_Type<"Record", "type"> {
+def fir_RecordType : FIR_Type<"Record", "type", [MemRefElementTypeInterface]> {
   let summary = "FIR derived type";
 
   let description = [{
@@ -330,7 +331,8 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let extraClassDeclaration = [{
     using TypePair = std::pair<std::string, mlir::Type>;
-    using TypeList = std::vector<TypePair>;
+    using TypeList = llvm::ArrayRef<TypePair>;
+    using TypeVector = llvm::SmallVector<TypePair>;
     TypeList getTypeList() const;
     TypeList getLenParamList() const;
 
@@ -356,6 +358,10 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     bool isPacked() const;
     void pack(bool);
 
+    // The presence of SEQUENCE attribute.
+    bool isSequence() const;
+    void setSequence(bool);
+
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
 }
@@ -365,6 +371,11 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
 
   let description = [{
     The type of a reference to an entity in memory.
+
+    References can be volatile. Any ops taking an operand of a volatile
+    reference must set their memory effects appropriately. Accesses of
+    volatile references are currently modeled as read and write effects
+    to a specific memory resource.
   }];
 
   let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
@@ -591,6 +602,10 @@ def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
+def AnyLogicalType : Type<AnyLogicalLike.predicate, "any logical">;
+def AnyLogicalOrIntegerLike : TypeConstraint<Or<[
+    fir_LogicalType.predicate,
+    SignlessIntegerLike.predicate]>, "fir.logical or signless integer">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
   "any floating point complex type">;
@@ -604,9 +619,10 @@ def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
     "any composite">;
 
 // Reference types
-def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate,
-    fir_LLVMPointerType.predicate]>, "any reference">;
+def AnyReferenceLike
+    : Type<Or<[fir_ReferenceType.predicate, fir_HeapType.predicate,
+               fir_PointerType.predicate, fir_LLVMPointerType.predicate]>,
+           "any reference">;
 
 def FuncType : TypeConstraint<FunctionType.predicate, "function type">;
 
@@ -620,8 +636,10 @@ def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate,
     fir_ClassType.predicate]>, "any box">;
 
-def BoxOrClassType : TypeConstraint<Or<[fir_BoxType.predicate,
-    fir_ClassType.predicate]>, "box or class">;
+def BoxOrClassLike
+    : TypeConstraint<Or<[fir_BoxType.predicate, fir_ClassType.predicate]>,
+                     "box or class">;
+def BoxOrClassType : Type<BoxOrClassLike.predicate, "box or class">;
 
 def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
     AnyBoxLike.predicate, FunctionType.predicate]>,

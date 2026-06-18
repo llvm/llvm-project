@@ -17,6 +17,7 @@
 #include "llvm/ADT/GenericUniformityInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 
 namespace llvm {
@@ -28,12 +29,12 @@ using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 ///
 /// If \p HasBranchDivergence is false, produces a dummy result which assumes
 /// everything is uniform.
-MachineUniformityInfo computeMachineUniformityInfo(
-    MachineFunction &F, const MachineCycleInfo &cycleInfo,
-    const MachineDominatorTree &domTree, bool HasBranchDivergence);
+LLVM_ABI MachineUniformityInfo computeMachineUniformityInfo(
+    MachineFunction &F, const MachineCycleInfo &CI,
+    const MachineDominatorTree &DT, bool HasBranchDivergence);
 
 /// Legacy analysis pass which computes a \ref MachineUniformityInfo.
-class MachineUniformityAnalysisPass : public MachineFunctionPass {
+class LLVM_ABI MachineUniformityAnalysisPass : public MachineFunctionPass {
   MachineUniformityInfo UI;
 
 public:
@@ -49,6 +50,27 @@ public:
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 
   // TODO: verify analysis
+};
+
+class MachineUniformityAnalysis
+    : public AnalysisInfoMixin<MachineUniformityAnalysis> {
+  friend AnalysisInfoMixin<MachineUniformityAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineUniformityInfo;
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
+};
+
+class MachineUniformityPrinterPass
+    : public RequiredPassInfoMixin<MachineUniformityPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineUniformityPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

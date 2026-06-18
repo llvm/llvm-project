@@ -106,7 +106,7 @@ struct DriverArgs {
     // relative or absolute).
     if (llvm::any_of(Driver,
                      [](char C) { return llvm::sys::path::is_separator(C); })) {
-      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
+      llvm::sys::path::make_absolute(Cmd.Directory, Driver);
     }
     this->Driver = Driver.str().str();
     for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
@@ -207,8 +207,6 @@ struct DriverArgs {
     return Args;
   }
 
-  static DriverArgs getEmpty() { return {}; }
-
 private:
   DriverArgs() = default;
 };
@@ -217,16 +215,6 @@ private:
 namespace llvm {
 using DriverArgs = clang::clangd::DriverArgs;
 template <> struct DenseMapInfo<DriverArgs> {
-  static DriverArgs getEmptyKey() {
-    auto Driver = DriverArgs::getEmpty();
-    Driver.Driver = "EMPTY_KEY";
-    return Driver;
-  }
-  static DriverArgs getTombstoneKey() {
-    auto Driver = DriverArgs::getEmpty();
-    Driver.Driver = "TOMBSTONE_KEY";
-    return Driver;
-  }
   static unsigned getHashValue(const DriverArgs &Val) {
     unsigned FixedFieldsHash = llvm::hash_value(std::tuple{
         Val.Driver,
@@ -239,8 +227,7 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Stdlib,
     });
 
-    unsigned SpecsHash =
-        llvm::hash_combine_range(Val.Specs.begin(), Val.Specs.end());
+    unsigned SpecsHash = llvm::hash_combine_range(Val.Specs);
 
     return llvm::hash_combine(FixedFieldsHash, SpecsHash);
   }
@@ -254,10 +241,11 @@ namespace {
 bool isValidTarget(llvm::StringRef Triple) {
   std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
   TargetOpts->Triple = Triple.str();
-  DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer);
   llvm::IntrusiveRefCntPtr<TargetInfo> Target =
-      TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+      TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   return bool(Target);
 }
 
@@ -332,7 +320,7 @@ std::optional<std::string> run(llvm::ArrayRef<llvm::StringRef> Argv,
          EC.message());
     return std::nullopt;
   }
-  auto CleanUp = llvm::make_scope_exit(
+  llvm::scope_exit CleanUp(
       [&OutputPath]() { llvm::sys::fs::remove(OutputPath); });
 
   std::optional<llvm::StringRef> Redirects[] = {{""}, {""}, {""}};

@@ -56,8 +56,6 @@ public:
 
   lldb::ChildCacheState Update() override = 0;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 protected:
   virtual lldb::addr_t GetDataAddress() = 0;
 
@@ -218,8 +216,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 private:
   ExecutionContextRef m_exe_ctx_ref;
   uint8_t m_ptr_size = 8;
@@ -306,7 +302,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 };
 
 class NSArray1SyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -321,7 +317,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 };
 } // namespace formatters
 } // namespace lldb_private
@@ -489,8 +485,8 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetChildAtIndex(
   object_at_idx += (pyhs_idx * m_ptr_size);
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 template <typename D32, typename D64>
@@ -524,16 +520,6 @@ lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::Update() {
 
   return error.Success() ? lldb::ChildCacheState::eReuse
                          : lldb::ChildCacheState::eRefetch;
-}
-
-size_t
-lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetIndexOfChildWithName(
-    ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
 }
 
 template <typename D32, typename D64>
@@ -612,17 +598,6 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 }
 
 template <typename D32, typename D64, bool Inline>
-size_t
-lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
-  GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
-
-template <typename D32, typename D64, bool Inline>
 llvm::Expected<uint32_t>
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
     D32, D64, Inline>::CalculateNumChildren() {
@@ -687,15 +662,15 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     return lldb::ValueObjectSP();
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp) {}
 
-size_t
+llvm::Expected<size_t>
 lldb_private::formatters::NSArray0SyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   return UINT32_MAX;
@@ -725,7 +700,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::NSArray1SyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp.get()) {}
 
-size_t
+llvm::Expected<size_t>
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   static const ConstString g_zero("[0]");

@@ -3,16 +3,18 @@
 ; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
 ; RUN: llc -aarch64-sve-vector-bits-min=2048 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llc -aarch64-sve-vector-bits-min=128 -use-constant-int-for-fixed-length-splat < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_128
 
 target triple = "aarch64-unknown-linux-gnu"
 
 define <4 x i32> @sdiv_v4i32_negative_pow2_divisor_packed(<4 x i32> %op1) vscale_range(1,0) #0 {
 ; CHECK-LABEL: sdiv_v4i32_negative_pow2_divisor_packed:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
-; CHECK-NEXT:    usra v0.4s, v1.4s, #29
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #3
-; CHECK-NEXT:    neg v0.4s, v0.4s
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #3
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <4 x i32> %op1, splat (i32 -8)
   ret <4 x i32> %res
@@ -21,10 +23,11 @@ define <4 x i32> @sdiv_v4i32_negative_pow2_divisor_packed(<4 x i32> %op1) vscale
 define <2 x i32> @sdiv_v2i32_negative_pow2_divisor_unpacked(<2 x i32> %op1) vscale_range(1,0) #0 {
 ; CHECK-LABEL: sdiv_v2i32_negative_pow2_divisor_unpacked:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v1.2s, v0.2s, #0
-; CHECK-NEXT:    usra v0.2s, v1.2s, #29
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #3
-; CHECK-NEXT:    neg v0.2s, v0.2s
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #3
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <2 x i32> %op1, splat (i32 -8)
   ret <2 x i32> %res
@@ -33,9 +36,10 @@ define <2 x i32> @sdiv_v2i32_negative_pow2_divisor_unpacked(<2 x i32> %op1) vsca
 define <4 x i32> @sdiv_v4i32_positive_pow2_divisor_packed(<4 x i32> %op1) vscale_range(1,0) #0 {
 ; CHECK-LABEL: sdiv_v4i32_positive_pow2_divisor_packed:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
-; CHECK-NEXT:    usra v0.4s, v1.4s, #29
-; CHECK-NEXT:    sshr v0.4s, v0.4s, #3
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <4 x i32> %op1, splat (i32 8)
   ret <4 x i32> %res
@@ -44,9 +48,10 @@ define <4 x i32> @sdiv_v4i32_positive_pow2_divisor_packed(<4 x i32> %op1) vscale
 define <2 x i32> @sdiv_v2i32_positive_pow2_divisor_unpacked(<2 x i32> %op1) vscale_range(1,0) #0 {
 ; CHECK-LABEL: sdiv_v2i32_positive_pow2_divisor_unpacked:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v1.2s, v0.2s, #0
-; CHECK-NEXT:    usra v0.2s, v1.2s, #29
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #3
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #3
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = sdiv <2 x i32> %op1, splat (i32 8)
   ret <2 x i32> %res
@@ -95,19 +100,12 @@ define void @sdiv_v64i8(ptr %a) #0 {
 ; VBITS_GE_128-LABEL: sdiv_v64i8:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
-; VBITS_GE_128-NEXT:    ldp q3, q4, [x0]
-; VBITS_GE_128-NEXT:    cmlt v2.16b, v0.16b, #0
-; VBITS_GE_128-NEXT:    cmlt v5.16b, v1.16b, #0
-; VBITS_GE_128-NEXT:    cmlt v6.16b, v3.16b, #0
-; VBITS_GE_128-NEXT:    usra v0.16b, v2.16b, #3
-; VBITS_GE_128-NEXT:    cmlt v2.16b, v4.16b, #0
-; VBITS_GE_128-NEXT:    usra v1.16b, v5.16b, #3
-; VBITS_GE_128-NEXT:    usra v3.16b, v6.16b, #3
-; VBITS_GE_128-NEXT:    usra v4.16b, v2.16b, #3
-; VBITS_GE_128-NEXT:    sshr v0.16b, v0.16b, #5
-; VBITS_GE_128-NEXT:    sshr v1.16b, v1.16b, #5
-; VBITS_GE_128-NEXT:    sshr v2.16b, v3.16b, #5
-; VBITS_GE_128-NEXT:    sshr v3.16b, v4.16b, #5
+; VBITS_GE_128-NEXT:    ptrue p0.b, vl16
+; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
+; VBITS_GE_128-NEXT:    asrd z0.b, p0/m, z0.b, #5
+; VBITS_GE_128-NEXT:    asrd z1.b, p0/m, z1.b, #5
+; VBITS_GE_128-NEXT:    asrd z2.b, p0/m, z2.b, #5
+; VBITS_GE_128-NEXT:    asrd z3.b, p0/m, z3.b, #5
 ; VBITS_GE_128-NEXT:    stp q0, q1, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q2, q3, [x0]
 ; VBITS_GE_128-NEXT:    ret
@@ -209,19 +207,12 @@ define void @sdiv_v32i16(ptr %a) #0 {
 ; VBITS_GE_128-LABEL: sdiv_v32i16:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
-; VBITS_GE_128-NEXT:    ldp q3, q4, [x0]
-; VBITS_GE_128-NEXT:    cmlt v2.8h, v0.8h, #0
-; VBITS_GE_128-NEXT:    cmlt v5.8h, v1.8h, #0
-; VBITS_GE_128-NEXT:    cmlt v6.8h, v3.8h, #0
-; VBITS_GE_128-NEXT:    usra v0.8h, v2.8h, #11
-; VBITS_GE_128-NEXT:    cmlt v2.8h, v4.8h, #0
-; VBITS_GE_128-NEXT:    usra v1.8h, v5.8h, #11
-; VBITS_GE_128-NEXT:    usra v3.8h, v6.8h, #11
-; VBITS_GE_128-NEXT:    usra v4.8h, v2.8h, #11
-; VBITS_GE_128-NEXT:    sshr v0.8h, v0.8h, #5
-; VBITS_GE_128-NEXT:    sshr v1.8h, v1.8h, #5
-; VBITS_GE_128-NEXT:    sshr v2.8h, v3.8h, #5
-; VBITS_GE_128-NEXT:    sshr v3.8h, v4.8h, #5
+; VBITS_GE_128-NEXT:    ptrue p0.h, vl8
+; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
+; VBITS_GE_128-NEXT:    asrd z0.h, p0/m, z0.h, #5
+; VBITS_GE_128-NEXT:    asrd z1.h, p0/m, z1.h, #5
+; VBITS_GE_128-NEXT:    asrd z2.h, p0/m, z2.h, #5
+; VBITS_GE_128-NEXT:    asrd z3.h, p0/m, z3.h, #5
 ; VBITS_GE_128-NEXT:    stp q0, q1, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q2, q3, [x0]
 ; VBITS_GE_128-NEXT:    ret
@@ -324,19 +315,12 @@ define void @sdiv_v16i32(ptr %a) #0 {
 ; VBITS_GE_128-LABEL: sdiv_v16i32:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
-; VBITS_GE_128-NEXT:    ldp q3, q4, [x0]
-; VBITS_GE_128-NEXT:    cmlt v2.4s, v0.4s, #0
-; VBITS_GE_128-NEXT:    cmlt v5.4s, v1.4s, #0
-; VBITS_GE_128-NEXT:    cmlt v6.4s, v3.4s, #0
-; VBITS_GE_128-NEXT:    usra v0.4s, v2.4s, #27
-; VBITS_GE_128-NEXT:    cmlt v2.4s, v4.4s, #0
-; VBITS_GE_128-NEXT:    usra v1.4s, v5.4s, #27
-; VBITS_GE_128-NEXT:    usra v3.4s, v6.4s, #27
-; VBITS_GE_128-NEXT:    usra v4.4s, v2.4s, #27
-; VBITS_GE_128-NEXT:    sshr v0.4s, v0.4s, #5
-; VBITS_GE_128-NEXT:    sshr v1.4s, v1.4s, #5
-; VBITS_GE_128-NEXT:    sshr v2.4s, v3.4s, #5
-; VBITS_GE_128-NEXT:    sshr v3.4s, v4.4s, #5
+; VBITS_GE_128-NEXT:    ptrue p0.s, vl4
+; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
+; VBITS_GE_128-NEXT:    asrd z0.s, p0/m, z0.s, #5
+; VBITS_GE_128-NEXT:    asrd z1.s, p0/m, z1.s, #5
+; VBITS_GE_128-NEXT:    asrd z2.s, p0/m, z2.s, #5
+; VBITS_GE_128-NEXT:    asrd z3.s, p0/m, z3.s, #5
 ; VBITS_GE_128-NEXT:    stp q0, q1, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q2, q3, [x0]
 ; VBITS_GE_128-NEXT:    ret
@@ -439,19 +423,12 @@ define void @sdiv_v8i64(ptr %a) #0 {
 ; VBITS_GE_128-LABEL: sdiv_v8i64:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0, #32]
-; VBITS_GE_128-NEXT:    ldp q3, q4, [x0]
-; VBITS_GE_128-NEXT:    cmlt v2.2d, v0.2d, #0
-; VBITS_GE_128-NEXT:    cmlt v5.2d, v1.2d, #0
-; VBITS_GE_128-NEXT:    cmlt v6.2d, v3.2d, #0
-; VBITS_GE_128-NEXT:    usra v0.2d, v2.2d, #59
-; VBITS_GE_128-NEXT:    cmlt v2.2d, v4.2d, #0
-; VBITS_GE_128-NEXT:    usra v1.2d, v5.2d, #59
-; VBITS_GE_128-NEXT:    usra v3.2d, v6.2d, #59
-; VBITS_GE_128-NEXT:    usra v4.2d, v2.2d, #59
-; VBITS_GE_128-NEXT:    sshr v0.2d, v0.2d, #5
-; VBITS_GE_128-NEXT:    sshr v1.2d, v1.2d, #5
-; VBITS_GE_128-NEXT:    sshr v2.2d, v3.2d, #5
-; VBITS_GE_128-NEXT:    sshr v3.2d, v4.2d, #5
+; VBITS_GE_128-NEXT:    ptrue p0.d, vl2
+; VBITS_GE_128-NEXT:    ldp q2, q3, [x0]
+; VBITS_GE_128-NEXT:    asrd z0.d, p0/m, z0.d, #5
+; VBITS_GE_128-NEXT:    asrd z1.d, p0/m, z1.d, #5
+; VBITS_GE_128-NEXT:    asrd z2.d, p0/m, z2.d, #5
+; VBITS_GE_128-NEXT:    asrd z3.d, p0/m, z3.d, #5
 ; VBITS_GE_128-NEXT:    stp q0, q1, [x0, #32]
 ; VBITS_GE_128-NEXT:    stp q2, q3, [x0]
 ; VBITS_GE_128-NEXT:    ret

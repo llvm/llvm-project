@@ -124,8 +124,9 @@ void test() {
 #if _LIBCPP_HAS_EXCEPTIONS
   // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
   // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
-  // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
-  // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
 #endif
+// These diagnostics can also additionally be produced by static_assert (see GH150601).
+// expected-error-re@*:* 0-2{{call to deleted constructor of{{.*}}}}
+// expected-error-re@*:* 0-2{{call to deleted constructor of{{.*}}}}
 }
 // clang-format on

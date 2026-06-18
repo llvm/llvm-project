@@ -20,5 +20,5 @@ multiclass shuffle<Reg RC> {
                                        RC:$src1, RC:$src2))]>;
 }
 
-// CHECK: shufp:src3
+// CHECK: shufp:$src3
 defm ADD : shuffle<VR128>;

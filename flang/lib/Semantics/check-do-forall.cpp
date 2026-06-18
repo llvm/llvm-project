@@ -71,7 +71,7 @@ static const Bounds &GetBounds(const parser::DoConstruct &doConstruct) {
 static const parser::Name &GetDoVariable(
     const parser::DoConstruct &doConstruct) {
   const Bounds &bounds{GetBounds(doConstruct)};
-  return bounds.name.thing;
+  return bounds.Name().thing;
 }
 
 static parser::MessageFixedText GetEnclosingDoMsg() {
@@ -535,7 +535,8 @@ private:
     if (const SomeExpr * expr{GetExpr(context_, scalarExpression)}) {
       if (!ExprHasTypeCategory(*expr, TypeCategory::Integer)) {
         // No warnings or errors for type INTEGER
-        const parser::CharBlock &loc{scalarExpression.thing.value().source};
+        parser::CharBlock loc{
+            parser::UnwrapRef<parser::Expr>(scalarExpression).source};
         CheckDoControl(loc, ExprHasTypeCategory(*expr, TypeCategory::Real));
       }
     }
@@ -545,14 +546,14 @@ private:
     // C1120 -- types of DO variables must be INTEGER, extended by allowing
     // REAL and DOUBLE PRECISION
     const Bounds &bounds{GetBounds(doConstruct)};
-    CheckDoVariable(bounds.name);
-    CheckDoExpression(bounds.lower);
-    CheckDoExpression(bounds.upper);
-    if (bounds.step) {
-      CheckDoExpression(*bounds.step);
-      if (IsZero(*bounds.step)) {
+    CheckDoVariable(bounds.Name());
+    CheckDoExpression(bounds.Lower());
+    CheckDoExpression(bounds.Upper());
+    if (auto &step{bounds.Step()}) {
+      CheckDoExpression(*step);
+      if (IsZero(*step)) {
         context_.Warn(common::UsageWarning::ZeroDoStep,
-            bounds.step->thing.value().source,
+            parser::UnwrapRef<parser::Expr>(step).source,
             "DO step expression should not be zero"_warn_en_US);
       }
     }
@@ -615,7 +616,7 @@ private:
   // C1121 - procedures in mask must be pure
   void CheckMaskIsPure(const parser::ScalarLogicalExpr &mask) const {
     UnorderedSymbolSet references{
-        GatherSymbolsFromExpression(mask.thing.thing.value())};
+        GatherSymbolsFromExpression(parser::UnwrapRef<parser::Expr>(mask))};
     for (const Symbol &ref : OrderBySourcePosition(references)) {
       if (IsProcedure(ref) && !IsPureProcedure(ref)) {
         context_.SayWithDecl(ref, parser::Unwrap<parser::Expr>(mask)->source,
@@ -639,32 +640,33 @@ private:
   }
 
   void HasNoReferences(const UnorderedSymbolSet &indexNames,
-      const parser::ScalarIntExpr &expr) const {
-    CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
-        indexNames,
+      const parser::ScalarIntExpr &scalarIntExpr) const {
+    const auto &expr{parser::UnwrapRef<parser::Expr>(scalarIntExpr)};
+    CheckNoCollisions(GatherSymbolsFromExpression(expr), indexNames,
         "%s limit expression may not reference index variable '%s'"_err_en_US,
-        expr.thing.thing.value().source);
+        expr.source);
   }
 
   // C1129, names in local locality-specs can't be in mask expressions
   void CheckMaskDoesNotReferenceLocal(const parser::ScalarLogicalExpr &mask,
       const UnorderedSymbolSet &localVars) const {
-    CheckNoCollisions(GatherSymbolsFromExpression(mask.thing.thing.value()),
-        localVars,
+    const auto &expr{parser::UnwrapRef<parser::Expr>(mask)};
+    CheckNoCollisions(GatherSymbolsFromExpression(expr), localVars,
         "%s mask expression references variable '%s'"
         " in LOCAL locality-spec"_err_en_US,
-        mask.thing.thing.value().source);
+        expr.source);
   }
 
   // C1129, names in local locality-specs can't be in limit or step
   // expressions
-  void CheckExprDoesNotReferenceLocal(const parser::ScalarIntExpr &expr,
+  void CheckExprDoesNotReferenceLocal(
+      const parser::ScalarIntExpr &scalarIntExpr,
       const UnorderedSymbolSet &localVars) const {
-    CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
-        localVars,
+    const auto &expr{parser::UnwrapRef<parser::Expr>(scalarIntExpr)};
+    CheckNoCollisions(GatherSymbolsFromExpression(expr), localVars,
         "%s expression references variable '%s'"
         " in LOCAL locality-spec"_err_en_US,
-        expr.thing.thing.value().source);
+        expr.source);
   }
 
   // C1130, DEFAULT(NONE) locality requires names to be in locality-specs to
@@ -707,6 +709,10 @@ private:
         }};
         supportedIdentifier = true;
         switch (reductionOperator.v) {
+        case parser::ReductionOperator::Operator::Minus:
+          context_.Say(currentStatementSourcePosition_,
+              "'-' is not a supported reduction operator in a DO CONCURRENT REDUCE locality specifier"_err_en_US);
+          break;
         case parser::ReductionOperator::Operator::Plus:
         case parser::ReductionOperator::Operator::Multiply:
           if (!(type->IsNumeric(TypeCategory::Complex) ||
@@ -772,7 +778,7 @@ private:
         HasNoReferences(indexNames, std::get<2>(control.t));
         if (const auto &intExpr{
                 std::get<std::optional<parser::ScalarIntExpr>>(control.t)}) {
-          const parser::Expr &expr{intExpr->thing.thing.value()};
+          const auto &expr{parser::UnwrapRef<parser::Expr>(intExpr)};
           CheckNoCollisions(GatherSymbolsFromExpression(expr), indexNames,
               "%s step expression may not reference index variable '%s'"_err_en_US,
               expr.source);
@@ -840,7 +846,7 @@ private:
   }
   void CheckForImpureCall(const parser::ScalarIntExpr &x,
       std::optional<IndexVarKind> nesting) const {
-    const auto &parsedExpr{x.thing.thing.value()};
+    const auto &parsedExpr{parser::UnwrapRef<parser::Expr>(x)};
     auto oldLocation{context_.location()};
     context_.set_location(parsedExpr.source);
     if (const auto &typedExpr{parsedExpr.typedExpr}) {
@@ -1099,8 +1105,8 @@ static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
 // messages.
 void DoForallChecker::Leave(const parser::CallStmt &callStmt) {
   if (const auto &typedCall{callStmt.typedCall}) {
-    const auto &parsedArgs{
-        std::get<std::list<parser::ActualArgSpec>>(callStmt.call.t)};
+    const auto &call{std::get<parser::Call>(callStmt.t)};
+    const auto &parsedArgs{std::get<std::list<parser::ActualArgSpec>>(call.t)};
     auto parsedArgIter{parsedArgs.begin()};
     const evaluate::ActualArguments &checkedArgs{typedCall->arguments()};
     for (const auto &checkedOptionalArg : checkedArgs) {
@@ -1124,7 +1130,8 @@ void DoForallChecker::Leave(const parser::ConnectSpec &connectSpec) {
   const auto *newunit{
       std::get_if<parser::ConnectSpec::Newunit>(&connectSpec.u)};
   if (newunit) {
-    context_.CheckIndexVarRedefine(newunit->v.thing.thing);
+    context_.CheckIndexVarRedefine(
+        parser::UnwrapRef<parser::Variable>(newunit));
   }
 }
 
@@ -1166,25 +1173,97 @@ void DoForallChecker::Leave(const parser::InquireSpec &inquireSpec) {
   const auto *intVar{std::get_if<parser::InquireSpec::IntVar>(&inquireSpec.u)};
   if (intVar) {
     const auto &scalar{std::get<parser::ScalarIntVariable>(intVar->t)};
-    context_.CheckIndexVarRedefine(scalar.thing.thing);
+    context_.CheckIndexVarRedefine(parser::UnwrapRef<parser::Variable>(scalar));
   }
 }
 
 void DoForallChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
   const auto *size{std::get_if<parser::IoControlSpec::Size>(&ioControlSpec.u)};
   if (size) {
-    context_.CheckIndexVarRedefine(size->v.thing.thing);
+    context_.CheckIndexVarRedefine(parser::UnwrapRef<parser::Variable>(size));
   }
 }
 
+static void CheckIoImpliedDoIndex(
+    SemanticsContext &context, const parser::Name &name) {
+  if (name.symbol) {
+    context.CheckIndexVarRedefine(name.source, *name.symbol);
+    if (auto why{WhyNotDefinable(name.source, name.symbol->owner(),
+            DefinabilityFlags{}, *name.symbol)}) {
+      context.Say(std::move(*why));
+    }
+  }
+}
+
+// F2023 12.6.3p7: The do-variable of an io-implied-do that is in another
+// io-implied-do shall not appear as, nor be associated with, the do-variable
+// of the containing io-implied-do.
+void DoForallChecker::CheckActiveIoImpliedDoVar(const parser::Name &name) {
+  if (!name.symbol) {
+    return;
+  }
+  const Symbol &resolved{ResolveAssociations(*name.symbol)};
+  const EquivalenceSet *equivSet{FindEquivalenceSet(resolved)};
+  for (const Symbol *active : activeIoImpliedDoVars_) {
+    const Symbol &activeResolved{ResolveAssociations(*active)};
+    bool associated{&resolved == &activeResolved};
+    if (!associated && equivSet) {
+      for (const EquivalenceObject &obj : *equivSet) {
+        if (obj.symbol == activeResolved) {
+          associated = true;
+          break;
+        }
+      }
+    }
+    if (associated) {
+      if (name.symbol == active) {
+        context_.Warn(common::UsageWarning::IoImpliedDoIndexConflict,
+            name.source,
+            "I/O implied DO index '%s' appears in an enclosing I/O implied DO loop and should not have the same name"_warn_en_US,
+            name.source);
+      } else {
+        context_.Warn(common::UsageWarning::IoImpliedDoIndexConflict,
+            name.source,
+            "I/O implied DO index '%s' should not be associated with do-variable '%s' of an enclosing I/O implied DO loop"_warn_en_US,
+            name.source, active->name());
+      }
+      break;
+    }
+  }
+  activeIoImpliedDoVars_.insert(name.symbol);
+}
+
+void DoForallChecker::Enter(const parser::OutputImpliedDo &outputImpliedDo) {
+  CheckActiveIoImpliedDoVar(parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name()));
+}
+
+void DoForallChecker::Enter(const parser::InputImpliedDo &inputImpliedDo) {
+  CheckActiveIoImpliedDoVar(parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name()));
+}
+
 void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
-  const auto &control{std::get<parser::IoImpliedDoControl>(outputImpliedDo.t)};
-  const parser::Name &name{control.name.thing.thing};
-  context_.CheckIndexVarRedefine(name.source, *name.symbol);
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).Name())};
+  CheckIoImpliedDoIndex(context_, name);
+  if (name.symbol) {
+    activeIoImpliedDoVars_.erase(name.symbol);
+  }
+}
+
+void DoForallChecker::Leave(const parser::InputImpliedDo &inputImpliedDo) {
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).Name())};
+  CheckIoImpliedDoIndex(context_, name);
+  if (name.symbol) {
+    activeIoImpliedDoVars_.erase(name.symbol);
+  }
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {
-  context_.CheckIndexVarRedefine(statVariable.v.thing.thing);
+  context_.CheckIndexVarRedefine(
+      parser::UnwrapRef<parser::Variable>(statVariable));
 }
 
 } // namespace Fortran::semantics

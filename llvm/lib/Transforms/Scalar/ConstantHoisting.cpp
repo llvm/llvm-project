@@ -44,7 +44,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -269,12 +268,14 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       std::pair<SetVector<BasicBlock *>, BlockFrequency>;
 
   // InsertPtsMap is a map from a BB to the best insertion points for the
-  // subtree of BB (subtree not including the BB itself).
+  // subtree of BB (subtree not including the BB itself). Pre-populate every
+  // node so that loop below only uses find().
   DenseMap<BasicBlock *, InsertPtsCostPair> InsertPtsMap;
-  InsertPtsMap.reserve(Orders.size() + 1);
+  for (BasicBlock *Node : Orders)
+    InsertPtsMap.try_emplace(Node);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
+    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap.find(Node)->second;
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -290,7 +291,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
+    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap.find(Parent)->second;
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.
@@ -381,12 +382,12 @@ void ConstantHoistingPass::collectConstantCandidates(
     ConstCandMapType::iterator Itr;
     bool Inserted;
     ConstPtrUnionType Cand = ConstInt;
-    std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(Cand, 0));
+    std::tie(Itr, Inserted) = ConstCandMap.try_emplace(Cand);
     if (Inserted) {
       ConstIntCandVec.push_back(ConstantCandidate(ConstInt));
       Itr->second = ConstIntCandVec.size() - 1;
     }
-    ConstIntCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
+    ConstIntCandVec[Itr->second].addUser(Inst, Idx, Cost.getValue());
     LLVM_DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx))) dbgs()
                    << "Collect constant " << *ConstInt << " from " << *Inst
                    << " with cost " << Cost << '\n';
@@ -439,14 +440,14 @@ void ConstantHoistingPass::collectConstantCandidates(
   ConstCandMapType::iterator Itr;
   bool Inserted;
   ConstPtrUnionType Cand = ConstExpr;
-  std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(Cand, 0));
+  std::tie(Itr, Inserted) = ConstCandMap.try_emplace(Cand);
   if (Inserted) {
     ExprCandVec.push_back(ConstantCandidate(
         ConstantInt::get(Type::getInt32Ty(*Ctx), Offset.getLimitedValue()),
         ConstExpr));
     Itr->second = ExprCandVec.size() - 1;
   }
-  ExprCandVec[Itr->second].addUser(Inst, Idx, *Cost.getValue());
+  ExprCandVec[Itr->second].addUser(Inst, Idx, Cost.getValue());
 }
 
 /// Check the operand for instruction Inst at index Idx.
@@ -504,6 +505,12 @@ void ConstantHoistingPass::collectConstantCandidates(
 
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
+    // Skip analyzing incoming PHI edges from unreachable blocks.
+    if (auto PHI = dyn_cast<PHINode>(Inst)) {
+      BasicBlock *IncomingBB = PHI->getIncomingBlock(Idx);
+      if (!DT->isReachableFromEntry(IncomingBB))
+        continue;
+    }
     // The cost of materializing the constants (defined in
     // `TargetTransformInfo::getIntImmCostInst`) for instructions which only
     // take constant variables is lower than `TargetTransformInfo::TCC_Basic`.
@@ -883,7 +890,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
         emitBaseConstants(Base, &R);
         ReBasesNum++;
         // Use the same debug location as the last user of the constant.
-        Base->setDebugLoc(DILocation::getMergedLocation(
+        Base->setDebugLoc(DebugLoc::getMergedLocation(
             Base->getDebugLoc(), R.User.Inst->getDebugLoc()));
       }
       assert(!Base->use_empty() && "The use list is empty!?");

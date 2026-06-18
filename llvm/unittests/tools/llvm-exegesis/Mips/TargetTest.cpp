@@ -9,7 +9,6 @@
 #include "Target.h"
 
 #include <cassert>
-#include <memory>
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "TestBase.h"

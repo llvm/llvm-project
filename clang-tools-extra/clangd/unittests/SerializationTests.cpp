@@ -433,7 +433,6 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
   std::string CorruptStri =
       (llvm::fromHex("ffffffff") + Stri->Data.drop_front(4)).str();
   Stri->Data = CorruptStri;
-  std::string FileDigest = llvm::fromHex("EED8F5EAF25C453C");
 
   // Try to crash rather than hang on large allocation.
   ScopedMemoryLimit MemLimit(1000 * 1024 * 1024); // 1GB

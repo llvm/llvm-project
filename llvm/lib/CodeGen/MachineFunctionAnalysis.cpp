@@ -21,6 +21,10 @@ using namespace llvm;
 
 AnalysisKey MachineFunctionAnalysis::Key;
 
+llvm::MachineFunctionAnalysis::Result::Result(
+    std::unique_ptr<MachineFunction> MF)
+    : MF(std::move(MF)) {}
+
 bool MachineFunctionAnalysis::Result::invalidate(
     Function &, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &) {
@@ -44,4 +48,10 @@ MachineFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
   TM->registerMachineRegisterInfoCallback(*MF);
 
   return Result(std::move(MF));
+}
+
+PreservedAnalyses FreeMachineFunctionPass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  FAM.clearAnalysis<MachineFunctionAnalysis>(F);
+  return PreservedAnalyses::all();
 }

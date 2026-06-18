@@ -88,6 +88,14 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
     return Builder.CreateMaxNum(Loaded, Val);
   case AtomicRMWInst::FMin:
     return Builder.CreateMinNum(Loaded, Val);
+  case AtomicRMWInst::FMaximum:
+    return Builder.CreateMaximum(Loaded, Val);
+  case AtomicRMWInst::FMinimum:
+    return Builder.CreateMinimum(Loaded, Val);
+  case AtomicRMWInst::FMaximumNum:
+    return Builder.CreateMaximumNum(Loaded, Val);
+  case AtomicRMWInst::FMinimumNum:
+    return Builder.CreateMinimumNum(Loaded, Val);
   case AtomicRMWInst::UIncWrap: {
     Constant *One = ConstantInt::get(Loaded->getType(), 1);
     Value *Inc = Builder.CreateAdd(Loaded, One);

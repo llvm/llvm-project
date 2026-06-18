@@ -1,4 +1,4 @@
-//===--- ClangTidyModule.h - clang-tidy -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "ClangTidyOptions.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Registry.h"
 #include <functional>
 #include <memory>
 
@@ -27,12 +28,12 @@ class ClangTidyContext;
 class ClangTidyCheckFactories {
 public:
   using CheckFactory = std::function<std::unique_ptr<ClangTidyCheck>(
-      llvm::StringRef Name, ClangTidyContext *Context)>;
+      StringRef Name, ClangTidyContext *Context)>;
 
   /// Registers check \p Factory with name \p Name.
   ///
   /// For all checks that have default constructors, use \c registerCheck.
-  void registerCheckFactory(llvm::StringRef Name, CheckFactory Factory);
+  void registerCheckFactory(StringRef Name, CheckFactory Factory);
 
   /// Registers the \c CheckType with the name \p Name.
   ///
@@ -55,12 +56,14 @@ public:
   ///   }
   /// };
   /// \endcode
-  template <typename CheckType> void registerCheck(llvm::StringRef CheckName) {
+  template <typename CheckType> void registerCheck(StringRef CheckName) {
     registerCheckFactory(CheckName,
-                         [](llvm::StringRef Name, ClangTidyContext *Context) {
+                         [](StringRef Name, ClangTidyContext *Context) {
                            return std::make_unique<CheckType>(Name, Context);
                          });
   }
+
+  void eraseCheck(StringRef CheckName) { Factories.erase(CheckName); }
 
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>
@@ -83,7 +86,7 @@ private:
 /// them a prefixed name.
 class ClangTidyModule {
 public:
-  virtual ~ClangTidyModule() {}
+  virtual ~ClangTidyModule() = default;
 
   /// Implement this function in order to register all \c CheckFactories
   /// belonging to this module.
@@ -93,6 +96,12 @@ public:
   virtual ClangTidyOptions getModuleOptions();
 };
 
+using ClangTidyModuleRegistry = llvm::Registry<ClangTidyModule>;
+
 } // namespace clang::tidy
+
+namespace llvm {
+extern template class Registry<clang::tidy::ClangTidyModule>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULE_H

@@ -44,16 +44,19 @@ using namespace __lsan;
   void *p = lsan_valloc(size, stack)
 #define COMMON_MALLOC_FREE(ptr) \
   lsan_free(ptr)
-#define COMMON_MALLOC_SIZE(ptr) \
-  uptr size = lsan_mz_size(ptr)
-#define COMMON_MALLOC_FILL_STATS(zone, stats)
-#define COMMON_MALLOC_REPORT_UNKNOWN_REALLOC(ptr, zone_ptr, zone_name) \
-  (void)zone_name; \
-  Report("mz_realloc(%p) -- attempting to realloc unallocated memory.\n", ptr);
-#define COMMON_MALLOC_NAMESPACE __lsan
-#define COMMON_MALLOC_HAS_ZONE_ENUMERATOR 0
-#define COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT 0
+#  define COMMON_MALLOC_FREE_SIZED(ptr, size) lsan_free_sized(ptr, size)
+#  define COMMON_MALLOC_FREE_ALIGNED_SIZED(ptr, alignment, size) \
+    lsan_free_aligned_sized(ptr, alignment, size)
+#  define COMMON_MALLOC_SIZE(ptr) uptr size = lsan_mz_size(ptr)
+#  define COMMON_MALLOC_FILL_STATS(zone, stats)
+#  define COMMON_MALLOC_REPORT_UNKNOWN_REALLOC(ptr, zone_ptr, zone_name)    \
+    (void)zone_name;                                                        \
+    Report("mz_realloc(%p) -- attempting to realloc unallocated memory.\n", \
+           ptr);
+#  define COMMON_MALLOC_NAMESPACE __lsan
+#  define COMMON_MALLOC_HAS_ZONE_ENUMERATOR 0
+#  define COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT 0
 
-#include "sanitizer_common/sanitizer_malloc_mac.inc"
+#  include "sanitizer_common/sanitizer_malloc_mac.inc"
 
 #endif // SANITIZER_APPLE

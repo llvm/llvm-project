@@ -39,7 +39,7 @@ class AdvDataFormatterTestCase(TestBase):
         def cleanup():
             self.runCmd("type format clear", check=False)
             self.runCmd("type summary clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
+            self.runCmd("settings set target.max-children-count 24", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)

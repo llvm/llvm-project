@@ -6,7 +6,7 @@
 //
 //==------------------------------------------------------------------------==//
 #include "SPIRVOpenMP.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -22,7 +22,7 @@ SPIRVOpenMPToolChain::SPIRVOpenMPToolChain(const Driver &D,
 
 void SPIRVOpenMPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
 
   if (DeviceOffloadingKind != Action::OFK_OpenMP)
     return;

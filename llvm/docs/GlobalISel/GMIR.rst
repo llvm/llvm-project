@@ -26,7 +26,7 @@ Generic Machine Instructions
   Reference.
 
 Whereas MIR deals largely in Target Instructions and only has a small set of
-target independent opcodes such as ``COPY``, ``PHI``, and ``REG_SEQUENCE``,
+target-independent opcodes such as ``COPY``, ``PHI``, and ``REG_SEQUENCE``,
 gMIR defines a rich collection of ``Generic Opcodes`` which are target
 independent and describe operations which are typically supported by targets.
 One example is ``G_ADD`` which is the generic opcode for an integer addition.
@@ -174,7 +174,9 @@ Here are some LLT examples and their ``EVT`` and ``Type`` equivalents:
    =============  =========  ======================================
    ``s1``         ``i1``     ``i1``
    ``s8``         ``i8``     ``i8``
+   ``s8``         ``i8``     ``b8`` [#byte-as-integer]_
    ``s32``        ``i32``    ``i32``
+   ``s32``        ``i32``    ``b32`` [#byte-as-integer]_
    ``s32``        ``f32``    ``float``
    ``s17``        ``i17``    ``i17``
    ``s16``        N/A        ``{i8, i8}`` [#abi-dependent]_
@@ -182,6 +184,7 @@ Here are some LLT examples and their ``EVT`` and ``Type`` equivalents:
    ``p0``         ``iPTR``   ``i8*``, ``i32*``, ``%opaque*``
    ``p2``         ``iPTR``   ``i8 addrspace(2)*``
    ``<4 x s32>``  ``v4f32``  ``<4 x float>``
+   ``<4 x s8>``   ``v4i8``   ``<4 x b8>`` [#byte-as-integer]_
    ``s64``        ``v1f64``  ``<1 x double>``
    ``<3 x s32>``  ``v3i32``  ``<3 x i32>``
    =============  =========  ======================================
@@ -212,6 +215,8 @@ on their addressspace.
 .. rubric:: Footnotes
 
 .. [#abi-dependent] This mapping is ABI dependent. Here we've assumed no additional padding is required.
+.. [#byte-as-integer] The :ref:`byte type <t_byte>` ``bN`` is translated as the
+   equi-sized integer scalar ``sN``. See :ref:`irtranslator-byte-type`.
 
 Generic Opcode Reference
 ------------------------

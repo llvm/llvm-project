@@ -233,17 +233,18 @@
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/OnDiskHashTable.h"
 #include <cstdint>
 #include <list>
 #include <memory>
 #include <optional>
 #include <string>
 #include <system_error>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -273,18 +274,18 @@ public:
 
   /// Create a remapper from the given remapping file. The remapper will
   /// be used for profile read in by Reader.
-  static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
   create(StringRef Filename, vfs::FileSystem &FS, SampleProfileReader &Reader,
          LLVMContext &C);
 
   /// Create a remapper from the given Buffer. The remapper will
   /// be used for profile read in by Reader.
-  static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
   create(std::unique_ptr<MemoryBuffer> &B, SampleProfileReader &Reader,
          LLVMContext &C);
 
   /// Apply remappings to the profile read by Reader.
-  void applyRemapping(LLVMContext &Ctx);
+  LLVM_ABI void applyRemapping(LLVMContext &Ctx);
 
   bool hasApplied() { return RemappingApplied; }
 
@@ -299,7 +300,7 @@ public:
 
   /// Return the equivalent name in the profile for \p FunctionName if
   /// it exists.
-  std::optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
+  LLVM_ABI std::optional<StringRef> lookUpNameInProfile(StringRef FunctionName);
 
 private:
   // The buffer holding the content read from remapping file.
@@ -343,6 +344,30 @@ private:
 /// The reader supports two file formats: text and binary. The text format
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
+
+/// NameTableIterator is a lightweight, self-contained input iterator designed
+/// to stream FunctionId symbols from an eagerly populated contiguous buffer
+/// of FunctionId objects.
+class NameTableIterator
+    : public llvm::iterator_facade_base<
+          NameTableIterator, std::input_iterator_tag, FunctionId,
+          std::ptrdiff_t, const FunctionId *, FunctionId> {
+  const FunctionId *Ptr = nullptr;
+
+public:
+  NameTableIterator() = default;
+  NameTableIterator(const FunctionId *P) : Ptr(P) {}
+
+  bool operator==(const NameTableIterator &RHS) const { return Ptr == RHS.Ptr; }
+
+  NameTableIterator &operator++() {
+    ++Ptr;
+    return *this;
+  }
+
+  FunctionId operator*() const { return *Ptr; }
+};
+
 class SampleProfileReader {
 public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -395,7 +420,8 @@ public:
   virtual std::error_code readImpl() = 0;
 
   /// Print the profile for \p FunctionSamples on stream \p OS.
-  void dumpFunctionProfile(const FunctionSamples &FS, raw_ostream &OS = dbgs());
+  LLVM_ABI void dumpFunctionProfile(const FunctionSamples &FS,
+                                    raw_ostream &OS = dbgs());
 
   /// Collect functions with definitions in Module M. For reader which
   /// support loading function profiles on demand, return true when the
@@ -404,10 +430,10 @@ public:
   virtual bool collectFuncsFromModule() { return false; }
 
   /// Print all the profiles on stream \p OS.
-  void dump(raw_ostream &OS = dbgs());
+  LLVM_ABI void dump(raw_ostream &OS = dbgs());
 
   /// Print all the profiles on stream \p OS in the JSON format.
-  void dumpJson(raw_ostream &OS = dbgs());
+  LLVM_ABI void dumpJson(raw_ostream &OS = dbgs());
 
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
@@ -456,7 +482,7 @@ public:
   /// Create a sample profile reader appropriate to the file format.
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
-  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(StringRef Filename, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          StringRef RemapFilename = "");
@@ -464,7 +490,7 @@ public:
   /// Create a sample profile reader from the supplied memory buffer.
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
-  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          StringRef RemapFilename = "");
@@ -495,7 +521,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual std::vector<FunctionId> *getNameTable() { return nullptr; }
+  virtual llvm::iterator_range<NameTableIterator> getNameTable() const {
+    return {NameTableIterator(), NameTableIterator()};
+  }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
@@ -516,7 +544,7 @@ public:
   void setModule(const Module *Mod) { M = Mod; }
 
   void setFuncNameToProfNameMap(
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId> &FPMap) {
+      const HashKeyMap<DenseMap, FunctionId, FunctionId> &FPMap) {
     FuncNameToProfNameMap = &FPMap;
   }
 
@@ -544,7 +572,7 @@ protected:
   }
 
   /// Compute summary for this profile.
-  void computeSummary();
+  LLVM_ABI void computeSummary();
 
   /// Read sample profiles for the given functions and write them to the given
   /// profile map. Currently it's only used for extended binary format to load
@@ -559,12 +587,12 @@ protected:
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
-  const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-      *FuncNameToProfNameMap = nullptr;
+  const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap =
+      nullptr;
 
   // A map from a function's context hash to its meta data section range, used
   // for on-demand read function profile metadata.
-  std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
+  DenseMap<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
   std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
@@ -587,6 +615,10 @@ protected:
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
 
+  /// If true, the profile has vtable profiles and reader should decode them
+  /// to parse profiles correctly.
+  bool ReadVTableProf = false;
+
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
 
@@ -608,7 +640,7 @@ protected:
   bool SkipFlatProf = false;
 };
 
-class SampleProfileReaderText : public SampleProfileReader {
+class LLVM_ABI SampleProfileReaderText : public SampleProfileReader {
 public:
   SampleProfileReaderText(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : SampleProfileReader(std::move(B), C, SPF_Text) {}
@@ -631,7 +663,7 @@ private:
   std::list<SampleContextFrameVector> CSNameTable;
 };
 
-class SampleProfileReaderBinary : public SampleProfileReader {
+class LLVM_ABI SampleProfileReaderBinary : public SampleProfileReader {
 public:
   SampleProfileReaderBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                             SampleProfileFormat Format = SPF_None)
@@ -645,8 +677,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  std::vector<FunctionId> *getNameTable() override {
-    return &NameTable;
+  llvm::iterator_range<NameTableIterator> getNameTable() const override {
+    return {NameTableIterator(NameTable.data()),
+            NameTableIterator(NameTable.data() + NameTable.size())};
   }
 
 protected:
@@ -701,6 +734,14 @@ protected:
   /// otherwise same as readStringFromTable, also return its hash value.
   ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
 
+  /// Read all virtual functions' vtable access counts for \p FProfile.
+  std::error_code readCallsiteVTableProf(FunctionSamples &FProfile);
+
+  /// Read bytes from the input buffer pointed by `Data` and decode them into
+  /// \p M. `Data` will be advanced to the end of the read bytes when this
+  /// function returns. Returns error if any.
+  std::error_code readVTableTypeCountMap(TypeCountMap &M);
+
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
 
@@ -730,7 +771,7 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) = 0;
 };
 
-class SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
+class LLVM_ABI SampleProfileReaderRawBinary : public SampleProfileReaderBinary {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
 
@@ -741,6 +782,48 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+};
+
+/// Trait class for reading the on-disk function offset hash table mapping
+/// function name GUIDs to their offsets in the SecLBRProfile section.
+class FuncOffsetHashTableInfo {
+public:
+  using key_type = uint64_t;
+  using key_type_ref = uint64_t;
+  using data_type = uint32_t; // Offset
+  using data_type_ref = uint32_t;
+  using hash_value_type = uint32_t;
+  using offset_type = uint32_t;
+  using internal_key_type = uint64_t;
+  using external_key_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref Key) {
+    return static_cast<hash_value_type>(Key);
+  }
+
+  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
+    return LHS == RHS;
+  }
+
+  static key_type GetInternalKey(key_type_ref Key) { return Key; }
+  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    // Implicit lengths: do NOT read or advance pointer D.
+    return {sizeof(key_type), sizeof(data_type)};
+  }
+
+  static key_type ReadKey(const unsigned char *D, offset_type Len) {
+    assert(Len == sizeof(key_type) && "Key length mismatch");
+    return support::endian::read64le(D);
+  }
+
+  static data_type ReadData(key_type_ref K, const unsigned char *D,
+                            offset_type Len) {
+    assert(Len == sizeof(data_type) && "Data length mismatch");
+    return support::endian::read32le(D);
+  }
 };
 
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
@@ -762,7 +845,8 @@ public:
 /// commonly used sections of a profile in extensible binary format. It is
 /// possible to define other types of profile inherited from
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase.
-class SampleProfileReaderExtBinaryBase : public SampleProfileReaderBinary {
+class LLVM_ABI SampleProfileReaderExtBinaryBase
+    : public SampleProfileReaderBinary {
 private:
   std::error_code decompressSection(const uint8_t *SecStart,
                                     const uint64_t SecSize,
@@ -845,7 +929,8 @@ private:
                        SampleProfileMap &Profiles) override;
 };
 
-class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
+class LLVM_ABI SampleProfileReaderExtBinary
+    : public SampleProfileReaderExtBinaryBase {
 private:
   std::error_code verifySPMagic(uint64_t Magic) override;
   std::error_code readCustomSection(const SecHdrTableEntry &Entry) override {
@@ -878,7 +963,7 @@ enum HistType {
   HIST_TYPE_INDIR_CALL_TOPN
 };
 
-class SampleProfileReaderGCC : public SampleProfileReader {
+class LLVM_ABI SampleProfileReaderGCC : public SampleProfileReader {
 public:
   SampleProfileReaderGCC(std::unique_ptr<MemoryBuffer> B, LLVMContext &C)
       : SampleProfileReader(std::move(B), C, SPF_GCC),

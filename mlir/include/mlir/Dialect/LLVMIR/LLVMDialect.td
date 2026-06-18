@@ -27,6 +27,7 @@ def LLVM_Dialect : Dialect {
   );
 
   let extraClassDeclaration = [{
+    static StringRef getTargetAttrName() { return "llvm.target"; }
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
@@ -35,6 +36,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getIdentAttrName() { return "llvm.ident"; }
     static StringRef getModuleFlags() { return "llvm.module.flags"; }
     static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
+    static StringRef getMmraAttrName() { return "llvm.mmra"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }
@@ -60,7 +62,11 @@ def LLVM_Dialect : Dialect {
     static StringRef getSExtAttrName() { return "llvm.signext"; }
     static StringRef getStackAlignmentAttrName() { return "llvm.alignstack"; }
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
+    static StringRef getWritableAttrName() { return "llvm.writable"; }
     static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
+    static StringRef getDeadOnUnwindAttrName() { return "llvm.dead_on_unwind"; }
+    static StringRef getDeadOnReturnAttrName() { return "llvm.dead_on_return"; }
+    static StringRef getNoFPClassAttrName() { return "llvm.nofpclass"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
     static StringRef getOpBundleSizesAttrName() { return "op_bundle_sizes"; }
     static StringRef getOpBundleTagsAttrName() { return "op_bundle_tags"; }
@@ -83,9 +89,20 @@ def LLVM_Dialect : Dialect {
       return "llvm.emit_c_interface";
     }
 
+    /// Name of the module level assembly attribute.
+    static StringRef getModuleLevelAsmAttrName() { return "llvm.module_asm"; }
+
     /// Name of the dependent libraries attribute.
     static StringRef getDependentLibrariesAttrName() {
       return "llvm.dependent_libraries";
+    }
+
+    /// Names of known llvm module flag keys.
+    static StringRef getModuleFlagKeyCGProfileName() {
+      return "CG Profile";
+    }
+    static StringRef getModuleFlagKeyProfileSummaryName() {
+      return "ProfileSummary";
     }
 
     /// Returns `true` if the given type is compatible with the LLVM dialect.

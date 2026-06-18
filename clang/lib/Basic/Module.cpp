@@ -25,7 +25,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <string>
@@ -54,7 +53,7 @@ Module::Module(ModuleConstructorTag, StringRef Name,
     NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
     ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
-    Parent->SubModules.push_back(this);
+    Parent->addSubmodule(Name, this);
   }
 }
 
@@ -334,26 +333,21 @@ void Module::markUnavailable(bool Unimportable) {
   SmallVector<Module *, 2> Stack;
   Stack.push_back(this);
   while (!Stack.empty()) {
-    Module *Current = Stack.back();
-    Stack.pop_back();
+    Module *Current = Stack.pop_back_val();
 
     if (!needUpdate(Current))
       continue;
 
     Current->IsAvailable = false;
     Current->IsUnimportable |= Unimportable;
-    for (auto *Submodule : Current->submodules()) {
+    for (Module *Submodule : Current->submodules()) {
       if (needUpdate(Submodule))
         Stack.push_back(Submodule);
     }
   }
 }
 
-Module *Module::findSubmodule(StringRef Name) const {
-  // Add new submodules into the index.
-  for (unsigned I = SubModuleIndex.size(), E = SubModules.size(); I != E; ++I)
-    SubModuleIndex[SubModules[I]->Name] = I;
-
+ModuleRef Module::findSubmodule(StringRef Name) const {
   if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
     return SubModules[It->second];
 
@@ -364,7 +358,7 @@ Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
                                 "fragment from the C++20 Named modules");
 
-  for (auto *SubModule : SubModules)
+  for (Module *SubModule : submodules())
     if (SubModule->isExplicitGlobalModule())
       return SubModule;
 
@@ -375,7 +369,7 @@ Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
                                 "fragment from the C++20 Named modules");
 
-  for (auto *SubModule : SubModules)
+  for (Module *SubModule : submodules())
     if (SubModule->isPrivateModule())
       return SubModule;
 
@@ -384,21 +378,17 @@ Module *Module::getPrivateModuleFragment() const {
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // All non-explicit submodules are exported.
-  for (std::vector<Module *>::const_iterator I = SubModules.begin(),
-                                             E = SubModules.end();
-       I != E; ++I) {
-    Module *Mod = *I;
+  for (Module *Mod : submodules())
     if (!Mod->IsExplicit)
       Exported.push_back(Mod);
-  }
 
   // Find re-exported modules by filtering the list of imported modules.
   bool AnyWildcard = false;
   bool UnrestrictedWildcard = false;
   SmallVector<Module *, 4> WildcardRestrictions;
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
-    Module *Mod = Exports[I].getPointer();
-    if (!Exports[I].getInt()) {
+    Module *Mod = Exports[I].first;
+    if (!Exports[I].second) {
       // Export a named module directly; no wildcards involved.
       Exported.push_back(Mod);
 
@@ -411,7 +401,7 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
     if (UnrestrictedWildcard)
       continue;
 
-    if (Module *Restriction = Exports[I].getPointer())
+    if (Module *Restriction = Exports[I].first)
       WildcardRestrictions.push_back(Restriction);
     else {
       WildcardRestrictions.clear();
@@ -561,7 +551,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "export_as" << ExportAsModule << "\n";
   }
 
-  for (auto *Submodule : submodules())
+  for (Module *Submodule : submodules())
     // Print inferred subframework modules so that we don't need to re-infer
     // them (requires expensive directory iteration + stat calls) when we build
     // the module. Regular inferred submodules are OK, as we need to look at all
@@ -572,9 +562,9 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "export ";
-    if (Module *Restriction = Exports[I].getPointer()) {
+    if (Module *Restriction = Exports[I].first) {
       OS << Restriction->getFullModuleName(true);
-      if (Exports[I].getInt())
+      if (Exports[I].second)
         OS << ".*";
     } else {
       OS << "*";

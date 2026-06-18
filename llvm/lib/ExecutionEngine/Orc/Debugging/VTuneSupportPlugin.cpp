@@ -162,7 +162,7 @@ void VTuneSupportPlugin::notifyTransferringResources(JITDylib &JD,
     return;
 
   auto &Dest = LoadedMethodIDs[DstKey];
-  Dest.insert(Dest.end(), I->second.begin(), I->second.end());
+  llvm::append_range(Dest, I->second);
   LoadedMethodIDs.erase(SrcKey);
 }
 

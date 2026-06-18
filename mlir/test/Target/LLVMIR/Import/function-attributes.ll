@@ -22,14 +22,14 @@ define dso_local void @dsolocal_func() {
 ; // -----
 
 ; CHECK-LABEL: @func_readnone
-; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 ; CHECK:   llvm.return
 define void @func_readnone() readnone {
   ret void
 }
 
 ; CHECK-LABEL: @func_readnone_indirect
-; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 declare void @func_readnone_indirect() #0
 attributes #0 = { readnone }
 
@@ -53,7 +53,10 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.preallocated = f64}
 ; CHECK-SAME:  !llvm.ptr {llvm.returned}
 ; CHECK-SAME:  !llvm.ptr {llvm.alignstack = 32 : i64}
-; CHECK-SAME:  !llvm.ptr {llvm.writeonly}
+; CHECK-SAME:  !llvm.ptr {llvm.writable, llvm.writeonly}
+; CHECK-SAME:  !llvm.ptr {llvm.dead_on_unwind}
+; CHECK-SAME:  !llvm.ptr {llvm.dead_on_return = 8 : i64}
+; CHECK-SAME:  f32 {llvm.nofpclass = 519 : i64}
 ; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
@@ -73,8 +76,11 @@ define ptr @func_arg_attrs(
     ptr preallocated(double) %arg16,
     ptr returned %arg17,
     ptr alignstack(32) %arg18,
-    ptr writeonly %arg19,
-    i64 range(i64 0, 4097) %arg20) {
+    ptr writable writeonly %arg19,
+    ptr dead_on_unwind %arg20,
+    ptr dead_on_return(8) %arg21,
+    float nofpclass(nan inf) %arg22,
+    i64 range(i64 0, 4097) %arg23) {
   ret ptr %arg17
 }
 
@@ -134,6 +140,12 @@ declare noundef ptr @func_res_attr_noundef()
 
 ; // -----
 
+; CHECK-LABEL: @func_res_attr_nofpclass
+; CHECK-SAME:  (f32 {llvm.nofpclass = 519 : i64})
+declare nofpclass(nan inf) float @func_res_attr_nofpclass()
+
+; // -----
+
 ; CHECK-LABEL: @func_res_attr_dereferenceable
 ; CHECK-SAME:  !llvm.ptr {llvm.dereferenceable = 42 : i64}
 declare dereferenceable(42) ptr @func_res_attr_dereferenceable()
@@ -169,7 +181,7 @@ define void @entry_count() !prof !1 {
 ; // -----
 
 ; CHECK-LABEL: @func_memory
-; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = readwrite, targetMem0 = readwrite, targetMem1 = readwrite>}
 ; CHECK:   llvm.return
 define void @func_memory() memory(readwrite, argmem: none) {
   ret void
@@ -303,54 +315,6 @@ declare void @align_decl() align 64
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_unsafe_fp_math_true
-; CHECK-SAME: attributes {unsafe_fp_math = true}
-declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_unsafe_fp_math_false
-; CHECK-SAME: attributes {unsafe_fp_math = false}
-declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_infs_fp_math_true
-; CHECK-SAME: attributes {no_infs_fp_math = true}
-declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_infs_fp_math_false
-; CHECK-SAME: attributes {no_infs_fp_math = false}
-declare void @func_attr_no_infs_fp_math_false() "no-infs-fp-math"="false"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_true
-; CHECK-SAME: attributes {no_nans_fp_math = true}
-declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_false
-; CHECK-SAME: attributes {no_nans_fp_math = false}
-declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_true
-; CHECK-SAME: attributes {approx_func_fp_math = true}
-declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_false
-; CHECK-SAME: attributes {approx_func_fp_math = false}
-declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
 declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"
@@ -363,21 +327,38 @@ declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_denormal_fp_math_ieee
-; CHECK-SAME: attributes {denormal_fp_math = "ieee"}
-declare void @func_attr_denormal_fp_math_ieee() "denormal-fp-math"="ieee"
+; CHECK-LABEL: @func_attr_denormal_fp_math_ieee(){{$}}
+declare void @func_attr_denormal_fp_math_ieee() denormal_fpenv(ieee)
 
 ; // -----
 
 ; CHECK-LABEL: @func_attr_denormal_fp_math_f32_preserve_sign
-; CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
-declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign"
+; CHECK-SAME: attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = ieee, default_input_mode = ieee, float_output_mode = preservesign, float_input_mode = preservesign>}
+declare void @func_attr_denormal_fp_math_f32_preserve_sign() denormal_fpenv(float: preservesign)
+
+; // -----
+
+; CHECK-LABEL: @func_attr_mixed_denormal_modes
+; CHECK: attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = dynamic, default_input_mode = preservesign, float_output_mode = preservesign, float_input_mode = dynamic>}
+declare void @func_attr_mixed_denormal_modes() denormal_fpenv(dynamic|preservesign, float: preservesign|dynamic)
 
 ; // -----
 
 ; CHECK-LABEL: @func_attr_fp_contract_fast
 ; CHECK-SAME: attributes {fp_contract = "fast"}
 declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_entry
+; CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+declare void @func_attr_instrument_function_entry() "instrument-function-entry"="__cyg_profile_func_enter"
+
+// -----
+
+; CHECK-LABEL: @func_attr_instrument_function_exit
+; CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
+declare void @func_attr_instrument_function_exit() "instrument-function-exit"="__cyg_profile_func_exit"
 
 // -----
 
@@ -390,6 +371,12 @@ declare void @noinline_attribute() noinline
 ; CHECK-LABEL: @alwaysinline_attribute
 ; CHECK-SAME: attributes {always_inline}
 declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @inlinehint_attribute
+; CHECK-SAME: attributes {inline_hint}
+declare void @inlinehint_attribute() inlinehint
 
 // -----
 
@@ -414,3 +401,112 @@ declare void @nounwind_attribute() nounwind
 ; CHECK-LABEL: @willreturn_attribute
 ; CHECK-SAME: attributes {will_return}
 declare void @willreturn_attribute() willreturn
+
+// -----
+
+; CHECK-LABEL: @noreturn_attribute
+; CHECK-SAME: attributes {noreturn}
+declare void @noreturn_attribute() noreturn
+
+// -----
+
+; CHECK-LABEL: @returnstwice_attribute
+; CHECK-SAME: attributes {returns_twice}
+declare void @returnstwice_attribute() returns_twice
+
+// -----
+
+; CHECK-LABEL: @hot_attribute
+; CHECK-SAME: attributes {hot}
+declare void @hot_attribute() hot
+
+// -----
+
+; CHECK-LABEL: @cold_attribute
+; CHECK-SAME: attributes {cold}
+declare void @cold_attribute() cold
+
+// -----
+
+; CHECK-LABEL: @noduplicate_attribute
+; CHECK-SAME: attributes {noduplicate}
+declare void @noduplicate_attribute() noduplicate
+
+// -----
+
+; CHECK-LABEL: @no_caller_saved_registers_attribute
+; CHECK-SAME: attributes {no_caller_saved_registers}
+declare void @no_caller_saved_registers_attribute () "no_caller_saved_registers"
+
+// -----
+
+; CHECK-LABEL: @nocallback_attribute
+; CHECK-SAME: attributes {nocallback}
+declare void @nocallback_attribute() nocallback
+
+// -----
+
+; CHECK-LABEL: @modular_format_attribute
+; CHECK-SAME: attributes {modular_format = "Ident,1,1,Foo,Bar"}
+declare void @modular_format_attribute(i32) "modular-format" = "Ident,1,1,Foo,Bar"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_all
+; CHECK-SAME: attributes {nobuiltins = []}
+declare void @no_builtins_all() "no-builtins"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_2
+; CHECK-SAME: attributes {nobuiltins = ["asdf", "defg"]}
+declare void @no_builtins_2() "no-builtin-asdf" "no-builtin-defg"
+
+// -----
+
+; CHECK-LABEL: @alloc_size_1
+; CHECK-SAME: attributes {allocsize = array<i32: 0>}
+declare void @alloc_size_1(i32) allocsize(0)
+
+// -----
+
+; CHECK-LABEL: @alloc_size_2
+; CHECK-SAME: attributes {allocsize = array<i32: 0, 1>}
+declare void @alloc_size_2(i32, i32) allocsize(0, 1)
+
+// -----
+
+; CHECK-LABEL: @minsize
+; CHECK-SAME: attributes {minsize}
+declare void @minsize() minsize
+
+// -----
+
+; CHECK-LABEL: @optsize
+; CHECK-SAME: attributes {optsize}
+declare void @optsize() optsize
+
+// -----
+
+; CHECK-LABEL: @save_reg_params
+; CHECK-SAME: attributes {save_reg_params}
+declare void @save_reg_params() "save-reg-params"
+
+// -----
+
+; CHECK-LABEL: @zero_call_used_regs
+; CHECK-SAME: attributes {zero_call_used_regs = "skip"}
+declare void @zero_call_used_regs() "zero-call-used-regs"="skip"
+
+// -----
+
+; Note: the 'default-func-attrs' aren't recoverable due to the way they lower
+; to LLVM-IR, so they are handled on import as passthrough attributes.
+; CHECK-LABEL: @default_func_attrs
+; CHECK-SAME: attributes {passthrough = {{\[}}["key", "value"], "keyOnly"]}
+declare void @default_func_attrs() "key"="value" "keyOnly"
+
+// -----
+
+; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
+declare void @test() preallocated(i32)

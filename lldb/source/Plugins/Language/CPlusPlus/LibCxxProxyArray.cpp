@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -41,7 +42,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   /// A non-owning pointer to the array's __vp_.
@@ -107,7 +108,7 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::GetChildAtIndex(
   uint64_t offset = idx * m_element_size_size_t;
   offset = offset + m_start->GetValueAsUnsigned(0);
 
-  lldb::ValueObjectSP indirect = CreateValueObjectFromAddress(
+  lldb::ValueObjectSP indirect = CreateChildValueObjectFromAddress(
       "", offset, m_backend.GetExecutionContextRef(), m_element_type_size_t);
   if (!indirect)
     return lldb::ValueObjectSP();
@@ -121,9 +122,9 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::GetChildAtIndex(
 
   StreamString name;
   name.Printf("[%" PRIu64 "] -> [%zu]", (uint64_t)idx, value);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -173,11 +174,16 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::Update() {
   return ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_base)
-    return std::numeric_limits<size_t>::max();
-  return ExtractIndexFromString(name.GetCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  }
+  return *optional_idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

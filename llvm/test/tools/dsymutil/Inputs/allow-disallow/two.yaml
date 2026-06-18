@@ -1,0 +1,4 @@
+objects:
+  - filename: '/private/tmp/allow-disallow/1.o'
+  - filename: '/private/tmp/allow-disallow/3.o'
+...

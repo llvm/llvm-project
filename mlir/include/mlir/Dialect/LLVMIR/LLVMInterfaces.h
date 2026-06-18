@@ -15,7 +15,13 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
+#include <type_traits>
+
 namespace mlir {
+
+class LLVMTypeConverter;
+class RewriterBase;
+
 namespace LLVM {
 namespace detail {
 

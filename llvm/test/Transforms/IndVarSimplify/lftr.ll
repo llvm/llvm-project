@@ -43,7 +43,7 @@ define i32 @pre_to_post_sub() {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 1
 ; CHECK-NEXT:    store i32 [[I]], ptr @A, align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp samesign ugt i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 0
@@ -270,7 +270,7 @@ define void @use_before_branch() {
 ; CHECK-NEXT:    br label [[LOOPENTRY_0:%.*]]
 ; CHECK:       loopentry.0:
 ; CHECK-NEXT:    [[MB_Y_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[T152:%.*]], [[LOOPENTRY_1:%.*]] ]
-; CHECK-NEXT:    [[T14:%.*]] = icmp ule i32 [[MB_Y_0]], 3
+; CHECK-NEXT:    [[T14:%.*]] = icmp samesign ule i32 [[MB_Y_0]], 3
 ; CHECK-NEXT:    br i1 [[T14]], label [[LOOPENTRY_1]], label [[LOOPEXIT_0:%.*]]
 ; CHECK:       loopentry.1:
 ; CHECK-NEXT:    [[T152]] = add nuw nsw i32 [[MB_Y_0]], 2

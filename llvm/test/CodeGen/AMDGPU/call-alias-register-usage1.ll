@@ -9,12 +9,12 @@
 ; The parent kernel has a higher VGPR usage than the possible callees.
 
 ; CHECK-LABEL: {{^}}kernel1:
-; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(kernel1.num_agpr, kernel1.num_vgpr), 1, 0)
-; CHECK-NEXT: .amdhsa_next_free_sgpr max(kernel1.numbered_sgpr+extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1), 1, 0)-extrasgprs(kernel1.uses_vcc, kernel1.uses_flat_scratch, 1)
+; CHECK:      .amdhsa_next_free_vgpr max(totalnumvgprs(.Lkernel1.num_agpr, .Lkernel1.num_vgpr), 1, 0)
+; CHECK-NEXT: .amdhsa_next_free_sgpr max(.Lkernel1.numbered_sgpr+extrasgprs(.Lkernel1.uses_vcc, .Lkernel1.uses_flat_scratch, 1), 1, 0)-extrasgprs(.Lkernel1.uses_vcc, .Lkernel1.uses_flat_scratch, 1)
 
-; CHECK:      .set kernel1.num_vgpr, max(42, .Laliasee_vgpr32_sgpr76.num_vgpr)
-; CHECK-NEXT: .set kernel1.num_agpr, max(0, .Laliasee_vgpr32_sgpr76.num_agpr)
-; CHECK-NEXT: .set kernel1.numbered_sgpr, max(33, .Laliasee_vgpr32_sgpr76.numbered_sgpr)
+; CHECK:      .set .Lkernel1.num_vgpr, max(42, .Laliasee_vgpr32_sgpr76.num_vgpr)
+; CHECK-NEXT: .set .Lkernel1.num_agpr, max(0, .Laliasee_vgpr32_sgpr76.num_agpr)
+; CHECK-NEXT: .set .Lkernel1.numbered_sgpr, max(33, .Laliasee_vgpr32_sgpr76.numbered_sgpr)
 define amdgpu_kernel void @kernel1() #0 {
 bb:
   call void asm sideeffect "; clobber v40 ", "~{v40}"()
@@ -35,5 +35,3 @@ attributes #0 = { noinline norecurse nounwind optnone }
 attributes #1 = { noinline norecurse nounwind readnone willreturn "amdgpu-waves-per-eu"="8,10" }
 attributes #2 = { nounwind readnone willreturn }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

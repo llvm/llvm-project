@@ -17,6 +17,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/Sequence.h"
 #include <optional>
 
@@ -126,7 +127,7 @@ public:
   /// and range length. `operandSegments` is an optional set of operand segments
   /// to be updated when mutating the operand list.
   MutableOperandRange(Operation *owner, unsigned start, unsigned length,
-                      ArrayRef<OperandSegment> operandSegments = std::nullopt);
+                      ArrayRef<OperandSegment> operandSegments = {});
   MutableOperandRange(Operation *owner);
 
   /// Construct a new mutable range for the given OpOperand.
@@ -383,13 +384,14 @@ private:
 class ValueRange final
     : public llvm::detail::indexed_accessor_range_base<
           ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
+          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *,
+                       const Repeated<Value> *>,
           Value, Value, Value> {
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, or results.
-  using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
+  /// values, operands, results, or a repeated single value.
+  using OwnerT = PointerUnion<const Value *, OpOperand *,
+                              detail::OpResultImpl *, const Repeated<Value> *>;
 
   using RangeBaseT::RangeBaseT;
 
@@ -409,9 +411,13 @@ public:
       : ValueRange(ResultRange(values)) {}
   ValueRange(ArrayRef<BlockArgument> values)
       : ValueRange(ArrayRef<Value>(values.data(), values.size())) {}
-  ValueRange(ArrayRef<Value> values = std::nullopt);
+  ValueRange(ArrayRef<Value> values = {});
   ValueRange(OperandRange values);
   ValueRange(ResultRange values);
+  /// Constructs a range from a repeated value. The Repeated object must outlive
+  /// this range.
+  ValueRange(const Repeated<Value> &repeatedValue LLVM_LIFETIME_BOUND)
+      : RangeBaseT(&repeatedValue, repeatedValue.count) {}
 
   /// Returns the types of the values within this range.
   using type_iterator = ValueTypeIterator<iterator>;

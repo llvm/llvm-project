@@ -21,7 +21,6 @@ foo:
 ; CHECK: out 63, r31                 ; encoding: [0xff,0xbf]
 
 ; CHECK: out bar-8, r29              ; encoding: [0xd0'A',0xb9'A']
-; CHECK:                             ;   fixup A - offset: 0, value: bar-8, kind: fixup_port6
 
 ; CHECK-INST: out 4,  r2
 ; CHECK-INST: out 6,  r9

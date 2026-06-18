@@ -40,14 +40,13 @@ int AddNamesMatchingPartialString(
     StringList *descriptions = nullptr) {
   int number_added = 0;
 
-  const bool add_all = cmd_str.empty();
-
-  for (auto iter = in_map.begin(), end = in_map.end(); iter != end; iter++) {
-    if (add_all || (iter->first.find(std::string(cmd_str), 0) == 0)) {
+  for (const auto &[name, cmd] : in_map) {
+    llvm::StringRef cmd_name = name;
+    if (cmd_name.starts_with(cmd_str)) {
       ++number_added;
-      matches.AppendString(iter->first.c_str());
+      matches.AppendString(name);
       if (descriptions)
-        descriptions->AppendString(iter->second->GetHelp());
+        descriptions->AppendString(cmd->GetHelp());
     }
   }
 
@@ -380,11 +379,14 @@ protected:
 
   Target &GetDummyTarget();
 
-  // This is for use in the command interpreter, and returns the most relevant
-  // target. In order of priority, that's the target from the command object's
-  // execution context, the target from the interpreter's execution context, the
-  // selected target or the dummy target.
-  Target &GetTarget();
+  /// Get the target this command should operate on. Prefers the frozen
+  /// execution context in the command object, falling back to the
+  /// interpreter's execution context. The dummy target is filtered out unless
+  /// the command has one of the eCommandRequires{Target,Process,Thread,Frame}
+  /// flags (in which case CheckRequirements has already guaranteed a real
+  /// target) or has opted in via eCommandAllowsDummyTarget. Returns null when
+  /// no target is available.
+  Target *GetTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have

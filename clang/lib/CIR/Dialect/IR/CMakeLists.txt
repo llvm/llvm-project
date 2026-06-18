@@ -3,9 +3,12 @@ add_clang_library(MLIRCIR
   CIRDialect.cpp
   CIRMemorySlot.cpp
   CIRTypes.cpp
+  CIRDataLayout.cpp
+  CIROpenCLAttrs.cpp
 
   DEPENDS
   MLIRCIROpsIncGen
+  MLIRCIRTypeConstraintsIncGen
   MLIRCIREnumsGen
   MLIRCIROpInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen

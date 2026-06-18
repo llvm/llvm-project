@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-// FIXME: Remove after issue https://github.com/llvm/llvm-project/issues/127348 resolved.
+// FIXME: Remove after issue https://llvm.org/PR127348 resolved.
 extern "C" const char* __asan_default_options() { return "check_initialization_order=true:strict_init_order=true"; }
 
 // Test that ios used from globals constructors doesn't trigger Asan initialization-order-fiasco.

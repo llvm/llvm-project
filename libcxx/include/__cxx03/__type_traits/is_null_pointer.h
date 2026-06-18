@@ -22,16 +22,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 inline const bool __is_null_pointer_v = __is_same(__remove_cv(_Tp), nullptr_t);
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_null_pointer : integral_constant<bool, __is_null_pointer_v<_Tp>> {};
-
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_null_pointer_v = __is_null_pointer_v<_Tp>;
-#  endif
-#endif // _LIBCPP_STD_VER >= 14
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_NULL_POINTER_H

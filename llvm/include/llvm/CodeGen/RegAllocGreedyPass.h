@@ -15,32 +15,30 @@
 
 using namespace llvm;
 
-class RAGreedyPass : public PassInfoMixin<RAGreedyPass> {
+class RAGreedyPass : public RequiredPassInfoMixin<RAGreedyPass> {
 public:
   struct Options {
     RegAllocFilterFunc Filter;
     StringRef FilterName;
     Options(RegAllocFilterFunc F = nullptr, StringRef FN = "all")
-        : Filter(F), FilterName(FN) {};
+        : Filter(std::move(F)), FilterName(FN) {};
   };
 
-  RAGreedyPass(Options Opts = Options()) : Opts(Opts) {}
-  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+  RAGreedyPass(Options Opts = Options()) : Opts(std::move(Opts)) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &F,
+                                 MachineFunctionAnalysisManager &AM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getClearedProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
-  void
+  LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName) const;
-  static bool isRequired() { return true; }
 
 private:
   Options Opts;

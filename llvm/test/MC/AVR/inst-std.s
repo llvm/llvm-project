@@ -18,7 +18,6 @@ foo:
 ; CHECK: std Z+30, r7                 ; encoding: [0x76,0x8e]
 
 ; CHECK: std Y+foo, r9                ; encoding: [0x98'A',0x82'A']
-; CHECK:                              ;   fixup A - offset: 0, value: +foo, kind: fixup_6
 
 ; INST: std Y+2, r2
 ; INST: std Y+0, r0

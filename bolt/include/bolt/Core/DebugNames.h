@@ -17,6 +17,7 @@
 #include "bolt/Core/DebugData.h"
 #include "llvm/CodeGen/AccelTable.h"
 
+#include <mutex>
 namespace llvm {
 namespace bolt {
 class BOLTDWARF5AccelTableData : public DWARF5AccelTableData {
@@ -65,22 +66,26 @@ public:
   void setCurrentUnit(DWARFUnit &Unit, const uint64_t UnitStartOffset);
   /// Emit Accelerator table.
   void emitAccelTable();
-  /// Returns true if the table was crated.
+  /// Returns true if the table was created.
   bool isCreated() const { return NeedToCreate; }
   /// Returns buffer containing the accelerator table.
   std::unique_ptr<DebugBufferVector> releaseBuffer() {
     return std::move(FullTableBuffer);
   }
-  /// Adds a DIE that is referenced across CUs.
-  void addCrossCUDie(DWARFUnit *Unit, const DIE *Die) {
-    CrossCUDies.insert({Die->getOffset(), {Unit, Die}});
-  }
+  void addCrossCUDie(DWARFUnit *Unit, const DIE *Die);
+  /// Looks up a DIE that is referenced across CUs.
+  std::optional<std::pair<DWARFUnit *, const DIE *>>
+  getCrossCUDie(uint64_t Offset);
   /// Returns true if the DIE can generate an entry for a cross cu reference.
   /// This only checks TAGs of a DIE because when this is invoked DIE might not
   /// be fully constructed.
   bool canGenerateEntryWithCrossCUReference(
       const DWARFUnit &Unit, const DIE &Die,
       const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec);
+
+  /// Pre-allocate CU and Foreign TU slots in deterministic order.
+  /// Must be called before any concurrent addAccelTableEntry() calls.
+  void preAllocateUnits(DWARFContext &DwCtx);
 
 private:
   BinaryContext &BC;
@@ -90,12 +95,14 @@ private:
   StringRef StrSection;
   uint64_t CurrentUnitOffset = 0;
   const DWARFUnit *CurrentUnit = nullptr;
+  std::mutex CrossCUDiesMutex;
   std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
-  /// Contains a map of TU hashes to a Foreign TU indecies.
+  /// Contains a map of TU hashes to a Foreign TU indices.
   /// This is used to reduce the size of Foreign TU list since there could be
   /// multiple TUs with the same hash.
   DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
-
+  /// Track whether AcceleratorTable have been preallocated.
+  bool Preallocated = false;
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {
     uint64_t StrOffset;
@@ -129,6 +136,7 @@ private:
   uint32_t AugmentationStringSize = 0;
   dwarf::Form CUIndexForm = dwarf::DW_FORM_data4;
   dwarf::Form TUIndexForm = dwarf::DW_FORM_data4;
+  constexpr static uint32_t BADCUOFFSET = 0xBADBAD;
 
   BucketList Buckets;
 
@@ -142,7 +150,7 @@ private:
   std::unique_ptr<raw_svector_ostream> AugStringtream;
   llvm::DenseMap<llvm::hash_code, uint64_t> StrCacheToOffsetMap;
   // Contains DWO ID to CUList Index.
-  llvm::DenseMap<uint64_t, uint32_t> CUOffsetsToPatch;
+  std::unordered_map<uint64_t, uint32_t> CUOffsetsToPatch;
   // Contains a map of Entry ID to Entry relative offset.
   llvm::DenseMap<uint64_t, uint32_t> EntryRelativeOffsets;
   llvm::DenseMap<uint64_t, std::pair<DWARFUnit *, const DIE *>> CrossCUDies;

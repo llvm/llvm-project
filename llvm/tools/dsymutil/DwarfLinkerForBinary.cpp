@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -38,10 +39,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -89,7 +90,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -202,7 +202,6 @@ Error DwarfLinkerForBinary::emitRelocations(
     Obj.OutRelocs->addValidRelocs(RM);
   }
 
-  SmallString<128> InputPath;
   SmallString<128> Path;
   // Create the "Relocations" directory in the "Resources" directory, and
   // create an architecture-specific directory in the "Relocations" directory.
@@ -233,7 +232,6 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   if (RL.empty())
     return Error::success();
 
-  SmallString<128> InputPath;
   SmallString<128> Path;
   // Create the "Remarks" directory in the "Resources" directory.
   sys::path::append(Path, *Options.ResourceDir, "Remarks");
@@ -292,6 +290,7 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
 
     Error E = RL.link(*ErrorOrObj);
+    // FIXME: Remark parsing errors are not propagated to the user.
     if (Error NewE = handleErrors(
             std::move(E), [&](std::unique_ptr<FileError> EC) -> Error {
               return remarksErrorHandler(Obj, *this, std::move(EC));
@@ -534,6 +533,65 @@ Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
   return Error::success();
 }
 
+Error DwarfLinkerForBinary::copyEmbeddedResources() const {
+  if (!Options.ResourceDir || Options.EmbedResources.empty())
+    return Error::success();
+
+  auto copyOneFile = [&](StringRef SrcPath,
+                         StringRef DstPath) -> std::error_code {
+    if (auto EC = sys::fs::create_directories(sys::path::parent_path(DstPath),
+                                              true, sys::fs::perms::all_all))
+      return EC;
+
+    if (Options.Verbose)
+      outs() << "embed resource " << SrcPath << " -> " << DstPath << '\n';
+
+    return sys::fs::copy_file(SrcPath, DstPath);
+  };
+
+  for (const auto &Entry : Options.EmbedResources) {
+    StringRef Dst = Entry.first();
+    StringRef Src = Entry.second;
+    bool IsDir = false;
+    if (auto EC = sys::fs::is_directory(Src, IsDir))
+      return make_error<StringError>("cannot embed resource " + Src + ": " +
+                                         toString(errorCodeToError(EC)),
+                                     EC);
+
+    if (IsDir) {
+      std::error_code EC;
+      for (sys::fs::recursive_directory_iterator I(Src, EC), E; I != E && !EC;
+           I.increment(EC)) {
+        if (I->type() == sys::fs::file_type::directory_file)
+          continue;
+        StringRef FilePath = I->path();
+        StringRef Relative = FilePath.substr(StringRef(Src).size());
+        if (!Relative.empty() && sys::path::is_separator(Relative.front()))
+          Relative = Relative.drop_front();
+        SmallString<128> DestPath;
+        sys::path::append(DestPath, *Options.ResourceDir, Dst, Relative);
+        if (auto CopyEC = copyOneFile(FilePath, DestPath))
+          return make_error<StringError>("cannot embed resource " + FilePath +
+                                             ": " +
+                                             toString(errorCodeToError(CopyEC)),
+                                         CopyEC);
+      }
+      if (EC)
+        return make_error<StringError>("cannot read directory " + Src + ": " +
+                                           toString(errorCodeToError(EC)),
+                                       EC);
+    } else {
+      SmallString<128> DestPath;
+      sys::path::append(DestPath, *Options.ResourceDir, Dst);
+      if (auto EC = copyOneFile(Src, DestPath))
+        return make_error<StringError>("cannot embed resource " + Src + ": " +
+                                           toString(errorCodeToError(EC)),
+                                       EC);
+    }
+  }
+  return Error::success();
+}
+
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
     const llvm::dsymutil::DebugMapObject *Obj, classic::DwarfStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
@@ -771,6 +829,57 @@ bool DwarfLinkerForBinary::linkImpl(
         MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
       };
 
+  if (Options.ResourceDir) {
+    // Collect .cas-config files. The build system might put these
+    // anywhere in the build directory, so dsymutil scans all parent
+    // paths of each object file. Their contents is a JSON dictionary,
+    // so this loop aggregates them in a JSON array.
+    llvm::StringSet<> VisitedPaths;
+    std::string CASConfigs = "[\n";
+    raw_string_ostream CASConfigStream(CASConfigs);
+    bool First = true;
+    for (const auto &Obj : Map.objects()) {
+      StringRef ObjPath = Obj->getObjectFilename();
+      for (StringRef Dir = sys::path::parent_path(ObjPath); !Dir.empty();
+           Dir = sys::path::parent_path(Dir)) {
+        if (!VisitedPaths.insert(Dir).second)
+          break;
+
+        SmallString<256> CASConfigPath(Dir);
+        sys::path::append(CASConfigPath, ".cas-config");
+        auto BufferOrErr = MemoryBuffer::getFile(CASConfigPath);
+        if (!BufferOrErr)
+          continue;
+
+        if (!First)
+          CASConfigStream << ",\n";
+        First = false;
+        CASConfigStream << (*BufferOrErr)->getBuffer().rtrim('\n');
+      }
+    }
+    CASConfigStream << "\n]\n";
+    if (!First) {
+      std::error_code EC;
+      SmallString<128> CASConfigsPath;
+      sys::path::append(CASConfigsPath, *Options.ResourceDir);
+      EC = sys::fs::create_directories(CASConfigsPath.str(), true,
+                                       sys::fs::perms::all_all);
+      if (EC) {
+        reportWarning("could not create directory '" + CASConfigsPath +
+                      "': " + EC.message());
+      } else {
+        sys::path::append(CASConfigsPath, "CASConfigs.json");
+        raw_fd_ostream OS(CASConfigsPath.str(), EC, sys::fs::OF_Text);
+        if (EC)
+          reportWarning("could not open '" + CASConfigsPath +
+                        "': " + EC.message());
+        else
+          OS << CASConfigs;
+      }
+    }
+  }
+
+  llvm::StringSet<> SwiftModules;
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
     // appropriate DWARF section.
@@ -779,20 +888,24 @@ bool DwarfLinkerForBinary::linkImpl(
         outs() << "DEBUG MAP OBJECT: " << Obj->getObjectFilename() << "\n";
 
       StringRef File = Obj->getObjectFilename();
+      if (!SwiftModules.insert(File).second)
+        continue;
+
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        reportWarning("Could not open '" + File + "'");
+        reportWarning("could not open '" + File + "'");
         continue;
       }
       auto FromInterfaceOrErr =
           IsBuiltFromSwiftInterface((*ErrorOrMem)->getBuffer());
       if (!FromInterfaceOrErr) {
-        reportWarning("Could not parse binary Swift module: " +
+        reportWarning("could not parse binary Swift module: " +
                           toString(FromInterfaceOrErr.takeError()),
                       Obj->getObjectFilename());
-        // Only skip swiftmodules that could be parsed and are
-        // positively identified as textual.
-      } else if (*FromInterfaceOrErr) {
+        // Only skip swiftmodules that could be parsed and are positively
+        // identified as textual. Do so only when the option allows.
+      } else if (*FromInterfaceOrErr &&
+                 !Options.IncludeSwiftModulesFromInterface) {
         if (Options.Verbose)
           outs() << "Skipping compiled textual Swift interface: "
                  << Obj->getObjectFilename() << "\n";
@@ -873,13 +986,16 @@ bool DwarfLinkerForBinary::linkImpl(
       return error(toString(std::move(E)));
   }
 
+  if (auto E = copyEmbeddedResources())
+    return error(toString(std::move(E)));
+
   auto MapTriple = Map.getTriple();
   if ((MapTriple.isOSDarwin() || MapTriple.isOSBinFormatMachO()) &&
       !Map.getBinaryPath().empty() &&
       ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
         Options.VFS, Map, *Streamer->getAsmPrinter().OutStreamer, OutFile,
-        RelocationsToApply);
+        RelocationsToApply, Options.AllowSectionHeaderOffsetOverflow);
 
   Streamer->finish();
   return true;
@@ -897,7 +1013,7 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     Linker.reportWarning("error reading section", DMO.getObjectFilename());
     return;
   }
-  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(), 0);
+  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian());
   bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {

@@ -24,9 +24,6 @@
 #include "gtest/gtest.h"
 #include <queue>
 
-using ::testing::Contains;
-using ::testing::Pair;
-
 using namespace llvm;
 using namespace llvm::SPIRV;
 

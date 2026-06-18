@@ -700,3 +700,25 @@ func.func @concat_non_axis_dyn_mixed(%arg0: tensor<?x1xf32>, %arg1: tensor<?x1xf
   %0 = "tosa.concat"(%arg0, %arg1, %arg2) <{axis = 1 : i32}> : (tensor<?x1xf32>, tensor<?x1xf32>, tensor<?x1xf32>) -> tensor<5x3xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @pad_variable_pad_const
+// CHECK-SAME: (%[[ARG0_SSA:.*]]: tensor<2x2xi32>, %[[PAD_INPUT_TENSOR_SSA:.*]]: tensor<1xi32>)
+func.func @pad_variable_pad_const(%arg0: tensor<2x2xi32>, %pad_input_tensor: tensor<1xi32>) -> tensor<4x5xi32> {
+  // CHECK-DAG: %[[C0_INDEX:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[EXTRACTED_PAD_VAL:.*]] = tensor.extract %[[PAD_INPUT_TENSOR_SSA]][%[[C0_INDEX]]] : tensor<1xi32>
+
+  // CHECK: %[[C_PAD_LOW_0:.*]] = arith.constant 1 : index
+  // CHECK: %[[C_PAD_HIGH_0:.*]] = arith.constant 1 : index
+  // CHECK: %[[C_PAD_LOW_1:.*]] = arith.constant 0 : index
+  // CHECK: %[[C_PAD_HIGH_1:.*]] = arith.constant 3 : index
+
+  // CHECK: %{{.*}} = tensor.pad %[[ARG0_SSA]] low[%[[C_PAD_LOW_0]], %[[C_PAD_LOW_1]]] high[%[[C_PAD_HIGH_0]], %[[C_PAD_HIGH_1]]] {
+  // CHECK:   tensor.yield %[[EXTRACTED_PAD_VAL]] : i32
+  // CHECK: } : tensor<2x2xi32> to tensor<4x5xi32>
+
+  %padding_indices = tosa.const_shape {values = dense<[1, 1, 0, 3]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %result = "tosa.pad"(%arg0, %padding_indices, %pad_input_tensor) : (tensor<2x2xi32>, !tosa.shape<4>, tensor<1xi32>) -> tensor<4x5xi32>
+  return %result : tensor<4x5xi32>
+}

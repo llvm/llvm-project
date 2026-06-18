@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_60 -mattr=+ptx73 | FileCheck %s --check-prefix=CHECK-32
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx73 | FileCheck %s --check-prefix=CHECK-64
 ; RUN: llc < %s -mtriple=nvptx64 -nvptx-short-ptr -mcpu=sm_60 -mattr=+ptx73 | FileCheck %s --check-prefix=CHECK-MIXED
-; RUN: %if ptxas && ptxas-12.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx73 | %ptxas-verify %}
+; RUN: %if ptxas-sm_60 && ptxas-isa-7.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx73 | %ptxas-verify -arch=sm_60 %}
 
 target triple = "nvptx64-nvidia-cuda"
 
@@ -49,7 +49,7 @@ define void @test_restore(ptr %p) {
 ; CHECK-32-NEXT:    .reg .b32 %r<3>;
 ; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
-; CHECK-32-NEXT:    ld.param.u32 %r1, [test_restore_param_0];
+; CHECK-32-NEXT:    ld.param.b32 %r1, [test_restore_param_0];
 ; CHECK-32-NEXT:    cvta.to.local.u32 %r2, %r1;
 ; CHECK-32-NEXT:    stackrestore.u32 %r2;
 ; CHECK-32-NEXT:    ret;
@@ -59,7 +59,7 @@ define void @test_restore(ptr %p) {
 ; CHECK-64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:
-; CHECK-64-NEXT:    ld.param.u64 %rd1, [test_restore_param_0];
+; CHECK-64-NEXT:    ld.param.b64 %rd1, [test_restore_param_0];
 ; CHECK-64-NEXT:    cvta.to.local.u64 %rd2, %rd1;
 ; CHECK-64-NEXT:    stackrestore.u64 %rd2;
 ; CHECK-64-NEXT:    ret;
@@ -70,7 +70,7 @@ define void @test_restore(ptr %p) {
 ; CHECK-MIXED-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-MIXED-EMPTY:
 ; CHECK-MIXED-NEXT:  // %bb.0:
-; CHECK-MIXED-NEXT:    ld.param.u64 %rd1, [test_restore_param_0];
+; CHECK-MIXED-NEXT:    ld.param.b64 %rd1, [test_restore_param_0];
 ; CHECK-MIXED-NEXT:    cvta.to.local.u64 %rd2, %rd1;
 ; CHECK-MIXED-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-MIXED-NEXT:    stackrestore.u32 %r1;

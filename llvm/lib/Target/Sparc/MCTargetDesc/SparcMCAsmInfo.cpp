@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcMCAsmInfo.h"
-#include "SparcMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -22,7 +22,9 @@ using namespace llvm;
 
 void SparcELFMCAsmInfo::anchor() {}
 
-SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple) {
+SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
+                                     const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   bool isV9 = (TheTriple.getArch() == Triple::sparcv9);
   IsLittleEndian = (TheTriple.getArch() == Triple::sparcel);
 
@@ -49,8 +51,7 @@ SparcELFMCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                MCStreamer &Streamer) const {
   if (Encoding & dwarf::DW_EH_PE_pcrel) {
     MCContext &Ctx = Streamer.getContext();
-    return SparcMCExpr::create(SparcMCExpr::VK_R_DISP32,
-                               MCSymbolRefExpr::create(Sym, Ctx), Ctx);
+    return MCSpecifierExpr::create(Sym, ELF::R_SPARC_DISP32, Ctx);
   }
 
   return MCAsmInfo::getExprForPersonalitySymbol(Sym, Encoding, Streamer);
@@ -62,8 +63,17 @@ SparcELFMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
                                        MCStreamer &Streamer) const {
   if (Encoding & dwarf::DW_EH_PE_pcrel) {
     MCContext &Ctx = Streamer.getContext();
-    return SparcMCExpr::create(SparcMCExpr::VK_R_DISP32,
-                               MCSymbolRefExpr::create(Sym, Ctx), Ctx);
+    return MCSpecifierExpr::create(Sym, ELF::R_SPARC_DISP32, Ctx);
   }
   return MCAsmInfo::getExprForFDESymbol(Sym, Encoding, Streamer);
+}
+
+void SparcELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
+                                           const MCSpecifierExpr &Expr) const {
+  StringRef S = Sparc::getSpecifierName(Expr.getSpecifier());
+  if (!S.empty())
+    OS << '%' << S << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (!S.empty())
+    OS << ')';
 }

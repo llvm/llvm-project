@@ -99,8 +99,8 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
 
   llvm::Expected<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
   if (!index_type_bytes) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), index_type_bytes.takeError(),
-                    "{0}");
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters),
+                    index_type_bytes.takeError(), "{0}");
     if (!index_type_bytes)
       return LibcxxVariantIndexValidity::Invalid;
   }
@@ -202,10 +202,6 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return formatters::ExtractIndexFromString(name.GetCString());
-  }
-
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;
@@ -271,7 +267,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!head_value)
     return {};
 
-  return head_value->Clone(ConstString("Value"));
+  return head_value->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *

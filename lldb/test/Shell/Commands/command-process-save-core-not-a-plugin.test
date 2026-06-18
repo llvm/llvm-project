@@ -1,0 +1,24 @@
+# This checks that lldb returns an error if process save-core is called
+# with a plugin that does not exist.
+
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb %t -o "settings set interpreter.stop-command-source-on-error false" -s %s -o exit 2>&1 | FileCheck %s
+
+b main
+# CHECK-LABEL: b main
+# CHECK: Breakpoint 1: where = {{.*}}`main
+
+run
+# CHECK-LABEL: run
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = breakpoint 1
+# CHECK:   frame #0: {{.*}}`main at main.c
+
+process save-core --plugin-name=minidump
+# CHECK-LABEL: process save-core --plugin-name=minidump
+# CHECK: error: 'process save-core' takes one arguments:
+# CHECK: Usage: {{.*}} FILE
+
+process save-core --plugin-name=notaplugin dump
+# CHECK-LABEL: process save-core --plugin-name=notaplugin dump
+# CHECK: error: plugin name 'notaplugin' is not a valid ObjectFile plugin name. Valid names are:{{.*}}minidump{{.*}}

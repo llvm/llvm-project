@@ -160,7 +160,7 @@ static void testHandleMoveIntoNewBundle(MachineFunction &MF, LiveIntervals &LIS,
 
   // Build bundle
   finalizeBundle(MBB, I, std::next(ToInstr.getIterator()));
-  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
+  MF.getProperties().resetIsSSA();
 
   // Update LiveIntervals
   MachineBasicBlock::instr_iterator BundleStart = std::prev(I);

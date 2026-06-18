@@ -3,13 +3,46 @@
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
+module acc_declare_common_test
+! CHECK-LABEL: fir.global @numbers_ {acc.declare = #acc.declare<dataClause = acc_declare_device_resident>, alignment = 4 : i64} : tuple<f32, f32> {
+! CHECK: acc.global_ctor @numbers__acc_ctor
+! CHECK: acc.global_dtor @numbers__acc_dtor
+ REAL :: one = 1
+ REAL :: two = 2
+ COMMON /numbers/ one, two
+ !$acc declare device_resident(/numbers/)
+
+! CHECK-LABEL: fir.global @numbers_create_ {acc.declare = #acc.declare<dataClause = acc_create>, alignment = 4 : i64} : tuple<f32, f32> {
+! CHECK: acc.global_ctor @numbers_create__acc_ctor
+! CHECK: acc.global_dtor @numbers_create__acc_dtor
+ REAL :: one_create = 1
+ REAL :: two_create = 2
+ COMMON /numbers_create/ one_create, two_create
+ !$acc declare create(/numbers_create/)
+
+! CHECK-LABEL: fir.global @numbers_in_ {acc.declare = #acc.declare<dataClause = acc_copyin>, alignment = 4 : i64} : tuple<f32, f32> {
+! CHECK: acc.global_ctor @numbers_in__acc_ctor
+! CHECK: acc.global_dtor @numbers_in__acc_dtor
+ REAL :: one_in = 1
+ REAL :: two_in = 2
+ COMMON /numbers_in/ one_in, two_in
+ !$acc declare copyin(/numbers_in/)
+
+! CHECK-LABEL: fir.global @numbers_link_ {acc.declare = #acc.declare<dataClause = acc_declare_link>, alignment = 4 : i64} : tuple<f32, f32> {
+! CHECK: acc.global_ctor @numbers_link__acc_ctor
+ REAL :: one_link = 1
+ REAL :: two_link = 2
+ COMMON /numbers_link/ one_link, two_link
+ !$acc declare link(/numbers_link/)
+end module
+
 module acc_declare_test
  integer, parameter :: n = 100000
  real, dimension(n) :: data1
  !$acc declare create(data1)
 end module
 
-! CHECK-LABEL: fir.global @_QMacc_declare_testEdata1 {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.array<100000xf32>
+! CHECK-LABEL: fir.global @_QMacc_declare_testEdata1 {acc.declare = #acc.declare<dataClause = acc_create>, alignment = 64 : i64} : !fir.array<100000xf32>
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_testEdata1) {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.ref<!fir.array<100000xf32>>
@@ -53,7 +86,7 @@ module acc_declare_device_resident_test
  !$acc declare device_resident(data1)
 end module
 
-! CHECK-LABEL: fir.global @_QMacc_declare_device_resident_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.array<5000xi32>
+! CHECK-LABEL: fir.global @_QMacc_declare_device_resident_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>, alignment = 64 : i64} : !fir.array<5000xi32>
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_device_resident_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_resident_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.ref<!fir.array<5000xi32>>
@@ -76,7 +109,7 @@ module acc_declare_device_link_test
  !$acc declare link(data1)
 end module
 
-! CHECK-LABEL: fir.global @_QMacc_declare_device_link_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_link>} : !fir.array<5000xi32> {
+! CHECK-LABEL: fir.global @_QMacc_declare_device_link_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_link>, alignment = 64 : i64} : !fir.array<5000xi32> {
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_device_link_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_link_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_link>} : !fir.ref<!fir.array<5000xi32>>

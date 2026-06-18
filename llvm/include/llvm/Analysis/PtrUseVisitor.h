@@ -168,13 +168,13 @@ protected:
   ///
   /// This will visit the users with the same offset of the current visit
   /// (including an unknown offset if that is the current state).
-  void enqueueUsers(Value &I);
+  LLVM_ABI void enqueueUsers(Value &I);
 
   /// Walk the operands of a GEP and adjust the offset as appropriate.
   ///
   /// This routine does the heavy lifting of the pointer walk by computing
   /// offsets and looking through GEPs.
-  bool adjustOffsetForGEP(GetElementPtrInst &GEPI);
+  LLVM_ABI bool adjustOffsetForGEP(GetElementPtrInst &GEPI);
 };
 
 } // end namespace detail
@@ -285,7 +285,6 @@ protected:
 
   // No-op intrinsics which we know don't escape the pointer to logic in
   // some other function.
-  void visitDbgInfoIntrinsic(DbgInfoIntrinsic &I) {}
   void visitMemIntrinsic(MemIntrinsic &I) {}
   void visitIntrinsicInst(IntrinsicInst &II) {
     switch (II.getIntrinsicID()) {

@@ -10,8 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_ASSIGNABLE_H
 
 #include <__config>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/add_rvalue_reference.h>
+#include <__type_traits/add_reference.h>
 #include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -21,8 +20,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Arg>
-struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_assignable
-    : public integral_constant<bool, __is_nothrow_assignable(_Tp, _Arg)> {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_assignable : integral_constant<bool, __is_nothrow_assignable(_Tp, _Arg)> {
+};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Arg>
@@ -31,9 +30,8 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_assignable_v = __is_
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_copy_assignable
-    : public integral_constant<
-          bool,
-          __is_nothrow_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<const _Tp>)> {};
+    : integral_constant<bool,
+                        __is_nothrow_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<const _Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
@@ -42,9 +40,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_copy_assignable_v = 
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_move_assignable
-    : public integral_constant<bool,
-                               __is_nothrow_assignable(__add_lvalue_reference_t<_Tp>, __add_rvalue_reference_t<_Tp>)> {
-};
+    : integral_constant<bool, __is_nothrow_assignable(__add_lvalue_reference_t<_Tp>, __add_rvalue_reference_t<_Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

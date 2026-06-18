@@ -21,32 +21,58 @@ from generate_feature_test_macro_components import FeatureTestMacros, Metadata
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.ftm = FeatureTestMacros(TEST_DATA)
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
         self.maxDiff = None  # This causes the diff to be printed when the test fails
 
     def test_implementation(self):
         expected = {
             "__cpp_lib_any": Metadata(
-                headers=["any"], test_suite_guard=None, libcxx_guard=None
+                headers=["any"],
+                available_since="c++17",
+                test_suite_guard=None,
+                libcxx_guard=None,
             ),
             "__cpp_lib_barrier": Metadata(
                 headers=["barrier"],
+                available_since="c++20",
                 test_suite_guard="!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
                 libcxx_guard="_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
             ),
+            "__cpp_lib_clamp": Metadata(
+                headers=["algorithm"],
+                available_since="c++17",
+                test_suite_guard=None,
+                libcxx_guard=None,
+            ),
             "__cpp_lib_format": Metadata(
-                headers=["format"], test_suite_guard=None, libcxx_guard=None
+                headers=["format"],
+                available_since="c++20",
+                test_suite_guard=None,
+                libcxx_guard=None,
             ),
             "__cpp_lib_parallel_algorithm": Metadata(
                 headers=["algorithm", "numeric"],
+                available_since="c++17",
+                test_suite_guard=None,
+                libcxx_guard=None,
+            ),
+            "__cpp_lib_to_chars": Metadata(
+                headers=["charconv"],
+                available_since="c++17",
                 test_suite_guard=None,
                 libcxx_guard=None,
             ),
             "__cpp_lib_variant": Metadata(
-                headers=["variant"], test_suite_guard=None, libcxx_guard=None
+                headers=["variant"],
+                available_since="c++17",
+                test_suite_guard=None,
+                libcxx_guard=None,
             ),
-            "__cpp_lib_missing_FTM_in_older_standard": Metadata(
-                headers=[], test_suite_guard=None, libcxx_guard=None
+            "__cpp_lib_zz_missing_FTM_in_older_standard": Metadata(
+                headers=[],
+                available_since="c++17",
+                test_suite_guard=None,
+                libcxx_guard=None,
             ),
         }
         self.assertEqual(self.ftm.ftm_metadata, expected)

@@ -17,7 +17,8 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include <optional>
 
 using namespace lldb;
@@ -85,10 +86,10 @@ GetByteOrderAndAddrSize(Thread *thread) {
 
 static void DumpDWARFExpr(Stream &s, llvm::ArrayRef<uint8_t> expr, Thread *thread) {
   if (auto order_and_width = GetByteOrderAndAddrSize(thread)) {
-    llvm::DataExtractor data(expr, order_and_width->first == eByteOrderLittle,
-                             order_and_width->second);
-    llvm::DWARFExpression(data, order_and_width->second, llvm::dwarf::DWARF32)
-        .print(s.AsRawOstream(), llvm::DIDumpOptions(), nullptr);
+    llvm::DataExtractor data(expr, order_and_width->first == eByteOrderLittle);
+    llvm::DWARFExpression E(data, order_and_width->second,
+                            llvm::dwarf::DWARF32);
+    printDwarfExpression(&E, s.AsRawOstream(), llvm::DIDumpOptions(), nullptr);
   } else
     s.PutCString("dwarf-expr");
 }
@@ -398,10 +399,10 @@ void UnwindPlan::AppendRow(Row row) {
 }
 
 struct RowLess {
-  bool operator()(addr_t a, const UnwindPlan::Row &b) const {
+  bool operator()(int64_t a, const UnwindPlan::Row &b) const {
     return a < b.GetOffset();
   }
-  bool operator()(const UnwindPlan::Row &a, addr_t b) const {
+  bool operator()(const UnwindPlan::Row &a, int64_t b) const {
     return a.GetOffset() < b;
   }
 };
@@ -418,7 +419,7 @@ void UnwindPlan::InsertRow(Row row, bool replace_existing) {
 }
 
 const UnwindPlan::Row *
-UnwindPlan::GetRowForFunctionOffset(std::optional<int> offset) const {
+UnwindPlan::GetRowForFunctionOffset(std::optional<int64_t> offset) const {
   auto it = offset ? llvm::upper_bound(m_row_list, *offset, RowLess())
                    : m_row_list.end();
   if (it == m_row_list.begin())
@@ -474,7 +475,7 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) const {
   // If the 0th Row of unwind instructions is missing, or if it doesn't provide
   // a register to use to find the Canonical Frame Address, this is not a valid
   // UnwindPlan.
-  const Row *row0 = GetRowForFunctionOffset(0);
+  const Row *row0 = GetRowAtIndex(0);
   if (!row0 ||
       row0->GetCFAValue().GetValueType() == Row::FAValue::unspecified) {
     Log *log = GetLog(LLDBLog::Unwind);

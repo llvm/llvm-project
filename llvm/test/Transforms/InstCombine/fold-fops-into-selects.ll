@@ -66,6 +66,15 @@ EntryBlock:
   ret float %op
 ; CHECK-LABEL: @test7(
 ; CHECK: [[OP:%.*]] = fdiv float %B, 3.000000e+00
-; CHECK: select i1 %A, float 0x3FD5555560000000, float [[OP]]
+; CHECK: select i1 %A, float f0x3EAAAAAB, float [[OP]]
 }
 
+define float @test8(i1 %A, float %B) {
+EntryBlock:
+  %cf = select i1 %A, float 1.000000e+00, float %B
+  %op = fdiv float 3.000000e+00, %cf, !fpmath !{float 2.5}
+  ret float %op
+; CHECK-LABEL: @test8(
+; CHECK: [[OP:%.*]] = fdiv float 3.000000e+00, %B, !fpmath
+; CHECK: select i1 %A, float 3.000000e+00, float [[OP]]
+}

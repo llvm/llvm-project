@@ -20,7 +20,7 @@
 ; CHECK:       str     x28, [sp, #24]
 ; CHECK:       stp     x29, x30, [sp, #32]
 ; CHECK:       add     x29, sp, #32
-; CHECK:       sub     sp, sp, #624
+; CHECK:       sub     sp, sp, #608
 ; CHECK:       mov     x19, sp
 ; CHECK:       mov     x0, #-2
 ; CHECK:       stur    x0, [x29, #16]
@@ -51,7 +51,7 @@
 ; CHECK:       str     x21, [sp, #16]
 ; CHECK:       str     x28, [sp, #24]
 ; CHECK:       stp     x29, x30, [sp, #32]
-; CHECK:       add     x20, x19, #12
+; CHECK:       add     x20, x19, #0
 
 ; Check that there are no further stack updates.
 ; CHECK-NOT:   sub     sp, sp

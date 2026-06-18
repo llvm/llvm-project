@@ -57,15 +57,15 @@ public:
   static const unsigned CallbackDistanceWeight = 150U;
 
   TypoCorrection(const DeclarationName &Name, NamedDecl *NameDecl,
-                 NestedNameSpecifier *NNS = nullptr, unsigned CharDistance = 0,
-                 unsigned QualifierDistance = 0)
+                 NestedNameSpecifier NNS = std::nullopt,
+                 unsigned CharDistance = 0, unsigned QualifierDistance = 0)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
         CharDistance(CharDistance), QualifierDistance(QualifierDistance) {
     if (NameDecl)
       CorrectionDecls.push_back(NameDecl);
   }
 
-  TypoCorrection(NamedDecl *Name, NestedNameSpecifier *NNS = nullptr,
+  TypoCorrection(NamedDecl *Name, NestedNameSpecifier NNS = std::nullopt,
                  unsigned CharDistance = 0)
       : CorrectionName(Name->getDeclName()), CorrectionNameSpec(NNS),
         CharDistance(CharDistance) {
@@ -73,7 +73,7 @@ public:
       CorrectionDecls.push_back(Name);
   }
 
-  TypoCorrection(DeclarationName Name, NestedNameSpecifier *NNS = nullptr,
+  TypoCorrection(DeclarationName Name, NestedNameSpecifier NNS = std::nullopt,
                  unsigned CharDistance = 0)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
         CharDistance(CharDistance) {}
@@ -88,13 +88,13 @@ public:
   }
 
   /// Gets the NestedNameSpecifier needed to use the typo correction
-  NestedNameSpecifier *getCorrectionSpecifier() const {
+  NestedNameSpecifier getCorrectionSpecifier() const {
     return CorrectionNameSpec;
   }
 
-  void setCorrectionSpecifier(NestedNameSpecifier *NNS) {
+  void setCorrectionSpecifier(NestedNameSpecifier NNS) {
     CorrectionNameSpec = NNS;
-    ForceSpecifierReplacement = (NNS != nullptr);
+    ForceSpecifierReplacement = !!NNS;
   }
 
   void WillReplaceSpecifier(bool ForceReplacement) {
@@ -264,7 +264,7 @@ private:
 
   // Results.
   DeclarationName CorrectionName;
-  NestedNameSpecifier *CorrectionNameSpec = nullptr;
+  NestedNameSpecifier CorrectionNameSpec = std::nullopt;
   SmallVector<NamedDecl *, 1> CorrectionDecls;
   unsigned CharDistance = 0;
   unsigned QualifierDistance = 0;
@@ -282,8 +282,9 @@ class CorrectionCandidateCallback {
 public:
   static const unsigned InvalidDistance = TypoCorrection::InvalidDistance;
 
-  explicit CorrectionCandidateCallback(const IdentifierInfo *Typo = nullptr,
-                                       NestedNameSpecifier *TypoNNS = nullptr)
+  explicit CorrectionCandidateCallback(
+      const IdentifierInfo *Typo = nullptr,
+      NestedNameSpecifier TypoNNS = std::nullopt)
       : Typo(Typo), TypoNNS(TypoNNS) {}
 
   virtual ~CorrectionCandidateCallback() = default;
@@ -320,7 +321,7 @@ public:
   virtual std::unique_ptr<CorrectionCandidateCallback> clone() = 0;
 
   void setTypoName(const IdentifierInfo *II) { Typo = II; }
-  void setTypoNNS(NestedNameSpecifier *NNS) { TypoNNS = NNS; }
+  void setTypoNNS(NestedNameSpecifier NNS) { TypoNNS = NNS; }
 
   // Flags for context-dependent keywords. WantFunctionLikeCasts is only
   // used/meaningful when WantCXXNamedCasts is false.
@@ -346,13 +347,41 @@ protected:
   }
 
   const IdentifierInfo *Typo;
-  NestedNameSpecifier *TypoNNS;
+  NestedNameSpecifier TypoNNS;
+};
+
+/// Callback class to reject typo corrections that look like template parameters
+/// when doing a qualified lookup. A template parameter (type or template) is
+/// local to the current template scope and cannot be validly qualified by any
+/// external scope (e.g. 'std::T' where T is a template parameter).
+class QualifiedLookupValidatorCCC : public CorrectionCandidateCallback {
+public:
+  explicit QualifiedLookupValidatorCCC(bool HasQualifier)
+      : HasQualifier(HasQualifier) {}
+
+  bool ValidateCandidate(const TypoCorrection &Candidate) override {
+    if (HasQualifier) {
+      if (const NamedDecl *ND = Candidate.getCorrectionDecl()) {
+        // A template parameter can never be a member of any qualifier scope.
+        if (isa<TemplateTypeParmDecl>(ND) || isa<TemplateTemplateParmDecl>(ND))
+          return false;
+      }
+    }
+    return CorrectionCandidateCallback::ValidateCandidate(Candidate);
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return std::make_unique<QualifiedLookupValidatorCCC>(*this);
+  }
+
+private:
+  bool HasQualifier;
 };
 
 class DefaultFilterCCC final : public CorrectionCandidateCallback {
 public:
   explicit DefaultFilterCCC(const IdentifierInfo *Typo = nullptr,
-                            NestedNameSpecifier *TypoNNS = nullptr)
+                            NestedNameSpecifier TypoNNS = std::nullopt)
       : CorrectionCandidateCallback(Typo, TypoNNS) {}
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
@@ -366,7 +395,7 @@ template <class C>
 class DeclFilterCCC final : public CorrectionCandidateCallback {
 public:
   explicit DeclFilterCCC(const IdentifierInfo *Typo = nullptr,
-                         NestedNameSpecifier *TypoNNS = nullptr)
+                         NestedNameSpecifier TypoNNS = std::nullopt)
       : CorrectionCandidateCallback(Typo, TypoNNS) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {

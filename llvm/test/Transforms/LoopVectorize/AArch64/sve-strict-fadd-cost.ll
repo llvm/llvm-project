@@ -1,25 +1,25 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE1
+; RUN:   -tail-folding-policy=dont-fold-tail -force-vector-interleave=1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE1
 ; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 \
+; RUN:   -tail-folding-policy=dont-fold-tail -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-v1 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE2
 ; RUN: opt < %s -passes=loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 \
+; RUN:   -tail-folding-policy=dont-fold-tail -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-n2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VSCALE1
 
 target triple="aarch64-unknown-linux-gnu"
 
 ; CHECK-VSCALE2-LABEL: LV: Checking a loop in 'fadd_strict32'
 ; CHECK-VSCALE2: Cost of 4 for VF vscale x 2:
-; CHECK-VSCALE2:  in-loop reduction   %add = fadd float %0, %sum.07
+; CHECK-VSCALE2:  REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 ; CHECK-VSCALE2: Cost of 8 for VF vscale x 4:
-; CHECK-VSCALE2:  in-loop reduction   %add = fadd float %0, %sum.07
+; CHECK-VSCALE2:  REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 ; CHECK-VSCALE1-LABEL: LV: Checking a loop in 'fadd_strict32'
 ; CHECK-VSCALE1: Cost of 2 for VF vscale x 2:
-; CHECK-VSCALE1:  in-loop reduction   %add = fadd float %0, %sum.07
+; CHECK-VSCALE1:  REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 ; CHECK-VSCALE1: Cost of 4 for VF vscale x 4:
-; CHECK-VSCALE1:  in-loop reduction   %add = fadd float %0, %sum.07
+; CHECK-VSCALE1:  REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 
 define float @fadd_strict32(ptr noalias nocapture readonly %a, i64 %n) #0 {
 entry:
@@ -42,10 +42,10 @@ for.end:
 
 ; CHECK-VSCALE2-LABEL: LV: Checking a loop in 'fadd_strict64'
 ; CHECK-VSCALE2: Cost of 4 for VF vscale x 2:
-; CHECK-VSCALE2:  in-loop reduction   %add = fadd double %0, %sum.07
+; CHECK-VSCALE2:  REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 ; CHECK-VSCALE1-LABEL: LV: Checking a loop in 'fadd_strict64'
 ; CHECK-VSCALE1: Cost of 2 for VF vscale x 2:
-; CHECK-VSCALE1:  in-loop reduction   %add = fadd double %0, %sum.07
+; CHECK-VSCALE1:  REDUCE ir<%add> = ir<%sum.07> + reduce.fadd (ir<%0>)
 
 define double @fadd_strict64(ptr noalias nocapture readonly %a, i64 %n) #0 {
 entry:

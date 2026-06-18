@@ -32,20 +32,17 @@ private:
   type __f_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn(type __f) _NOEXCEPT : __f_(__f) {}
+  _LIBCPP_HIDE_FROM_ABI __mem_fn(type __f) _NOEXCEPT : __f_(__f) {}
 
   // invoke
   template <class... _ArgTypes>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-
-  typename __invoke_return<type, _ArgTypes...>::type
-  operator()(_ArgTypes&&... __args) const {
+  _LIBCPP_HIDE_FROM_ABI typename __invoke_return<type, _ArgTypes...>::type operator()(_ArgTypes&&... __args) const {
     return std::__invoke(__f_, std::forward<_ArgTypes>(__args)...);
   }
 };
 
 template <class _Rp, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::*__pm) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::* __pm) _NOEXCEPT {
   return __mem_fn<_Rp _Tp::*>(__pm);
 }
 

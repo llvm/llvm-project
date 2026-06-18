@@ -15,8 +15,8 @@
 
 using namespace llvm;
 
-bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                                        unsigned ScalarOpdIdx) {
+bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
+    Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_wave_readlane:
     return ScalarOpdIdx == 1;
@@ -26,33 +26,28 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 }
 
 bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                            int OpdIdx) {
-  switch (ID) {
-  case Intrinsic::dx_asdouble:
-    return OpdIdx == 0;
-  default:
-    return OpdIdx == -1;
-  }
-}
-
-bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
-    Intrinsic::ID ID) const {
+                                                            int OpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_asdouble:
   case Intrinsic::dx_firstbitlow:
   case Intrinsic::dx_firstbitshigh:
   case Intrinsic::dx_firstbituhigh:
-  case Intrinsic::dx_frac:
-  case Intrinsic::dx_rsqrt:
-  case Intrinsic::dx_saturate:
-  case Intrinsic::dx_splitdouble:
-  case Intrinsic::dx_wave_readlane:
-  case Intrinsic::dx_wave_reduce_max:
-  case Intrinsic::dx_wave_reduce_sum:
-  case Intrinsic::dx_wave_reduce_umax:
-  case Intrinsic::dx_wave_reduce_usum:
-    return true;
+  case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
+  case Intrinsic::dx_legacyf16tof32:
+  case Intrinsic::dx_legacyf32tof16:
+  case Intrinsic::dx_wave_all_equal:
+    return OpdIdx == 0;
   default:
-    return false;
+    // All DX intrinsics are overloaded on return type unless specified
+    // otherwise
+    return OpdIdx == -1;
   }
+}
+
+unsigned DirectXTTIImpl::getMinimumLookupTableEntryBitWidth() const {
+  // DXIL does not support i8, so switch lookup tables must not be narrowed
+  // below the minimum legal integer width. When native 16-bit types are
+  // enabled (-enable-16bit-types) the minimum is i16, otherwise it is i32.
+  return HasNativeLowPrecision ? 16 : 32;
 }

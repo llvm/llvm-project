@@ -38,7 +38,35 @@ struct Throws {
 };
 
 bool Throws::sThrows = false;
-#endif
+
+struct ThrowingMoveOnly {
+  TEST_CONSTEXPR ThrowingMoveOnly() : value(0), do_throw(false) {}
+  TEST_CONSTEXPR explicit ThrowingMoveOnly(int v) : value(v), do_throw(false) {}
+  TEST_CONSTEXPR explicit ThrowingMoveOnly(int v, bool throw_) : value(v), do_throw(throw_) {}
+
+  ThrowingMoveOnly(const ThrowingMoveOnly& rhs)        = delete;
+  ThrowingMoveOnly& operator=(const ThrowingMoveOnly&) = delete;
+
+  TEST_CONSTEXPR_CXX14 ThrowingMoveOnly(ThrowingMoveOnly&& rhs) : value(rhs.value), do_throw(rhs.do_throw) {
+    if (do_throw)
+      throw 1;
+  }
+  TEST_CONSTEXPR_CXX14 ThrowingMoveOnly& operator=(ThrowingMoveOnly&& rhs) {
+    value    = rhs.value;
+    do_throw = rhs.do_throw;
+    if (do_throw)
+      throw 1;
+    return *this;
+  }
+
+  TEST_CONSTEXPR_CXX14 friend bool operator==(ThrowingMoveOnly const& lhs, ThrowingMoveOnly const& rhs) {
+    return lhs.value == rhs.value;
+  }
+
+  int value;
+  bool do_throw;
+};
+#endif // TEST_HAS_NO_EXCEPTIONS
 
 struct Tracker {
   int copy_assignments = 0;

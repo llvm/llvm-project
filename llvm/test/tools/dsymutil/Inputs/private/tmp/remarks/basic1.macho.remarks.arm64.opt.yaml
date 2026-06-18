@@ -1,0 +1,47 @@
+--- !Missed
+Pass:            inline
+Name:            NoDefinition
+DebugLoc:        { File: basic1.c, Line: 38, Column: 10 }
+Function:        main
+Args:
+  - Callee:          foo
+    DebugLoc:        { File: basic1.c, Line: 0, Column: 0 }
+  - String:          ' will not be inlined into '
+  - Caller:          main
+    DebugLoc:        { File: basic1.c, Line: 37, Column: 0 }
+  - String:          ' because its definition is unavailable'
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: basic1.c, Line: 37, Column: 0 }
+Function:        main
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        main
+  - String:          ''''
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: basic1.c, Line: 38, Column: 10 }
+Function:        main
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      entry
+  - String:          "\n"
+  - String:          TCRETURNdi
+  - String:          ': '
+  - INST_TCRETURNdi: '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: basic1.c, Line: 37, Column: 0 }
+Function:        main
+Args:
+  - NumInstructions: '1'
+  - String:          ' instructions in function'
+...

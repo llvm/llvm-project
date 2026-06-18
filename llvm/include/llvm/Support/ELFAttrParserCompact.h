@@ -10,29 +10,30 @@
 #define LLVM_SUPPORT_ELFCOMPACTATTRPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/ELFAttributeParser.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Error.h"
 
 #include <optional>
-#include <unordered_map>
 
 namespace llvm {
 class StringRef;
 class ScopedPrinter;
 
-class ELFCompactAttrParser : public ELFAttributeParser {
+class LLVM_ABI ELFCompactAttrParser : public ELFAttributeParser {
   StringRef vendor;
-  std::unordered_map<unsigned, unsigned> attributes;
-  std::unordered_map<unsigned, StringRef> attributesStr;
+  DenseMap<unsigned, unsigned> attributes;
+  DenseMap<unsigned, StringRef> attributesStr;
 
   virtual Error handler(uint64_t tag, bool &handled) = 0;
 
 protected:
   ScopedPrinter *sw;
   TagNameMap tagToStringMap;
-  DataExtractor de{ArrayRef<uint8_t>{}, true, 0};
+  DataExtractor de{ArrayRef<uint8_t>{}, true};
   DataExtractor::Cursor cursor{0};
 
   void printAttribute(unsigned tag, unsigned value, StringRef valueDesc);
@@ -44,11 +45,11 @@ protected:
   Error parseSubsection(uint32_t length);
 
   void setAttributeString(unsigned tag, StringRef value) {
-    attributesStr.emplace(tag, value);
+    attributesStr.try_emplace(tag, value);
   }
 
 public:
-  virtual ~ELFCompactAttrParser() { static_cast<void>(!cursor.takeError()); }
+  ~ELFCompactAttrParser() override { static_cast<void>(!cursor.takeError()); }
   Error integerAttribute(unsigned tag);
   Error stringAttribute(unsigned tag);
 

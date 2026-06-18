@@ -6,7 +6,7 @@
 ! Input type is implicit
 ! RUN: cat %s | %flang -E -cpp - | FileCheck %s --check-prefix=PP-NOT-DEFINED
 ! RUN: cat %s | %flang -DNEW -E -cpp - | FileCheck %s --check-prefix=PP-DEFINED
-! RUN: cat %s | %flang -DNEW -E - | FileCheck %s --check-prefix=PP-DEFINED
+! RUN: cat %s | %flang -DNEW -E - | FileCheck %s --check-prefix=PP-NOT-DEFINED
 ! RUN: cat %s | %flang -DNEW -E -nocpp - | FileCheck %s --check-prefix=PP-NOT-DEFINED
 
 ! Input type is explicit

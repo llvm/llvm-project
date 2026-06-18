@@ -15,7 +15,8 @@
 namespace llvm {
 
 class Function;
-class GCNSubtarget;
+
+enum class LitModifier { None, Lit, Lit64 };
 
 /// AMDGPU target specific MCExpr operations.
 ///
@@ -23,9 +24,11 @@ class GCNSubtarget;
 /// operations are:
 ///   - (bitwise) or
 ///   - max
+///   - min
 ///
-/// \note If the 'or'/'max' operations are provided only a single argument, the
-/// operation will act as a no-op and simply resolve as the provided argument.
+/// \note If the 'or'/'max'/'min' operations are provided only a single
+/// argument, the operation will act as a no-op and simply resolve as the
+/// provided argument.
 ///
 class AMDGPUMCExpr : public MCTargetExpr {
 public:
@@ -36,7 +39,11 @@ public:
     AGVK_ExtraSGPRs,
     AGVK_TotalNumVGPRs,
     AGVK_AlignTo,
-    AGVK_Occupancy
+    AGVK_Occupancy,
+    AGVK_InstPrefSize,
+    AGVK_Lit,
+    AGVK_Lit64,
+    AGVK_Min,
   };
 
   // Relocation specifiers.
@@ -50,6 +57,7 @@ public:
     S_REL64,         // symbol@rel64
     S_ABS32_LO,      // symbol@abs32@lo
     S_ABS32_HI,      // symbol@abs32@hi
+    S_ABS64,         // symbol@abs64
   };
 
 private:
@@ -59,16 +67,21 @@ private:
   ArrayRef<const MCExpr *> Args;
 
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
-  ~AMDGPUMCExpr();
+  ~AMDGPUMCExpr() override;
 
   bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateInstPrefSize(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
   create(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
+
+  /// \returns the required operand count for \p Kind, or 0 for the variadic
+  /// kinds (or/max/min). Used at parse time and by the create() assert.
+  static unsigned getNumExpectedArgs(VariantKind Kind);
 
   static const AMDGPUMCExpr *createOr(ArrayRef<const MCExpr *> Args,
                                       MCContext &Ctx) {
@@ -78,6 +91,10 @@ public:
   static const AMDGPUMCExpr *createMax(ArrayRef<const MCExpr *> Args,
                                        MCContext &Ctx) {
     return create(VariantKind::AGVK_Max, Args, Ctx);
+  }
+  static const AMDGPUMCExpr *createMin(ArrayRef<const MCExpr *> Args,
+                                       MCContext &Ctx) {
+    return create(VariantKind::AGVK_Min, Args, Ctx);
   }
 
   static const AMDGPUMCExpr *createExtraSGPRs(const MCExpr *VCCUsed,
@@ -93,26 +110,30 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
-  static const AMDGPUMCExpr *createOccupancy(unsigned InitOcc,
-                                             const MCExpr *NumSGPRs,
-                                             const MCExpr *NumVGPRs,
-                                             const GCNSubtarget &STM,
-                                             MCContext &Ctx);
+  /// Create an expression for instruction prefetch size computation:
+  /// min(divideCeil(CodeSizeBytes, CacheLineSize), (1 << FieldWidth) - 1)
+  /// FieldWidth and CacheLineSize are derived from the subtarget.
+  static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
+                                                MCContext &Ctx);
+
+  static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
+                                       MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
+  MCContext &getCtx() const { return Ctx; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
                                  const MCAssembler *Asm) const override;
-  bool isSymbolUsedInExpression(const MCSymbol *Sym) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
+  static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *E);
 };
 
 namespace AMDGPU {
@@ -129,6 +150,13 @@ const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
 static inline AMDGPUMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
   return AMDGPUMCExpr::Specifier(SRE->getKind());
 }
+
+LLVM_READONLY bool isLitExpr(const MCExpr *Expr);
+
+LLVM_READONLY int64_t getLitValue(const MCExpr *Expr);
+
+LLVM_READONLY AMDGPUMCExpr::VariantKind getExprKind(const MCExpr *Expr);
+
 } // end namespace AMDGPU
 } // end namespace llvm
 

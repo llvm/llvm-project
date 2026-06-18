@@ -33,14 +33,17 @@
 // template<ranges::input_range R, class Allocator>
 //   map(from_range_t, R&&, Allocator)
 //     -> map<range-key-type<R>, range-mapped-type<R>, less<range-key-type<R>>, Allocator>; // C++23
-
+// since C++26
 #include <algorithm> // std::equal
 #include <array>
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
 #include <map>
+#include <utility>
+#include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
@@ -48,7 +51,7 @@
 using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     const P arr[] = {{1, 1L}, {2, 2L}, {1, 1L}, {INT_MAX, 1L}, {3, 1L}};
     std::map m(std::begin(arr), std::end(arr));
@@ -189,9 +192,33 @@ int main(int, char**) {
       static_assert(std::is_same_v<decltype(c), std::map<int, long, DefaultComp, Alloc>>);
     }
   }
+  {
+    std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+    std::map m1(pair_vec.begin(), pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(m1), std::map<int, float>);
+
+    std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+    std::map m2(tuple_vec.begin(), tuple_vec.end());
+    ASSERT_SAME_TYPE(decltype(m2), std::map<int, double>);
+
+    std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+    std::map m3(array_vec.begin(), array_vec.end());
+    ASSERT_SAME_TYPE(decltype(m3), std::map<long, long>);
+
+    std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+    std::map m4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(m4), std::map<int, char>);
+  }
 #endif
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::map, std::map<int, long>>();
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

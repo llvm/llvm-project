@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_SPECIFIERS_H
 #define LLVM_CLANG_BASIC_SPECIFIERS_H
 
+#include "clang/Basic/OptionalUnsigned.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -120,7 +121,7 @@ namespace clang {
 
   /// A C++ access specifier (public, private, protected), plus the
   /// special value "none" which means different things in different contexts.
-  enum AccessSpecifier {
+  enum AccessSpecifier : uint8_t {
     AS_public,
     AS_protected,
     AS_private,
@@ -153,7 +154,7 @@ namespace clang {
     /// A bitfield object is a bitfield on a C or C++ record.
     OK_BitField,
 
-    /// A vector component is an element or range of elements on a vector.
+    /// A vector component is an element or range of elements of a vector.
     OK_VectorComponent,
 
     /// An Objective-C property is a logical field of an Objective-C
@@ -165,7 +166,7 @@ namespace clang {
     /// Objective-C method calls.
     OK_ObjCSubscript,
 
-    /// A matrix component is a single element of a matrix.
+    /// A matrix component is a single element or range of elements of a matrix.
     OK_MatrixComponent
   };
 
@@ -289,14 +290,13 @@ namespace clang {
     CC_AAPCS_VFP,          // __attribute__((pcs("aapcs-vfp")))
     CC_IntelOclBicc,       // __attribute__((intel_ocl_bicc))
     CC_SpirFunction,       // default for OpenCL functions on SPIR target
-    CC_OpenCLKernel,       // inferred for OpenCL kernels
+    CC_DeviceKernel,       // __attribute__((device_kernel))
     CC_Swift,              // __attribute__((swiftcall))
     CC_SwiftAsync,         // __attribute__((swiftasynccall))
     CC_PreserveMost,       // __attribute__((preserve_most))
     CC_PreserveAll,        // __attribute__((preserve_all))
     CC_AArch64VectorCall,  // __attribute__((aarch64_vector_pcs))
     CC_AArch64SVEPCS,      // __attribute__((aarch64_sve_pcs))
-    CC_AMDGPUKernelCall,   // __attribute__((amdgpu_kernel))
     CC_M68kRTD,            // __attribute__((m68k_rtd))
     CC_PreserveNone,       // __attribute__((preserve_none))
     CC_RISCVVectorCall,    // __attribute__((riscv_vector_cc))
@@ -326,7 +326,7 @@ namespace clang {
     case CC_X86Pascal:
     case CC_X86VectorCall:
     case CC_SpirFunction:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
     case CC_Swift:
     case CC_SwiftAsync:
     case CC_M68kRTD:
@@ -362,6 +362,8 @@ namespace clang {
     // parameters are assumed to only get null on error.
     NullableResult,
   };
+  using NullabilityKindOrNone = OptionalUnsigned<NullabilityKind>;
+
   /// Prints human-readable debug representation.
   llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 

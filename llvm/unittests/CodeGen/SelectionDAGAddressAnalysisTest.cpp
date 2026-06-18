@@ -7,98 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
+#include "SelectionDAGTestBase.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
-#include "gtest/gtest.h"
 
 namespace llvm {
 
-class SelectionDAGAddressAnalysisTest : public testing::Test {
-protected:
-  static void SetUpTestCase() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-  }
-
-  void SetUp() override {
-    StringRef Assembly = "@g = global i32 0\n"
-                         "@g_alias = alias i32, i32* @g\n"
-                         "define i32 @f() {\n"
-                         "  %1 = load i32, i32* @g\n"
-                         "  ret i32 %1\n"
-                         "}";
-
-    Triple TargetTriple("aarch64--");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    // FIXME: These tests do not depend on AArch64 specifically, but we have to
-    // initialize a target. A skeleton Target for unittests would allow us to
-    // always run these tests.
-    if (!T)
-      GTEST_SKIP();
-
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine(TargetTriple, "", "+sve", Options, std::nullopt,
-                               std::nullopt, CodeGenOptLevel::Aggressive));
-    if (!TM)
-      GTEST_SKIP();
-
-    SMDiagnostic SMError;
-    M = parseAssemblyString(Assembly, SMError, Context);
-    if (!M)
-      report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
-
-    F = M->getFunction("f");
-    if (!F)
-      report_fatal_error("F?");
-    G = M->getGlobalVariable("g");
-    if (!G)
-      report_fatal_error("G?");
-    AliasedG = M->getNamedAlias("g_alias");
-    if (!AliasedG)
-      report_fatal_error("AliasedG?");
-
-    MachineModuleInfo MMI(TM.get());
-
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
-
-    DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
-    if (!DAG)
-      report_fatal_error("DAG?");
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
-  }
-
-  TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeAction(Context, VT);
-  }
-
-  EVT getTypeToTransformTo(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeToTransformTo(Context, VT);
-  }
-
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  Function *F;
-  GlobalVariable *G;
-  GlobalAlias *AliasedG;
-  std::unique_ptr<MachineFunction> MF;
-  std::unique_ptr<SelectionDAG> DAG;
-};
+class SelectionDAGAddressAnalysisTest : public SelectionDAGTestBase {};
 
 TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
   SDLoc Loc;

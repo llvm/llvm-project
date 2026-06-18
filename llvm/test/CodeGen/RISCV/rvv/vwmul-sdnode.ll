@@ -48,8 +48,8 @@ define <vscale x 1 x i64> @vwmul_vx_nxv1i64_nxv1i32(<vscale x 1 x i32> %va, i32 
 ; CHECK-NEXT:    vwmul.vx v9, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
   %vc = sext <vscale x 1 x i32> %va to <vscale x 1 x i64>
   %vd = sext <vscale x 1 x i32> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -63,8 +63,8 @@ define <vscale x 1 x i64> @vwmulu_vx_nxv1i64_nxv1i32(<vscale x 1 x i32> %va, i32
 ; CHECK-NEXT:    vwmulu.vx v9, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
   %vc = zext <vscale x 1 x i32> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i32> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -78,8 +78,8 @@ define <vscale x 1 x i64> @vwmulsu_vx_nxv1i64_nxv1i32(<vscale x 1 x i32> %va, i3
 ; CHECK-NEXT:    vwmulsu.vx v9, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
   %vc = sext <vscale x 1 x i32> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i32> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -135,8 +135,8 @@ define <vscale x 2 x i64> @vwmul_vx_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, i32 
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vwmul.vx v8, v10, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %vc = sext <vscale x 2 x i32> %va to <vscale x 2 x i64>
   %vd = sext <vscale x 2 x i32> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -150,8 +150,8 @@ define <vscale x 2 x i64> @vwmulu_vx_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, i32
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vwmulu.vx v8, v10, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %vc = zext <vscale x 2 x i32> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i32> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -165,8 +165,8 @@ define <vscale x 2 x i64> @vwmulsu_vx_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, i3
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vwmulsu.vx v8, v10, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %vc = sext <vscale x 2 x i32> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i32> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -222,8 +222,8 @@ define <vscale x 4 x i64> @vwmul_vx_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, i32 
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vwmul.vx v8, v12, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %vc = sext <vscale x 4 x i32> %va to <vscale x 4 x i64>
   %vd = sext <vscale x 4 x i32> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -237,8 +237,8 @@ define <vscale x 4 x i64> @vwmulu_vx_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, i32
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vwmulu.vx v8, v12, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %vc = zext <vscale x 4 x i32> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i32> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -252,8 +252,8 @@ define <vscale x 4 x i64> @vwmulsu_vx_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, i3
 ; CHECK-NEXT:    vmv2r.v v12, v8
 ; CHECK-NEXT:    vwmulsu.vx v8, v12, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %vc = sext <vscale x 4 x i32> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i32> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -309,8 +309,8 @@ define <vscale x 8 x i64> @vwmul_vx_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, i32 
 ; CHECK-NEXT:    vmv4r.v v16, v8
 ; CHECK-NEXT:    vwmul.vx v8, v16, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %vc = sext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   %vd = sext <vscale x 8 x i32> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -324,8 +324,8 @@ define <vscale x 8 x i64> @vwmulu_vx_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, i32
 ; CHECK-NEXT:    vmv4r.v v16, v8
 ; CHECK-NEXT:    vwmulu.vx v8, v16, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %vc = zext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i32> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -339,8 +339,8 @@ define <vscale x 8 x i64> @vwmulsu_vx_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, i3
 ; CHECK-NEXT:    vmv4r.v v16, v8
 ; CHECK-NEXT:    vwmulsu.vx v8, v16, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> undef, i32 %b, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %vc = sext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i32> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -399,8 +399,8 @@ define <vscale x 1 x i64> @vwmul_vx_nxv1i64_nxv1i16(<vscale x 1 x i16> %va, i16 
 ; CHECK-NEXT:    vsext.vf2 v11, v9
 ; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
   %vc = sext <vscale x 1 x i16> %va to <vscale x 1 x i64>
   %vd = sext <vscale x 1 x i16> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -415,8 +415,8 @@ define <vscale x 1 x i64> @vwmulu_vx_nxv1i64_nxv1i16(<vscale x 1 x i16> %va, i16
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
   %vc = zext <vscale x 1 x i16> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i16> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -433,8 +433,8 @@ define <vscale x 1 x i64> @vwmulsu_vx_nxv1i64_nxv1i16(<vscale x 1 x i16> %va, i1
 ; CHECK-NEXT:    vzext.vf2 v11, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
   %vc = sext <vscale x 1 x i16> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i16> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -493,8 +493,8 @@ define <vscale x 2 x i64> @vwmul_vx_nxv2i64_nxv2i16(<vscale x 2 x i16> %va, i16 
 ; CHECK-NEXT:    vsext.vf2 v11, v9
 ; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   %vc = sext <vscale x 2 x i16> %va to <vscale x 2 x i64>
   %vd = sext <vscale x 2 x i16> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -509,8 +509,8 @@ define <vscale x 2 x i64> @vwmulu_vx_nxv2i64_nxv2i16(<vscale x 2 x i16> %va, i16
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   %vc = zext <vscale x 2 x i16> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i16> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -527,8 +527,8 @@ define <vscale x 2 x i64> @vwmulsu_vx_nxv2i64_nxv2i16(<vscale x 2 x i16> %va, i1
 ; CHECK-NEXT:    vzext.vf2 v11, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   %vc = sext <vscale x 2 x i16> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i16> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -587,8 +587,8 @@ define <vscale x 4 x i64> @vwmul_vx_nxv4i64_nxv4i16(<vscale x 4 x i16> %va, i16 
 ; CHECK-NEXT:    vsext.vf2 v14, v9
 ; CHECK-NEXT:    vwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
   %vc = sext <vscale x 4 x i16> %va to <vscale x 4 x i64>
   %vd = sext <vscale x 4 x i16> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -603,8 +603,8 @@ define <vscale x 4 x i64> @vwmulu_vx_nxv4i64_nxv4i16(<vscale x 4 x i16> %va, i16
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
   %vc = zext <vscale x 4 x i16> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i16> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -621,8 +621,8 @@ define <vscale x 4 x i64> @vwmulsu_vx_nxv4i64_nxv4i16(<vscale x 4 x i16> %va, i1
 ; CHECK-NEXT:    vzext.vf2 v14, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v12, v14
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
   %vc = sext <vscale x 4 x i16> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i16> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -681,8 +681,8 @@ define <vscale x 8 x i64> @vwmul_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i16 
 ; CHECK-NEXT:    vsext.vf2 v20, v10
 ; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %vc = sext <vscale x 8 x i16> %va to <vscale x 8 x i64>
   %vd = sext <vscale x 8 x i16> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -697,8 +697,8 @@ define <vscale x 8 x i64> @vwmulu_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i16
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %vc = zext <vscale x 8 x i16> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i16> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -715,8 +715,8 @@ define <vscale x 8 x i64> @vwmulsu_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i1
 ; CHECK-NEXT:    vzext.vf2 v20, v10
 ; CHECK-NEXT:    vwmulsu.vv v8, v16, v20
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i16> undef, i16 %b, i16 0
-  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i16> poison, i16 %b, i16 0
+  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %vc = sext <vscale x 8 x i16> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i16> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -775,8 +775,8 @@ define <vscale x 1 x i64> @vwmul_vx_nxv1i64_nxv1i8(<vscale x 1 x i8> %va, i8 %b)
 ; CHECK-NEXT:    vsext.vf4 v11, v9
 ; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
   %vc = sext <vscale x 1 x i8> %va to <vscale x 1 x i64>
   %vd = sext <vscale x 1 x i8> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -791,8 +791,8 @@ define <vscale x 1 x i64> @vwmulu_vx_nxv1i64_nxv1i8(<vscale x 1 x i8> %va, i8 %b
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
   %vc = zext <vscale x 1 x i8> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i8> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -809,8 +809,8 @@ define <vscale x 1 x i64> @vwmulsu_vx_nxv1i64_nxv1i8(<vscale x 1 x i8> %va, i8 %
 ; CHECK-NEXT:    vzext.vf4 v11, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
+  %head = insertelement <vscale x 1 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
   %vc = sext <vscale x 1 x i8> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i8> %splat to <vscale x 1 x i64>
   %ve = mul <vscale x 1 x i64> %vc, %vd
@@ -869,8 +869,8 @@ define <vscale x 2 x i64> @vwmul_vx_nxv2i64_nxv2i8(<vscale x 2 x i8> %va, i8 %b)
 ; CHECK-NEXT:    vsext.vf4 v11, v9
 ; CHECK-NEXT:    vwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   %vc = sext <vscale x 2 x i8> %va to <vscale x 2 x i64>
   %vd = sext <vscale x 2 x i8> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -885,8 +885,8 @@ define <vscale x 2 x i64> @vwmulu_vx_nxv2i64_nxv2i8(<vscale x 2 x i8> %va, i8 %b
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v8, v10
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   %vc = zext <vscale x 2 x i8> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i8> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -903,8 +903,8 @@ define <vscale x 2 x i64> @vwmulsu_vx_nxv2i64_nxv2i8(<vscale x 2 x i8> %va, i8 %
 ; CHECK-NEXT:    vzext.vf4 v11, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer
+  %head = insertelement <vscale x 2 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   %vc = sext <vscale x 2 x i8> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i8> %splat to <vscale x 2 x i64>
   %ve = mul <vscale x 2 x i64> %vc, %vd
@@ -963,8 +963,8 @@ define <vscale x 4 x i64> @vwmul_vx_nxv4i64_nxv4i8(<vscale x 4 x i8> %va, i8 %b)
 ; CHECK-NEXT:    vsext.vf4 v14, v9
 ; CHECK-NEXT:    vwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
   %vc = sext <vscale x 4 x i8> %va to <vscale x 4 x i64>
   %vd = sext <vscale x 4 x i8> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -979,8 +979,8 @@ define <vscale x 4 x i64> @vwmulu_vx_nxv4i64_nxv4i8(<vscale x 4 x i8> %va, i8 %b
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v8, v12
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
   %vc = zext <vscale x 4 x i8> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i8> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -997,8 +997,8 @@ define <vscale x 4 x i64> @vwmulsu_vx_nxv4i64_nxv4i8(<vscale x 4 x i8> %va, i8 %
 ; CHECK-NEXT:    vzext.vf4 v14, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v12, v14
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> undef, <vscale x 4 x i32> zeroinitializer
+  %head = insertelement <vscale x 4 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
   %vc = sext <vscale x 4 x i8> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i8> %splat to <vscale x 4 x i64>
   %ve = mul <vscale x 4 x i64> %vc, %vd
@@ -1057,8 +1057,8 @@ define <vscale x 8 x i64> @vwmul_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %b)
 ; CHECK-NEXT:    vsext.vf4 v20, v9
 ; CHECK-NEXT:    vwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %vc = sext <vscale x 8 x i8> %va to <vscale x 8 x i64>
   %vd = sext <vscale x 8 x i8> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -1073,8 +1073,8 @@ define <vscale x 8 x i64> @vwmulu_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %b
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v8, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %vc = zext <vscale x 8 x i8> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i8> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd
@@ -1091,8 +1091,8 @@ define <vscale x 8 x i64> @vwmulsu_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %
 ; CHECK-NEXT:    vzext.vf4 v20, v9
 ; CHECK-NEXT:    vwmulsu.vv v8, v16, v20
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i8> undef, i8 %b, i8 0
-  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
+  %head = insertelement <vscale x 8 x i8> poison, i8 %b, i8 0
+  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %vc = sext <vscale x 8 x i8> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i8> %splat to <vscale x 8 x i64>
   %ve = mul <vscale x 8 x i64> %vc, %vd

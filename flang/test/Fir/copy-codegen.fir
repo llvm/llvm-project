@@ -12,10 +12,8 @@ func.func @test_copy_1(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t>) {
 // CHECK-LABEL:   llvm.func @test_copy_1(
 // CHECK-SAME:                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !llvm.ptr,
 // CHECK-SAME:                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !llvm.ptr) {
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_2]][1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"sometype", (array<9 x i32>)>
-// CHECK:           %[[VAL_4:.*]] = llvm.ptrtoint %[[VAL_3]] : !llvm.ptr to i64
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %[[VAL_4]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(36 : i64) : i64
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %[[VAL_2]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -26,10 +24,8 @@ func.func @test_copy_2(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t>) {
 // CHECK-LABEL:   llvm.func @test_copy_2(
 // CHECK-SAME:                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !llvm.ptr,
 // CHECK-SAME:                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !llvm.ptr) {
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.zero : !llvm.ptr
-// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_2]][1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"sometype", (array<9 x i32>)>
-// CHECK:           %[[VAL_4:.*]] = llvm.ptrtoint %[[VAL_3]] : !llvm.ptr to i64
-// CHECK:           "llvm.intr.memmove"(%[[VAL_1]], %[[VAL_0]], %[[VAL_4]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(36 : i64) : i64
+// CHECK:           "llvm.intr.memmove"(%[[VAL_1]], %[[VAL_0]], %[[VAL_2]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:           llvm.return
 // CHECK:         }
 }

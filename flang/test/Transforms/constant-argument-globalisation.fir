@@ -1,5 +1,5 @@
 // RUN: fir-opt --constant-argument-globalisation-opt  < %s | FileCheck %s
-// RUN: %flang_fc1 -emit-llvm -flang-deprecated-no-hlfir -O2 -o - %s | FileCheck --check-prefix=DISABLE %s
+// RUN: %flang_fc1 -emit-llvm -O2 -o - %s | FileCheck --check-prefix=DISABLE %s
 module {
   func.func @sub1(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "y"}) {
     %0 = fir.alloca i32 {adapt.valuebyref}
@@ -49,8 +49,8 @@ module {
 // DISABLE-LABEL: ; ModuleID =
 // DISABLE-NOT: @_extruded
 // DISABLE:  define void @sub1(
-// DISABLE-SAME: ptr captures(none) [[ARG0:%.*]],
-// DISABLE-SAME: ptr captures(none) [[ARG1:%.*]])
+// DISABLE-SAME: ptr {{[^%]*}}[[ARG0:%.*]],
+// DISABLE-SAME: ptr {{[^%]*}}[[ARG1:%.*]])
 // DISABLE-SAME: {
 // DISABLE: [[CONST_R0:%.*]] = alloca double
 // DISABLE: [[CONST_R1:%.*]] = alloca double

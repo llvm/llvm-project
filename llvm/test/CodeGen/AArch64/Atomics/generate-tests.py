@@ -177,6 +177,8 @@ FP_ATOMICRMW_OPS = [
     "fsub",
     "fmax",
     "fmin",
+    "fmaximum",
+    "fminimum",
 ]
 
 

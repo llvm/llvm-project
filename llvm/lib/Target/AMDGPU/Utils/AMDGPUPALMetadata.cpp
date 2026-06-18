@@ -23,6 +23,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/VersionTuple.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -43,6 +44,7 @@ static const char *getStageName(CallingConv::ID CC) {
   case CallingConv::AMDGPU_LS:
     return ".ls";
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     llvm_unreachable("Callable shader has no hardware stage");
   default:
     return ".cs";
@@ -259,13 +261,16 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   getHwStage(CC)[".entry_point_symbol"] =
       MsgPackDoc.getNode(Name, /*Copy=*/true);
 
-  // Set .entry_point which is defined
-  // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
-  SmallString<16> EPName("_amdgpu_");
-  raw_svector_ostream EPNameOS(EPName);
-  EPNameOS << getStageName(CC) + 1;
-  getHwStage(CC)[".entry_point"] =
-      MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  // For PAL version 3.6 and above, entry_point is no longer required.
+  if (getPALVersion() < VersionTuple(3, 6)) {
+    // Set .entry_point which is defined to be _amdgpu_<stage>_main and
+    // _amdgpu_cs_main for non-shader functions.
+    SmallString<16> EPName("_amdgpu_");
+    raw_svector_ostream EPNameOS(EPName);
+    EPNameOS << getStageName(CC) + 1 << "_main";
+    getHwStage(CC)[".entry_point"] =
+        MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  }
 }
 
 // Set the number of used vgprs in the metadata. This is an optional
@@ -676,6 +681,22 @@ static const char *getRegisterName(unsigned RegNum) {
       {0x2e4d, "COMPUTE_USER_DATA_13"},
       {0x2e4e, "COMPUTE_USER_DATA_14"},
       {0x2e4f, "COMPUTE_USER_DATA_15"},
+      {0x2e50, "COMPUTE_USER_DATA_16"},
+      {0x2e51, "COMPUTE_USER_DATA_17"},
+      {0x2e52, "COMPUTE_USER_DATA_18"},
+      {0x2e53, "COMPUTE_USER_DATA_19"},
+      {0x2e54, "COMPUTE_USER_DATA_20"},
+      {0x2e55, "COMPUTE_USER_DATA_21"},
+      {0x2e56, "COMPUTE_USER_DATA_22"},
+      {0x2e57, "COMPUTE_USER_DATA_23"},
+      {0x2e58, "COMPUTE_USER_DATA_24"},
+      {0x2e59, "COMPUTE_USER_DATA_25"},
+      {0x2e5a, "COMPUTE_USER_DATA_26"},
+      {0x2e5b, "COMPUTE_USER_DATA_27"},
+      {0x2e5c, "COMPUTE_USER_DATA_28"},
+      {0x2e5d, "COMPUTE_USER_DATA_29"},
+      {0x2e5e, "COMPUTE_USER_DATA_30"},
+      {0x2e5f, "COMPUTE_USER_DATA_31"},
 
       {0x2e07, "COMPUTE_NUM_THREAD_X"},
       {0x2e08, "COMPUTE_NUM_THREAD_Y"},
@@ -894,7 +915,7 @@ bool AMDGPUPALMetadata::setFromString(StringRef S) {
         errs() << "Unrecognized PAL metadata register key '" << S << "'\n";
         continue;
       }
-      Key = MsgPackDoc.getNode(uint64_t(Val));
+      Key = MsgPackDoc.getNode(Val);
     }
     Registers.getMap()[Key] = I.second;
   }
@@ -1051,6 +1072,21 @@ unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
 unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
 
 unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
+
+VersionTuple AMDGPUPALMetadata::getPALVersion() {
+  return VersionTuple(getPALVersion(0), getPALVersion(1));
+}
+
+// Set the field in a given .hardware_stages entry to a maximum value
+void AMDGPUPALMetadata::updateHwStageMaximum(unsigned CC, StringRef field,
+                                             unsigned Val) {
+  msgpack::MapDocNode HwStageFieldMapNode = getHwStage(CC);
+  auto &Node = HwStageFieldMapNode[field];
+  if (Node.isEmpty())
+    Node = Val;
+  else
+    Node = std::max<unsigned>(Node.getUInt(), Val);
+}
 
 // Set the field in a given .hardware_stages entry
 void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, unsigned Val) {

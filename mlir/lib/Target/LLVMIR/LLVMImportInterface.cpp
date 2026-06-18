@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
-#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
 using namespace mlir;
@@ -34,21 +33,20 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
   SmallVector<Value> mlirOperands;
   SmallVector<NamedAttribute> mlirAttrs;
   if (failed(moduleImport.convertIntrinsicArguments(
-          llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands, mlirAttrs)))
+          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false,
+          /*immArgPositions=*/{}, /*immArgAttrNames=*/{}, mlirOperands,
+          mlirAttrs)))
     return failure();
 
-  Type results = moduleImport.convertType(inst->getType());
-  auto op = builder.create<::mlir::LLVM::CallIntrinsicOp>(
-      moduleImport.translateLoc(inst->getDebugLoc()), results,
+  Type resultType = moduleImport.convertType(inst->getType());
+  auto op = CallIntrinsicOp::create(
+      builder, moduleImport.translateLoc(inst->getDebugLoc()),
+      isa<LLVMVoidType>(resultType) ? TypeRange{} : TypeRange{resultType},
       StringAttr::get(builder.getContext(), intrinName),
       ValueRange{mlirOperands}, FastmathFlagsAttr{});
 
   moduleImport.setFastmathFlagsAttr(inst, op);
-
-  ArrayAttr argsAttr, resAttr;
-  moduleImport.convertParameterAttributes(inst, argsAttr, resAttr, builder);
-  op.setArgAttrsAttr(argsAttr);
-  op.setResAttrsAttr(resAttr);
+  moduleImport.convertArgAndResultAttrs(inst, op);
 
   // Update importer tracking of results.
   unsigned numRes = op.getNumResults();

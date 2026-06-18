@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx83 | FileCheck --check-prefixes=CHECK %s
-; RUN: %if ptxas-12.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx83 | %ptxas-verify -arch=sm_90 %}
+; RUN: %if ptxas-sm_90 && ptxas-isa-8.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx83 | %ptxas-verify -arch=sm_90 %}
 
 ; CHECK-LABEL: test_fence_proxy_tensormap_generic_release
 define void @test_fence_proxy_tensormap_generic_release() {

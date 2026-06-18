@@ -28,9 +28,9 @@ using namespace llvm;
 
 namespace llvm {
 
-template class RegionBase<RegionTraits<Function>>;
-template class RegionNodeBase<RegionTraits<Function>>;
-template class RegionInfoBase<RegionTraits<Function>>;
+template class LLVM_TEMPLATE_ABI RegionBase<RegionTraits<Function>>;
+template class LLVM_TEMPLATE_ABI RegionNodeBase<RegionTraits<Function>>;
+template class LLVM_TEMPLATE_ABI RegionInfoBase<RegionTraits<Function>>;
 
 } // end namespace llvm
 
@@ -116,9 +116,7 @@ void RegionInfo::viewOnly() { viewRegionOnly(this); }
 // RegionInfoPass implementation
 //
 
-RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {
-  initializeRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {}
 
 RegionInfoPass::~RegionInfoPass() = default;
 

@@ -737,15 +737,25 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #  include <compare>
 #  include <concepts>
 
+// [range.access.general]
+#  if _LIBCPP_STD_VER >= 20
+#    include <__ranges/access.h>
+#    include <__ranges/data.h>
+#    include <__ranges/empty.h>
+#    include <__ranges/rbegin.h>
+#    include <__ranges/rend.h>
+#    include <__ranges/size.h>
+#  endif
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
 #    include <variant>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <cstddef>
 #    include <cstdlib>
 #    include <exception>

@@ -164,14 +164,14 @@ entry:
 define ptr @scc_A(ptr dereferenceable_or_null(4) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define noundef dereferenceable_or_null(4) ptr @scc_A
-; CHECK-SAME: (ptr nofree noundef readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef readnone returned dereferenceable_or_null(4) [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_C(ptr noalias nofree noundef nonnull readnone dereferenceable(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
-; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(8) ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
-; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_C(ptr noalias nofree noundef nonnull readnone dereferenceable(4) [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(8) ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(8) [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    br label [[COND_END]]
@@ -201,14 +201,14 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define ptr @scc_B(ptr dereferenceable_or_null(8) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define noundef dereferenceable_or_null(8) ptr @scc_B
-; CHECK-SAME: (ptr nofree noundef readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef readnone returned dereferenceable_or_null(8) [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_A(ptr noalias nofree noundef nonnull readnone dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
-; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(8) ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
-; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_C(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_A(ptr noalias nofree noundef nonnull readnone dereferenceable(8) [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(8) ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_C(ptr noalias nofree noundef readnone dereferenceable_or_null(8) [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    br label [[COND_END]]
@@ -237,20 +237,20 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define ptr @scc_C(ptr dereferenceable_or_null(2) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define noundef dereferenceable_or_null(4) ptr @scc_C
-; CHECK-SAME: (ptr nofree noundef readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (ptr nofree noundef readnone returned dereferenceable_or_null(4) [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(4) [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_C(ptr noalias nofree noundef readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_C(ptr noalias nofree noundef readnone dereferenceable_or_null(4) [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi ptr [ [[A]], [[COND_TRUE]] ], [ [[A]], [[COND_FALSE]] ]
-; CHECK-NEXT:    [[CALL3:%.*]] = call ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL3:%.*]] = call ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(4) [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ptr [[A]]
 ;
 entry:
@@ -525,7 +525,7 @@ entry:
 define ptr @ret_arg_or_unknown(ptr %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define ptr @ret_arg_or_unknown
-; CHECK-SAME: (ptr [[B:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr nofree [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RET_ARG:%.*]], label [[RET_UNKNOWN:%.*]]
@@ -550,7 +550,7 @@ ret_unknown:
 define ptr @ret_arg_or_unknown_through_phi(ptr %b) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define ptr @ret_arg_or_unknown_through_phi
-; CHECK-SAME: (ptr [[B:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (ptr nofree [[B:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RET_ARG:%.*]], label [[RET_UNKNOWN:%.*]]

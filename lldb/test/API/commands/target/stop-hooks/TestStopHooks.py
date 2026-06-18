@@ -5,9 +5,11 @@ Test stop hook functionality
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class TestStopHooks(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -55,7 +57,7 @@ class TestStopHooks(TestBase):
     def after_expr_test(self):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
+        interp.HandleCommand("target stop-hook add -o 'expr g_var++' -I false", result)
         self.assertTrue(result.Succeeded(), "Set the target stop hook")
 
         (target, process, thread, first_bkpt) = lldbutil.run_to_source_breakpoint(

@@ -14,6 +14,7 @@
 
 #include "SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -209,10 +210,10 @@ private:
     return false;
   }
 
-  std::unordered_set<BasicBlock *>
+  SmallPtrSet<BasicBlock *, 0>
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
-    std::unordered_set<BasicBlock *> Output;
+    SmallPtrSet<BasicBlock *, 0> Output;
 
     if (isMatch(From))
       Output.insert(From);
@@ -269,8 +270,7 @@ public:
       ToProcess.pop();
 
       auto CT = getConvergenceToken(L->getHeader());
-      SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),
-                                                L->block_end());
+      SmallPtrSet<BasicBlock *, 8> RegionBlocks(llvm::from_range, L->blocks());
       SmallVector<BasicBlock *> LoopExits;
       L->getExitingBlocks(LoopExits);
       if (CT.has_value()) {

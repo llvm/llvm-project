@@ -2318,11 +2318,79 @@ TEST(LlvmLibcStrftimeTest, TimeFormatFullDateTime) {
   EXPECT_STREQ_LEN(written, buffer, "  Wed Jun 15 14:13:12 2011");
 }
 
-// TODO: implement %z and %Z when timezones are implemented.
-//  TEST(LlvmLibcStrftimeTest, TimezoneOffset) {
-//    // this tests %z, which reads: [tm_isdst, tm_zone]
-//    struct tm time;
-//    char buffer[100];
-//    size_t written = 0;
-//    SimplePaddedNum spn;
-//  }
+#if defined(__linux__)
+TEST(LlvmLibcStrftimeTest, TimezoneTest) {
+  struct tm time;
+  char buffer[100];
+  size_t written = 0;
+
+  time.tm_year = get_adjusted_year(2011);
+  time.tm_mon = 5;
+  time.tm_mday = 15;
+  time.tm_hour = 14;
+  time.tm_min = 13;
+  time.tm_sec = 12;
+  time.tm_wday = 3;
+  time.tm_yday = 165;
+  time.tm_isdst = 0;
+  time.tm_gmtoff = 3600; // +01:00
+  time.tm_zone = "BST";
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "+0100");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%Z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "BST");
+
+  time.tm_gmtoff = -18000; // -05:00
+  time.tm_zone = "EST";
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "-0500");
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%Z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "EST");
+
+  time.tm_gmtoff = -16200; // -04:30
+  time.tm_zone = "XYZ";
+
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "-0430");
+
+  // Test null tm_zone
+  time.tm_zone = nullptr;
+  time.tm_isdst = 0;
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%Z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "");
+
+  // Test negative tm_isdst (should write no characters)
+  time.tm_isdst = -1;
+  time.tm_gmtoff = 3600;
+  time.tm_zone = "BST";
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "");
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%Z", &time);
+  EXPECT_STREQ_LEN(written, buffer, "");
+}
+#endif // __linux__
+
+TEST(LlvmLibcStrftimeTest, BufferTooSmall) {
+  struct tm time;
+  char tiny_buffer[1];
+
+  time.tm_year = get_adjusted_year(2025);
+  time.tm_mon = 10;
+  time.tm_mday = 24;
+
+  size_t written =
+      LIBC_NAMESPACE::strftime(tiny_buffer, sizeof(tiny_buffer), "%F", &time);
+  EXPECT_EQ(written, size_t{0});
+
+  char small_buffer[10];
+
+  // The string "2025-11-24" is 10 chars,
+  // so strftime needs 10 + 1 bytes to write the string and the null terminator.
+  written =
+      LIBC_NAMESPACE::strftime(small_buffer, sizeof(small_buffer), "%F", &time);
+  EXPECT_EQ(written, size_t{0});
+}

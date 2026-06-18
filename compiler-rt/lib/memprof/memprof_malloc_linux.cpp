@@ -50,6 +50,24 @@ INTERCEPTOR(void, cfree, void *ptr) {
 }
 #endif // SANITIZER_INTERCEPT_CFREE
 
+#if SANITIZER_INTERCEPT_FREE_SIZED
+INTERCEPTOR(void, free_sized, void *ptr, uptr size) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_STACK_TRACE_FREE;
+  memprof_delete(ptr, size, 0, &stack, FROM_MALLOC);
+}
+#endif // SANITIZER_INTERCEPT_FREE_SIZED
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+INTERCEPTOR(void, free_aligned_sized, void *ptr, uptr alignment, uptr size) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_STACK_TRACE_FREE;
+  memprof_delete(ptr, size, alignment, &stack, FROM_MALLOC);
+}
+#endif // SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+
 INTERCEPTOR(void *, malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);

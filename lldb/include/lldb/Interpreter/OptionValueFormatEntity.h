@@ -21,14 +21,12 @@ public:
 
   ~OptionValueFormatEntity() override = default;
 
-  // Virtual subclass pure virtual overrides
-
   OptionValue::Type GetType() const override { return eTypeFormatEntity; }
 
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override;
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,
@@ -36,20 +34,18 @@ public:
 
   void Clear() override;
 
+  bool IsDefault() const override {
+    return m_current_format == m_default_format;
+  }
+
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
-
-  // Subclass specific functions
-
-  FormatEntity::Entry &GetCurrentValue() { return m_current_entry; }
 
   const FormatEntity::Entry &GetCurrentValue() const { return m_current_entry; }
 
   void SetCurrentValue(const FormatEntity::Entry &value) {
     m_current_entry = value;
   }
-
-  FormatEntity::Entry &GetDefaultValue() { return m_default_entry; }
 
   const FormatEntity::Entry &GetDefaultValue() const { return m_default_entry; }
 

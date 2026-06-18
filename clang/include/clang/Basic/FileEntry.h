@@ -82,6 +82,7 @@ public:
   inline const llvm::sys::fs::UniqueID &getUniqueID() const;
   inline time_t getModificationTime() const;
   inline bool isNamedPipe() const;
+  inline bool isDeviceFile() const;
   inline void closeFile() const;
 
   /// Check if the underlying FileEntry is the same, intentially ignoring
@@ -182,18 +183,6 @@ private:
   bool hasOptionalValue() const { return ME; }
 
   friend struct llvm::DenseMapInfo<FileEntryRef>;
-  struct dense_map_empty_tag {};
-  struct dense_map_tombstone_tag {};
-
-  // Private constructors for use by DenseMapInfo.
-  FileEntryRef(dense_map_empty_tag)
-      : ME(llvm::DenseMapInfo<const MapEntry *>::getEmptyKey()) {}
-  FileEntryRef(dense_map_tombstone_tag)
-      : ME(llvm::DenseMapInfo<const MapEntry *>::getTombstoneKey()) {}
-  bool isSpecialDenseMapKey() const {
-    return isSameRef(FileEntryRef(dense_map_empty_tag())) ||
-           isSameRef(FileEntryRef(dense_map_tombstone_tag()));
-  }
 
   const MapEntry *ME;
 };
@@ -217,11 +206,7 @@ class OptionalStorage<clang::FileEntryRef>
       clang::FileMgr::MapEntryOptionalStorage<clang::FileEntryRef>;
 
 public:
-  OptionalStorage() = default;
-
-  template <class... ArgTypes>
-  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
-      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  using StorageImpl::StorageImpl;
 
   OptionalStorage &operator=(clang::FileEntryRef Ref) {
     StorageImpl::operator=(Ref);
@@ -242,28 +227,13 @@ namespace llvm {
 
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
-  static inline clang::FileEntryRef getEmptyKey() {
-    return clang::FileEntryRef(clang::FileEntryRef::dense_map_empty_tag());
-  }
-
-  static inline clang::FileEntryRef getTombstoneKey() {
-    return clang::FileEntryRef(clang::FileEntryRef::dense_map_tombstone_tag());
-  }
-
   static unsigned getHashValue(clang::FileEntryRef Val) {
     return hash_value(Val);
   }
 
   static bool isEqual(clang::FileEntryRef LHS, clang::FileEntryRef RHS) {
-    // Catch the easy cases: both empty, both tombstone, or the same ref.
     if (LHS.isSameRef(RHS))
       return true;
-
-    // Confirm LHS and RHS are valid.
-    if (LHS.isSpecialDenseMapKey() || RHS.isSpecialDenseMapKey())
-      return false;
-
-    // It's safe to use operator==.
     return LHS == RHS;
   }
 
@@ -273,8 +243,6 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
     return llvm::hash_value(Val);
   }
   static bool isEqual(const clang::FileEntry *LHS, clang::FileEntryRef RHS) {
-    if (RHS.isSpecialDenseMapKey())
-      return false;
     return LHS == RHS;
   }
   /// @}
@@ -316,6 +284,7 @@ class FileEntry {
   llvm::sys::fs::UniqueID UniqueID;
   unsigned UID = 0; // A unique (small) ID for the file.
   bool IsNamedPipe = false;
+  bool IsDeviceFile = false;
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
@@ -340,6 +309,7 @@ public:
   /// Check whether the file is a named pipe (and thus can't be opened by
   /// the native FileManager methods).
   bool isNamedPipe() const { return IsNamedPipe; }
+  bool isDeviceFile() const { return IsDeviceFile; }
 
   void closeFile() const;
 };
@@ -357,6 +327,9 @@ time_t FileEntryRef::getModificationTime() const {
 }
 
 bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
+bool FileEntryRef::isDeviceFile() const {
+  return getFileEntry().isDeviceFile();
+}
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
 

@@ -50,7 +50,7 @@ mlir::Value fir::runtime::genInitArrayConstructorVector(
   auto args = fir::runtime::createArguments(builder, loc, funcType, cookie,
                                             toBox, useValueLengthParameters,
                                             sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
   return cookie;
 }
 
@@ -63,7 +63,7 @@ void fir::runtime::genPushArrayConstructorValue(
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcType,
                                             arrayConstructorVector, fromBox);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genPushArrayConstructorSimpleScalar(
@@ -75,5 +75,5 @@ void fir::runtime::genPushArrayConstructorSimpleScalar(
   mlir::FunctionType funcType = func.getFunctionType();
   auto args = fir::runtime::createArguments(
       builder, loc, funcType, arrayConstructorVector, fromAddress);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

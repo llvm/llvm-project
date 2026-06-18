@@ -25,16 +25,9 @@ static bool isDebugSection(const Section &Sec) {
   return Sec.Name.starts_with(".debug") || Sec.Name.starts_with("reloc..debug");
 }
 
-static bool isLinkerSection(const Section &Sec) {
-  return Sec.Name.starts_with("reloc.") || Sec.Name == "linking";
-}
-
-static bool isNameSection(const Section &Sec) { return Sec.Name == "name"; }
-
-// Sections which are known to be "comments" or informational and do not affect
-// program semantics.
-static bool isCommentSection(const Section &Sec) {
-  return Sec.Name == "producers";
+static bool isEngineInterpretedSection(const Section &Sec) {
+  return Sec.SectionType != llvm::wasm::WASM_SEC_CUSTOM ||
+         Sec.Name.starts_with("metadata.code.");
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -47,7 +40,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       if (!BufferOrErr)
         return createFileError(Filename, BufferOrErr.takeError());
       std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
-      std::copy(Contents.begin(), Contents.end(), Buf->getBufferStart());
+      llvm::copy(Contents, Buf->getBufferStart());
       if (Error E = Buf->commit())
         return createFileError(Filename, std::move(E));
       return Error::success();
@@ -75,8 +68,7 @@ static void removeSections(const CommonConfig &Config, Object &Obj) {
 
   if (Config.StripAll) {
     RemovePred = [RemovePred](const Section &Sec) {
-      return RemovePred(Sec) || isDebugSection(Sec) || isLinkerSection(Sec) ||
-             isNameSection(Sec) || isCommentSection(Sec);
+      return RemovePred(Sec) || !isEngineInterpretedSection(Sec);
     };
   }
 

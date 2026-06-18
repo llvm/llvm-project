@@ -106,24 +106,35 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
   if (bundleHasArgument(BOI, ABA_WasOn))
     Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn);
-  auto GetArgOr1 = [&](unsigned Idx) -> uint64_t {
+  auto GetArgOr = [&](unsigned Idx, uint64_t Default) -> uint64_t {
     if (auto *ConstInt = dyn_cast<ConstantInt>(
             getValueFromBundleOpInfo(Assume, BOI, ABA_Argument + Idx)))
       return ConstInt->getZExtValue();
-    return 1;
+    return Default;
   };
-  if (BOI.End - BOI.Begin > ABA_Argument)
-    Result.ArgValue = GetArgOr1(0);
+  if (BOI.End - BOI.Begin > ABA_Argument) {
+    switch (Result.AttrKind) {
+    case Attribute::Alignment:
+      Result.ArgValue = GetArgOr(0, 1);
+      break;
+    case Attribute::Dereferenceable:
+    case Attribute::DereferenceableOrNull:
+      Result.ArgValue = GetArgOr(0, 0);
+      break;
+    case Attribute::None:
+      Result.ArgValue = 0;
+      break;
+    default:
+      llvm_unreachable("Attribute kind does not support argument");
+    }
+  }
+  Result.IRArgValue = bundleHasArgument(BOI, ABA_Argument)
+                          ? getValueFromBundleOpInfo(Assume, BOI, ABA_Argument)
+                          : nullptr;
   if (Result.AttrKind == Attribute::Alignment)
     if (BOI.End - BOI.Begin > ABA_Argument + 1)
-      Result.ArgValue = MinAlign(Result.ArgValue, GetArgOr1(1));
+      Result.ArgValue = MinAlign(Result.ArgValue, GetArgOr(1, 1));
   return Result;
-}
-
-RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(AssumeInst &Assume,
-                                                        unsigned Idx) {
-  CallBase::BundleOpInfo BOI = Assume.getBundleOpInfoForOperand(Idx);
-  return getKnowledgeFromBundle(Assume, BOI);
 }
 
 bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {
@@ -157,47 +168,33 @@ llvm::getKnowledgeFromUse(const Use *U,
 RetainedKnowledge
 llvm::getKnowledgeForValue(const Value *V,
                            ArrayRef<Attribute::AttrKind> AttrKinds,
-                           AssumptionCache *AC,
+                           AssumptionCache &AC,
                            function_ref<bool(RetainedKnowledge, Instruction *,
                                              const CallBase::BundleOpInfo *)>
                                Filter) {
   NumAssumeQueries++;
-  if (AC) {
-    for (AssumptionCache::ResultElem &Elem : AC->assumptionsFor(V)) {
-      auto *II = cast_or_null<AssumeInst>(Elem.Assume);
-      if (!II || Elem.Index == AssumptionCache::ExprResultIdx)
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *II, II->bundle_op_info_begin()[Elem.Index])) {
-        if (V != RK.WasOn)
-          continue;
-        if (is_contained(AttrKinds, RK.AttrKind) &&
-            Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index])) {
-          NumUsefullAssumeQueries++;
-          return RK;
-        }
-      }
-    }
-    return RetainedKnowledge::none();
-  }
-  for (const auto &U : V->uses()) {
-    CallInst::BundleOpInfo* Bundle = getBundleFromUse(&U);
-    if (!Bundle)
+  for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(V)) {
+    auto *II = cast_or_null<AssumeInst>(Elem.Assume);
+    if (!II || Elem.Index == AssumptionCache::ExprResultIdx)
       continue;
-    if (RetainedKnowledge RK =
-            getKnowledgeFromBundle(*cast<AssumeInst>(U.getUser()), *Bundle))
+    if (RetainedKnowledge RK = getKnowledgeFromBundle(
+            *II, II->bundle_op_info_begin()[Elem.Index])) {
+      if (V != RK.WasOn)
+        continue;
       if (is_contained(AttrKinds, RK.AttrKind) &&
-          Filter(RK, cast<Instruction>(U.getUser()), Bundle)) {
+          Filter(RK, II, &II->bundle_op_info_begin()[Elem.Index])) {
         NumUsefullAssumeQueries++;
         return RK;
       }
+    }
   }
+
   return RetainedKnowledge::none();
 }
 
 RetainedKnowledge llvm::getKnowledgeValidInContext(
     const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
-    const Instruction *CtxI, const DominatorTree *DT, AssumptionCache *AC) {
+    AssumptionCache &AC, const Instruction *CtxI, const DominatorTree *DT) {
   return getKnowledgeForValue(V, AttrKinds, AC,
                               [&](auto, Instruction *I, auto) {
                                 return isValidAssumeForContext(I, CtxI, DT);

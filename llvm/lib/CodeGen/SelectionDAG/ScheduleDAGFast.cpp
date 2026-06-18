@@ -80,16 +80,10 @@ public:
   void Schedule() override;
 
   /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  void AddPred(SUnit *SU, const SDep &D) {
-    SU->addPred(D);
-  }
+  void AddPred(SUnit *SU, const SDep &D) { SU->addPred(D); }
 
   /// RemovePred - removes a predecessor edge from SUnit SU.
-  /// This returns true if an edge was removed.
-  void RemovePred(SUnit *SU, const SDep &D) {
-    SU->removePred(D);
-  }
+  void RemovePred(SUnit *SU, const SDep &D) { SU->removePred(D); }
 
 private:
   void ReleasePred(SUnit *SU, SDep *PredEdge);
@@ -360,8 +354,8 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       DelDeps.push_back(std::make_pair(SuccSU, D));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i)
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
 
   ++NumDups;
   return NewSU;
@@ -395,9 +389,8 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
       DelDeps.push_back(std::make_pair(SuccSU, Succ));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i) {
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
-  }
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
   SDep FromDep(SU, SDep::Data, Reg);
   FromDep.setLatency(SU->Latency);
   AddPred(CopyFromSU, FromDep);
@@ -409,29 +402,6 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
   Copies.push_back(CopyToSU);
 
   ++NumPRCopies;
-}
-
-/// getPhysicalRegisterVT - Returns the ValueType of the physical register
-/// definition of the specified node.
-/// FIXME: Move to SelectionDAG?
-static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
-                                 const TargetInstrInfo *TII) {
-  unsigned NumRes;
-  if (N->getOpcode() == ISD::CopyFromReg) {
-    // CopyFromReg has: "chain, Val, glue" so operand 1 gives the type.
-    NumRes = 1;
-  } else {
-    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(!MCID.implicit_defs().empty() &&
-           "Physical reg def must be in implicit def list!");
-    NumRes = MCID.getNumDefs();
-    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
-      if (Reg == ImpDef)
-        break;
-      ++NumRes;
-    }
-  }
-  return N->getSimpleValueType(NumRes);
 }
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
@@ -579,9 +549,7 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
         assert(LRegs.size() == 1 && "Can't handle this yet!");
         unsigned Reg = LRegs[0];
         SUnit *LRDef = LiveRegDefs[Reg];
-        MVT VT = getPhysicalRegisterVT(LRDef->getNode(), Reg, TII);
-        const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, VT);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
         // If cross copy register class is the same as RC, then it must be
@@ -700,7 +668,7 @@ void ScheduleDAGLinearize::ScheduleNode(SDNode *N) {
         // Glue operand is already scheduled.
         continue;
 
-      DenseMap<SDNode*, SDNode*>::iterator DI = GluedMap.find(OpN);
+      auto DI = GluedMap.find(OpN);
       if (DI != GluedMap.end() && DI->second != N)
         // Users of glues are counted against the glued users.
         OpN = DI->second;

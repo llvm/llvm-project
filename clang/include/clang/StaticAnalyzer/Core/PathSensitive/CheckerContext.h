@@ -51,36 +51,45 @@ public:
       wasInlined(wasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
+    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+                           "must be tagged with the active checker.");
   }
 
   AnalysisManager &getAnalysisManager() {
+    return Eng.getAnalysisManager();
+  }
+  const AnalysisManager &getAnalysisManager() const {
     return Eng.getAnalysisManager();
   }
 
   ConstraintManager &getConstraintManager() {
     return Eng.getConstraintManager();
   }
+  const ConstraintManager &getConstraintManager() const {
+    return Eng.getConstraintManager();
+  }
 
   StoreManager &getStoreManager() {
     return Eng.getStoreManager();
   }
+  const StoreManager &getStoreManager() const { return Eng.getStoreManager(); }
 
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
   ExplodedNode *getPredecessor() { return Pred; }
+  const ExplodedNode *getPredecessor() const { return Pred; }
   const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added
   /// a new transition or a bug report.
   bool isDifferent() { return Changed; }
+  bool isDifferent() const { return Changed; }
 
   /// Returns the number of times the current block has been visited
   /// along the analyzed path.
-  unsigned blockCount() const {
-    return NB.getContext().blockCount();
-  }
+  unsigned blockCount() const { return Eng.getNumVisitedCurrent(); }
 
   ASTContext &getASTContext() {
     return Eng.getContext();
@@ -92,47 +101,53 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
-  }
+  const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
 
-  const StackFrameContext *getStackFrame() const {
-    return Pred->getStackFrame();
-  }
-
-  /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  /// Return true if the current StackFrame has no caller context.
+  bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
   }
+  const BugReporter &getBugReporter() const { return Eng.getBugReporter(); }
 
   const SourceManager &getSourceManager() {
     return getBugReporter().getSourceManager();
   }
+  const SourceManager &getSourceManager() const {
+    return getBugReporter().getSourceManager();
+  }
 
   Preprocessor &getPreprocessor() { return getBugReporter().getPreprocessor(); }
+  const Preprocessor &getPreprocessor() const {
+    return getBugReporter().getPreprocessor();
+  }
 
   SValBuilder &getSValBuilder() {
     return Eng.getSValBuilder();
   }
+  const SValBuilder &getSValBuilder() const { return Eng.getSValBuilder(); }
 
   SymbolManager &getSymbolManager() {
+    return getSValBuilder().getSymbolManager();
+  }
+  const SymbolManager &getSymbolManager() const {
     return getSValBuilder().getSymbolManager();
   }
 
   ProgramStateManager &getStateManager() {
     return Eng.getStateManager();
   }
+  const ProgramStateManager &getStateManager() const {
+    return Eng.getStateManager();
+  }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
-    return Pred->getLocationContext()->getAnalysisDeclContext();
+    return Pred->getStackFrame()->getAnalysisDeclContext();
   }
 
   /// Get the blockID.
-  unsigned getBlockID() const {
-    return NB.getContext().getBlock()->getBlockID();
-  }
+  unsigned getBlockID() const { return Eng.getCurrBlock()->getBlockID(); }
 
   /// If the given node corresponds to a PostStore program point,
   /// retrieve the location region as it was uttered in the code.
@@ -147,9 +162,9 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
+
+  ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 
   /// Returns true if the value of \p E is greater than or equal to \p
   /// Val under unsigned comparison.
@@ -167,6 +182,9 @@ public:
   ///        tag is specified, a default tag, unique to the given checker,
   ///        will be used. Tags are used to prevent states generated at
   ///        different sites from caching out.
+  /// NOTE: If the State is unchanged and the Tag is nullptr, this may return a
+  /// node which is not tagged (instead of using the default tag corresponding
+  /// to the active checker). This is arguably a bug and should be fixed.
   ExplodedNode *addTransition(ProgramStateRef State = nullptr,
                               const ProgramPointTag *Tag = nullptr) {
     return addTransitionImpl(State ? State : getState(), false, nullptr, Tag);
@@ -179,6 +197,9 @@ public:
   /// @param Pred The transition will be generated from the specified Pred node
   ///             to the newly generated node.
   /// @param Tag The tag to uniquely identify the creation site.
+  /// NOTE: If the State is unchanged and the Tag is nullptr, this may return a
+  /// node which is not tagged (instead of using the default tag corresponding
+  /// to the active checker). This is arguably a bug and should be fixed.
   ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
     return addTransitionImpl(State, false, Pred, Tag);
@@ -401,7 +422,7 @@ public:
   /// If AF_INET is a macro, the result should be treated as a source of taint.
   ///
   /// \sa clang::Lexer::getSpelling(), clang::Lexer::getImmediateMacroName().
-  StringRef getMacroNameOrSpelling(SourceLocation &Loc);
+  std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
   ExplodedNode *addTransitionImpl(ProgramStateRef State,

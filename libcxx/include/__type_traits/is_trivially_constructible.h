@@ -10,8 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
 
 #include <__config>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/add_rvalue_reference.h>
+#include <__type_traits/add_reference.h>
 #include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -32,7 +31,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_constructible_v =
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_copy_constructible
-    : public integral_constant<bool, __is_trivially_constructible(_Tp, __add_lvalue_reference_t<const _Tp>)> {};
+    : integral_constant<bool, __is_trivially_constructible(_Tp, __add_lvalue_reference_t<const _Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
@@ -42,7 +41,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_copy_constructible
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_move_constructible
-    : public integral_constant<bool, __is_trivially_constructible(_Tp, __add_rvalue_reference_t<_Tp>)> {};
+    : integral_constant<bool, __is_trivially_constructible(_Tp, __add_rvalue_reference_t<_Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
@@ -52,7 +51,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_move_constructible
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_default_constructible
-    : public integral_constant<bool, __is_trivially_constructible(_Tp)> {};
+    : integral_constant<bool, __is_trivially_constructible(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

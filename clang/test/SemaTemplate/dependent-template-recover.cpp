@@ -146,9 +146,9 @@ namespace templ_spec {
 
     // FIXME: Why error recovery for the non-typename case is so bad?
     A<T::template X<int>> t3; // expected-error {{did you forget 'typename'}}
-    // expected-error@-1 {{'A<typename T::X>' (aka 'void')}}
+    // expected-error@-1 {{'A<T::X>' (aka 'void')}}
 
     A<T::X<int>> t4; // expected-error {{use 'template' keyword}} expected-error {{did you forget 'typename'}}
-    // expected-error@-1 {{'A<typename T::X>' (aka 'void')}}
+    // expected-error@-1 {{'A<T::X>' (aka 'void')}}
   };
 } // namespace templ_spec

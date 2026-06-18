@@ -21,6 +21,5 @@ MyList * el;
 
 
 static int test7(id keys) {
-  for (id key; in keys) ;  // expected-error {{use of undeclared identifier 'in'}} \
-                           // expected-error {{expected ';' in 'for' statement specifier}}
+  for (id key; in keys) ;  // expected-error {{use of undeclared identifier 'in'}}
 }

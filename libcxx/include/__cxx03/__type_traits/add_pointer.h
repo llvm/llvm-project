@@ -45,11 +45,6 @@ struct add_pointer {
   using type _LIBCPP_NODEBUG = __add_pointer_t<_Tp>;
 };
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using add_pointer_t = __add_pointer_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_ADD_POINTER_H

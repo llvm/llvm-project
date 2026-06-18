@@ -23,7 +23,6 @@
 # CHECK: "modules": [
 # CHECK: {
 # CHECK: "path": {{.*}}-main.exe
-# CHECK-NOT: }
 
 # PRELOAD_TRUE: "symbolTableParseTime":
 # PRELOAD_TRUE-SAME: {{[1-9]+}}

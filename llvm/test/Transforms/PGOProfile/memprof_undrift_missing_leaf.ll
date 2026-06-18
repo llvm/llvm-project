@@ -16,6 +16,8 @@ HeapProfileRecords:
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       1
+          TotalLifetime:   1
+          TotalLifetimeAccessDensity: 0
     CallSites:       []
 ...
 ;--- memprof_missing_leaf.ll

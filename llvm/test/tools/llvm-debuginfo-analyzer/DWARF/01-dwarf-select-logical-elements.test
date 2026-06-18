@@ -34,7 +34,7 @@
 ; ONE-NEXT: [004]           {Code} 'movl	$0x7, -0x4(%rbp)'
 ; ONE-NEXT: [003]           {Code} 'movl	%eax, -0x4(%rbp)'
 ; ONE-NEXT: [003]           {Code} 'movl	%esi, -0x14(%rbp)'
-; ONE-NEXT: [004]           {Code} 'movl	-0x14(%rbp), %eax'
+; ONE-NEXT: [003]           {Code} 'movl	-0x14(%rbp), %eax'
 ; ONE-NEXT: [003]           {Code} 'movl	-0x4(%rbp), %eax'
 ; ONE-NEXT: [003]     4     {TypeAlias} 'INTEGER' -> 'int'
 ; ONE-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'

@@ -274,4 +274,28 @@ void f(int a) {
 }
 }
 
+namespace GH147495 {
+struct S {
+  enum class E { A };
+  using enum E;
+
+  struct S1 {
+    using enum E;
+  };
+
+  struct S2 {
+    using E::A;
+  };
+};
+}
+
+namespace Redecl {
+  enum class A : int { X };
+  enum class A : int;
+  template <class> struct B {
+    using enum A;
+    using Z = decltype(X);
+  };
+  template struct B<int>;
+} // namespace Redecl
 #endif

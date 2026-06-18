@@ -14,11 +14,12 @@
 #ifndef LLVM_SUPPORT_MSP430ATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_MSP430ATTRIBUTEPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/MSP430Attributes.h"
 
 namespace llvm {
-class MSP430AttributeParser : public ELFCompactAttrParser {
+class LLVM_ABI MSP430AttributeParser : public ELFCompactAttrParser {
   struct DisplayHandler {
     MSP430Attrs::AttrType Attribute;
     Error (MSP430AttributeParser::*Routine)(MSP430Attrs::AttrType);

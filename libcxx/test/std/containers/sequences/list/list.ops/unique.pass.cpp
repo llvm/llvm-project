@@ -9,7 +9,7 @@
 // <list>
 
 // void      unique(); // before C++20
-// size_type unique(); // C++20 and later
+// size_type unique(); // C++20 and later; constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {2, 1, 1, 4, 4, 4, 4, 3, 3};
     int a2[] = {2, 1, 4, 3};
@@ -44,6 +44,15 @@ int main(int, char**) {
 #  endif
     assert((c == std::list<int, min_allocator<int>>(a2, a2 + 4)));
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

@@ -75,30 +75,40 @@ void test() {
 
   // Invalid Unicode Scalar Values
   if constexpr (std::same_as<CharT, char>) {
-    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xa0\x80^}"), 42); // U+D800
-    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xa0\xbf^}"), 42); // U+DBFF
-    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xbf\x80^}"), 42); // U+DC00
-    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xbf\xbf^}"), 42); // U+DFFF
-
-    check_exception(
-        "The format specifier contains malformed Unicode characters", SV("{:\xf4\x90\x80\x80^}"), 42); // U+110000
-    check_exception(
-        "The format specifier contains malformed Unicode characters", SV("{:\xf4\x90\xbf\xbf^}"), 42); // U+11FFFF
+    check_exception("The format specifier contains malformed Unicode characters",
+                    std::string_view{"{:\xed\xa0\x80^}"},
+                    42); // U+D800
+    check_exception("The format specifier contains malformed Unicode characters",
+                    std::string_view{"{:\xed\xa0\xbf^}"},
+                    42); // U+DBFF
+    check_exception("The format specifier contains malformed Unicode characters",
+                    std::string_view{"{:\xed\xbf\x80^}"},
+                    42); // U+DC00
+    check_exception("The format specifier contains malformed Unicode characters",
+                    std::string_view{"{:\xed\xbf\xbf^}"},
+                    42); // U+DFFF
 
     check_exception("The format specifier contains malformed Unicode characters",
-                    SV("{:\x80^}"),
+                    std::string_view{"{:\xf4\x90\x80\x80^}"},
+                    42); // U+110000
+    check_exception("The format specifier contains malformed Unicode characters",
+                    std::string_view{"{:\xf4\x90\xbf\xbf^}"},
+                    42); // U+11FFFF
+
+    check_exception("The format specifier contains malformed Unicode characters",
+                    std::string_view{"{:\x80^}"},
                     42); // Trailing code unit with no leading one.
     check_exception("The format specifier contains malformed Unicode characters",
-                    SV("{:\xc0^}"),
+                    std::string_view{"{:\xc0^}"},
                     42); // Missing trailing code unit.
     check_exception("The format specifier contains malformed Unicode characters",
-                    SV("{:\xe0\x80^}"),
+                    std::string_view{"{:\xe0\x80^}"},
                     42); // Missing trailing code unit.
     check_exception("The format specifier contains malformed Unicode characters",
-                    SV("{:\xf0\x80^}"),
+                    std::string_view{"{:\xf0\x80^}"},
                     42); // Missing two trailing code units.
     check_exception("The format specifier contains malformed Unicode characters",
-                    SV("{:\xf0\x80\x80^}"),
+                    std::string_view{"{:\xf0\x80\x80^}"},
                     42); // Missing trailing code unit.
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

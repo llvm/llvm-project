@@ -16,6 +16,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_map>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -35,7 +36,7 @@ static_assert(!CanLowerBound<NonTransparentMap>);
 static_assert(!CanLowerBound<const NonTransparentMap>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -75,9 +76,14 @@ void test() {
   test_lower_bound(cm, "zzz", 5);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<std::string>, std::vector<int>>();
-  test<std::deque<std::string>, std::vector<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<std::string>, std::vector<int>>();
+  }
   test<MinSequenceContainer<std::string>, MinSequenceContainer<int>>();
   test<std::vector<std::string, min_allocator<std::string>>, std::vector<int, min_allocator<int>>>();
 
@@ -90,6 +96,22 @@ int main(int, char**) {
     assert(it != m.end());
     assert(transparent_used);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    auto it = m.lower_bound("charlie");
+    assert(it == m.begin() + 2);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

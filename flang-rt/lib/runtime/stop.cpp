@@ -23,11 +23,15 @@
 
 extern "C" {
 
-static void DescribeIEEESignaledExceptions() {
+[[maybe_unused]] static void DescribeIEEESignaledExceptions() {
+#if defined(RT_DEVICE_COMPILATION) || RT_GPU_TARGET
+  unsigned excepts{}; // No fenv support on the device.
+#else
 #ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
   auto excepts{std::fetestexcept(FE_ALL_EXCEPT)};
+#endif
 #endif
   if (excepts) {
     std::fputs("IEEE arithmetic exceptions signaled:", stderr);
@@ -61,8 +65,10 @@ static void DescribeIEEESignaledExceptions() {
 }
 
 static void CloseAllExternalUnits(const char *why) {
+#if !RT_GPU_TARGET
   Fortran::runtime::io::IoErrorHandler handler{why};
   Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
+#endif
 }
 
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
@@ -82,15 +88,7 @@ static void CloseAllExternalUnits(const char *why) {
     }
     std::printf("\n");
   }
-#if defined(__CUDACC__)
-  // NVCC supports __trap().
-  __trap();
-#elif defined(__clang__)
-  // Clang supports __builtin_trap().
-  __builtin_trap();
-#else
-#error "unsupported compiler"
-#endif
+  Fortran::runtime::DeviceTrap();
 #else
   CloseAllExternalUnits("STOP statement");
   if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
@@ -104,7 +102,10 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
-  std::exit(code);
+  if (isErrorStop)
+    Fortran::runtime::ErrorExit(code);
+  else
+    Fortran::runtime::NormalExit(code);
 #endif
 }
 
@@ -119,17 +120,7 @@ static void CloseAllExternalUnits(const char *why) {
           "Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP", code);
     }
   }
-  if (isErrorStop) {
-#if defined(__CUDACC__)
-    // NVCC supports __trap().
-    __trap();
-#elif defined(__clang__)
-    // Clang supports __builtin_trap().
-    __builtin_trap();
-#else
-#error "unsupported compiler"
-#endif
-  }
+  Fortran::runtime::DeviceTrap();
 #else
   CloseAllExternalUnits("STOP statement");
   if (!quiet) {
@@ -142,13 +133,14 @@ static void CloseAllExternalUnits(const char *why) {
     DescribeIEEESignaledExceptions();
   }
   if (isErrorStop) {
-    std::exit(EXIT_FAILURE);
+    Fortran::runtime::ErrorExit(EXIT_FAILURE);
   } else {
-    std::exit(EXIT_SUCCESS);
+    Fortran::runtime::NormalExit(EXIT_SUCCESS);
   }
 #endif
 }
 
+#if !RT_GPU_TARGET
 static bool StartPause() {
   if (Fortran::runtime::io::IsATerminal(0)) {
     Fortran::runtime::io::IoErrorHandler handler{"PAUSE statement"};
@@ -162,7 +154,7 @@ static void EndPause() {
   std::fflush(nullptr);
   if (std::fgetc(stdin) == EOF) {
     CloseAllExternalUnits("PAUSE statement");
-    std::exit(EXIT_SUCCESS);
+    Fortran::runtime::ErrorExit(EXIT_SUCCESS);
   }
 }
 
@@ -188,21 +180,34 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
     EndPause();
   }
 }
+#endif
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
-  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
   CloseAllExternalUnits("FAIL IMAGE statement");
-  std::exit(EXIT_FAILURE);
+  Fortran::runtime::NotifyOtherImagesOfFailImageStatement();
+  Fortran::runtime::NormalExit(EXIT_FAILURE);
 }
 
 [[noreturn]] void RTNAME(ProgramEndStatement)() {
   CloseAllExternalUnits("END statement");
-  std::exit(EXIT_SUCCESS);
+  Fortran::runtime::NormalExit(EXIT_SUCCESS);
+}
+
+void RTNAME(RegisterImagesNormalEndCallback)(void (*callback)(int)) {
+  Fortran::runtime::SetNormalEndCallback(callback);
+}
+
+void RTNAME(RegisterImagesErrorCallback)(void (*callback)(int)) {
+  Fortran::runtime::SetErrorCallback(callback);
+}
+
+void RTNAME(RegisterFailImageCallback)(void (*callback)(void)) {
+  Fortran::runtime::SetFailImageCallback(callback);
 }
 
 [[noreturn]] void RTNAME(Exit)(int status) {
   CloseAllExternalUnits("CALL EXIT()");
-  std::exit(status);
+  Fortran::runtime::NormalExit(status);
 }
 
 static RT_NOINLINE_ATTR void PrintBacktrace() {

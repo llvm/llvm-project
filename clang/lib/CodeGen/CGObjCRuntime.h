@@ -117,7 +117,8 @@ public:
   virtual ~CGObjCRuntime();
 
   std::string getSymbolNameForMethod(const ObjCMethodDecl *method,
-                                     bool includeCategoryName = true);
+                                     bool includeCategoryName = true,
+                                     bool useDirectABI = false);
 
   /// Generate the function required to register all Objective-C components in
   /// this compilation unit with the runtime library.
@@ -148,6 +149,18 @@ public:
 
   /// Generate a constant string object.
   virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;
+  virtual ConstantAddress GenerateConstantNumber(const bool Value,
+                                                 const QualType &Ty) = 0;
+  virtual ConstantAddress GenerateConstantNumber(const llvm::APSInt &Value,
+                                                 const QualType &Ty) = 0;
+  virtual ConstantAddress GenerateConstantNumber(const llvm::APFloat &Value,
+                                                 const QualType &Ty) = 0;
+  virtual ConstantAddress
+  GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) = 0;
+  virtual ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>>
+          KeysAndObjects) = 0;
 
   /// Generate a category.  A category contains a list of methods (and
   /// accompanying metadata) and a list of protocols.
@@ -224,6 +237,12 @@ public:
   // should have full control over how parameters are passed.
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD) = 0;
+
+  /// Generates precondition checks for direct Objective-C Methods.
+  /// This includes [self self] for class methods and nil checks.
+  virtual void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) = 0;
 
   /// Generates prologue for direct Objective-C Methods.
   virtual void GenerateDirectMethodPrologue(CodeGenFunction &CGF,
@@ -322,10 +341,22 @@ public:
   MessageSendInfo getMessageSendInfo(const ObjCMethodDecl *method,
                                      QualType resultType,
                                      CallArgList &callArgs);
+
   bool canMessageReceiverBeNull(CodeGenFunction &CGF,
                                 const ObjCMethodDecl *method, bool isSuper,
                                 const ObjCInterfaceDecl *classReceiver,
                                 llvm::Value *receiver);
+
+  /// Check if a class object can be unrealized (not yet initialized).
+  /// Returns true if the class may be unrealized, false if provably realized.
+  ///
+  /// TODO: Returns false if:
+  /// - An instance method on the same class was called in a dominating path
+  /// - The class was explicitly realized earlier in control flow
+  /// - Note: [Parent foo] does NOT realize Child (inheritance care needed)
+  bool canClassObjectBeUnrealized(const ObjCInterfaceDecl *ClassDecl,
+                                  CodeGenFunction &CGF) const;
+
   static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
 
   /// Destroy the callee-destroyed arguments of the given method,

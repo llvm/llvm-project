@@ -257,6 +257,188 @@ TEST_F(GlobPatternTest, NUL) {
   }
 }
 
+TEST_F(GlobPatternTest, PrefixSuffix) {
+  auto Pat = GlobPattern::create("");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("abcd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("*abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->prefix());
+  EXPECT_EQ("abcd", Pat->suffix());
+
+  Pat = GlobPattern::create("abcd*");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("abcd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("ab*cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab?cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab[n]cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab{}cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab{cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab]cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab]cd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("ab\\cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("d", Pat->suffix());
+
+  Pat = GlobPattern::create("ab\\\\cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("d", Pat->suffix());
+
+  Pat = GlobPattern::create("ab?cd?");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("?ab?cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab/cd", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab\\cd", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("d", Pat->suffix());
+
+  Pat = GlobPattern::create("ab/cd", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/false);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab/cd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("ab\\cd", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/false);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("d", Pat->suffix());
+}
+
+TEST_F(GlobPatternTest, Substr) {
+  auto Pat = GlobPattern::create("");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("*abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("abcd*");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc*d");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bc", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc*def*g");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("def", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd*ef*g");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcd", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd*efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcd", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcd[ef]g*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcd", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc[d]efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("efg", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc[]]efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("efg", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcde\\fg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcde", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcde\\[fg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcde", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcde?fg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcde", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bcdef{g}*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bcdef", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc/de*f", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bc", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc\\de*f", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bc", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc/de*f", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/false);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bc/de", Pat->longest_substr());
+
+  Pat = GlobPattern::create("a*bc\\de*f", /*MaxSubPatterns=*/{},
+                            /*SlashAgnostic=*/false);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("bc", Pat->longest_substr());
+}
+
 TEST_F(GlobPatternTest, Pathological) {
   std::string P, S(40, 'a');
   StringRef Pieces[] = {"a*", "[ba]*", "{b*,a*}*"};
@@ -270,5 +452,37 @@ TEST_F(GlobPatternTest, Pathological) {
   ASSERT_TRUE((bool)Pat);
   EXPECT_FALSE(Pat->match(S));
   EXPECT_TRUE(Pat->match(S + 'b'));
+}
+
+TEST_F(GlobPatternTest, SlashAgnosticMatch) {
+  auto Pat1 = GlobPattern::create("foo\\\\bar[a\\\\-z]", 1024,
+                                  /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat1);
+  EXPECT_TRUE(Pat1->match("foo/bar\\"));
+  EXPECT_TRUE(Pat1->match("foo/barb"));
+  EXPECT_TRUE(Pat1->match("foo/bar/"));
+}
+
+TEST_F(GlobPatternTest, SlashAgnosticMatchInverted) {
+  auto Pat = GlobPattern::create("foo\\\\bar[^a\\\\-z]", 1024,
+                                 /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_FALSE(Pat->match("foo/bar/"));
+  EXPECT_FALSE(Pat->match("foo/barb"));
+  EXPECT_TRUE(Pat->match("foo/bar1"));
+}
+
+TEST_F(GlobPatternTest, SlashAgnosticInvertedSlash) {
+  auto Pat1 = GlobPattern::create("foo[^/]", 1024, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat1);
+  EXPECT_FALSE(Pat1->match("foo/"));
+  EXPECT_FALSE(Pat1->match("foo\\"));
+  EXPECT_TRUE(Pat1->match("fooa"));
+
+  auto Pat2 = GlobPattern::create("foo[^\\]", 1024, /*SlashAgnostic=*/true);
+  ASSERT_TRUE((bool)Pat2);
+  EXPECT_FALSE(Pat2->match("foo/"));
+  EXPECT_FALSE(Pat2->match("foo\\"));
+  EXPECT_TRUE(Pat2->match("fooa"));
 }
 }

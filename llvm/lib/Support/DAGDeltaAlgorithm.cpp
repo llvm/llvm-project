@@ -47,16 +47,16 @@ class DAGDeltaAlgorithmImpl {
   friend class DeltaActiveSetHelper;
 
 public:
-  typedef DAGDeltaAlgorithm::change_ty change_ty;
-  typedef DAGDeltaAlgorithm::changeset_ty changeset_ty;
-  typedef DAGDeltaAlgorithm::changesetlist_ty changesetlist_ty;
-  typedef DAGDeltaAlgorithm::edge_ty edge_ty;
+  using change_ty = DAGDeltaAlgorithm::change_ty;
+  using changeset_ty = DAGDeltaAlgorithm::changeset_ty;
+  using changesetlist_ty = DAGDeltaAlgorithm::changesetlist_ty;
+  using edge_ty = DAGDeltaAlgorithm::edge_ty;
 
 private:
-  typedef std::vector<change_ty>::iterator pred_iterator_ty;
-  typedef std::vector<change_ty>::iterator succ_iterator_ty;
-  typedef std::set<change_ty>::iterator pred_closure_iterator_ty;
-  typedef std::set<change_ty>::iterator succ_closure_iterator_ty;
+  using pred_iterator_ty = std::vector<change_ty>::iterator;
+  using succ_iterator_ty = std::vector<change_ty>::iterator;
+  using pred_closure_iterator_ty = std::set<change_ty>::iterator;
+  using succ_closure_iterator_ty = std::set<change_ty>::iterator;
 
   DAGDeltaAlgorithm &DDA;
 
@@ -179,8 +179,8 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
     const std::vector<edge_ty> &Dependencies)
     : DDA(DDA) {
   for (change_ty Change : Changes) {
-    Predecessors.insert(std::make_pair(Change, std::vector<change_ty>()));
-    Successors.insert(std::make_pair(Change, std::vector<change_ty>()));
+    Predecessors.try_emplace(Change);
+    Successors.try_emplace(Change);
   }
   for (const edge_ty &Dep : Dependencies) {
     Predecessors[Dep.second].push_back(Dep.first);
@@ -210,7 +210,7 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
 
   // Invert to form the predecessor closure map.
   for (change_ty Change : Changes)
-    PredClosure.insert(std::make_pair(Change, std::set<change_ty>()));
+    PredClosure.try_emplace(Change);
   for (change_ty Change : Changes)
     for (succ_closure_iterator_ty it2 = succ_closure_begin(Change),
                                   ie2 = succ_closure_end(Change);

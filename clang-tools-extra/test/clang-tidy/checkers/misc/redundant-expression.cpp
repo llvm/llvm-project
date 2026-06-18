@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- --target=x86_64-linux -fno-delayed-template-parsing -Wno-array-compare-cxx26
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- --target=x86_64-linux -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
 
 typedef __INT64_TYPE__ I64;
 
@@ -572,6 +572,51 @@ int TestBitwise(int X, int Y) {
   return 0;
 }
 
+bool TestBitwiseUInt128(unsigned __int128 Value) {
+  constexpr unsigned __int128 BigBit =
+      static_cast<unsigned __int128>(1) << 100;
+
+  if ((Value & BigBit) == BigBit) return true;
+
+  constexpr unsigned __int128 LowMask = static_cast<unsigned __int128>(0xFF);
+
+  if ((Value & LowMask) == BigBit) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: logical expression is always false
+  if ((Value & LowMask) != BigBit) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: logical expression is always true
+  if ((Value | BigBit) == LowMask) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: logical expression is always false
+  if ((Value | BigBit) != LowMask) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: logical expression is always true
+
+  return false;
+}
+
+#define UINT128_BIG_BIT (static_cast<unsigned __int128>(1) << 100)
+
+bool TestBitwiseUInt128Macro(unsigned __int128 Value) {
+  return (Value & UINT128_BIG_BIT) == UINT128_BIG_BIT;
+}
+
+template <int N>
+bool TestBitwiseUInt128Template(unsigned __int128 Value) {
+  constexpr unsigned __int128 Mask = static_cast<unsigned __int128>(1) << N;
+  return (Value & Mask) == Mask;
+}
+
+bool UseBitwiseUInt128Template(unsigned __int128 Value) {
+  return TestBitwiseUInt128Template<100>(Value);
+}
+
+using RedundantExpressionU128 = unsigned __int128;
+typedef unsigned __int128 RedundantExpressionTypedefU128;
+
+bool TestBitwiseUInt128AliasCvRef(const RedundantExpressionU128 &Value) {
+  constexpr RedundantExpressionTypedefU128 Mask =
+      static_cast<RedundantExpressionU128>(1) << 100;
+  return (Value & Mask) == Mask;
+}
+
 // Overloaded operators that compare an instance of a struct and an integer
 // constant.
 struct S {
@@ -999,21 +1044,21 @@ int TestOperatorConfusion(int X, int Y, long Z)
 
   int K = !(1 | 2 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: ineffective logical negation operator used; did you mean '~'?
-  // CHECK-FIXES: {{^}}  int K = ~(1 | 2 | 4);{{$}}
+  // CHECK-FIXES: int K = ~(1 | 2 | 4);
   K = !(FLAG1 & FLAG2 & FLAG3);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  K = ~(FLAG1 & FLAG2 & FLAG3);{{$}}
+  // CHECK-FIXES: K = ~(FLAG1 & FLAG2 & FLAG3);
   K = !(3 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  K = ~(3 | 4);{{$}}
+  // CHECK-FIXES: K = ~(3 | 4);
   int NotFlags = !FLAGS;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  int NotFlags = ~FLAGS;{{$}}
+  // CHECK-FIXES: int NotFlags = ~FLAGS;
   NotFlags = NOTFLAGS;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: ineffective logical negation operator
   return !(1 | 2 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  return ~(1 | 2 | 4);{{$}}
+  // CHECK-FIXES: return ~(1 | 2 | 4);
 }
 
 template <int Shift, int Mask>

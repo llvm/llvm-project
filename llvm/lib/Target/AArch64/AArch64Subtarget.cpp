@@ -73,7 +73,7 @@ static cl::opt<AArch64PAuth::AuthCheckMethod>
                                cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
 
 static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
-    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
+    "aarch64-min-jump-table-entries", cl::init(10), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
 static cl::opt<unsigned> AArch64StreamingHazardSize(
@@ -86,10 +86,9 @@ static cl::alias AArch64StreamingStackHazardSize(
     cl::desc("alias for -aarch64-streaming-hazard-size"),
     cl::aliasopt(AArch64StreamingHazardSize));
 
-static cl::opt<bool> EnableZPRPredicateSpills(
-    "aarch64-enable-zpr-predicate-spills", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
+static cl::opt<unsigned>
+    VScaleForTuningOpt("sve-vscale-for-tuning", cl::Hidden,
+                       cl::desc("Force a vscale for tuning factor for SVE"));
 
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
@@ -138,7 +137,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
       AvoidLDAPUR = true;
     break;
   case Carmel:
-    CacheLineSize = 64;
     break;
   case CortexA35:
   case CortexA53:
@@ -150,7 +148,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA57:
-    MaxInterleaveFactor = 4;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
@@ -175,8 +172,10 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
+  case CortexA320:
   case CortexA510:
   case CortexA520:
+  case C1Nano:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(16);
@@ -186,10 +185,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA715:
   case CortexA720:
   case CortexA725:
+  case C1Pro:
   case CortexX2:
   case CortexX3:
   case CortexX4:
   case CortexX925:
+  case C1Premium:
+  case C1Ultra:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -199,7 +201,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     CacheLineSize = 256;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -218,30 +219,17 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA16:
   case AppleA17:
   case AppleM4:
-    CacheLineSize = 64;
+  case AppleM5:
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
-    switch (ARMProcFamily) {
-    case AppleA14:
-    case AppleA15:
-    case AppleA16:
-    case AppleA17:
-    case AppleM4:
-      MaxInterleaveFactor = 4;
-      break;
-    default:
-      break;
-    }
     break;
   case ExynosM3:
-    MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;
     PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(16);
     break;
   case Falkor:
-    MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     CacheLineSize = 128;
@@ -250,7 +238,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 8;
     break;
   case Kryo:
-    MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
     CacheLineSize = 128;
     PrefetchDistance = 740;
@@ -270,9 +257,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case NeoverseV2:
   case NeoverseV3:
     EpilogueVectorizationMinVF = 8;
-    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NeoverseN2:
   case NeoverseN3:
     PrefFunctionAlignment = Align(16);
@@ -290,18 +276,14 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Neoverse512TVB:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    MaxInterleaveFactor = 4;
     break;
   case Saphira:
-    MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
   case ThunderX2T99:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -319,15 +301,18 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinVectorRegisterBitWidth = 128;
     break;
   case TSV110:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
     break;
-  case ThunderX3T110:
-    CacheLineSize = 64;
+  case HIP12:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
+    VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
+    break;
+  case ThunderX3T110:
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -337,21 +322,17 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Ampere1:
   case Ampere1A:
   case Ampere1B:
-    CacheLineSize = 64;
+  case Ampere1C:
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
-    MaxInterleaveFactor = 4;
     break;
   case Oryon:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
   case Olympus:
     EpilogueVectorizationMinVF = 8;
-    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
@@ -362,6 +343,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
     MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
+  if (VScaleForTuningOpt.getNumOccurrences() > 0)
+    VScaleForTuning = VScaleForTuningOpt;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
@@ -370,7 +353,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool IsStreaming, bool IsStreamingCompatible,
-                                   bool HasMinSize)
+                                   bool HasMinSize,
+                                   bool EnableSRLTSubregToRegMitigation)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
@@ -382,7 +366,17 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
               ? std::optional<unsigned>(AArch64StreamingHazardSize)
               : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
-      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
+      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride),
+      EnableSRLTSubregToRegMitigation(EnableSRLTSubregToRegMitigation),
+      // To benefit from SME2's strided-register multi-vector load/store
+      // instructions we'll need to enable subreg liveness. Our longer
+      // term aim is to make this the default, regardless of streaming
+      // mode, but there are still some outstanding issues, see:
+      //  https://github.com/llvm/llvm-project/pull/174188
+      // and:
+      //  https://github.com/llvm/llvm-project/pull/168353
+      EnableSubregLiveness(IsStreaming || EnableSubregLivenessTracking),
+      TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
@@ -414,22 +408,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
-
-  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
-}
-
-unsigned AArch64Subtarget::getHwModeSet() const {
-  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
-
-  // Use a special hardware mode in streaming[-compatible] functions with
-  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
-  // alignment) for the predicate register class.
-  if (EnableZPRPredicateSpills.getValue() &&
-      (isStreaming() || isStreamingCompatible())) {
-    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
-  }
-
-  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -532,7 +510,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 }
 
 void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                           unsigned NumRegionInstrs) const {
+                                           const SchedRegion &Region) const {
   // LNT run (at least on Cyclone) showed reasonably significant gains for
   // bi-directional scheduling. 253.perlbmk.
   Policy.OnlyTopDown = false;
@@ -661,6 +639,12 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
   // This isn't ABI, so we can always do better in the future.
   return getPointerAuthStableSipHash(
       (Twine(ParentFn.getName()) + " blockaddress").str());
+}
+
+bool AArch64Subtarget::isX16X17Safer() const {
+  // The Darwin kernel implements special protections for x16 and x17 so we
+  // should prefer to use those registers on that platform.
+  return isTargetDarwin();
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

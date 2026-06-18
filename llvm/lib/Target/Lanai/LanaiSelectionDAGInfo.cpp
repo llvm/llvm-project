@@ -12,14 +12,20 @@
 
 #include "LanaiSelectionDAGInfo.h"
 
+#define GET_SDNODE_DESC
+#include "LanaiGenSDNodeInfo.inc"
+
 #define DEBUG_TYPE "lanai-selectiondag-info"
 
-namespace llvm {
+using namespace llvm;
+
+LanaiSelectionDAGInfo::LanaiSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(LanaiGenSDNodeInfo) {}
 
 SDValue LanaiSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG & /*DAG*/, const SDLoc & /*dl*/, SDValue /*Chain*/,
-    SDValue /*Dst*/, SDValue /*Src*/, SDValue Size, Align /*Alignment*/,
-    bool /*isVolatile*/, bool /*AlwaysInline*/,
+    SDValue /*Dst*/, SDValue /*Src*/, SDValue Size, Align /*DstAlign*/,
+    Align /*SrcAlign*/, bool /*isVolatile*/, bool /*AlwaysInline*/,
     MachinePointerInfo /*DstPtrInfo*/,
     MachinePointerInfo /*SrcPtrInfo*/) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -28,5 +34,3 @@ SDValue LanaiSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   return SDValue();
 }
-
-} // namespace llvm

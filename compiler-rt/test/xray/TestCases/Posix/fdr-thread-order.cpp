@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t.exe
-// RUN: XRAY_OPTIONS="patch_premain=false \
+// RUN: env XRAY_OPTIONS="patch_premain=false \
 // RUN:    xray_logfile_base=%t/ xray_mode=xray-fdr verbosity=1" \
 // RUN:    XRAY_FDR_OPTIONS=func_duration_threshold_us=0 %run %t.exe 2>&1 | \
 // RUN:    FileCheck %s

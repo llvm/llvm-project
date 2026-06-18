@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  ABI
   AggressiveInstCombine
   Analysis
   BitReader
@@ -25,6 +26,7 @@ set(LLVM_LINK_COMPONENTS
   ObjCARCOpts
   Object
   Passes
+  Plugins
   ProfileData
   ScalarOpts
   Support
@@ -102,6 +104,7 @@ add_clang_library(clangCodeGen
   CodeGenFunction.cpp
   CodeGenModule.cpp
   CodeGenPGO.cpp
+  CodeGenSYCL.cpp
   CodeGenTBAA.cpp
   CodeGenTypes.cpp
   ConstantInitBuilder.cpp
@@ -112,11 +115,14 @@ add_clang_library(clangCodeGen
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
   ModuleBuilder.cpp
+  ModuleLinker.cpp
   ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
+  QualTypeMapper.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetBuiltins/ARM.cpp
+  TargetBuiltins/AVR.cpp
   TargetBuiltins/AMDGPU.cpp
   TargetBuiltins/DirectX.cpp
   TargetBuiltins/Hexagon.cpp
@@ -143,7 +149,6 @@ add_clang_library(clangCodeGen
   Targets/MSP430.cpp
   Targets/Mips.cpp
   Targets/NVPTX.cpp
-  Targets/PNaCl.cpp
   Targets/PPC.cpp
   Targets/RISCV.cpp
   Targets/SPIR.cpp
@@ -154,6 +159,7 @@ add_clang_library(clangCodeGen
   Targets/WebAssembly.cpp
   Targets/X86.cpp
   Targets/XCore.cpp
+  TrapReasonBuilder.cpp
   VarBypassDetector.cpp
 
   DEPENDS
@@ -161,8 +167,7 @@ add_clang_library(clangCodeGen
   intrinsics_gen
   ClangDriverOptions
   # These generated headers are included transitively.
-  ARMTargetParserTableGen
-  AArch64TargetParserTableGen
+  target_parser_gen
 
   LINK_LIBS
   clangAST

@@ -26,16 +26,16 @@ define void @use_frame_base_reg() {
 ; RV64I-LABEL: use_frame_base_reg:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1712
+; RV64I-NEXT:    addi a0, a0, 1712
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 100016
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1704
+; RV64I-NEXT:    addi a0, a0, 1704
 ; RV64I-NEXT:    add a0, sp, a0
 ; RV64I-NEXT:    lbu zero, 4(a0)
 ; RV64I-NEXT:    lbu zero, 0(a0)
 ; RV64I-NEXT:    lui a0, 24
-; RV64I-NEXT:    addiw a0, a0, 1712
+; RV64I-NEXT:    addi a0, a0, 1712
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
@@ -130,8 +130,8 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV32I-NEXT:    addi s0, sp, 2032
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    addi sp, sp, -480
-; RV32I-NEXT:    lbu a0, -1960(s0)
-; RV32I-NEXT:    sb a0, -1960(s0)
+; RV32I-NEXT:    lbu a0, 552(sp)
+; RV32I-NEXT:    sb a0, 552(sp)
 ; RV32I-NEXT:    addi sp, sp, 480
 ; RV32I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
@@ -153,9 +153,8 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV64I-NEXT:    addi s0, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    addi sp, sp, -496
-; RV64I-NEXT:    addi a0, s0, -1972
-; RV64I-NEXT:    lbu a1, 0(a0)
-; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    lbu a0, 556(sp)
+; RV64I-NEXT:    sb a0, 556(sp)
 ; RV64I-NEXT:    addi sp, sp, 496
 ; RV64I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

@@ -59,6 +59,10 @@ def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
 def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
+defm branch_to_branch: BB<"branch-to-branch",
+    "Enable branch-to-branch optimization (default at -O2)",
+    "Disable branch-to-branch optimization (default at -O0 and -O1)">;
+
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;
@@ -144,13 +148,16 @@ def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArg
 defm irpgo_profile: EEq<"irpgo-profile",
   "Read a temporary profile file for use with --bp-startup-sort=">;
 def bp_compression_sort: JJ<"bp-compression-sort=">, MetaVarName<"[none,function,data,both]">,
-  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together, resulting in a smaller compressed app size">;
+  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together. Deprecated. Please use --bp-compression-sort-section">;
+def bp_compression_sort_section: JJ<"bp-compression-sort-section=">,
+  MetaVarName<"<glob>[=<layout_priority>[=<match_priority>]]">,
+  HelpText<"Reorder input sections whose name matches <glob> to improve Lempel-Ziv compression, while letting users split sections into groups, run BP independently per group, and exclude unsuitable sections. layout_priority controls group placement order (default 0). match_priority resolves conflicts when multiple globs match (default: last match wins). May be specified multiple times">;
 def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
   HelpText<"Utilize a temporal profile file to reduce page faults during program startup">;
 
 // Auxiliary options related to balanced partition
 defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
-  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+  "When --irpgo-profile is specified, prioritize function similarity for compression in addition to startup time", "">;
 def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
   HelpText<"Print information on balanced partitioning">;
 
@@ -340,7 +347,7 @@ def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
 def no_warn_mismatch: F<"no-warn-mismatch">,
-  HelpText<"Suppress errors for certain unknown seciton types">;
+  HelpText<"Suppress errors for certain unknown section types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
@@ -384,6 +391,9 @@ defm pie: B<"pie",
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections (default)">;
+def print_gc_sections_eq: JJ<"print-gc-sections=">,
+  HelpText<"List removed unused sections to <file>">,
+  MetaVarName<"<file>">;
 
 defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
@@ -710,7 +720,20 @@ def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
 def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
-
+def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
+  HelpText<"Distributor to use for ThinLTO backend compilations. If specified, "
+  "ThinLTO backend compilations will be distributed">;
+defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
+  "pass to the ThinLTO distributor">;
+def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
+  HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_prepend_arg: EEq<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
     "Ignore the .llvm.lto section in relocatable object files (default).">;
@@ -824,14 +847,10 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
 
 defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;
 
-// Hidden options, used by clang's -fsanitize=memtag-* options to emit an ELF
-// note to designate what kinds of memory (stack/heap) should be protected using
-// ARM's MTE on armv8.5+. A binary's desire for stack MTE can't be obtained
-// implicitly, so we have a specific bit in the note to signal to the loader to
-// remap the stack as PROT_MTE.
-defm android_memtag_stack: BB<"android-memtag-stack",
-    "Instruct the dynamic loader to prepare for MTE stack instrumentation", "">;
-defm android_memtag_heap: BB<"android-memtag-heap",
-    "Instruct the dynamic loader to enable MTE protection for the heap", "">;
-defm android_memtag_mode: EEq<"android-memtag-mode",
-    "Instruct the dynamic loader to start under MTE mode {async, sync, none}">;
+// Hidden option, used by clang's -fsanitize=memtag-* option to emit an ELF note
+// to designate what kinds of memory (stack/heap) should be protected using
+// ARM's MTE on armv8.5+. This note is Android-specific and it is used only in
+// older SDK versions.
+defm android_memtag_note
+    : BB<"android-memtag-note", "Emit the Android-specific legacy memtag note",
+         "">;

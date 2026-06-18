@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -mtriple=amdgcn-unknown-amdhsa -passes=loop-unroll -S %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-unknown-amdhsa -passes=loop-unroll -S %s | FileCheck %s
 
 ; Check that we full unroll loop to be able to eliminate alloca
 ; CHECK-LABEL: @non_invariant_ind
@@ -34,6 +34,8 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+declare i32 @func()
+
 ; Check that we unroll inner loop but not outer
 ; CHECK-LABEL: @invariant_ind
 ; CHECK:       %[[exitcond:[^ ]+]] = icmp eq i32 %{{.*}}, 32
@@ -43,7 +45,7 @@ for.body:                                         ; preds = %for.body, %entry
 define amdgpu_kernel void @invariant_ind(ptr addrspace(1) nocapture %a, i32 %x) {
 entry:
   %arr = alloca [64 x i32], align 4, addrspace(5)
-  %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tmp1 = tail call i32 @func()
   br label %for.cond2.preheader
 
 for.cond2.preheader:                              ; preds = %for.cond.cleanup5, %entry

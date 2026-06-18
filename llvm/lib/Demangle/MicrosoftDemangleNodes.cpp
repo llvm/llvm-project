@@ -521,6 +521,9 @@ void PointerTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
     assert(false);
   }
   outputQualifiers(OB, Quals, false, false);
+
+  if (PointerAuthQualifier)
+    PointerAuthQualifier->output(OB, Flags);
 }
 
 void PointerTypeNode::outputPost(OutputBuffer &OB, OutputFlags Flags) const {
@@ -591,6 +594,13 @@ void FunctionSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   Signature->outputPost(OB, Flags);
 }
 
+void PointerAuthQualifierNode::output(OutputBuffer &OB,
+                                      OutputFlags Flags) const {
+  OB << "__ptrauth(";
+  Components->output(OB, Flags);
+  OB << ")";
+}
+
 void VariableSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   const char *AccessSpec = nullptr;
   bool IsStatic = true;
@@ -652,9 +662,9 @@ void VcallThunkIdentifierNode::output(OutputBuffer &OB,
 void SpecialTableSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   outputQualifiers(OB, Quals, false, true);
   Name->output(OB, Flags);
-  if (TargetName) {
+  if (TargetNames) {
     OB << "{for `";
-    TargetName->output(OB, Flags);
+    TargetNames->output(OB, Flags, "'s `");
     OB << "'}";
   }
 }

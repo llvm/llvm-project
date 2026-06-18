@@ -12,10 +12,13 @@
 #ifndef LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -23,7 +26,6 @@
 #include <vector>
 
 namespace llvm {
-class DWARFContext;
 class DWARFDie;
 namespace object {
 class ObjectFile;
@@ -37,7 +39,7 @@ public:
   /// correlate.
   enum ProfCorrelatorKind { NONE, DEBUG_INFO, BINARY };
 
-  static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
+  LLVM_ABI static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
   get(StringRef Filename, ProfCorrelatorKind FileKind,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
       const ArrayRef<llvm::object::BuildID> BIs = {});
@@ -52,7 +54,7 @@ public:
   virtual Error dumpYaml(int MaxWarnings, raw_ostream &OS) = 0;
 
   /// Return the number of ProfileData elements.
-  std::optional<size_t> getDataSize() const;
+  LLVM_ABI std::optional<size_t> getDataSize() const;
 
   /// Return a pointer to the names string that this class constructs.
   const char *getNamesPointer() const { return Names.c_str(); }
@@ -65,9 +67,9 @@ public:
     return Ctx->CountersSectionEnd - Ctx->CountersSectionStart;
   }
 
-  static const char *FunctionNameAttributeName;
-  static const char *CFGHashAttributeName;
-  static const char *NumCountersAttributeName;
+  LLVM_ABI static const char *FunctionNameAttributeName;
+  LLVM_ABI static const char *CFGHashAttributeName;
+  LLVM_ABI static const char *NumCountersAttributeName;
 
   enum InstrProfCorrelatorKind { CK_32Bit, CK_64Bit };
   InstrProfCorrelatorKind getKind() const { return Kind; }
@@ -75,8 +77,8 @@ public:
 
 protected:
   struct Context {
-    static llvm::Expected<std::unique_ptr<Context>>
-    get(std::unique_ptr<MemoryBuffer> Buffer, const object::ObjectFile &Obj,
+    LLVM_ABI static llvm::Expected<std::unique_ptr<Context>>
+    get(std::unique_ptr<MemoryBuffer> Buffer, object::ObjectFile &Obj,
         ProfCorrelatorKind FileKind);
     std::unique_ptr<MemoryBuffer> Buffer;
     /// The address range of the __llvm_prf_cnts section.
@@ -88,6 +90,10 @@ protected:
     const char *DataEnd;
     const char *NameStart;
     size_t NameSize;
+    /// Resolved values for Mach-O linker fixup chains when FileKind is Binary.
+    /// The mapping is from an address relative to the start of __llvm_covdata,
+    /// to the resolved pointer value at that address.
+    llvm::DenseMap<uint64_t, uint64_t> MachOFixups;
     /// True if target and host have different endian orders.
     bool ShouldSwapBytes;
   };

@@ -81,6 +81,7 @@ message Symbol {
 message Ref {
   optional SymbolLocation location = 1;
   optional uint32 kind = 2;
+  optional string container = 3;
 }
 
 message SymbolInfo {

@@ -12,7 +12,6 @@
 #include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
@@ -25,7 +24,9 @@ namespace detail {
 class TypeFromLLVMIRTranslatorImpl {
 public:
   /// Constructs a class creating types in the given MLIR context.
-  TypeFromLLVMIRTranslatorImpl(MLIRContext &context) : context(context) {}
+  TypeFromLLVMIRTranslatorImpl(MLIRContext &context,
+                               bool importStructsAsLiterals)
+      : context(context), importStructsAsLiterals(importStructsAsLiterals) {}
 
   /// Translates the given type.
   Type translateType(llvm::Type *type) {
@@ -35,8 +36,9 @@ public:
     Type translated =
         llvm::TypeSwitch<llvm::Type *, Type>(type)
             .Case<llvm::ArrayType, llvm::FunctionType, llvm::IntegerType,
-                  llvm::PointerType, llvm::StructType, llvm::FixedVectorType,
-                  llvm::ScalableVectorType, llvm::TargetExtType>(
+                  llvm::ByteType, llvm::PointerType, llvm::StructType,
+                  llvm::FixedVectorType, llvm::ScalableVectorType,
+                  llvm::TargetExtType>(
                 [this](auto *type) { return this->translate(type); })
             .Default([this](llvm::Type *type) {
               return translatePrimitiveType(type);
@@ -72,7 +74,7 @@ private:
     if (type->isMetadataTy())
       return LLVM::LLVMMetadataType::get(&context);
     if (type->isTokenTy())
-      return LLVM::LLVMTokenType::get(&context);
+      return TokenType::get(&context);
     llvm_unreachable("not a primitive type");
   }
 
@@ -95,6 +97,11 @@ private:
     return IntegerType::get(&context, type->getBitWidth());
   }
 
+  /// Translates the given byte type.
+  Type translate(llvm::ByteType *type) {
+    return LLVM::LLVMByteType::get(&context, type->getBitWidth());
+  }
+
   /// Translates the given pointer type.
   Type translate(llvm::PointerType *type) {
     return LLVM::LLVMPointerType::get(&context, type->getAddressSpace());
@@ -103,7 +110,7 @@ private:
   /// Translates the given structure type.
   Type translate(llvm::StructType *type) {
     SmallVector<Type, 8> subtypes;
-    if (type->isLiteral()) {
+    if (type->isLiteral() || importStructsAsLiterals) {
       translateTypes(type->subtypes(), subtypes);
       return LLVM::LLVMStructType::getLiteral(&context, subtypes,
                                               type->isPacked());
@@ -124,14 +131,15 @@ private:
 
   /// Translates the given fixed-vector type.
   Type translate(llvm::FixedVectorType *type) {
-    return LLVM::getFixedVectorType(translateType(type->getElementType()),
-                                    type->getNumElements());
+    return VectorType::get(type->getNumElements(),
+                           translateType(type->getElementType()));
   }
 
   /// Translates the given scalable-vector type.
   Type translate(llvm::ScalableVectorType *type) {
-    return LLVM::getScalableVectorType(translateType(type->getElementType()),
-                                       type->getMinNumElements());
+    return VectorType::get(type->getMinNumElements(),
+                           translateType(type->getElementType()),
+                           /*scalableDims=*/true);
   }
 
   /// Translates the given target extension type.
@@ -157,14 +165,20 @@ private:
 
   /// The context in which MLIR types are created.
   MLIRContext &context;
+
+  /// Controls if structs should be imported as literal structs, i.e., nameless
+  /// structs.
+  bool importStructsAsLiterals;
 };
 
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir
 
-LLVM::TypeFromLLVMIRTranslator::TypeFromLLVMIRTranslator(MLIRContext &context)
-    : impl(new detail::TypeFromLLVMIRTranslatorImpl(context)) {}
+LLVM::TypeFromLLVMIRTranslator::TypeFromLLVMIRTranslator(
+    MLIRContext &context, bool importStructsAsLiterals)
+    : impl(std::make_unique<detail::TypeFromLLVMIRTranslatorImpl>(
+          context, importStructsAsLiterals)) {}
 
 LLVM::TypeFromLLVMIRTranslator::~TypeFromLLVMIRTranslator() = default;
 

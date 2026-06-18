@@ -67,7 +67,7 @@ func.func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: %[[LOWALIGN:.+]] = arith.select %[[OVER31]], %[[C0]], %[[LOR]]
   // CHECK-DAG: %[[RESULT:.+]] = arith.addi %[[LOWALIGN]], %[[HIALIGN]]
   // CHECK: return %[[RESULT]]
-  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = "DOUBLE_ROUND"} : (i32, i32, i8) -> i32
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = DOUBLE_ROUND} : (i32, i32, i8) -> i32
   return %res : i32
 }
 
@@ -77,8 +77,18 @@ func.func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
 // SCALE: tosa.apply_scale
 func.func @apply_scale_test_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>, %arg2 : vector<4xi8>) -> (vector<4xi32>) {
   // CHECK-NOT: "tosa.apply_scale"
-  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = "DOUBLE_ROUND"} : (vector<4xi32>, vector<4xi32>, vector<4xi8>) -> vector<4xi32>
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = DOUBLE_ROUND} : (vector<4xi32>, vector<4xi32>, vector<4xi8>) -> vector<4xi32>
   return %res : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @apply_scale_test_vector_rank_0
+// SCALE: tosa.apply_scale
+func.func @apply_scale_test_vector_rank_0(%arg0 : vector<i32>, %arg1 : vector<i32>, %arg2 : vector<i8>) -> (vector<i32>) {
+  // CHECK-NOT: "tosa.apply_scale"
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = DOUBLE_ROUND} : (vector<i32>, vector<i32>, vector<i8>) -> vector<i32>
+  return %res : vector<i32>
 }
 
 // -----
@@ -115,7 +125,7 @@ func.func @apply_scale_test_i48(%arg0 : i48, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: %[[SHR:.+]] = arith.shrsi %[[RES64]], %[[S64]]
   // CHECK-DAG: %[[TRUNC:.+]] = arith.trunci %[[SHR]] : i64 to i32
   // CHECK: return %[[TRUNC]]
-  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = "DOUBLE_ROUND"} : (i48, i32, i8) -> i32
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = DOUBLE_ROUND} : (i48, i32, i8) -> i32
   return %res : i32
 }
 
@@ -152,6 +162,6 @@ func.func @apply_scale_test_i64(%arg0 : i64, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: %[[SHR:.+]] = arith.shrsi %[[RES64]], %[[S64]]
   // CHECK-DAG: %[[TRUNC:.+]] = arith.trunci %[[SHR]] : i64 to i32
   // CHECK: return %[[TRUNC]]
-  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = "DOUBLE_ROUND"} : (i64, i32, i8) -> i32
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = DOUBLE_ROUND} : (i64, i32, i8) -> i32
   return %res : i32
 }

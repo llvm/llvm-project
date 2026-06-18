@@ -29,8 +29,8 @@ define i32 @test_const(ptr %in1, ptr %in2, ptr %out, i32 %n, ptr %tbl) {
 ; CHECK-NEXT:    csel x10, x9, xzr, lt
 ; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    ldr s3, [x4, x10]
-; CHECK-NEXT:    fcvtzs w10, s3
-; CHECK-NEXT:    str w10, [x2], #4
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    st1 { v3.s }[0], [x2], #4
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: // %for.cond.cleanup
 ; CHECK-NEXT:    mov w0, wzr

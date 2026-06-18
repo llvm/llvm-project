@@ -16,6 +16,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -65,7 +67,7 @@ public:
   virtual void Erase(size_t CurrentOutputSize) = 0;
 };
 
-class DefaultFunctionPruningStrategy : public FunctionPruningStrategy {
+class LLVM_ABI DefaultFunctionPruningStrategy : public FunctionPruningStrategy {
   std::vector<NameFunctionSamples> SortedFunctions;
 
 public:
@@ -86,7 +88,7 @@ public:
 };
 
 /// Sample-based profile writer. Base class.
-class SampleProfileWriter {
+class LLVM_ABI SampleProfileWriter {
 public:
   virtual ~SampleProfileWriter() = default;
 
@@ -163,7 +165,7 @@ protected:
 };
 
 /// Sample-based profile writer (text format).
-class SampleProfileWriterText : public SampleProfileWriter {
+class LLVM_ABI SampleProfileWriterText : public SampleProfileWriter {
 public:
   std::error_code writeSample(const FunctionSamples &S) override;
 
@@ -192,13 +194,13 @@ private:
   /// cannot be skipped.
   bool MarkFlatProfiles = false;
 
-  friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
 
 /// Sample-based profile writer (binary format).
-class SampleProfileWriterBinary : public SampleProfileWriter {
+class LLVM_ABI SampleProfileWriterBinary : public SampleProfileWriter {
 public:
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS) {}
@@ -216,15 +218,22 @@ protected:
   std::error_code writeBody(const FunctionSamples &S);
   inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
                                 std::set<FunctionId> &V);
-  
+
   MapVector<FunctionId, uint32_t> NameTable;
-  
+
   void addName(FunctionId FName);
   virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
 
+  /// Write \p CallsiteTypeMap to the output stream \p OS.
+  std::error_code
+  writeCallsiteVTableProf(const CallsiteTypeMap &CallsiteTypeMap,
+                          raw_ostream &OS);
+
+  bool WriteVTableProf = false;
+
 private:
-  friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
@@ -264,7 +273,54 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
-class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
+/// Trait class for writing the on-disk function offset hash table mapping
+/// function name GUIDs to their offsets in the SecLBRProfile section.
+class FuncOffsetHashTableWriterInfo {
+public:
+  using key_type = uint64_t;
+  using key_type_ref = uint64_t;
+  using data_type = uint32_t; // Offset
+  using data_type_ref = uint32_t;
+  using hash_value_type = uint32_t;
+  using offset_type = uint32_t;
+  using internal_key_type = uint64_t;
+  using external_key_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref Key) {
+    return static_cast<hash_value_type>(Key);
+  }
+
+  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
+    return LHS == RHS;
+  }
+
+  static key_type GetInternalKey(key_type_ref Key) { return Key; }
+  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
+
+  static std::pair<offset_type, offset_type>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
+    // Implicit lengths: do NOT write anything to Out.
+    return {sizeof(key_type), sizeof(data_type)};
+  }
+
+  static void EmitKey(raw_ostream &Out, key_type_ref K, offset_type Len) {
+    using namespace llvm::support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    assert(Len == sizeof(key_type) && "Key length mismatch");
+    LE.write<uint64_t>(K);
+  }
+
+  static void EmitData(raw_ostream &Out, key_type_ref K, data_type_ref V,
+                       offset_type Len) {
+    using namespace llvm::support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    assert(Len == sizeof(data_type) && "Data length mismatch");
+    LE.write<uint32_t>(V);
+  }
+};
+
+class LLVM_ABI SampleProfileWriterExtBinaryBase
+    : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 public:
   std::error_code write(const SampleProfileMap &ProfileMap) override;
@@ -407,10 +463,10 @@ private:
   ProfileSymbolList *ProfSymList = nullptr;
 };
 
-class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
+class LLVM_ABI SampleProfileWriterExtBinary
+    : public SampleProfileWriterExtBinaryBase {
 public:
-  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
-      : SampleProfileWriterExtBinaryBase(OS) {}
+  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS);
 
 private:
   std::error_code writeDefaultLayout(const SampleProfileMap &ProfileMap);

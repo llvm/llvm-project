@@ -114,7 +114,7 @@ func.func @non_operation() {
 
 func.func @unknown_dialect_operation() {
   // expected-error@below {{Dialect `foo' not found for custom op 'foo.asd'}}
-  // expected-note-re@below {{Registered dialects:{{.*}} test{{.*}}}}
+  // expected-note-re@below {{Available dialects:{{.*}} test{{.*}}}}
   foo.asd
 }
 
@@ -639,6 +639,16 @@ func.func @invalid_region_dominance_with_dominance_free_regions() {
 
 // expected-error@+1 {{expected valid attribute name}}
 "t"(){""}
+
+// -----
+
+// expected-error @below {{expected bare identifier or keyword}}
+test.parse_custom_operation_name_api(@foo) {}
+
+// -----
+
+// expected-error @below {{expected bare identifier or keyword}}
+test.parse_custom_operation_name_api(42) {}
 
 // -----
 

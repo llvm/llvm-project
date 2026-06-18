@@ -171,10 +171,8 @@ bool FunctionCaller::WriteFunctionArguments(
     m_wrapper_args_addrs.push_back(args_addr_ref);
   } else {
     // Make sure this is an address that we've already handed out.
-    if (find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-             args_addr_ref) == m_wrapper_args_addrs.end()) {
+    if (!llvm::is_contained(m_wrapper_args_addrs, args_addr_ref))
       return false;
-    }
   }
 
   // TODO: verify fun_addr needs to be a callable address
@@ -325,8 +323,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
 void FunctionCaller::DeallocateFunctionResults(ExecutionContext &exe_ctx,
                                                lldb::addr_t args_addr) {
   std::list<lldb::addr_t>::iterator pos;
-  pos = std::find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-                  args_addr);
+  pos = llvm::find(m_wrapper_args_addrs, args_addr);
   if (pos != m_wrapper_args_addrs.end())
     m_wrapper_args_addrs.erase(pos);
 
@@ -390,18 +387,16 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
   return_value = exe_ctx.GetProcessRef().RunThreadPlan(
       exe_ctx, call_plan_sp, real_options, diagnostic_manager);
 
-  if (log) {
-    if (return_value != lldb::eExpressionCompleted) {
-      LLDB_LOGF(log,
-                "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
-                "completed abnormally: %s ==",
-                m_name.c_str(), toString(return_value).c_str());
-    } else {
-      LLDB_LOGF(log,
-                "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
-                "completed normally ==",
-                m_name.c_str());
-    }
+  if (return_value != lldb::eExpressionCompleted) {
+    LLDB_LOGF(log,
+              "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
+              "completed abnormally: %s ==",
+              m_name.c_str(), toString(return_value).c_str());
+  } else {
+    LLDB_LOGF(log,
+              "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
+              "completed normally ==",
+              m_name.c_str());
   }
 
   if (exe_ctx.GetProcessPtr())

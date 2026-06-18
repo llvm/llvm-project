@@ -51,6 +51,8 @@ public:
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  StackOffset getNonLocalFrameIndexReference(const MachineFunction &MF,
+                                             int FI) const override;
   int ResolveFrameIndexReference(const MachineFunction &MF, int FI,
                                  Register &FrameReg, int SPAdj) const;
 
@@ -98,6 +100,15 @@ private:
                    MutableArrayRef<CalleeSavedInfo> CSI, unsigned LdmOpc,
                    unsigned LdrOpc, bool isVarArg, bool NoGap,
                    function_ref<bool(unsigned)> Func) const;
+
+  void emitFPStatusSaves(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                         ArrayRef<CalleeSavedInfo> CSI,
+                         unsigned PushOneOpc) const;
+
+  void emitFPStatusRestores(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI,
+                            MutableArrayRef<CalleeSavedInfo> CSI,
+                            unsigned LdrOpc) const;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,

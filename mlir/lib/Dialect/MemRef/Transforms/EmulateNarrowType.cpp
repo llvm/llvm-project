@@ -32,15 +32,24 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 /// Converts a memref::ReinterpretCastOp to the converted type. The result
-/// MemRefType of the old op must have a rank and stride of 1, with static
-/// offset and size. The number of bits in the offset must evenly divide the
-/// bitwidth of the new converted type.
+/// memref is linearized to a rank-1 byte view (or rank-0 if the source is
+/// rank-0). When `assumeAligned` is true, dynamic offsets are accepted under
+/// the alignment contract that the caller guarantees the offset is a multiple
+/// of `dstBits / srcBits`; statically-provable misalignment is rejected.
+/// When `assumeAligned` is false, dynamic offsets are rejected outright since
+/// divisibility cannot be proven from the IR alone.
 static LogicalResult
 convertCastingOp(ConversionPatternRewriter &rewriter,
                  memref::ReinterpretCastOp::Adaptor adaptor,
-                 memref::ReinterpretCastOp op, MemRefType newTy) {
-  auto convertedElementType = newTy.getElementType();
-  auto oldElementType = op.getType().getElementType();
+                 memref::ReinterpretCastOp op, MemRefType newTy,
+                 bool assumeAligned) {
+  if (newTy == op.getType()) {
+    return rewriter.notifyMatchFailure(
+        op, "result type was not converted by narrow-type emulation");
+  }
+
+  Type convertedElementType = newTy.getElementType();
+  Type oldElementType = op.getType().getElementType();
   int srcBits = oldElementType.getIntOrFloatBitWidth();
   int dstBits = convertedElementType.getIntOrFloatBitWidth();
   if (dstBits % srcBits != 0) {
@@ -48,35 +57,70 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
                                        "only dstBits % srcBits == 0 supported");
   }
 
-  // Only support stride of 1.
-  if (llvm::any_of(op.getStaticStrides(),
-                   [](int64_t stride) { return stride != 1; })) {
-    return rewriter.notifyMatchFailure(op->getLoc(),
-                                       "stride != 1 is not supported");
-  }
-
-  auto sizes = op.getStaticSizes();
-  int64_t offset = op.getStaticOffset(0);
-  // Only support static sizes and offsets.
-  if (llvm::is_contained(sizes, ShapedType::kDynamic) ||
-      offset == ShapedType::kDynamic) {
+  ArrayRef<int64_t> staticStrides = op.getStaticStrides();
+  if (!staticStrides.empty() && staticStrides.back() != 1) {
     return rewriter.notifyMatchFailure(
-        op, "dynamic size or offset is not supported");
+        op->getLoc(), "innermost stride != 1 is not supported");
   }
 
-  int elementsPerByte = dstBits / srcBits;
-  if (offset % elementsPerByte != 0) {
+  // TODO: support dynamic sizes. Requires a divisibility analysis or a
+  // stronger alignment contract; tracked as follow-up work.
+  if (llvm::is_contained(op.getStaticSizes(), ShapedType::kDynamic)) {
+    return rewriter.notifyMatchFailure(op, "dynamic sizes are not supported");
+  }
+
+  if (!memref::isStaticShapeAndContiguousRowMajor(op.getType())) {
     return rewriter.notifyMatchFailure(
-        op, "offset not multiple of elementsPerByte is not supported");
+        op, "result memref is not row-major contiguous");
   }
 
-  SmallVector<int64_t> size;
-  if (sizes.size())
-    size.push_back(llvm::divideCeilSigned(sizes[0], elementsPerByte));
-  offset = offset / elementsPerByte;
+  // Reject dynamic offsets unless the caller has opted into the alignment
+  // contract via `assumeAligned`. Without it we cannot prove the offset is a
+  // multiple of `dstBits / srcBits`.
+  if (!assumeAligned &&
+      llvm::is_contained(op.getStaticOffsets(), ShapedType::kDynamic)) {
+    return rewriter.notifyMatchFailure(
+        op, "dynamic offsets require assumeAligned=true to ensure the offset "
+            "is a multiple of dstBits / srcBits");
+  }
+
+  Location loc = op.getLoc();
+  SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
+  OpFoldResult origOffset = op.getMixedOffsets()[0];
+
+  SmallVector<OpFoldResult> newSizes;
+  SmallVector<OpFoldResult> newStrides;
+  OpFoldResult newOffset;
+  OpFoldResult intraOffset;
+  if (mixedSizes.empty()) {
+    int64_t elementsPerByte = dstBits / srcBits;
+    AffineExpr s0;
+    bindSymbols(rewriter.getContext(), s0);
+    newOffset = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, s0.floorDiv(elementsPerByte), {origOffset});
+    intraOffset = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, s0 % elementsPerByte, {origOffset});
+  } else {
+    // Use ceil division so the produced linearized size matches the converted
+    // result memref shape (see `getLinearizedShape` in the type converter),
+    // which also rounds up to fit all source elements.
+    memref::LinearizedMemRefInfo info =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits, origOffset, mixedSizes,
+            memref::LinearizedDivKind::Ceil);
+    newOffset = info.linearizedOffset;
+    intraOffset = info.intraDataOffset;
+    newSizes.push_back(info.linearizedSize);
+    newStrides.push_back(rewriter.getIndexAttr(1));
+  }
+
+  if (auto cst = getConstantIntValue(intraOffset); cst && *cst != 0) {
+    return rewriter.notifyMatchFailure(
+        op, "offset is provably not a multiple of dstBits / srcBits");
+  }
 
   rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-      op, newTy, adaptor.getSource(), offset, size, op.getStaticStrides());
+      op, newTy, adaptor.getSource(), newOffset, newSizes, newStrides);
   return success();
 }
 
@@ -99,7 +143,7 @@ static Value getOffsetForBitwidth(Location loc, OpFoldResult srcIdx,
       affine::makeComposedFoldedAffineApply(builder, loc, offsetExpr, {srcIdx});
   Value bitOffset = getValueOrCreateConstantIndexOp(builder, loc, offsetVal);
   IntegerType dstType = builder.getIntegerType(targetBits);
-  return builder.create<arith::IndexCastOp>(loc, dstType, bitOffset);
+  return arith::IndexCastOp::create(builder, loc, dstType, bitOffset);
 }
 
 /// When writing a subbyte size, masked bitwise operations are used to only
@@ -112,14 +156,14 @@ static Value getSubByteWriteMask(Location loc, OpFoldResult linearizedIndices,
   auto dstIntegerType = builder.getIntegerType(dstBits);
   auto maskRightAlignedAttr =
       builder.getIntegerAttr(dstIntegerType, (1 << srcBits) - 1);
-  Value maskRightAligned = builder.create<arith::ConstantOp>(
-      loc, dstIntegerType, maskRightAlignedAttr);
+  Value maskRightAligned = arith::ConstantOp::create(
+      builder, loc, dstIntegerType, maskRightAlignedAttr);
   Value writeMaskInverse =
-      builder.create<arith::ShLIOp>(loc, maskRightAligned, bitwidthOffset);
+      arith::ShLIOp::create(builder, loc, maskRightAligned, bitwidthOffset);
   auto flipValAttr = builder.getIntegerAttr(dstIntegerType, -1);
   Value flipVal =
-      builder.create<arith::ConstantOp>(loc, dstIntegerType, flipValAttr);
-  return builder.create<arith::XOrIOp>(loc, writeMaskInverse, flipVal);
+      arith::ConstantOp::create(builder, loc, dstIntegerType, flipValAttr);
+  return arith::XOrIOp::create(builder, loc, writeMaskInverse, flipVal);
 }
 
 /// Returns the scaled linearized index based on the `srcBits` and `dstBits`
@@ -141,7 +185,7 @@ getLinearizedSrcIndices(OpBuilder &builder, Location loc, int64_t srcBits,
                         const SmallVector<OpFoldResult> &indices,
                         Value memref) {
   auto stridedMetadata =
-      builder.create<memref::ExtractStridedMetadataOp>(loc, memref);
+      memref::ExtractStridedMetadataOp::create(builder, loc, memref);
   OpFoldResult linearizedIndices;
   std::tie(std::ignore, linearizedIndices) =
       memref::getLinearizedMemRefOffsetAndSize(
@@ -188,7 +232,6 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
 
     Location loc = op.getLoc();
     OpFoldResult zero = rewriter.getIndexAttr(0);
-    SmallVector<OpFoldResult> indices(currentType.getRank(), zero);
 
     // Get linearized type.
     int srcBits = currentType.getElementType().getIntOrFloatBitWidth();
@@ -230,7 +273,7 @@ struct ConvertMemRefAssumeAlignment final
     }
 
     rewriter.replaceOpWithNewOp<memref::AssumeAlignmentOp>(
-        op, adaptor.getMemref(), adaptor.getAlignmentAttr());
+        op, newTy, adaptor.getMemref(), adaptor.getAlignmentAttr());
     return success();
   }
 };
@@ -299,16 +342,16 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     // Special case 0-rank memref loads.
     Value bitsLoad;
     if (convertedType.getRank() == 0) {
-      bitsLoad = rewriter.create<memref::LoadOp>(loc, adaptor.getMemref(),
-                                                 ValueRange{});
+      bitsLoad = memref::LoadOp::create(rewriter, loc, adaptor.getMemref(),
+                                        ValueRange{});
     } else {
       // Linearize the indices of the original load instruction. Do not account
       // for the scaling yet. This will be accounted for later.
       OpFoldResult linearizedIndices = getLinearizedSrcIndices(
           rewriter, loc, srcBits, adaptor.getIndices(), op.getMemRef());
 
-      Value newLoad = rewriter.create<memref::LoadOp>(
-          loc, adaptor.getMemref(),
+      Value newLoad = memref::LoadOp::create(
+          rewriter, loc, adaptor.getMemref(),
           getIndicesForLoadOrStore(rewriter, loc, linearizedIndices, srcBits,
                                    dstBits));
 
@@ -316,7 +359,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
       // Note, currently only the big-endian is supported.
       Value bitwidthOffset = getOffsetForBitwidth(loc, linearizedIndices,
                                                   srcBits, dstBits, rewriter);
-      bitsLoad = rewriter.create<arith::ShRSIOp>(loc, newLoad, bitwidthOffset);
+      bitsLoad = arith::ShRSIOp::create(rewriter, loc, newLoad, bitwidthOffset);
     }
 
     // Get the corresponding bits. If the arith computation bitwidth equals
@@ -324,19 +367,54 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     // It is not clear if this case actually happens in practice, but we keep
     // the operations just in case. Otherwise, if the arith computation bitwidth
     // is different from the emulated bitwidth we truncate the result.
-    Operation *result;
+    Value result;
     auto resultTy = getTypeConverter()->convertType(oldElementType);
-    if (resultTy == convertedElementType) {
-      auto mask = rewriter.create<arith::ConstantOp>(
-          loc, convertedElementType,
+    auto conversionTy =
+        resultTy.isInteger()
+            ? resultTy
+            : IntegerType::get(rewriter.getContext(),
+                               resultTy.getIntOrFloatBitWidth());
+    if (conversionTy == convertedElementType) {
+      auto mask = arith::ConstantOp::create(
+          rewriter, loc, convertedElementType,
           rewriter.getIntegerAttr(convertedElementType, (1 << srcBits) - 1));
 
-      result = rewriter.create<arith::AndIOp>(loc, bitsLoad, mask);
+      result = arith::AndIOp::create(rewriter, loc, bitsLoad, mask);
     } else {
-      result = rewriter.create<arith::TruncIOp>(loc, resultTy, bitsLoad);
+      result = arith::TruncIOp::create(rewriter, loc, conversionTy, bitsLoad);
     }
 
-    rewriter.replaceOp(op, result->getResult(0));
+    if (conversionTy != resultTy) {
+      result = arith::BitcastOp::create(rewriter, loc, resultTy, result);
+    }
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertMemRefCast
+//===----------------------------------------------------------------------===//
+
+/// `memref.cast` between two narrow-typed memrefs forwards through the type
+/// converter to a cast between the converted byte-typed memrefs.
+struct ConvertMemRefCast final : OpConversionPattern<memref::CastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type newTy = getTypeConverter()->convertType(op.getType());
+    if (!newTy) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert memref type: {0}", op.getType()));
+    }
+    if (newTy == op.getType())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<memref::CastOp>(op, newTy, adaptor.getSource());
     return success();
   }
 };
@@ -369,11 +447,15 @@ struct ConvertMemRefMemorySpaceCast final
 // ConvertMemRefReinterpretCast
 //===----------------------------------------------------------------------===//
 
-/// Output types should be at most one dimensional, so only the 0 or 1
-/// dimensional cases are supported.
+/// Forwards to `convertCastingOp`, which enforces all preconditions.
+/// `assumeAligned` is propagated from the populate entry point and controls
+/// acceptance of dynamic offsets.
 struct ConvertMemRefReinterpretCast final
     : OpConversionPattern<memref::ReinterpretCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  ConvertMemRefReinterpretCast(const TypeConverter &typeConverter,
+                               MLIRContext *context, bool assumeAligned)
+      : OpConversionPattern<memref::ReinterpretCastOp>(typeConverter, context),
+        assumeAligned(assumeAligned) {}
 
   LogicalResult
   matchAndRewrite(memref::ReinterpretCastOp op, OpAdaptor adaptor,
@@ -386,22 +468,28 @@ struct ConvertMemRefReinterpretCast final
           llvm::formatv("failed to convert memref type: {0}", op.getType()));
     }
 
-    // Only support for 0 or 1 dimensional cases.
-    if (op.getType().getRank() > 1) {
-      return rewriter.notifyMatchFailure(
-          op->getLoc(), "subview with rank > 1 is not supported");
-    }
-
-    return convertCastingOp(rewriter, adaptor, op, newTy);
+    return convertCastingOp(rewriter, adaptor, op, newTy, assumeAligned);
   }
+
+private:
+  bool assumeAligned;
 };
 
 //===----------------------------------------------------------------------===//
 // ConvertMemrefStore
 //===----------------------------------------------------------------------===//
 
+/// Emulate narrow type memref store with a non-atomic or atomic
+/// read-modify-write sequence. The `disableAtomicRMW` indicates whether to use
+/// a normal read-modify-write sequence instead of using
+/// `memref.generic_atomic_rmw` to perform subbyte storing.
 struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
+
+  ConvertMemrefStore(const TypeConverter &typeConverter, MLIRContext *context,
+                     bool disableAtomicRMW)
+      : OpConversionPattern<memref::StoreOp>(typeConverter, context),
+        disableAtomicRMW(disableAtomicRMW) {}
 
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
@@ -416,14 +504,24 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
     }
 
     Location loc = op.getLoc();
-    Value extendedInput = rewriter.create<arith::ExtUIOp>(loc, dstIntegerType,
-                                                          adaptor.getValue());
 
-    // Special case 0-rank memref stores. No need for masking.
+    // Pad the input value with 0s on the left.
+    Value input = adaptor.getValue();
+    if (!input.getType().isInteger()) {
+      input = arith::BitcastOp::create(
+          rewriter, loc,
+          IntegerType::get(rewriter.getContext(),
+                           input.getType().getIntOrFloatBitWidth()),
+          input);
+    }
+    Value extendedInput =
+        arith::ExtUIOp::create(rewriter, loc, dstIntegerType, input);
+
+    // Special case 0-rank memref stores. No need for masking. The non-atomic
+    // store is used because it operates on the entire value.
     if (convertedType.getRank() == 0) {
-      rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::assign,
-                                           extendedInput, adaptor.getMemref(),
-                                           ValueRange{});
+      memref::StoreOp::create(rewriter, loc, extendedInput, adaptor.getMemref(),
+                              ValueRange{});
       rewriter.eraseOp(op);
       return success();
     }
@@ -436,21 +534,39 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
                                                 dstBits, rewriter);
     Value writeMask = getSubByteWriteMask(loc, linearizedIndices, srcBits,
                                           dstBits, bitwidthOffset, rewriter);
-    // Align the value to write with the destination bits
+    // Align the value to write with the destination bits.
     Value alignedVal =
-        rewriter.create<arith::ShLIOp>(loc, extendedInput, bitwidthOffset);
+        arith::ShLIOp::create(rewriter, loc, extendedInput, bitwidthOffset);
 
-    // Clear destination bits
-    rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::andi,
-                                         writeMask, adaptor.getMemref(),
-                                         storeIndices);
-    // Write srcs bits to destination
-    rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::ori,
-                                         alignedVal, adaptor.getMemref(),
-                                         storeIndices);
+    if (disableAtomicRMW) {
+      // Load the original value.
+      Value origValue = memref::LoadOp::create(
+          rewriter, loc, adaptor.getMemref(), storeIndices);
+      // Clear destination bits (and with mask).
+      Value clearedValue =
+          arith::AndIOp::create(rewriter, loc, origValue, writeMask);
+      // Write src bits to destination (or with aligned value), and store the
+      // result.
+      Value newValue =
+          arith::OrIOp::create(rewriter, loc, clearedValue, alignedVal);
+      memref::StoreOp::create(rewriter, loc, newValue, adaptor.getMemref(),
+                              storeIndices);
+    } else {
+      // Atomic read-modify-write operations.
+      // Clear destination bits.
+      memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::andi,
+                                  writeMask, adaptor.getMemref(), storeIndices);
+      // Write src bits to destination.
+      memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::ori,
+                                  alignedVal, adaptor.getMemref(),
+                                  storeIndices);
+    }
     rewriter.eraseOp(op);
     return success();
   }
+
+private:
+  bool disableAtomicRMW;
 };
 
 //===----------------------------------------------------------------------===//
@@ -458,11 +574,17 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 //===----------------------------------------------------------------------===//
 
 /// Emulating narrow ints on subview have limited support, supporting only
-/// static offset and size and stride of 1. Ideally, the subview should be
+/// static sizes and stride of 1. When `assumeAligned` is true, dynamic
+/// offsets are accepted under the alignment contract that the caller
+/// guarantees the offset is a multiple of `dstBits / srcBits`. Without that
+/// opt-in, dynamic offsets are rejected. Ideally, the subview should be
 /// folded away before running narrow type emulation, and this pattern should
 /// only run for cases that can't be folded.
 struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
-  using OpConversionPattern::OpConversionPattern;
+  ConvertMemRefSubview(const TypeConverter &typeConverter, MLIRContext *context,
+                       bool assumeAligned)
+      : OpConversionPattern<memref::SubViewOp>(typeConverter, context),
+        assumeAligned(assumeAligned) {}
 
   LogicalResult
   matchAndRewrite(memref::SubViewOp subViewOp, OpAdaptor adaptor,
@@ -498,17 +620,26 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     }
 
     auto sizes = subViewOp.getStaticSizes();
-    int64_t lastOffset = subViewOp.getStaticOffsets().back();
-    // Only support static sizes and offsets.
-    if (llvm::is_contained(sizes, ShapedType::kDynamic) ||
-        lastOffset == ShapedType::kDynamic) {
+    // TODO: support dynamic sizes. Requires a divisibility analysis or a
+    // stronger alignment contract; tracked as follow-up work.
+    if (llvm::is_contained(sizes, ShapedType::kDynamic)) {
+      return rewriter.notifyMatchFailure(subViewOp->getLoc(),
+                                         "dynamic size is not supported");
+    }
+
+    // Reject dynamic offsets unless the caller has opted into the alignment
+    // contract via `assumeAligned`.
+    if (!assumeAligned && llvm::is_contained(subViewOp.getStaticOffsets(),
+                                             ShapedType::kDynamic)) {
       return rewriter.notifyMatchFailure(
-          subViewOp->getLoc(), "dynamic size or offset is not supported");
+          subViewOp,
+          "dynamic offsets require assumeAligned=true to ensure the offset "
+          "is a multiple of dstBits / srcBits");
     }
 
     // Transform the offsets, sizes and strides according to the emulation.
-    auto stridedMetadata = rewriter.create<memref::ExtractStridedMetadataOp>(
-        loc, subViewOp.getViewSource());
+    auto stridedMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, subViewOp.getViewSource());
 
     OpFoldResult linearizedIndices;
     auto strides = stridedMetadata.getConstifiedMixedStrides();
@@ -521,11 +652,21 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
             getMixedValues(adaptor.getStaticOffsets(), adaptor.getOffsets(),
                            rewriter));
 
+    if (auto cst = getConstantIntValue(linearizedInfo.intraDataOffset);
+        cst && *cst != 0) {
+      return rewriter.notifyMatchFailure(
+          subViewOp,
+          "subview offset is provably not a multiple of dstBits / srcBits");
+    }
+
     rewriter.replaceOpWithNewOp<memref::SubViewOp>(
         subViewOp, newTy, adaptor.getSource(), linearizedIndices,
         linearizedInfo.linearizedSize, strides.back());
     return success();
   }
+
+private:
+  bool assumeAligned;
 };
 
 //===----------------------------------------------------------------------===//
@@ -585,16 +726,20 @@ struct ConvertMemRefExpandShape final
 
 void memref::populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, bool disableAtomicRMW, bool assumeAligned) {
 
   // Populate `memref.*` conversion patterns.
-  patterns.add<ConvertMemRefAllocation<memref::AllocOp>,
-               ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefCopy,
-               ConvertMemRefDealloc, ConvertMemRefCollapseShape,
-               ConvertMemRefExpandShape, ConvertMemRefLoad, ConvertMemrefStore,
-               ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast,
-               ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
-      typeConverter, patterns.getContext());
+  patterns
+      .add<ConvertMemRefAllocation<memref::AllocOp>,
+           ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefCast,
+           ConvertMemRefCopy, ConvertMemRefDealloc, ConvertMemRefCollapseShape,
+           ConvertMemRefExpandShape, ConvertMemRefLoad,
+           ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast>(
+          typeConverter, patterns.getContext());
+  patterns.add<ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
+      typeConverter, patterns.getContext(), assumeAligned);
+  patterns.insert<ConvertMemrefStore>(typeConverter, patterns.getContext(),
+                                      disableAtomicRMW);
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
 }
 
@@ -620,11 +765,11 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
     arith::NarrowTypeEmulationConverter &typeConverter) {
   typeConverter.addConversion(
       [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        auto intTy = dyn_cast<IntegerType>(ty.getElementType());
-        if (!intTy)
+        Type elementType = ty.getElementType();
+        if (!elementType.isIntOrFloat())
           return ty;
 
-        unsigned width = intTy.getWidth();
+        unsigned width = elementType.getIntOrFloatBitWidth();
         unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
         if (width >= loadStoreWidth)
           return ty;
@@ -637,8 +782,11 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
         if (!strides.empty() && strides.back() != 1)
           return nullptr;
 
-        auto newElemTy = IntegerType::get(ty.getContext(), loadStoreWidth,
-                                          intTy.getSignedness());
+        auto newElemTy = IntegerType::get(
+            ty.getContext(), loadStoreWidth,
+            elementType.isInteger()
+                ? cast<IntegerType>(elementType).getSignedness()
+                : IntegerType::SignednessSemantics::Signless);
         if (!newElemTy)
           return nullptr;
 

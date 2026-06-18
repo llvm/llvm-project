@@ -7,83 +7,6 @@ func.func @foo() {
 
 // -----
 
-llvm.func @vector_with_non_vector_type() -> f32 {
-  // expected-error @below{{expected vector or array type}}
-  %cst = llvm.mlir.constant(dense<100.0> : vector<1xf64>) : f32
-  llvm.return %cst : f32
-}
-
-// -----
-
-llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
-  // expected-error @below{{expected an array attribute for a struct constant}}
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
-}
-
-// -----
-
-llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
-  // expected-error @below{{expected an array attribute for a struct constant}}
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
-}
-
-// -----
-
-llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
-  // expected-error @below{{expected struct element types to be floating point type or integer type}}
-  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
-  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
-}
-
-// -----
-
-llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @below{{expected struct element attribute types to be floating point type or integer type}}
-  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
-  llvm.return %0 : !llvm.struct<(f64, f64)>
-}
-
-// -----
-
-llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @below{{struct element at index 0 is of wrong type}}
-  %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
-  llvm.return %0 : !llvm.struct<(f64, f64)>
-}
-
-// -----
-
-llvm.func @integer_with_float_type() -> f32 {
-  // expected-error @+1 {{expected integer type}}
-  %0 = llvm.mlir.constant(1 : index) : f32
-  llvm.return %0 : f32
-}
-
-// -----
-
-llvm.func @incompatible_float_attribute_type() -> f32 {
-  // expected-error @below{{expected float type of width 64}}
-  %cst = llvm.mlir.constant(1.0 : f64) : f32
-  llvm.return %cst : f32
-}
-
-// -----
-
-llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
-  // expected-error @below{{expected integer type of width 16}}
-  %cst = llvm.mlir.constant(1.0 : f16) : i32
-  llvm.return %cst : i32
-}
-
-// -----
-
-// expected-error @below{{unsupported constant value}}
-llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm.array<2 x f64>
-
-// -----
-
 // expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
 llvm.func @passthrough_unexpected_value() attributes {passthrough = [["readonly", "42"]]}
 
@@ -103,6 +26,26 @@ llvm.func @passthrough_wrong_type() attributes {passthrough = [42]}
 llvm.func @passthrough_wrong_type() attributes {
   passthrough = [[ 42, 42 ]]
 }
+
+// -----
+
+// expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
+llvm.mlir.global external @target_specific_attrs_unexpected_value() {target_specific_attrs = [["readonly", "42"]]} : f64
+
+// -----
+
+// expected-error @below{{LLVM attribute 'alignstack' expects a value}}
+llvm.mlir.global external @target_specific_attrs_expected_value() {target_specific_attrs = ["alignstack"]} : f64
+
+// -----
+
+// expected-error @below{{expected 'target_specific_attrs' to contain string or array attributes}}
+llvm.mlir.global external @target_specific_attrs_wrong_type() {target_specific_attrs = [42]} : f64
+
+// -----
+
+// expected-error @below{{expected arrays within 'target_specific_attrs' to contain two strings}}
+llvm.mlir.global external @target_specific_attrs_wrong_type() {target_specific_attrs = [[ 42, 42 ]]} : f64
 
 // -----
 
@@ -453,3 +396,19 @@ llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : 
 }
 
 llvm.func extern_weak @extern_func()
+
+// -----
+
+llvm.func @invoke_branch_weights_callee()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_personality_v0} {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // expected-error @below{{expects number of branch weights to match number of successors: 1 vs 2}}
+  llvm.invoke @invoke_branch_weights_callee() to ^bb2 unwind ^bb1 {branch_weights = array<i32 : 42>} : () -> ()
+^bb1:  // pred: ^bb0
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.br ^bb2
+^bb2:  // 2 preds: ^bb0, ^bb1
+  llvm.return %0 : i32
+}

@@ -167,6 +167,21 @@ def b4constu: Immediate<i32,
   let EncoderMethod = "getB4constuOpValue";
   let DecoderMethod = "decodeB4constuOperand";
 }
+
+// imm7_22 predicate - Immediate in the range [7,22] for sign extend and clamps
+def Imm7_22_AsmOperand: ImmAsmOperand<"imm7_22">;
+def imm7_22: Immediate<i32, [{ return Imm >= 7 && Imm <= 22; }], "Imm7_22_AsmOperand"> {
+  let EncoderMethod = "getImm7_22OpValue";
+  let DecoderMethod = "decodeImm7_22Operand";
+}
+
+// select_256 predicate - Immediate in the range [0,255]
+def Select_256_AsmOperand: ImmAsmOperand<"Select_256">;
+def select_256: Immediate<i32, [{ return Imm >= 0 && Imm <= 255; }], "Select_256_AsmOperand"> {
+  let EncoderMethod = "getSelect_256OpValue";
+  let DecoderMethod = "decodeSelect_256Operand";
+}
+
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//
@@ -214,6 +229,7 @@ def  pcrel32call : Operand<iPTR> {
   let EncoderMethod = "getCallEncoding";
   let DecoderMethod = "decodeCallOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def brtarget : Operand<OtherVT> {
@@ -221,6 +237,7 @@ def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetEncoding";
   let DecoderMethod = "decodeBranchOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def jumptarget : Operand<OtherVT> {
@@ -228,6 +245,15 @@ def jumptarget : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetEncoding";
   let DecoderMethod = "decodeJumpOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
+}
+
+def ltarget : Operand<OtherVT> {
+  let PrintMethod = "printLoopTarget";
+  let EncoderMethod = "getLoopTargetEncoding";
+  let DecoderMethod = "decodeLoopOperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def L32Rtarget : Operand<i32> {
@@ -235,4 +261,5 @@ def L32Rtarget : Operand<i32> {
   let EncoderMethod = "getL32RTargetEncoding";
   let DecoderMethod = "decodeL32ROperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }

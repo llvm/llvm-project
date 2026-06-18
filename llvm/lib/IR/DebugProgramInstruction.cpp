@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
+
+using namespace llvm;
 
 namespace llvm {
-
 template <typename T>
 DbgRecordParamRef<T>::DbgRecordParamRef(const T *Param)
     : Ref(const_cast<T *>(Param)) {}
@@ -24,9 +26,10 @@ template <typename T> T *DbgRecordParamRef<T>::get() const {
   return cast<T>(Ref);
 }
 
-template class DbgRecordParamRef<DIExpression>;
-template class DbgRecordParamRef<DILabel>;
-template class DbgRecordParamRef<DILocalVariable>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DIExpression>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILabel>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILocalVariable>;
+} // namespace llvm
 
 DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
@@ -142,8 +145,8 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-DbgLabelRecord::DbgLabelRecord(MDNode *Label, MDNode *DL)
-    : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
+DbgLabelRecord::DbgLabelRecord(MDNode *Label)
+    : DbgRecord(LabelKind, DebugLoc()), Label(Label) {
   assert(Label && "Unexpected nullptr");
   assert((isa<DILabel>(Label) || Label->isTemporary()) &&
          "Label type must be or resolve to a DILabel");
@@ -153,26 +156,25 @@ DbgLabelRecord::DbgLabelRecord(DILabel *Label, DebugLoc DL)
   assert(Label && "Unexpected nullptr");
 }
 
-DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                               MDNode *DL) {
-  return new DbgLabelRecord(Label, DL);
+DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label) {
+  return new DbgLabelRecord(Label);
 }
 
 DbgVariableRecord::DbgVariableRecord(DbgVariableRecord::LocationType Type,
                                      Metadata *Val, MDNode *Variable,
                                      MDNode *Expression, MDNode *AssignID,
                                      Metadata *Address,
-                                     MDNode *AddressExpression, MDNode *DI)
-    : DbgRecord(ValueKind, DebugLoc(DI)),
+                                     MDNode *AddressExpression)
+    : DbgRecord(ValueKind, DebugLoc()),
       DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
       Expression(Expression), AddressExpression(AddressExpression) {}
 
 DbgVariableRecord *DbgVariableRecord::createUnresolvedDbgVariableRecord(
     DbgVariableRecord::LocationType Type, Metadata *Val, MDNode *Variable,
     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-    MDNode *AddressExpression, MDNode *DI) {
+    MDNode *AddressExpression) {
   return new DbgVariableRecord(Type, Val, Variable, Expression, AssignID,
-                               Address, AddressExpression, DI);
+                               Address, AddressExpression);
 }
 
 DbgVariableRecord *
@@ -206,6 +208,22 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
   auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DI);
   NewDVRDeclare->insertBefore(&InsertBefore);
   return NewDVRDeclare;
+}
+
+DbgVariableRecord *
+DbgVariableRecord::createDVRDeclareValue(Value *Address, DILocalVariable *DV,
+                                         DIExpression *Expr,
+                                         const DILocation *DI) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                               LocationType::DeclareValue);
+}
+
+DbgVariableRecord *DbgVariableRecord::createDVRDeclareValue(
+    Value *Address, DILocalVariable *DV, DIExpression *Expr,
+    const DILocation *DI, DbgVariableRecord &InsertBefore) {
+  auto *NewDVRCoro = createDVRDeclareValue(Address, DV, Expr, DI);
+  NewDVRCoro->insertBefore(&InsertBefore);
+  return NewDVRCoro;
 }
 
 DbgVariableRecord *DbgVariableRecord::createDVRAssign(
@@ -424,6 +442,10 @@ DbgVariableRecord::createDebugIntrinsic(Module *M,
   case DbgVariableRecord::LocationType::End:
   case DbgVariableRecord::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
+    break;
+  case DbgVariableRecord::LocationType::DeclareValue:
+    llvm_unreachable(
+        "#dbg_declare_value should never be converted to an intrinsic");
   }
 
   // Create the intrinsic from this DbgVariableRecord's information, optionally
@@ -664,11 +686,11 @@ void DbgMarker::eraseFromParent() {
 }
 
 iterator_range<DbgRecord::self_iterator> DbgMarker::getDbgRecordRange() {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 iterator_range<DbgRecord::const_self_iterator>
 DbgMarker::getDbgRecordRange() const {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 
 void DbgRecord::removeFromParent() {
@@ -754,5 +776,3 @@ iterator_range<simple_ilist<DbgRecord>::iterator> DbgMarker::cloneDebugInfoFrom(
     // We inserted a block at the end, return that range.
     return {First->getIterator(), StoredDbgRecords.end()};
 }
-
-} // end namespace llvm

@@ -71,14 +71,12 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
         IntegerType::get(type.getContext(), getIndexBitwidth(params)));
 
   // Sizes of vector types are rounded up to those of types with closest
-  // power-of-two number of elements in the innermost dimension. We also assume
-  // there is no bit-packing at the moment element sizes are taken in bytes and
-  // multiplied with 8 bits.
+  // power-of-two number of elements in the innermost dimension.
   // TODO: make this extensible.
   if (auto vecType = dyn_cast<VectorType>(type)) {
     uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
                         llvm::PowerOf2Ceil(vecType.getShape().back()) *
-                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+                        dataLayout.getTypeSizeInBits(vecType.getElementType());
     return llvm::TypeSize::get(baseSize, vecType.isScalable());
   }
 
@@ -312,6 +310,25 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
+// Returns the function pointer alignment if specified in the given entry. If
+// the entry is empty the default alignment zero is returned.
+Attribute mlir::detail::getDefaultFunctionPointerAlignment(
+    DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+  return entry.getValue();
+}
+
+// Returns the legal int widths if specified in the given entry. If the entry is
+// empty the default legal int widths represented by an empty attribute is
+// returned.
+Attribute
+mlir::detail::getDefaultLegalIntWidths(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+  return entry.getValue();
+}
+
 std::optional<Attribute>
 mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
@@ -345,10 +362,7 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
   return llvm::TypeSwitch<Operation *, DataLayoutSpecInterface>(operation)
       .Case<ModuleOp, DataLayoutOpInterface>(
           [&](auto op) { return op.getDataLayoutSpec(); })
-      .Default([](Operation *) {
-        llvm_unreachable("expected an op with data layout spec");
-        return DataLayoutSpecInterface();
-      });
+      .DefaultUnreachable("expected an op with data layout spec");
 }
 
 static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {
@@ -373,7 +387,7 @@ collectParentLayouts(Operation *leaf,
   for (Operation *parent = leaf->getParentOp(); parent != nullptr;
        parent = parent->getParentOp()) {
     llvm::TypeSwitch<Operation *>(parent)
-        .Case<ModuleOp>([&](ModuleOp op) {
+        .Case([&](ModuleOp op) {
           // Skip top-level module op unless it has a layout. Top-level module
           // without layout is most likely the one implicitly added by the
           // parser and it doesn't have location. Top-level null specification
@@ -385,7 +399,7 @@ collectParentLayouts(Operation *leaf,
           if (opLocations)
             opLocations->push_back(op.getLoc());
         })
-        .Case<DataLayoutOpInterface>([&](DataLayoutOpInterface op) {
+        .Case([&](DataLayoutOpInterface op) {
           specs.push_back(op.getDataLayoutSpec());
           if (opLocations)
             opLocations->push_back(op.getLoc());
@@ -402,7 +416,6 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
   assert((isa<ModuleOp, DataLayoutOpInterface>(leaf)) &&
          "expected an op with data layout spec");
 
-  SmallVector<DataLayoutOpInterface> opsWithLayout;
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(leaf, specs);
 
@@ -711,6 +724,39 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   return *stackAlignment;
 }
 
+Attribute mlir::DataLayout::getFunctionPointerAlignment() const {
+  checkValid();
+  if (functionPointerAlignment)
+    return *functionPointerAlignment;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getFunctionPointerAlignmentIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    functionPointerAlignment = iface.getFunctionPointerAlignment(entry);
+  else
+    functionPointerAlignment =
+        detail::getDefaultFunctionPointerAlignment(entry);
+  return *functionPointerAlignment;
+}
+
+Attribute mlir::DataLayout::getLegalIntWidths() const {
+  checkValid();
+  if (legalIntWidths)
+    return *legalIntWidths;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getLegalIntWidthsIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    legalIntWidths = iface.getLegalIntWidths(entry);
+  else
+    legalIntWidths = detail::getDefaultLegalIntWidths(entry);
+  return *legalIntWidths;
+}
+
 std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
     TargetSystemSpecInterface::DeviceID deviceID,
     StringAttr propertyName) const {
@@ -736,8 +782,8 @@ std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
 //===----------------------------------------------------------------------===//
 
 void DataLayoutSpecInterface::bucketEntriesByType(
-    DenseMap<TypeID, DataLayoutEntryList> &types,
-    DenseMap<StringAttr, DataLayoutEntryInterface> &ids) {
+    llvm::MapVector<TypeID, DataLayoutEntryList> &types,
+    llvm::MapVector<StringAttr, DataLayoutEntryInterface> &ids) {
   for (DataLayoutEntryInterface entry : getEntries()) {
     if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey()))
       types[type.getTypeID()].push_back(entry);
@@ -755,8 +801,8 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
   // Second, dispatch verifications of entry groups to types or dialects they
   // are associated with.
-  DenseMap<TypeID, DataLayoutEntryList> types;
-  DenseMap<StringAttr, DataLayoutEntryInterface> ids;
+  llvm::MapVector<TypeID, DataLayoutEntryList> types;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> ids;
   spec.bucketEntriesByType(types, ids);
 
   for (const auto &kvp : types) {

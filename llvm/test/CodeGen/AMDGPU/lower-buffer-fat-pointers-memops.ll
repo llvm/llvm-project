@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 define void @loads(ptr addrspace(8) %buf) {
@@ -176,7 +175,9 @@ define {i32, i1} @cmpxchg_weak(ptr addrspace(8) %buf, i32 %wanted, i32 %new) {
 ; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i32(i32 [[NEW]], i32 [[WANTED]], ptr addrspace(8) align 4 [[BUF]], i32 16, i32 0, i32 0)
 ; CHECK-NEXT:    fence syncscope("wavefront") acquire
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } poison, i32 [[RET]], 0
-; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[RET]], [[WANTED]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i32, i1 } [[TMP1]], i1 [[TMP2]], 1
+; CHECK-NEXT:    ret { i32, i1 } [[TMP3]]
 ;
   %base = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %p = getelementptr i32, ptr addrspace(7) %base, i32 4

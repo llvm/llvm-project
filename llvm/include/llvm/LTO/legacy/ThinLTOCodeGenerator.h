@@ -21,6 +21,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -47,7 +48,7 @@ struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
   std::optional<Reloc::Model> RelocModel;
   CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Aggressive;
 
-  std::unique_ptr<TargetMachine> create() const;
+  LLVM_ABI std::unique_ptr<TargetMachine> create() const;
 };
 
 /// This class define an interface similar to the LTOCodeGenerator, but adapted
@@ -59,14 +60,14 @@ struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
 class ThinLTOCodeGenerator {
 public:
   /// Add given module to the code generator.
-  void addModule(StringRef Identifier, StringRef Data);
+  LLVM_ABI void addModule(StringRef Identifier, StringRef Data);
 
   /**
    * Adds to a list of all global symbols that must exist in the final generated
    * code. If a symbol is not listed there, it will be optimized away if it is
    * inlined into every usage.
    */
-  void preserveSymbol(StringRef Name);
+  LLVM_ABI void preserveSymbol(StringRef Name);
 
   /**
    * Adds to a list of all global symbols that are cross-referenced between
@@ -74,7 +75,7 @@ public:
    * references from a ThinLTO module to this symbol is optimized away, then
    * the symbol can be discarded.
    */
-  void crossReferenceSymbol(StringRef Name);
+  LLVM_ABI void crossReferenceSymbol(StringRef Name);
 
   /**
    * Process all the modules that were added to the code generator in parallel.
@@ -83,7 +84,7 @@ public:
    * unless setGeneratedObjectsDirectory() has been called, in which case
    * results are available through getProducedBinaryFiles().
    */
-  void run();
+  LLVM_ABI void run();
 
   /**
    * Return the "in memory" binaries produced by the code generator. This is
@@ -253,35 +254,35 @@ public:
    * Produce the combined summary index from all the bitcode files:
    * "thin-link".
    */
-  std::unique_ptr<ModuleSummaryIndex> linkCombinedIndex();
+  LLVM_ABI std::unique_ptr<ModuleSummaryIndex> linkCombinedIndex();
 
   /**
    * Perform promotion and renaming of exported internal functions,
    * and additionally resolve weak and linkonce symbols.
    * Index is updated to reflect linkage changes from weak resolution.
    */
-  void promote(Module &Module, ModuleSummaryIndex &Index,
-               const lto::InputFile &File);
+  LLVM_ABI void promote(Module &Module, ModuleSummaryIndex &Index,
+                        const lto::InputFile &File);
 
   /**
    * Compute and emit the imported files for module at \p ModulePath.
    */
-  void emitImports(Module &Module, StringRef OutputName,
-                   ModuleSummaryIndex &Index,
-                   const lto::InputFile &File);
+  LLVM_ABI void emitImports(Module &Module, StringRef OutputName,
+                            ModuleSummaryIndex &Index,
+                            const lto::InputFile &File);
 
   /**
    * Perform cross-module importing for the module identified by
    * ModuleIdentifier.
    */
-  void crossModuleImport(Module &Module, ModuleSummaryIndex &Index,
-                         const lto::InputFile &File);
+  LLVM_ABI void crossModuleImport(Module &Module, ModuleSummaryIndex &Index,
+                                  const lto::InputFile &File);
 
   /**
    * Compute the list of summaries and the subset of declaration summaries
    * needed for importing into module.
    */
-  void gatherImportedSummariesForModule(
+  LLVM_ABI void gatherImportedSummariesForModule(
       Module &Module, ModuleSummaryIndex &Index,
       ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
       GVSummaryPtrSet &DecSummaries, const lto::InputFile &File);
@@ -289,21 +290,21 @@ public:
   /**
    * Perform internalization. Index is updated to reflect linkage changes.
    */
-  void internalize(Module &Module, ModuleSummaryIndex &Index,
-                   const lto::InputFile &File);
+  LLVM_ABI void internalize(Module &Module, ModuleSummaryIndex &Index,
+                            const lto::InputFile &File);
 
   /**
    * Perform post-importing ThinLTO optimizations.
    */
-  void optimize(Module &Module);
+  LLVM_ABI void optimize(Module &Module);
 
   /**
    * Write temporary object file to SavedObjectDirectoryPath, write symlink
    * to Cache directory if needed. Returns the path to the generated file in
    * SavedObjectsDirectoryPath.
    */
-  std::string writeGeneratedObject(int count, StringRef CacheEntryPath,
-                                   const MemoryBuffer &OutputBuffer);
+  LLVM_ABI std::string writeGeneratedObject(int count, StringRef CacheEntryPath,
+                                            const MemoryBuffer &OutputBuffer);
   /**@}*/
 
 private:
