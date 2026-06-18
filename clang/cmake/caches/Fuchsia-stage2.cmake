@@ -473,6 +473,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-otool
   llvm-pdbutil
   llvm-profdata
+  llvm-profgen
   llvm-rc
   llvm-ranlib
   llvm-readelf
