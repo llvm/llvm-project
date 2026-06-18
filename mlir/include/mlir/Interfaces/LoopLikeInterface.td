@@ -62,7 +62,8 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins "::mlir::Value ":$value),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return !$_op->isAncestor(value.getParentRegion()->getParentOp());
+        ::mlir::Region *region = value.getParentRegion();
+        return !region || !region->isAttached() || !$_op->isAncestor(region->getParentOp());
       }]
     >,
     InterfaceMethod<[{
