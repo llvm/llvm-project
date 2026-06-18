@@ -281,7 +281,7 @@ ObjectFileWasm::GetModuleSpecifications(const FileSpec &file,
     return {};
 
   ModuleSpecList specs;
-  specs.Append(ModuleSpec(file, ArchSpec("wasm32-unknown-unknown-wasm")));
+  specs.Append(ModuleSpec(file, ArchSpec("wasm32")));
   return specs;
 }
 
@@ -290,7 +290,7 @@ ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
     : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
-      m_arch("wasm32-unknown-unknown-wasm") {
+      m_arch("wasm32") {
   m_data_nsp->SetAddressByteSize(4);
 }
 
@@ -300,7 +300,7 @@ ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
                                lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr,
                  std::make_shared<DataExtractor>(header_data_sp)),
-      m_arch("wasm32-unknown-unknown-wasm") {}
+      m_arch("wasm32") {}
 
 bool ObjectFileWasm::ParseHeader() {
   // We already parsed the header during initialization.

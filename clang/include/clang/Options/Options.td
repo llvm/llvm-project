@@ -8914,6 +8914,11 @@ def fno_modules_check_relocated
       Group<f_Group>,
       HelpText<"Skip checks for relocated modules when loading PCM files">,
       MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
+def init_datetime_macros_EQ : Joined<["-"], "init-datetime-macros=">,
+  HelpText<"Change __DATE__, __TIME__, and __TIMESTAMP__ macros initialization and expansion">,
+  Values<"default,literalone,undefined">,
+  NormalizedValues<["Default", "LiteralOne", "Undefined"]>,
+  MarshallingInfoEnum<PreprocessorOpts<"InitDateTimeMacros">, "Default">;
 
 } // let Visibility = [CC1Option]
 
@@ -9352,6 +9357,12 @@ def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
       HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
+def _SLASH_experimental_deterministic : CLJoined<"experimental:deterministic">,
+      HelpText<"Emit warnings on usage of non-deterministic macros __DATE__, __TIME__ and __TIMESTAMP__">;
+def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
+      HelpText<"Undefine the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
+def _SLASH_d1nodatetime_ : CLFlag<"d1nodatetime-">,
+      HelpText<"Disable undefinition of the standard preprocessor macros __DATE__, __TIME__ and __TIMESTAMP__">;
 
 // Non-aliases:
 

@@ -85,7 +85,6 @@ if not "%version_7z%"=="" (
 REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
-REM   NSIS with the strlen_8192 patch,
 REM   Perl (for the OpenMP run-time).
 REM
 REM
@@ -188,6 +187,7 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+  -DCPACK_GENERATOR="WIX" ^
   -DCOMPILER_RT_BUILD_ORC=OFF
 
 if "%force-msvc%" == "" (

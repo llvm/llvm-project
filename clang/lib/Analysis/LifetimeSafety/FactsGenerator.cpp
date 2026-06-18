@@ -450,6 +450,10 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
+  if (BO->getOpcode() == BO_Comma) {
+    killAndFlowOrigin(*BO, *BO->getRHS());
+    return;
+  }
   if (BO->isCompoundAssignmentOp())
     return;
   if (BO->getType()->isPointerType() && BO->isAdditiveOp())
