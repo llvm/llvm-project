@@ -2654,7 +2654,6 @@ PreservedAnalyses ReassociatePass::run(Function &F,
   if (MadeChange) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
-    PA.preserve<UniformityInfoAnalysis>();
     return PA;
   }
 
