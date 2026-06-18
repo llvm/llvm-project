@@ -485,21 +485,19 @@ struct OMPInformationCache : public InformationCache {
   }
 
   /// Returns true if the function declaration \p F matches the runtime
-  /// function types, that is, return type \p RTFRetType, and argument types
-  /// \p RTFArgTypes.
-  static bool declMatchesRTFTypes(Function *F, Type *RTFRetType,
-                                  SmallVector<Type *, 8> &RTFArgTypes) {
+  /// function type \p RTFTy.
+  static bool declMatchesRTFTypes(Function *F, FunctionType *RTFTy) {
     // TODO: We should output information to the user (under debug output
     //       and via remarks).
 
     if (!F)
       return false;
-    if (F->getReturnType() != RTFRetType)
+    if (F->getReturnType() != RTFTy->getReturnType())
       return false;
-    if (F->arg_size() != RTFArgTypes.size())
+    if (F->arg_size() != RTFTy->getNumParams())
       return false;
 
-    auto *RTFTyIt = RTFArgTypes.begin();
+    auto *RTFTyIt = RTFTy->param_begin();
     for (Argument &Arg : F->args()) {
       if (Arg.getType() != *RTFTyIt)
         return false;
@@ -577,57 +575,34 @@ struct OMPInformationCache : public InformationCache {
   /// Helper to initialize all runtime function information for those defined
   /// in OpenMPKinds.def.
   void initializeRuntimeFunctions(Module &M) {
-
-    // Helper macros for handling __VA_ARGS__ in OMP_RTL
-#define OMP_TYPE(VarName, ...)                                                 \
-  Type *VarName = OMPBuilder.VarName;                                          \
-  (void)VarName;
-
-#define OMP_ARRAY_TYPE(VarName, ...)                                           \
-  ArrayType *VarName##Ty = OMPBuilder.VarName##Ty;                             \
-  (void)VarName##Ty;                                                           \
-  PointerType *VarName##PtrTy = OMPBuilder.VarName##PtrTy;                     \
-  (void)VarName##PtrTy;
-
-#define OMP_FUNCTION_TYPE(VarName, ...)                                        \
-  FunctionType *VarName = OMPBuilder.VarName;                                  \
-  (void)VarName;                                                               \
-  PointerType *VarName##Ptr = OMPBuilder.VarName##Ptr;                         \
-  (void)VarName##Ptr;
-
-#define OMP_STRUCT_TYPE(VarName, ...)                                          \
-  StructType *VarName = OMPBuilder.VarName;                                    \
-  (void)VarName;                                                               \
-  PointerType *VarName##Ptr = OMPBuilder.VarName##Ptr;                         \
-  (void)VarName##Ptr;
-
-#define OMP_RTL(_Enum, _Name, _IsVarArg, _ReturnType, ...)                     \
-  {                                                                            \
-    SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
-    Function *F = M.getFunction(_Name);                                        \
-    RTLFunctions.insert(F);                                                    \
-    if (declMatchesRTFTypes(F, OMPBuilder._ReturnType, ArgsTypes)) {           \
-      RuntimeFunctionIDMap[F] = _Enum;                                         \
-      auto &RFI = RFIs[_Enum];                                                 \
-      RFI.Kind = _Enum;                                                        \
-      RFI.Name = _Name;                                                        \
-      RFI.IsVarArg = _IsVarArg;                                                \
-      RFI.ReturnType = OMPBuilder._ReturnType;                                 \
-      RFI.ArgumentTypes = std::move(ArgsTypes);                                \
-      RFI.Declaration = F;                                                     \
-      unsigned NumUses = collectUses(RFI);                                     \
-      (void)NumUses;                                                           \
-      LLVM_DEBUG({                                                             \
-        dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")           \
-               << " found\n";                                                  \
-        if (RFI.Declaration)                                                   \
-          dbgs() << TAG << "-> got " << NumUses << " uses in "                 \
-                 << RFI.getNumFunctionsWithUses()                              \
-                 << " different functions.\n";                                 \
-      });                                                                      \
-    }                                                                          \
-  }
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+    for (unsigned I = 0;
+         I < static_cast<unsigned>(RuntimeFunction::OMPRTL___last); ++I) {
+      RuntimeFunction RTF = static_cast<RuntimeFunction>(I);
+      StringRef Name = OMPBuilder.getRuntimeFunctionName(RTF);
+      FunctionType *RTFTy = OMPBuilder.getRuntimeFunctionType(RTF);
+      Function *F = M.getFunction(Name);
+      RTLFunctions.insert(F);
+      if (declMatchesRTFTypes(F, RTFTy)) {
+        RuntimeFunctionIDMap[F] = RTF;
+        auto &RFI = RFIs[RTF];
+        RFI.Kind = RTF;
+        RFI.Name = Name;
+        RFI.IsVarArg = RTFTy->isVarArg();
+        RFI.ReturnType = RTFTy->getReturnType();
+        RFI.ArgumentTypes.assign(RTFTy->param_begin(), RTFTy->param_end());
+        RFI.Declaration = F;
+        unsigned NumUses = collectUses(RFI);
+        (void)NumUses;
+        LLVM_DEBUG({
+          dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")
+                 << " found\n";
+          if (RFI.Declaration)
+            dbgs() << TAG << "-> got " << NumUses << " uses in "
+                   << RFI.getNumFunctionsWithUses()
+                   << " different functions.\n";
+        });
+      }
+    }
 
     // Remove the `noinline` attribute from `__kmpc`, `ompx::` and `omp_`
     // functions, except if `optnone` is present.

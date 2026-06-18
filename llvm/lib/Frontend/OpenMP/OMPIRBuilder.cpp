@@ -64,7 +64,10 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "openmp-ir-builder"
@@ -684,6 +687,212 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
                 KernelArgs.DynCGroupMem};
 }
 
+namespace {
+
+namespace RuntimeFunctions {
+
+enum TypeKind : uint8_t {
+#define OMP_TYPE(Name, ...) Name,
+#define OMP_ARRAY_TYPE(Name, ...) Name##Ty, Name##PtrTy,
+#define OMP_FUNCTION_TYPE(Name, ...) Name, Name##Ptr,
+#define OMP_STRUCT_TYPE(Name, ...) Name, Name##Ptr,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  Last
+};
+
+static_assert(sizeof(TypeKind) == 1,
+              "OpenMP runtime type kinds must remain compact");
+
+struct NameTable {
+#define OMP_RTL(Enum, Str, ...) char Enum[sizeof(Str)];
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+};
+
+constexpr NameTable Names = {
+#define OMP_RTL(Enum, Str, ...) Str,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+};
+
+constexpr size_t MaxRuntimeArguments = 16;
+
+template <typename... Kinds> constexpr auto typeKinds(Kinds... Values) {
+  return std::array<TypeKind, sizeof...(Kinds)>{Values...};
+}
+
+struct Descriptor {
+  uint16_t NameOffset;
+  std::array<TypeKind, MaxRuntimeArguments> ArgumentTypes;
+  TypeKind ReturnType;
+  uint8_t ArgumentCount;
+  uint8_t IsVarArg;
+};
+
+static_assert(MaxRuntimeArguments <= std::numeric_limits<uint8_t>::max());
+static_assert(sizeof(Descriptor) == 22,
+              "OpenMP runtime function descriptors must remain compact");
+
+template <size_t N>
+constexpr Descriptor makeDescriptor(uint16_t NameOffset, TypeKind ReturnType,
+                                    std::array<TypeKind, N> ArgumentTypes,
+                                    bool IsVarArg) {
+  static_assert(N <= MaxRuntimeArguments,
+                "OpenMP runtime function exceeds descriptor capacity");
+  Descriptor Result{};
+  Result.NameOffset = NameOffset;
+  Result.ReturnType = ReturnType;
+  Result.ArgumentCount = static_cast<uint8_t>(N);
+  Result.IsVarArg = IsVarArg;
+  for (size_t I = 0; I < N; ++I)
+    Result.ArgumentTypes[I] = ArgumentTypes[I];
+  return Result;
+}
+
+constexpr auto Descriptors = [] {
+  std::array<Descriptor,
+             static_cast<size_t>(omp::RuntimeFunction::OMPRTL___last) + 1>
+      Result{};
+#define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
+  Result[static_cast<size_t>(omp::RuntimeFunction::Enum)] =                    \
+      makeDescriptor(static_cast<uint16_t>(offsetof(NameTable, Enum)),         \
+                     ReturnType, typeKinds(__VA_ARGS__), IsVarArg);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  return Result;
+}();
+
+static_assert(sizeof(Names) <= std::numeric_limits<uint16_t>::max());
+
+static Type *getType(const OpenMPIRBuilder &Builder, TypeKind Kind) {
+  switch (Kind) {
+#define OMP_TYPE(Name, ...)                                                    \
+  case Name:                                                                   \
+    return Builder.Name;
+#define OMP_ARRAY_TYPE(Name, ...)                                              \
+  case Name##Ty:                                                               \
+    return Builder.Name##Ty;                                                   \
+  case Name##PtrTy:                                                            \
+    return Builder.Name##PtrTy;
+#define OMP_FUNCTION_TYPE(Name, ...)                                           \
+  case Name:                                                                   \
+    return Builder.Name;                                                       \
+  case Name##Ptr:                                                              \
+    return Builder.Name##Ptr;
+#define OMP_STRUCT_TYPE(Name, ...)                                             \
+  case Name:                                                                   \
+    return Builder.Name;                                                       \
+  case Name##Ptr:                                                              \
+    return Builder.Name##Ptr;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  case Last:
+    break;
+  }
+  llvm_unreachable("invalid OpenMP runtime type kind");
+}
+
+} // namespace RuntimeFunctions
+
+namespace RuntimeAttributes {
+
+enum SetKind : uint8_t {
+#define OMP_ATTRS_SET(Name, ...) Name,
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  Last
+};
+
+static_assert(sizeof(SetKind) == 1,
+              "OpenMP runtime attribute set kinds must remain compact");
+
+constexpr size_t MaxAttributeArguments = 15;
+
+template <typename... Kinds> constexpr auto attributeKinds(Kinds... Values) {
+  return std::array<SetKind, sizeof...(Kinds)>{Values...};
+}
+
+struct Descriptor {
+  std::array<SetKind, MaxAttributeArguments> ArgumentAttributes;
+  SetKind FunctionAttributes;
+  SetKind ReturnAttributes;
+  uint8_t ArgumentCount;
+};
+
+static_assert(MaxAttributeArguments <= std::numeric_limits<uint8_t>::max());
+static_assert(sizeof(Descriptor) == 18,
+              "OpenMP runtime attribute descriptors must remain compact");
+
+template <size_t N>
+constexpr Descriptor makeDescriptor(SetKind FunctionAttributes,
+                                    SetKind ReturnAttributes,
+                                    std::array<SetKind, N> ArgumentAttributes) {
+  static_assert(N <= MaxAttributeArguments,
+                "OpenMP runtime attributes exceed descriptor capacity");
+  Descriptor Result{};
+  Result.FunctionAttributes = FunctionAttributes;
+  Result.ReturnAttributes = ReturnAttributes;
+  Result.ArgumentCount = static_cast<uint8_t>(N);
+  for (size_t I = 0; I < N; ++I)
+    Result.ArgumentAttributes[I] = ArgumentAttributes[I];
+  return Result;
+}
+
+constexpr auto Descriptors = [] {
+  std::array<Descriptor,
+             static_cast<size_t>(omp::RuntimeFunction::OMPRTL___last)>
+      Result{};
+  for (Descriptor &D : Result)
+    D.FunctionAttributes = Last;
+
+#define OMP_PARAM_ATTRS(...) attributeKinds(__VA_ARGS__)
+#define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)                \
+  Result[static_cast<size_t>(omp::RuntimeFunction::Enum)] =                    \
+      makeDescriptor(FnAttrSet, RetAttrSet, ArgAttrSets);
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  return Result;
+}();
+
+static AttributeSet getAttributeSet(Module &M, LLVMContext &Ctx, SetKind Kind) {
+  switch (Kind) {
+#define OMP_ATTRS_SET(Name, AttrSet)                                           \
+  case Name:                                                                   \
+    return AttrSet;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  case Last:
+    break;
+  }
+  llvm_unreachable("invalid OpenMP runtime attribute set kind");
+}
+
+} // namespace RuntimeAttributes
+
+} // namespace
+
+StringRef
+OpenMPIRBuilder::getRuntimeFunctionName(omp::RuntimeFunction FnID) const {
+  const size_t Index = static_cast<size_t>(FnID);
+  assert(Index < static_cast<size_t>(omp::RuntimeFunction::OMPRTL___last));
+
+  const auto &Descriptor = RuntimeFunctions::Descriptors[Index];
+  const auto &NextDescriptor = RuntimeFunctions::Descriptors[Index + 1];
+  const char *Name = reinterpret_cast<const char *>(&RuntimeFunctions::Names) +
+                     Descriptor.NameOffset;
+  return StringRef(Name, NextDescriptor.NameOffset - Descriptor.NameOffset - 1);
+}
+
+FunctionType *
+OpenMPIRBuilder::getRuntimeFunctionType(omp::RuntimeFunction FnID) const {
+  const size_t Index = static_cast<size_t>(FnID);
+  assert(Index < static_cast<size_t>(omp::RuntimeFunction::OMPRTL___last));
+
+  const auto &Descriptor = RuntimeFunctions::Descriptors[Index];
+  SmallVector<Type *, 8> ArgumentTypes;
+  ArgumentTypes.reserve(Descriptor.ArgumentCount);
+  for (size_t I = 0; I < Descriptor.ArgumentCount; ++I)
+    ArgumentTypes.push_back(
+        RuntimeFunctions::getType(*this, Descriptor.ArgumentTypes[I]));
+
+  return FunctionType::get(
+      RuntimeFunctions::getType(*this, Descriptor.ReturnType), ArgumentTypes,
+      Descriptor.IsVarArg);
+}
+
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
 
@@ -714,51 +923,39 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
     }
   };
 
-#define OMP_ATTRS_SET(VarName, AttrSet) AttributeSet VarName = AttrSet;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  const size_t Index = static_cast<size_t>(FnID);
+  if (Index >= RuntimeAttributes::Descriptors.size())
+    return;
 
-  // Add attributes to the function declaration.
-  switch (FnID) {
-#define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)                \
-  case Enum:                                                                   \
-    FnAttrs = FnAttrs.addAttributes(Ctx, FnAttrSet);                           \
-    addAttrSet(RetAttrs, RetAttrSet, /*Param*/ false);                         \
-    for (size_t ArgNo = 0; ArgNo < ArgAttrSets.size(); ++ArgNo)                \
-      addAttrSet(ArgAttrs[ArgNo], ArgAttrSets[ArgNo]);                         \
-    Fn.setAttributes(AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrs));    \
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-  default:
-    // Attributes are optional.
-    break;
-  }
+  const auto &Descriptor = RuntimeAttributes::Descriptors[Index];
+  if (Descriptor.FunctionAttributes == RuntimeAttributes::Last)
+    return;
+
+  assert(Descriptor.ArgumentCount <= ArgAttrs.size());
+  FnAttrs =
+      FnAttrs.addAttributes(Ctx, RuntimeAttributes::getAttributeSet(
+                                     M, Ctx, Descriptor.FunctionAttributes));
+  addAttrSet(
+      RetAttrs,
+      RuntimeAttributes::getAttributeSet(M, Ctx, Descriptor.ReturnAttributes),
+      /*Param=*/false);
+  for (size_t ArgNo = 0; ArgNo < Descriptor.ArgumentCount; ++ArgNo)
+    addAttrSet(ArgAttrs[ArgNo],
+               RuntimeAttributes::getAttributeSet(
+                   M, Ctx, Descriptor.ArgumentAttributes[ArgNo]));
+
+  Fn.setAttributes(AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrs));
 }
 
 FunctionCallee
 OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
-  FunctionType *FnTy = nullptr;
-  Function *Fn = nullptr;
-
-  // Try to find the declation in the module first.
-  switch (FnID) {
-#define OMP_RTL(Enum, Str, IsVarArg, ReturnType, ...)                          \
-  case Enum:                                                                   \
-    FnTy = FunctionType::get(ReturnType, ArrayRef<Type *>{__VA_ARGS__},        \
-                             IsVarArg);                                        \
-    Fn = M.getFunction(Str);                                                   \
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-  }
+  FunctionType *FnTy = getRuntimeFunctionType(FnID);
+  StringRef Name = getRuntimeFunctionName(FnID);
+  Function *Fn = M.getFunction(Name);
 
   if (!Fn) {
     // Create a new declaration if we need one.
-    switch (FnID) {
-#define OMP_RTL(Enum, Str, ...)                                                \
-  case Enum:                                                                   \
-    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, Str, M);         \
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-    }
+    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, Name, M);
     Fn->setCallingConv(Config.getRuntimeCC());
     // Add information if the runtime function takes a callback function
     if (FnID == OMPRTL___kmpc_fork_call || FnID == OMPRTL___kmpc_fork_teams) {
