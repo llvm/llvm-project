@@ -135,9 +135,11 @@ class AutomapToTargetDataPass
           [&](mlir::omp::ClauseMapFlags mapType) -> mlir::omp::MapInfoOp {
         mlir::Type descriptorTy =
             fir::unwrapRefType(memOp.getMemref().getType());
-        // The attach entry expects the descriptor object to already have a
-        // device mapping, but this raw object map must not be expanded as a
-        // Fortran descriptor member map.
+        // Keep the descriptor itself present. MapInfoFinalization expands this
+        // ref_ptr map and emits the attach map when the descriptor is created.
+        mapType |= omp::ClauseMapFlags::ref_ptr;
+        if (!isAlloc)
+          mapType |= omp::ClauseMapFlags::attach_never;
         return mlir::omp::MapInfoOp::create(
             builder, memOp.getLoc(), memOp.getMemref().getType(),
             memOp.getMemref(), TypeAttr::get(descriptorTy),
@@ -150,7 +152,7 @@ class AutomapToTargetDataPass
             /*members_index=*/ArrayAttr{},
             /*bounds=*/SmallVector<Value>{},
             /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
-            builder.getBoolAttr(true));
+            builder.getBoolAttr(false));
       };
 
       if (isAlloc)
@@ -173,27 +175,9 @@ class AutomapToTargetDataPass
           builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
 
-      if (isAlloc) {
-        mlir::omp::MapInfoOp attachInfo = mlir::omp::MapInfoOp::create(
-            builder, memOp.getLoc(), dataAddr.getType(), dataAddr,
-            TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
-            builder.getAttr<omp::ClauseMapFlagsAttr>(
-                omp::ClauseMapFlags::attach),
-            builder.getAttr<omp::VariableCaptureKindAttr>(
-                omp::VariableCaptureKind::ByRef),
-            /*var_ptr_ptr=*/memOp.getMemref(),
-            /*var_ptr_ptr_type=*/
-            TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
-            /*members=*/SmallVector<Value>{},
-            /*members_index=*/ArrayAttr{},
-            /*bounds=*/SmallVector<Value>{},
-            /*mapperId=*/mlir::FlatSymbolRefAttr(), globalOp.getSymNameAttr(),
-            builder.getBoolAttr(false));
-        clauses.mapVars.push_back(attachInfo);
-      } else {
+      if (!isAlloc)
         clauses.mapVars.push_back(
             createDescriptorMap(omp::ClauseMapFlags::del));
-      }
 
       isAlloc ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
               : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
