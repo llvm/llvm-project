@@ -937,3 +937,53 @@ void invalid_after_ternary_reset(bool flag) {
 }
 
 } // namespace unique_ptr_invalidation
+
+// A non-trivial destructor at scope exit is modeled as an implicit use (a
+// UseFact with no source expression). The live-origins join helper reads such a
+// fact's explicit location rather than dereferencing its null use-expression, so
+// a function with both a tracked borrow and such an implicit use (e.g. a
+// std::function local) is analyzed without crashing.
+namespace implicit_use_join {
+void view_and_callable() {
+  std::string text = "long enough heap-allocated backing string value here!";
+  std::string_view tok = text;       // a tracked borrow (live origin)
+  std::function<void()> c = [] {};   // non-trivial dtor at scope exit
+  (void)c;
+  (void)tok.size(); // no-warning (must not crash)
+}
+
+void view_and_callable_mutation() {
+  std::string text = "long enough heap-allocated backing string value here!";
+  std::string_view tok = text; // expected-warning {{local variable 'text' is later invalidated}}
+  std::function<void()> c = [] {};
+  (void)c;
+  text.push_back('x'); // expected-note {{local variable 'text' is invalidated here}}
+  (void)tok.size();    // expected-note {{later used here}}
+}
+} // namespace implicit_use_join
+
+// A borrow read by a scope-exit destructor or cleanup callback (an implicit use
+// with no source expression) that was freed earlier via `delete` is a
+// use-after-free; the diagnostic is anchored at the implicit use's location.
+namespace implicit_use_after_free {
+struct [[gsl::Pointer]] Ref {
+  const int *p;
+  Ref &operator=(const int *q [[clang::lifetime_capture_by(this)]]);
+  ~Ref(); // non-trivial, out-of-line: may read p
+};
+void cleanup_ref(Ref *r); // out-of-line: may read r->p
+
+void via_destructor() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used here}}
+
+void via_cleanup() {
+  Ref g __attribute__((cleanup(cleanup_ref))); // expected-note {{later used here}}
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  g = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}
+} // namespace implicit_use_after_free

@@ -127,6 +127,27 @@ public:
         << UseExpr->getSourceRange();
   }
 
+  void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
+                           const Expr *MovedExpr, SourceLocation FreeLoc,
+                           llvm::ArrayRef<const Expr *> ExprChain) override {
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_use_after_scope_moved
+                          : diag::warn_lifetime_safety_use_after_scope;
+    std::string DestroyedSubject = getDiagSubjectDescription(IssueExpr);
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << DestroyedSubject << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
+        << DestroyedSubject;
+
+    reportAliasingChain(ExprChain);
+
+    S.Diag(UseLoc, diag::note_lifetime_safety_used_here);
+  }
+
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             const Expr *MovedExpr) override {
     unsigned DiagID = MovedExpr
@@ -213,6 +234,28 @@ public:
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
+  }
+  void reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
+                                  const Expr *InvalidationExpr) override {
+    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                        ? diag::warn_lifetime_safety_use_after_free
+                        : diag::warn_lifetime_safety_invalidation;
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
+    S.Diag(IssueExpr->getExprLoc(), WarnDiag)
+        << InvalidatedSubject << IssueExpr->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    S.Diag(UseLoc, diag::note_lifetime_safety_used_here);
+  }
+  void reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
+                                  const Expr *InvalidationExpr) override {
+    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                        ? diag::warn_lifetime_safety_use_after_free
+                        : diag::warn_lifetime_safety_invalidation;
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
+    S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
+        << InvalidatedSubject << PVD->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    S.Diag(UseLoc, diag::note_lifetime_safety_used_here);
   }
 
   void reportInvalidatedField(const Expr *IssueExpr,

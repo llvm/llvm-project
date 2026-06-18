@@ -86,6 +86,8 @@ private:
 
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
+  void handleCleanupFunction(const CFGCleanupFunction &CleanupFunction);
+
   void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
 
   void handleExitBlock();
