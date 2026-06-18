@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
 
-int *global; // expected-note 2 {{this global dangles}}
+int *global; // expected-note 4 {{this global dangles}}
 int *global_backup; // expected-note {{this global dangles}}
 
 struct ObjWithStaticField {
@@ -47,4 +47,26 @@ void store_then_clear() {
 void dangling_static_field() {
   int local;
   ObjWithStaticField::static_field = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the static variable 'static_field' which will dangle}}
+}
+
+// A store on some-but-not-all paths must still be caught: the global's origin
+// only spans blocks via the function-exit escape, so it must survive the join.
+void conditional_escape(int c) {
+  int local = 7;
+  if (c)
+    global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+}
+
+void loop_escape(int n) {
+  int local = 0;
+  for (int i = 0; i < n; ++i)
+    global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+}
+
+// Negative: a conditional store that never leaks a stack address is silent.
+void conditional_no_escape(int c) {
+  int local = 7;
+  if (c)
+    global = nullptr; // no-warning
+  (void)local;
 }
