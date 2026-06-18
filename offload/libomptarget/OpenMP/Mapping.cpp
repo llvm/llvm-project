@@ -283,7 +283,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       LR.TPR.Flags.IsHostPointer = true;
       LR.TPR.TargetPointer = HstPtrBegin;
     }
-  } else if (HasPresentModifier) {
+  } else if (HasPresentModifier && !isNullMap(HstPtrBegin, Size)) {
     ODBG(ODT_Mapping) << "Mapping required by 'present' map type modifier does "
                       << "not exist for HstPtrBegin=" << HstPtrBegin
                       << ", Size=" << Size;

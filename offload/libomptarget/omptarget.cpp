@@ -665,7 +665,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
-    if (!TgtPtrBegin && (DataSize || HasPresentModifier)) {
+    if (!TgtPtrBegin && (DataSize || (HasPresentModifier &&
+                                      !isNullMap(HstPtrBegin, DataSize)))) {
       REPORT() << "Call to getTargetPointer returned null pointer ("
                << (HasPresentModifier ? "'present' map type modifier"
                                       : "device failure or illegal mapping")
@@ -1132,7 +1133,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
-        (DataSize || HasPresentModifier)) {
+        (DataSize ||
+         (HasPresentModifier && !isNullMap(HstPtrBegin, DataSize)))) {
       ODBG(ODT_Mapping) << "Mapping does not exist ("
                         << (HasPresentModifier ? "'present' map type modifier"
                                                : "ignored")
