@@ -3686,6 +3686,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           return RemoveBundle();
         }
 
+        Value *BasePtr;
+        uint64_t PtrOffset;
+        if (match(Ptr.get(),
+                  m_PtrAdd(m_Value(BasePtr), m_ConstantInt(PtrOffset)))) {
+          Builder.CreateAlignmentAssumption(
+              DL, BasePtr, *Alignment, Builder.getInt64(*Offset - PtrOffset));
+          return RemoveBundle();
+        }
+
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
         // the align argument attribute disappears.
