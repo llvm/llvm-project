@@ -654,9 +654,8 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
-    // there.
-    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
+    // Disable relative lookup tables for all AArch64 targets.
+    if (TargetTriple.isAArch64())
       return false;
 
     return true;
