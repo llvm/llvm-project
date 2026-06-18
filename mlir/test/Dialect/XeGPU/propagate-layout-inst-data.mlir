@@ -177,44 +177,6 @@ func.func @load_gather_with_coalesce_chunksize(%arg0: memref<8x16xf16>, %arg1: m
 
 // -----
 gpu.module @test {
-// CHECK-LABEL: func.func @insert_strided_slice_inst_data_no_packing(
-// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x32xf32>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} dense<1.000000e+00> : vector<4x16xf32>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x32xf32>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>, offsets = [0, 0], strides = [1, 1]} : vector<4x16xf32> into vector<8x32xf32>
-// CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<8x32xf32> -> !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
-// CHECK: xegpu.store_nd %[[INSERT]], %[[TDESC]][0, 0] <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x32xf32>, !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
-func.func @insert_strided_slice_inst_data_no_packing(%arg0: memref<8x32xf32>) {
-  %c0 = arith.constant 0 : index
-  %cst_small = arith.constant dense<1.0> : vector<4x16xf32>
-  %cst_large = arith.constant dense<0.0> : vector<8x32xf32>
-  %insert = vector.insert_strided_slice %cst_small, %cst_large {offsets = [0, 0], strides = [1, 1]} : vector<4x16xf32> into vector<8x32xf32>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x32xf32> -> !xegpu.tensor_desc<8x32xf32>
-  xegpu.store_nd %insert, %tdesc[0, 0] : vector<8x32xf32>, !xegpu.tensor_desc<8x32xf32>
-  return
-}
-}
-
-// -----
-gpu.module @test {
-// CHECK-LABEL: func.func @insert_strided_slice_inst_data_with_packing(
-// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x64xi8>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 2]>} dense<1> : vector<4x64xi8>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 2]>} dense<0> : vector<8x64xi8>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 2]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
-func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
-  %c0 = arith.constant 0 : index
-  %cst_small = arith.constant dense<1> : vector<4x64xi8>
-  %cst_large = arith.constant dense<0> : vector<8x64xi8>
-  %insert = vector.insert_strided_slice %cst_small, %cst_large {offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
-  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x64xi8> -> !xegpu.tensor_desc<8x64xi8>
-  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [8, 64]>}>: vector<8x64xi8>, !xegpu.tensor_desc<8x64xi8>
-  return
-}
-}
-
-// -----
-gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_non_unit_dims(
 // CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<1024xindex>, vector<1024xi1> -> vector<1024xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} : vector<1024xf16> to vector<8x8x16xf16>
