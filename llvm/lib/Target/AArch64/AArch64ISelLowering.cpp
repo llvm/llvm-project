@@ -1157,6 +1157,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Try and combine setcc/select_cc with csel and bool-vector bitcasts.
   setTargetDAGCombine(ISD::SETCC);
   setTargetDAGCombine(ISD::SELECT_CC);
+  setTargetDAGCombine(ISD::SETCCCARRY);
 
   setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
 
@@ -28078,6 +28079,41 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performSETCCCARRYCombine(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::SETCCCARRY && "Unexpected opcode!");
+
+  // Rebuild narrow high/low compares from type-legalized wide unsigned compares
+  // so the existing CCMP conjunction/disjunction lowering can handle them.
+  SDValue HiLHS = N->getOperand(0);
+  SDValue HiRHS = N->getOperand(1);
+  SDValue Carry = N->getOperand(2);
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(3))->get();
+  if (Cond != ISD::SETULT || Carry.getOpcode() != ISD::USUBO ||
+      Carry.getResNo() != 1)
+    return SDValue();
+
+  if (!isNullConstant(HiLHS) && !isNullConstant(HiRHS))
+    return SDValue();
+
+  SDValue LoLHS = Carry.getOperand(0);
+  SDValue LoRHS = Carry.getOperand(1);
+  if (!isa<ConstantSDNode>(LoLHS) && !isa<ConstantSDNode>(LoRHS))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  SDValue LoCmp = DAG.getSetCC(DL, VT, LoLHS, LoRHS, ISD::SETULT);
+  if (isNullConstant(HiRHS)) {
+    SDValue HiEq = DAG.getSetCC(DL, VT, HiLHS, HiRHS, ISD::SETEQ);
+    return DAG.getNode(ISD::AND, DL, VT, HiEq, LoCmp);
+  }
+
+  SDValue HiNe = DAG.getSetCC(
+      DL, VT, HiRHS, DAG.getConstant(0, DL, HiRHS.getValueType()), ISD::SETNE);
+  return DAG.getNode(ISD::OR, DL, VT, HiNe, LoCmp);
+}
+
 static SDValue performSELECT_CCCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        SelectionDAG &DAG) {
@@ -30010,6 +30046,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performVSelectCombine(N, DCI, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DCI, DAG);
+  case ISD::SETCCCARRY:
+    return performSETCCCARRYCombine(N, DAG);
   case ISD::LOAD:
     return performLOADCombine(N, DCI, DAG, Subtarget);
   case ISD::STORE:
