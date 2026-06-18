@@ -50,8 +50,7 @@ struct Float128 {
         }
       }
 
-      fputil::DyadicFloat<cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>
-          xd(sign, 0, value);
+      fputil::DyadicFloat<FPBits<Float128>::STORAGE_LEN> xd(sign, 0, value);
       bits = xd.template as<Float128, /*ShouldSignalExceptions=*/true>().bits;
 
     } else if constexpr (cpp::is_convertible_v<T, Float128>) {
@@ -68,7 +67,6 @@ struct Float128 {
     return fputil::cast<T>(*this);
   }
 
-  // Integer conversion (Incomplete + not verified with tests)
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   LIBC_INLINE constexpr explicit operator T() const {
     FPBits<Float128> x_bits(*this);
@@ -78,7 +76,7 @@ struct Float128 {
         x_bits.sign(),
        x_bits_exp,
         x_bits.get_explicit_mantissa());
-    return static_cast<T>(xd.as_mantissa_type_rounded());
+    return static_cast<T>(xd.as_mantissa_type());
   }
 
   // unary
@@ -149,10 +147,4 @@ struct Float128 {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
-// <--To be removed------------------------------------>
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
-              LIBC_NAMESPACE::fputil::Float128>::value);
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
-              LIBC_NAMESPACE::fputil::Float128>::value);
-// ----------------------------------------------------
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
