@@ -1067,6 +1067,10 @@ class WidenIV {
   ScalarEvolution *SE;
   DominatorTree   *DT;
 
+  // Does the module have any calls to the llvm.experimental.guard intrinsic
+  // at all? If not we can avoid scanning instructions looking for guards.
+  bool HasGuards;
+
   bool UsePostIncrementRanges;
 
   // Statistics
@@ -1138,7 +1142,7 @@ public:
 
   WidenIV(const WideIVInfo &WI, LoopInfo *LInfo, ScalarEvolution *SEv,
           DominatorTree *DTree, SmallVectorImpl<WeakTrackingVH> &DI,
-          bool UsePostIncrementRanges = true);
+          bool HasGuards, bool UsePostIncrementRanges = true);
 
   PHINode *createWideIV(SCEVExpander &Rewriter);
 
@@ -1231,13 +1235,14 @@ static Instruction *getInsertPointForUses(Instruction *User, Value *Def,
 }
 
 WidenIV::WidenIV(const WideIVInfo &WI, LoopInfo *LInfo, ScalarEvolution *SEv,
-                 DominatorTree *DTree, SmallVectorImpl<WeakTrackingVH> &DI,
-                 bool UsePostIncrementRanges)
-    : OrigPhi(WI.NarrowIV), WideType(WI.WidestNativeType), LI(LInfo),
-      L(LI->getLoopFor(OrigPhi->getParent())), SE(SEv), DT(DTree),
-      UsePostIncrementRanges(UsePostIncrementRanges), DeadInsts(DI) {
-  assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
-  ExtendKindMap[OrigPhi] = WI.IsSigned ? ExtendKind::Sign : ExtendKind::Zero;
+          DominatorTree *DTree, SmallVectorImpl<WeakTrackingVH> &DI,
+          bool HasGuards, bool UsePostIncrementRanges)
+      : OrigPhi(WI.NarrowIV), WideType(WI.WidestNativeType), LI(LInfo),
+        L(LI->getLoopFor(OrigPhi->getParent())), SE(SEv), DT(DTree),
+        HasGuards(HasGuards), UsePostIncrementRanges(UsePostIncrementRanges),
+        DeadInsts(DI) {
+    assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
+    ExtendKindMap[OrigPhi] = WI.IsSigned ? ExtendKind::Sign : ExtendKind::Zero;
 }
 
 Value *WidenIV::createExtendInst(Value *NarrowOper, Type *WideType,
@@ -2181,6 +2186,19 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
+  for (User *U : NarrowDefLHS->users()) {
+    // We can use some simple heuristics to infer NarrowDef's range. For
+    // instance, if the LHS of the ADD is used by `zext nneg`, then the LHS
+    // value can be considered non-negative.
+    if (match(U, m_NNegZExt(m_Value()))) {
+      auto NewRange = ConstantRange::makeExactICmpRegion(
+          CmpInst::ICMP_SGE, APInt::getZero(NarrowDefRHS->getBitWidth()));
+      NewRange = NewRange.addWithNoWrap(
+          *NarrowDefRHS, OverflowingBinaryOperator::NoSignedWrap);
+      updatePostIncRangeInfo(NarrowDef, NarrowUser, NewRange);
+    }
+  }
+
   auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
     CmpPredicate Pred;
     Value *CmpRHS;
@@ -2200,22 +2218,14 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
   };
 
   auto UpdateRangeFromGuards = [&](Instruction *Ctx) {
+    if (!HasGuards)
+      return;
+
     for (Instruction &I : make_range(Ctx->getIterator().getReverse(),
                                      Ctx->getParent()->rend())) {
       Value *C = nullptr;
       if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(C))))
         UpdateRangeFromCondition(C, /*TrueDest=*/true);
-
-      // We can use some simple heuristics to infer NarrowDef's range. For
-      // instance, if the LHS of the ADD is used by `zext nneg`, then the LHS
-      // value can be considered non-negative.
-      if (match(&I, m_NNegZExt(m_Specific(NarrowDefLHS)))) {
-        auto NewRange = ConstantRange::makeExactICmpRegion(
-            CmpInst::ICMP_SGE, APInt::getZero(NarrowDefRHS->getBitWidth()));
-        NewRange = NewRange.addWithNoWrap(
-            *NarrowDefRHS, OverflowingBinaryOperator::NoSignedWrap);
-        updatePostIncRangeInfo(NarrowDef, NarrowUser, NewRange);
-      }
     }
   };
 
@@ -2277,13 +2287,12 @@ void WidenIV::calculatePostIncRanges(PHINode *OrigPhi) {
   }
 }
 
-PHINode *llvm::createWideIV(const WideIVInfo &WI, LoopInfo *LI,
-                            ScalarEvolution *SE, SCEVExpander &Rewriter,
-                            DominatorTree *DT,
-                            SmallVectorImpl<WeakTrackingVH> &DeadInsts,
-                            unsigned &NumElimExt, unsigned &NumWidened,
-                            bool UsePostIncrementRanges) {
-  WidenIV Widener(WI, LI, SE, DT, DeadInsts, UsePostIncrementRanges);
+PHINode *llvm::createWideIV(const WideIVInfo &WI,
+    LoopInfo *LI, ScalarEvolution *SE, SCEVExpander &Rewriter,
+    DominatorTree *DT, SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+    unsigned &NumElimExt, unsigned &NumWidened,
+    bool HasGuards, bool UsePostIncrementRanges) {
+  WidenIV Widener(WI, LI, SE, DT, DeadInsts, HasGuards, UsePostIncrementRanges);
   PHINode *WidePHI = Widener.createWideIV(Rewriter);
   NumElimExt = Widener.getNumElimExt();
   NumWidened = Widener.getNumWidened();
