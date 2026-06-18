@@ -23,7 +23,6 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Options/Options.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
-#include "clang/ScalableStaticAnalysisFramework/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Frontend/TUSummaryExtractorFrontendAction.h"
 #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
@@ -210,7 +209,7 @@ CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<ASTMergeAction>(std::move(Act),
                                             FEOpts.ASTMergeFiles);
 
-  if (!CI.getSSAFOpts().TUSummaryFile.empty()) {
+  if (!FEOpts.SSAFTUSummaryFile.empty()) {
     Act = std::make_unique<ssaf::TUSummaryExtractorFrontendAction>(
         std::move(Act));
   }
