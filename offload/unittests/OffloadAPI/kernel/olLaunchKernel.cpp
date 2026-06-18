@@ -60,7 +60,7 @@ KERNEL_MULTI_TEST(Global, global, "write", "read")
 
 TEST_P(olLaunchKernelFooTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   void *ArgPtrs[] = {&Mem};
@@ -76,7 +76,7 @@ TEST_P(olLaunchKernelFooTest, Success) {
     ASSERT_EQ(Data[i], i);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
@@ -85,8 +85,10 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
   threadify([&](size_t) {
     void *DevAlloc, *HstAlloc;
     size_t Size = LaunchArgs.GroupSize.x * sizeof(uint32_t);
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &DevAlloc));
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, Size, &HstAlloc));
+    ASSERT_SUCCESS(
+        olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &DevAlloc));
+    ASSERT_SUCCESS(
+        olMemAlloc(Context, Device, OL_ALLOC_TYPE_HOST, Size, &HstAlloc));
 
     void *ArgPtrs[] = {&DevAlloc};
     size_t ArgSizes[] = {sizeof(DevAlloc)};
@@ -103,8 +105,8 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
       ASSERT_EQ(Data[i], i);
     }
 
-    ASSERT_SUCCESS(olMemFree(DevAlloc));
-    ASSERT_SUCCESS(olMemFree(HstAlloc));
+    ASSERT_SUCCESS(olMemFree(Context, DevAlloc));
+    ASSERT_SUCCESS(olMemFree(Context, HstAlloc));
   });
 }
 
@@ -117,7 +119,7 @@ TEST_P(olLaunchKernelNoArgsTest, Success) {
 
 TEST_P(olLaunchKernelMultiArgsTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(int), &Mem));
 
   char A = 3;
@@ -136,7 +138,7 @@ TEST_P(olLaunchKernelMultiArgsTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
     ASSERT_EQ(Data[i], A + C + static_cast<int>(i));
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 struct Foo {
@@ -146,7 +148,7 @@ struct Foo {
 
 TEST_P(olLaunchKernelCompositeTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   uint8_t N = 1;
@@ -165,12 +167,12 @@ TEST_P(olLaunchKernelCompositeTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
     ASSERT_EQ(Data[i], N + F.a + F.b + i);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   void *ArgPtrs[] = {&Mem};
@@ -184,7 +186,7 @@ TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
     ASSERT_EQ(Data[i], i);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelByteTest, Success) {
@@ -206,7 +208,7 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x *
                                 sizeof(uint32_t),
                             &Mem));
@@ -223,7 +225,7 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], (i % 64) * 2);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
@@ -233,7 +235,7 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.NumGroups.x * sizeof(uint32_t), &Mem));
 
   void *ArgPtrs[] = {&Mem};
@@ -248,7 +250,7 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
@@ -258,7 +260,7 @@ TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
   LaunchArgs.DynSharedMemory = 0;
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.NumGroups.x * sizeof(uint32_t), &Mem));
 
   void *ArgPtrs[] = {&Mem};
@@ -273,7 +275,7 @@ TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 // The test intends to verify the correctness of the current implementation of
@@ -284,9 +286,10 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessSyncEvent) {
 
   size_t Size = sizeof(uint32_t);
 
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size,
+                            &InitValuePassed));
   ASSERT_SUCCESS(
-      olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &InitValuePassed));
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &ResNum));
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &ResNum));
 
   uint32_t HostInitVal = 0;
   ASSERT_SUCCESS(
@@ -323,8 +326,8 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessSyncEvent) {
 
   ASSERT_EQ(FinalResVal, NumberToAdd * LoopRange);
 
-  ASSERT_SUCCESS(olMemFree(InitValuePassed));
-  ASSERT_SUCCESS(olMemFree(ResNum));
+  ASSERT_SUCCESS(olMemFree(Context, InitValuePassed));
+  ASSERT_SUCCESS(olMemFree(Context, ResNum));
 }
 
 // The test checks the correctness of the synchronization between queues using
@@ -342,10 +345,12 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessTwoQueues) {
 
   size_t Size = sizeof(uint32_t);
 
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size,
+                            &InitValuePassed));
   ASSERT_SUCCESS(
-      olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &InitValuePassed));
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &ResNum1));
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &ResNum2));
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &ResNum1));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &ResNum2));
 
   uint32_t HostInitVal = 0;
   ASSERT_SUCCESS(
@@ -392,14 +397,14 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessTwoQueues) {
 
   ASSERT_EQ(FinalResVal, 2 * NumberToAdd * LoopRange);
 
-  ASSERT_SUCCESS(olMemFree(InitValuePassed));
-  ASSERT_SUCCESS(olMemFree(ResNum1));
-  ASSERT_SUCCESS(olMemFree(ResNum2));
+  ASSERT_SUCCESS(olMemFree(Context, InitValuePassed));
+  ASSERT_SUCCESS(olMemFree(Context, ResNum1));
+  ASSERT_SUCCESS(olMemFree(Context, ResNum2));
 }
 
 TEST_P(olLaunchKernelGlobalTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   void *ArgPtrs[] = {&Mem};
@@ -417,7 +422,7 @@ TEST_P(olLaunchKernelGlobalTest, Success) {
     ASSERT_EQ(Data[i], i * 2);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
@@ -433,7 +438,7 @@ TEST_P(olLaunchKernelGlobalCtorTest, Success) {
   SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   void *ArgPtrs[] = {&Mem};
@@ -448,7 +453,7 @@ TEST_P(olLaunchKernelGlobalCtorTest, Success) {
     ASSERT_EQ(Data[i], i + 100);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchKernelGlobalDtorTest, Success) {
@@ -462,8 +467,8 @@ TEST_P(olLaunchKernelGlobalDtorTest, Success) {
 
 TEST_P(olLaunchKernelGridSizeTest, Success) {
   void *Mem;
-  ASSERT_SUCCESS(
-      olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 6 * sizeof(uint32_t), &Mem));
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
+                            6 * sizeof(uint32_t), &Mem));
 
   uint32_t *NumBlocks = static_cast<uint32_t *>(Mem);
   uint32_t *NumThreads = static_cast<uint32_t *>(Mem) + 3;
@@ -497,5 +502,5 @@ TEST_P(olLaunchKernelGridSizeTest, Success) {
     ASSERT_EQ(NumThreads[2], LaunchArgs.GroupSize.z);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }

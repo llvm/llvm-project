@@ -1616,7 +1616,74 @@ public:
   }
 };
 
-/// Class implementing the CUDA-specific functionalities of the plugin.
+struct CUDAPluginContextTy final : public PluginContextTy {
+  CUDAPluginContextTy(GenericPluginTy &Plugin,
+                      llvm::ArrayRef<GenericDeviceTy *> Devices)
+      : PluginContextTy(Plugin, Devices) {}
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    assert(!Devices.empty() && "context constructed without devices");
+    auto &Dev = static_cast<CUDADeviceTy &>(*Devices.front());
+    if (auto Err = Dev.setContext())
+      return std::move(Err);
+
+    auto CuPtr = reinterpret_cast<CUdeviceptr>(Ptr);
+
+    // The first cuPointerGetAttribute call doubles as the validity check:
+    // unknown pointers return CUDA_ERROR_INVALID_VALUE.
+    unsigned MemType = 0;
+    CUresult Res = cuPointerGetAttribute(
+        &MemType, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, CuPtr);
+    if (Res == CUDA_ERROR_INVALID_VALUE)
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known CUDA allocation");
+    if (auto Err = Plugin::check(Res, "error in cuPointerGetAttribute: %s"))
+      return std::move(Err);
+
+    unsigned IsManaged = 0;
+    Res = cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
+                                CuPtr);
+    if (auto Err = Plugin::check(Res, "error in cuPointerGetAttribute: %s"))
+      return std::move(Err);
+
+    TargetAllocTy Kind = TARGET_ALLOC_DEVICE;
+    if (IsManaged)
+      Kind = TARGET_ALLOC_SHARED;
+    else if (MemType == CU_MEMORYTYPE_HOST)
+      Kind = TARGET_ALLOC_HOST;
+
+    void *Base = nullptr;
+    Res = cuPointerGetAttribute(&Base, CU_POINTER_ATTRIBUTE_RANGE_START_ADDR,
+                                CuPtr);
+    if (auto Err = Plugin::check(Res, "error in cuPointerGetAttribute: %s"))
+      return std::move(Err);
+
+    size_t Size = 0;
+    Res = cuPointerGetAttribute(&Size, CU_POINTER_ATTRIBUTE_RANGE_SIZE, CuPtr);
+    if (auto Err = Plugin::check(Res, "error in cuPointerGetAttribute: %s"))
+      return std::move(Err);
+
+    int Ordinal = -1;
+    Res = cuPointerGetAttribute(&Ordinal, CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL,
+                                CuPtr);
+    if (auto Err = Plugin::check(Res, "error in cuPointerGetAttribute: %s"))
+      return std::move(Err);
+
+    GenericDeviceTy *OwnerDevice = nullptr;
+    for (auto *D : Devices) {
+      if (D->getDeviceId() == Ordinal) {
+        OwnerDevice = D;
+        break;
+      }
+    }
+    if (!OwnerDevice)
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "allocation owner is not a device of this context");
+
+    return PluginAllocInfoTy{OwnerDevice, Kind, Base, Size};
+  }
+};
+
 struct CUDAPluginTy final : public GenericPluginTy {
   /// Create a CUDA plugin.
   CUDAPluginTy() : GenericPluginTy(getTripleArch()) {}
@@ -1679,6 +1746,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new CUDADeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<CUDAPluginContextTy>(*this, Devices);
   }
 
   /// Creates a CUDA global handler.

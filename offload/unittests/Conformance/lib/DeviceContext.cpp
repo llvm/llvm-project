@@ -154,19 +154,25 @@ const llvm::SetVector<llvm::StringRef> &mathtest::getPlatforms() {
   return Platforms;
 }
 
-void detail::allocManagedMemory(ol_device_handle_t DeviceHandle,
+void detail::allocManagedMemory(ol_context_handle_t ContextHandle,
+                                ol_device_handle_t DeviceHandle,
                                 std::size_t Size,
                                 void **AllocationOut) noexcept {
-  OL_CHECK(
-      olMemAlloc(DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size, AllocationOut));
+  OL_CHECK(olMemAlloc(ContextHandle, DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size,
+                      AllocationOut));
 }
 
 //===----------------------------------------------------------------------===//
 // DeviceContext
 //===----------------------------------------------------------------------===//
 
+void DeviceContext::init() {
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &ContextHandle));
+}
+
 DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
-    : GlobalDeviceId(GlobalDeviceId), DeviceHandle(nullptr) {
+    : GlobalDeviceId(GlobalDeviceId), DeviceHandle(nullptr),
+      ContextHandle(nullptr) {
   const auto &Devices = getDevices();
 
   if (GlobalDeviceId >= Devices.size())
@@ -175,10 +181,11 @@ DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
                 llvm::Twine(Devices.size()));
 
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  init();
 }
 
 DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
-    : DeviceHandle(nullptr) {
+    : DeviceHandle(nullptr), ContextHandle(nullptr) {
   const auto &Platforms = getPlatforms();
 
   if (!llvm::any_of(Platforms, [&](llvm::StringRef CurrentPlatform) {
@@ -210,6 +217,36 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
 
   GlobalDeviceId = *FoundGlobalDeviceId;
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  init();
+}
+
+DeviceContext::DeviceContext(DeviceContext &&Other) noexcept
+    : GlobalDeviceId(Other.GlobalDeviceId), DeviceHandle(Other.DeviceHandle),
+      ContextHandle(Other.ContextHandle) {
+  Other.DeviceHandle = nullptr;
+  Other.ContextHandle = nullptr;
+}
+
+DeviceContext &DeviceContext::operator=(DeviceContext &&Other) noexcept {
+  if (this == &Other)
+    return *this;
+
+  if (ContextHandle)
+    OL_CHECK(olDestroyContext(ContextHandle));
+
+  GlobalDeviceId = Other.GlobalDeviceId;
+  DeviceHandle = Other.DeviceHandle;
+  ContextHandle = Other.ContextHandle;
+
+  Other.DeviceHandle = nullptr;
+  Other.ContextHandle = nullptr;
+
+  return *this;
+}
+
+DeviceContext::~DeviceContext() noexcept {
+  if (ContextHandle)
+    OL_CHECK(olDestroyContext(ContextHandle));
 }
 
 [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>

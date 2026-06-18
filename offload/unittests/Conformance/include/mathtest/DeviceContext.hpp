@@ -40,7 +40,8 @@ const llvm::SetVector<llvm::StringRef> &getPlatforms();
 
 namespace detail {
 
-void allocManagedMemory(ol_device_handle_t DeviceHandle, std::size_t Size,
+void allocManagedMemory(ol_context_handle_t ContextHandle,
+                        ol_device_handle_t DeviceHandle, std::size_t Size,
                         void **AllocationOut) noexcept;
 } // namespace detail
 
@@ -56,14 +57,23 @@ public:
 
   explicit DeviceContext(llvm::StringRef Platform, std::size_t DeviceId = 0);
 
+  DeviceContext(const DeviceContext &) = delete;
+  DeviceContext &operator=(const DeviceContext &) = delete;
+
+  DeviceContext(DeviceContext &&Other) noexcept;
+  DeviceContext &operator=(DeviceContext &&Other) noexcept;
+
+  ~DeviceContext() noexcept;
+
   template <typename T>
   ManagedBuffer<T> createManagedBuffer(std::size_t Size) const noexcept {
     void *UntypedAddress = nullptr;
 
-    detail::allocManagedMemory(DeviceHandle, Size * sizeof(T), &UntypedAddress);
+    detail::allocManagedMemory(ContextHandle, DeviceHandle, Size * sizeof(T),
+                               &UntypedAddress);
     T *TypedAddress = static_cast<T *>(UntypedAddress);
 
-    return ManagedBuffer<T>(TypedAddress, Size);
+    return ManagedBuffer<T>(ContextHandle, TypedAddress, Size);
   }
 
   [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
@@ -135,8 +145,11 @@ private:
                         uint32_t GroupSize, size_t NumArgs, void **ArgPtrs,
                         const size_t *ArgSizes) const noexcept;
 
+  void init();
+
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
+  ol_context_handle_t ContextHandle;
 };
 } // namespace mathtest
 

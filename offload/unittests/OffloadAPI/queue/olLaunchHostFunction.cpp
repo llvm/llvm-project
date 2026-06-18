@@ -64,7 +64,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   uint32_t *Data = (uint32_t *)Mem;
@@ -102,7 +102,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   }
 
   ASSERT_SUCCESS(olDestroyQueue(Queue));
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchHostFunctionTest, InvalidNullCallback) {

@@ -19,6 +19,11 @@
 #include "L0Options.h"
 #include "L0Program.h"
 
+#include "llvm/ADT/DenseMap.h"
+
+#include <memory>
+#include <mutex>
+
 namespace llvm::omp::target::plugin {
 
 /// Class implementing the LevelZero specific functionalities of the plugin.
@@ -33,6 +38,11 @@ private:
 
   /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
+
+  /// Default plugin context for each driver, lazily created.
+  llvm::DenseMap<L0ContextTy *, std::unique_ptr<PluginContextTy>>
+      DefaultContexts;
+  std::mutex DefaultContextsMutex;
 
   // Table containing per-thread information for each Context using TLS.
   L0ContextTLSTableTy ContextTLSTable;
@@ -66,6 +76,12 @@ public:
   Error deinitImpl() override;
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override;
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override;
+  Expected<std::unique_ptr<PluginContextTy>>
+  createDefaultPluginContext() override;
+  Expected<PluginContextTy *>
+  getDefaultContext(GenericDeviceTy &Device) override;
   GenericGlobalHandlerTy *createGlobalHandler() override;
 
   uint16_t getMagicElfBits() const override { return ELF::EM_INTELGT; }

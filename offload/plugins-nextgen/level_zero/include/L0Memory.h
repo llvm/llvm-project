@@ -259,6 +259,23 @@ class MemAllocatorTy {
         return &AllocInfo->second;
     }
 
+    /// Find the allocation that contains `Ptr`, allowing it to point anywhere
+    /// inside the allocation. Returns nullptr if no allocation contains it.
+    const MemAllocInfoTy *findContaining(const void *Ptr) const {
+      if (Map.empty())
+        return nullptr;
+      auto I = Map.upper_bound(const_cast<void *>(Ptr));
+      if (I == Map.begin())
+        return nullptr;
+      --I;
+      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t MapBase = reinterpret_cast<uintptr_t>(I->first);
+      uintptr_t MapSize = static_cast<uintptr_t>(I->second.ReqSize);
+      if (MapBase <= PtrAsInt && PtrAsInt < MapBase + MapSize)
+        return &I->second;
+      return nullptr;
+    }
+
     /// Check if the map contains the given pointer and offset.
     bool contains(const void *Ptr, size_t Size) const {
       if (Map.size() == 0)
@@ -377,7 +394,10 @@ public:
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
   ~MemAllocatorTy() = default;
 
-  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
+  /// Initialize device-side pools for `L0Device`. If `Context` is non-null,
+  /// the pools are bound to it instead of `L0Device.getL0Context()`.
+  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option,
+                        L0ContextTy *Context = nullptr);
   Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
@@ -406,6 +426,13 @@ public:
   const MemAllocInfoTy *getAllocInfo(void *Ptr) {
     std::lock_guard<std::mutex> Lock(Mtx);
     return AllocInfo.find(Ptr);
+  }
+
+  /// Get allocation information for any pointer that falls inside an
+  /// allocation owned by this allocator.
+  const MemAllocInfoTy *getAllocInfoContaining(const void *Ptr) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    return AllocInfo.findContaining(Ptr);
   }
 
   /// Get kernel indirect access flags using implicit argument info.

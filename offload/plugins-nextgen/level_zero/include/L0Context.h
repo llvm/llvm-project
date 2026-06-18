@@ -16,6 +16,10 @@
 #include "L0Event.h"
 #include "L0Memory.h"
 #include "PerThreadTable.h"
+#include "PluginInterface.h"
+
+#include <mutex>
+#include <unordered_map>
 
 namespace llvm::omp::target::plugin {
 
@@ -40,17 +44,16 @@ struct L0ContextTLSTableTy
   }
 };
 
-/// Driver and context-specific resources. We assume a single context per
-/// driver.
-class L0ContextTy {
-  /// The plugin that created this context.
-  LevelZeroPluginTy &Plugin;
-
+/// Driver- and context-specific resources for a single ze_context_handle_t.
+class L0ContextTy : public PluginContextTy {
   /// Level Zero Driver handle.
   ze_driver_handle_t zeDriver = nullptr;
 
   /// Common Level Zero context.
   ze_context_handle_t zeContext = nullptr;
+
+  /// True when this instance is responsible for destroying `zeContext`.
+  bool OwnsZeContext = false;
 
   /// API version supported by the Level Zero driver.
   ze_api_version_t APIVersion = ZE_API_VERSION_CURRENT;
@@ -62,8 +65,12 @@ class L0ContextTy {
   /// Common event pool.
   EventPoolTy EventPool;
 
-  /// Host Memory allocator for this driver.
+  /// Host Memory allocator for this context.
   MemAllocatorTy HostMemAllocator;
+
+  /// Per-device allocators, parallel to `Devices`. Empty unless this instance
+  /// was constructed with explicit devices.
+  llvm::SmallVector<std::unique_ptr<MemAllocatorTy>> DeviceAllocators;
 
 public:
   /// Named constants for checking the imported external pointer regions.
@@ -73,21 +80,31 @@ public:
 
   /// Create context, initialize event pool and extension functions.
   L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-              int32_t DriverId)
-      : Plugin(Plugin), zeDriver(zeDriver) {}
+              int32_t /*DriverId*/);
+
+  /// Adopt an existing ze_context_handle_t. Pair with initWithDevices() to
+  /// initialize the event pool, extension functions, and per-device pools.
+  L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
+              ze_context_handle_t AdoptedZeContext, bool OwnsZeContext,
+              llvm::ArrayRef<GenericDeviceTy *> Devices);
 
   L0ContextTy(const L0ContextTy &) = delete;
   L0ContextTy(L0ContextTy &&) = delete;
   L0ContextTy &operator=(const L0ContextTy &) = delete;
   L0ContextTy &operator=(const L0ContextTy &&) = delete;
 
-  /// Release resources.
-  ~L0ContextTy() = default;
+  ~L0ContextTy() override;
 
   Error init();
+  Error initWithDevices();
   Error deinit();
 
-  LevelZeroPluginTy &getPlugin() const { return Plugin; }
+  LevelZeroPluginTy &getPlugin() const;
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            TargetAllocTy Kind) override;
+  Error deallocate(void *Ptr) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
   StagingBufferTy &getStagingBuffer();
 
@@ -141,6 +158,9 @@ public:
   ze_result_t(ZE_APICALL *zexKernelGetArgumentSize)(
       ze_kernel_handle_t hKernel, uint32_t argIndex,
       uint32_t *pArgSize) = nullptr;
+
+  ze_context_handle_t(ZE_APICALL *zeDriverGetDefaultContext)(
+      ze_driver_handle_t hDriver) = nullptr;
 };
 
 } // namespace llvm::omp::target::plugin
