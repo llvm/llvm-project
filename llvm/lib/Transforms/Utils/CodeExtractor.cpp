@@ -679,6 +679,8 @@ bool CodeExtractor::isEligible() const {
         return false;
       if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0)))
         return false;
+      if (BB->getTerminatingDeoptimizeCall())
+        return false;
     }
   }
   return true;
