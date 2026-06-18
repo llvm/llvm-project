@@ -66,3 +66,13 @@ kernel void test_read_imagef_linear(read_only image2d_t img, global float *out) 
   float2 coord = (float2)(0.5f, 0.5f);
   *out = read_imagef(img, glb_linear, coord).s0; // no warning
 }
+
+// Samplerless 1D image reads: integer coordinate must not be mistaken for a
+// sampler value even when it looks like CLK_FILTER_LINEAR (e.g. 0x20).
+kernel void test_read_imageui_samplerless(read_only image1d_t img, global uint *out) {
+  *out = read_imageui(img, 0x10).s0; // no warning
+  *out = read_imageui(img, 0x20).s0; // no warning
+  *out = read_imageui(img, 0x30).s0; // no warning
+  *out = read_imagei(img, 0x10).s0;  // no warning
+  *out = read_imagei(img, 0x20).s0;  // no warning
+}

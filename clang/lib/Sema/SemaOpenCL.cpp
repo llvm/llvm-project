@@ -586,8 +586,9 @@ void SemaOpenCL::checkBuiltinReadImage(FunctionDecl *FDecl, CallExpr *Call) {
   if (Name != "read_imagei" && Name != "read_imageui")
     return;
 
-  // read_image{i|ui} take (image, sampler, coord); sampler is arg[1].
-  if (Call->getNumArgs() < 2)
+  // read_image{i|ui} with a sampler take (image, sampler, coord).
+  // Bail out samplerless overloads (image, coord) — 2 args.
+  if (Call->getNumArgs() < 3)
     return;
   Expr *SamplerArg = Call->getArg(1);
   QualType ArgTy = SamplerArg->getType().getCanonicalType();
