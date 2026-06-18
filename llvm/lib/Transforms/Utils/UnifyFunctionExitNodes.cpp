@@ -46,7 +46,7 @@ bool unifyReturnBlocks(Function &F) {
   std::vector<BasicBlock *> ReturningBlocks;
 
   for (BasicBlock &I : F) {
-    if (I.getTerminatingDeoptimizeCall())
+    if (I.getTerminatingDeoptimizeCall() || I.getTerminatingMustTailCall())
       return false;
     if (isa<ReturnInst>(I.getTerminator()))
       ReturningBlocks.push_back(&I);
