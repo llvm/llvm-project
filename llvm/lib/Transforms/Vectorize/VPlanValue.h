@@ -360,6 +360,13 @@ public:
   /// Returns the result type, which may be an explicit vector type.
   Type *getResultType() const { return Ty; }
 
+  /// Widens the result to \p VF elements instead of the plan's VF. The result
+  /// type must still be scalar.
+  void materializeVectorType(ElementCount VF) {
+    assert(Ty && !Ty->isVectorTy() && "result type is already a vector");
+    Ty = VectorType::get(Ty, VF);
+  }
+
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVMultiDefValueSC ||
            V->getVPValueID() == VPVSingleDefValueSC;

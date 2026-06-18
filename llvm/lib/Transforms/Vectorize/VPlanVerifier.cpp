@@ -26,6 +26,24 @@
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
+/// Verify that the explicit vector types of a recipe's results and of operands
+/// it uses as vectors have matching element counts.
+static bool verifyWideningVF(const VPRecipeBase &R) {
+  for (const VPRecipeValue *Def : R.definedValues()) {
+    auto *WideTy = dyn_cast_if_present<VectorType>(Def->getResultType());
+    if (!WideTy)
+      continue;
+    ElementCount EC = WideTy->getElementCount();
+    if (all_of(R.operands(), [&](const VPValue *Op) {
+          return R.usesScalars(Op) || Op->getWideningVF(EC) == EC;
+        }))
+      continue;
+    errs() << "Operand widened to a different VF than its user!\n";
+    return false;
+  }
+  return true;
+}
+
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
@@ -344,6 +362,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
+
+    if (!verifyWideningVF(R))
+      return false;
   }
 
   auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB);
