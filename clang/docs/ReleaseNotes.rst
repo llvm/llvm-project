@@ -420,6 +420,8 @@ Modified Compiler Flags
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+- ``-fprofile-update=atomic`` will now promote counter updates out of loops,
+  similar to the non-atomic case ([#202487](https://github.com/llvm/llvm-project/pull/202487)).
 
 - The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
   and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
