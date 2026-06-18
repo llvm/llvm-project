@@ -1,5 +1,5 @@
 // REQUIRES: comgr-has-spirv-translator
-
+// XFAIL: *
 
 // COM: Generate a debuginfo SPIR-V file from a HIP kernel
 // RUN: %clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \

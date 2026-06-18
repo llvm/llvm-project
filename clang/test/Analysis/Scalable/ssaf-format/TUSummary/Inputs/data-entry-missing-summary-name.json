@@ -10,5 +10,6 @@
       "summary_data": []
     }
   ],
-  "target_triple": "arm64-apple-macosx"
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
 }
