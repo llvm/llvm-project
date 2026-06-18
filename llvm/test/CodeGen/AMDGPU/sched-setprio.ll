@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck --check-prefix=GCN %s
 
 declare void @llvm.amdgcn.s.setprio(i16)
+declare void @llvm.amdgcn.s.setprio.mask(i16, i32)
 declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
 
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32:
@@ -16,5 +17,30 @@ bb:
   %mai.2 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 3.0, float 4.0, <4 x float> %mai.1, i32 0, i32 0, i32 0)
   call void @llvm.amdgcn.s.setprio(i16 0)
   store <4 x float> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_setprio_mask0_blocks_salu:
+; GCN:      s_setprio 1
+; GCN-NEXT: s_add_i32
+define amdgpu_cs void @test_setprio_mask0_blocks_salu(ptr addrspace(1) %out, i32 inreg %x, i32 inreg %y) {
+  %add1 = add i32 %x, 1
+  call void @llvm.amdgcn.s.setprio.mask(i16 1, i32 0)
+  %add2 = add i32 %y, 2
+  %sum = add i32 %add1, %add2
+  store i32 %sum, ptr addrspace(1) %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_setprio_mask4_allows_salu:
+; GCN:      s_add_i32
+; GCN-NEXT: s_add_i32
+; GCN-NEXT: s_setprio 1
+define amdgpu_cs void @test_setprio_mask4_allows_salu(ptr addrspace(1) %out, i32 inreg %x, i32 inreg %y) {
+  %add1 = add i32 %x, 1
+  call void @llvm.amdgcn.s.setprio.mask(i16 1, i32 4)
+  %add2 = add i32 %y, 2
+  %sum = add i32 %add1, %add2
+  store i32 %sum, ptr addrspace(1) %out
   ret void
 }

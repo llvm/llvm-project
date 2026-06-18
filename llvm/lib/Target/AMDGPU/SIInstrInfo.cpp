@@ -4559,6 +4559,22 @@ static bool changesVGPRIndexingMode(const MachineInstr &MI) {
   }
 }
 
+bool SIInstrInfo::isSchedBarrierLike(const MachineInstr &MI) const {
+  unsigned Opc = MI.getOpcode();
+  return Opc == AMDGPU::SCHED_BARRIER || Opc == AMDGPU::S_SETPRIO;
+}
+
+unsigned SIInstrInfo::getSchedBarrierLikeMask(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case AMDGPU::SCHED_BARRIER:
+    return MI.getOperand(0).getImm();
+  case AMDGPU::S_SETPRIO:
+    return MI.getOperand(1).getImm();
+  default:
+    llvm_unreachable("Expected a SchedBarrier-like instruction");
+  }
+}
+
 bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                        const MachineBasicBlock *MBB,
                                        const MachineFunction &MF) const {
@@ -4577,7 +4593,7 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
     return true;
 
-  if (MI.getOpcode() == AMDGPU::SCHED_BARRIER && MI.getOperand(0).getImm() == 0)
+  if (isSchedBarrierLike(MI) && getSchedBarrierLikeMask(MI) == 0)
     return true;
 
   // Target-independent instructions do not have an implicit-use of EXEC, even
@@ -4586,7 +4602,6 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   return MI.modifiesRegister(AMDGPU::EXEC, &RI) ||
          MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
          MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
-         MI.getOpcode() == AMDGPU::S_SETPRIO ||
          MI.getOpcode() == AMDGPU::S_SETPRIO_INC_WG ||
          changesVGPRIndexingMode(MI);
 }
