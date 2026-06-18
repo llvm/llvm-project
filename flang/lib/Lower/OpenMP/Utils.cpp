@@ -70,7 +70,6 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
-
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
   // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
