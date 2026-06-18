@@ -10,6 +10,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -187,7 +188,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     return llvm::Error::success();
   // Since the only data types are single endian and ULEBs, the
   // endianness should not matter.
-  llvm::DataExtractor cur_block(control.back(), true, 64);
+  llvm::DataExtractor cur_block(control.back(), true);
   llvm::DataExtractor::Cursor pc(0);
 
   while (!control.empty()) {
@@ -196,7 +197,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       // Save the return address.
       if (control.size() > 1)
         control[control.size() - 2] = cur_block.getData().drop_front(pc.tell());
-      cur_block = llvm::DataExtractor(control.back(), true, 64);
+      cur_block = llvm::DataExtractor(control.back(), true);
       if (pc)
         pc = llvm::DataExtractor::Cursor(0);
     };
@@ -222,9 +223,10 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     if (control.empty() || !pc)
       return pc.takeError();
 
-    LLDB_LOGV(GetLog(LLDBLog::DataFormatters),
-              "[eval {0}] opcode={1}, control={2}, data={3}", toString(sig),
-              toString(opcode), control.size(), toString(data));
+    LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                     "[eval {0}] opcode={1}, control={2}, data={3}",
+                     toString(sig), toString(opcode), control.size(),
+                     toString(data));
 
     // Various shorthands to improve the readability of error handling.
 #define TYPE_CHECK(...)                                                        \
@@ -496,6 +498,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
           return index_or_err.takeError();
         break;
       }
+      case sel_get_parent: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        auto *parent = valobj->GetParent();
+        data.Push(parent ? parent->GetSP() : ValueObjectSP());
+        break;
+      }
       case sel_get_type: {
         TYPE_CHECK(Object);
         POP_VALOBJ(valobj);
@@ -566,6 +575,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto type = data.Pop<CompilerType>();
         POP_VALOBJ(valobj);
         data.Push(valobj->Cast(type));
+        break;
+      }
+      case sel_clone: {
+        TYPE_CHECK(Object, String);
+        auto new_name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->Clone(new_name));
         break;
       }
       case sel_strlen: {

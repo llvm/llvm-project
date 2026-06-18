@@ -1636,3 +1636,52 @@ func.func @shape_of_static_with_shape_result(%arg0: tensor<3xf32>) -> !shape.sha
   %0 = shape.shape_of %arg0 : tensor<3xf32> -> !shape.shape
   return %0 : !shape.shape
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/179679:
+// shape.broadcast fold used to crash with an unchecked cast when one of the
+// operands was ub.poison (a non-DenseIntElementsAttr attribute). The fold
+// must bail out gracefully instead.
+
+// CHECK-LABEL: @broadcast_no_crash_on_poison
+// CHECK-NOT: shape.broadcast
+// CHECK: return
+func.func @broadcast_no_crash_on_poison() {
+  %0 = shape.const_shape [1, 2, 3] : tensor<3xindex>
+  %1 = ub.poison : tensor<3xindex>
+  %2 = shape.broadcast %0, %1 : tensor<3xindex>, tensor<3xindex> -> tensor<3xindex>
+  %3 = tensor.rank %2 : tensor<3xindex>
+  return
+}
+
+// -----
+
+// tensor.extract(shape.shape_of(tensor)) folds to tensor.dim.
+// CHECK-LABEL: func @extract_from_shape_of_tensor(
+func.func @extract_from_shape_of_tensor(%arg0: tensor<?xf32>) -> index {
+  // CHECK:      %[[DIM:.*]] = tensor.dim %arg0
+  // CHECK-NOT:  shape.shape_of
+  // CHECK-NOT:  tensor.extract
+  // CHECK:      return %[[DIM]]
+  %c0 = arith.constant 0 : index
+  %shape = shape.shape_of %arg0 : tensor<?xf32> -> tensor<1xindex>
+  %dim = tensor.extract %shape[%c0] : tensor<1xindex>
+  return %dim : index
+}
+
+// -----
+
+// tensor.extract(shape.shape_of(memref)) must NOT be folded to tensor.dim
+// because tensor.dim requires a tensor source.  Previously this pattern
+// incorrectly created tensor.dim with a memref operand, causing a crash.
+// CHECK-LABEL: func @extract_from_shape_of_memref_no_fold(
+func.func @extract_from_shape_of_memref_no_fold(%arg0: memref<?xf32>) -> index {
+  // CHECK:      shape.shape_of
+  // CHECK:      tensor.extract
+  // CHECK-NOT:  tensor.dim
+  %c0 = arith.constant 0 : index
+  %shape = shape.shape_of %arg0 : memref<?xf32> -> tensor<1xindex>
+  %dim = tensor.extract %shape[%c0] : tensor<1xindex>
+  return %dim : index
+}

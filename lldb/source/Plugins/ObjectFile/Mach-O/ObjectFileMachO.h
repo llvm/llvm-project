@@ -57,12 +57,10 @@ public:
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataExtractorSP &extractor_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        lldb_private::ModuleSpecList &specs);
+  static lldb_private::ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        lldb_private::SaveCoreOptions &options,
@@ -249,8 +247,8 @@ protected:
   };
 
   struct LCNoteEntry {
-    LCNoteEntry(uint32_t addr_byte_size, lldb::ByteOrder byte_order)
-        : payload(lldb_private::Stream::eBinary, addr_byte_size, byte_order) {}
+    explicit LCNoteEntry(lldb::ByteOrder byte_order)
+        : payload(lldb_private::Stream::eBinary, byte_order) {}
 
     std::string name;
     lldb::addr_t payload_file_offset = 0;

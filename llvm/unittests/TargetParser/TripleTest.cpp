@@ -1386,15 +1386,21 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::LiteOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
-  T = Triple("x86_64-pc-serenity");
+  T = Triple("x86_64-unknown-serenity");
   EXPECT_EQ(Triple::x86_64, T.getArch());
-  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Serenity, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
-  T = Triple("aarch64-pc-serenity");
+  T = Triple("aarch64-unknown-serenity");
   EXPECT_EQ(Triple::aarch64, T.getArch());
-  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Serenity, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-serenity");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Serenity, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
@@ -1469,6 +1475,114 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::spirv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ChipStar, T.getOS());
+}
+
+TEST(TripleTest, EnumConstructor) {
+  {
+    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA);
+    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa");
+  }
+
+  {
+    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+             Triple::LLVM, Triple::ELF);
+    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa-llvm-elf");
+  }
+
+  {
+    Triple T(Triple::amdgcn, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+             Triple::LLVM);
+    EXPECT_EQ(T.getArch(), Triple::amdgcn);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgcn-amd-amdhsa-llvm");
+  }
+
+  {
+    Triple T(Triple::arm, Triple::ARMSubArch_v9_7a, Triple::PC, Triple::Linux,
+             Triple::GNU, Triple::COFF);
+    EXPECT_EQ(T.getArch(), Triple::arm);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Linux);
+    EXPECT_EQ(T.getEnvironment(), Triple::GNU);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "arm-pc-linux-gnu-coff");
+  }
+
+  {
+    Triple T(Triple::arm, Triple::ARMSubArch_v9_7a);
+    EXPECT_EQ(T.getArch(), Triple::arm);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "arm-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::x86_64);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::dxil);
+    EXPECT_EQ(T.getArch(), Triple::dxil);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::DXContainer);
+    EXPECT_EQ(T.str(), "dxilv1.0-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::x86_64, Triple::NoSubArch, Triple::UnknownVendor,
+             Triple::UnknownOS, Triple::MSVC);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-unknown-unknown-msvc");
+  }
+
+  {
+    Triple T(Triple::x86, Triple::NoSubArch, Triple::UnknownVendor,
+             Triple::Win32);
+    EXPECT_EQ(T.getArch(), Triple::x86);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::Win32);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "i386-unknown-windows");
+  }
+
+  {
+    Triple T(Triple::x86, Triple::NoSubArch, Triple::PC, Triple::Win32,
+             Triple::MSVC);
+    EXPECT_EQ(T.getArch(), Triple::x86);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Win32);
+    EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "i386-pc-windows-msvc");
+  }
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
@@ -2554,10 +2668,29 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.isArch64Bit());
   EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
 
+  T = Triple("arm64-apple-darwin25");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26), Version);
+
   T = Triple("x86_64-apple-darwin26");
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Version);
   EXPECT_EQ(VersionTuple(27), Version);
+
+  T = Triple("x86_64-apple-darwin27");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  T = Triple("x86_64-apple-darwin30");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(30), Version);
 
   // Check invalid ranges are remapped.
   T = Triple("arm64-apple-visionos6.0");
@@ -2645,6 +2778,10 @@ TEST(TripleTest, getOSVersion) {
   T = Triple("x86_64-apple-driverkit");
   Version = T.getDriverKitVersion();
   EXPECT_EQ(VersionTuple(19, 0), Version);
+
+  T = Triple("arm64-apple-driverkit27");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(27), Version);
 
   T = Triple("dxil-unknown-shadermodel6.6-pixel");
   EXPECT_EQ(Triple::dxil, T.getArch());
@@ -3391,6 +3528,41 @@ TEST(DataLayoutTest, UEFI) {
 
   // Test UEFI X86_64 Mangling Component.
   EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
+TEST(TripleTest, DefaultWCharSize) {
+  EXPECT_EQ(4u, Triple("x86_64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("aarch64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("riscv64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("amdgcn-amd-amdhsa").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("nvptx64-nvidia-cuda").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("armv7-unknown-linux-gnueabi").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("s390x-none-zos").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("powerpc64-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("").getDefaultWCharSize());
+
+  EXPECT_EQ(2u, Triple("x86_64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("aarch64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-w64-windows-gnu").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-unknown-uefi").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps4").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps5").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
+
+  EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
+TEST(DataLayoutTest, CheriRISCV32) {
+  Triple TT = Triple("riscv32-unknown-unknown");
+
+  EXPECT_THAT(TT.computeDataLayout(""),
+              testing::Not(testing::HasSubstr("pe200")));
+  EXPECT_THAT(TT.computeDataLayout(""),
+              testing::Not(testing::HasSubstr("A200-P200-G200")));
+  EXPECT_THAT(TT.computeDataLayout("cheriot"),
+              testing::HasSubstr("pe200:64:64:64:32"));
+  EXPECT_THAT(TT.computeDataLayout("cheriot"),
+              testing::HasSubstr("A200-P200-G200"));
 }
 
 } // end anonymous namespace

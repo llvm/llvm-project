@@ -7,6 +7,7 @@
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat00Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -23,57 +24,7 @@ void StoreScalarAtMat00(out float4x4 A, float F) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat01Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat01(out float4x4 A, float F) {
-    A._m01 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat02Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat02(out float4x4 A, float F) {
-    A._m02 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat03Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat03(out float4x4 A, float F) {
-    A._m03 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat10Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -84,6 +35,60 @@ void StoreScalarAtMat03(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
+void StoreScalarAtMat01(out float4x4 A, float F) {
+    A._m01 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat02Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat02(out float4x4 A, float F) {
+    A._m02 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat03Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat03(out float4x4 A, float F) {
+    A._m03 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat10Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
 void StoreScalarAtMat10(out float4x4 A, float F) {
     A._m10 = F;
 }
@@ -91,6 +96,7 @@ void StoreScalarAtMat10(out float4x4 A, float F) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -108,57 +114,7 @@ void StoreScalarAtMat11(out float4x4 A, float F) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat12(out float4x4 A, float F) {
-    A._m12 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat13(out float4x4 A, float F) {
-    A._m13 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat20Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat20(out float4x4 A, float F) {
-    A._m20 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -169,6 +125,60 @@ void StoreScalarAtMat20(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
+void StoreScalarAtMat12(out float4x4 A, float F) {
+    A._m12 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat13(out float4x4 A, float F) {
+    A._m13 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat20Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat20(out float4x4 A, float F) {
+    A._m20 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
 void StoreScalarAtMat21(out float4x4 A, float F) {
     A._m21 = F;
 }
@@ -176,6 +186,7 @@ void StoreScalarAtMat21(out float4x4 A, float F) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -193,57 +204,7 @@ void StoreScalarAtMat22(out float4x4 A, float F) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat23(out float4x4 A, float F) {
-    A._m23 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat30Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat30(out float4x4 A, float F) {
-    A._m30 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
-// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat31(out float4x4 A, float F) {
-    A._m31 = F;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EfEf(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -254,6 +215,60 @@ void StoreScalarAtMat31(out float4x4 A, float F) {
 // CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
+void StoreScalarAtMat23(out float4x4 A, float F) {
+    A._m23 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat30Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat30(out float4x4 A, float F) {
+    A._m30 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat31(out float4x4 A, float F) {
+    A._m31 = F;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EfEf(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
 void StoreScalarAtMat32(out float4x4 A, float F) {
     A._m32 = F;
 }
@@ -261,6 +276,7 @@ void StoreScalarAtMat32(out float4x4 A, float F) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EfEf(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4

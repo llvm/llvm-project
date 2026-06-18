@@ -4,8 +4,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass postrapseudos %s -o - | FileCheck -check-prefixes=GCN,GFX1250 %s
 
 # GCN-LABEL: name: v_mov_b64_from_vgpr
-# GFX900: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX900: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1
+# GFX900: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec
+# GFX900: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec
 # GFX90A: $vgpr0_vgpr1 = V_PK_MOV_B32 8, $vgpr2_vgpr3, 12, $vgpr2_vgpr3, 0, 0, 0, 0, 0, implicit $exec
 # GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 $vgpr2_vgpr3, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 $vgpr2_vgpr3, implicit $exec
@@ -16,8 +16,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_sgpr
-# GFX900: $vgpr0 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX900: $vgpr1 = V_MOV_B32_e32 $sgpr3, implicit $exec, implicit-def $vgpr0_vgpr1
+# GFX900: $vgpr0 = V_MOV_B32_e32 $sgpr2, implicit $exec
+# GFX900: $vgpr1 = V_MOV_B32_e32 $sgpr3, implicit $exec
 # GFX90A: $vgpr0_vgpr1 = V_PK_MOV_B32 8, $sgpr2_sgpr3, 12, $sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
 # GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr2_sgpr3, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr2_sgpr3, implicit $exec
@@ -28,10 +28,10 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_sext_inline_imm
-# GFX900: $vgpr0 = V_MOV_B32_e32 -2, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX900: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX90A: $vgpr0 = V_MOV_B32_e32 -2, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX90A: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec, implicit-def $vgpr0_vgpr1
+# GFX900: $vgpr0 = V_MOV_B32_e32 -2, implicit $exec
+# GFX900: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec
+# GFX90A: $vgpr0 = V_MOV_B32_e32 -2, implicit $exec
+# GFX90A: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec
 # GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 -2, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 -2, implicit $exec
 name: v_mov_b64_from_sext_inline_imm
@@ -41,8 +41,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_lit
-# NOT-GFX1250: $vgpr0 = V_MOV_B32_e32 1430494974, implicit $exec, implicit-def $vgpr0_vgpr1
-# NOT-GFX1250: $vgpr1 = V_MOV_B32_e32 -232831, implicit $exec, implicit-def $vgpr0_vgpr1
+# NOT-GFX1250: $vgpr0 = V_MOV_B32_e32 1430494974, implicit $exec
+# NOT-GFX1250: $vgpr1 = V_MOV_B32_e32 -232831, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 -1000000100000002, implicit $exec
 name: v_mov_b64_from_lit
 body: |
@@ -51,8 +51,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_first_inline_imm
-# NOT-GFX1250: $vgpr0 = V_MOV_B32_e32 -1, implicit $exec, implicit-def $vgpr0_vgpr1
-# NOT-GFX1250: $vgpr1 = V_MOV_B32_e32 268435455, implicit $exec, implicit-def $vgpr0_vgpr1
+# NOT-GFX1250: $vgpr0 = V_MOV_B32_e32 -1, implicit $exec
+# NOT-GFX1250: $vgpr1 = V_MOV_B32_e32 268435455, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 1152921504606846975, implicit $exec
 name: v_mov_b64_from_first_inline_imm
 body: |
@@ -61,8 +61,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_second_inline_imm
-# NOT-GFX1250: $vgpr0 = V_MOV_B32_e32 268435455, implicit $exec, implicit-def $vgpr0_vgpr1
-# NOT-GFX1250: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec, implicit-def $vgpr0_vgpr1
+# NOT-GFX1250: $vgpr0 = V_MOV_B32_e32 268435455, implicit $exec
+# NOT-GFX1250: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 -4026531841, implicit $exec
 name: v_mov_b64_from_second_inline_imm
 body: |
@@ -71,8 +71,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_same_sext_inline_imm
-# GFX900: $vgpr0 = V_MOV_B32_e32 -1, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX900: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec, implicit-def $vgpr0_vgpr1
+# GFX900: $vgpr0 = V_MOV_B32_e32 -1, implicit $exec
+# GFX900: $vgpr1 = V_MOV_B32_e32 -1, implicit $exec
 # GFX90A: $vgpr0_vgpr1 = V_PK_MOV_B32 8, -1, 8, -1, 0, 0, 0, 0, 0, implicit $exec
 # GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 -1, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 -1, implicit $exec
@@ -83,8 +83,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_from_same_fp_inline_imm
-# GFX900: $vgpr0 = V_MOV_B32_e32 1065353216, implicit $exec, implicit-def $vgpr0_vgpr1
-# GFX900: $vgpr1 = V_MOV_B32_e32 1065353216, implicit $exec, implicit-def $vgpr0_vgpr1
+# GFX900: $vgpr0 = V_MOV_B32_e32 1065353216, implicit $exec
+# GFX900: $vgpr1 = V_MOV_B32_e32 1065353216, implicit $exec
 # GFX90A: $vgpr0_vgpr1 = V_PK_MOV_B32 8, 1065353216, 8, 1065353216, 0, 0, 0, 0, 0, implicit $exec
 # GFX942: $vgpr0_vgpr1 = V_PK_MOV_B32 8, 1065353216, 8, 1065353216, 0, 0, 0, 0, 0, implicit $exec
 # GFX1250: $vgpr0_vgpr1 = V_MOV_B64_e32 4575657222473777152, implicit $exec
@@ -95,8 +95,8 @@ body: |
 ...
 
 # GCN-LABEL: name: v_mov_b64_misalign
-# GCN: $vgpr5 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr5_vgpr6
-# GCN: $vgpr6 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr5_vgpr6
+# GCN: $vgpr5 = V_MOV_B32_e32 0, implicit $exec
+# GCN: $vgpr6 = V_MOV_B32_e32 0, implicit $exec
 name: v_mov_b64_misalign
 body: |
   bb.0:

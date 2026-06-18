@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c99 -triple aarch64 -target-feature +bf16 -target-feature +sve
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c99 -triple aarch64 -target-feature +bf16 -target-feature +sve -Wno-void-ptr-dereference
 
 typedef struct N {} N;
 
@@ -42,3 +42,7 @@ void f8() {
   Y6 y6;
   N t8 = 0 ? x6 : y6; // expected-error {{incompatible type 'B6'}}
 }
+
+const volatile X2 *x7;
+volatile Y2 *y7;
+N t9 = 0 ? *x7 : *y7; // expected-error {{incompatible type 'B2'}}

@@ -300,7 +300,7 @@ def BSR64rm  : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins GR64:$fallback, i64mem
 } // Defs = [EFLAGS]
 
 let SchedRW = [WriteMicrocoded] in {
-let Defs = [EDI,ESI], Uses = [EDI,ESI,DF] in {
+let Defs = [EDI,ESI], Uses = [EDI,ESI,DF], mayLoad = 1, mayStore = 1 in {
 def MOVSB : I<0xA4, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "movsb\t{$src, $dst|$dst, $src}", []>;
 def MOVSW : I<0xA5, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -312,35 +312,35 @@ def MOVSQ : RI<0xA5, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
                Requires<[In64BitMode]>;
 }
 
-let Defs = [EDI], Uses = [AL,EDI,DF] in
+let Defs = [EDI], Uses = [AL,EDI,DF], mayStore = 1 in
 def STOSB : I<0xAA, RawFrmDst, (outs), (ins dstidx8:$dst),
               "stosb\t{%al, $dst|$dst, al}", []>;
-let Defs = [EDI], Uses = [AX,EDI,DF] in
+let Defs = [EDI], Uses = [AX,EDI,DF], mayStore = 1 in
 def STOSW : I<0xAB, RawFrmDst, (outs), (ins dstidx16:$dst),
               "stosw\t{%ax, $dst|$dst, ax}", []>, OpSize16;
-let Defs = [EDI], Uses = [EAX,EDI,DF] in
+let Defs = [EDI], Uses = [EAX,EDI,DF], mayStore = 1 in
 def STOSL : I<0xAB, RawFrmDst, (outs), (ins dstidx32:$dst),
               "stos{l|d}\t{%eax, $dst|$dst, eax}", []>, OpSize32;
-let Defs = [RDI], Uses = [RAX,RDI,DF] in
+let Defs = [RDI], Uses = [RAX,RDI,DF], mayStore = 1 in
 def STOSQ : RI<0xAB, RawFrmDst, (outs), (ins dstidx64:$dst),
                "stosq\t{%rax, $dst|$dst, rax}", []>,
                Requires<[In64BitMode]>;
 
-let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF], mayLoad = 1 in
 def SCASB : I<0xAE, RawFrmDst, (outs), (ins dstidx8:$dst),
               "scasb\t{$dst, %al|al, $dst}", []>;
-let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF], mayLoad = 1 in
 def SCASW : I<0xAF, RawFrmDst, (outs), (ins dstidx16:$dst),
               "scasw\t{$dst, %ax|ax, $dst}", []>, OpSize16;
-let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF], mayLoad = 1 in
 def SCASL : I<0xAF, RawFrmDst, (outs), (ins dstidx32:$dst),
               "scas{l|d}\t{$dst, %eax|eax, $dst}", []>, OpSize32;
-let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF] in
+let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF], mayLoad = 1 in
 def SCASQ : RI<0xAF, RawFrmDst, (outs), (ins dstidx64:$dst),
                "scasq\t{$dst, %rax|rax, $dst}", []>,
                Requires<[In64BitMode]>;
 
-let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF] in {
+let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF], mayLoad = 1 in {
 def CMPSB : I<0xA6, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "cmpsb\t{$dst, $src|$src, $dst}", []>;
 def CMPSW : I<0xA7, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -982,7 +982,7 @@ def REPNE_PREFIX : I<0xF2, PrefixByte, (outs),  (ins), "repne", []>;
 }
 
 // String manipulation instructions
-let SchedRW = [WriteMicrocoded] in {
+let SchedRW = [WriteMicrocoded], mayLoad = 1 in {
 let Defs = [AL,ESI], Uses = [ESI,DF] in
 def LODSB : I<0xAC, RawFrmSrc, (outs), (ins srcidx8:$src),
               "lodsb\t{$src, %al|al, $src}", []>;
@@ -1402,6 +1402,44 @@ let Predicates = [HasBMI2, HasEGPR] in {
   defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep, "_EVEX">, XD, REX_W, EVEX;
   defm PEXT32 : PdepPext<"pext", Xi32, X86pext, "_EVEX">, XS, EVEX;
   defm PEXT64 : PdepPext<"pext", Xi64, X86pext, "_EVEX">, XS, REX_W, EVEX;
+}
+
+let Predicates = [HasBMI2, NoEGPR] in {
+  def : Pat<(i32 (pext GR32:$src, GR32:$mask)),
+            (PEXT32rr GR32:$src, GR32:$mask)>;
+  def : Pat<(i32 (pext GR32:$src, (loadi32 addr:$mask))),
+            (PEXT32rm GR32:$src, i32mem:$mask)>;
+  def : Pat<(i64 (pext GR64:$src, GR64:$mask)),
+            (PEXT64rr GR64:$src, GR64:$mask)>;
+  def : Pat<(i64 (pext GR64:$src, (loadi64 addr:$mask))),
+            (PEXT64rm GR64:$src, i64mem:$mask)>;
+  def : Pat<(i32 (pdep GR32:$src, GR32:$mask)),
+            (PDEP32rr GR32:$src, GR32:$mask)>;
+  def : Pat<(i32 (pdep GR32:$src, (loadi32 addr:$mask))),
+            (PDEP32rm GR32:$src, i32mem:$mask)>;
+  def : Pat<(i64 (pdep GR64:$src, GR64:$mask)),
+            (PDEP64rr GR64:$src, GR64:$mask)>;
+  def : Pat<(i64 (pdep GR64:$src, (loadi64 addr:$mask))),
+            (PDEP64rm GR64:$src, i64mem:$mask)>;
+}
+
+let Predicates = [HasBMI2, HasEGPR] in {
+  def : Pat<(i32 (pext GR32:$src, GR32:$mask)),
+            (PEXT32rr_EVEX GR32:$src, GR32:$mask)>;
+  def : Pat<(i32 (pext GR32:$src, (loadi32 addr:$mask))),
+            (PEXT32rm_EVEX GR32:$src, i32mem:$mask)>;
+  def : Pat<(i64 (pext GR64:$src, GR64:$mask)),
+            (PEXT64rr_EVEX GR64:$src, GR64:$mask)>;
+  def : Pat<(i64 (pext GR64:$src, (loadi64 addr:$mask))),
+            (PEXT64rm_EVEX GR64:$src, i64mem:$mask)>;
+  def : Pat<(i32 (pdep GR32:$src, GR32:$mask)),
+            (PDEP32rr_EVEX GR32:$src, GR32:$mask)>;
+  def : Pat<(i32 (pdep GR32:$src, (loadi32 addr:$mask))),
+            (PDEP32rm_EVEX GR32:$src, i32mem:$mask)>;
+  def : Pat<(i64 (pdep GR64:$src, GR64:$mask)),
+            (PDEP64rr_EVEX GR64:$src, GR64:$mask)>;
+  def : Pat<(i64 (pdep GR64:$src, (loadi64 addr:$mask))),
+            (PDEP64rm_EVEX GR64:$src, i64mem:$mask)>;
 }
 
 //===----------------------------------------------------------------------===//

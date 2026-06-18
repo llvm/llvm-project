@@ -169,7 +169,7 @@ def CallAndMessageChecker
            CmdLineOption<Boolean, "ArgPointeeInitializedness",
                          "Check whether the pointee of a pass-by-reference or "
                          "pass-by-pointer is undefined",
-                         "false", InAlpha>,
+                         "false", Released>,
            CmdLineOption<
                Boolean, "NilReceiver",
                "Check whether the receiver in the message expression is nil",
@@ -420,6 +420,11 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
 def FixedAddressDereferenceChecker
     : Checker<"FixedAddressDereference">,
       HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
+
+def UnconditionalVAArgChecker
+    : Checker<"UnconditionalVAArg">,
+      HelpText<"Check variadic functions unconditionally using va_arg">,
       Documentation<HasDocumentation>;
 
 } // end "optin.core"

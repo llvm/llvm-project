@@ -120,8 +120,6 @@ public:
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerREADSTEADYCOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
@@ -289,6 +287,10 @@ public:
     return AtomicExpansionKind::LLSC;
   }
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
@@ -356,7 +358,7 @@ private:
     return MVT::getIntegerVT(Ty.getSizeInBits());
   }
   MVT tyVector(MVT Ty, MVT ElemTy) const {
-    if (Ty.isVector() && Ty.getVectorElementType() == ElemTy)
+    if (Ty.isVectorOf(ElemTy))
       return Ty;
     unsigned TyWidth = Ty.getSizeInBits();
     unsigned ElemWidth = ElemTy.getSizeInBits();
@@ -503,6 +505,7 @@ private:
 
   SDValue CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const;
   SDValue RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const;
+  SDValue WidenHvxTruncateToBool(SDValue Op, SelectionDAG &DAG) const;
 
   std::pair<const TargetRegisterClass*, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
@@ -518,6 +521,10 @@ private:
                              SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
+
+  SDValue combineConcatOfShuffles(SDValue Op, SelectionDAG &DAG) const;
+  SDValue combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
+                                     SelectionDAG &DAG) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
   SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;

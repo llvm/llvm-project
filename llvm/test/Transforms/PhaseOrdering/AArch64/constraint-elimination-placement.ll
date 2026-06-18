@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx"
 
 define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %call) {
 ; CHECK-LABEL: define noundef i1 @test_order_1(
-; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[THIS:%.*]], ptr noalias nofree captures(address) [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
@@ -21,7 +21,7 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
 ; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
 ; CHECK:       for.body45.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr ptr, ptr [[OTHER]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr [8 x i8], ptr [[OTHER]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    br label [[FOR_BODY45:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    store i32 0, ptr [[THIS]], align 4
@@ -94,7 +94,7 @@ declare i64 @strlen(ptr)
 
 define void @test2(ptr %this) #0 {
 ; CHECK-LABEL: define void @test2(
-; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
@@ -132,7 +132,7 @@ if.else21:                                        ; preds = %entry
 
 define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-LABEL: define noundef i1 @test2_fn2(
-; CHECK-SAME: ptr readonly captures(none) [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[__RHS]])
 ; CHECK-NEXT:    [[CALL1_I:%.*]] = tail call i1 @test2_fn4(i8 undef)

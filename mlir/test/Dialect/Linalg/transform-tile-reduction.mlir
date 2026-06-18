@@ -692,3 +692,340 @@ module {
 //      CHECK:   %[[R:.*]] = linalg.reduce ins(%[[L]]
 // CHECK-SAME:       outs(%[[ARG2]] :
 //      CHECK:   return %[[R]]
+
+// -----
+
+// Check that linalg.index is correctly offset after partial reduction tiling.
+
+func.func @reduction_tile_with_linalg_index(%arg0: tensor<8x128xf32>, %out: tensor<8xi32>) -> tensor<8xi32> {
+  %red = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                       affine_map<(d0, d1) -> (d0)>],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%arg0 : tensor<8x128xf32>)
+      outs(%out : tensor<8xi32>) {
+    ^bb0(%in: f32, %acc: i32):
+      %idx = linalg.index 1 : index
+      %idx_i32 = arith.index_cast %idx : index to i32
+      %sum = arith.addi %idx_i32, %acc : i32
+      linalg.yield %sum : i32
+  } -> tensor<8xi32>
+  return %red : tensor<8xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+      by tile_sizes = [0, 32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-DAG: #[[$INDEX_MAP:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-LABEL: func @reduction_tile_with_linalg_index(
+//       CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
+//       CHECK:     linalg.generic
+//       CHECK:       %[[LOCAL_IDX:.+]] = linalg.index 1 : index
+//       CHECK:       affine.apply #[[$INDEX_MAP]](%[[IV]])[%[[LOCAL_IDX]]]
+
+// -----
+
+// Verify that tile_reduction_using_forall handles output indexing maps that
+// contain constant expressions (e.g. `affine_map<(d0,d1,d2)->(d0,0,d2)>`)
+// without crashing. Previously, generateInitialTensorForPartialReduction
+// unconditionally cast every map result to AffineDimExpr, triggering an
+// assertion when a constant expression was present (issue #173025).
+
+func.func @reduction_tile_with_constant_in_output_map(
+    %arg0: tensor<1x4096x64xf32>,
+    %arg1: tensor<1x1x64xf32>) -> tensor<1x1x64xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+    ],
+    iterator_types = ["parallel", "reduction", "parallel"]
+  } ins(%arg0 : tensor<1x4096x64xf32>) outs(%arg1 : tensor<1x1x64xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<1x1x64xf32>
+  return %0 : tensor<1x1x64xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg
+        : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.tile_reduction_using_forall %0
+        by tile_sizes = [0, 4, 0]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @reduction_tile_with_constant_in_output_map
+//   CHECK-DAG:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[E:.*]] = tensor.empty() : tensor<1x1x64x1024xf32>
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[E]] : tensor<1x1x64x1024xf32>) -> tensor<1x1x64x1024xf32>
+//       CHECK:   %[[L:.*]] = scf.forall (%[[IV:.+]]) = (0) to (4096) step (4) shared_outs(%[[ARG3:.+]] = %[[F]]) -> (tensor<1x1x64x1024xf32>) {
+//       CHECK:     %[[IN_SLICE:.+]] = tensor.extract_slice %arg0[0, %[[IV]], 0] [1, 4, 64] [1, 1, 1]
+//       CHECK:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ARG3]][0, 0, 0, {{.*}}] [1, 1, 64, 1] [1, 1, 1, 1]
+//       CHECK:     %[[PARTIAL:.+]] = linalg.generic
+//  CHECK-SAME:         ins(%[[IN_SLICE]] :
+//  CHECK-SAME:         outs(%[[INIT_SLICE]] :
+//       CHECK:     scf.forall.in_parallel {
+//       CHECK:       tensor.parallel_insert_slice %[[PARTIAL]] into %[[ARG3]][0, 0, 0, {{.*}}] [1, 1, 64, 1] [1, 1, 1, 1]
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<1x1x64x1024xf32>) outs(%arg1 : tensor<1x1x64xf32>) dimensions = [3]
+//       CHECK:   return %{{.*}} : tensor<1x1x64xf32>
+
+// -----
+
+// Verify tile_reduction_using_forall with a constant in the output map when
+// the constant-indexed dimension size is greater than 1 (K=3). The partial
+// init tensor must use the actual output dim size (3), not a hardcoded 1.
+
+func.func @reduction_tile_forall_constant_dim_k_gt_1(
+    %arg0: tensor<1x4096x64xf32>,
+    %arg1: tensor<1x3x64xf32>) -> tensor<1x3x64xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+    ],
+    iterator_types = ["parallel", "reduction", "parallel"]
+  } ins(%arg0 : tensor<1x4096x64xf32>) outs(%arg1 : tensor<1x3x64xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<1x3x64xf32>
+  return %0 : tensor<1x3x64xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg
+        : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.tile_reduction_using_forall %0
+        by tile_sizes = [0, 4, 0]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @reduction_tile_forall_constant_dim_k_gt_1
+//   CHECK-DAG:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[E:.*]] = tensor.empty() : tensor<1x3x64x1024xf32>
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[E]] : tensor<1x3x64x1024xf32>) -> tensor<1x3x64x1024xf32>
+//       CHECK:   %[[L:.*]] = scf.forall (%[[IV:.+]]) = (0) to (4096) step (4) shared_outs(%[[ARG3:.+]] = %[[F]]) -> (tensor<1x3x64x1024xf32>) {
+//       CHECK:     %[[IN_SLICE:.+]] = tensor.extract_slice %arg0[0, %[[IV]], 0] [1, 4, 64] [1, 1, 1]
+//       CHECK:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ARG3]][0, 0, 0, {{.*}}] [1, 3, 64, 1] [1, 1, 1, 1]
+//       CHECK:     %[[PARTIAL:.+]] = linalg.generic
+//  CHECK-SAME:         ins(%[[IN_SLICE]] :
+//  CHECK-SAME:         outs(%[[INIT_SLICE]] :
+//       CHECK:     scf.forall.in_parallel {
+//       CHECK:       tensor.parallel_insert_slice %[[PARTIAL]] into %[[ARG3]][0, 0, 0, {{.*}}] [1, 3, 64, 1] [1, 1, 1, 1]
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<1x3x64x1024xf32>) outs(%arg1 : tensor<1x3x64xf32>) dimensions = [3]
+//       CHECK:   return %{{.*}} : tensor<1x3x64xf32>
+
+// -----
+
+// Verify tile_reduction_using_for with a constant in the output map when
+// the constant-indexed dimension size is greater than 1 (K=3). The partial
+// init tensor must use the actual output dim size (3), not a hardcoded 1.
+
+func.func @reduction_tile_for_constant_dim_k_gt_1(
+    %arg0: tensor<1x4096x64xf32>,
+    %arg1: tensor<1x3x64xf32>) -> tensor<1x3x64xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+    ],
+    iterator_types = ["parallel", "reduction", "parallel"]
+  } ins(%arg0 : tensor<1x4096x64xf32>) outs(%arg1 : tensor<1x3x64xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<1x3x64xf32>
+  return %0 : tensor<1x3x64xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg
+        : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+        by tile_sizes = [0, 4, 0]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @reduction_tile_for_constant_dim_k_gt_1
+//   CHECK-DAG:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[E:.*]] = tensor.empty() : tensor<1x3x64x4xf32>
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[E]] : tensor<1x3x64x4xf32>) -> tensor<1x3x64x4xf32>
+//       CHECK:   %[[L:.*]] = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG3:.+]] = %[[F]]) -> (tensor<1x3x64x4xf32>) {
+//       CHECK:     %[[PARTIAL:.+]] = linalg.generic
+//  CHECK-SAME:         outs(%[[ARG3]] :
+//       CHECK:     scf.yield %[[PARTIAL]]
+//       CHECK:   }
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<1x3x64x4xf32>) outs(%arg1 : tensor<1x3x64xf32>) dimensions = [3]
+//       CHECK:   return %{{.*}} : tensor<1x3x64xf32>
+
+// -----
+
+// Verify tile_reduction_using_forall handles dynamic output shapes combined
+// with a constant expression in the output map. The partial init tensor must
+// use tensor.dim to query the dynamic dimension at the constant-indexed
+// position rather than a hardcoded 1.
+
+// CHECK-LABEL: func @reduction_tile_dynamic_constant_map
+func.func @reduction_tile_dynamic_constant_map(
+    %arg0: tensor<?x4096x?xf32>,
+    %arg1: tensor<?x3x?xf32>) -> tensor<?x3x?xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+    ],
+    iterator_types = ["parallel", "reduction", "parallel"]
+  } ins(%arg0 : tensor<?x4096x?xf32>) outs(%arg1 : tensor<?x3x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<?x3x?xf32>
+  return %0 : tensor<?x3x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg
+        : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.tile_reduction_using_forall %0
+        by tile_sizes = [0, 4, 0]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// Verify that the partial init tensor uses the correct dynamic shape. The
+// constant-indexed dim 1 is static (size 3) so the partial tensor is
+// tensor<?x3x?x1024xf32>. The extract_slice within the forall body uses
+// size 3 at the constant-indexed position, not a hardcoded 1.
+//   CHECK-DAG:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[E:.*]] = tensor.empty({{.*}}) : tensor<?x3x?x1024xf32>
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[E]] : tensor<?x3x?x1024xf32>)
+//       CHECK:   scf.forall
+//       CHECK:     tensor.extract_slice {{.*}} [{{.*}}, 3, {{.*}}, 1]
+//       CHECK:   linalg.reduce ins({{.*}} : tensor<?x3x?x1024xf32>) {{.*}} dimensions = [3]
+//       CHECK:   return %{{.*}}
+
+// -----
+
+// Verify tile_reduction_using_forall handles two consecutive constant
+// expressions in the same output map (e.g. `(d0,d1,d2)->(0,0,d2)`).
+// Both constant-indexed dimensions must use the actual output dim size.
+
+// CHECK-LABEL: func @reduction_tile_two_constants_in_map
+func.func @reduction_tile_two_constants_in_map(
+    %arg0: tensor<1x4096x64xf32>,
+    %arg1: tensor<3x5x64xf32>) -> tensor<3x5x64xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (0, 0, d2)>
+    ],
+    iterator_types = ["reduction", "reduction", "parallel"]
+  } ins(%arg0 : tensor<1x4096x64xf32>) outs(%arg1 : tensor<3x5x64xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<3x5x64xf32>
+  return %0 : tensor<3x5x64xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg
+        : (!transform.any_op) -> !transform.any_op
+    %1:4 = transform.structured.tile_reduction_using_forall %0
+        by tile_sizes = [0, 4, 0]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+//   CHECK-DAG:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[E:.*]] = tensor.empty() : tensor<3x5x64x1024xf32>
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[E]] : tensor<3x5x64x1024xf32>) -> tensor<3x5x64x1024xf32>
+//       CHECK:   %[[L:.*]] = scf.forall (%[[IV:.+]]) = (0) to (4096) step (4) shared_outs(%[[ARG3:.+]] = %[[F]]) -> (tensor<3x5x64x1024xf32>) {
+//       CHECK:     tensor.extract_slice %arg0[0, %[[IV]], 0] [1, 4, 64] [1, 1, 1]
+//       CHECK:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ARG3]][0, 0, 0, {{.*}}] [3, 5, 64, 1] [1, 1, 1, 1]
+//       CHECK:     linalg.generic
+//       CHECK:     scf.forall.in_parallel {
+//       CHECK:       tensor.parallel_insert_slice {{.*}} into %[[ARG3]][0, 0, 0, {{.*}}] [3, 5, 64, 1] [1, 1, 1, 1]
+//       CHECK:     }
+//       CHECK:   }
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<3x5x64x1024xf32>) outs(%arg1 : tensor<3x5x64xf32>) dimensions = [3]
+//       CHECK:   return %{{.*}} : tensor<3x5x64xf32>
+
+// -----
+
+// Verify tile_reduction_using_for handles dynamic output shapes combined with
+// a constant expression in the output map. The partial init tensor must use
+// tensor.dim to query the dynamic dimensions rather than hardcoding 1.
+
+// CHECK-LABEL: func @reduction_tile_for_dynamic_constant_map
+func.func @reduction_tile_for_dynamic_constant_map(
+    %arg0: tensor<?x4096x?xf32>,
+    %arg1: tensor<?x3x?xf32>) -> tensor<?x3x?xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+    ],
+    iterator_types = ["parallel", "reduction", "parallel"]
+  } ins(%arg0 : tensor<?x4096x?xf32>) outs(%arg1 : tensor<?x3x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<?x3x?xf32>
+  return %0 : tensor<?x3x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg
+        : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+        by tile_sizes = [0, 4, 0]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op,
+                                  !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// Verify the partial init tensor uses tensor.dim for dynamic dims and the
+// static constant-indexed position uses size 3. The extract_slice inside
+// the for loop body must use size 3 at the constant-indexed position.
+//   CHECK-DAG:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//   CHECK-DAG:   %[[E:.*]] = tensor.empty({{.*}}) : tensor<?x3x?x4xf32>
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[E]] : tensor<?x3x?x4xf32>)
+//       CHECK:   %[[L:.*]] = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG3:.+]] = %[[F]]) -> (tensor<?x3x?x4xf32>) {
+//       CHECK:     tensor.extract_slice %arg0[{{.*}}] [{{.*}}, 4, {{.*}}] [1, 1, 1]
+//       CHECK:     tensor.extract_slice %[[ARG3]][{{.*}}] [{{.*}}, 3, {{.*}}, 4] [1, 1, 1, 1]
+//       CHECK:   }
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x3x?x4xf32>) outs(%arg1 : tensor<?x3x?xf32>) dimensions = [3]
+//       CHECK:   return %{{.*}}

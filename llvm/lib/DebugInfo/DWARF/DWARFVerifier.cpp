@@ -80,17 +80,34 @@ DWARFVerifier::DieRangeInfo::insert(const DieRangeInfo &RI) {
   if (RI.Ranges.empty())
     return Children.end();
 
-  auto End = Children.end();
-  auto Iter = Children.begin();
-  while (Iter != End) {
-    if (Iter->intersects(RI))
-      return Iter;
-    ++Iter;
+  // Use lower_bound to find the insertion point in O(log N), then check
+  // only the immediate neighbors for overlap. Since children are verified
+  // to be non-overlapping as they are inserted, only adjacent entries in
+  // the sorted set can intersect with a newly inserted entry.
+  auto It = Children.lower_bound(RI);
+
+  // Check the predecessor for overlap.
+  if (It != Children.begin()) {
+    auto Prev = std::prev(It);
+    if (Prev->intersects(RI))
+      return Prev;
   }
-  Children.insert(RI);
+
+  // Check the element at the lower_bound position for overlap or duplicate.
+  if (It != Children.end()) {
+    // We only override "smaller than", so "not smaller than" (RI >= It) plus
+    // the semantics of `lower_bound` (It >= RI) says this is exact duplicate
+    // (equivalent key), which is allowed and doesn't need reinsertion.
+    if (!(RI < *It))
+      return Children.end();
+    if (It->intersects(RI))
+      return It;
+  }
+
+  // No overlap — insert with hint for O(1) amortized insertion.
+  Children.insert(It, RI);
   return Children.end();
 }
-
 bool DWARFVerifier::DieRangeInfo::contains(const DieRangeInfo &RHS) const {
   auto I1 = Ranges.begin(), E1 = Ranges.end();
   auto I2 = RHS.Ranges.begin(), E2 = RHS.Ranges.end();
@@ -155,11 +172,13 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   if (Version >= 5) {
     UnitType = DebugInfoData.getU8(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
-    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset) : DebugInfoData.getU32(Offset);
+    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset)
+                               : DebugInfoData.getU32(Offset);
     ValidType = dwarf::isUnitType(UnitType);
   } else {
     UnitType = 0;
-    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset) : DebugInfoData.getU32(Offset);
+    AbbrOffset = isUnitDWARF64 ? DebugInfoData.getU64(Offset)
+                               : DebugInfoData.getU32(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
   }
 
@@ -329,7 +348,7 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
     return 0;
 
   DWARFDie Curr = Die.getParent();
-  for (; Curr.isValid() && !Curr.isSubprogramDIE(); Curr = Die.getParent()) {
+  for (; Curr.isValid() && !Curr.isSubprogramDIE(); Curr = Curr.getParent()) {
     if (Curr.getTag() == DW_TAG_inlined_subroutine) {
       ErrorCategory.Report(
           "Call site nested entry within inlined subroutine", [&]() {
@@ -422,7 +441,7 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
 
   for (const auto &Unit : Units) {
     OS << formatv("Verifying unit: {0} / {1}", Index, Units.getNumUnits());
-    if (const char* Name = Unit->getUnitDIE(true).getShortName())
+    if (const char *Name = Unit->getUnitDIE(true).getShortName())
       OS << formatv(", \"{0}\"", Name);
     OS << '\n';
     OS.flush();
@@ -481,7 +500,7 @@ unsigned DWARFVerifier::verifyIndex(StringRef Name,
     return 0;
   OS << "Verifying " << Name << "...\n";
   DWARFUnitIndex Index(InfoColumnKind);
-  DataExtractor D(IndexStr, DCtx.isLittleEndian(), 0);
+  DataExtractor D(IndexStr, DCtx.isLittleEndian());
   if (!Index.parse(D))
     return 1;
   using MapType = IntervalMap<uint64_t, uint64_t>;
@@ -537,14 +556,12 @@ bool DWARFVerifier::handleDebugInfo() {
   unsigned NumErrors = 0;
 
   OS << "Verifying .debug_info Unit Header Chain...\n";
-  DObj.forEachInfoSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S);
-  });
+  DObj.forEachInfoSections(
+      [&](const DWARFSection &S) { NumErrors += verifyUnitSection(S); });
 
   OS << "Verifying .debug_types Unit Header Chain...\n";
-  DObj.forEachTypesSections([&](const DWARFSection &S) {
-    NumErrors += verifyUnitSection(S);
-  });
+  DObj.forEachTypesSections(
+      [&](const DWARFSection &S) { NumErrors += verifyUnitSection(S); });
 
   OS << "Verifying non-dwo Units...\n";
   NumErrors += verifyUnits(DCtx.getNormalUnitsVector());
@@ -754,7 +771,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     if (Expected<std::vector<DWARFLocationExpression>> Loc =
             Die.getLocations(DW_AT_location)) {
       for (const auto &Entry : *Loc) {
-        DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(), 0);
+        DataExtractor Data(Entry.Expr, DCtx.isLittleEndian());
         DWARFExpression Expression(Data, U->getAddressByteSize(),
                                    U->getFormParams().Format);
         bool Error =
@@ -1026,8 +1043,7 @@ unsigned DWARFVerifier::verifyDebugInfoReferences(
     return DWARFDie();
   };
   unsigned NumErrors = 0;
-  for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair :
-       References) {
+  for (const std::pair<const uint64_t, std::set<uint64_t>> &Pair : References) {
     if (GetDIEForOffset(Pair.first))
       continue;
     ++NumErrors;
@@ -1757,15 +1773,23 @@ void DWARFVerifier::verifyNameIndexEntries(
     // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
     // will return the unit DIE of DU if we aren't able to get the .dwo file,
     // but that is what the function currently does.
+    // A CU is a skeleton CU only when DWARF 5+ tags it as DW_TAG_skeleton_unit,
+    // or when, in older DWARF, the CU has no children.
+    DWARFDie UnitDie = DU->getUnitDIE();
+    auto IsSkeletonCU = [&]() {
+      if (DU->getVersion() >= 5)
+        return UnitDie.getTag() == dwarf::DW_TAG_skeleton_unit;
+      return !UnitDie.hasChildren();
+    };
+    bool IsSkeleton = DU->getDWOId() && IsSkeletonCU();
     DWARFUnit *NonSkeletonUnit = nullptr;
-    if (DU->getDWOId()) {
+    if (IsSkeleton) {
       auto Iter = CUOffsetsToDUMap.find(DU->getOffset());
       NonSkeletonUnit = Iter->second;
     } else {
       NonSkeletonUnit = DU;
     }
-    DWARFDie UnitDie = DU->getUnitDIE();
-    if (DU->getDWOId() && !NonSkeletonUnit->isDWOUnit()) {
+    if (IsSkeleton && !NonSkeletonUnit->isDWOUnit()) {
       ErrorCategory.Report("Unable to get load .dwo file", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x} unable to load "
@@ -1897,8 +1921,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
   }
   DWARFUnit *U = Die.getDwarfUnit();
   for (const auto &Entry : *Loc) {
-    DataExtractor Data(toStringRef(Entry.Expr), DCtx.isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(Entry.Expr, DCtx.isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
@@ -1965,6 +1988,12 @@ void DWARFVerifier::verifyNameIndexCompleteness(
 
   // Object members aren't globally visible.
   case DW_TAG_member:
+    return;
+
+  // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.
+  // Their DW_AT_name carries the annotation kind, not a globally visible
+  // symbol, so they should not be indexed.
+  case DW_TAG_LLVM_annotation:
     return;
 
   // According to a strict reading of the specification, enumerators should not
@@ -2168,7 +2197,7 @@ void DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
 
 bool DWARFVerifier::handleAccelTables() {
   const DWARFObject &D = DCtx.getDWARFObj();
-  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian(), 0);
+  DataExtractor StrData(D.getStrSection(), DCtx.isLittleEndian());
   if (!D.getAppleNamesSection().Data.empty())
     verifyAppleAccelTable(&D.getAppleNamesSection(), &StrData, ".apple_names");
   if (!D.getAppleTypesSection().Data.empty())
@@ -2277,7 +2306,8 @@ bool DWARFVerifier::verifyDebugStrOffsets(
       });
       Success = false;
     }
-    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit; ++Index) {
+    for (uint64_t Index = 0; C && C.tell() + OffsetByteSize <= NextUnit;
+         ++Index) {
       uint64_t OffOff = C.tell();
       uint64_t StrOff = DA.getAddress(C);
       // check StrOff refers to the start of a string

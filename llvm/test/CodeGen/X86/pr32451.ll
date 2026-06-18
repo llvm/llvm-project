@@ -16,7 +16,6 @@ define ptr @japi1_convert_690(ptr, ptr, i32) {
 ; CHECK-NEXT:    calll julia.gc_root_decl@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    calll jl_get_ptls_states@PLT
-; CHECK-NEXT:    # kill: def $ecx killed $eax
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; CHECK-NEXT:    movl 4(%eax), %eax
 ; CHECK-NEXT:    movb (%eax), %al

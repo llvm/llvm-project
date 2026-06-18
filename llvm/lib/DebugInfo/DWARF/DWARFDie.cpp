@@ -46,7 +46,7 @@ static void dumpApplePropertyAttribute(raw_ostream &OS, uint64_t Val) {
     if (!PropName.empty())
       OS << PropName;
     else
-      OS << format("DW_APPLE_PROPERTY_0x%" PRIx64, Bit);
+      OS << formatv("DW_APPLE_PROPERTY_{0:x}", Bit);
     if (!(Val ^= Bit))
       break;
     OS << ", ";
@@ -96,8 +96,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
          "bad FORM for location expression");
   DWARFContext &Ctx = U->getContext();
   ArrayRef<uint8_t> Expr = *FormValue.getAsBlock();
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Ctx.isLittleEndian(), 0);
+  DataExtractor Data(Expr, Ctx.isLittleEndian());
   DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
   printDwarfExpression(&DE, OS, DumpOpts, U);
 }
@@ -246,7 +245,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin ||
-      Attr == DW_AT_call_origin || Attr == DW_AT_import) {
+      Attr == DW_AT_call_origin || Attr == DW_AT_import ||
+      Attr == DW_AT_LLVM_virtual_call_origin) {
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
@@ -677,7 +677,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
     if (DumpOpts.ShowAddresses)
       WithColor(OS, HighlightColor::Address).get()
-          << format("\n0x%8.8" PRIx64 ": ", Offset);
+          << formatv("\n{0:x8}: ", Offset);
 
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();
@@ -685,11 +685,11 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         WithColor(OS, HighlightColor::Tag).get().indent(Indent)
             << formatv("{0}", getTag());
         if (DumpOpts.Verbose) {
-          OS << format(" [%u] %c", abbrCode,
-                       AbbrevDecl->hasChildren() ? '*' : ' ');
+          OS << formatv(" [{0}] {1}", abbrCode,
+                        AbbrevDecl->hasChildren() ? '*' : ' ');
           if (std::optional<uint32_t> ParentIdx = Die->getParentIdx())
-            OS << format(" (0x%8.8" PRIx64 ")",
-                         U->getDIEAtIndex(*ParentIdx).getOffset());
+            OS << formatv(" ({0:x8})",
+                          U->getDIEAtIndex(*ParentIdx).getOffset());
         }
         OS << '\n';
 

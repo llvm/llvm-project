@@ -24,7 +24,7 @@ namespace clang::tidy::bugprone {
 namespace {
 
 AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
-               clang::ast_matchers::internal::Matcher<NamedDecl>,
+               ast_matchers::internal::Matcher<NamedDecl>,
                IgnoredFunctionsMatcher) {
   const Expr *E = &Node;
 

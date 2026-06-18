@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -412,6 +413,10 @@ public:
   /// format interpretation for llvm.convert.to.arbitrary.fp and
   /// llvm.convert.from.arbitrary.fp intrinsics.
   LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
+
+  /// Returns the fltSemantics for a given arbitrary FP format string,
+  /// or nullptr if invalid.
+  LLVM_ABI static const fltSemantics *getArbitraryFPSemantics(StringRef Format);
 };
 
 namespace detail {
@@ -673,6 +678,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -919,6 +926,8 @@ public:
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
@@ -1103,18 +1112,6 @@ class APFloat : public APFloatBase {
   explicit APFloat(IEEEFloat F, const fltSemantics &S) : U(std::move(F), S) {}
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
-
-  // Compares the absolute value of this APFloat with another.  Both operands
-  // must be finite non-zero.
-  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
-    assert(&getSemantics() == &RHS.getSemantics() &&
-           "Should only compare APFloats with the same semantics");
-    if (usesLayout<IEEEFloat>(getSemantics()))
-      return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
-    if (usesLayout<DoubleAPFloat>(getSemantics()))
-      return U.Double.compareAbsoluteValue(RHS.U.Double);
-    llvm_unreachable("Unexpected semantics");
-  }
 
 public:
   APFloat(const fltSemantics &Semantics) : U(Semantics) {}
@@ -1412,6 +1409,24 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
 
+  /// Fill this APFloat with the result of a string conversion.
+  ///
+  /// The following strings are accepted for conversion purposes:
+  /// * Decimal floating-point literals (e.g., `0.1e-5`)
+  /// * Hexadecimal floating-point literals (e.g., `0x1.0p-5`)
+  /// * Positive infinity via "inf", "INFINITY", "Inf", "+Inf", or "+inf".
+  /// * Negative infinity via "-inf", "-INFINITY", or "-Inf".
+  /// * Quiet NaNs via "nan", "NaN", "nan(...)", or "NaN(...)", where the
+  ///   "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  /// * Signaling NaNs via "snan", "sNaN", "snan(...)", or "sNaN(...)", where
+  ///   the "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  ///
+  /// If the input string is none of these forms, then an error is returned.
+  ///
+  /// If a floating-point exception occurs during conversion, then no error is
+  /// returned, and the exception is indicated via opStatus.
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
@@ -1474,6 +1489,18 @@ public:
     llvm_unreachable("Unexpected semantics");
   }
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
+  cmpResult compareAbsoluteValue(const APFloat &RHS) const {
+    assert(&getSemantics() == &RHS.getSemantics() &&
+           "Should only compare APFloats with the same semantics");
+    if (usesLayout<IEEEFloat>(getSemantics()))
+      return U.IEEE.compareAbsoluteValue(RHS.U.IEEE);
+    if (usesLayout<DoubleAPFloat>(getSemantics()))
+      return U.Double.compareAbsoluteValue(RHS.U.Double);
+    llvm_unreachable("Unexpected semantics");
+  }
+
   bool bitwiseIsEqual(const APFloat &RHS) const {
     if (&getSemantics() != &RHS.getSemantics())
       return false;
@@ -1530,6 +1557,14 @@ public:
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
+  }
+
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
   }
 
   /// Return the FPClassTest which will return true for the value.
@@ -1725,6 +1760,12 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+/// Implement IEEE 754-2019 exp functions
+LLVM_READONLY
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

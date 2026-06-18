@@ -180,6 +180,40 @@ void test_builtin_elementwise_sub_sat(int i, short s, double d, float4 v, int3 i
   // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was '_Complex float')}}
 }
 
+void test_builtin_elementwise_clmul(int i, short s, double d, float4 v,
+                                    int3 iv, unsigned3 uv, unsigned u,
+                                    unsigned4 vu, int *p) {
+  i = __builtin_elementwise_clmul(p, d);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'int *')}}
+
+  struct Foo foo = __builtin_elementwise_clmul(i, i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_elementwise_clmul(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_clmul();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_clmul(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_clmul(v, v);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float4' (vector of 4 'float' values))}}
+
+  i = __builtin_elementwise_clmul(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
+
+  i = __builtin_elementwise_clmul(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+
+  unsigned _BitInt(31) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
+  ext = __builtin_elementwise_clmul(ext, ext);
+
+  u = __builtin_elementwise_clmul(u, u);
+  vu = __builtin_elementwise_clmul(vu, vu);
+}
+
 void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_max(p, d);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was 'int *')}}
@@ -238,6 +272,14 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, u
   _Complex float c1, c2;
   c1 = __builtin_elementwise_max(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was '_Complex float')}}
+
+  double dr;
+  dr = __builtin_elementwise_max(d, 0.0);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
+
+  float4 vr;
+  vr = __builtin_elementwise_max(v, v);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
 }
 
 void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
@@ -298,6 +340,14 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, u
   _Complex float c1, c2;
   c1 = __builtin_elementwise_min(c1, c2);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was '_Complex float')}}
+
+  double dr;
+  dr = __builtin_elementwise_min(d, 0.0);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
+
+  float4 vr;
+  vr = __builtin_elementwise_min(v, v);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
 }
 
 void test_builtin_elementwise_maximum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
@@ -1379,6 +1429,7 @@ typedef struct {
 
 float3 foo(float3 a,const struct_float3* hi) {
   float3 b = __builtin_elementwise_max((float3)(0.0f), a);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
   return __builtin_elementwise_pow(b, hi->b.yyy);
 }
 
