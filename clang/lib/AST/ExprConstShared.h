@@ -29,6 +29,7 @@ class LangOptions;
 class ASTContext;
 class CharUnits;
 class Expr;
+class CallExpr;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -77,6 +78,14 @@ void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
+
+/// Return the (normalized) builtin ID to dispatch on in the constant
+/// evaluators' target-specific cases, or 0 if \p E does not name a builtin
+/// those cases should handle. Translates an auxiliary target builtin ID back to
+/// its canonical value and only returns IDs for architectures the constant
+/// evaluators can fold (currently x86/x86_64).
+unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
+                                       const CallExpr *E);
 
 uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);

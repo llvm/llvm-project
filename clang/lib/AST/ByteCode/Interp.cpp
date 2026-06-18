@@ -1230,7 +1230,8 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
     return true;
   // operator new.
   if (const auto *CE = dyn_cast_if_present<CallExpr>(Source);
-      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
+      CE && getConstantEvaluatedBuiltinID(S.getASTContext(), CE) ==
+                Builtin::BI__builtin_operator_new)
     return true;
   // std::allocator.allocate() call
   if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(Source);

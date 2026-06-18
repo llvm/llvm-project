@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-is-target-device \
 // RUN:   -triple aarch64 -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -aux-target-feature +avx512f -std=c++17 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-is-target-device \
+// RUN:   -triple aarch64 -aux-triple x86_64-unknown-linux-gnu \
+// RUN:   -aux-target-feature +avx512f -std=c++17 -fsyntax-only -verify \
+// RUN:   -fexperimental-new-constant-interpreter %s
 
 // expected-no-diagnostics
 

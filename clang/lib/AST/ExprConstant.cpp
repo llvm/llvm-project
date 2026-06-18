@@ -8457,52 +8457,6 @@ protected:
            Info.Ctx.BuiltinInfo.isConstantEvaluated(BuiltinOp);
   }
 
-  // Return the target builtin ID to dispatch on in the constant evaluator's
-  // target-specific cases, or 0 if \p E does not name a builtin those cases
-  // should handle.
-  //
-  // Target-specific builtin IDs of different targets overlap (each target
-  // numbers its builtins from Builtin::FirstTSBuiltin), so a target builtin ID
-  // is only meaningful for the target that owns it. Determine the owning target
-  // (translating an auxiliary ID back to its canonical value) and only return
-  // the ID for architectures whose target-specific builtins the constant
-  // evaluator knows how to fold; otherwise an overlapping ID could be
-  // misinterpreted as an unrelated builtin of another target.
-  unsigned getConstantEvaluatedBuiltinID(const CallExpr *E) {
-    unsigned BuiltinOp = E->getBuiltinCallee();
-
-    // Target-independent builtins have the same ID regardless of the target, so
-    // they can be dispatched as-is.
-    if (BuiltinOp < Builtin::FirstTSBuiltin)
-      return BuiltinOp;
-
-    // Determine the target that owns this builtin, translating an auxiliary ID
-    // back to its canonical value.
-    const TargetInfo *OwningTarget;
-    if (Info.Ctx.BuiltinInfo.isAuxBuiltinID(BuiltinOp)) {
-      OwningTarget = Info.Ctx.getAuxTargetInfo();
-      BuiltinOp = Info.Ctx.BuiltinInfo.getAuxBuiltinID(BuiltinOp);
-    } else {
-      OwningTarget = &Info.Ctx.getTargetInfo();
-    }
-
-    if (!OwningTarget)
-      return 0;
-
-    // Only dispatch the ID for architectures whose target-specific builtins the
-    // constant evaluator can fold. x86 and x86_64 share a single builtin set and
-    // are the only such architectures today; as other targets gain
-    // constant-evaluation support for their builtins, add the corresponding
-    // cases here so their IDs are dispatched too.
-    switch (OwningTarget->getTriple().getArch()) {
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      return BuiltinOp;
-    default:
-      return 0;
-    }
-  }
-
 public:
   ExprEvaluatorBase(EvalInfo &Info) : Info(Info) {}
 
@@ -10315,6 +10269,53 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     llvm_unreachable("GetAlignOfType on a non-alignment ExprKind");
 }
 
+// Return the target builtin ID to dispatch on in the constant evaluators'
+// target-specific cases, or 0 if \p E does not name a builtin those cases
+// should handle.
+//
+// Target-specific builtin IDs of different targets overlap (each target numbers
+// its builtins from Builtin::FirstTSBuiltin), so a target builtin ID is only
+// meaningful for the target that owns it. Determine the owning target
+// (translating an auxiliary ID back to its canonical value) and only return the
+// ID for architectures whose target-specific builtins the constant evaluators
+// know how to fold; otherwise an overlapping ID could be misinterpreted as an
+// unrelated builtin of another target.
+unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
+                                       const CallExpr *E) {
+  unsigned BuiltinOp = E->getBuiltinCallee();
+
+  // Target-independent builtins have the same ID regardless of the target, so
+  // they can be dispatched as-is.
+  if (BuiltinOp < Builtin::FirstTSBuiltin)
+    return BuiltinOp;
+
+  // Determine the target that owns this builtin, translating an auxiliary ID
+  // back to its canonical value.
+  const TargetInfo *OwningTarget;
+  if (Ctx.BuiltinInfo.isAuxBuiltinID(BuiltinOp)) {
+    OwningTarget = Ctx.getAuxTargetInfo();
+    BuiltinOp = Ctx.BuiltinInfo.getAuxBuiltinID(BuiltinOp);
+  } else {
+    OwningTarget = &Ctx.getTargetInfo();
+  }
+
+  if (!OwningTarget)
+    return 0;
+
+  // Only dispatch the ID for architectures whose target-specific builtins the
+  // constant evaluators can fold. x86 and x86_64 share a single builtin set and
+  // are the only such architectures today; as other targets gain
+  // constant-evaluation support for their builtins, add the corresponding cases
+  // here so their IDs are dispatched too.
+  switch (OwningTarget->getTriple().getArch()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return BuiltinOp;
+  default:
+    return 0;
+  }
+}
+
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind) {
   E = E->IgnoreParens();
@@ -10389,7 +10390,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
 bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return visitNonBuiltinCallExpr(E);
-  return VisitBuiltinCallExpr(E, getConstantEvaluatedBuiltinID(E));
+  return VisitBuiltinCallExpr(E, getConstantEvaluatedBuiltinID(Info.Ctx, E));
 }
 
 // Determine if T is a character type for which we guarantee that
@@ -12326,7 +12327,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
 
-  unsigned BuiltinOp = getConstantEvaluatedBuiltinID(E);
+  unsigned BuiltinOp = getConstantEvaluatedBuiltinID(Info.Ctx, E);
 
   auto EvaluateBinOpExpr =
       [&](llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -16462,7 +16463,7 @@ tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
-  return VisitBuiltinCallExpr(E, getConstantEvaluatedBuiltinID(E));
+  return VisitBuiltinCallExpr(E, getConstantEvaluatedBuiltinID(Info.Ctx, E));
 }
 
 static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
@@ -20035,7 +20036,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
 
-  unsigned BuiltinOp = getConstantEvaluatedBuiltinID(E);
+  unsigned BuiltinOp = getConstantEvaluatedBuiltinID(Info.Ctx, E);
 
   switch (BuiltinOp) {
   default:

@@ -4503,7 +4503,16 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+  // BuiltinID has already been normalized (see getConstantEvaluatedBuiltinID),
+  // i.e. an auxiliary target builtin ID has been translated to its canonical
+  // value. The "is constant evaluated" check below needs the *raw* builtin ID
+  // so that aux-target IDs resolve into the correct (aux-target) builtin
+  // records; recover it from the call, falling back to BuiltinID for builtins
+  // emitted without a direct callee (e.g. operator new/delete).
+  unsigned RawBuiltinID = Call->getBuiltinCallee();
+  if (!RawBuiltinID)
+    RawBuiltinID = BuiltinID;
+  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(RawBuiltinID))
     return Invalid(S, OpPC);
 
   const InterpFrame *Frame = S.Current;
