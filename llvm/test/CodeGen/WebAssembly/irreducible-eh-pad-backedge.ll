@@ -24,17 +24,37 @@ declare ptr @llvm.wasm.get.exception(token)
 declare i32 @__gxx_wasm_personality_v0(...)
 
 ; -----------------------------------------------------------------------------
-; Simple EH-shaped irreducible loop.
+; simple CFG
 ;
-; Machine-level shape:
+;   ┌────────────────────────────┐
+;   │ entry                      │
+;   │ save SP                    │
+;   │ call foo                   │
+;   └───────┬─────────────┬──────┘
+;           │normal       │exception
+;           v             v
+;        exit        outer.catch
+;                        │
+;                        │ call foo
+;           ┌────────────┴────────────┐
+;           │normal                   │exception
+;           v                         v
+;    inner.catch.original      inner.catch.original
+;           │
+;           v
+;   ┌────────────────────────────┐
+;   │ bb7 loop header            │◄──────────────┐
+;   │ try {                      │               │
+;   │   call foo                 │               │
+;   │ }                          │               │
+;   └───────┬─────────────┬──────┘               │
+;           │normal       │exception             │
+;           v             v                      │
+;        exit       inner.catch.clone            │
+;                        │                       │
+;                        │ restore SP            │
+;                        └──────── br loop ──────┘
 ;
-;   inner.catch [EHPad] -> bb7
-;        ^                 |
-;        |                 |
-;        +---- unwind -----+
-;
-; bb7 also has an external predecessor through outer.catch -> outer.cont -> bb7.
-
 define void @eh_test0_simple() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: eh_test0_simple:
 ; CHECK:       .Lfunc_begin0:
@@ -117,7 +137,40 @@ bb7:
 
 ; -----------------------------------------------------------------------------
 ; Inner natural loop before entering the throwing block.
-
+;
+;    ┌────────────────────────────┐
+;    │ entry                      │
+;    │ save SP                    │
+;    │ call foo                   │
+;    └───────┬─────────────┬──────┘
+;            │normal       │exception
+;            v             v
+;         exit        outer.catch
+;                         │
+;                         │ call foo
+;            ┌────────────┴────────────┐
+;            │normal                   │exception
+;            v                         v
+;       preinner loop          inner.catch.original
+;            │                         │
+;            │                         │ restore SP
+;            │                         v
+;            └──────────────────────► body
+;                                      ▲
+;                                      │
+;    ┌────────────────────────────┐    │
+;    │ body loop header           │◄───┘
+;    │ try {                      │
+;    │   call foo                 │
+;    │ }                          │
+;    └───────┬─────────────┬──────┘
+;            │normal       │exception
+;            v             v
+;         exit       inner.catch.clone
+;                         │
+;                         │ restore SP
+;                         └──────── br loop ──────► body
+;
 define void @eh_test1_inner_loop() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: eh_test1_inner_loop:
 ; CHECK:       .Lfunc_begin1:
