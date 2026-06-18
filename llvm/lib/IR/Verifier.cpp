@@ -5650,12 +5650,6 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
   visitCallStackMetadata(MD);
 }
 
-static inline bool isConstantIntMetadataOperand(const Metadata *MD) {
-  if (auto *VAL = dyn_cast<ValueAsMetadata>(MD))
-    return isa<ConstantInt>(VAL->getValue());
-  return false;
-}
-
 void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!callee_type metadata should only exist on calls",
         &I);
@@ -5663,14 +5657,15 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
     Check(isa<MDNode>(Op),
           "The callee_type metadata must be a list of type metadata nodes", Op);
     auto *TypeMD = cast<MDNode>(Op);
-    Check(TypeMD->getNumOperands() == 2,
-          "Well-formed generalized type metadata must contain exactly two "
-          "operands",
+    Check(TypeMD->getNumOperands() == 1,
+          "Well-formed generalized callgraph metadata must contain exactly one "
+          "operand",
           Op);
-    Check(isConstantIntMetadataOperand(TypeMD->getOperand(0)) &&
-              mdconst::extract<ConstantInt>(TypeMD->getOperand(0))->isZero(),
-          "The first operand of type metadata for functions must be zero", Op);
-    Check(TypeMD->hasGeneralizedMDString(),
+    Check(isa<MDString>(TypeMD->getOperand(0)),
+          "The operand of type metadata for functions must be an MDString", Op);
+    Check(cast<MDString>(TypeMD->getOperand(0))
+              ->getString()
+              .ends_with(".generalized"),
           "Only generalized type metadata can be part of the callee_type "
           "metadata list",
           Op);

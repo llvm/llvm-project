@@ -14,6 +14,6 @@ entry:
   ret i32 %call
 }
 
-!0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
+!0 = !{!"_ZTSFiPvcE.generalized"}
 !1 = !{!2}
-!2 = !{i64 0, !"_ZTSFicE.generalized"}
+!2 = !{!"_ZTSFicE.generalized"}

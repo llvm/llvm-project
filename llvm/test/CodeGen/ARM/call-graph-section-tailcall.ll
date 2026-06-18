@@ -22,10 +22,10 @@ declare !callgraph !2 i32 @foo(i8 signext)
 
 declare !callgraph !2 i32 @bar(i8 signext)
 
-!0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
+!0 = !{!"_ZTSFiPvcE.generalized"}
 !1 = !{!2}
-!2 = !{i64 0, !"_ZTSFicE.generalized"}
-!3 = !{i64 0, !"_ZTSFiiE.generalized"}
+!2 = !{!"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFiiE.generalized"}
 
 ; CHECK:      Hex dump of section '.llvm.callgraph':
 ; CHECK-NEXT: 0x00000000 00050000 00008e19 0b7f3326 e3000154

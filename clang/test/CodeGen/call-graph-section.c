@@ -74,20 +74,20 @@ void stf() {
   fp_stparam(St2, &St2);
 }
 
-// ITANIUM: [[F_TVOID]] = !{i64 0, !"_ZTSFvE.generalized"}
+// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvE.generalized"}
 // ITANIUM: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
-// ITANIUM: [[F_TPRIMITIVE]] = !{i64 0, !"_ZTSFicfdE.generalized"}
-// ITANIUM: [[F_TPTR]] = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
+// ITANIUM: [[F_TPRIMITIVE]] = !{!"_ZTSFicfdE.generalized"}
+// ITANIUM: [[F_TPTR]] = !{!"_ZTSFPiPcPfPdE.generalized"}
 // ITANIUM: [[F_TPRIMITIVE_CT]] = !{[[F_TPRIMITIVE:![0-9]+]]}
 // ITANIUM: [[F_TPTR_CT]] = !{[[F_TPTR:![0-9]+]]}
-// ITANIUM: [[F_TSTRUCT]] = !{i64 0, !"_ZTSFv3st2PS_E.generalized"}
+// ITANIUM: [[F_TSTRUCT]] = !{!"_ZTSFv3st2PS_E.generalized"}
 // ITANIUM: [[F_TSTRUCT_CT]] = !{[[F_TSTRUCT:![0-9]+]]}
 
-// MS: [[F_TVOID]] = !{i64 0, !"?6AX@Z.generalized"}
+// MS: [[F_TVOID]] = !{!"?6AX@Z.generalized"}
 // MS: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
-// MS: [[F_TPRIMITIVE]] = !{i64 0, !"?6AHDMN@Z.generalized"}
-// MS: [[F_TPTR]] = !{i64 0, !"?6APEAHPEADPEAMPEAN@Z.generalized"}
+// MS: [[F_TPRIMITIVE]] = !{!"?6AHDMN@Z.generalized"}
+// MS: [[F_TPTR]] = !{!"?6APEAHPEADPEAMPEAN@Z.generalized"}
 // MS: [[F_TPRIMITIVE_CT]] = !{[[F_TPRIMITIVE:![0-9]+]]}
 // MS: [[F_TPTR_CT]] = !{[[F_TPTR:![0-9]+]]}
-// MS: [[F_TSTRUCT]] = !{i64 0, !"?6AXUst2@@PEAU0@@Z.generalized"}
+// MS: [[F_TSTRUCT]] = !{!"?6AXUst2@@PEAU0@@Z.generalized"}
 // MS: [[F_TSTRUCT_CT]] = !{[[F_TSTRUCT:![0-9]+]]}

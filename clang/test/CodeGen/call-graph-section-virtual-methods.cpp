@@ -22,7 +22,7 @@ class Base {
     int vf(char *a) override { return 1; };
   };
   
-  // FT: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
+  // FT: [[F_TVF]] = !{!"_ZTSFiPcE.generalized"}
   
   ////////////////////////////////////////////////////////////////////////////////
   // Callsites (check for indirect callsite operand bundles)
@@ -53,4 +53,4 @@ class Base {
   }
 
   // CST: [[F_TVF_CT]] = !{[[F_TVF:![0-9]+]]}
-  // CST: [[F_TVF]] = !{i64 0, !"_ZTSFiPcE.generalized"}
+  // CST: [[F_TVF]] = !{!"_ZTSFiPcE.generalized"}

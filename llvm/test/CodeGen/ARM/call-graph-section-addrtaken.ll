@@ -22,9 +22,9 @@ entry:
   ret void
 }
 
-!0 = !{i64 0, !"_ZTSFvPFviEE.generalized"}
-!1 = !{i64 0, !"_ZTSFivE.generalized"}
-!2 = !{i64 0, !"_ZTSFviE.generalized"}
+!0 = !{!"_ZTSFvPFviEE.generalized"}
+!1 = !{!"_ZTSFivE.generalized"}
+!2 = !{!"_ZTSFviE.generalized"}
 
 ; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
 ;; Version

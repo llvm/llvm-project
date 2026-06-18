@@ -25,8 +25,8 @@ entry:
 
 declare !type !2 i32 @fizz(i32, i32)
 
-!0 = !{i64 0, !"_ZTSFiiiiE.generalized"}
+!0 = !{!"_ZTSFiiiiE.generalized"}
 !1 = !{!2}
-!2 = !{i64 0, !"_ZTSFiiiE.generalized"}
+!2 = !{!"_ZTSFiiiE.generalized"}
 !3 = !{!4}
-!4 = !{i64 0, !"_ZTSFicE.generalized"}
+!4 = !{!"_ZTSFicE.generalized"}

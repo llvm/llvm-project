@@ -3399,9 +3399,7 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
     F->addMetadata(llvm::LLVMContext::MD_callgraph,
                    *llvm::MDTuple::get(
                        getLLVMContext(),
-                       {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                            llvm::Type::getInt64Ty(getLLVMContext()), 0)),
-                        CreateMetadataIdentifierGeneralized(FD->getType())}));
+                       {CreateMetadataIdentifierGeneralized(FD->getType())}));
   }
 }
 
@@ -3442,10 +3440,7 @@ void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
     return;
 
   llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
-  llvm::MDTuple *TypeTuple = llvm::MDTuple::get(
-      getLLVMContext(), {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                             llvm::Type::getInt64Ty(getLLVMContext()), 0)),
-                         TypeIdMD});
+  llvm::MDTuple *TypeTuple = llvm::MDTuple::get(getLLVMContext(), {TypeIdMD});
   llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), {TypeTuple});
   CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
 }

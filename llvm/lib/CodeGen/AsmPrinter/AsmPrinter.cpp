@@ -1758,11 +1758,13 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
   SmallVector<MDNode *, 2> Types;
   F.getMetadata(LLVMContext::MD_callgraph, Types);
   for (const auto &Type : Types) {
-    if (Type->hasGeneralizedMDString()) {
-      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(1));
-      uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
-      IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
-      return ConstantInt::get(Int64Ty, TypeIdVal);
+    if (Type->getNumOperands() == 1 && isa<MDString>(Type->getOperand(0))) {
+      MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(0));
+      if (MDGeneralizedTypeId->getString().ends_with(".generalized")) {
+        uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
+        IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
+        return ConstantInt::get(Int64Ty, TypeIdVal);
+      }
     }
   }
   return nullptr;

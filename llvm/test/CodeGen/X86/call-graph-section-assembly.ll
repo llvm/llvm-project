@@ -29,11 +29,11 @@ entry:
 }
 
 !0 = !{!1}
-!1 = !{i64 0, !"_ZTSFvE.generalized"}
+!1 = !{!"_ZTSFvE.generalized"}
 !2 = !{!3}
-!3 = !{i64 0, !"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFicE.generalized"}
 !4 = !{!5}
-!5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
+!5 = !{!"_ZTSFPvS_E.generalized"}
 
 ; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
 ;; Version
