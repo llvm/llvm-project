@@ -8457,6 +8457,17 @@ protected:
            Info.Ctx.BuiltinInfo.isConstantEvaluated(BuiltinOp);
   }
 
+  // Return the target builtin ID to dispatch on in the constant evaluator's
+  // target-specific cases, or 0 if \p E does not name a builtin those cases
+  // should handle.
+  //
+  // Target-specific builtin IDs of different targets overlap (each target
+  // numbers its builtins from Builtin::FirstTSBuiltin), so a target builtin ID
+  // is only meaningful for the target that owns it. Determine the owning target
+  // (translating an auxiliary ID back to its canonical value) and only return
+  // the ID for architectures whose target-specific builtins the constant
+  // evaluator knows how to fold; otherwise an overlapping ID could be
+  // misinterpreted as an unrelated builtin of another target.
   unsigned getConstantEvaluatedBuiltinID(const CallExpr *E) {
     unsigned BuiltinOp = E->getBuiltinCallee();
 
@@ -8465,16 +8476,8 @@ protected:
     if (BuiltinOp < Builtin::FirstTSBuiltin)
       return BuiltinOp;
 
-    // Target-specific builtin IDs of different targets overlap (each target
-    // numbers its builtins from Builtin::FirstTSBuiltin), and the
-    // target-specific constant-evaluation cases dispatched on this ID are
-    // X86-only. A target builtin ID may therefore only be treated as an X86
-    // builtin when the target that owns it is actually x86; otherwise the
-    // overlapping ID could be misinterpreted as an unrelated X86 builtin.
-    // Determine the owning target (translating an auxiliary ID back to its
-    // canonical value) and only keep the ID when that target is x86; for any
-    // other target return 0 so dispatch falls through to the default case
-    // ("cannot constant-fold") instead of matching an X86 case by accident.
+    // Determine the target that owns this builtin, translating an auxiliary ID
+    // back to its canonical value.
     const TargetInfo *OwningTarget;
     if (Info.Ctx.BuiltinInfo.isAuxBuiltinID(BuiltinOp)) {
       OwningTarget = Info.Ctx.getAuxTargetInfo();
@@ -8483,10 +8486,21 @@ protected:
       OwningTarget = &Info.Ctx.getTargetInfo();
     }
 
-    if (!OwningTarget || !OwningTarget->getTriple().isX86())
+    if (!OwningTarget)
       return 0;
 
-    return BuiltinOp;
+    // Only dispatch the ID for architectures whose target-specific builtins the
+    // constant evaluator can fold. x86 and x86_64 share a single builtin set and
+    // are the only such architectures today; as other targets gain
+    // constant-evaluation support for their builtins, add the corresponding
+    // cases here so their IDs are dispatched too.
+    switch (OwningTarget->getTriple().getArch()) {
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      return BuiltinOp;
+    default:
+      return 0;
+    }
   }
 
 public:
