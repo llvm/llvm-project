@@ -1036,12 +1036,14 @@ private:
                                                         EffectiveNumThreads);
 
       // Honor OMP_NUM_TEAMS environment variable for BigJumpLoop kernel type.
-      if (NumTeamsEnvVar > 0 && static_cast<uint32_t>(NumTeamsEnvVar) <=
-                                    GenericDevice.getBlockLimit())
+      if (NumTeamsEnvVar > 0 &&
+          static_cast<uint32_t>(NumTeamsEnvVar) <=
+              GenericDevice.getBlockLimit(EffectiveNumThreads))
         NumGroups = std::min(static_cast<uint64_t>(NumTeamsEnvVar), NumGroups);
       // Honor num_teams clause but lower it if tripcount dictates.
       else if (UserNumBlocks > 0 &&
-               UserNumBlocks <= GenericDevice.getBlockLimit()) {
+               UserNumBlocks <=
+                   GenericDevice.getBlockLimit(EffectiveNumThreads)) {
         NumGroups = std::min(static_cast<uint64_t>(UserNumBlocks), NumGroups);
       } else {
         // num_teams clause is not specified. Choose lower of tripcount-based
@@ -1079,7 +1081,8 @@ private:
                                        GenericDevice, EffectiveNumThreads));
       }
       return std::min(NumGroups,
-                      static_cast<uint64_t>(GenericDevice.getBlockLimit()));
+                      static_cast<uint64_t>(
+                          GenericDevice.getBlockLimit(EffectiveNumThreads)));
     }
 
     if (isXTeamReductionsMode()) {
@@ -1130,11 +1133,13 @@ private:
       // may fail to extract it, instead using the alternative computation of
       // the number of teams. But the runtime here will still see the value
       // of the clause, so we need to check against the upper limit.
-      if (UserNumBlocks > 0 && UserNumBlocks <= GenericDevice.getBlockLimit()) {
+      if (UserNumBlocks > 0 &&
+          UserNumBlocks <= GenericDevice.getBlockLimit(EffectiveNumThreads)) {
         NumGroups =
             std::min(static_cast<uint64_t>(UserNumBlocks), MaxNumGroups);
-      } else if (NumTeamsEnvVar > 0 && static_cast<uint32_t>(NumTeamsEnvVar) <=
-                                           GenericDevice.getBlockLimit()) {
+      } else if (NumTeamsEnvVar > 0 &&
+                 static_cast<uint32_t>(NumTeamsEnvVar) <=
+                     GenericDevice.getBlockLimit(EffectiveNumThreads)) {
         NumGroups =
             std::min(static_cast<uint64_t>(NumTeamsEnvVar), MaxNumGroups);
       } else {
@@ -1187,7 +1192,8 @@ private:
       // TODO: We need to honor any value and consequently allow more than the
       // block limit. For this we might need to start multiple kernels or let
       // the blocks start again until the requested number has been started.
-      return std::min(UserNumBlocks, GenericDevice.getBlockLimit());
+      return std::min(UserNumBlocks,
+                      GenericDevice.getBlockLimit(EffectiveNumThreads));
     }
 
     // If envar OMPX_SPMD_OCCUPANCY_BASED_OPT is set and no OMP_NUM_TEAMS is
@@ -1296,7 +1302,7 @@ private:
       }
     }
     return std::min(PreferredNumBlocks,
-                    (uint64_t)GenericDevice.getBlockLimit());
+                    (uint64_t)GenericDevice.getBlockLimit(EffectiveNumThreads));
   }
 
   /// Compute the occupancy with the constraint on the number of SGPRs
@@ -3847,6 +3853,18 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
 
   uint32_t getNumComputeUnits() const override { return NumComputeUnits; }
+
+  /// See GenericDeviceTy::getBlockLimit(uint32_t). The HSA launch configuration
+  /// is an int32_t grid representing blocks * threads. This means the block
+  /// limit depends on the user's requested thread count.
+  uint32_t getBlockLimit(uint32_t NumThreads) const override {
+    if (NumThreads == 0)
+      return GridValues.GV_Max_Teams;
+    uint64_t MaxGridItems =
+        uint64_t(GridValues.GV_Max_Teams) * getThreadLimit();
+    uint64_t MaxBlocks = MaxGridItems / NumThreads;
+    return std::min<uint64_t>(MaxBlocks, UINT32_MAX);
+  }
 
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }
