@@ -73,6 +73,7 @@ bool test_insert_node_type() {
 
   return true;
 }
+
 int main(int, char**) {
   assert(test_insert_node_type());
 

@@ -51,6 +51,7 @@ bool test() {
 
   return true;
 }
+
 int main(int, char**) {
   test();
 
