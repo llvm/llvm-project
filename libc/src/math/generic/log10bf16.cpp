@@ -10,6 +10,7 @@
 #include "src/__support/math/log10bf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 LLVM_LIBC_FUNCTION(bfloat16, log10bf16, (bfloat16 x)) {
   return math::log10bf16(x);
 }
