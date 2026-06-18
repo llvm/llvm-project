@@ -2383,7 +2383,7 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        const char *OutputDirPath) {
   return Device.RTL->initialize_record_replay(
       Device.DeviceID, MemorySize, VAddr, IsRecord,
-      /*IsNative=*/true, SaveOutput, EmitReport, /*ReportFile=*/"",
+      /*IsNative=*/true, SaveOutput, EmitReport, /*ReportFilename=*/"",
       OutputDirPath);
 }
 

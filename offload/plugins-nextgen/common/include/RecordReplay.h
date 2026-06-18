@@ -84,7 +84,7 @@ protected:
   bool EmitReport;
 
   /// The name of the file where to emit the record report.
-  std::string ReportFile;
+  std::string ReportFilename;
 
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
@@ -165,9 +165,9 @@ protected:
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, StringRef ReportFile, GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename, GenericDeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
-        ReportFile(ReportFile.str()), Device(Device) {
+        ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
       OutputDirectory = std::filesystem::current_path();
     else
@@ -264,10 +264,10 @@ private:
 /// The native kernel record replay support.
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
-                       bool SaveOutput, bool EmitReport, StringRef ReportFile,
+                       bool SaveOutput, bool EmitReport, StringRef ReportFilename,
                        GenericDeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
-                       ReportFile, Device) {}
+                       ReportFilename, Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,

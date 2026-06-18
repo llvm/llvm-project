@@ -91,12 +91,12 @@ Error RecordReplayTy::emitInstanceReport() {
   llvm::raw_ostream *OutStream = &llvm::outs();
   std::unique_ptr<llvm::raw_fd_ostream> FileOut;
 
-  if (!ReportFile.empty()) {
+  if (!ReportFilename.empty()) {
     // The report file is emitted in the output directory.
-    std::string ReportFilePath =
-        (std::filesystem::absolute(OutputDirectory) / ReportFile).string();
+    std::string ReportFilepath =
+        (std::filesystem::absolute(OutputDirectory) / ReportFilename).string();
     std::error_code EC;
-    FileOut = std::make_unique<llvm::raw_fd_ostream>(ReportFilePath, EC);
+    FileOut = std::make_unique<llvm::raw_fd_ostream>(ReportFilepath, EC);
     if (EC)
       return Plugin::error(ErrorCode::HOST_IO, "saving report file");
     OutStream = FileOut.get();
