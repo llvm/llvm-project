@@ -340,9 +340,10 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
       disable(Dep.Later);
 }
 
-static void setEnableIfMandatory(AArch64::ExtensionSet &Exts, AArch64::ExtensionInfo E) {
-    if (Exts.BaseArch->DefaultExts.test(E.ID))
-      Exts.Enabled.set(E.ID);
+static void setEnableIfMandatory(AArch64::ExtensionSet &Exts,
+                                 AArch64::ExtensionInfo E) {
+  if (Exts.BaseArch->DefaultExts.test(E.ID))
+    Exts.Enabled.set(E.ID);
 }
 
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
