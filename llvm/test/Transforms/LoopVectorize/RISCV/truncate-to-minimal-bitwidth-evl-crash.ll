@@ -49,25 +49,21 @@ exit:
 define void @truncate_i16_to_i8_cse(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @truncate_i16_to_i8_cse(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[COUNT_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[SRC]], align 2
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i16> poison, i16 [[TMP5]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT1]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[BROADCAST_SPLAT2]] to <2 x i8>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> [[TMP1]], <2 x ptr> align 1 splat (ptr null), <2 x i1> splat (i1 true))
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> [[TMP1]], <2 x ptr> align 1 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true))
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967296
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK-NEXT:    [[VAL_ZEXT:%.*]] = zext i16 [[TMP5]] to i64
+; CHECK-NEXT:    [[VAL_TRUNC_ZEXT:%.*]] = trunc i64 [[VAL_ZEXT]] to i8
+; CHECK-NEXT:    store i8 [[VAL_TRUNC_ZEXT]], ptr null, align 1
+; CHECK-NEXT:    [[VAL_TRUNC:%.*]] = trunc i16 [[TMP5]] to i8
+; CHECK-NEXT:    store i8 [[VAL_TRUNC]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[COUNT_NEXT]] = add i32 [[COUNT]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[COUNT_NEXT]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -96,5 +92,4 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ;.

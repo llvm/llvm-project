@@ -1913,11 +1913,28 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
-               VPWidenIntrinsicRecipe, VPWidenCastRecipe>(&R))
+               VPWidenIntrinsicRecipe, VPWidenStoreRecipe, VPWidenCastRecipe>(
+              &R))
         continue;
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
+
+      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R)) {
+        if (StoreR->isConsecutive() || StoreR->getMask() ||
+            any_of(StoreR->operands(),
+                   [](VPValue *Op) { return !vputils::isSingleScalar(Op); }))
+          continue;
+
+        auto *Clone = new VPReplicateRecipe(
+            &StoreR->getIngredient(),
+            {StoreR->getStoredValue(), StoreR->getAddr()},
+            true /*IsSingleScalar*/, nullptr /*Mask*/, {} /*Flags*/,
+            *StoreR /*Metadata*/, StoreR->getDebugLoc());
+        Clone->insertBefore(StoreR);
+        StoreR->eraseFromParent();
+        continue;
+      }
 
       auto *RepOrWidenR = cast<VPRecipeWithIRFlags>(&R);
       if (RepR && RepR->getOpcode() == Instruction::Store &&
