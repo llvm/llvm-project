@@ -961,7 +961,6 @@ define <4 x i8> @test_psll_bs_mask(<4 x i8> %a, i8 %shamt) {
 
 ; Test logical shift left(vector shamt)
 define <2 x i16> @test_psll_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
-;
 ; RV32-LABEL: test_psll_hs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 16
