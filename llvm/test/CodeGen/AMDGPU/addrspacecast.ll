@@ -1,5 +1,5 @@
-; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc -amdgpu-use-amdgpu-trackers=0 | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | llc -amdgpu-use-amdgpu-trackers=0 | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
 
 target triple = "amdgcn-amd-amdhsa"
 

@@ -2754,42 +2754,46 @@ define <32 x i8> @load_v32i8(ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: load_v32i8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    buffer_load_dwordx4 v[36:39], off, s[16:19], 0
-; SDAG-NEXT:    buffer_load_dwordx4 v[32:35], off, s[16:19], 0 offset:16
+; SDAG-NEXT:    buffer_load_dwordx4 v[0:3], off, s[16:19], 0
+; SDAG-NEXT:    buffer_load_dwordx4 v[16:19], off, s[16:19], 0 offset:16
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
-; SDAG-NEXT:    v_lshrrev_b64 v[3:4], 24, v[36:37]
-; SDAG-NEXT:    v_lshrrev_b64 v[11:12], 24, v[38:39]
+; SDAG-NEXT:    v_lshrrev_b64 v[33:34], 24, v[0:1]
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_lshrrev_b64 v[19:20], 24, v[32:33]
-; SDAG-NEXT:    v_lshrrev_b64 v[27:28], 24, v[34:35]
-; SDAG-NEXT:    v_lshrrev_b32_e32 v1, 8, v36
-; SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v36
-; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v37
-; SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v37
-; SDAG-NEXT:    v_lshrrev_b32_e32 v7, 24, v37
-; SDAG-NEXT:    v_lshrrev_b32_e32 v9, 8, v38
-; SDAG-NEXT:    v_lshrrev_b32_e32 v10, 16, v38
-; SDAG-NEXT:    v_lshrrev_b32_e32 v13, 8, v39
-; SDAG-NEXT:    v_lshrrev_b32_e32 v14, 16, v39
-; SDAG-NEXT:    v_lshrrev_b32_e32 v15, 24, v39
-; SDAG-NEXT:    v_lshrrev_b32_e32 v17, 8, v32
-; SDAG-NEXT:    v_lshrrev_b32_e32 v18, 16, v32
-; SDAG-NEXT:    v_lshrrev_b32_e32 v21, 8, v33
-; SDAG-NEXT:    v_lshrrev_b32_e32 v22, 16, v33
-; SDAG-NEXT:    v_lshrrev_b32_e32 v23, 24, v33
-; SDAG-NEXT:    v_lshrrev_b32_e32 v25, 8, v34
-; SDAG-NEXT:    v_lshrrev_b32_e32 v26, 16, v34
-; SDAG-NEXT:    v_lshrrev_b32_e32 v29, 8, v35
-; SDAG-NEXT:    v_lshrrev_b32_e32 v30, 16, v35
-; SDAG-NEXT:    v_lshrrev_b32_e32 v31, 24, v35
-; SDAG-NEXT:    v_mov_b32_e32 v0, v36
-; SDAG-NEXT:    v_mov_b32_e32 v4, v37
-; SDAG-NEXT:    v_mov_b32_e32 v8, v38
-; SDAG-NEXT:    v_mov_b32_e32 v12, v39
-; SDAG-NEXT:    v_mov_b32_e32 v16, v32
-; SDAG-NEXT:    v_mov_b32_e32 v20, v33
-; SDAG-NEXT:    v_mov_b32_e32 v24, v34
-; SDAG-NEXT:    v_mov_b32_e32 v28, v35
+; SDAG-NEXT:    v_lshrrev_b64 v[37:38], 24, v[16:17]
+; SDAG-NEXT:    v_lshrrev_b64 v[11:12], 24, v[2:3]
+; SDAG-NEXT:    v_lshrrev_b64 v[27:28], 24, v[18:19]
+; SDAG-NEXT:    v_lshrrev_b32_e32 v34, 8, v0
+; SDAG-NEXT:    v_lshrrev_b32_e32 v35, 16, v0
+; SDAG-NEXT:    v_lshrrev_b32_e32 v36, 8, v16
+; SDAG-NEXT:    v_lshrrev_b32_e32 v32, 16, v16
+; SDAG-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
+; SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
+; SDAG-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
+; SDAG-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
+; SDAG-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
+; SDAG-NEXT:    v_lshrrev_b32_e32 v13, 8, v3
+; SDAG-NEXT:    v_lshrrev_b32_e32 v14, 16, v3
+; SDAG-NEXT:    v_lshrrev_b32_e32 v15, 24, v3
+; SDAG-NEXT:    v_lshrrev_b32_e32 v21, 8, v17
+; SDAG-NEXT:    v_lshrrev_b32_e32 v22, 16, v17
+; SDAG-NEXT:    v_lshrrev_b32_e32 v23, 24, v17
+; SDAG-NEXT:    v_lshrrev_b32_e32 v25, 8, v18
+; SDAG-NEXT:    v_lshrrev_b32_e32 v26, 16, v18
+; SDAG-NEXT:    v_lshrrev_b32_e32 v29, 8, v19
+; SDAG-NEXT:    v_lshrrev_b32_e32 v30, 16, v19
+; SDAG-NEXT:    v_lshrrev_b32_e32 v31, 24, v19
+; SDAG-NEXT:    v_mov_b32_e32 v4, v1
+; SDAG-NEXT:    v_mov_b32_e32 v8, v2
+; SDAG-NEXT:    v_mov_b32_e32 v12, v3
+; SDAG-NEXT:    v_mov_b32_e32 v20, v17
+; SDAG-NEXT:    v_mov_b32_e32 v24, v18
+; SDAG-NEXT:    v_mov_b32_e32 v28, v19
+; SDAG-NEXT:    v_mov_b32_e32 v1, v34
+; SDAG-NEXT:    v_mov_b32_e32 v2, v35
+; SDAG-NEXT:    v_mov_b32_e32 v17, v36
+; SDAG-NEXT:    v_mov_b32_e32 v18, v32
+; SDAG-NEXT:    v_mov_b32_e32 v3, v33
+; SDAG-NEXT:    v_mov_b32_e32 v19, v37
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: load_v32i8:
@@ -2906,23 +2910,23 @@ define void @store_v32i8(<32 x i8> %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-LABEL: store_v32i8:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_load_ubyte v33, off, s[0:3], s32
 ; GISEL-NEXT:    v_mov_b32_e32 v31, 8
 ; GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v31, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GISEL-NEXT:    v_mov_b32_e32 v32, 0xff
 ; GISEL-NEXT:    v_and_or_b32 v0, v0, v32, v1
+; GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v2
+; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v3
+; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
+; GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v31, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v7
-; GISEL-NEXT:    buffer_load_ubyte v7, off, s[0:3], s32
+; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v6
+; GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v7
 ; GISEL-NEXT:    v_and_or_b32 v1, v4, v32, v1
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v2
-; GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v3
-; GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v6
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
-; GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GISEL-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
-; GISEL-NEXT:    v_or3_b32 v0, v0, v2, v3
-; GISEL-NEXT:    v_or3_b32 v1, v1, v4, v5
+; GISEL-NEXT:    v_or3_b32 v1, v1, v2, v3
 ; GISEL-NEXT:    v_lshlrev_b32_sdwa v2, v31, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v10
 ; GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v11
@@ -2943,28 +2947,28 @@ define void @store_v32i8(<32 x i8> %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    v_and_or_b32 v4, v16, v32, v4
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v6, 24, v6
-; GISEL-NEXT:    v_lshlrev_b32_sdwa v8, v31, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GISEL-NEXT:    v_or3_b32 v4, v4, v5, v6
-; GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v22
-; GISEL-NEXT:    v_and_b32_e32 v6, 0xff, v23
-; GISEL-NEXT:    v_and_or_b32 v8, v20, v32, v8
-; GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GISEL-NEXT:    v_lshlrev_b32_e32 v6, 24, v6
-; GISEL-NEXT:    v_or3_b32 v5, v8, v5, v6
-; GISEL-NEXT:    v_lshlrev_b32_sdwa v6, v31, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GISEL-NEXT:    v_and_b32_e32 v8, 0xff, v26
-; GISEL-NEXT:    v_and_b32_e32 v9, 0xff, v27
-; GISEL-NEXT:    v_and_or_b32 v6, v24, v32, v6
-; GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GISEL-NEXT:    v_lshlrev_b32_e32 v9, 24, v9
-; GISEL-NEXT:    v_or3_b32 v6, v6, v8, v9
-; GISEL-NEXT:    v_lshlrev_b32_sdwa v8, v31, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GISEL-NEXT:    v_and_b32_e32 v9, 0xff, v30
-; GISEL-NEXT:    v_and_or_b32 v8, v28, v32, v8
-; GISEL-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_lshlrev_b32_sdwa v5, v31, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GISEL-NEXT:    v_and_b32_e32 v6, 0xff, v22
+; GISEL-NEXT:    v_and_b32_e32 v7, 0xff, v23
+; GISEL-NEXT:    v_and_or_b32 v5, v20, v32, v5
+; GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v7, 24, v7
-; GISEL-NEXT:    v_or3_b32 v7, v8, v9, v7
+; GISEL-NEXT:    v_or3_b32 v5, v5, v6, v7
+; GISEL-NEXT:    v_lshlrev_b32_sdwa v6, v31, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GISEL-NEXT:    v_and_b32_e32 v7, 0xff, v26
+; GISEL-NEXT:    v_and_b32_e32 v8, 0xff, v27
+; GISEL-NEXT:    v_and_or_b32 v6, v24, v32, v6
+; GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; GISEL-NEXT:    v_lshlrev_b32_e32 v8, 24, v8
+; GISEL-NEXT:    v_or3_b32 v6, v6, v7, v8
+; GISEL-NEXT:    v_lshlrev_b32_sdwa v7, v31, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GISEL-NEXT:    v_and_b32_e32 v8, 0xff, v30
+; GISEL-NEXT:    v_and_or_b32 v7, v28, v32, v7
+; GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_lshlrev_b32_e32 v9, 24, v33
+; GISEL-NEXT:    v_or3_b32 v7, v7, v8, v9
 ; GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[16:19], 0
 ; GISEL-NEXT:    buffer_store_dwordx4 v[4:7], off, s[16:19], 0 offset:16
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)

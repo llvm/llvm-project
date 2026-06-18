@@ -341,15 +341,15 @@ define hidden void @blam() {
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, spam@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, spam@rel32@hi+12
+; GCN-NEXT:    s_mov_b32 s12, s65
+; GCN-NEXT:    s_mov_b32 s13, s64
+; GCN-NEXT:    v_mov_b32_e32 v31, v40
+; GCN-NEXT:    s_mov_b32 s14, s55
+; GCN-NEXT:    s_mov_b32 s15, s54
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; GCN-NEXT:    s_mov_b32 s12, s65
-; GCN-NEXT:    s_mov_b32 s13, s64
-; GCN-NEXT:    s_mov_b32 s14, s55
-; GCN-NEXT:    s_mov_b32 s15, s54
-; GCN-NEXT:    v_mov_b32_e32 v31, v40
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0

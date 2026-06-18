@@ -731,13 +731,13 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; HAWAII-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; HAWAII-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; HAWAII-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; HAWAII-NEXT:    s_mov_b32 s12, s53
 ; HAWAII-NEXT:    s_mov_b32 s13, s52
 ; HAWAII-NEXT:    s_mov_b32 s14, s51
 ; HAWAII-NEXT:    s_mov_b32 s15, s50
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, v2
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, v3
+; HAWAII-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; HAWAII-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; HAWAII-NEXT:    v_mov_b32_e32 v4, v0
 ; HAWAII-NEXT:    ; implicit-def: $vgpr0_vgpr1
