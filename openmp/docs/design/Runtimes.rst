@@ -1312,8 +1312,8 @@ LIBOMPTARGET_RECORD_REPORT
 This environment variable is used to instruct the runtime to emit a summary of
 the recorded kernel instances and their associated JSON files. When enabled, the
 report is emitted in the standard output. The environment variable
-:ref:`LIBOMPTARGET_RECORD_REPORT_FILE` can be used to indicate a file where to
-emit the report. By default, no report is emitted.
+:ref:`LIBOMPTARGET_RECORD_REPORT_FILE` can be used to indicate the file name of
+the file where to emit the report. By default, no report is emitted.
 
 .. _libomptarget_record_report_file:
 
@@ -1321,9 +1321,10 @@ LIBOMPTARGET_RECORD_REPORT_FILE
 """""""""""""""""""""""""""""""
 
 This environment variable is used to instruct the runtime to emit the recording
-report to a specific output file. The file will be created within the recording
-directory. Note that it is not needed to use :ref:`LIBOMPTARGET_RECORD_REPORT`
-when setting this enviornment variable.
+report to an output file with a specific file name. The file will be created
+within the recording directory (see :ref:`LIBOMPTARGET_RECORD_DIR`). Note that
+it is not needed to use :ref:`LIBOMPTARGET_RECORD_REPORT` when setting this
+environment variable.
 
 LIBOMPTARGET_RECORD_MEMSIZE
 """""""""""""""""""""""""""
