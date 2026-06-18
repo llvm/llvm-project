@@ -113,3 +113,41 @@ constexpr bool hex_case() {
   return ea == 0 && eb == 0 && a == 255 && b == 255;
 }
 static_assert(hex_case());
+
+// Independent-oracle anchors. The round-trip checks above pass even if a
+// symmetric bug hits both directions; these compare to_chars output and
+// from_chars values against fixed expected results, per base. INV-1 of the
+// review establishes the runtime engine matches the constexpr engine
+// byte-for-byte, so these constexpr anchors cover the runtime path too.
+constexpr bool to_eq(auto v, int base, const char *expect) {
+  char buf[300] = {};
+  char *e = __builtin_to_chars(buf, buf + sizeof(buf), v, base);
+  if (!e)
+    return false;
+  const char *p = buf;
+  for (; *expect; ++p, ++expect)
+    if (p == e || *p != *expect)
+      return false;
+  return p == e;
+}
+static_assert(to_eq(5u, 2, "101"));
+static_assert(to_eq(8u, 8, "10"));
+static_assert(to_eq(255u, 16, "ff"));
+static_assert(to_eq(35u, 36, "z"));
+static_assert(to_eq(1000000u, 10, "1000000"));
+static_assert(to_eq(-255, 16, "-ff"));
+static_assert(to_eq((s256)(((u256)1) << 200), 10,
+                    "16069380442589902755419620923411626025222029937827928353"
+                    "01376"));
+
+constexpr long long parse_val(const char *s, unsigned n, int base) {
+  long long out = -999;
+  int ec = 0;
+  __builtin_from_chars(s, s + n, &out, base, &ec);
+  return out;
+}
+static_assert(parse_val("101", 3, 2) == 5);
+static_assert(parse_val("777", 3, 8) == 511);
+static_assert(parse_val("7f", 2, 16) == 127);
+static_assert(parse_val("z", 1, 36) == 35);
+static_assert(parse_val("-123", 4, 10) == -123);
