@@ -92,7 +92,7 @@ struct AMDGPUUseNativeCallsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class SILowerI1CopiesPass : public OptionalPassInfoMixin<SILowerI1CopiesPass> {
+class SILowerI1CopiesPass : public RequiredPassInfoMixin<SILowerI1CopiesPass> {
 public:
   SILowerI1CopiesPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
@@ -356,7 +356,7 @@ public:
 };
 
 class AMDGPULowerKernelArgumentsPass
-    : public OptionalPassInfoMixin<AMDGPULowerKernelArgumentsPass> {
+    : public RequiredPassInfoMixin<AMDGPULowerKernelArgumentsPass> {
 private:
   TargetMachine &TM;
 
@@ -413,7 +413,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class SIModeRegisterPass : public OptionalPassInfoMixin<SIModeRegisterPass> {
+class SIModeRegisterPass : public RequiredPassInfoMixin<SIModeRegisterPass> {
 public:
   SIModeRegisterPass() = default;
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
@@ -518,7 +518,7 @@ public:
 };
 
 class SIAnnotateControlFlowPass
-    : public OptionalPassInfoMixin<SIAnnotateControlFlowPass> {
+    : public RequiredPassInfoMixin<SIAnnotateControlFlowPass> {
 private:
   const AMDGPUTargetMachine &TM;
 

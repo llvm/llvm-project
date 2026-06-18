@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class UnifyLoopExitsPass : public OptionalPassInfoMixin<UnifyLoopExitsPass> {
+class UnifyLoopExitsPass : public RequiredPassInfoMixin<UnifyLoopExitsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
