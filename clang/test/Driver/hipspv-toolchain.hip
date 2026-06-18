@@ -38,7 +38,7 @@
 // NEW-SAME: "--image=file=[[OBJ_DEV]],triple=[[TRIPLE]],arch=generic,kind=hip"
 
 // NEW: {{".*clang-linker-wrapper"}} "--device-compiler=[[TRIPLE]]=--hip-path=[[HIP_PATH]]"
-// NEW-SAME: "--device-compiler=[[TRIPLE]]=-flto=full"
+// NEW-SAME: "--no-lto"
 // NEW-SAME: "--emit-fatbin-only" "-o" "[[BUNDLE:.*hipfb]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" {{".*"}} "-aux-triple" "[[TRIPLE]]"

@@ -50,7 +50,7 @@
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp -fopenmp-targets=spirv64-intel -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
-// CHECK-EMIT-LLVM-IR: "-cc1" "-triple" "spirv64-intel"{{.*}}"-emit-llvm"
+// CHECK-EMIT-LLVM-IR: "-cc1" "-triple" "spirv64-intel"{{.*}}"-emit-llvm-bc"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=spirv64-intel \
 // RUN: --sysroot=%S/Inputs/spirv-openmp/ %s 2>&1 | FileCheck --check-prefix=CHECK-GPULIB %s

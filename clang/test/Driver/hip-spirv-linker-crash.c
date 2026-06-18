@@ -12,4 +12,4 @@
 // CHECK: "{{.*}}llvm-link"
 // CHECK-NOT: opt-bisect-limit
 // CHECK-NOT: -mllvm
-// CHECK-SAME: "-o" "{{.*}}.bc" "{{.*}}.o"{{$}}
+// CHECK-SAME: "-o" "{{.*}}.bc" "{{.*}}.bc"{{$}}
