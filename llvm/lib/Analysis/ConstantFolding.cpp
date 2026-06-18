@@ -1105,9 +1105,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // Try to infer inbounds for GEPs of globals.
   if (!NW.isInBounds() && Offset.isNonNegative()) {
-    bool CanBeNull, CanBeFreed;
-    uint64_t DerefBytes =
-        Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+    bool CanBeNull;
+    uint64_t DerefBytes = Ptr->getPointerDereferenceableBytes(
+        DL, CanBeNull, /*CanBeFreed=*/nullptr);
     if (DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes))
       NW |= GEPNoWrapFlags::inBounds();
   }

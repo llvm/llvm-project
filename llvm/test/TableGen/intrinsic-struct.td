@@ -1,9 +1,8 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-ENUM
-// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-IMPL
-// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-ENUM
+// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s  | FileCheck %s --check-prefix=CHECK-IMPL
+// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-// XFAIL: vg_leak
-
+#define TEST_INTRINSICS_SUPPRESS_DEFS
 include "llvm/IR/Intrinsics.td"
 
 // Make sure we can return up to 257 values. Intrinsics are in alphabetical order.
@@ -16,17 +15,21 @@ include "llvm/IR/Intrinsics.td"
 
 // Make sure the encoding table is correctly generated.
 // CHECK-IMPL: IIT_LongEncodingTable
+// CHECK-IMPL-NEXT: 21, 0
+// CHECK-IMPL-SAME: 15, 0, 1, 15, 1, 1, 0
+
+// CHECK-IMPL-NEXT: 21, 7
+// CHECK-IMPL-SAME: 15, 0, 1, 15, 1, 1, 15, 2, 1, 15, 3, 1, 15, 4, 1, 15, 5, 1
+// CHECK-IMPL-SAME: 15, 6, 1, 15, 7, 1, 15, 8, 1, 0
+
+// CHECK-IMPL-NEXT: 21, 8
+// CHECK-IMPL-SAME: 15, 0, 1, 15, 1, 1, 15, 2, 1, 15, 3, 1, 15, 4, 1, 15, 5, 1
+// CHECK-IMPL-SAME: 15, 6, 1, 15, 7, 1, 15, 8, 1, 15, 9, 1, 0
+
 // CHECK-IMPL-NEXT: 21, 255
 // There should be list of 257 '4's (IIT code for i32) followed by 0. We just
 // match the suffix that ends with 0 (IIT_Done).
 // CHECK-IMPL-SAME: 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0
-// CHECK-IMPL-NEXT: 15, 32, 0
-// CHECK-IMPL-NEXT: 21, 0
-// CHECK-IMPL-SAME: 15, 32, 15, 33, 0
-// CHECK-IMPL-NEXT: 21, 7
-// CHECK-IMPL-SAME: 15, 32, 15, 33, 15, 34, 15, 35, 15, 36, 15, 37, 15, 38, 15, 39, 15, 40, 0,
-// CHECK-IMPL-NEXT: 21, 8
-// CHECK-IMPL-SAME: 15, 32, 15, 33, 15, 34, 15, 35, 15, 36, 15, 37, 15, 38, 15, 39, 15, 40, 15, 41, 0,
 def int_returns_a0_results : Intrinsic<
                              [],
                              [], []>;

@@ -701,6 +701,10 @@ defm PackedFP64Ops : AMDGPUSubtargetFeature<"packed-fp64-ops",
   "Support packed fp64 instructions"
 >;
 
+defm PackedU64Ops : AMDGPUSubtargetFeature<"packed-u64-ops",
+  "Support packed uint64 instructions"
+>;
+
 defm R128A16 : AMDGPUSubtargetFeature<"r128-a16",
   "Support gfx9-style A16 for 16-bit coordinates/gradients/lod/clamp/mip image "
   "operands, where a16 is aliased with r128"
@@ -1101,6 +1105,11 @@ defm VOPDInsts : AMDGPUSubtargetFeature<"vopd",
 
 defm VALUTransUseHazard : AMDGPUSubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result",
+  /*GenPredicate=*/0
+>;
+
+defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
+  "Hazard when TRANS co-executes with other VALU instruction",
   /*GenPredicate=*/0
 >;
 
@@ -2219,7 +2228,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
-   FeatureSWMMACGfx1250Insts])>;
+   FeatureSWMMACGfx1250Insts,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2228,6 +2238,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
    FeaturePackedFP64Ops,
+   FeaturePackedU64Ops,
    FeatureGFX1251GEMMInsts,
    FeatureGFX125xLowestRateWMMA,
    FeatureCubeInsts,
@@ -2241,7 +2252,9 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
-   FeatureSWMMACGfx1250Insts])>;
+   FeatureSWMMACGfx1250Insts,
+   FeatureUseAddPC64Inst,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2253,7 +2266,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
    FeatureXNACKAnyOnly,
-   FeatureGFX125xLowestRateWMMA])>;
+   FeatureGFX125xLowestRateWMMA,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2318,6 +2332,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
+   FeatureTransCoexecutionHazard
 ]>;
 
 //===----------------------------------------------------------------------===//
