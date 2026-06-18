@@ -71,13 +71,12 @@ struct Float128 {
   // Integer conversion (Incomplete + not verified with tests)
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   LIBC_INLINE constexpr explicit operator T() const {
-    fputil::FPBits<Float128> x_bits(*this);
-    if (x_bits.is_zero())
-      return static_cast<T>(0);
-
-    fputil::DyadicFloat<fputil::FPBits<Float128>::STORAGE_LEN> xd(
+    FPBits<Float128> x_bits(*this);
+    int  x_bits_exp = x_bits.get_explicit_exponent() - FPBits<Float128>::FRACTION_LEN;
+    // sign * mantissa * 2(exp-bias)
+    DyadicFloat<FPBits<Float128>::STORAGE_LEN> xd(
         x_bits.sign(),
-        x_bits.get_explicit_exponent() - fputil::FPBits<Float128>::FRACTION_LEN,
+       x_bits_exp,
         x_bits.get_explicit_mantissa());
     return static_cast<T>(xd.as_mantissa_type_rounded());
   }
