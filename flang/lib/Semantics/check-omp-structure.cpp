@@ -5154,6 +5154,19 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
     using LastprivateModifier = parser::OmpLastprivateModifier;
     if (auto *modifier{OmpGetUniqueModifier<LastprivateModifier>(modifiers)}) {
       CheckLastprivateModifier(*modifier);
+      // A list item that appears in a lastprivate clause with a conditional
+      // modifier must be a scalar variable.
+      if (modifier->v == LastprivateModifier::Value::Conditional) {
+        for (auto &[symbol, source] : currSymbols) {
+          if (symbol->Rank() != 0) {
+            context_.Say(source,
+                "A list item that appears in a LASTPRIVATE clause with the "
+                "CONDITIONAL modifier must be a scalar variable, '%s' is "
+                "not scalar"_err_en_US,
+                symbol->name());
+          }
+        }
+      }
     }
   }
 }

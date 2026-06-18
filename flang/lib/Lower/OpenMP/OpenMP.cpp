@@ -97,6 +97,10 @@ static mlir::Value
 getOrCreateConditionalLpGlobal(Fortran::lower::AbstractConverter &converter,
                                mlir::Location loc, fir::RecordType lpType);
 
+static void
+emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
+                                 mlir::Location loc);
+
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
 //===----------------------------------------------------------------------===//
@@ -3032,11 +3036,6 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                    converter.getCurrentLocation(), clauseOps);
 }
 
-// Forward declaration.
-static void
-emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
-                                 mlir::Location loc);
-
 /// Walk up the parent-op chain from the current insertion point and return
 /// the nearest enclosing \c omp::ParallelOp, or \c nullptr if none exists
 /// (i.e. the construct is orphaned).  The walk handles intervening ops such
@@ -3098,7 +3097,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (isOrphaned)
       emitNestedParallelGuardForCondLp(converter, loc);
 
-    if (!isOrphaned) {
+    if (enclosingParallel) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPoint(enclosingParallel);
       lpAlloca = builder.createTemporary(loc, lpType);
@@ -4142,7 +4141,7 @@ static mlir::omp::WsloopOp genStandaloneDo(
     if (isOrphaned)
       emitNestedParallelGuardForCondLp(converter, loc);
 
-    if (!isOrphaned) {
+    if (enclosingParallel) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPoint(enclosingParallel);
       lpAlloca = builder.createTemporary(loc, lpType);
@@ -4331,6 +4330,8 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            enableDelayedPrivatization, symTable);
   dsp.processStep1(&simdClauseOps);
 
+  if (!dsp.getConditionalLastprivateSymbols().empty())
+    TODO(loc, "lastprivate(conditional:) on simd construct");
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
@@ -4691,6 +4692,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
       /*shouldCollectPreDeterminedSymbols=*/false,
       /*useDelayedPrivatization=*/true, symTable);
   wsloopItemDSP.processStep1(&wsloopClauseOps);
+  if (!wsloopItemDSP.getConditionalLastprivateSymbols().empty())
+    TODO(loc, "lastprivate(conditional:) on do simd composite construct");
 
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
@@ -5520,6 +5523,8 @@ static fir::RecordType buildConditionalLpType(
 
   // Value fields first.
   for (const auto *sym : condLpSyms) {
+    assert(sym->Rank() == 0 &&
+           "lastprivate(conditional:) requires scalar variables");
     std::string symName = sym->name().ToString();
     mlir::Type symType = converter.genType(*sym);
     fields.push_back({symName, symType});
