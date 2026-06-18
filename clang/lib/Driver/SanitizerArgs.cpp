@@ -435,9 +435,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask InvalidTrappingKinds = TrappingKinds & NotAllowedWithTrap;
   const llvm::Triple &Triple = TC.getTriple();
 
-  MinimalRuntime =
+  const bool ExplicitMinimalRuntime =
       Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
-                   options::OPT_fno_sanitize_minimal_runtime, MinimalRuntime);
+                   options::OPT_fno_sanitize_minimal_runtime, false);
+  MinimalRuntime = Args.hasFlag(options::OPT_fsanitize_minimal_runtime,
+                                options::OPT_fno_sanitize_minimal_runtime,
+                                Triple.isGPU());
   HandlerPreserveAllRegs =
       Args.hasFlag(options::OPT_fsanitize_handler_preserve_all_regs,
                    options::OPT_fno_sanitize_handler_preserve_all_regs,
@@ -484,7 +487,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       }
       Add &= ~InvalidTrappingKinds;
 
-      if (MinimalRuntime) {
+      if (ExplicitMinimalRuntime) {
         if (SanitizerMask KindsToDiagnose =
                 Add & NotAllowedWithMinimalRuntime & ~DiagnosedKinds) {
           if (DiagnoseErrors) {
@@ -653,7 +656,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       // Silently discard any unsupported sanitizers implicitly enabled through
       // group expansion.
       Add &= ~InvalidTrappingKinds;
-      if (MinimalRuntime) {
+      if (ExplicitMinimalRuntime) {
         Add &= ~NotAllowedWithMinimalRuntime;
       }
       // NotAllowedWithExecuteOnly is silently discarded on an execute-only
@@ -966,7 +969,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   Stats = Args.hasFlag(options::OPT_fsanitize_stats,
                        options::OPT_fno_sanitize_stats, false);
 
-  if (MinimalRuntime) {
+  if (ExplicitMinimalRuntime) {
     SanitizerMask IncompatibleMask =
         Kinds & ~setGroupBits(CompatibleWithMinimalRuntime);
     if (IncompatibleMask && DiagnoseErrors)

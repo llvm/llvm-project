@@ -91,3 +91,17 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=safe-stack -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SAFESTACK-MINIMAL
 // CHECK-SAFESTACK-MINIMAL: "-fsanitize=safe-stack"
 // CHECK-SAFESTACK-MINIMAL: "-fsanitize-minimal-runtime"
+
+// Check that AMDGPU defaults to the minimal runtime.
+// RUN: %clang --target=amdgcn-amd-amdhsa -fsanitize=undefined -nogpulib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-AMDGPU-MINIMAL
+// CHECK-AMDGPU-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=amdgcn-amd-amdhsa -fsanitize=undefined -fno-sanitize-minimal-runtime -nogpulib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-AMDGPU-NO-MINIMAL
+// CHECK-AMDGPU-NO-MINIMAL-NOT: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=amdgcn-amd-amdhsa -mcpu=gfx900:xnack+ -fsanitize=address -nogpulib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-AMDGPU-ASAN --implicit-check-not=error:
+// CHECK-AMDGPU-ASAN: "-fsanitize=address"
+// CHECK-AMDGPU-ASAN: "-fsanitize-minimal-runtime"
+
+// RUN: not %clang --target=amdgcn-amd-amdhsa -fsanitize=undefined -fsanitize=vptr -fsanitize-minimal-runtime -nogpulib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-AMDGPU-EXPLICIT-VPTR
+// CHECK-AMDGPU-EXPLICIT-VPTR: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-minimal-runtime'
