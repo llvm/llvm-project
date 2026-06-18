@@ -6,9 +6,9 @@
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
-declare !type !0 void @direct_foo()
-declare !type !1 i32 @direct_bar(i8)
-declare !type !2 ptr @direct_baz(ptr)
+declare !callgraph !0 void @direct_foo()
+declare !callgraph !1 i32 @direct_bar(i8)
+declare !callgraph !2 ptr @direct_baz(ptr)
 
 ; CHECK: ball:
 define ptr @ball() {

@@ -8,7 +8,7 @@
 ; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
 ; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
 ; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
-define i32 @foo(i32 %x, i32 %y) !type !0 {
+define i32 @foo(i32 %x, i32 %y) !callgraph !0 {
 entry:
   ;; Call instruction with accurate callee_type.
   ;; callee_type should be dropped seemlessly.
@@ -24,7 +24,7 @@ entry:
   ret i32 %sub
 }
 
-declare !type !2 i32 @fizz(i32, i32)
+declare !callgraph !2 i32 @fizz(i32, i32)
 
 !0 = !{!"_ZTSFiiiiE.generalized"}
 !1 = !{!2}

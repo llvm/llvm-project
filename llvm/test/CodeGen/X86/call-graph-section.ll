@@ -6,11 +6,11 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .llvm.callgraph - | FileCheck %s
 
-declare !type !0 void @foo()
+declare !callgraph !0 void @foo()
 
-declare !type !1 i32 @bar(i8)
+declare !callgraph !1 i32 @bar(i8)
 
-declare !type !2 ptr @baz(ptr)
+declare !callgraph !2 ptr @baz(ptr)
 
 define void @main() {
 entry:
