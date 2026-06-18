@@ -157,10 +157,6 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
 /// Given a map of deinterleaves to zext or uitofp casts, remove the operations
 /// and replace them with tbl shuffles.
 static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
-  // TODO: Cache tbl patterns and reuse, and abandon transforms for a particular
-  //       deinterleave if it would introduce too many. We probably want a
-  //       hardcoded number of tbls to start with, but if we can estimate
-  //       register pressure then we could make better decisions.
   for (auto &[Deinterleave, Extends] : Deinterleaves) {
     VectorType *DestTy = cast<VectorType>(Extends[0]->getDestTy());
     VectorType *SrcTy = cast<VectorType>(Extends[0]->getSrcTy());
