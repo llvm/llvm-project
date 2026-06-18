@@ -194,14 +194,14 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot3;
-; PTX-NEXT:    ld.param.b32 %rd1, [escape_ptr_gep_param_1+4];
-; PTX-NEXT:    shl.b64 %rd2, %rd1, 32;
-; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_gep_param_1];
-; PTX-NEXT:    or.b64 %rd4, %rd2, %rd3;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd4;
-; PTX-NEXT:    add.u64 %rd5, %SPL, 0;
-; PTX-NEXT:    or.b64 %rd6, %rd5, 4;
-; PTX-NEXT:    cvta.local.u64 %rd7, %rd6;
+; PTX-NEXT:    add.u64 %rd1, %SPL, 0;
+; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
+; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_gep_param_1+4];
+; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_param_1];
+; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd6;
+; PTX-NEXT:    add.s64 %rd7, %rd2, 4;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd7;
@@ -288,14 +288,14 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot5;
 ; PTX-NEXT:    ld.param.b64 %rd1, [escape_ptr_gep_store_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    ld.param.b32 %rd3, [escape_ptr_gep_store_param_1+4];
-; PTX-NEXT:    shl.b64 %rd4, %rd3, 32;
-; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_store_param_1];
-; PTX-NEXT:    or.b64 %rd6, %rd4, %rd5;
-; PTX-NEXT:    st.local.b64 [%SPL], %rd6;
-; PTX-NEXT:    add.u64 %rd7, %SPL, 0;
-; PTX-NEXT:    or.b64 %rd8, %rd7, 4;
-; PTX-NEXT:    cvta.local.u64 %rd9, %rd8;
+; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
+; PTX-NEXT:    cvta.local.u64 %rd4, %rd3;
+; PTX-NEXT:    ld.param.b32 %rd5, [escape_ptr_gep_store_param_1+4];
+; PTX-NEXT:    shl.b64 %rd6, %rd5, 32;
+; PTX-NEXT:    ld.param.b32 %rd7, [escape_ptr_gep_store_param_1];
+; PTX-NEXT:    or.b64 %rd8, %rd6, %rd7;
+; PTX-NEXT:    st.local.b64 [%SPL], %rd8;
+; PTX-NEXT:    add.s64 %rd9, %rd4, 4;
 ; PTX-NEXT:    st.global.b64 [%rd2], %rd9;
 ; PTX-NEXT:    ret;
 entry:
