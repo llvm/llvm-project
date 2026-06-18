@@ -1,4 +1,7 @@
-// RUN: mlir-opt -memref-to-emitc -split-input-file %s | FileCheck %s
+// Note that we use `-convert-to-emitc` instead of `-convert-memref-to-emitc`
+// to include the custom type converter registration for the test dialect.
+
+// RUN: mlir-opt -convert-to-emitc -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: emitc.func @alloc_with_custom_element_type()
 func.func @alloc_with_custom_element_type() {
