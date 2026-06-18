@@ -11,15 +11,13 @@ canonicalize_cmake_boolean(COMGR_SPIRV_TRANSLATOR_AVAILABLE)
 
 configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
 
-if (NOT DEFINED LLVM_LIT_PATH)
-  find_program(LLVM_LIT_PATH
-    NAMES llvm-lit llvm-lit.py llvm-lit.cmd
-    PATHS "${LLVM_TOOLS_BINARY_DIR}/../../bin" "${LLVM_TOOLS_BINARY_DIR}"
-    NO_DEFAULT_PATH
-  )
-  if (NOT LLVM_LIT_PATH)
-    set(LLVM_LIT_PATH "${LLVM_TOOLS_BINARY_DIR}/llvm-lit")
-  endif()
+find_program(LLVM_LIT_PATH
+  NAMES llvm-lit llvm-lit.py llvm-lit.cmd
+  PATHS "${LLVM_TOOLS_BINARY_DIR}/../../bin" "${LLVM_TOOLS_BINARY_DIR}"
+  NO_DEFAULT_PATH
+)
+if (NOT LLVM_LIT_PATH)
+  set(LLVM_LIT_PATH "${LLVM_TOOLS_BINARY_DIR}/llvm-lit")
 endif()
 message("-- LLVM_LIT_PATH: ${LLVM_LIT_PATH}")
 
