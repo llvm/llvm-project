@@ -27,9 +27,9 @@ define void @test(ptr %p) {
 ; VEC-LABEL: define void @test(
 ; VEC-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VEC-NEXT:  entry:
-; VEC-NEXT:    [[P1:%.*]] = ptrtoint ptr [[P]] to i64
+; VEC-NEXT:    [[P1:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; VEC-NEXT:    [[TMP0:%.*]] = add i64 [[P1]], 16
-; VEC-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
+; VEC-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoaddr (ptr @h to i64), i64 1))
 ; VEC-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX2]], -9
 ; VEC-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[P1]]
 ; VEC-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
@@ -38,7 +38,7 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; VEC:       vector.scevcheck:
 ; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[P1]], 16
-; VEC-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
+; VEC-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 add (i64 ptrtoaddr (ptr @h to i64), i64 1))
 ; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[UMAX]], -9
 ; VEC-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[P1]]
 ; VEC-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3

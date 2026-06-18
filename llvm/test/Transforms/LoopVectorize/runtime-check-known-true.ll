@@ -5,7 +5,7 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-LABEL: define void @test_runtime_check_known_false_after_construction(
 ; CHECK-SAME: ptr [[START_1:%.*]], ptr [[START_2:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[GEP_START_2:%.*]] = getelementptr i8, ptr [[START_2]], i64 8
 ; CHECK-NEXT:    [[START_1_INT:%.*]] = ptrtoint ptr [[START_1]] to i64
 ; CHECK-NEXT:    [[START_2_INT:%.*]] = ptrtoint ptr [[GEP_START_2]] to i64

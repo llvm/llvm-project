@@ -138,8 +138,8 @@ define i64 @interleave_group_load_pointer_type(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i64 @interleave_group_load_pointer_type(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 24
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1

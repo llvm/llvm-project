@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 define i64 @blam(ptr %start, ptr %end, ptr %ptr.2) {
 ; CHECK-LABEL: @blam(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
 ; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], [[LOOP_1_HEADER]] ], [ [[START1]], [[ENTRY:%.*]] ]

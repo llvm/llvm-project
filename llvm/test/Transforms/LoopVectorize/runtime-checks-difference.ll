@@ -515,12 +515,7 @@ define void @diff_check_via_i32_ptrarith(ptr %origin, ptr %dst, ptr %base, i32 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[RHS]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[D]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[LHS]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[BASE1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[BASE1]], [[IDX_EXT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[LHS]], [[TMP12]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], 4
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
@@ -577,13 +572,13 @@ define void @phi_of_ptrtoint_diff_check(ptr %base, ptr %end, i64 %n, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[END_INT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[DST_INT]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], [[DST_INT]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[N]], [[DST_PTR1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[DST_INT]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], [[DST_INT]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 4
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;
 entry:

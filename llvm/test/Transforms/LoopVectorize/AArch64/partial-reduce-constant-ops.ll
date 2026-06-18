@@ -7,8 +7,8 @@ define i32 @red_zext_mul_by_63(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_zext_mul_by_63(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
@@ -73,8 +73,8 @@ define i32 @red_zext_mul_by_255(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_zext_mul_by_255(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
@@ -139,8 +139,8 @@ define i32 @red_zext_mul_by_256(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_zext_mul_by_256(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
@@ -205,8 +205,8 @@ define i32 @red_sext_mul_by_63(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_sext_mul_by_63(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
@@ -273,8 +273,8 @@ define i32 @red_sext_mul_by_128(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_sext_mul_by_128(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
@@ -340,8 +340,8 @@ define i32 @red_sext_mul_by_255(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_sext_mul_by_255(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
@@ -406,8 +406,8 @@ define i32 @red_sext_mul_by_256(ptr %start, ptr %end) {
 ; CHECK-LABEL: define i32 @red_sext_mul_by_256(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
