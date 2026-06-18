@@ -233,8 +233,7 @@ define <64 x i8> @test_affine_affine_xor_no_fold_512_different_inputs(<64 x i8> 
 define <64 x i8> @test_source_xor_fold_splat2(<64 x i8> %src) nounwind {
 ; CHECK-LABEL: test_source_xor_fold_splat2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
-; CHECK-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; CHECK-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; CHECK-NEXT:    retq
   %xor = xor <64 x i8> %src, splat(i8 255)
   %bit2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %xor, <64 x i8> splat(i8 2), i8 128)
@@ -244,8 +243,7 @@ define <64 x i8> @test_source_xor_fold_splat2(<64 x i8> %src) nounwind {
 define <64 x i8> @test_source_xor_fold_bitrev(<64 x i8> %src) nounwind {
 ; CHECK-LABEL: test_source_xor_fold_bitrev:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; CHECK-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; CHECK-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; CHECK-NEXT:    retq
   %xor = xor <64 x i8> %src, splat(i8 15)
   %rev = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %xor, <64 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 15)
@@ -255,8 +253,7 @@ define <64 x i8> @test_source_xor_fold_bitrev(<64 x i8> %src) nounwind {
 define <64 x i8> @test_source_xor_fold_rotl2(<64 x i8> %src) nounwind {
 ; CHECK-LABEL: test_source_xor_fold_rotl2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; CHECK-NEXT:    vgf2p8affineqb $2, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
+; CHECK-NEXT:    vgf2p8affineqb $5, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
 ; CHECK-NEXT:    retq
   %xor = xor <64 x i8> %src, splat(i8 193)
   %rotl2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %xor, <64 x i8> <i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64>, i8 2)
@@ -266,8 +263,7 @@ define <64 x i8> @test_source_xor_fold_rotl2(<64 x i8> %src) nounwind {
 define <64 x i8> @test_source_xor_fold_cumulative_parity(<64 x i8> %src) nounwind {
 ; CHECK-LABEL: test_source_xor_fold_cumulative_parity:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; CHECK-NEXT:    vgf2p8affineqb $158, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
 ; CHECK-NEXT:    retq
   %xor = xor <64 x i8> %src, splat(i8 162)
   %parity = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %xor, <64 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
@@ -278,9 +274,10 @@ define <64 x i8> @test_source_xor_fold_cumulative_parity(<64 x i8> %src) nounwin
 define <64 x i8> @test_source_xor_fold_multiuse(<64 x i8> %src, ptr %sink) nounwind {
 ; CHECK-LABEL: test_source_xor_fold_multiuse:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdi)
-; CHECK-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %xor = xor <64 x i8> %src, splat(i8 255)
   store <64 x i8> %xor, ptr %sink

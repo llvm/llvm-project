@@ -448,15 +448,12 @@ define <32 x i8> @test_affine_affine_same_matrix_fold_256(<32 x i8> %src1, <32 x
 define <16 x i8> @test_source_xor_fold_splat2(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_source_xor_fold_splat2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_source_xor_fold_splat2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
-; AVX512-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX512-NEXT:    retq
   %xor = xor <16 x i8> %src, splat(i8 255)
   %bit2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> splat(i8 2), i8 128)
@@ -466,14 +463,12 @@ define <16 x i8> @test_source_xor_fold_splat2(<16 x i8> %src) nounwind {
 define <16 x i8> @test_source_xor_fold_bitrev(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_source_xor_fold_bitrev:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_source_xor_fold_bitrev:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; AVX512-NEXT:    retq
   %xor = xor <16 x i8> %src, splat(i8 15)
   %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 15)
@@ -483,14 +478,12 @@ define <16 x i8> @test_source_xor_fold_bitrev(<16 x i8> %src) nounwind {
 define <16 x i8> @test_source_xor_fold_rotl2(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_source_xor_fold_rotl2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vgf2p8affineqb $2, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
+; AVX-NEXT:    vgf2p8affineqb $5, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_source_xor_fold_rotl2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vgf2p8affineqb $2, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
+; AVX512-NEXT:    vgf2p8affineqb $5, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
 ; AVX512-NEXT:    retq
   %xor = xor <16 x i8> %src, splat(i8 193)
   %rotl2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64>, i8 2)
@@ -500,14 +493,12 @@ define <16 x i8> @test_source_xor_fold_rotl2(<16 x i8> %src) nounwind {
 define <16 x i8> @test_source_xor_fold_cumulative_parity(<16 x i8> %src) nounwind {
 ; AVX-LABEL: test_source_xor_fold_cumulative_parity:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; AVX-NEXT:    vgf2p8affineqb $158, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_source_xor_fold_cumulative_parity:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; AVX512-NEXT:    vgf2p8affineqb $158, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
 ; AVX512-NEXT:    retq
   %xor = xor <16 x i8> %src, splat(i8 162)
   %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
@@ -519,16 +510,17 @@ define <16 x i8> @test_source_xor_fold_multiuse(<16 x i8> %src, ptr %sink) nounw
 ; AVX-LABEL: test_source_xor_fold_multiuse:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_source_xor_fold_multiuse:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm1 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX512-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %xor = xor <16 x i8> %src, splat(i8 255)
   store <16 x i8> %xor, ptr %sink
