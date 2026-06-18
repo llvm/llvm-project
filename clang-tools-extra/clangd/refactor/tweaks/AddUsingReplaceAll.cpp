@@ -16,8 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -32,14 +30,13 @@
 
 namespace clang {
 namespace clangd {
-namespace {
 
-/// Tweak for removing full namespace qualifier under cursor on DeclRefExpr and
-/// types and adding "using" statement instead. This tweak replaces all
-/// occurrences of the qualified symbol in the file, not just the one under the
-/// cursor, but it also requires more preparation and is more expensive to
-/// compute, so it is hidden behind a separate action from AddUsing, which only
-/// removes the qualifier under the cursor.
+/// Tweak for removing the full namespace qualifier under the cursor on
+/// DeclRefExpr and types and adding "using" statement instead. This tweak
+/// replaces all occurrences of the qualified symbol in the file, not just the
+/// one under the cursor, but it also requires more preparation and is more
+/// expensive to compute, so it is hidden behind a separate action from
+/// AddUsing, which only removes the qualifier under the cursor.
 class AddUsingReplaceAll : public Tweak {
 public:
   const char *id() const override;
@@ -62,9 +59,9 @@ private:
 REGISTER_TWEAK(AddUsingReplaceAll)
 
 std::string AddUsingReplaceAll::title() const {
-  return std::string(llvm::formatv(
-      "Add using-declaration for {0} and replace qualified references",
-      SpelledName));
+  return std::string(llvm::formatv("Add using-declaration for {0} and replace "
+                                   "all qualified references in this file",
+                                   SpelledName));
 }
 
 /// Collects all UsingDecls visible at the selection by walking the enclosing
@@ -72,9 +69,9 @@ std::string AddUsingReplaceAll::title() const {
 /// AST traversal and only visits O(depth * declarations-per-scope) nodes.
 ///
 /// A using-declaration declared in a scope S is visible at SelectionCtx iff
-/// S is an ancestor of SelectionCtx, i.e. exactly the contexts we walk when
+/// S is an ancestor of SelectionCtx, i.e., exactly the contexts we walk when
 /// ascending via getLexicalParent().
-std::vector<const UsingDecl *>
+static std::vector<const UsingDecl *>
 collectEnclosingUsings(const DeclContext *SelectionCtx,
                        const SourceManager &SM) {
   std::vector<const UsingDecl *> Result;
@@ -102,14 +99,15 @@ struct InsertionPointData {
   bool AlwaysFullyQualify = false;
 };
 
-const NamespaceDecl *getNamespaceFromQualifier(NestedNameSpecifier Qualifier) {
+static const NamespaceDecl *
+getNamespaceFromQualifier(NestedNameSpecifier Qualifier) {
   if (!Qualifier || Qualifier.getKind() != NestedNameSpecifier::Kind::Namespace)
     return nullptr;
   return dyn_cast_or_null<NamespaceDecl>(
       Qualifier.getAsNamespaceAndPrefix().Namespace);
 }
 
-llvm::Expected<InsertionPointData>
+static llvm::Expected<InsertionPointData>
 findInsertionPoint(const Tweak::Selection &Inputs,
                    const NestedNameSpecifierLoc &QualifierToRemove,
                    const llvm::StringRef Name,
@@ -183,8 +181,8 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   return error("Cannot find place to insert \"using\"");
 }
 
-bool isNamespaceForbidden(const Tweak::Selection &Inputs,
-                          NestedNameSpecifier Namespace) {
+static bool isNamespaceForbidden(const Tweak::Selection &Inputs,
+                                 NestedNameSpecifier Namespace) {
   const auto *NS =
       dyn_cast<NamespaceDecl>(Namespace.getAsNamespaceAndPrefix().Namespace);
   if (!NS)
@@ -200,15 +198,15 @@ bool isNamespaceForbidden(const Tweak::Selection &Inputs,
   return false;
 }
 
-std::string getNNSLAsString(NestedNameSpecifierLoc NNSL,
-                            const PrintingPolicy &Policy) {
+static std::string getNNSLAsString(NestedNameSpecifierLoc NNSL,
+                                   const PrintingPolicy &Policy) {
   std::string Out;
   llvm::raw_string_ostream OutStream(Out);
   NNSL.getNestedNameSpecifier().print(OutStream, Policy);
   return OutStream.str();
 }
 
-const NamedDecl *canonicalDecl(const NamedDecl *D) {
+static const NamedDecl *canonicalDecl(const NamedDecl *D) {
   return D ? llvm::dyn_cast<NamedDecl>(D->getCanonicalDecl()) : nullptr;
 }
 
@@ -440,6 +438,5 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
   return Effect::mainFileEdit(SM, std::move(Repls));
 }
 
-} // namespace
 } // namespace clangd
 } // namespace clang
