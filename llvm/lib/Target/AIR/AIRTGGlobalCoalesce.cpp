@@ -78,6 +78,102 @@ static std::optional<int64_t> constInt(Value *V) {
 
 static constexpr StringLiteral kAsyncCopy2D("air.simdgroup_async_copy_2d");
 
+static std::optional<uint64_t> staticMaxUnsigned(Value *V, unsigned Depth = 0) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getZExtValue();
+  if (Depth > 16)
+    return std::nullopt;
+  Type *Ty = V->getType();
+  if (!Ty->isIntegerTy())
+    return std::nullopt;
+  unsigned BitW = Ty->getIntegerBitWidth();
+  uint64_t TypeMax = BitW >= 64 ? ~0ULL : ((1ULL << BitW) - 1);
+  if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+    Value *A = BO->getOperand(0), *B = BO->getOperand(1);
+    switch (BO->getOpcode()) {
+    case Instruction::And: {
+      auto MA = staticMaxUnsigned(A, Depth + 1);
+      auto MB = staticMaxUnsigned(B, Depth + 1);
+      if (MA && MB)
+        return std::min(*MA, *MB);
+      if (MA)
+        return *MA;
+      if (MB)
+        return *MB;
+      return std::nullopt;
+    }
+    case Instruction::Or:
+    case Instruction::Xor:
+    case Instruction::Add: {
+      auto MA = staticMaxUnsigned(A, Depth + 1);
+      auto MB = staticMaxUnsigned(B, Depth + 1);
+      if (!MA || !MB)
+        return std::nullopt;
+      return std::min(*MA + *MB, TypeMax);
+    }
+    case Instruction::Shl: {
+      auto MA = staticMaxUnsigned(A, Depth + 1);
+      auto *C = dyn_cast<ConstantInt>(B);
+      if (!MA || !C)
+        return std::nullopt;
+      return std::min(*MA << C->getZExtValue(), TypeMax);
+    }
+    case Instruction::Mul: {
+      auto MA = staticMaxUnsigned(A, Depth + 1);
+      auto MB = staticMaxUnsigned(B, Depth + 1);
+      if (!MA || !MB)
+        return std::nullopt;
+      return std::min(*MA * *MB, TypeMax);
+    }
+    default:
+      return std::nullopt;
+    }
+  }
+  if (auto *ZE = dyn_cast<ZExtInst>(V))
+    return staticMaxUnsigned(ZE->getOperand(0), Depth + 1);
+  if (auto *TR = dyn_cast<TruncInst>(V)) {
+    if (auto M = staticMaxUnsigned(TR->getOperand(0), Depth + 1))
+      return std::min(*M, TypeMax);
+    return std::nullopt;
+  }
+  if (auto *Sel = dyn_cast<SelectInst>(V)) {
+    auto MT = staticMaxUnsigned(Sel->getTrueValue(), Depth + 1);
+    auto MF = staticMaxUnsigned(Sel->getFalseValue(), Depth + 1);
+    if (MT && MF)
+      return std::max(*MT, *MF);
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+static bool gepFeedsOnlyMMAReads(Value *V) {
+  SmallVector<Value *, 16> Work{V};
+  SmallPtrSet<Value *, 16> Seen;
+  bool SawMMARead = false;
+  while (!Work.empty()) {
+    Value *Cur = Work.pop_back_val();
+    if (!Seen.insert(Cur).second)
+      continue;
+    for (User *U : Cur->users()) {
+      if (isa<GEPOperator>(U) || isa<BitCastOperator>(U) ||
+          isa<AddrSpaceCastOperator>(U)) {
+        Work.push_back(U);
+        continue;
+      }
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        Function *Callee = CB->getCalledFunction();
+        if (Callee &&
+            Callee->getName().starts_with("air.simdgroup_matrix_8x8_load")) {
+          SawMMARead = true;
+          continue;
+        }
+      }
+      return false;
+    }
+  }
+  return SawMMARead;
+}
+
 static bool shrinkOverAllocatedThreadgroupGlobals(Module &M) {
   const DataLayout &DL = M.getDataLayout();
 
@@ -95,6 +191,7 @@ static bool shrinkOverAllocatedThreadgroupGlobals(Module &M) {
     int64_t HighWater = 0;
     bool Bail = false;
     bool SawDynamicGEP = false;
+    bool SawUnboundedDynGEP = false;
     bool SawAsyncCopy = false;
 
     SmallVector<std::pair<User *, int64_t>, 16> Work;
@@ -109,6 +206,30 @@ static bool shrinkOverAllocatedThreadgroupGlobals(Module &M) {
         APInt Off(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
         if (!GEP->accumulateConstantOffset(DL, Off)) {
           SawDynamicGEP = true;
+          if (gepFeedsOnlyMMAReads(GEP))
+            continue;
+          int64_t DynMaxByte = 0;
+          bool Bounded = false;
+          if (GEP->getNumOperands() == 2) {
+            if (auto M = staticMaxUnsigned(GEP->getOperand(1))) {
+              uint64_t ElemBytes =
+                  DL.getTypeAllocSize(GEP->getSourceElementType());
+              DynMaxByte = static_cast<int64_t>(*M * ElemBytes);
+              Bounded = true;
+            }
+          }
+          if (!Bounded) {
+            SawUnboundedDynGEP = true;
+            continue;
+          }
+          int64_t DynBase = Base + DynMaxByte;
+          if (DynBase < 0 || DynBase >= CurBytes) {
+            Bail = true;
+            break;
+          }
+          HighWater = std::max(HighWater, DynBase);
+          for (User *UU : GEP->users())
+            Work.push_back({UU, DynBase});
           continue;
         }
         for (User *UU : GEP->users())
@@ -144,11 +265,17 @@ static bool shrinkOverAllocatedThreadgroupGlobals(Module &M) {
         Bail = true;
         break;
       }
-      HighWater = std::max(HighWater, Base + 1);
+      int64_t AccessBytes = 1;
+      if (auto *SI = dyn_cast<StoreInst>(U))
+        AccessBytes = DL.getTypeStoreSize(SI->getValueOperand()->getType());
+      else if (auto *LI = dyn_cast<LoadInst>(U))
+        AccessBytes = DL.getTypeStoreSize(LI->getType());
+      HighWater = std::max(HighWater, Base + AccessBytes);
     }
 
-    if (SawDynamicGEP && !SawAsyncCopy)
+    if (SawUnboundedDynGEP && !SawAsyncCopy)
       Bail = true;
+    (void)SawDynamicGEP;
 
     if (Bail || HighWater <= 0)
       continue;
