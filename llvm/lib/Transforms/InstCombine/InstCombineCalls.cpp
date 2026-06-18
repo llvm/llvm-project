@@ -2662,12 +2662,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::pdep:
     if (auto *MaskC = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
-      if (MaskC->isNullValue())
-        return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), 0));
-
-      if (MaskC->isAllOnesValue())
-        return replaceInstUsesWith(*II, II->getArgOperand(0));
-
       unsigned MaskIdx, MaskLen;
       if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
         // any single contingous sequence of 1s anywhere in the mask simply
@@ -2691,12 +2685,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::pext:
     if (auto *MaskC = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
-      if (MaskC->isNullValue())
-        return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), 0));
-
-      if (MaskC->isAllOnesValue())
-        return replaceInstUsesWith(*II, II->getArgOperand(0));
-
       unsigned MaskIdx, MaskLen;
       if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
         // any single contingous sequence of 1s anywhere in the mask simply
