@@ -102,5 +102,6 @@
   "tu_namespace": {
     "kind": "CompilationUnit",
     "name": "Mock.cpp"
-  }
+  },
+  "type": "TUSummary"
 }
