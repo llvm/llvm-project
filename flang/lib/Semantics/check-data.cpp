@@ -13,6 +13,7 @@
 
 #include "check-data.h"
 #include "data-to-inits.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -211,10 +212,9 @@ static bool IsValidDataObject(const SomeExpr &expr) { // C878, C879
 
 void DataChecker::Leave(const parser::DataIDoObject &object) {
   if (const auto *designator{
-          std::get_if<parser::Scalar<common::Indirection<parser::Designator>>>(
-              &object.u)}) {
+          std::get_if<common::Indirection<parser::Designator>>(&object.u)}) {
     if (MaybeExpr expr{exprAnalyzer_.Analyze(*designator)}) {
-      auto source{parser::UnwrapRef<parser::Designator>(*designator).source};
+      auto source{designator->value().source};
       DataVarChecker checker{exprAnalyzer_.context(), source};
       if (checker(*expr)) {
         if (checker.HasComponentWithoutSubscripts()) { // C880
@@ -223,6 +223,11 @@ void DataChecker::Leave(const parser::DataIDoObject &object) {
         } else if (!IsValidDataObject(*expr)) {
           exprAnalyzer_.context().Say(
               source, "Data implied do object must be a variable"_err_en_US);
+        } else if (expr->Rank() != 0 && !evaluate::IsObjectPointer(*expr)) {
+          // R841 array-element or scalar-structure-component
+          // C877 allows it to be a pointer
+          exprAnalyzer_.context().Say(source,
+              "Data implied do object must be scalar or a pointer"_err_en_US);
         } else {
           return;
         }

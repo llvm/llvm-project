@@ -240,9 +240,8 @@ bool DataInitializationCompiler<DSV>::Scan(
     const parser::DataIDoObject &object) {
   return common::visit(
       common::visitors{
-          [&](const parser::Scalar<common::Indirection<parser::Designator>>
-                  &var) {
-            return Scan(parser::UnwrapRef<parser::Designator>(var));
+          [&](const common::Indirection<parser::Designator> &var) {
+            return Scan(var.value());
           },
           [&](const common::Indirection<parser::DataImpliedDo> &ido) {
             return Scan(ido.value());
