@@ -2356,7 +2356,7 @@ Check for null pointers being passed as arguments to C string functions:
 .. _unix-cstring-UninitializedRead:
 
 unix.cstring.UninitializedRead (C)
-""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""
 Check for uninitialized reads from common memory copy/manipulation functions such as:
  ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
 
