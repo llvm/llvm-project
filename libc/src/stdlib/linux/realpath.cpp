@@ -29,6 +29,9 @@ namespace {
 // Separator character for POSIX paths.
 constexpr char PATH_SEP = '/';
 
+// Separator for POSIX paths, as a `cpp::string_view`.
+constexpr cpp::string_view PATH_SEP_STRING = "/";
+
 // Dummy struct to represent success in `ErrorOr` when no value is needed.
 struct Ok {};
 
@@ -51,7 +54,7 @@ public:
     size_ = 1;
   }
 
-  bool is_root() const { return size_ == 1; }
+  bool is_root() const { return view() == PATH_SEP_STRING; }
 
   ErrorOr<Ok> set_to_cwd() { return Error(ENOSYS); }
 
@@ -65,7 +68,7 @@ public:
   // Adds a single component to the end of this path.
   ErrorOr<Ok> push_component(cpp::string_view component) {
     if (!is_root()) {
-      if (ErrorOr<Ok> res = push_raw(PATH_SEP); !res)
+      if (ErrorOr<Ok> res = push_raw(PATH_SEP_STRING); !res)
         return res;
     }
 
@@ -82,10 +85,6 @@ private:
     inline_memcpy(buf_ + size_, value.data(), value.size());
     size_ += value.size();
     return Ok{};
-  }
-
-  ErrorOr<Ok> push_raw(char value) {
-    return push_raw(cpp::string_view(&value, 1));
   }
 
   // Current size of the path stored in `buf_`.
