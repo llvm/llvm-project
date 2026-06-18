@@ -14,11 +14,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
-
-#include <unordered_set>
 
 namespace llvm {
 
@@ -59,21 +59,12 @@ class SampleProfileMatcher {
   // For each function, store every callsite and its matching state into this
   // map, of which each entry is a pair of callsite location and MatchState.
   // This is used for profile staleness computation and report.
-  StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
-      FuncCallsiteMatchStates;
+  StringMap<DenseMap<LineLocation, MatchState>> FuncCallsiteMatchStates;
 
-  struct FuncToProfileNameMapHash {
-    uint64_t
-    operator()(const std::pair<const Function *, FunctionId> &P) const {
-      return hash_combine(P.first, P.second);
-    }
-  };
   // A map from a pair of function and profile name to a boolean value
   // indicating whether they are matched. This is used as a cache for the
   // matching result.
-  std::unordered_map<std::pair<const Function *, FunctionId>, bool,
-                     FuncToProfileNameMapHash>
-      FuncProfileMatchCache;
+  DenseMap<std::pair<const Function *, FunctionId>, bool> FuncProfileMatchCache;
   // The new functions found by the call graph matching. The map's key is the
   // the new(renamed) function pointer and the value is old(unused) profile
   // name.
@@ -82,16 +73,15 @@ class SampleProfileMatcher {
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
-  HashKeyMap<std::unordered_map, FunctionId, FunctionId> *FuncNameToProfNameMap;
+  HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap;
 
   // A map pointer to the SymbolMap in SampleProfileLoader, which stores all
   // the original matched symbols before the matching. this is to determine if
   // the profile is unused(to be matched) or not.
-  HashKeyMap<std::unordered_map, FunctionId, Function *> *SymbolMap;
+  HashKeyMap<DenseMap, FunctionId, Function *> *SymbolMap;
 
   // The new functions from IR.
-  HashKeyMap<std::unordered_map, FunctionId, Function *>
-      FunctionsWithoutProfile;
+  HashKeyMap<DenseMap, FunctionId, Function *> FunctionsWithoutProfile;
 
   // Pointer to the Profile Symbol List in the reader.
   std::shared_ptr<ProfileSymbolList> PSL;
@@ -123,10 +113,9 @@ public:
   SampleProfileMatcher(
       Module &M, SampleProfileReader &Reader, LazyCallGraph &CG,
       const PseudoProbeManager *ProbeManager, ThinOrFullLTOPhase LTOPhase,
-      HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
+      HashKeyMap<DenseMap, FunctionId, Function *> &SymMap,
       std::shared_ptr<ProfileSymbolList> PSL,
-      HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          &FuncNameToProfNameMap)
+      HashKeyMap<DenseMap, FunctionId, FunctionId> &FuncNameToProfNameMap)
       : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
         LTOPhase(LTOPhase), FuncNameToProfNameMap(&FuncNameToProfNameMap),
         SymbolMap(&SymMap), PSL(PSL) {};
@@ -189,9 +178,9 @@ private:
            State == MatchState::RemovedMatch;
   };
 
-  void countCallGraphRecoveredSamples(
-      const FunctionSamples &FS,
-      std::unordered_set<FunctionId> &MatchedUnusedProfile);
+  void
+  countCallGraphRecoveredSamples(const FunctionSamples &FS,
+                                 DenseSet<FunctionId> &MatchedUnusedProfile);
   // Count the samples of checksum mismatched function for the top-level
   // function and all inlinees.
   void countMismatchedFuncSamples(const FunctionSamples &FS, bool IsTopLevel);

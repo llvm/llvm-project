@@ -483,17 +483,19 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
                                 OuterImplicit.ASTNode.get<Expr>()))
     return false;
 
-  std::function<bool(const SelectionTree::Node *)> IsFullySelected =
-      [&](const SelectionTree::Node *N) {
-        if (N->ASTNode.getSourceRange().isValid() &&
-            N->Selected != SelectionTree::Complete)
+  struct FullySelectedChecker {
+    bool isFullySelected(const SelectionTree::Node *N) const {
+      if (N->ASTNode.getSourceRange().isValid() &&
+          N->Selected != SelectionTree::Complete)
+        return false;
+      for (const auto *Child : N->Children) {
+        if (!isFullySelected(Child))
           return false;
-        for (const auto *Child : N->Children) {
-          if (!IsFullySelected(Child))
-            return false;
-        }
-        return true;
-      };
+      }
+      return true;
+    }
+  };
+  const FullySelectedChecker FullySelected;
   auto ExprIsFullySelectedTargetNode = [&](const Expr *E) {
     if (E != OuterImplicit.ASTNode.get<Expr>())
       return false;
@@ -504,7 +506,7 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
     // See the documentation of ParsedBinaryOperator for further details.
     if (!IsBinOp)
       return true;
-    return IsFullySelected(N);
+    return FullySelected.isFullySelected(N);
   };
 
   // Disable extraction of full RHS on assignment operations, e.g:
