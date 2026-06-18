@@ -14,6 +14,7 @@
 #include "src/stdlib/realpath.h"
 #include "hdr/errno_macros.h"
 #include "hdr/limits_macros.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/common.h"

@@ -13,6 +13,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/limits_macros.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/realpath.h"

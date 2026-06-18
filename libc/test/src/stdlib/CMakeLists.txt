@@ -385,6 +385,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.limits_macros
+    libc.hdr.types.size_t
     libc.src.__support.CPP.string
     libc.src.__support.macros.config
     libc.src.stdlib.realpath
