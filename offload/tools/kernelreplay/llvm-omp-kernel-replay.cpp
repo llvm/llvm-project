@@ -63,6 +63,11 @@ static cl::opt<uint32_t>
                    cl::desc("Set the number of replay repetitions."),
                    cl::init(1), cl::cat(ReplayOptions));
 
+static cl::opt<bool>
+    IgnoreLimitsOpt("ignore-limits",
+                    cl::desc("Ignore thread and team limits (unrecommended)."),
+                    cl::init(false), cl::cat(ReplayOptions));
+
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -220,13 +225,13 @@ Error replayKernel() {
     return createErr("ThreadsLimits min and max are inconsistent");
 
   // If the limits were specified, verify the selected values are valid.
-  if (TeamsLimits[0] > 0 &&
+  if (!IgnoreLimitsOpt && TeamsLimits[0] > 0 &&
       (NumTeams < TeamsLimits[0] || NumTeams > TeamsLimits[1]))
     return createErr("number of teams (%" PRIu32
                      ") is out of the allowed limits (min,max: %" PRIu32
                      ",%" PRIu32 ")",
                      NumTeams, TeamsLimits[0], TeamsLimits[1]);
-  if (ThreadsLimits[0] > 0 &&
+  if (!IgnoreLimitsOpt && ThreadsLimits[0] > 0 &&
       (NumThreads < ThreadsLimits[0] || NumThreads > ThreadsLimits[1]))
     return createErr("number of threads (%" PRIu32
                      ") is out of the allowed limits (min,max: %" PRIu32
