@@ -4766,3 +4766,30 @@ void asm_inout_operand_is_read() {
 }
 } // namespace class_reads
 } // namespace what_is_a_use
+
+// A borrow captured into the implicit object via
+// [[clang::lifetime_capture_by_this]] that outlives the captured local is
+// caught at the capturing method's exit.
+struct CaptureByThis {
+  int member;
+  const int *p;
+  void store(const int &x [[clang::lifetime_capture_by_this]]);
+  void captures_dangling_local() {
+    int local = 0;
+    store(local); // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}} expected-note {{later used here}}
+  void captures_in_nested_scope() {
+    {
+      int local = 0;
+      store(local); // expected-warning {{local variable 'local' does not live long enough}}
+    }               // expected-note {{local variable 'local' is destroyed here}}
+  }                 // expected-note {{later used here}}
+  // Negative: capturing a caller-scoped reference into `this` does not dangle.
+  void captures_caller_ref(const int &caller_ref) {
+    store(caller_ref);
+  }
+  // Negative: capturing a member (same lifetime as the object) does not dangle.
+  void captures_member() {
+    store(member);
+  }
+};
