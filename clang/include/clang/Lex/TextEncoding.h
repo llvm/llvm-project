@@ -13,9 +13,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TextEncoding.h"
 
-enum ConversionAction { CA_NoConversion };
+enum ConversionAction { CA_NoConversion, CA_FromInputEncoding };
 
 class TextEncoding {
+std::unique_ptr<llvm::TextEncodingConverter> FromInputEncodingConverter;
+
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
 };

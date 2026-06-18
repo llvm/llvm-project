@@ -34,6 +34,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -912,15 +913,20 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  return InitializeSourceManager(Input, getDiagnostics(), getFileManager(),
-                                 getSourceManager());
+  // Retrieve the converter to the internal charset if it exists.
+  llvm::TextEncodingConverter *Converter =
+      hasPreprocessor() ? getPreprocessor().getTextEncoding().getConverter(
+                              CA_FromInputEncoding)
+                        : nullptr;
+
+  return InitializeSourceManager(Input, Converter, getDiagnostics(),
+                                 getFileManager(), getSourceManager());
 }
 
 // static
-bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
-                                               DiagnosticsEngine &Diags,
-                                               FileManager &FileMgr,
-                                               SourceManager &SourceMgr) {
+bool CompilerInstance::InitializeSourceManager(
+    const FrontendInputFile &Input, llvm::TextEncodingConverter *Converter,
+    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
@@ -950,7 +956,7 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
   }
 
   SourceMgr.setMainFileID(
-      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind));
+      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind, Converter));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");
