@@ -9,13 +9,13 @@
 #ifndef FORTRAN_OPTIMIZER_ANALYSIS_ARRAYSECTIONANALYZER_H
 #define FORTRAN_OPTIMIZER_ANALYSIS_ARRAYSECTIONANALYZER_H
 
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
-class Operation;
-class Value;
+class OpBuilder;
 } // namespace mlir
 
 namespace hlfir {
@@ -61,6 +61,17 @@ public:
   static SlicesOverlapKind
   analyze(mlir::Value ref1, mlir::Value ref2,
           ValueEquivalenceCallback areKnownEquivalent = nullptr);
+
+  ///  Generate a runtime disjointness check for the given LHS and RHS.
+  ///  Check if the sections are disjoint using `ub1 < lb2 || ub2 < lb1`
+  ///  Returns true if the sections are disjoint, false otherwise.
+  ///  Returns nullptr if the operands are not a matching pair of
+  ///  hlfir.designate on the same base or no dimension has statically-known
+  ///  stride order.
+  static mlir::Value genRuntimeDisjointnessCheck(mlir::Location loc,
+                                                 mlir::OpBuilder &builder,
+                                                 mlir::Value lhsRef,
+                                                 mlir::Value rhsRef);
 
   static bool isDesignatingArrayInOrder(hlfir::DesignateOp designate,
                                         hlfir::ElementalOpInterface elemental);

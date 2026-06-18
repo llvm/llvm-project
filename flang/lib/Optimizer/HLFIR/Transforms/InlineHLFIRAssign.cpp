@@ -103,11 +103,9 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "RHS/LHS element types mismatch");
 
+    bool rhsNeedsTemporary = false;
+
     if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType())) {
-      // If RHS is not an hlfir.expr, then we should prove that
-      // LHS and RHS do not alias.
-      // TODO: if they may alias, we can insert hlfir.as_expr for RHS,
-      // and proceed with the inlining.
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
@@ -121,7 +119,15 @@ public:
                                   << "\tLHS: " << lhs << "\n"
                                   << "\tRHS: " << rhs << "\n"
                                   << "\tALIAS: " << aliasRes << "\n");
-          return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+          // Overlap is Unknown: unsafe to read RHS while writing LHS
+          // without a temp. Call
+          // ArraySectionAnalyzer::genRuntimeDisjointnessCheck to check if the
+          // sections are disjoint.
+          // 1. Sections disjoint at runtime-> direct element-wise copy (no
+          // temp)
+          // 2. Sections are not disjoint at runtime  -> Allocate a temporary
+          // and copy RHS into it, then copy the temporary to LHS.
+          rhsNeedsTemporary = true;
         }
       }
     }
@@ -129,6 +135,43 @@ public:
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
+
+    const bool useWorkshare = flangomp::shouldUseWorkshareLowering(assign);
+    mlir::ArrayAttr accessGroups;
+    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      accessGroups = attrs;
+
+    auto emitAssignFrom = [&](hlfir::Entity rhsEntity) {
+      hlfir::genNoAliasArrayAssignment(
+          loc, builder, rhsEntity, lhs, useWorkshare,
+          /*temporaryLHS=*/false, nullptr, accessGroups);
+    };
+
+    if (rhsNeedsTemporary) {
+      if (mlir::Value disjoint =
+              fir::ArraySectionAnalyzer::genRuntimeDisjointnessCheck(
+                  loc, builder, lhs, rhs)) {
+        builder.genIfThenElse(loc, disjoint)
+            .genThen([&]() { emitAssignFrom(rhs); })
+            .genElse([&]() {
+              mlir::Value tempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
+              emitAssignFrom(hlfir::Entity{tempExpr});
+              hlfir::DestroyOp::create(builder, loc, tempExpr);
+            })
+            .end();
+        rewriter.eraseOp(assign);
+        return mlir::success();
+      }
+    }
+
+    // When rhsNeedsTemporary is true and genRuntimeDisjointnessCheck
+    // returned null, always use a temporary rhsExpr.
+    mlir::Value rhsTempExpr;
+    if (rhsNeedsTemporary) {
+      rhsTempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
+      rhs = hlfir::Entity{rhsTempExpr};
+    }
 
     // Materialize scalar RHS before the assignment loop. Fortran 10.2.1.3
     // requires that the RHS expression is fully evaluated before any part
@@ -138,13 +181,11 @@ public:
     if (!rhs.isArray())
       rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
 
-    mlir::ArrayAttr accessGroups;
-    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
-            fir::getAccessGroupsAttrName()))
-      accessGroups = attrs;
-    hlfir::genNoAliasArrayAssignment(
-        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
-        /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
+    emitAssignFrom(rhs);
+
+    if (rhsTempExpr)
+      hlfir::DestroyOp::create(builder, loc, rhsTempExpr);
+
     rewriter.eraseOp(assign);
     return mlir::success();
   }
