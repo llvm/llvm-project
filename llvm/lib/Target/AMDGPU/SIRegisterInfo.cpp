@@ -650,7 +650,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
       for (MCPhysReg Reg : *RC) {
         unsigned Index = getHWRegIndex(Reg);
-        if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs)
+        if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs &&
+            Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI &&
+            Reg != AMDGPU::VCC)
           Reserved.set(Reg);
       }
     }
@@ -909,7 +911,7 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
     return !TII->isLegalMUBUFImmOffset(FullOffset);
 
   return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                                 SIInstrFlags::FlatScratch);
+                                 AMDGPU::FlatAddrSpace::FlatScratch);
 }
 
 Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
@@ -1075,7 +1077,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
 
   if (IsFlat) {
     assert(TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                                  SIInstrFlags::FlatScratch) &&
+                                  AMDGPU::FlatAddrSpace::FlatScratch) &&
            "offset should be legal");
     FIOp->ChangeToRegister(BaseReg, false);
     OffsetOp->setImm(NewOffset);
@@ -1118,7 +1120,7 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
     return TII->isLegalMUBUFImmOffset(NewOffset);
 
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                                SIInstrFlags::FlatScratch);
+                                AMDGPU::FlatAddrSpace::FlatScratch);
 }
 
 const TargetRegisterClass *
@@ -1693,7 +1695,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
   bool IsOffsetLegal =
       IsFlat ? TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                                      SIInstrFlags::FlatScratch)
+                                      AMDGPU::FlatAddrSpace::FlatScratch)
              : TII->isLegalMUBUFImmOffset(MaxOffset);
   if (!IsOffsetLegal || (IsFlat && !SOffset && !ST.hasFlatScratchSTMode())) {
     SOffset = MCRegister();
@@ -1937,7 +1939,8 @@ void SIRegisterInfo::buildSpillLoadStore(
     }
 
     Register FinalValueReg = ValueReg;
-    if (LoadStoreOp == AMDGPU::SCRATCH_LOAD_USHORT_SADDR) {
+    if (LoadStoreOp == AMDGPU::SCRATCH_LOAD_USHORT_SADDR ||
+        LoadStoreOp == AMDGPU::SCRATCH_LOAD_USHORT_ST) {
       // If we are loading 16-bit value with SRAMECC endabled we need a temp
       // 32-bit VGPR to load and extract 16-bits into the final register.
       ValueReg =
@@ -2567,7 +2570,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
     case AMDGPU::SI_SPILL_S32_SAVE: {
-      return spillSGPR(MI, Index, RS, nullptr, nullptr, false, false, NeedsCFI);
+      return spillSGPR(MI, Index, RS, nullptr, nullptr,
+                       FrameInfo.getStackID(Index) == TargetStackID::SGPRSpill,
+                       false, NeedsCFI);
     }
 
     // SGPR register restore
@@ -2585,7 +2590,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_RESTORE:
     case AMDGPU::SI_SPILL_S64_RESTORE:
     case AMDGPU::SI_SPILL_S32_RESTORE: {
-      return restoreSGPR(MI, Index, RS);
+      return restoreSGPR(MI, Index, RS, nullptr, nullptr,
+                         FrameInfo.getStackID(Index) ==
+                             TargetStackID::SGPRSpill);
     }
 
     // VGPR register spill
@@ -3143,7 +3150,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset);
         int64_t NewOffset = Offset + OffsetOp->getImm();
         if (TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                                   SIInstrFlags::FlatScratch)) {
+                                   AMDGPU::FlatAddrSpace::FlatScratch)) {
           OffsetOp->setImm(NewOffset);
           if (FrameReg)
             return false;
@@ -3963,13 +3970,18 @@ bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
 MCRegister SIRegisterInfo::findUnusedRegister(
     const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
     const MachineFunction &MF, bool ReserveHighestRegister) const {
+  // Never offer VCC as an unused register.
+  auto isVCC = [](MCRegister Reg) {
+    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
+  };
+
   if (ReserveHighestRegister) {
     for (MCRegister Reg : reverse(*RC))
-      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg))
+      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg))
         return Reg;
   } else {
     for (MCRegister Reg : *RC)
-      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg))
+      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg))
         return Reg;
   }
   return MCRegister();
@@ -3978,7 +3990,7 @@ MCRegister SIRegisterInfo::findUnusedRegister(
 bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
                                   const RegisterBankInfo &RBI,
                                   Register Reg) const {
-  auto *RB = RBI.getRegBank(Reg, MRI, *MRI.getTargetRegisterInfo());
+  auto *RB = RBI.getRegBank(Reg, MRI, *this);
   if (!RB)
     return false;
 
@@ -4315,9 +4327,11 @@ unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
       (RC.getID() == AMDGPU::VGPR_32RegClassID)
           ? RC.getRegisters().take_front(NumArchVGPRs)
           : RC.getRegisters();
-  for (MCPhysReg Reg : reverse(Registers))
-    if (MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/!IncludeCalls))
+  for (MCPhysReg Reg : reverse(Registers)) {
+    if (Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI &&
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/!IncludeCalls))
       return getHWRegIndex(Reg) + 1;
+  }
   return 0;
 }
 

@@ -87,9 +87,9 @@ struct LoweringPreparePass
 
   void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
+  void lowerComplexConjOp(cir::ComplexConjOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
-  void lowerUnaryOp(cir::UnaryOpInterface op);
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
@@ -683,18 +683,34 @@ buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   mlir::Value &c = rhsReal;
   mlir::Value &d = rhsImag;
 
-  mlir::Value ac = builder.createMul(loc, a, c);     // a*c
-  mlir::Value bd = builder.createMul(loc, b, d);     // b*d
-  mlir::Value cc = builder.createMul(loc, c, c);     // c*c
-  mlir::Value dd = builder.createMul(loc, d, d);     // d*d
-  mlir::Value acbd = builder.createAdd(loc, ac, bd); // ac+bd
-  mlir::Value ccdd = builder.createAdd(loc, cc, dd); // cc+dd
-  mlir::Value resultReal = builder.createDiv(loc, acbd, ccdd);
+  // The element type of the complex (lhs/rhs) determines whether floating
+  // point or integer ops are needed.
+  bool isFP = cir::isFPOrVectorOfFPType(a.getType());
+  auto mul = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFMul(l, x, y) : builder.createMul(l, x, y);
+  };
+  auto add = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFAdd(l, x, y) : builder.createAdd(l, x, y);
+  };
+  auto sub = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFSub(l, x, y) : builder.createSub(l, x, y);
+  };
+  auto div = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFDiv(l, x, y) : builder.createDiv(l, x, y);
+  };
 
-  mlir::Value bc = builder.createMul(loc, b, c);     // b*c
-  mlir::Value ad = builder.createMul(loc, a, d);     // a*d
-  mlir::Value bcad = builder.createSub(loc, bc, ad); // bc-ad
-  mlir::Value resultImag = builder.createDiv(loc, bcad, ccdd);
+  mlir::Value ac = mul(loc, a, c);     // a*c
+  mlir::Value bd = mul(loc, b, d);     // b*d
+  mlir::Value cc = mul(loc, c, c);     // c*c
+  mlir::Value dd = mul(loc, d, d);     // d*d
+  mlir::Value acbd = add(loc, ac, bd); // ac+bd
+  mlir::Value ccdd = add(loc, cc, dd); // cc+dd
+  mlir::Value resultReal = div(loc, acbd, ccdd);
+
+  mlir::Value bc = mul(loc, b, c);     // b*c
+  mlir::Value ad = mul(loc, a, d);     // a*d
+  mlir::Value bcad = sub(loc, bc, ad); // bc-ad
+  mlir::Value resultImag = div(loc, bcad, ccdd);
   return builder.createComplexCreate(loc, resultReal, resultImag);
 }
 
@@ -727,35 +743,39 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   mlir::Value &c = rhsReal;
   mlir::Value &d = rhsImag;
 
+  // Smith's algorithm is only used for floating-point complex division.
+  assert(cir::isFPOrVectorOfFPType(a.getType()) &&
+         "range-reduction complex divide expects floating-point operands");
+
   auto trueBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createDiv(loc, d, c);    // r := d / c
-    mlir::Value rd = builder.createMul(loc, r, d);   // r*d
-    mlir::Value tmp = builder.createAdd(loc, c, rd); // tmp := c + r*d
+    mlir::Value r = builder.createFDiv(loc, d, c);    // r := d / c
+    mlir::Value rd = builder.createFMul(loc, r, d);   // r*d
+    mlir::Value tmp = builder.createFAdd(loc, c, rd); // tmp := c + r*d
 
-    mlir::Value br = builder.createMul(loc, b, r);   // b*r
-    mlir::Value abr = builder.createAdd(loc, a, br); // a + b*r
-    mlir::Value e = builder.createDiv(loc, abr, tmp);
+    mlir::Value br = builder.createFMul(loc, b, r);   // b*r
+    mlir::Value abr = builder.createFAdd(loc, a, br); // a + b*r
+    mlir::Value e = builder.createFDiv(loc, abr, tmp);
 
-    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
-    mlir::Value bar = builder.createSub(loc, b, ar); // b - a*r
-    mlir::Value f = builder.createDiv(loc, bar, tmp);
+    mlir::Value ar = builder.createFMul(loc, a, r);   // a*r
+    mlir::Value bar = builder.createFSub(loc, b, ar); // b - a*r
+    mlir::Value f = builder.createFDiv(loc, bar, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
   auto falseBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createDiv(loc, c, d);    // r := c / d
-    mlir::Value rc = builder.createMul(loc, r, c);   // r*c
-    mlir::Value tmp = builder.createAdd(loc, d, rc); // tmp := d + r*c
+    mlir::Value r = builder.createFDiv(loc, c, d);    // r := c / d
+    mlir::Value rc = builder.createFMul(loc, r, c);   // r*c
+    mlir::Value tmp = builder.createFAdd(loc, d, rc); // tmp := d + r*c
 
-    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
-    mlir::Value arb = builder.createAdd(loc, ar, b); // a*r + b
-    mlir::Value e = builder.createDiv(loc, arb, tmp);
+    mlir::Value ar = builder.createFMul(loc, a, r);   // a*r
+    mlir::Value arb = builder.createFAdd(loc, ar, b); // a*r + b
+    mlir::Value e = builder.createFDiv(loc, arb, tmp);
 
-    mlir::Value br = builder.createMul(loc, b, r);   // b*r
-    mlir::Value bra = builder.createSub(loc, br, a); // b*r - a
-    mlir::Value f = builder.createDiv(loc, bra, tmp);
+    mlir::Value br = builder.createFMul(loc, b, r);   // b*r
+    mlir::Value bra = builder.createFSub(loc, br, a); // b*r - a
+    mlir::Value f = builder.createFDiv(loc, bra, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
@@ -940,12 +960,23 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
                                    mlir::Value lhsReal, mlir::Value lhsImag,
                                    mlir::Value rhsReal, mlir::Value rhsImag) {
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
-  mlir::Value resultRealLhs = builder.createMul(loc, lhsReal, rhsReal); // ac
-  mlir::Value resultRealRhs = builder.createMul(loc, lhsImag, rhsImag); // bd
-  mlir::Value resultImagLhs = builder.createMul(loc, lhsReal, rhsImag); // ad
-  mlir::Value resultImagRhs = builder.createMul(loc, lhsImag, rhsReal); // bc
-  mlir::Value resultReal = builder.createSub(loc, resultRealLhs, resultRealRhs);
-  mlir::Value resultImag = builder.createAdd(loc, resultImagLhs, resultImagRhs);
+  bool isFP = cir::isFPOrVectorOfFPType(lhsReal.getType());
+  auto mul = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFMul(l, x, y) : builder.createMul(l, x, y);
+  };
+  auto add = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFAdd(l, x, y) : builder.createAdd(l, x, y);
+  };
+  auto sub = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFSub(l, x, y) : builder.createSub(l, x, y);
+  };
+
+  mlir::Value resultRealLhs = mul(loc, lhsReal, rhsReal); // ac
+  mlir::Value resultRealRhs = mul(loc, lhsImag, rhsImag); // bd
+  mlir::Value resultImagLhs = mul(loc, lhsReal, rhsImag); // ad
+  mlir::Value resultImagRhs = mul(loc, lhsImag, rhsReal); // bc
+  mlir::Value resultReal = sub(loc, resultRealLhs, resultRealRhs);
+  mlir::Value resultImag = add(loc, resultImagLhs, resultImagRhs);
   mlir::Value algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
@@ -997,35 +1028,22 @@ void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   op.erase();
 }
 
-void LoweringPreparePass::lowerUnaryOp(cir::UnaryOpInterface op) {
-  if (!mlir::isa<cir::ComplexType>(op.getResult().getType()))
-    return;
-
-  mlir::Location loc = op->getLoc();
+void LoweringPreparePass::lowerComplexConjOp(cir::ComplexConjOp op) {
+  mlir::Location loc = op.getLoc();
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  mlir::Value operand = op.getInput();
+  mlir::Value operand = op.getOperand();
   mlir::Value operandReal = builder.createComplexReal(loc, operand);
   mlir::Value operandImag = builder.createComplexImag(loc, operand);
 
-  mlir::Value resultReal = operandReal;
-  mlir::Value resultImag = operandImag;
+  // The complex conjugate is formed by negating the imaginary component.
+  const bool isFP = cir::isFPOrVectorOfFPType(operandReal.getType());
+  mlir::Value resultImag = isFP ? builder.createFNeg(loc, operandImag)
+                                : builder.createMinus(loc, operandImag);
 
-  llvm::TypeSwitch<mlir::Operation *>(op)
-      .Case<cir::IncOp>(
-          [&](auto) { resultReal = builder.createInc(loc, operandReal); })
-      .Case<cir::DecOp>(
-          [&](auto) { resultReal = builder.createDec(loc, operandReal); })
-      .Case<cir::MinusOp>([&](auto) {
-        resultReal = builder.createMinus(loc, operandReal);
-        resultImag = builder.createMinus(loc, operandImag);
-      })
-      .Case<cir::NotOp>(
-          [&](auto) { resultImag = builder.createMinus(loc, operandImag); })
-      .Default([](auto) { llvm_unreachable("unhandled unary complex op"); });
-
-  mlir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
+  mlir::Value result =
+      builder.createComplexCreate(loc, operandReal, resultImag);
   op->replaceAllUsesWith(mlir::ValueRange{result});
   op->erase();
 }
@@ -1832,6 +1850,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   assert(!cir::MissingFeatures::opGlobalCtorPriority());
 
   SmallString<256> fnName;
+  cir::GlobalLinkageKind linkage;
   // Include the filename in the symbol name. Including "sub_" matches gcc
   // and makes sure these symbols appear lexicographically behind the symbols
   // with priority (TBD).  Module implementation units behave the same
@@ -1844,17 +1863,18 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
         astCtx->createMangleContext());
     cast<clang::ItaniumMangleContext>(*mangleCtx)
         .mangleModuleInitializer(astCtx->getCurrentNamedModule(), out);
+    linkage = cir::GlobalLinkageKind::ExternalLinkage;
   } else {
     fnName += "_GLOBAL__sub_I_";
     fnName += getTransformedFileName(mlirModule);
+    linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
-  cir::FuncOp f =
-      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
-                           cir::GlobalLinkageKind::ExternalLinkage);
+  cir::FuncOp f = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
+                                       fnType, linkage);
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (cir::FuncOp &f : dynamicInitializers)
     builder.createCallOp(f.getLoc(), f, {});
@@ -1923,9 +1943,9 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
 
-  mlir::Value tmpAddr = builder.createAlloca(
-      loc, /*addr type*/ builder.getPointerTo(eltTy),
-      /*var type*/ eltTy, "__array_idx", builder.getAlignmentAttr(1));
+  mlir::Value tmpAddr =
+      builder.createAlloca(loc, /*addr type*/ builder.getPointerTo(eltTy),
+                           "__array_idx", builder.getAlignmentAttr(1));
   builder.createStore(loc, start, tmpAddr);
 
   mlir::Block *bodyBlock = &op->getRegion(0).front();
@@ -2237,6 +2257,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayDtor(arrayDtor);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
+  } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
+    lowerComplexConjOp(complexConj);
   } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
   } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
@@ -2248,8 +2270,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       cudaDeviceVars.emplace_back(glob, regAttr);
   } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
     lowerGetGlobalOp(getGlob);
-  } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
-    lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
@@ -2378,9 +2398,9 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // Create the fatbin wrapper struct:
   //    struct { int magic; int version; void *fatbin; void *unused; };
-  auto fatbinWrapperType = RecordType::get(
+  auto fatbinWrapperType = cir::StructType::get(
       &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
-      /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
+      /*packed=*/false, /*padded=*/false, /*is_class=*/false);
   std::string fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(
@@ -2870,10 +2890,10 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
-                  cir::MinusOp, cir::NotOp, cir::LocalInitOp>(op))
+                  cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
+                  cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
+                  cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
+                  cir::CmpThreeWayOp, cir::LocalInitOp>(op))
       opsToTransform.push_back(op);
   });
 

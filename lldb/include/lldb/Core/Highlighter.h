@@ -156,12 +156,6 @@ namespace llvm {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<lldb::LanguageType> {
-  static inline lldb::LanguageType getEmptyKey() {
-    return lldb::eNumLanguageTypes;
-  }
-  static inline lldb::LanguageType getTombstoneKey() {
-    return lldb::eNumLanguageTypes;
-  }
   static unsigned getHashValue(lldb::LanguageType language_type) {
     return static_cast<unsigned>(language_type);
   }

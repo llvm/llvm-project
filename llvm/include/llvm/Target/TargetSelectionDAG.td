@@ -346,7 +346,7 @@ def SDTFPAtomic2 : SDTypeProfile<1, 2, [
 ]>;
 
 def SDTAtomicStore : SDTypeProfile<0, 2, [
-  SDTCisInt<0>, SDTCisPtrTy<1>
+  SDTCisPtrTy<1>
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
@@ -480,6 +480,8 @@ def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
 def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
+def pext       : SDNode<"ISD::PEXT"      , SDTIntBinOp>;
+def pdep       : SDNode<"ISD::PDEP"      , SDTIntBinOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,
@@ -642,8 +644,6 @@ def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
 def fp_to_uint_sat : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntSatOp>;
-def fp_to_sint_sat_gi : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntOp>;
-def fp_to_uint_sat_gi : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntOp>;
 def f16_to_fp  : SDNode<"ISD::FP16_TO_FP" , SDTIntToFPOp>;
 def fp_to_f16  : SDNode<"ISD::FP_TO_FP16" , SDTFPToIntOp>;
 def bf16_to_fp  : SDNode<"ISD::BF16_TO_FP" , SDTIntToFPOp>;
@@ -2391,6 +2391,41 @@ def atomic_store_128 :
   PatFrag<(ops node:$val, node:$ptr),
           (atomic_store node:$val, node:$ptr)> {
   let IsAtomic = true;
+  let MemoryVT = i128;
+}
+
+// Matches store or atomic_store, no alignment requirement.
+def any_store : PatFrags<(ops node:$val, node:$ptr),
+                         [(store node:$val, node:$ptr),
+                          (atomic_store node:$val, node:$ptr)]>;
+
+def any_store_8 : PatFrags<(ops node:$val, node:$ptr),
+                           [(store node:$val, node:$ptr),
+                            (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i8;
+}
+
+def any_store_16 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i16;
+}
+
+def any_store_32 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i32;
+}
+
+def any_store_64 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i64;
+}
+
+def any_store_128 : PatFrags<(ops node:$val, node:$ptr),
+                             [(store node:$val, node:$ptr),
+                              (atomic_store node:$val, node:$ptr)]> {
   let MemoryVT = i128;
 }
 
