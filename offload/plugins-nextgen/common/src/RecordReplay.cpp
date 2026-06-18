@@ -88,20 +88,34 @@ Error RecordReplayTy::deinit() {
 }
 
 Error RecordReplayTy::emitInstanceReport() {
+  llvm::raw_ostream *OutStream = &llvm::outs();
+  std::unique_ptr<llvm::raw_fd_ostream> FileOut;
+
+  if (!ReportFile.empty()) {
+    // The report file is emitted in the output directory.
+    std::string ReportFilePath =
+        (std::filesystem::absolute(OutputDirectory) / ReportFile).string();
+    std::error_code EC;
+    FileOut = std::make_unique<llvm::raw_fd_ostream>(ReportFilePath, EC);
+    if (EC)
+      return Plugin::error(ErrorCode::HOST_IO, "saving report file");
+    OutStream = FileOut.get();
+  }
+
   std::lock_guard<std::mutex> LG(InstancesLock);
-  llvm::outs() << "=== Kernel Record Report ===\n";
-  llvm::outs() << "Directory: "
-               << std::filesystem::absolute(OutputDirectory).string() << "\n";
-  llvm::outs() << "Total Instances: " << Instances.size() << "\n";
-  llvm::outs() << "JSON Filename, Kernel Name, Time (ns), Occurrences:\n";
+  *OutStream << "=== Kernel Record Report ===\n";
+  *OutStream << "Directory: "
+             << std::filesystem::absolute(OutputDirectory).string() << "\n";
+  *OutStream << "Total Instances: " << OrderedInstances.size() << "\n";
+  *OutStream << "JSON Filename, Kernel Name, Time (ns), Occurrences:\n";
 
   SmallString<128> Filename;
-  for (const auto &Inst : Instances)
-    llvm::outs()
-        << getFilename(Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
-        << ", " << Inst.Kernel.getName() << ", " << Inst.getRecordedTimeNs()
-        << ", " << Inst.Occurrences << "\n";
-  llvm::outs() << "=== End Kernel Record Report ===\n";
+  for (const auto *Inst : OrderedInstances)
+    *OutStream
+        << getFilename(*Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
+        << ", " << Inst->Kernel.getName() << ", " << Inst->getRecordedTimeNs()
+        << ", " << Inst->Occurrences << "\n";
+  *OutStream << "=== End Kernel Record Report ===\n";
 
   return Plugin::success();
 }
@@ -114,18 +128,24 @@ RecordReplayTy::registerInstance(const GenericKernelTy &Kernel,
   std::lock_guard<std::mutex> LG(InstancesLock);
   auto [It, Inserted] = Instances.emplace(Kernel, NumTeams, NumThreads,
                                           SharedMemorySize, ReplayOutcome);
+  // Keep insertion order.
+  if (Inserted)
+    OrderedInstances.push_back(&(*It));
+
   // Increase the number of occurrences.
   It->Occurrences += 1;
-  return {*It, Inserted};
+
+  // Return reference and whether it was registered for the first time. Notice
+  // that registering an unregistered instance counts as a new registration.
+  return {*It, (It->Occurrences == 1)};
 }
 
 Error RecordReplayTy::unregisterInstance(const InstanceTy &Instance) {
   assert(isReplaying() && "Cannot unregister instance when recording.");
 
+  // Do not remove it, it may be reused in the future.
   std::lock_guard<std::mutex> LG(InstancesLock);
-  size_t Erased = Instances.erase(Instance);
-  if (Erased != 1)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT, "invalid instance");
+  Instance.Occurrences = 0;
   return Plugin::success();
 }
 

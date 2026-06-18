@@ -2383,7 +2383,8 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        const char *OutputDirPath) {
   return Device.RTL->initialize_record_replay(
       Device.DeviceID, MemorySize, VAddr, IsRecord,
-      /*IsNative=*/true, SaveOutput, EmitReport, OutputDirPath);
+      /*IsNative=*/true, SaveOutput, EmitReport, /*ReportFile=*/"",
+      OutputDirPath);
 }
 
 /// Executes a kernel using pre-recorded information for loading to

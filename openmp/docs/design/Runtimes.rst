@@ -1279,6 +1279,7 @@ is provided below.
 * ``LIBOMPTARGET_RECORD=[TRUE/FALSE] (default FALSE)``
 * ``LIBOMPTARGET_RECORD_DIR=<Filepath>``
 * ``LIBOMPTARGET_RECORD_REPORT=[TRUE/FALSE] (default FALSE)``
+* ``LIBOMPTARGET_RECORD_REPORT_FILE=<Filename>``
 * ``LIBOMPTARGET_RECORD_MEMSIZE=<Num> (default 8*1024*1024*1024)``
 * ``LIBOMPTARGET_RECORD_DEVICE=<Num> (default 0)``
 * ``LIBOMPTARGET_RECORD_OUTPUT=[TRUE/FALSE] (default TRUE)``
@@ -1309,8 +1310,20 @@ LIBOMPTARGET_RECORD_REPORT
 """"""""""""""""""""""""""
 
 This environment variable is used to instruct the runtime to emit a summary of
-the recorded kernel instances and their associated JSON files. By default, no
-report is emitted.
+the recorded kernel instances and their associated JSON files. When enabled, the
+report is emitted in the standard output. The environment variable
+:ref:`LIBOMPTARGET_RECORD_REPORT_FILE` can be used to indicate a file where to
+emit the report. By default, no report is emitted.
+
+.. _libomptarget_record_report_file:
+
+LIBOMPTARGET_RECORD_REPORT_FILE
+"""""""""""""""""""""""""""""""
+
+This environment variable is used to instruct the runtime to emit the recording
+report to a specific output file. The file will be created within the recording
+directory. Note that it is not needed to use :ref:`LIBOMPTARGET_RECORD_REPORT`
+when setting this enviornment variable.
 
 LIBOMPTARGET_RECORD_MEMSIZE
 """""""""""""""""""""""""""
