@@ -15,9 +15,9 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, ptr addrspace(1) %out) #
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
 ; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; CHECK-NEXT:  ; %bb.1: ; %ift

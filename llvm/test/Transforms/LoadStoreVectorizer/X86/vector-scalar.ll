@@ -7,11 +7,10 @@
 define void @vector_scalar(ptr %ptr, double %a, <1 x double> %b) {
 ; CHECK-LABEL: define void @vector_scalar(
 ; CHECK-SAME: ptr [[PTR:%.*]], double [[A:%.*]], <1 x double> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[A]] to b64
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x b64> poison, b64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x double> [[B]] to b64
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x b64> [[TMP2]], b64 [[TMP3]], i32 1
-; CHECK-NEXT:    store <2 x b64> [[TMP4]], ptr [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[B]] to double
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP1]], double [[TMP2]], i32 1
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[PTR]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr <1 x double>, ptr %ptr, i32 1

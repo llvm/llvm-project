@@ -84,15 +84,17 @@ define amdgpu_kernel void @set_inactive_imm_poison_64(ptr addrspace(1) %out) {
 define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x i32> inreg %desc) {
 ; GCN-LABEL: set_inactive_scc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x34
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_buffer_load_dword s4, s[4:7], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    s_buffer_load_dword s7, s[0:3], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v1, s6
 ; GCN-NEXT:    s_or_saveexec_b64 s[2:3], -1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 42, v1, s[2:3]
 ; GCN-NEXT:    s_mov_b64 exec, s[2:3]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s4, 56
+; GCN-NEXT:    s_cmp_lg_u32 s7, 56
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_mov_b32 s2, 1
 ; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
@@ -209,18 +211,19 @@ define amdgpu_kernel void @set_inactive_v2i16(ptr addrspace(1) %out, <2 x i16> %
 define amdgpu_kernel void @set_inactive_v2f16(ptr addrspace(1) %out, <2 x half> %in) {
 ; GCN-LABEL: set_inactive_v2f16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0x2c
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_mov_b32 s5, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    s_or_saveexec_b64 s[0:1], -1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x3c003c00
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[4:5]
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[0:1]
+; GCN-NEXT:    s_mov_b64 exec, s[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; GCN-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %tmp.0 = call <2 x half> @llvm.amdgcn.set.inactive.v2f16(<2 x half> %in, <2 x half> <half 1.0, half 1.0>) #0
   %tmp = call <2 x half> @llvm.amdgcn.strict.wwm.v2i16(<2 x half> %tmp.0)

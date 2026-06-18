@@ -879,25 +879,25 @@ define amdgpu_kernel void @uaddo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GCN-ISEL-NEXT: {{  $}}
 ; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
-; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset, align 4, addrspace 4)
-; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY2]], %subreg.sub0, killed [[COPY1]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
-; GCN-ISEL-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
+; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+; GCN-ISEL-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+; GCN-ISEL-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
+; GCN-ISEL-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+; GCN-ISEL-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY6]], %subreg.sub0, killed [[COPY5]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
+; GCN-ISEL-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[COPY3]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-; GCN-ISEL-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-; GCN-ISEL-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY6]], %subreg.sub0, killed [[COPY5]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub1
-; GCN-ISEL-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub0
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-; GCN-ISEL-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
-; GCN-ISEL-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
-; GCN-ISEL-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY killed [[COPY10]]
-; GCN-ISEL-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 killed [[COPY9]], [[COPY11]], 0, implicit $exec
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[COPY3]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub1
+; GCN-ISEL-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub0
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY10]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+; GCN-ISEL-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+; GCN-ISEL-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 killed [[COPY2]], [[COPY11]], 0, implicit $exec
 ; GCN-ISEL-NEXT:   BUFFER_STORE_DWORD_OFFSET killed [[V_ADD_CO_U32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
 ; GCN-ISEL-NEXT:   $scc = COPY [[V_ADD_CO_U32_e64_1]]
 ; GCN-ISEL-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
@@ -2195,25 +2195,25 @@ define amdgpu_kernel void @usubo32_vcc_user(ptr addrspace(1) %out, ptr addrspace
 ; GCN-ISEL-NEXT: {{  $}}
 ; GCN-ISEL-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
 ; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset, align 4, addrspace 4)
-; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset, align 4, addrspace 4)
-; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY2]], %subreg.sub0, killed [[COPY1]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
-; GCN-ISEL-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+; GCN-ISEL-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 13, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset + 16, align 4, addrspace 4)
+; GCN-ISEL-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+; GCN-ISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+; GCN-ISEL-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+; GCN-ISEL-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
+; GCN-ISEL-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+; GCN-ISEL-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY6]], %subreg.sub0, killed [[COPY5]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
+; GCN-ISEL-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[COPY3]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-; GCN-ISEL-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-; GCN-ISEL-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY6]], %subreg.sub0, killed [[COPY5]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub1
-; GCN-ISEL-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub0
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-; GCN-ISEL-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
-; GCN-ISEL-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
-; GCN-ISEL-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY killed [[COPY10]]
-; GCN-ISEL-NEXT:   [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_SUB_CO_U32_e64 killed [[COPY9]], [[COPY11]], 0, implicit $exec
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[COPY3]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub1
+; GCN-ISEL-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE2]].sub0
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY10]], %subreg.sub0, killed [[COPY9]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+; GCN-ISEL-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+; GCN-ISEL-NEXT:   [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_SUB_CO_U32_e64 killed [[COPY2]], [[COPY11]], 0, implicit $exec
 ; GCN-ISEL-NEXT:   BUFFER_STORE_DWORD_OFFSET killed [[V_SUB_CO_U32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
 ; GCN-ISEL-NEXT:   $scc = COPY [[V_SUB_CO_U32_e64_1]]
 ; GCN-ISEL-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
@@ -4110,7 +4110,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-ISEL-NEXT:   S_CBRANCH_SCC1 %bb.4, implicit $scc
 ; GCN-ISEL-NEXT:   S_BRANCH %bb.2
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT: bb.2 (%ir-block.7):
+; GCN-ISEL-NEXT: bb.2 (%ir-block.9):
 ; GCN-ISEL-NEXT:   successors: %bb.4(0x80000000)
 ; GCN-ISEL-NEXT: {{  $}}
 ; GCN-ISEL-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[COPY9]].sub0
@@ -4148,7 +4148,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-ISEL-NEXT:   [[COPY20:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]]
 ; GCN-ISEL-NEXT:   S_BRANCH %bb.4
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT: bb.3 (%ir-block.12):
+; GCN-ISEL-NEXT: bb.3 (%ir-block.14):
 ; GCN-ISEL-NEXT:   successors: %bb.1(0x80000000)
 ; GCN-ISEL-NEXT: {{  $}}
 ; GCN-ISEL-NEXT:   [[COPY21:%[0-9]+]]:sreg_32 = COPY [[COPY9]].sub0
@@ -4348,7 +4348,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_13:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE25:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY82]], %subreg.sub0, killed [[COPY81]], %subreg.sub1, killed [[S_MOV_B32_13]], %subreg.sub2, killed [[S_MOV_B32_12]], %subreg.sub3
 ; GCN-ISEL-NEXT:   [[COPY83:%[0-9]+]]:vreg_64 = COPY [[PHI2]]
-; GCN-ISEL-NEXT:   BUFFER_STORE_DWORDX2_OFFSET [[COPY83]], killed [[REG_SEQUENCE25]], 0, 0, 0, 0, implicit $exec :: (store (s64) into %ir.15, addrspace 1)
+; GCN-ISEL-NEXT:   BUFFER_STORE_DWORDX2_OFFSET [[COPY83]], killed [[REG_SEQUENCE25]], 0, 0, 0, 0, implicit $exec :: (store (s64) into %ir.17, addrspace 1)
 ; GCN-ISEL-NEXT:   S_ENDPGM 0
   %result = udiv i64 %x, %y
   store i64 %result, ptr addrspace(1) %out

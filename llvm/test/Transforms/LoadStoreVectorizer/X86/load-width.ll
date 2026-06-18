@@ -8,16 +8,12 @@ define <8 x double> @loadwidth_insert_extract(ptr %ptr) {
 ; CHECK-HSW-LABEL: define <8 x double> @loadwidth_insert_extract(
 ; CHECK-HSW-SAME: ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-HSW-NEXT:    [[C:%.*]] = getelementptr <2 x double>, ptr [[PTR]], i32 2
-; CHECK-HSW-NEXT:    [[TMP1:%.*]] = load <4 x b64>, ptr [[PTR]], align 16
-; CHECK-HSW-NEXT:    [[LA1:%.*]] = shufflevector <4 x b64> [[TMP1]], <4 x b64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-HSW-NEXT:    [[TMP2:%.*]] = bitcast <2 x b64> [[LA1]] to <2 x double>
-; CHECK-HSW-NEXT:    [[LB2:%.*]] = shufflevector <4 x b64> [[TMP1]], <4 x b64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-HSW-NEXT:    [[TMP3:%.*]] = bitcast <2 x b64> [[LB2]] to <2 x double>
-; CHECK-HSW-NEXT:    [[TMP4:%.*]] = load <4 x b64>, ptr [[C]], align 16
-; CHECK-HSW-NEXT:    [[LC3:%.*]] = shufflevector <4 x b64> [[TMP4]], <4 x b64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-HSW-NEXT:    [[TMP5:%.*]] = bitcast <2 x b64> [[LC3]] to <2 x double>
-; CHECK-HSW-NEXT:    [[LD4:%.*]] = shufflevector <4 x b64> [[TMP4]], <4 x b64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-HSW-NEXT:    [[TMP6:%.*]] = bitcast <2 x b64> [[LD4]] to <2 x double>
+; CHECK-HSW-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[PTR]], align 16
+; CHECK-HSW-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-HSW-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-HSW-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[C]], align 16
+; CHECK-HSW-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-HSW-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-HSW-NEXT:    [[V1:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-HSW-NEXT:    [[V2:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
 ; CHECK-HSW-NEXT:    [[V3:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
@@ -38,15 +34,11 @@ define <8 x double> @loadwidth_insert_extract(ptr %ptr) {
 ;
 ; CHECK-KNL-LABEL: define <8 x double> @loadwidth_insert_extract(
 ; CHECK-KNL-SAME: ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-KNL-NEXT:    [[TMP1:%.*]] = load <8 x b64>, ptr [[PTR]], align 16
-; CHECK-KNL-NEXT:    [[LA1:%.*]] = shufflevector <8 x b64> [[TMP1]], <8 x b64> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-KNL-NEXT:    [[TMP2:%.*]] = bitcast <2 x b64> [[LA1]] to <2 x double>
-; CHECK-KNL-NEXT:    [[LB2:%.*]] = shufflevector <8 x b64> [[TMP1]], <8 x b64> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-KNL-NEXT:    [[TMP3:%.*]] = bitcast <2 x b64> [[LB2]] to <2 x double>
-; CHECK-KNL-NEXT:    [[LC3:%.*]] = shufflevector <8 x b64> [[TMP1]], <8 x b64> poison, <2 x i32> <i32 4, i32 5>
-; CHECK-KNL-NEXT:    [[TMP4:%.*]] = bitcast <2 x b64> [[LC3]] to <2 x double>
-; CHECK-KNL-NEXT:    [[LD4:%.*]] = shufflevector <8 x b64> [[TMP1]], <8 x b64> poison, <2 x i32> <i32 6, i32 7>
-; CHECK-KNL-NEXT:    [[TMP5:%.*]] = bitcast <2 x b64> [[LD4]] to <2 x double>
+; CHECK-KNL-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr [[PTR]], align 16
+; CHECK-KNL-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-KNL-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-KNL-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-KNL-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-KNL-NEXT:    [[V1:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-KNL-NEXT:    [[V2:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
 ; CHECK-KNL-NEXT:    [[V3:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
