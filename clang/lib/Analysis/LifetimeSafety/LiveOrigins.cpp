@@ -64,6 +64,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return FieldEsc->getFieldDecl()->getLocation();
     if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
       return GlobalEsc->getGlobal()->getLocation();
+    if (auto *ThisEsc = dyn_cast<ThisEscapeFact>(OEF))
+      return ThisEsc->getLoc();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }

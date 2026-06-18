@@ -192,6 +192,18 @@ int* return_spaced_brackets(int* p [ [clang::noescape] /*some comment*/ ]) { // 
   return p; // expected-note {{returned here}}
 }
 
+// FIXME: A [[clang::noescape]] parameter captured into the object via
+// [[clang::lifetime_capture_by(this)]] escapes the function and should be
+// diagnosed. It currently is not: the escape is modeled as a ThisEscapeFact at
+// exit, which does not feed the noescape-violation machinery.
+struct CaptureByThisNoescape {
+  const int *p;
+  void store(const int &x [[clang::lifetime_capture_by(this)]]);
+  void captures_noescape(const int &n [[clang::noescape]]) {
+    store(n); // FIXME-warning: parameter is marked [[clang::noescape]] but escapes
+  }
+};
+
 namespace callable_wrappers {
 
 std::function<void()> escape_noescape_via_function(int &x [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}

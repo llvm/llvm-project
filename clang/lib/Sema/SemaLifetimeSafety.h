@@ -127,6 +127,25 @@ public:
         << UseExpr->getSourceRange();
   }
 
+  void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
+                           const Expr *MovedExpr,
+                           SourceLocation FreeLoc) override {
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_use_after_scope_moved
+                          : diag::warn_lifetime_safety_use_after_scope;
+    std::string DestroyedSubject = getDiagSubjectDescription(IssueExpr);
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << DestroyedSubject << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
+        << DestroyedSubject;
+
+    S.Diag(UseLoc, diag::note_lifetime_safety_used_here);
+  }
+
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             const Expr *MovedExpr) override {
     unsigned DiagID = MovedExpr
