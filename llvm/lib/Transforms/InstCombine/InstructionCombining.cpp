@@ -5962,6 +5962,10 @@ bool InstCombinerImpl::run() {
 
         Result->insertInto(InstParent, InsertPos);
 
+        // Register newly created assumptions.
+        if (auto *Assume = dyn_cast<AssumeInst>(Result))
+          AC.registerAssumption(Assume);
+
         // Push the new instruction and any users onto the worklist.
         Worklist.pushUsersToWorkList(*Result);
         Worklist.push(Result);
