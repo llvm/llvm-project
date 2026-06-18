@@ -463,9 +463,10 @@ more accurate checks in calling code.
 To enable annotation suggestions, use ``-Wlifetime-safety-suggestions``.
 
 Fix-it hints normally insert ``[[clang::lifetimebound]]``. If a visible
-object-like macro expands to ``[[clang::lifetimebound]]``, Clang will use the
-last such macro visible at the insertion point. To force a project-specific
-macro spelling, use ``-lifetime-safety-lifetimebound-macro=<macro>``.
+object-like macro expands to ``[[clang::lifetimebound]]`` or
+``__attribute__((lifetimebound))``, Clang will use the last such macro
+visible at the insertion point. To force a project-specific macro spelling,
+use ``-lifetime-safety-lifetimebound-macro=<macro>``.
 
 .. code-block:: c++
 

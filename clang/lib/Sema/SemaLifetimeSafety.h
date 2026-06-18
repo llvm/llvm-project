@@ -423,7 +423,8 @@ public:
   }
 
 private:
-  std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace) {
+  std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,
+                                        bool AllowGNUAttrMacro = true) {
     StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
     if (Spelling.empty() && Loc.isValid()) {
       const Preprocessor &PP = S.getPreprocessor();
@@ -431,6 +432,12 @@ private:
           Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
                 tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
                 tok::r_square, tok::r_square});
+
+      if (Spelling.empty() && AllowGNUAttrMacro)
+        Spelling = PP.getLastMacroWithSpelling(
+            Loc, {tok::kw___attribute, tok::l_paren, tok::l_paren,
+                  PP.getIdentifierInfo("lifetimebound"), tok::r_paren,
+                  tok::r_paren});
     }
     const std::string Text =
         Spelling.empty() ? "[[clang::lifetimebound]]" : Spelling.str();
@@ -479,8 +486,9 @@ private:
               ->getLocation(),
           0, S.getSourceManager(), S.getLangOpts());
     }
-    return {InsertionPoint, getLifetimeBoundFixItText(InsertionPoint,
-                                                      /*LeadingSpace=*/true)};
+    return {InsertionPoint,
+            getLifetimeBoundFixItText(InsertionPoint, /*LeadingSpace=*/true,
+                                      /*AllowGNUAttrMacro=*/false)};
   }
 
   std::string getDiagSubjectDescription(const ValueDecl *VD) {

@@ -182,6 +182,25 @@ struct TrailingReturn {
   }
 };
 
+#define GNU_LIFETIMEBOUND_MACRO __attribute__((lifetimebound))
+
+View return_view_with_gnu_macro(View a) {
+  // CHECK: :[[@LINE-1]]:33: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:39-[[@LINE-2]]:39}:" GNU_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
+struct OnlyGNUMember {
+  MyObj data;
+
+  View get_view() {
+    // CHECK: :[[@LINE-1]]:18: warning: implicit this in intra-TU function should be marked
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:" {{\[\[}}clang::lifetimebound]]"
+    return data;
+  }
+};
+
+#define LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
 #define MY_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
 
 View unnamed_macro(View);
