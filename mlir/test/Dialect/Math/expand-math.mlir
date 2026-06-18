@@ -891,3 +891,263 @@ func.func @clampf_vector_op(%arg: vector<3x4xf32>, %min: vector<3x4xf32>, %max: 
   %a = math.clampf %arg to [%min, %max] fastmath<fast> : vector<3x4xf32>
   return %a: vector<3x4xf32>
 }
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_sinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.sinh %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_sinh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.sinh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_sinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.sinh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_sinh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.sinh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_cosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.cosh %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_cosh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.cosh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_cosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.cosh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_cosh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.cosh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_tanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.tanh %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_tanh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.tanh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_tanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.tanh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_tanh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.tanh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_asinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.asinh %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_asinh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.asinh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_asinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.asinh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_asinh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.asinh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_acosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.acosh %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_acosh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.acosh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_acosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.acosh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_acosh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.acosh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_atanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.atanh %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_atanh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.atanh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_atanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.atanh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_atanh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.atanh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_exp2_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.exp2 %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_exp2_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.exp2 %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_exp2_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.exp2 %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_exp2_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.exp2 %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_round_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.round %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_round_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.round %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_round_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.round %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_round_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.round %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_roundeven_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK:          %[[OP:.*]] = math.roundeven %[[ARG]] : tensor<?xf32>
+// CHECK:          return %[[OP]] : tensor<?xf32>
+
+func.func @non_static_shape_roundeven_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.roundeven %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_roundeven_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.roundeven %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_roundeven_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.roundeven %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_ctlz_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xi32>)
+// CHECK-SAME:     -> tensor<?xi32>
+// CHECK:          %[[OP:.*]] = math.ctlz %[[ARG]] : tensor<?xi32>
+// CHECK:          return %[[OP]] : tensor<?xi32>
+
+func.func @non_static_shape_ctlz_op(%arg: tensor<?xi32>) -> tensor<?xi32>{
+  %a = math.ctlz %arg : tensor<?xi32>
+  return %a: tensor<?xi32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_ctlz_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xi32>)
+// CHECK-SAME:     -> tensor<*xi32>
+// CHECK:          %[[OP:.*]] = math.ctlz %[[ARG]] : tensor<*xi32>
+// CHECK:          return %[[OP]] : tensor<*xi32>
+
+func.func @unranked_ctlz_op(%arg: tensor<*xi32>) -> tensor<*xi32>{
+  %a = math.ctlz %arg : tensor<*xi32>
+  return %a: tensor<*xi32>
+}

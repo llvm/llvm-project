@@ -25,6 +25,15 @@ namespace mlir::math {
 #include "mlir/Dialect/Math/Transforms/Passes.h.inc"
 } // namespace mlir::math
 
+/// Check if the type is a shaped type with dynamic shape
+/// (e.g., tensor<?xf32>). Returns false for scalar types and static-shaped
+/// types, allowing expansion to proceed. Only dynamic-shaped tensors/vectors
+/// are rejected since the generated constant folding assumes static shapes.
+static bool isDynamicShaped(Type type) {
+  auto shapedTy = dyn_cast<ShapedType>(type);
+  return shapedTy && !shapedTy.hasStaticShape();
+}
+
 /// Create a float constant.
 static Value createFloatConst(Location loc, Type type, APFloat value,
                               OpBuilder &b) {
@@ -77,6 +86,9 @@ static LogicalResult convertSinhOp(math::SinhOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
+  if (isDynamicShaped(opType))
+    return failure();
+
   Value exp = math::ExpOp::create(b, operand);
   Value neg = arith::NegFOp::create(b, operand);
   Value nexp = math::ExpOp::create(b, neg);
@@ -92,6 +104,9 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+
+  if (isDynamicShaped(opType))
+    return failure();
 
   Value exp = math::ExpOp::create(b, operand);
   Value neg = arith::NegFOp::create(b, operand);
@@ -113,6 +128,10 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
 /// result by `sign(x)` to retain sign of the real result.
 static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   auto floatType = op.getOperand().getType();
+
+  if (isDynamicShaped(floatType))
+    return failure();
+
   Location loc = op.getLoc();
   Value zero = createFloatConst(loc, floatType, 0.0, rewriter);
   Value one = createFloatConst(loc, floatType, 1.0, rewriter);
@@ -162,6 +181,9 @@ static LogicalResult convertAsinhOp(math::AsinhOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
+  if (isDynamicShaped(opType))
+    return failure();
+
   Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
   Value fma = math::FmaOp::create(b, operand, operand, one);
   Value sqrt = math::SqrtOp::create(b, fma);
@@ -178,6 +200,9 @@ static LogicalResult convertAcoshOp(math::AcoshOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
+  if (isDynamicShaped(opType))
+    return failure();
+
   Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter);
   Value fma = math::FmaOp::create(b, operand, operand, negOne);
   Value sqrt = math::SqrtOp::create(b, fma);
@@ -193,6 +218,9 @@ static LogicalResult convertAtanhOp(math::AtanhOp op,
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+
+  if (isDynamicShaped(opType))
+    return failure();
 
   Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
   Value add = arith::AddFOp::create(b, operand, one);
@@ -224,14 +252,13 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
 //      if (x > y) then incr = 1 else incr = 0
 //      y = y + incr   <= replace this op with the ceilf op.
 static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
-  // Creating constants assumes the static shaped type.
-  auto shapedType = dyn_cast<ShapedType>(op.getType());
-  if (shapedType && !shapedType.hasStaticShape())
-    return failure();
-
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+
+  if (isDynamicShaped(opType))
+    return failure();
+
   Type operandETy = getElementTypeOrSelf(opType);
   FloatType floatTy = llvm::dyn_cast<FloatType>(operandETy);
   const llvm::fltSemantics &semantics = floatTy.getFloatSemantics();
@@ -449,6 +476,10 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+
+  if (isDynamicShaped(opType))
+    return failure();
+
   Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b);
   Value mult = arith::MulFOp::create(b, opType, operand, ln2);
   Value exp = math::ExpOp::create(b, op->getLoc(), mult);
@@ -463,6 +494,9 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
   Type opEType = getElementTypeOrSelf(opType);
+
+  if (isDynamicShaped(opType))
+    return failure();
 
   if (!opEType.isF32()) {
     return rewriter.notifyMatchFailure(op, "not a round of f32.");
@@ -523,6 +557,9 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   auto eTy = getElementTypeOrSelf(operandTy);
   Location loc = op.getLoc();
 
+  if (isDynamicShaped(operandTy))
+    return failure();
+
   // Only expand for integer or float element types (index has no fixed bitwidth).
   if (!eTy.isIntOrFloat()) {
     return rewriter.notifyMatchFailure(op, "ctlz expansion only supports int or float types");
@@ -573,6 +610,9 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Type resultTy = op.getType();
   Type operandETy = getElementTypeOrSelf(operandTy);
   Type resultETy = getElementTypeOrSelf(resultTy);
+
+  if (isDynamicShaped(operandTy))
+    return failure();
 
   if (!isa<FloatType>(operandETy) || !isa<FloatType>(resultETy)) {
     return rewriter.notifyMatchFailure(op, "not a roundeven of f16 or f32.");
@@ -698,12 +738,10 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
 // Convert `math.rsqrt` into `arith.divf` + `math.sqrt`
 static LogicalResult convertRsqrtOp(math::RsqrtOp op,
                                     PatternRewriter &rewriter) {
-
   auto operand = op.getOperand();
   auto operandTy = operand.getType();
-  // Operand type must be shatic shaped type to create const float.
-  auto shapedOperandType = dyn_cast<ShapedType>(operandTy);
-  if (shapedOperandType && !shapedOperandType.hasStaticShape())
+
+  if (isDynamicShaped(operandTy))
     return failure();
 
   auto eTy = getElementTypeOrSelf(operandTy);
