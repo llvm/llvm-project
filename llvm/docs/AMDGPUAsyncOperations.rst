@@ -11,7 +11,7 @@ Introduction
 ============
 
 Asynchronous operations are operations that are completed independently at an
-unspecified scope. A thread that requests one or more async operations can use
+unspecified scope. A thread that initiates one or more async operations can use
 *asyncmarks* to track their completion.
 
 Operations
@@ -20,7 +20,7 @@ Operations
 Async Instructions
 ------------------
 
-The following instructions request async operations that transfer data between
+The following instructions initiate async operations that transfer data between
 global memory and LDS memory.
 
 .. note::
@@ -67,7 +67,7 @@ function is called the *current sequence*.
 ``@llvm.amdgcn.asyncmark()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Appends an asyncmark to the current sequence.
+Produces an asyncmark and appends it to the current sequence.
 
 ``@llvm.amdgcn.wait.asyncmark(i16 %N)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -78,7 +78,7 @@ asyncmarks from the start of the sequence if it is more than ``N``.
 Memory Consistency Model
 ========================
 
-An ``asyncmark()`` operation ``X`` that inserts an asyncmark ``M`` is
+An ``asyncmark()`` operation ``X`` that produces an asyncmark ``M`` is
 *completed-at* a ``wait.asyncmark()`` operation ``Y`` in the same function body
 if:
 
@@ -86,13 +86,10 @@ if:
 - ``M`` is not in the current sequence at any operation ``Z`` that immediately
   follows ``Y`` in *program-order*.
 
-When a thread executes an async *instruction* ``I``, it initiates a
-corresponding async *operation* ``A``, and ``I`` is said to *happen-before*
-``A``.
-
-An async operation ``A`` initiated by an instruction ``I`` *happens-before* a
-``wait.asyncmark()`` operation ``Y`` if there exists an ``asyncmark()``
-operation ``X`` such that:
+Each dynamic instance ``I`` of an async *instruction* initiates a corresponding
+async *operation* ``A`` such that ``I`` *happens-before* ``A``. Then ``A``
+*happens-before* a ``wait.asyncmark()`` operation ``Y`` if there exists an
+``asyncmark()`` operation ``X`` such that:
 
 - ``I`` is *program-ordered* before ``X``, and
 - ``X`` is *completed-at* ``Y``.
@@ -100,8 +97,8 @@ operation ``X`` such that:
 Examples
 ========
 
-Uneven blocks of async transfers
---------------------------------
+Uneven blocks of async operations
+---------------------------------
 
 .. code-block:: c++
 
@@ -167,7 +164,7 @@ Ordinary function call
 
 .. code-block:: c++
 
-   extern void bar(); // may or may not make async calls
+   extern void bar(); // may or may not initiate async operations
 
    void foo(global int *g, local int *l) {
        // first block
@@ -235,7 +232,7 @@ After inlining, ``C`` is also *completed-at* ``D`` and ``X`` is **not**
 *completed-at* ``D``.
 
 Conversely, a ``wait.asyncmark`` call inside a callee cannot be used to track
-asyncmarks inserted by the caller, since this ``wait.asyncmark`` can only
+asyncmarks from the caller, since this ``wait.asyncmark`` can only
 observe the current sequence of the callee.
 
 .. code-block:: c++
