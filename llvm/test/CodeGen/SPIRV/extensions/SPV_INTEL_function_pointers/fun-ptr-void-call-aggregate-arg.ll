@@ -6,7 +6,7 @@
 ; The -discard-value-names run additionally checks that the per-callsite type
 ; restoration is keyed independently of value names.
 ; RUN: llvm-as < %s | llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers -discard-value-names -o - | FileCheck %s
-; %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; %if spirv-tools %{ llvm-as < %s | llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers -discard-value-names -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
 ; CHECK-DAG: OpExtension "SPV_INTEL_function_pointers"
