@@ -270,3 +270,17 @@ func.func @test_vector_element_type() {
   %alloc = memref.alloc() : memref<16x1xvector<16xf16>, 3>
   return
 }
+
+
+// -----
+
+/// Ensure ui64 memory space attributes do not crash
+// nvgpu-optimize-shared-memory (issue #204580).
+
+// CHECK-LABEL: func @test_int_conversion
+module {
+  func.func @test_int_conversion() {
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xf32, 1 : ui64>
+    return
+  }
+}
