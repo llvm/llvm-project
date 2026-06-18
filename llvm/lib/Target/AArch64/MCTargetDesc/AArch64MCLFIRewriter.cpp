@@ -22,8 +22,14 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    NoLFIGuardElim("aarch64-lfi-no-guard-elim", cl::Hidden,
+                   cl::desc("Disable the LFI guard elimination optimization"),
+                   cl::init(false));
 
 namespace llvm::AArch64 {
 struct LFIVariantEntry {
@@ -245,14 +251,36 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
   return {};
 }
 
+void AArch64MCLFIRewriter::onLabel(const MCSymbol *) {
+  // Invalidate guard state since the label is a potential branch target.
+  ActiveGuard = false;
+}
+
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
                                     const MCSubtargetInfo &STI) {
+  // Invalidate the active guard if this instruction modifies the guarded
+  // register, modifies x28 itself, or may affect control flow.
+  if (ActiveGuard) {
+    const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
+    if (Desc.mayAffectControlFlow(Inst, *RegInfo) ||
+        mayModifyRegister(Inst, ActiveGuardReg) ||
+        mayModifyRegister(Inst, getWRegFromXReg(ActiveGuardReg)) ||
+        mayModifyRegister(Inst, LFIAddrReg))
+      ActiveGuard = false;
+  }
+
   Out.emitInstruction(Inst, STI);
 }
 
 void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        MCStreamer &Out,
                                        const MCSubtargetInfo &STI) {
+  // If x28 already holds the guarded value of Src, this guard is redundant and
+  // can be skipped.
+  if (!NoLFIGuardElim && Dest == LFIAddrReg && ActiveGuard &&
+      ActiveGuardReg == Src)
+    return;
+
   // add Dest, LFIBaseReg, W(Src), uxtw
   MCInst Inst;
   Inst.setOpcode(AArch64::ADDXrx);
@@ -262,6 +290,12 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
   Inst.addOperand(
       MCOperand::createImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTW, 0)));
   emitInst(Inst, Out, STI);
+
+  // Record Src as the new active guard.
+  if (Dest == LFIAddrReg) {
+    ActiveGuard = true;
+    ActiveGuardReg = Src;
+  }
 }
 
 void AArch64MCLFIRewriter::emitBranch(unsigned Opcode, MCRegister Target,
@@ -818,8 +852,12 @@ bool llvm::isLFIPrePostMemAccess(unsigned Opcode) {
 
 bool AArch64MCLFIRewriter::rewriteInst(const MCInst &Inst, MCStreamer &Out,
                                        const MCSubtargetInfo &STI) {
-  // The guard prevents rewrite-recursion when we emit instructions from inside
-  // the rewriter (such instructions should not be rewritten).
+  // Invalidate guard state if the rewriter was manually disabled.
+  if (!Enabled)
+    ActiveGuard = false;
+
+  // This recursion guard prevents rewrite-recursion when we emit instructions
+  // from inside the rewriter (such instructions should not be rewritten).
   if (!Enabled || Guard)
     return false;
   Guard = true;
