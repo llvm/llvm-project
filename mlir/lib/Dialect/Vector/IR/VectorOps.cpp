@@ -6194,6 +6194,13 @@ LogicalResult vector::LoadOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
+  // Negative strides are not supported on vector.load.
+  auto [strides, offset] = memRefTy.getStridesAndOffset();
+  for (int64_t stride : strides) {
+    if (!ShapedType::isDynamic(stride) && stride < 0)
+      return emitOpError("memref strides must be non-negative");
+  }
+
   if (memRefTy.getRank() < resVecTy.getRank())
     return emitOpError(
         "destination memref has lower rank than the result vector");
@@ -6239,6 +6246,13 @@ LogicalResult vector::StoreOp::verify() {
 
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
+
+  // Negative strides are not supported on vector.store.
+  auto [strides, offset] = memRefTy.getStridesAndOffset();
+  for (int64_t stride : strides) {
+    if (!ShapedType::isDynamic(stride) && stride < 0)
+      return emitOpError("memref strides must be non-negative");
+  }
 
   if (memRefTy.getRank() < valueVecTy.getRank())
     return emitOpError("source memref has lower rank than the vector to store");
