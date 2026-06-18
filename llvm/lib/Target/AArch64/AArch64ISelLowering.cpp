@@ -1157,7 +1157,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Try and combine setcc/select_cc with csel and bool-vector bitcasts.
   setTargetDAGCombine(ISD::SETCC);
   setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::SETCCCARRY);
 
   setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
 
@@ -12084,10 +12083,10 @@ static bool isLegalCondCmpImmediate(const APInt &Imm) {
 // is fine.
 static bool hasLegalCmpImmediate(SDValue LHS, SDValue RHS) {
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(LHS);
-  if (C && !isLegalCmpImmed(C->getAPIntValue()))
+  if (C && !llvm::AArch64_AM::isLegalCmpImmed(C->getAPIntValue()))
     return false;
   C = dyn_cast<ConstantSDNode>(RHS);
-  if (C && !isLegalCmpImmed(C->getAPIntValue()))
+  if (C && !llvm::AArch64_AM::isLegalCmpImmed(C->getAPIntValue()))
     return false;
   return true;
 }
@@ -12101,14 +12100,6 @@ static bool hasLegalCondCmpImmediate(SDValue LHS, SDValue RHS) {
   if (C && !isLegalCondCmpImmediate(C->getAPIntValue()))
     return false;
   return true;
-}
-
-// Only the leading compare of the chain uses the wider CMP immediate; the rest
-// become CCMPs. So a compare whose immediate is a legal CMP operand but not a
-// legal CCMP operand is cheapest at the front.
-static bool preferAsFirstCmp(const std::pair<SDValue, SDValue> &Pair) {
-  return hasLegalCmpImmediate(Pair.first, Pair.second) &&
-         !hasLegalCondCmpImmediate(Pair.first, Pair.second);
 }
 
 // True if either operand is a constant that does not fit a CCMP immediate but
@@ -12204,8 +12195,15 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
         any_of(WorkList, hasCheapXorImmediateThatNeedsCondCmpReg))
       return SDValue();
 
+    // Only the leading compare of the chain uses the wider CMP immediate; the
+    // rest become CCMPs. So a compare whose immediate is a legal CMP operand
+    // but not a legal CCMP operand is cheapest at the front.
+    auto PreferAsFirstCmp = [](const std::pair<SDValue, SDValue> &Pair) {
+      return hasLegalCmpImmediate(Pair.first, Pair.second) &&
+             !hasLegalCondCmpImmediate(Pair.first, Pair.second);
+    };
     SmallVector<std::pair<SDValue, SDValue>, 16>::iterator First =
-        find_if(WorkList, preferAsFirstCmp);
+        find_if(WorkList, PreferAsFirstCmp);
     if (First != WorkList.end())
       std::iter_swap(WorkList.begin(), First);
 
