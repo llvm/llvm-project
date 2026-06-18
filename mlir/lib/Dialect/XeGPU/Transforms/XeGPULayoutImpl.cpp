@@ -940,9 +940,11 @@ getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
 /// C/D.
 static std::optional<SmallVector<int64_t>> get2DBlockIOInstDataLayout(
     ArrayRef<int64_t> dataShape, Type elemTy,
-    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction) {
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    bool transform = false, bool transpose = false) {
   int rank = dataShape.size();
-  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
+  auto blockWHC =
+      uArchInstruction->getBlockWidthHeightCount(elemTy, transform, transpose);
   if (!blockWHC)
     return std::nullopt;
   auto [bWidths, bHeights, bCounts] = blockWHC.value();
@@ -1032,19 +1034,15 @@ computeScatterIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
 static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
                                   int64_t subgroupSize, int64_t bitwidth,
-                                  int64_t packingSize, bool vnni = false,
-                                  bool transpose = false) {
+                                  int64_t packingSize, bool transform = false) {
   int64_t rank = instShape.size();
   SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-  int64_t packingDim = vnni ? rank - 2 : rank - 1;
-  laneData[packingDim] = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  assert(
-      !(vnni && transpose) &&
-      "transpose and VNNI cannot be enabled at the same time for 2D block IO");
-  if (transpose)
-    laneLayout[rank - 2] = subgroupSize;
-  else
-    laneLayout.back() = subgroupSize;
+  int kDim = transform ? rank - 2 : rank - 1;
+  unsigned vnniFactor = packingSize / bitwidth;
+  laneData[kDim] = bitwidth < packingSize ? vnniFactor : 1;
+  laneLayout.back() =
+      std::min(subgroupSize, instShape.back() / laneData.back());
+
   // assert that the lane layout and data fit in the inst shape
   for (int64_t i = 0; i < rank; ++i) {
     int64_t laneProduct = laneLayout[i] * laneData[i];
@@ -1566,6 +1564,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   auto context = resVecTy.getContext();
   Type elemTy = resVecTy.getElementType();
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
   auto subgroupSize = uArch->getSubgroupSize();
   auto dataShape = resVecTy.getShape();
   const auto *uArchInstruction =
@@ -1582,17 +1581,22 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       consumerLayout.getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> consumerLaneData =
       consumerLayout.getEffectiveLaneDataAsInt();
-  SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
+  auto consumerOrderAttr = consumerLayout.getOrder();
 
   assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
          "Expected consumer layout to have lane_layout and lane_data");
 
-  bool hasTransform = consumerLaneData[rank - 2] != 1;
-  bool hasTranspose = consumerLaneLayout[rank - 2] != 1;
-  unsigned packingFactor = (hasTranspose || hasTransform)
-                               ? consumerLaneData[rank - 2]
-                               : consumerLaneData[rank - 1];
-  unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
+  // vertical lane layout means that the blockload must be transposed
+  // note scaleA on PVC has vertical lan layout even without transposed order
+  // attr
+  bool hasTranspose =
+      consumerLaneLayout[rank - 2] > 1 && consumerLaneLayout[rank - 1] == 1;
+  bool hasTransform = !hasTranspose && consumerLaneData[rank - 2] > 1 &&
+                      consumerLaneData[rank - 1] == 1;
+  assert((consumerLaneData[rank - 2] == 1 || consumerLaneData[rank - 1] == 1) &&
+         "Expected consumer lane data to have at most one non-unit dim");
+  unsigned packingfactor =
+      std::max(consumerLaneData[rank - 2], consumerLaneData[rank - 1]);
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
@@ -1602,6 +1606,18 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       return nullptr;
     auto [bWidths, bHeights, bCounts] = blockWHC.value();
 
+    SmallVector<int64_t> laneLayout;
+    // set the laneLayout to use consumer's LaneLayout as base, but adjust its
+    // size to match the subgroupsize in case its orignal value is larger than 1
+    for (int i = 0; i < rank; i++) {
+      if (consumerLaneLayout[i] > 1)
+        laneLayout.push_back(std::max(static_cast<int64_t>(subgroupSize),
+                                      consumerLaneLayout[i]));
+      else
+        laneLayout.push_back(1);
+    }
+
+    // See whether the consumer's inst_data satisfies the block constraints.
     int64_t height = consumerInstData[rank - 2];
     int64_t width = consumerInstData[rank - 1];
     auto maxBlockCount = *llvm::max_element(bCounts);
@@ -1610,28 +1626,27 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
         (width % maxWidth == 0 && width / maxWidth < maxBlockCount)) {
       if (llvm::is_contained(bHeights, static_cast<int>(height))) {
         return buildInstDataLayoutWithLane(context, consumerInstData,
-                                           consumerLaneLayout, consumerLaneData,
-                                           consumerLayout.getOrder());
+                                           laneLayout, consumerLaneData,
+                                           consumerOrderAttr);
       }
     }
-    auto instData =
-        get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
-    auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-        *instData, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
-        hasTransform, hasTranspose);
 
+    // if consumer instData size too small, try the larger one. like DPAS_MX's
+    // scale is smaller than block load
+    auto instData = get2DBlockIOInstDataLayout(
+        dataShape, elemTy, uArchInstruction, hasTransform, hasTranspose);
+    // assert instData is valid against consumer layout since
+    // transform/transpose attribute are derived from consumer layout
+    assert(instData &&
+           isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
+           "Expected the store layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
+                                       consumerLaneData, consumerOrderAttr);
   }
   if (layoutKind == xegpu::LayoutKind::Lane) {
-    if (isValidLaneLayout(dataShape, consumerLaneLayout, consumerLaneData)) {
-      return consumerLayout;
-    } else {
-      auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-          dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
-          hasTransform, hasTranspose);
-      return buildLaneLayout(context, laneLayout, laneData);
-    }
+    assert(isValidLaneLayout(dataShape, consumerLaneLayout, consumerLaneData) &&
+           "Expected the lane layout to satisfy uArch block constraints");
+    return consumerLayout;
   }
   return nullptr;
 }
@@ -1938,38 +1953,53 @@ xegpu::completeBlockLoadLaneLayoutFromInstData(
   if (!specifiedLayout.getEffectiveLaneLayoutAsInt().empty() &&
       !specifiedLayout.getEffectiveLaneDataAsInt().empty())
     return specifiedLayout;
+  if (!consumerLayout)
+    return specifiedLayout;
+  SmallVector<int64_t> consumerLaneLayout =
+      consumerLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
+  if (consumerLaneLayout.empty() || consumerLaneData.empty())
+    return specifiedLayout;
 
   auto *context = specifiedLayout.getContext();
   int rank = specifiedInstData.size();
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
 
-  // Derive the transform / transpose / packing properties from the consumer's
-  // lane info, but recompute the lane factorization itself from inst_data.
-  bool hasTransform = false;
-  bool hasTranspose = false;
-  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
-  if (consumerLayout) {
-    SmallVector<int64_t> consumerLaneLayout =
-        consumerLayout.getEffectiveLaneLayoutAsInt();
-    SmallVector<int64_t> consumerLaneData =
-        consumerLayout.getEffectiveLaneDataAsInt();
-    if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
-      hasTransform = consumerLaneData[rank - 2] != 1;
-      hasTranspose = consumerLaneLayout[rank - 2] != 1;
-      unsigned packingFactor = (hasTranspose || hasTransform)
-                                   ? consumerLaneData[rank - 2]
-                                   : consumerLaneData[rank - 1];
-      packingSize = packingFactor * bitwidth;
+  SmallVector<int64_t> laneLayout;
+  // set the laneLayout to use consumer's LaneLayout as base, but adjust its
+  // size to match the subgroupsize in case its orignal value is larger than 1
+  for (int i = 0; i < rank; i++) {
+    if (consumerLaneLayout[i] > 1) {
+      laneLayout.push_back(
+          std::max(static_cast<int64_t>(subgroupSize), consumerLaneLayout[i]));
+    } else {
+      laneLayout.push_back(1);
     }
   }
 
-  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-      specifiedInstData, subgroupSize, bitwidth, packingSize, hasTransform,
-      hasTranspose);
-  if (!isValidLaneLayout(specifiedInstData, laneLayout, laneData))
+  // // Derive the transform / transpose / packing properties from the
+  // consumer's
+  // // lane info, but recompute the lane factorization itself from inst_data.
+  // auto consumerOrder = consumerLayout.getEffectiveOrderAsInt();
+  // // if consumerOrder is like [0, 1, 2, 3], then set hasTranspose to true
+  // bool hasTranspose =
+  //     (consumerOrder == llvm::to_vector(llvm::seq<int64_t>(0, rank)));
+  // int kDim = hasTranspose ? rank - 1 : rank - 2;
+  // unsigned vnniFactor = consumerLaneData[kDim];
+  // unsigned packingSize = vnniFactor * bitwidth;
+  // bool hasTransform = vnniFactor != 1;
+  // // scaleA on PVC has vertical lan layout even without transpose
+  // bool hasVerticalLayout = consumerLaneLayout[rank - 2] > 1 &&
+  // consumerLaneLayout[rank - 1] == 1;
+
+  // auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+  //     specifiedInstData, subgroupSize, bitwidth, packingSize, hasTransform,
+  //     hasTranspose, hasVerticalLayout);
+  if (!isValidLaneLayout(specifiedInstData, laneLayout, consumerLaneData))
     return std::nullopt;
   return buildInstDataLayoutWithLane(context, specifiedInstData, laneLayout,
-                                     laneData);
+                                     consumerLaneData,
+                                     consumerLayout.getOrder());
 }
 
 /// Completes user-provided DPAS A/B/C-D anchors that carry only inst_data by

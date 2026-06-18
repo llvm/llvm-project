@@ -130,48 +130,6 @@ public:
   void set(const xegpu::DistributeLayoutAttr &layout) { storage = layout; }
 };
 
-SmallVector<int> LayoutInfo::getLaneLayout() const {
-  if (!isAssigned())
-    return {};
-  return llvm::map_to_vector(storage.getEffectiveLaneLayoutAsInt(),
-                             [](int64_t val) { return static_cast<int>(val); });
-}
-
-SmallVector<int> LayoutInfo::getLaneData() const {
-  if (!isAssigned())
-    return {};
-  return llvm::map_to_vector(storage.getEffectiveLaneDataAsInt(),
-                             [](int64_t val) { return static_cast<int>(val); });
-}
-
-SmallVector<int> LayoutInfo::getInstData() const {
-  if (!isAssigned())
-    return {};
-  return llvm::map_to_vector(storage.getEffectiveInstDataAsInt(),
-                             [](int64_t val) { return static_cast<int>(val); });
-}
-
-SmallVector<int> LayoutInfo::getSgLayout() const {
-  if (!isAssigned())
-    return {};
-  return llvm::map_to_vector(storage.getEffectiveSgLayoutAsInt(),
-                             [](int64_t val) { return static_cast<int>(val); });
-}
-
-SmallVector<int> LayoutInfo::getSgData() const {
-  if (!isAssigned())
-    return {};
-  return llvm::map_to_vector(storage.getEffectiveSgDataAsInt(),
-                             [](int64_t val) { return static_cast<int>(val); });
-}
-
-SmallVector<int> LayoutInfo::getOrder() const {
-  if (!isAssigned() || !storage.getOrder())
-    return {};
-  return llvm::map_to_vector(storage.getOrder().asArrayRef(),
-                             [](int64_t val) { return static_cast<int>(val); });
-}
-
 void LayoutInfo::print(raw_ostream &os) const {
   if (isAssigned()) {
     os << storage;
@@ -967,7 +925,8 @@ void LayoutInfoPropagation::visitLoadNdOp(
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
-    if (layoutKind == xegpu::LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData &&
+        !consumerLayoutAttr.getEffectiveLaneLayoutAsInt().empty()) {
       const auto *uArchInstruction =
           dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
               uArch->getInstruction(
@@ -1014,42 +973,43 @@ void LayoutInfoPropagation::visitConvertLayoutOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
-    return;
 
   // TODO: fix if one of the layouts is a slice layout
-  auto targetLayout =
+  auto targetLayoutAttr =
       dyn_cast<xegpu::LayoutAttr>(convert.getTargetLayoutAttr());
+  auto inputLayoutAttr =
+      dyn_cast<xegpu::LayoutAttr>(convert.getInputLayoutAttr());
 
   // The result's propagated layout is authoritative for the converted value.
   // Fill the lane_layout / lane_data / order parameters the target_layout is
   // missing from it (sg_layout / sg_data / inst_data are left as-is), so the
   // target stays consistent with what is actually propagated downstream.
-  auto resultLayoutAttr = dyn_cast<xegpu::LayoutAttr>(resultLayout.get());
-  if (resultLayoutAttr && targetLayout) {
+  auto resultLayoutAttr = resultLayout.isAssigned()
+                              ? dyn_cast<xegpu::LayoutAttr>(resultLayout.get())
+                              : nullptr;
+  if (resultLayoutAttr && targetLayoutAttr) {
     if (layoutKind == xegpu::LayoutKind::InstData &&
-        !targetLayout.getLaneLayout()) {
-      targetLayout = xegpu::LayoutAttr::get(
-          convert.getContext(), targetLayout.getSgLayout(),
-          targetLayout.getSgData(), targetLayout.getInstData(),
+        !targetLayoutAttr.getLaneLayout()) {
+      targetLayoutAttr = xegpu::LayoutAttr::get(
+          convert.getContext(), targetLayoutAttr.getSgLayout(),
+          targetLayoutAttr.getSgData(), targetLayoutAttr.getInstData(),
           resultLayoutAttr.getLaneLayout(), resultLayoutAttr.getLaneData(),
           resultLayoutAttr.getOrder());
-      convert.setTargetLayoutAttr(targetLayout);
+      convert.setTargetLayoutAttr(targetLayoutAttr);
     }
   }
 
   // Fill only the lane_layout / lane_data / order parameters the input_layout
   // is missing from the target_layout (sg_layout / sg_data / inst_data are left
   // as-is), so the producer side receives a fully-populated lane layout.
-  auto inputLayout = dyn_cast<xegpu::LayoutAttr>(convert.getInputLayoutAttr());
-  if (inputLayout && targetLayout) {
+  if (inputLayoutAttr && targetLayoutAttr) {
     if (layoutKind == xegpu::LayoutKind::InstData &&
-        !inputLayout.getLaneLayout()) {
+        !inputLayoutAttr.getLaneLayout()) {
       auto merged = xegpu::LayoutAttr::get(
-          convert.getContext(), inputLayout.getSgLayout(),
-          inputLayout.getSgData(), inputLayout.getInstData(),
-          targetLayout.getLaneLayout(), targetLayout.getLaneData(),
-          targetLayout.getOrder());
+          convert.getContext(), inputLayoutAttr.getSgLayout(),
+          inputLayoutAttr.getSgData(), inputLayoutAttr.getInstData(),
+          targetLayoutAttr.getLaneLayout(), targetLayoutAttr.getLaneData(),
+          targetLayoutAttr.getOrder());
       convert.setInputLayoutAttr(merged);
     }
   }
@@ -1221,7 +1181,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
-    if (layoutKind == xegpu::LayoutKind::InstData) {
+    if (layoutKind == xegpu::LayoutKind::InstData &&
+        !consumerLayoutAttr.getEffectiveLaneLayoutAsInt().empty()) {
       const auto uArchInstruction =
           dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
               uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));

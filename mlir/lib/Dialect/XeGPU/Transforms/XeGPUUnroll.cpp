@@ -988,7 +988,7 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     Value newSource = op.getSource();
     SmallVector<Value> newOps;
-    if (inputLayout && targetLayout) {
+    if (inputLayout && targetLayout && !inputLayout.isEqualTo(targetLayout)) {
       SmallVector<Type> convertedValTypes =
           getUnrolledTypes(valueTy, *targetShape);
       SmallVector<Value> convertedValues =
