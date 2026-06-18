@@ -11761,7 +11761,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_paadd:
   case Intrinsic::riscv_paaddu:
   case Intrinsic::riscv_pasub:
-  case Intrinsic::riscv_pasubu: {
+  case Intrinsic::riscv_pasubu:
+  case Intrinsic::riscv_pabd:
+  case Intrinsic::riscv_pabdu: {
     unsigned Opc;
     switch (IntNo) {
     case Intrinsic::riscv_paadd:
@@ -11775,6 +11777,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       break;
     case Intrinsic::riscv_pasubu:
       Opc = RISCVISD::ASUBU;
+      break;
+    case Intrinsic::riscv_pabd:
+      Opc = ISD::ABDS;
+      break;
+    case Intrinsic::riscv_pabdu:
+      Opc = ISD::ABDU;
       break;
     }
 
@@ -15688,7 +15696,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_paadd:
     case Intrinsic::riscv_paaddu:
     case Intrinsic::riscv_pasub:
-    case Intrinsic::riscv_pasubu: {
+    case Intrinsic::riscv_pasubu:
+    case Intrinsic::riscv_pabd:
+    case Intrinsic::riscv_pabdu: {
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
         return;
@@ -15706,6 +15716,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         break;
       case Intrinsic::riscv_pasubu:
         Opc = RISCVISD::ASUBU;
+        break;
+      case Intrinsic::riscv_pabd:
+        Opc = ISD::ABDS;
+        break;
+      case Intrinsic::riscv_pabdu:
+        Opc = ISD::ABDU;
         break;
       }
 
@@ -21564,6 +21580,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DCI.CombineTo(N, Res, Res);
     }
     break;
+  }
+  case RISCVISD::PSRL:
+  case RISCVISD::PSRA: {
+    // Fold (PSRL/PSRA (trunc (PSRL X, C1)), C2) -> (trunc (PSRL/PSRA X, C1+C2))
+    // when C1 equals the number of bits discarded by the truncate.
+    SDValue Src = N->getOperand(0);
+    if (Src.getOpcode() != ISD::TRUNCATE || !Src.hasOneUse())
+      break;
+    SDValue PSRLVal = Src.getOperand(0);
+    if (PSRLVal.getOpcode() != RISCVISD::PSRL || !PSRLVal.hasOneUse())
+      break;
+    auto *C1 = dyn_cast<ConstantSDNode>(PSRLVal.getOperand(1));
+    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!C1 || !C2)
+      break;
+    MVT NarrowVT = N->getSimpleValueType(0);
+    MVT WideVT = PSRLVal.getSimpleValueType();
+    unsigned NarrowEltBits = NarrowVT.getVectorElementType().getSizeInBits();
+    unsigned WideEltBits = WideVT.getVectorElementType().getSizeInBits();
+    unsigned TruncatedBits = WideEltBits - NarrowEltBits;
+    if (C1->getZExtValue() != TruncatedBits)
+      break;
+    uint64_t NewShAmt = C1->getZExtValue() + C2->getZExtValue();
+    if (NewShAmt >= WideEltBits)
+      break;
+    SDValue NewShift =
+        DAG.getNode(N->getOpcode(), DL, WideVT, PSRLVal.getOperand(0),
+                    DAG.getConstant(NewShAmt, DL, XLenVT));
+    return DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, NewShift);
   }
   case RISCVISD::ADDD: {
     assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
