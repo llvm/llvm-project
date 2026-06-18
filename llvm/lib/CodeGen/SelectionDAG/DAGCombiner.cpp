@@ -7026,12 +7026,14 @@ static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
   return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
 }
 
-// Try to convert vXiY into vPiQ with:
-// 1. vXiY is not legal type
-// 2. vPiQ is legal type
-// 3. X * Y = P * Q
-// This prevents promotion of integer vectors like v32i4 to v32i16
-// which can create more type casting operations.
+/// Try to convert
+/// `(vXiY SELECT \p Cond, (vXiY \p TrueVal), (vXiY \p FalseVal))` into
+/// `(vPiQ SELECT Cond, (vPiQ NewTrue), (vPiQ NewFalse))` with:
+/// 1. vXiY is not legal type
+/// 2. vPiQ is legal type
+/// 3. X * Y = P * Q
+/// This prevents promotion of integer vectors like v32i4 to v32i16
+/// which can create more type casting operations.
 static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
                                    const TargetLowering &TLI, SDValue Cond,
                                    SDValue TrueVal, SDValue FalseVal) {
@@ -13293,9 +13295,10 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     return R;
 
   EVT ResultVT = N->getValueType(0);
-  if (ResultVT.isVector())
+  if (ResultVT.isVector()) {
     if (SDValue R = castIntVectorSelect(N, DAG, TLI, N0, N1, N2))
       return R;
+  }
 
   return SDValue();
 }
