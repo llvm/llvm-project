@@ -10,4 +10,7 @@
 #include "src/math/expbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 LLVM_LIBC_FUNCTION(bfloat16, expbf16, (bfloat16 x)) { return math::expbf16(x); }
+
+} // namespace LIBC_NAMESPACE_DECL
