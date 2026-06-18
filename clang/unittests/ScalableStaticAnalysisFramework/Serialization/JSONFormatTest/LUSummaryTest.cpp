@@ -227,6 +227,7 @@ TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMissingData) {
       }
     ],
     "target_triple": "arm64-apple-macosx",
+    "type": "LUSummary",
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -264,6 +265,7 @@ TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
       }
     ],
     "target_triple": "arm64-apple-macosx",
+    "type": "LUSummary",
     "id_table": [],
     "linkage_table": [],
     "data": [
