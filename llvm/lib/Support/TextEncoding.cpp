@@ -365,7 +365,12 @@ namespace {
 // Use StringMap which is designed for string keys
 using ConverterCache = StringMap<std::unique_ptr<TextEncodingConverter>>;
 
-static ManagedStatic<ConverterCache> GlobalConverterCache;
+struct ConverterCacheData {
+  ConverterCache Cache;
+  std::shared_mutex Mutex;
+};
+
+static ManagedStatic<ConverterCacheData> GlobalConverterCache;
 } // namespace
 
 ErrorOr<TextEncodingConverter *>
@@ -381,23 +386,32 @@ TextEncodingConverterCache::getOrCreateConverter(StringRef SourceEncoding,
   Key += " -> ";
   Key += TargetEncoding;
 
-  // Check if converter already exists
-  auto Iter = GlobalConverterCache->find(Key);
-  if (Iter != GlobalConverterCache->end()) {
-    return Iter->second.get();
+  // First, try to find existing converter with shared lock (allows concurrent reads)
+  {
+    std::shared_lock<std::shared_mutex> ReadLock(GlobalConverterCache->Mutex);
+    auto Iter = GlobalConverterCache->Cache.find(Key);
+    if (Iter != GlobalConverterCache->Cache.end())
+      return Iter->second.get();
   }
+
+  // Not found, need to create - acquire unique lock for writing
+  std::unique_lock<std::shared_mutex> WriteLock(GlobalConverterCache->Mutex);
+  
+  // Double-check: another thread might have created it while we were waiting
+  auto Iter = GlobalConverterCache->Cache.find(Key);
+  if (Iter != GlobalConverterCache->Cache.end())
+    return Iter->second.get();
 
   // Create a new converter
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
       TextEncodingConverter::create(SourceEncoding, TargetEncoding);
-  if (!ErrorOrConverter) {
+  if (!ErrorOrConverter)
     return ErrorOrConverter.getError();
-  }
 
   // Insert into cache and return pointer
   auto NewConverter =
       std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
   TextEncodingConverter *Result = NewConverter.get();
-  GlobalConverterCache->try_emplace(Key, std::move(NewConverter));
+  GlobalConverterCache->Cache.try_emplace(Key, std::move(NewConverter));
   return Result;
 }
