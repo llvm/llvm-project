@@ -5298,7 +5298,7 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x10 nv
+; GFX1250-NEXT:    s_load_b96 s[8:10], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_add_co_i32 s0, s10, 1

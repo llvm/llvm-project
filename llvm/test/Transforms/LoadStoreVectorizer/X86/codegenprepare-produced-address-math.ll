@@ -21,11 +21,9 @@ define void @test(i32 %base) #0 {
 ; CHECK-NEXT:    [[CND:%.*]] = icmp ult i32 [[BASE]], 1000
 ; CHECK-NEXT:    br i1 [[CND]], label %[[LOADS:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOADS]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr [[ARRAYIDX352_4]], align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP297_41:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[TMP297_41]] to i32
-; CHECK-NEXT:    [[TMP297_52:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[TMP297_52]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[ARRAYIDX352_4]], align 4, !tbaa [[FLOAT_TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP297_41:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP297_52:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -67,11 +65,9 @@ define void @test.codegenprepared(i32 %base) #0 {
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IDX351_4]], 4
 ; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr inbounds i8, ptr @global_pointer, i64 [[SUNKADDR]]
 ; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr inbounds i8, ptr [[SUNKADDR1]], i64 4096
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr [[SUNKADDR2]], align 4, !tbaa [[FLOAT_TBAA0]]
-; CHECK-NEXT:    [[TMP297_41:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[TMP297_41]] to i32
-; CHECK-NEXT:    [[TMP297_52:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[TMP297_52]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SUNKADDR2]], align 4, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    [[TMP297_41:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP297_52:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

@@ -203,27 +203,27 @@ entry:
 define amdgpu_kernel void @class_f16_1(
 ; VI-SDAG-LABEL: class_f16_1:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x8
-; VI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-SDAG-NEXT:    s_mov_b32 s3, 0x1100f000
-; VI-SDAG-NEXT:    s_mov_b32 s2, -1
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; VI-SDAG-NEXT:    s_mov_b32 s7, 0x1100f000
+; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], s4, 1
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; VI-SDAG-NEXT:    s_cselect_b32 s4, -1, 0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; VI-SDAG-NEXT:    s_mov_b32 s4, s0
+; VI-SDAG-NEXT:    s_mov_b32 s5, s1
+; VI-SDAG-NEXT:    v_cmp_class_f16_e64 s[0:1], s2, 1
+; VI-SDAG-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; VI-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-SDAG-NEXT:    s_endpgm
 ;
 ; VI-GISEL-LABEL: class_f16_1:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dword s3, s[8:9], 0x8
-; VI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-GISEL-NEXT:    s_mov_b32 s2, -1
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], s3, 1
+; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], s2, 1
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
+; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -240,27 +240,27 @@ entry:
 define amdgpu_kernel void @class_f16_64(
 ; VI-SDAG-LABEL: class_f16_64:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x8
-; VI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-SDAG-NEXT:    s_mov_b32 s3, 0x1100f000
-; VI-SDAG-NEXT:    s_mov_b32 s2, -1
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; VI-SDAG-NEXT:    s_mov_b32 s7, 0x1100f000
+; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], s4, 64
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; VI-SDAG-NEXT:    s_cselect_b32 s4, -1, 0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; VI-SDAG-NEXT:    s_mov_b32 s4, s0
+; VI-SDAG-NEXT:    s_mov_b32 s5, s1
+; VI-SDAG-NEXT:    v_cmp_class_f16_e64 s[0:1], s2, 64
+; VI-SDAG-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; VI-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-SDAG-NEXT:    s_endpgm
 ;
 ; VI-GISEL-LABEL: class_f16_64:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dword s3, s[8:9], 0x8
-; VI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-GISEL-NEXT:    s_mov_b32 s2, -1
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], s3, 64
+; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], s2, 64
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
+; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -277,29 +277,29 @@ entry:
 define amdgpu_kernel void @class_f16_full_mask(
 ; VI-SDAG-LABEL: class_f16_full_mask:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x8
-; VI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0x3ff
-; VI-SDAG-NEXT:    s_mov_b32 s3, 0x1100f000
-; VI-SDAG-NEXT:    s_mov_b32 s2, -1
+; VI-SDAG-NEXT:    s_mov_b32 s7, 0x1100f000
+; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_class_f16_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s4, -1, 0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; VI-SDAG-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
+; VI-SDAG-NEXT:    s_mov_b32 s4, s0
+; VI-SDAG-NEXT:    s_mov_b32 s5, s1
+; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-SDAG-NEXT:    s_endpgm
 ;
 ; VI-GISEL-LABEL: class_f16_full_mask:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dword s3, s[8:9], 0x8
-; VI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x3ff
-; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s3, v0
+; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
+; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -316,29 +316,29 @@ entry:
 define amdgpu_kernel void @class_f16_nine_bit_mask(
 ; VI-SDAG-LABEL: class_f16_nine_bit_mask:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x8
-; VI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0x1ff
-; VI-SDAG-NEXT:    s_mov_b32 s3, 0x1100f000
-; VI-SDAG-NEXT:    s_mov_b32 s2, -1
+; VI-SDAG-NEXT:    s_mov_b32 s7, 0x1100f000
+; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_class_f16_e32 vcc, s4, v0
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s4, -1, 0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; VI-SDAG-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
+; VI-SDAG-NEXT:    s_mov_b32 s4, s0
+; VI-SDAG-NEXT:    s_mov_b32 s5, s1
+; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-SDAG-NEXT:    s_endpgm
 ;
 ; VI-GISEL-LABEL: class_f16_nine_bit_mask:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dword s3, s[8:9], 0x8
-; VI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x1ff
-; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s3, v0
+; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s2, v0
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
+; VI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0

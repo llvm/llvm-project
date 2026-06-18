@@ -10,12 +10,10 @@ define amdgpu_kernel void @merge_v2i32_v2i32(ptr addrspace(1) nocapture %a, ptr 
 ; CHECK-LABEL: define amdgpu_kernel void @merge_v2i32_v2i32(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b32>, ptr addrspace(1) [[B]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = shufflevector <4 x b32> [[TMP0]], <4 x b32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b32> [[LD_C1]] to <2 x i32>
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <4 x b32> [[TMP0]], <4 x b32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[LD_C_IDX_12]] to <2 x i32>
-; CHECK-NEXT:    store <4 x b32> zeroinitializer, ptr addrspace(1) [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(1) [[B]], align 4
+; CHECK-NEXT:    [[LD_C1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr addrspace(1) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -35,12 +33,12 @@ define amdgpu_kernel void @merge_v1i32_v1i32(ptr addrspace(1) nocapture %a, ptr 
 ; CHECK-LABEL: define amdgpu_kernel void @merge_v1i32_v1i32(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[B]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C1]] to <1 x i32>
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_IDX_12]] to <1 x i32>
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[B]], align 4
+; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[LD_C1]] to <1 x i32>
+; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[LD_C_IDX_12]] to <1 x i32>
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(1) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -85,12 +83,10 @@ define amdgpu_kernel void @merge_v2i16_v2i16(ptr addrspace(1) nocapture %a, ptr 
 ; CHECK-LABEL: define amdgpu_kernel void @merge_v2i16_v2i16(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b16>, ptr addrspace(1) [[B]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = shufflevector <4 x b16> [[TMP0]], <4 x b16> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b16> [[LD_C1]] to <2 x i16>
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <4 x b16> [[TMP0]], <4 x b16> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b16> [[LD_C_IDX_12]] to <2 x i16>
-; CHECK-NEXT:    store <4 x b16> zeroinitializer, ptr addrspace(1) [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr addrspace(1) [[B]], align 4
+; CHECK-NEXT:    [[LD_C1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr addrspace(1) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -110,12 +106,10 @@ define amdgpu_kernel void @merge_fat_ptrs(ptr addrspace(7) nocapture %a, ptr add
 ; CHECK-OOB-RELAXED-LABEL: define amdgpu_kernel void @merge_fat_ptrs(
 ; CHECK-OOB-RELAXED-SAME: ptr addrspace(7) captures(none) [[A:%.*]], ptr addrspace(7) readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-OOB-RELAXED-NEXT:  [[ENTRY:.*:]]
-; CHECK-OOB-RELAXED-NEXT:    [[TMP0:%.*]] = load <4 x b16>, ptr addrspace(7) [[B]], align 4
-; CHECK-OOB-RELAXED-NEXT:    [[LD_C1:%.*]] = shufflevector <4 x b16> [[TMP0]], <4 x b16> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-OOB-RELAXED-NEXT:    [[TMP1:%.*]] = bitcast <2 x b16> [[LD_C1]] to <2 x i16>
-; CHECK-OOB-RELAXED-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <4 x b16> [[TMP0]], <4 x b16> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-OOB-RELAXED-NEXT:    [[TMP2:%.*]] = bitcast <2 x b16> [[LD_C_IDX_12]] to <2 x i16>
-; CHECK-OOB-RELAXED-NEXT:    store <4 x b16> zeroinitializer, ptr addrspace(7) [[A]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr addrspace(7) [[B]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[LD_C1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-OOB-RELAXED-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-OOB-RELAXED-NEXT:    store <4 x i16> zeroinitializer, ptr addrspace(7) [[A]], align 4
 ; CHECK-OOB-RELAXED-NEXT:    ret void
 ;
 ; CHECK-OOB-STRICT-LABEL: define amdgpu_kernel void @merge_fat_ptrs(
