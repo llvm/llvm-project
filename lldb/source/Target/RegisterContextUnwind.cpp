@@ -868,6 +868,41 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     return arch_default_unwind_plan_sp;
   }
 
+  // Function outlining is a clang feature where common blocks of instructions
+  // from separate functions can be put in a separate utility function, and
+  // the original functions call into the utility function to execute them,
+  // resulting in fewer bytes used for the code section overall.
+  //
+  // The call to the OUTLINED_FUNCTION may not be a normal ABI call (e.g.
+  // on RISCV it might be called `jal t0, OUTLINED_FUNCTION_<nn>` putting the
+  // return address in a temporary register instead of $ra).  Tthe unwind
+  // instructions in eh_frame/debug_frame are not correct today for an
+  // OUTLINED_FUNCTION, even when a normal ABI call is made.
+  // Clang does not insert CFI directives in the OUTLINED_FUNCTION so it
+  // will look like a frameless function that does nothing beyond its initial
+  // unwind state.
+  //
+  // A function may outline its prologue, mid-function block of instructions,
+  // or its epilogue.  If a function's prologue is outlined, the unwind
+  // instructions (eh_frame/debug_frame/lldb's instruction analysis) for the
+  // original function are incorrect and cannot be trusted.
+  //
+  // If we are in an OUTLINED_FUNCTION in a backtrace, distrust all sources
+  // of unwind information and use the architectural default unwind plan
+  // instead.  We may miss the caller stack frame in the backtrace, but it
+  // will work more reliably than any other method.
+  if (m_sym_ctx_valid && arch_default_unwind_plan_sp) {
+    const char *name = GetSymbolOrFunctionName(m_sym_ctx).AsCString("");
+    if (!strncmp(name, "OUTLINED_FUNCTION_",
+                 sizeof("OUTLINED_FUNCTION_") - 1)) {
+      UNWIND_LOG(log,
+                 "Overriding full unwind plan, using architectural default for "
+                 "function {0}",
+                 name);
+      return arch_default_unwind_plan_sp;
+    }
+  }
+
   FuncUnwindersSP func_unwinders_sp;
   if (m_sym_ctx_valid) {
     func_unwinders_sp =
