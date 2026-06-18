@@ -1362,9 +1362,9 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
                                        IsSigned);
   } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
-    // Do not use 32-bit division if dividend may be -0x80000000.
+    // Do not use 32-bit division if dividend may be -0x80000000LL.
     // Otherwise 32-bit division cannot be used safely.
-    // -0x80000000/1 and -0x80000000/-1 are not equal,
+    // -0x80000000LL/1 and -0x80000000LL/-1 are not equal,
     // but they produce the same lower 32-bit result.
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
