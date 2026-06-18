@@ -13764,6 +13764,10 @@ def warn_attr_min_eq_max:  Warning<
 
 def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
   "attribute %0 with %1 arguments requires shader model %2 or greater">;
+def warn_hlsl_wavesize_unsupported_spirv : Warning<
+  "attribute 'WaveSize' is not supported for the SPIR-V target; "
+  "consider using VK_EXT_subgroup_size_control">,
+  InGroup<HLSLAttributeStatement>;
 def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
   "argument %0 must be constant integer 1 or -1">;
 def err_invalid_hlsl_resource_type: Error<
