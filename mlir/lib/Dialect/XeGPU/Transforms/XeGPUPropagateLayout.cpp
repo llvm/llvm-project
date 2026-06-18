@@ -612,6 +612,13 @@ void LayoutInfoPropagation::visitShapeCastOp(
 
   xegpu::DistributeLayoutAttr srcLayoutAttr =
       xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+  // TODO: turn this into a real pass failure once propagation failures are
+  // wired to signalPassFailure().
+  if (!srcLayoutAttr) {
+    shapeCast.emitWarning("Failed to infer source layout for shape_cast; "
+                          "unsupported shape-cast pattern.");
+    return;
+  }
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }

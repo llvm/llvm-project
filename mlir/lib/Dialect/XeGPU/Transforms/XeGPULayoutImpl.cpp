@@ -394,9 +394,9 @@ static xegpu::LayoutAttr buildInstDataLayoutWithLane(
                                 orderAttr);
 }
 
-bool isValidLaneLayout(ArrayRef<int64_t> dataShape,
-                       ArrayRef<int64_t> laneLayout,
-                       ArrayRef<int64_t> laneData) {
+static bool isValidLaneLayout(ArrayRef<int64_t> dataShape,
+                              ArrayRef<int64_t> laneLayout,
+                              ArrayRef<int64_t> laneData) {
   int rank = dataShape.size();
   for (int dim = 0; dim < rank; ++dim) {
     int64_t laneProduct = laneLayout[dim] * laneData[dim];
@@ -971,8 +971,7 @@ static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                                 SmallVector<int64_t>>>
 getDpasInstDataLayouts(
     VectorType aTy, VectorType bTy, VectorType cdTy,
-    const xegpu::uArch::MMAInstructionInterface *uArchInstruction,
-    bool isDpasMx = false) {
+    const xegpu::uArch::MMAInstructionInterface *uArchInstruction) {
 
   // M dimension is the second-to-last dim of A (handles batch dims).
   const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
@@ -1381,8 +1380,7 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
       cdTy.getShape(), subgroupSize,
       cdTy.getElementType().getIntOrFloatBitWidth(),
       cdTy.getElementType().getIntOrFloatBitWidth());
-  auto instDataVecs = getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction,
-                                             /*isDpasMx=*/true);
+  auto instDataVecs = getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction);
   if (!instDataVecs)
     return std::nullopt;
 
@@ -1527,7 +1525,7 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     assert(instData && isValidLaneLayout(*instData, laneLayout, laneData) &&
-           "Expected the store layout to satisfy uArch block constraints");
+           "Expected the prefetch layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        laneData);
   }
@@ -1586,7 +1584,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
          "Expected consumer layout to have lane_layout and lane_data");
 
   // vertical lane layout means that the blockload must be transposed
-  // note scaleA on PVC has vertical lan layout even without transposed order
+  // note scaleA on PVC has vertical lane layout even without transposed order
   // attr
   bool hasTranspose =
       consumerLaneLayout[rank - 2] > 1 && consumerLaneLayout[rank - 1] == 1;
@@ -1605,7 +1603,8 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
     SmallVector<int64_t> laneLayout;
     // set the laneLayout to use consumer's LaneLayout as base, but adjust its
-    // size to match the subgroupsize in case its orignal value is larger than 1
+    // size to match the subgroupsize in case its original value is larger than
+    // 1
     for (int i = 0; i < rank; i++) {
       if (consumerLaneLayout[i] > 1)
         laneLayout.push_back(std::max(static_cast<int64_t>(subgroupSize),
@@ -1636,7 +1635,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     // transform/transpose attribute are derived from consumer layout
     assert(instData &&
            isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
-           "Expected the store layout to satisfy uArch block constraints");
+           "Expected the load layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        consumerLaneData, consumerOrderAttr);
   }
@@ -1759,7 +1758,7 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
                               ArrayRef<int64_t> srcShape, int subgroupSize) {
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(true &&
+    assert(false &&
            "subgroup layout assignment not supported for storeScatter.");
     return nullptr;
   }
@@ -1931,10 +1930,10 @@ xegpu::completeBlockStoreLaneLayoutFromInstData(
                                      laneData);
 }
 
-/// Like completeBlockStoreLaneLayoutFromInstData, but for load_nd. The consumer
-/// determines transform / transpose / packing, but the lane factorization is
-/// recomputed from inst_data (load-side lane counts differ from the consumer's)
-/// — mirroring the InstData branch of setupLoadNdAnchorLayout.
+/// Like completeBlockStoreLaneLayoutFromInstData, but for load_nd. The
+/// consumer's lane_data and order are reused as-is; lane_layout is rebuilt from
+/// the consumer's lane_layout, bumping every non-unit dim up to the subgroup
+/// size. The user-provided inst_data is preserved.
 std::optional<xegpu::DistributeLayoutAttr>
 xegpu::completeBlockLoadLaneLayoutFromInstData(
     xegpu::DistributeLayoutAttr specifiedLayout,
@@ -1964,7 +1963,7 @@ xegpu::completeBlockLoadLaneLayoutFromInstData(
 
   SmallVector<int64_t> laneLayout;
   // set the laneLayout to use consumer's LaneLayout as base, but adjust its
-  // size to match the subgroupsize in case its orignal value is larger than 1
+  // size to match the subgroupsize in case its original value is larger than 1
   for (int i = 0; i < rank; i++) {
     if (consumerLaneLayout[i] > 1) {
       laneLayout.push_back(
@@ -1974,24 +1973,6 @@ xegpu::completeBlockLoadLaneLayoutFromInstData(
     }
   }
 
-  // // Derive the transform / transpose / packing properties from the
-  // consumer's
-  // // lane info, but recompute the lane factorization itself from inst_data.
-  // auto consumerOrder = consumerLayout.getEffectiveOrderAsInt();
-  // // if consumerOrder is like [0, 1, 2, 3], then set hasTranspose to true
-  // bool hasTranspose =
-  //     (consumerOrder == llvm::to_vector(llvm::seq<int64_t>(0, rank)));
-  // int kDim = hasTranspose ? rank - 1 : rank - 2;
-  // unsigned vnniFactor = consumerLaneData[kDim];
-  // unsigned packingSize = vnniFactor * bitwidth;
-  // bool hasTransform = vnniFactor != 1;
-  // // scaleA on PVC has vertical lan layout even without transpose
-  // bool hasVerticalLayout = consumerLaneLayout[rank - 2] > 1 &&
-  // consumerLaneLayout[rank - 1] == 1;
-
-  // auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-  //     specifiedInstData, subgroupSize, bitwidth, packingSize, hasTransform,
-  //     hasTranspose, hasVerticalLayout);
   if (!isValidLaneLayout(specifiedInstData, laneLayout, consumerLaneData))
     return std::nullopt;
   return buildInstDataLayoutWithLane(context, specifiedInstData, laneLayout,
@@ -2229,7 +2210,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
         consumerSliceLayout
             ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
             : SmallVector<int64_t>({});
-    // A[i] reduced from A[i, j] is stored out directly, use veritical Lane
+    // A[i] reduced from A[i, j] is stored out directly, use vertical Lane
     // layout like [16, 1]
     bool verticalLaneLayout = consumerReductionDims.empty() &&
                               reductionDims.size() == 1 &&
@@ -2290,11 +2271,13 @@ xegpu::setupReductionResultLayout(xegpu::LayoutKind layoutKind,
   xegpu::LayoutAttr srcLayout;
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(true && "subgroup layout assignment not supported for reduction (op "
-                   "is not expected at this level).");
+    assert(false &&
+           "subgroup layout assignment not supported for reduction (op "
+           "is not expected at this level).");
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(true && "instData layout assignment not supported for reduction (op "
-                   "is not expected at this level).");
+    assert(false &&
+           "instData layout assignment not supported for reduction (op "
+           "is not expected at this level).");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     SmallVector<int64_t> laneLayout(1), laneData(1);
     laneLayout[0] = std::min(static_cast<int64_t>(subgroupSize), srcShape[0]);
@@ -2465,8 +2448,8 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 
   if (layoutKind == xegpu::LayoutKind::Subgroup ||
       layoutKind == xegpu::LayoutKind::InstData) {
-    assert(true &&
-           "subgroup layout assignment not supported for insertStridedSlice.");
+    assert(false && "subgroup/instData layout assignment not supported for "
+                    "insertStridedSlice.");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     for (int dim = 0; dim < srcRank; dim++) {
       assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
