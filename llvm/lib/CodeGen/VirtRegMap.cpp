@@ -712,17 +712,17 @@ void VirtRegRewriter::rewrite() {
                                                           PhysReg, MI);
                 const TargetRegisterClass *RC = MRI->getRegClass(VirtReg);
 
-                // FIXME: Incorrect sub-registers should never make it into
-                // LiveOutUndefLanes.
+                // LiveOutUndefLanes may contain lanes that are part of the
+                // register (e.g. sub1) but not independently addressable by any
+                // sub-register index valid on this class (e.g. hi16), since
+                // lane masks are numbered globally across classes. Such lanes
+                // do not need to become separate implicit defs, so drop them.
                 LaneBitmask NewLiveOutUndefLanes;
                 for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E;
                      ++Idx) {
                   if (!TRI->isSubRegValidForRegClass(RC, Idx))
                     continue;
                   LaneBitmask M = TRI->getSubRegIndexLaneMask(Idx);
-                  // We only need to cover valid sub-registers. Construct a new
-                  // mask that only contains parts of the of the old one for
-                  // valid registers.
                   if ((M & LiveOutUndefLanes) == M)
                     NewLiveOutUndefLanes |= M;
                 }
