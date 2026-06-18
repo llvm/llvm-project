@@ -492,6 +492,25 @@ TEST(kmp_trait_expr_group_test, EqualityDifferentNegation) {
   delete g2;
 }
 
+TEST(kmp_trait_expr_group_test, EqualityDifferentGroupType) {
+  // Groups with the same sub-expressions but different AND/OR type are not
+  // equal.
+  kmp_trait_expr_group *g1 = new kmp_trait_expr_group();
+  kmp_trait_expr_group *g2 = new kmp_trait_expr_group();
+
+  g1->add_expr(new kmp_literal_trait(1));
+  g1->add_expr(new kmp_literal_trait(2));
+  g1->set_group_type(kmp_trait_expr_group::AND);
+  g2->add_expr(new kmp_literal_trait(1));
+  g2->add_expr(new kmp_literal_trait(2));
+  g2->set_group_type(kmp_trait_expr_group::OR);
+
+  EXPECT_FALSE(*g1 == *g2);
+
+  delete g1;
+  delete g2;
+}
+
 TEST(kmp_trait_expr_group_test, NestedGroups) {
   kmp_trait_expr_group *outer = new kmp_trait_expr_group();
   outer->set_group_type(kmp_trait_expr_group::OR);

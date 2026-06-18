@@ -1035,4 +1035,27 @@ TEST(ParseSingleDeviceTest, LargeNumber) {
   EXPECT_EQ(result, 999999);
 }
 
+TEST(ParseSingleDeviceTest, TrailingGarbage) {
+  // Trailing non-integer characters must not be silently ignored.
+  ASSERT_DEATH(kmp_trait_context::parse_single_device(kmp_str_ref("10abc"), 100,
+                                                      "trailing_garbage"),
+               "OMP: Error #[0-9]+: trait parser while parsing "
+               "trailing_garbage: "
+               "failed to parse trait specification \\(10abc\\)");
+}
+
+TEST(ParseSingleDeviceTest, TrailingList) {
+  // Only a single device is accepted; a comma-separated list must fail.
+  ASSERT_DEATH(kmp_trait_context::parse_single_device(kmp_str_ref("10,11"), 100,
+                                                      "trailing_list"),
+               "OMP: Error #[0-9]+: trait parser while parsing trailing_list: "
+               "failed to parse trait specification \\(10,11\\)");
+}
+
+TEST(ParseSingleDeviceTest, TrailingSpaces) {
+  // Trailing whitespace is allowed.
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("7  "), 10);
+  EXPECT_EQ(result, 7);
+}
+
 } // namespace

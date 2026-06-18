@@ -297,9 +297,16 @@ int kmp_trait_context::parse_single_device(kmp_str_ref spec,
                                            int device_num_limit,
                                            const char *dbg_name) {
   int device_num;
+  kmp_str_ref orig_spec = spec;
   spec.skip_space();
   if (!spec.consume_integer(device_num))
-    KMP_FATAL(TraitParserFailed, dbg_name, spec.copy());
+    KMP_FATAL(TraitParserFailed, dbg_name, orig_spec.copy());
+  // Reject any trailing characters so that malformed input (e.g. "10abc" or
+  // "10,11") fails loudly instead of being silently truncated to the leading
+  // integer.
+  spec.skip_space();
+  if (!spec.empty())
+    KMP_FATAL(TraitParserFailed, dbg_name, orig_spec.copy());
   if (device_num > device_num_limit)
     KMP_FATAL(TraitParserValueTooLarge, dbg_name, device_num, device_num_limit);
   return device_num;

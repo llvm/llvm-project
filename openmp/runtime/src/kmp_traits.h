@@ -262,9 +262,11 @@ public:
       return false;
     const kmp_trait_expr_group &other_group =
         static_cast<const kmp_trait_expr_group &>(other);
-    return exprs.is_set_equal(
-        other_group.exprs, [](kmp_trait_expr *const &a,
-                              kmp_trait_expr *const &b) { return *a == *b; });
+    return type == other_group.type &&
+           exprs.is_set_equal(other_group.exprs, [](kmp_trait_expr *const &a,
+                                                    kmp_trait_expr *const &b) {
+             return *a == *b;
+           });
   }
 };
 
