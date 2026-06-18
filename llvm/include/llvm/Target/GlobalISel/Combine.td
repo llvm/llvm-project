@@ -1299,6 +1299,62 @@ def and_or_disjoint_mask : GICombineRule<
          [{ return Helper.matchAndOrDisjointMask(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${info}); }])>;
 
+// (X&~Y)|Y --> X|Y
+def or_and_xor_to_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $not),
+         (G_OR $root, $and, $y)),
+  (apply (G_OR $root, $x, $y))>;
+
+// (X&Y)|~Y --> X|~Y
+def or_and_xor_to_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_OR $root, $x, $xor))>;
+
+// (X|~Y)&Y --> X&Y
+def and_xor_or_to_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $or, $x, $not),
+         (G_AND $root, $or, $y)),
+  (apply (G_AND $root, $x, $y))>;
+
+// (X|Y)&~Y --> X&~Y
+def and_xor_or_to_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $and, $x, $y),
+         (G_AND $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_AND $root, $x, $xor))>;
+
+// fold or (xor x, y), (x and/or y) --> or x, y
+def or_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $xor, $x, $y),
+         (G_OR $or, $x, $y),
+         (G_OR $root, $xor, $or)),
+  (apply (G_OR $root, $x, $y))>;
+
+def or_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $xor, $x, $y),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $xor, $and)),
+  (apply (G_OR $root, $x, $y))>;
+
+def or_and_xor_combines : GICombineGroup<[or_and_xor_to_or,
+                                          or_and_xor_to_xor_or,
+                                          and_xor_or_to_and,
+                                          and_xor_or_to_xor_and,
+                                          or_xor_or,
+                                          or_xor_and]>;
+
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (G_CONSTANT $mask, $imm2),
