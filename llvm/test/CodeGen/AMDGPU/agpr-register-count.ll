@@ -156,8 +156,8 @@ declare void @undef_func()
 ; GCN-LABEL: {{^}}kernel_call_undef_func:
 ; GCN:    .amdhsa_next_free_vgpr max(totalnumvgprs(.Lkernel_call_undef_func.num_agpr, .Lkernel_call_undef_func.num_vgpr), 1, 0)
 ; GFX90A: .amdhsa_accum_offset (((((alignto(max(1, .Lkernel_call_undef_func.num_vgpr), 4)/4)-1)&~65536)&63)+1)*4
-; GCN:    .set .Lkernel_call_undef_func.num_vgpr, max(32, amdgpu.max_num_vgpr)
-; GCN:    .set .Lkernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
+; GCN:    .set .Lkernel_call_undef_func.num_vgpr, min(128, max(32, amdgpu.max_num_vgpr))
+; GCN:    .set .Lkernel_call_undef_func.num_agpr, min(128, max(0, amdgpu.max_num_agpr))
 ; GCN:    NumVgprs: .Lkernel_call_undef_func.num_vgpr
 ; GCN:    NumAgprs: .Lkernel_call_undef_func.num_agpr
 ; GCN:    TotalNumVgprs: totalnumvgprs(.Lkernel_call_undef_func.num_agpr, .Lkernel_call_undef_func.num_vgpr)

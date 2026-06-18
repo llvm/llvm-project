@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
+#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -316,11 +317,35 @@ void MCResourceInfo::gatherResourceInfo(
     } else {
       const MCExpr *SymRef = MCSymbolRefExpr::create(MaxSym, OutContext);
       MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
-      const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
+      const MCExpr *RegExpr = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
-      LocalNumSym->setVariableValue(MaxWithLocal);
-      LLVM_DEBUG(dbgs() << "MCResUse:   " << LocalNumSym->getName()
-                        << ": Indirect callee within, using module maximum\n");
+      if (RIK == RIK_NumVGPR) {
+        const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+        unsigned MaxAllowedVGPRs =
+            ST.getMaxNumVectorRegs(MF.getFunction()).first;
+        RegExpr = AMDGPUMCExpr::createMin(
+            {MCConstantExpr::create(MaxAllowedVGPRs, OutContext), RegExpr},
+            OutContext);
+      } else if (RIK == RIK_NumAGPR) {
+        const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+        unsigned MaxAllowedAGPRs =
+            ST.getMaxNumVectorRegs(MF.getFunction()).second;
+        RegExpr = AMDGPUMCExpr::createMin(
+            {MCConstantExpr::create(MaxAllowedAGPRs, OutContext), RegExpr},
+            OutContext);
+      } else if (RIK == RIK_NumSGPR) {
+        const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+        unsigned MaxAllowedSGPRs = ST.getMaxNumSGPRs(MF.getFunction());
+        RegExpr = AMDGPUMCExpr::createMin(
+            {MCConstantExpr::create(MaxAllowedSGPRs, OutContext), RegExpr},
+            OutContext);
+      }
+      LocalNumSym->setVariableValue(RegExpr);
+      LLVM_DEBUG(
+          dbgs()
+          << "MCResUse:   " << LocalNumSym->getName()
+          << ": Indirect callee within, using module maximum unless it exceeds "
+             "the functions budget for VGPRs, AGPRs, or SGPRs \n");
     }
   };
 
