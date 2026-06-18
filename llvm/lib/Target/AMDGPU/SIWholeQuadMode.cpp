@@ -1112,6 +1112,8 @@ void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB, BlockInfo &BI) {
       }
       break;
     default:
+      if (ActiveLanesReg && !MI.isDebugInstr() && !MI.getDesc().isConvergent())
+        MI.setFlag(MachineInstr::OverrideConvergence);
       break;
     }
     if (SplitPoint)
@@ -1463,6 +1465,12 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
 
         toStrictMode(MBB, Before, SavedNonStrictReg, Needs);
         State = Needs;
+
+        // In whole wave mode, we're going to flag all instructions inside
+        // a whole wave region as convergent (if they aren't already based on
+        // their opcode).
+        if (Needs == StateStrictWWM)
+          BI.NeedsLowering = true;
       } else {
         if (WQMToExact) {
           if (!WQMFromExec && (OutNeeds & StateWQM)) {
