@@ -8834,7 +8834,7 @@ SDValue SITargetLowering::promoteUniformABSToI32(SDValue Op,
   auto &DAG = DCI.DAG;
   EVT ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
 
-  if (Op->isDivergent() || isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+  if (isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
     return SDValue();
 
   SDLoc DL(Op);
