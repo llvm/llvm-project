@@ -5467,7 +5467,7 @@ getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
   RefExpr = RefExpr->IgnoreParenImpCasts();
   auto *DE = dyn_cast_or_null<DeclRefExpr>(RefExpr);
   auto *ME = dyn_cast_or_null<MemberExpr>(RefExpr);
-  if ((!DE || (!isa<VarDecl, BindingDecl>(DE->getDecl()))) &&
+  if ((!DE || !isa<VarDecl, BindingDecl>(DE->getDecl())) &&
       (S.getCurrentThisType().isNull() || !ME ||
        !isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()) ||
        !isa<FieldDecl>(ME->getMemberDecl()))) {
@@ -20687,17 +20687,17 @@ static bool actOnOMPReductionKindClause(
       Type = Context.getBaseElementType(D->getType().getNonReferenceType());
     }
     auto *VD = dyn_cast<VarDecl>(D);
-    auto *BD = dyn_cast<BindingDecl>(D);
 
     // Check for unsupported reduction forms on structured bindings.
-    if (BD && (D->getType().getNonReferenceType()->isArrayType() ||
-               BOK == BO_Comma)) {
+    auto *BD = dyn_cast<BindingDecl>(D);
+    if (BD && D->getType().getNonReferenceType()->isArrayType()) {
       // Array-type reductions are not supported.
-      if (D->getType().getNonReferenceType()->isArrayType())
-        S.Diag(ELoc, diag::err_omp_array_reduction_on_binding);
-      else
-        // User-defined reductions (declare reduction) are not supported.
-        S.Diag(ELoc, diag::err_omp_udr_reduction_on_binding);
+      S.Diag(ELoc, diag::err_omp_array_reduction_on_binding);
+      continue;
+    }
+    if (BD && BOK == BO_Comma) {
+      // User-defined reductions (declare reduction) are not supported.
+      S.Diag(ELoc, diag::err_omp_udr_reduction_on_binding);
       continue;
     }
 

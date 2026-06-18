@@ -1136,7 +1136,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
   bool DeviceConstTarget = getLangOpts().OpenMPIsTargetDevice &&
                            isOpenMPTargetExecutionDirective(EKind);
   bool FirstprivateIsLastprivate = false;
-  llvm::DenseMap<const Decl *, OpenMPLastprivateModifier> Lastprivates;
+  llvm::SmallDenseMap<const Decl *, OpenMPLastprivateModifier> Lastprivates;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
     for (const auto *D : C->varlist()) {
       const auto *VD = cast<DeclRefExpr>(D)->getDecl();
@@ -1155,7 +1155,6 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
     const auto *InitsRef = C->inits().begin();
     for (const Expr *IInit : C->private_copies()) {
       const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
-      const VarDecl *OrigVD = dyn_cast<VarDecl>(OrigDecl);
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
 
       if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
@@ -1187,6 +1186,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
       }
 
       // Original VarDecl logic.
+      const VarDecl *OrigVD = dyn_cast<VarDecl>(OrigDecl);
       assert(OrigVD && "Expected VarDecl for non-BindingDecl firstprivate");
       bool ThisFirstprivateIsLastprivate =
           Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
@@ -1309,7 +1309,7 @@ void CodeGenFunction::EmitOMPPrivateClause(
     CodeGenFunction::OMPPrivateScope &PrivateScope) {
   if (!HaveInsertPoint())
     return;
-  llvm::DenseSet<const ValueDecl *> EmittedAsPrivate;
+  llvm::SmallDenseSet<const ValueDecl *> EmittedAsPrivate;
   for (const auto *C : D.getClausesOfKind<OMPPrivateClause>()) {
     auto IRef = C->varlist_begin();
     for (const Expr *IInit : C->private_copies()) {
@@ -1413,7 +1413,7 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
           cast<VarDecl>(cast<DeclRefExpr>(C)->getDecl())->getCanonicalDecl());
     }
   }
-  llvm::DenseSet<const ValueDecl *> AlreadyEmittedVars;
+  llvm::SmallDenseSet<const ValueDecl *> AlreadyEmittedVars;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
     HasAtLeastOneLastprivate = true;
     if (isOpenMPTaskLoopDirective(EKind) && !getLangOpts().OpenMPSimd)
@@ -1522,7 +1522,7 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
     EmitBlock(ThenBB);
   }
   llvm::DenseSet<const ValueDecl *> AlreadyEmittedVars;
-  llvm::DenseMap<const VarDecl *, const Expr *> LoopCountersAndUpdates;
+  llvm::SmallDenseMap<const VarDecl *, const Expr *> LoopCountersAndUpdates;
   if (const auto *LoopDirective = dyn_cast<OMPLoopDirective>(&D)) {
     auto IC = LoopDirective->counters().begin();
     for (const Expr *F : LoopDirective->finals()) {
@@ -2874,9 +2874,8 @@ void CodeGenFunction::EmitOMPLinearClause(
       const auto *PrivateVD =
           cast<VarDecl>(cast<DeclRefExpr>(*CurPrivate)->getDecl());
       bool IsSIMDLCV = false;
-      if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
+      if (const auto *VarD = dyn_cast<VarDecl>(VD))
         IsSIMDLCV = SIMDLCVs.count(VarD->getCanonicalDecl());
-      }
       if (!IsSIMDLCV) {
         // Emit private VarDecl with copy init.
         EmitVarDecl(*PrivateVD);

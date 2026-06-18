@@ -2091,13 +2091,13 @@ bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
 /// Create a field within the lambda class or captured statement record for the
 /// given capture.
 FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
-                                   bool isOpenMP) {
+                                   bool IsOpenMP) {
   SourceLocation Loc = Capture.getLocation();
   QualType FieldType = Capture.getCaptureType();
   TypeSourceInfo *TSI = nullptr;
   if (Capture.isVariableCapture()) {
     const VarDecl *Var = nullptr;
-    if (isOpenMP) {
+    if (IsOpenMP) {
       if (auto *BD = dyn_cast_or_null<BindingDecl>(Capture.getVariable())) {
         Var = cast<VarDecl>(BD->getDecomposedDecl());
         FieldType = Var->getType();

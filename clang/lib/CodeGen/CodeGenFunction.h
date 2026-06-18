@@ -1239,11 +1239,9 @@ public:
       assert(PerformCleanup && "adding private to dead scope");
       if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
         auto It = CGF.OMPPrivatizedBindings.find(BD);
-        if (It != CGF.OMPPrivatizedBindings.end()) {
-          BindingChanges.emplace_back(BD, It->second);
-        } else {
-          BindingChanges.emplace_back(BD, std::nullopt);
-        }
+        BindingChanges.emplace_back(BD, It != CGF.OMPPrivatizedBindings.end()
+                                            ? std::make_optional(It->second)
+                                            : std::nullopt);
       }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
@@ -1270,9 +1268,7 @@ public:
       for (auto &Change : BindingChanges) {
         if (Change.second.has_value()) {
           auto It = CGF.OMPPrivatizedBindings.find(Change.first);
-          assert(It != CGF.OMPPrivatizedBindings.end() &&
-                 "Entry should exist when restoring previous value");
-          It->second = *Change.second;
+          It->second = CGF.OMPPrivatizedBindings.at(Change.first);
         } else {
           CGF.OMPPrivatizedBindings.erase(Change.first);
         }
@@ -1579,7 +1575,7 @@ private:
   /// Lookup map for privatized BindingDecls.
   /// Used when BindingDecls are remapped during OpenMP outlining, since the
   /// remapped BindingDecl has a different pointer than the original.
-  llvm::DenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;
+  llvm::SmallDenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.

@@ -3835,9 +3835,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (E->refersToEnclosingVariableOrCapture()) {
       // Try direct lookup first.
       auto It = LocalDeclMap.find(BD->getCanonicalDecl());
-      if (It != LocalDeclMap.end()) {
+      if (It != LocalDeclMap.end())
         return MakeAddrLValue(It->second, E->getType(), AlignmentSource::Decl);
-      }
       // OpenMP case: binding was captured via its decomposed decl.
       if (CapturedStmtInfo &&
           CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
