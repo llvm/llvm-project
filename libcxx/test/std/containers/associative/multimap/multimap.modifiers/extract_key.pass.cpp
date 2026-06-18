@@ -69,17 +69,7 @@ bool test() {
     assert(!res);
   }
 
-  {
-    using min_alloc_map = std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>;
-    min_alloc_map m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
-    int keys[]          = {1, 2, 3, 4, 5, 6};
-    test(m, std::begin(keys), std::end(keys));
-  }
-
-  return true;
-}
-int main(int, char**) {
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::multimap<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     {
       Counter<int> keys[] = {1, 2, 3, 4, 5, 6};
@@ -89,8 +79,18 @@ int main(int, char**) {
     assert(Counter_base::gConstructed == 0);
   }
 
-  test();
+  {
+    using min_alloc_map = std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>;
+    min_alloc_map m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
+    int keys[]          = {1, 2, 3, 4, 5, 6};
+    test(m, std::begin(keys), std::end(keys));
+  }
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
