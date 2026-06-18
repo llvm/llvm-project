@@ -724,6 +724,9 @@ public:
   }
 
   constexpr iterator erase(const_iterator __position) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __position != end(), "inplace_vector<T,N>::erase(iterator) called with a non-dereferenceable iterator");
+
     pointer __pos = data() + (__position - cbegin());
 
     std::move(__pos + 1, data() + __size_, __pos);
@@ -733,6 +736,8 @@ public:
   }
 
   constexpr iterator erase(const_iterator __first, const_iterator __last) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+        __first <= __last, "inplace_vector<T,N>::erase(first, last) called with invalid range");
     __size_type __x = __last - __first;
     pointer __pos   = data() + (__first - cbegin());
 
