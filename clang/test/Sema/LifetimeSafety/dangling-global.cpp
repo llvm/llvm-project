@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
 
-int *global; // expected-note {{this global dangles}}
+int *global; // expected-note 2 {{this global dangles}}
 int *global_backup; // expected-note {{this global dangles}}
 
 struct ObjWithStaticField {
@@ -30,6 +30,12 @@ void inlined() {
 void store_local_in_global() {
   int local;
   global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+}
+
+int side();
+void store_local_in_global_via_comma() {
+  int local;
+  global = (side(), &local); // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
 }
 
 void store_then_clear() {
