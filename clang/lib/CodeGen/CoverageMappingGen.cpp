@@ -356,6 +356,20 @@ public:
     return Loc;
   }
 
+  /// Get the start of \c S for a region that has not started yet.
+  SourceLocation getStartOfNewRegion(const Stmt *S) {
+    SourceLocation Loc = getStart(S);
+    if (!Loc.isMacroID())
+      return Loc;
+
+    FileID FID = SM.getFileID(Loc);
+    const SrcMgr::ExpansionInfo *Expansion =
+        &SM.getSLocEntry(FID).getExpansion();
+    if (Expansion->isFunctionMacroExpansion())
+      return Expansion->getExpansionLocStart();
+    return Loc;
+  }
+
   /// Get the end of \c S ignoring macro arguments and builtin macros.
   SourceLocation getEnd(const Stmt *S) {
     SourceLocation Loc = S->getEndLoc();
@@ -930,6 +944,9 @@ struct CounterCoverageMappingBuilder
   /// A stack of currently live regions.
   llvm::SmallVector<SourceMappingRegion> RegionStack;
 
+  /// RegionStack indices for regions created by startCallContinuationRegion().
+  llvm::SmallSet<size_t, 4> CallContinuationRegionIndices;
+
   /// Set if the Expr should be handled as a leaf even if it is kind of binary
   /// logical ops (&&, ||).
   llvm::DenseSet<const Stmt *> LeafExprSet;
@@ -1120,6 +1137,52 @@ struct CounterCoverageMappingBuilder
     return Depth;
   }
 
+  /// Return whether a region would remain in source order after popRegions()
+  /// adjusts it out of nested macro expansions or included files.
+  bool isRegionInSourceOrder(SourceLocation StartLoc, SourceLocation EndLoc) {
+    if (StartLoc.isInvalid() || EndLoc.isInvalid())
+      return false;
+
+    size_t StartDepth = locationDepth(StartLoc);
+    size_t EndDepth = locationDepth(EndLoc);
+    while (!SM.isWrittenInSameFile(StartLoc, EndLoc)) {
+      bool UnnestStart = StartDepth >= EndDepth;
+      bool UnnestEnd = EndDepth >= StartDepth;
+      if (UnnestEnd) {
+        EndLoc = getPreciseTokenLocEnd(getIncludeOrExpansionLoc(EndLoc));
+        if (EndLoc.isInvalid())
+          return false;
+        EndDepth--;
+      }
+      if (UnnestStart) {
+        StartLoc = getIncludeOrExpansionLoc(StartLoc);
+        if (StartLoc.isInvalid())
+          return false;
+        StartDepth--;
+      }
+    }
+
+    return SpellingRegion(SM, StartLoc, EndLoc).isInSourceOrder();
+  }
+
+  /// Return the closest enclosing end location for the active region.
+  std::optional<SourceLocation> getRegionEndLoc(size_t ParentIndex,
+                                                SourceLocation StartLoc) {
+    for (size_t I = RegionStack.size() - 1; I > ParentIndex; --I) {
+      if (!RegionStack[I - 1].hasEndLoc())
+        continue;
+      SourceLocation EndLoc = RegionStack[I - 1].getEndLoc();
+      if (isRegionInSourceOrder(StartLoc, EndLoc))
+        return EndLoc;
+    }
+    if (RegionStack[ParentIndex].hasEndLoc()) {
+      SourceLocation EndLoc = RegionStack[ParentIndex].getEndLoc();
+      if (isRegionInSourceOrder(StartLoc, EndLoc))
+        return EndLoc;
+    }
+    return std::nullopt;
+  }
+
   /// Pop regions from the stack into the function's list of regions.
   ///
   /// Adds all regions from \c ParentIndex to the top of the stack to the
@@ -1128,12 +1191,14 @@ struct CounterCoverageMappingBuilder
     assert(RegionStack.size() >= ParentIndex && "parent not in stack");
     while (RegionStack.size() > ParentIndex) {
       SourceMappingRegion &Region = RegionStack.back();
-      if (Region.hasStartLoc() &&
-          (Region.hasEndLoc() || RegionStack[ParentIndex].hasEndLoc())) {
+      std::optional<SourceLocation> RegionEndLoc;
+      if (Region.hasEndLoc())
+        RegionEndLoc = Region.getEndLoc();
+      else if (Region.hasStartLoc())
+        RegionEndLoc = getRegionEndLoc(ParentIndex, Region.getBeginLoc());
+      if (Region.hasStartLoc() && RegionEndLoc) {
         SourceLocation StartLoc = Region.getBeginLoc();
-        SourceLocation EndLoc = Region.hasEndLoc()
-                                    ? Region.getEndLoc()
-                                    : RegionStack[ParentIndex].getEndLoc();
+        SourceLocation EndLoc = *RegionEndLoc;
         bool isBranch = Region.isBranch();
         size_t StartDepth = locationDepth(StartLoc);
         size_t EndDepth = locationDepth(EndLoc);
@@ -1197,6 +1262,7 @@ struct CounterCoverageMappingBuilder
         assert(SpellingRegion(SM, Region).isInSourceOrder());
         SourceRegions.push_back(Region);
       }
+      CallContinuationRegionIndices.erase(RegionStack.size() - 1);
       RegionStack.pop_back();
     }
   }
@@ -1395,7 +1461,11 @@ struct CounterCoverageMappingBuilder
   /// Ensure that \c S is included in the current region.
   void extendRegion(const Stmt *S) {
     SourceMappingRegion &Region = getRegion();
-    SourceLocation StartLoc = getStart(S);
+    bool IsStartingCallContinuation =
+        !Region.hasStartLoc() &&
+        CallContinuationRegionIndices.count(RegionStack.size() - 1);
+    SourceLocation StartLoc =
+        IsStartingCallContinuation ? getStartOfNewRegion(S) : getStart(S);
 
     handleFileExit(StartLoc);
     if (!Region.hasStartLoc())
@@ -1423,7 +1493,8 @@ struct CounterCoverageMappingBuilder
         Region.hasEndLoc() ? std::optional<SourceLocation>(Region.getEndLoc())
                            : std::nullopt;
     Region.setEndLoc(EndLoc);
-    pushRegion(ContinuationCount, std::nullopt, OriginalEndLoc);
+    size_t Index = pushRegion(ContinuationCount, std::nullopt, OriginalEndLoc);
+    CallContinuationRegionIndices.insert(Index);
     GapRegionCounter = ContinuationCount;
     HasGapRegion = true;
   }
