@@ -1381,15 +1381,17 @@ private:
 
   /// Parse all attributes in LAs, and attach them to Decl D.
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
-                               bool EnterScope, bool OnDefinition);
+                               bool EnterScope, bool OnDefinition,
+                               ParsedAttributes *OutAttrs = nullptr);
 
   /// Finish parsing an attribute for which parsing was delayed.
   /// This will be called at the end of parsing a class declaration
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
-  void ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
-                           bool OnDefinition);
+  void ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
+                           bool OnDefinition,
+                           ParsedAttributes *OutAttrs = nullptr);
 
   /// ParseLexedMethodDeclarations - We finished parsing the member
   /// specification of a top (non-nested) C++ class. Now go over the
@@ -1523,24 +1525,6 @@ private:
   bool TryAltiVecTokenOutOfLine(DeclSpec &DS, SourceLocation Loc,
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
-
-  void ParseLexedCAttributeList(LateParsedAttrList &LA,
-                                // TO_UPSTREAM(BoundsSafety)
-                                bool EnterScope,
-                                ParsedAttributes *OutAttrs = nullptr);
-
-  /// Finish parsing an attribute for which parsing was delayed.
-  /// This will be called at the end of parsing a class declaration
-  /// for each LateParsedAttribute. We consume the saved tokens and
-  /// create an attribute with the arguments filled in. We add this
-  /// to the Attribute list for the decl.
-  // TO_UPSTREAM(BoundsSafety) ON
-  /// Note: it's important the the LateParsedAttribute is removed after parsing
-  /// to prevent being reparsed later in the wrong context. This is handled
-  /// automatically by Parser::ParseLexedCAttributeList.
-  // TO_UPSTREAM(BoundsSafety) OFF
-  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
-                            ParsedAttributes *OutAttrs = nullptr);
 
   void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                // TO_UPSTREAM(BoundsSafety)

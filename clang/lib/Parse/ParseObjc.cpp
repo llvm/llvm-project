@@ -1235,7 +1235,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
         // there are no parameters with late attrs to parse
         assert(LateAttr->Decls.empty());
         LateAttr->addDecl(Result);
-        ParseLexedCAttribute(*LateAttr, true);
+        ParseLexedAttribute(*LateAttr, /*EnterScope=*/true,
+                            /*OnDefinition=*/false);
       }
     }
     /* TO_UPSTREAM(BoundsSafety) OFF */
@@ -1410,8 +1411,9 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     // ParseLexedCAttribute.
     Actions.ObjC().ActOnEnterObjCMethodContextForLateParsedAttrs(
         getCurScope(), cast<ObjCMethodDecl>(Result));
-    ParseLexedCAttributeList(LateParsedAttrs,
-                             /*we already have parameters in scope*/ false);
+    ParseLexedAttributeList(LateParsedAttrs, /*D=*/nullptr,
+                            /*we already have parameters in scope*/ false,
+                            /*OnDefinition=*/false);
     Actions.ActOnExitFunctionContext();
   }
   /* TO_UPSTREAM(BoundsSafety) OFF */

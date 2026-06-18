@@ -2482,7 +2482,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (getLangOpts().BoundsSafetyAttributes && BoundsSafetyLateAttrs) {
     DistributeCLateParsedAttrs(D, FirstDecl, BoundsSafetyLateAttrs);
     if (BoundsSafetyLateAttrs->size() > 0)
-      ParseLexedCAttributeList(*BoundsSafetyLateAttrs, true);
+      ParseLexedAttributeList(*BoundsSafetyLateAttrs, /*D=*/nullptr,
+                              /*EnterScope=*/true, /*OnDefinition=*/false);
   }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
@@ -2552,7 +2553,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       if (getLangOpts().BoundsSafetyAttributes && BoundsSafetyLateAttrs) {
         DistributeCLateParsedAttrs(D, ThisDecl, BoundsSafetyLateAttrs);
         if (BoundsSafetyLateAttrs->size() > 0)
-          ParseLexedCAttributeList(*BoundsSafetyLateAttrs, true);
+          ParseLexedAttributeList(*BoundsSafetyLateAttrs, /*D=*/nullptr,
+                                  /*EnterScope=*/true, /*OnDefinition=*/false);
       }
       /* TO_UPSTREAM(BoundsSafety) OFF*/
 
@@ -3349,7 +3351,8 @@ void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
     LateAttrs->append(DCLateAttrs);
     NestedLevel++;
   }
-  ParseLexedCAttributeList(ProtoLateAttrs, false);
+  ParseLexedAttributeList(ProtoLateAttrs, /*D=*/nullptr, /*EnterScope=*/false,
+                          /*OnDefinition=*/false);
   /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
@@ -5043,21 +5046,6 @@ void Parser::ParseStructDeclaration(
   }
 }
 
-// TODO: All callers of this function should be moved to
-// `Parser::ParseLexedAttributeList`.
-void Parser::ParseLexedCAttributeList(LateParsedAttrList &LAs,
-                                      // TO_UPSTREAM(BoundsSafety)
-                                      bool EnterScope,
-                                      ParsedAttributes *OutAttrs) {
-  assert(LAs.parseSoon() &&
-         "Attribute list should be marked for immediate parsing.");
-  for (auto *LA : LAs) {
-    ParseLexedCAttribute(*LA, EnterScope, OutAttrs);
-    delete LA;
-  }
-  LAs.clear();
-}
-
 ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA,
                                                     // TO_UPSTREAM(BoundsSafety)
                                                     bool EnterScope) {
@@ -5133,19 +5121,6 @@ ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA,
     ConsumeAnyToken();
 
   return Attrs;
-}
-
-void Parser::ParseLexedCAttribute(LateParsedAttribute &LA,
-                                  // TO_UPSTREAM(BoundsSafety)
-                                  bool EnterScope,
-                                  ParsedAttributes *OutAttrs) {
-  ParsedAttributes Attrs = ParseLexedCAttributeTokens(LA, EnterScope);
-
-  for (Decl *D : LA.Decls)
-    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
-
-  if (OutAttrs)
-    OutAttrs->takeAllAppendingFrom(Attrs);
 }
 
 void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
@@ -5312,7 +5287,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     for (auto *LateAttr : LateFieldAttrs)
       LateAttr->ParseLexedAttributes();
   } /* TO_UPSTREAM(BoundsSafety) OFF */ else
-    ParseLexedCAttributeList(LateFieldAttrs, /*EnterScope=*/false);
+    ParseLexedAttributeList(LateFieldAttrs, /*D=*/nullptr, /*EnterScope=*/false,
+                            /*OnDefinition=*/false);
 
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
@@ -6908,7 +6884,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
               LateAttr->NestedTypeLevel = NestedLevel;
             }
           }
-          ParseLexedCAttributeList(LateAttrs, false, &D.getAttributes());
+          ParseLexedAttributeList(LateAttrs, /*D=*/nullptr,
+                                  /*EnterScope=*/false, /*OnDefinition=*/false,
+                                  &D.getAttributes());
           LateAttrs.clear();
         }
       }
@@ -7781,7 +7759,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   }
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
-  ParseLexedCAttributeList(LateParamAttrs, true, nullptr);
+  ParseLexedAttributeList(LateParamAttrs, /*D=*/nullptr, /*EnterScope=*/true,
+                          /*OnDefinition=*/false, /*OutAttrs=*/nullptr);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Collect non-parameter declarations from the prototype if this is a function

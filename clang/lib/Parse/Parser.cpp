@@ -1443,7 +1443,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     BoundsSafetyLateAttrs = &BoundsSafetyAttrList;
   DistributeCLateParsedAttrs(D, Res, BoundsSafetyLateAttrs);
   if (BoundsSafetyLateAttrs->size() > 0)
-    ParseLexedCAttributeList(*BoundsSafetyLateAttrs, false);
+    ParseLexedAttributeList(*BoundsSafetyLateAttrs, /*D=*/nullptr,
+                            /*EnterScope=*/false, /*OnDefinition=*/false);
   /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   return ParseFunctionStatementBody(Res, BodyScope);
