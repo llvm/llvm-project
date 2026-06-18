@@ -3517,17 +3517,13 @@ void Darwin::addClangTargetOptions(
       (getLinkerVersion(DriverArgs) >= VersionTuple(811, 2)))
     CC1Args.push_back("-fobjc-msgsend-selector-stubs");
 
-  bool LinkerIsLLD = false;
-  GetLinkerPath(&LinkerIsLLD);
-
   // Enable objc_msgSend class selector stubs by default if the linker supports
   // it. ld64-1250+ does, for arm64, arm64e, and arm64_32.
-  // FIXME(#203385): LLD doesn't support ObjC class selector stubs yet.
   if (!DriverArgs.hasArgNoClaim(
           options::OPT_fobjc_msgsend_class_selector_stubs,
           options::OPT_fno_objc_msgsend_class_selector_stubs) &&
       getTriple().isAArch64() &&
-      (getLinkerVersion(DriverArgs) >= VersionTuple(1250, 0)) && !LinkerIsLLD)
+      (getLinkerVersion(DriverArgs) >= VersionTuple(1250, 0)))
     CC1Args.push_back("-fobjc-msgsend-class-selector-stubs");
 
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled

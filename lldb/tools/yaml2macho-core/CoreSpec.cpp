@@ -51,12 +51,16 @@ template <> struct llvm::yaml::MappingTraits<MemoryRegion> {
   static void mapping(IO &io, MemoryRegion &memory) {
     io.mapRequired("addr", memory.addr);
     io.mapOptional("UInt8", memory.bytes);
+    io.mapOptional("UInt16", memory.halfwords);
     io.mapOptional("UInt32", memory.words);
     io.mapOptional("UInt64", memory.doublewords);
 
     if (memory.bytes.size()) {
       memory.type = MemoryType::UInt8;
       memory.size = memory.bytes.size();
+    } else if (memory.halfwords.size()) {
+      memory.type = MemoryType::UInt16;
+      memory.size = memory.halfwords.size() * 2;
     } else if (memory.words.size()) {
       memory.type = MemoryType::UInt32;
       memory.size = memory.words.size() * 4;

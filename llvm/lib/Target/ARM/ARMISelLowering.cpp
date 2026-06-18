@@ -21403,17 +21403,16 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
       Value* args[6] = {Builder.getInt32(15), Builder.getInt32(0),
                         Builder.getInt32(0), Builder.getInt32(7),
                         Builder.getInt32(10), Builder.getInt32(5)};
-      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, args);
-    } else {
-      // Instead of using barriers, atomic accesses on these subtargets use
-      // libcalls.
-      llvm_unreachable("makeDMB on a target so old that it has no barriers");
+      return Builder.CreateIntrinsicWithoutFolding(Intrinsic::arm_mcr, args);
     }
+    // Instead of using barriers, atomic accesses on these subtargets use
+    // libcalls.
+    llvm_unreachable("makeDMB on a target so old that it has no barriers");
   } else {
     // Only a full system barrier exists in the M-class architectures.
     Domain = Subtarget->isMClass() ? ARM_MB::SY : Domain;
     Constant *CDomain = Builder.getInt32(Domain);
-    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, CDomain);
+    return Builder.CreateIntrinsicWithoutFolding(Intrinsic::arm_dmb, CDomain);
   }
 }
 
@@ -21692,7 +21691,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
 
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int = IsAcquire ? Intrinsic::arm_ldaex : Intrinsic::arm_ldrex;
-  CallInst *CI = Builder.CreateIntrinsic(Int, Tys, Addr);
+  CallInst *CI = Builder.CreateIntrinsicWithoutFolding(Int, Tys, Addr);
 
   CI->addParamAttr(
       0, Attribute::get(M->getContext(), Attribute::ElementType, ValueTy));
@@ -21896,7 +21895,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
       BaseAddr = Builder.CreateConstGEP1_32(VecTy->getElementType(), BaseAddr,
                                             VecTy->getNumElements() * Factor);
 
-    CallInst *VldN = createLoadIntrinsic(BaseAddr);
+    Value *VldN = createLoadIntrinsic(BaseAddr);
 
     // Replace uses of each shufflevector with the corresponding vector loaded
     // by ldN.
