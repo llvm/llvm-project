@@ -1,4 +1,5 @@
 // RUN: %clangxx_min_runtime -fsanitize=signed-integer-overflow -fsanitize-recover=all %s -o %t && %run %t 2>&1 | FileCheck %s
+// UNSUPPORTED: gpu
 
 #include <stdint.h>
 

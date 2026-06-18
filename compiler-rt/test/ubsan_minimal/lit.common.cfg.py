@@ -52,6 +52,9 @@ if config.target_os not in [
 if config.test_cfi:
     config.available_features.add("cfi")
 
+if config.target_arch in ("amdgcn", "nvptx", "spirv"):
+    config.available_features.add("gpu")
+
 # Don't target x86_64h if the test machine can't execute x86_64h binaries.
 if "-arch x86_64h" in target_cflags and "x86_64h" not in config.available_features:
     config.unsupported = True

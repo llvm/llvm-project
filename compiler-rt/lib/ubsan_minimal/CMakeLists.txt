@@ -6,6 +6,16 @@ set(UBSAN_MINIMAL_SOURCES
 
 include_directories(..)
 
+# The GPU runtime reports to the host over the RPC channel for host-side
+# symbolization, so it needs the shared sanitizer header and the RPC headers.
+if(COMPILER_RT_GPU_BUILD)
+  include_directories(${COMPILER_RT_SOURCE_DIR}/include)
+  include(FindLibcCommonUtils)
+  get_target_property(LIBC_COMMON_UTILS_INCLUDE
+    llvm-libc-common-utilities INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(${LIBC_COMMON_UTILS_INCLUDE})
+endif()
+
 set(UBSAN_CFLAGS
   ${SANITIZER_COMMON_CFLAGS}
   -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)

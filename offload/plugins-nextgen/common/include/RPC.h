@@ -24,6 +24,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <thread>
 
@@ -35,6 +36,10 @@ class GenericGlobalHandlerTy;
 class DeviceImageTy;
 } // namespace plugin
 
+/// Deduplication tables for GPU sanitizer diagnostics; defined in 'Sanitizer.h'
+/// and held by pointer so this header stays free of the sanitizer ABI include.
+struct SanitizerTables;
+
 /// A generic class implementing the interface between the RPC server provided
 /// by the 'libc' project and 'libomptarget'. If the RPC server is not available
 /// these routines will perform no action.
@@ -44,6 +49,9 @@ public:
 
   /// Initializes the handles to the number of devices we may need to service.
   RPCServerTy(plugin::GenericPluginTy &Plugin);
+
+  /// Defined out of line for the sanitizer tables.
+  ~RPCServerTy();
 
   /// Deinitialize the associated memory and resources.
   llvm::Error shutDown(plugin::GenericPluginTy &Plugin);
@@ -76,7 +84,13 @@ public:
   void setSleepFunction(std::function<void()> Sleep,
                         std::function<void()> Wake);
 
+  /// Sanitizer deduplication state with the same lifetime as the RPC interface.
+  SanitizerTables &getSanitizerTables() { return *Sanitizers; }
+
 private:
+  /// Deduplication tables for any sanitizer diagnostics this server services.
+  std::unique_ptr<SanitizerTables> Sanitizers;
+
   /// Array from this device's identifier to its attached devices.
   std::unique_ptr<void *[]> Buffers;
 
