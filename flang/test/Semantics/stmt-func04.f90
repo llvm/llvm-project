@@ -73,3 +73,47 @@ subroutine global_clashes
   !ERROR: The name 'global_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
   p1(global_func) = global_func + 1
 end subroutine
+
+! Clashes with bind(c) global subprogram (exercises global scope path).
+real function bindc_global_func() bind(c)
+  bindc_global_func = 1.0
+end function
+subroutine bindc_global_clashes
+  !ERROR: The name 'bindc_global_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  r1(bindc_global_func) = bindc_global_func + 1
+end subroutine
+
+! Clashes with bind(c) external declared via local explicit interface block.
+subroutine bindc_interface_clashes
+  interface
+    real function c_iface_func() bind(c)
+    end function
+  end interface
+  !ERROR: The name 'c_iface_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  r2(c_iface_func) = c_iface_func + 1
+end subroutine
+
+! bind(c) USE-associated variables: scalar is ok; array is an error.
+module m_bindc
+  real, bind(c) :: c_scalar
+  real, bind(c) :: c_array(4)
+end module
+subroutine bindc_use_var_clashes
+  use m_bindc
+  r3(c_scalar) = c_scalar + 1  ! ok: bind(c) scalar variable
+  !ERROR: The name 'c_array' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  r4(c_array) = c_array + 1
+end subroutine
+
+! bind(c) USE-associated module procedure (error).
+module m_bindc_proc
+contains
+  real function c_mod_func() bind(c)
+    c_mod_func = 1.0
+  end function
+end module
+subroutine bindc_use_proc_clashes
+  use m_bindc_proc
+  !ERROR: The name 'c_mod_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  r5(c_mod_func) = c_mod_func + 1
+end subroutine
