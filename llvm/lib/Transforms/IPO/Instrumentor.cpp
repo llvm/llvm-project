@@ -905,6 +905,25 @@ static void readValuePack(const Range &R, Value &Pack,
   }
 }
 
+template <unsigned... Opcodes>
+Value *InstructionIO<Opcodes...>::getLeft(Value &V, Type &Ty,
+                                          InstrumentationConfig &IConf,
+                                          InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return I.getOperand(0);
+}
+
+template <unsigned... Opcodes>
+Value *InstructionIO<Opcodes...>::getRight(Value &V, Type &Ty,
+                                           InstrumentationConfig &IConf,
+                                           InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  if (I.getNumOperands() > 1)
+    return I.getOperand(1);
+  else
+    return PoisonValue::get(&Ty);
+}
+
 /// FunctionIO
 /// {
 void FunctionIO::init(InstrumentationConfig &IConf,
@@ -1019,21 +1038,6 @@ static Value *getSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
   auto &I = cast<Instruction>(V);
   auto &DL = I.getDataLayout();
   return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
-}
-
-static Value *getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                      InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  return I.getOperand(0);
-}
-
-static Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                       InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  if (I.getNumOperands() > 1)
-    return I.getOperand(1);
-  else
-    return PoisonValue::get(&Ty);
 }
 
 /// UnreachableIO
@@ -1821,7 +1825,7 @@ Value *CompareIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
   switch (I.getOpcode()) {
   case Instruction::ICmp:
     if (dyn_cast<ICmpInst>(&V)->hasSameSign())
-      Flag |= COMPARE_SAMESIGN;
+      Flag |= COMPARE_FLAG_SAMESIGN;
     break;
   case Instruction::FCmp:
     if (I.hasNoNaNs())
