@@ -618,7 +618,7 @@ CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
   SmallVector<Value *, 2> Args = {Op, buildMD(getNormalizedPoisonValue(ElemTy)),
                                   B.getInt32(getPointerAddressSpace(OpTy))};
   CallInst *PtrCasted =
-      B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_ptrcast, {Types}, Args);
   GR->buildAssignPtr(B, ElemTy, PtrCasted);
   return PtrCasted;
 }
@@ -905,7 +905,8 @@ SPIRVEmitIntrinsics::buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP) {
   Args.push_back(B.getInt1(GEP.isInBounds()));
   Args.push_back(GEP.getOperand(0));
   llvm::append_range(Args, Indices);
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+  Instruction *NewI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_gep, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &GEP, NewI);
   return NewI;
 }
@@ -1582,8 +1583,8 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     if (isAssignTypeInstr(U)) {
       B.SetInsertPoint(U);
       SmallVector<Value *, 2> Args = {New, U->getOperand(1)};
-      CallInst *AssignCI =
-          B.CreateIntrinsic(Intrinsic::spv_assign_type, {New->getType()}, Args);
+      CallInst *AssignCI = B.CreateIntrinsicWithoutFolding(
+          Intrinsic::spv_assign_type, {New->getType()}, Args);
       GR->addAssignPtrTypeInstr(New, AssignCI);
       U->eraseFromParent();
     } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
@@ -1646,7 +1647,8 @@ void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
         setInsertPointSkippingPhis(B, I);
         BPrepared = true;
       }
-      auto *IntrUndef = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+      CallInst *IntrUndef =
+          B.CreateIntrinsicWithoutFolding(Intrinsic::spv_undef, {});
       I->replaceUsesOfWith(Op, IntrUndef);
       AggrConsts[IntrUndef] = AggrUndef;
       AggrConstTypes[IntrUndef] = AggrUndef->getType();
@@ -1676,8 +1678,8 @@ void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
           setInsertPointSkippingPhis(B, &I);
           BPrepared = true;
         }
-        auto *Call =
-            B.CreateIntrinsic(Intrinsic::spv_poison, {B.getInt32Ty()}, {});
+        CallInst *Call = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_poison,
+                                                         {B.getInt32Ty()}, {});
         AggrConsts[Call] = Poison;
         AggrConstTypes[Call] = OpTy;
         Replacement = Call;
@@ -1765,8 +1767,8 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
               PrepareInsert();
               Type *PoisonTy = Op->getType();
               if (PoisonTy->isAggregateType()) {
-                auto *Call = B.CreateIntrinsic(Intrinsic::spv_poison,
-                                               {B.getInt32Ty()}, {});
+                CallInst *Call = B.CreateIntrinsicWithoutFolding(
+                    Intrinsic::spv_poison, {B.getInt32Ty()}, {});
                 AggrConsts[Call] = cast<PoisonValue>(Op);
                 AggrConstTypes[Call] = PoisonTy;
                 Op = Call;
@@ -1777,8 +1779,8 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
             Args.push_back(Op);
           }
         PrepareInsert();
-        auto *CI =
-            B.CreateIntrinsic(Intrinsic::spv_const_composite, {ResTy}, {Args});
+        auto *CI = B.CreateIntrinsicWithoutFolding(
+            Intrinsic::spv_const_composite, {ResTy}, {Args});
         Worklist.push(CI);
         I->replaceUsesOfWith(Op, CI);
         KeepInst = true;
@@ -1901,8 +1903,8 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
     BBCases.push_back(Case.getCaseSuccessor());
     Args.push_back(BlockAddress::get(F, Case.getCaseSuccessor()));
   }
-  CallInst *NewI = B.CreateIntrinsic(Intrinsic::spv_switch,
-                                     {I.getOperand(0)->getType()}, {Args});
+  CallInst *NewI = B.CreateIntrinsicWithoutFolding(
+      Intrinsic::spv_switch, {I.getOperand(0)->getType()}, {Args});
   // remove switch to avoid its unneeded and undesirable unwrap into branches
   // and conditions
   replaceAllUsesWith(&I, NewI);
@@ -1937,7 +1939,8 @@ Instruction *SPIRVEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
   for (unsigned J = 0; J < SGEP->getNumIndices(); ++J)
     Args.push_back(SGEP->getIndexOperand(J));
 
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, Types, Args);
+  Instruction *NewI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_gep, Types, Args);
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2033,7 +2036,8 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
         Args.push_back(I.getPointerOperand());
         Args.append(NewIndices.begin(), NewIndices.end());
 
-        auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+        Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_gep,
+                                                            {Types}, {Args});
         replaceAllUsesWithAndErase(B, &I, NewI);
         return NewI;
       }
@@ -2044,7 +2048,8 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(I.isInBounds()));
   llvm::append_range(Args, I.operands());
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+  Instruction *NewI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_gep, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2066,7 +2071,8 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
 
   SmallVector<Type *, 2> Types = {I.getType(), Source->getType()};
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_bitcast, {Types}, {Args});
+  Instruction *NewI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_bitcast, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2354,7 +2360,8 @@ Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args(I.op_begin(), I.op_end());
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
+  Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_insertelt,
+                                                      {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2371,7 +2378,8 @@ SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
   SmallVector<Type *, 3> Types = {I.getType(), I.getVectorOperandType(),
                                   I.getIndexOperand()->getType()};
   SmallVector<Value *, 2> Args = {I.getVectorOperand(), I.getIndexOperand()};
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
+  Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractelt,
+                                                      {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2390,7 +2398,7 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
   Instruction *NewI =
-      B.CreateIntrinsic(Intrinsic::spv_insertv, {Types}, {Args});
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_insertv, {Types}, {Args});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2409,8 +2417,8 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
   SmallVector<Value *> Args(I.operands());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
-  auto *NewI =
-      B.CreateIntrinsic(Intrinsic::spv_extractv, {I.getType()}, {Args});
+  Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
+                                                      {I.getType()}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   // If the aggregate result feeds a callsite whose aggregate params were
   // rewritten to i32 value-ids by SPIRVPrepareFunctions, mutate it to match.
@@ -2450,8 +2458,8 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
     IntrinsicId = Intrinsic::spv_atomic_load;
     Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
   }
-  CallInst *NewI =
-      B.CreateIntrinsic(IntrinsicId, {I.getOperand(0)->getType()}, Args);
+  CallInst *NewI = B.CreateIntrinsicWithoutFolding(
+      IntrinsicId, {I.getOperand(0)->getType()}, Args);
 
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
@@ -2490,7 +2498,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
     IntrinsicId = Intrinsic::spv_atomic_store;
     Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
   }
-  auto *NewI = B.CreateIntrinsic(
+  Instruction *NewI = B.CreateIntrinsicWithoutFolding(
       IntrinsicId, {I.getValueOperand()->getType(), PtrOp->getType()}, Args);
   NewI->copyMetadata(I);
   I.eraseFromParent();
@@ -2513,13 +2521,13 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   B.SetInsertPoint(&I);
   TrackConstants = false;
   Type *PtrTy = I.getType();
-  auto *NewI =
+  Instruction *NewI =
       ArraySize
-          ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
-                              {PtrTy, ArraySize->getType()},
-                              {ArraySize, B.getInt32(I.getAlign().value())})
-          : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy},
-                              {B.getInt32(I.getAlign().value())});
+          ? B.CreateIntrinsicWithoutFolding(
+                Intrinsic::spv_alloca_array, {PtrTy, ArraySize->getType()},
+                {ArraySize, B.getInt32(I.getAlign().value())})
+          : B.CreateIntrinsicWithoutFolding(Intrinsic::spv_alloca, {PtrTy},
+                                            {B.getInt32(I.getAlign().value())});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2541,8 +2549,8 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
       static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_cmpxchg,
-                                 {I.getPointerOperand()->getType()}, {Args});
+  Instruction *NewI = B.CreateIntrinsicWithoutFolding(
+      Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2592,15 +2600,47 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
+// llvm.compiler.used and llvm.used hold use-list entries that protect their
+// referenced globals from DCE without participating in code generation.
+static bool isUseListGlobal(StringRef Name) {
+  return Name == "llvm.compiler.used" || Name == "llvm.used";
+}
+
+// Returns true for module-level globals that should not have SPIR-V intrinsics
+// emitted (use-list globals plus llvm.global.annotations).
+static bool isArtificialGlobal(StringRef Name) {
+  return isUseListGlobal(Name) || Name == "llvm.global.annotations";
+}
+
+// Returns true if every use of GV traces back to llvm.compiler.used or
+// llvm.used.
+static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *> Stack(GV.users());
+  while (!Stack.empty()) {
+    const Value *V = Stack.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (const auto *GVUser = dyn_cast<GlobalVariable>(V)) {
+      if (!isUseListGlobal(GVUser->getName()))
+        return false;
+      continue;
+    }
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      Stack.append(C->user_begin(), C->user_end());
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 static bool
 shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
                                    const GlobalVariable &GV,
                                    const Function *F) {
   // Skip special artificial variables.
-  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
-                                             "llvm.compiler.used", "llvm.used"};
-
-  if (ArtificialGlobals.contains(GV.getName()))
+  if (isArtificialGlobal(GV.getName()))
     return false;
 
   auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
@@ -2622,7 +2662,7 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
 Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
                                                    IRBuilder<> &B) {
   auto MakeLeaf = [&](Type *ElemTy) -> Instruction * {
-    auto *Leaf = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+    CallInst *Leaf = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_undef, {});
     AggrConsts[Leaf] = PoisonValue::get(ElemTy);
     AggrConstTypes[Leaf] = ElemTy;
     return Leaf;
@@ -2641,8 +2681,8 @@ Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
       Elems.push_back(Entry);
     }
   }
-  auto *Composite = B.CreateIntrinsic(Intrinsic::spv_const_composite,
-                                      {B.getInt32Ty()}, Elems);
+  CallInst *Composite = B.CreateIntrinsicWithoutFolding(
+      Intrinsic::spv_const_composite, {B.getInt32Ty()}, Elems);
   AggrConsts[Composite] = PoisonValue::get(AggrTy);
   AggrConstTypes[Composite] = AggrTy;
   return Composite;
@@ -2670,8 +2710,8 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
           isa<PoisonValue>(Init) &&
           STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
       if (UsePoison) {
-        auto *Call =
-            B.CreateIntrinsic(Intrinsic::spv_poison, {B.getInt32Ty()}, {});
+        CallInst *Call = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_poison,
+                                                         {B.getInt32Ty()}, {});
         AggrConsts[Call] = cast<PoisonValue>(Init);
         AggrConstTypes[Call] = Init->getType();
         InitOp = Call;
@@ -2681,11 +2721,13 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     }
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
-    auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
-                                       {GV.getType(), Ty}, {&GV, Const});
+    CallInst *InitInst = B.CreateIntrinsicWithoutFolding(
+        Intrinsic::spv_init_global, {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, InitOp);
   }
-  if (!Init && GV.use_empty())
+  // Globals with only use-list references have no real function uses. Emit
+  // spv_unref_global so buildGlobalVariable is called for them.
+  if (!Init && hasOnlyArtificialUses(GV))
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -3140,8 +3182,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       SmallVector<Value *, 2> Args = {
           NewOp, buildMD(getNormalizedPoisonValue(OpElemTy)),
           B.getInt32(getPointerAddressSpace(OpTy))};
-      CallInst *PtrCasted =
-          B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+      CallInst *PtrCasted = B.CreateIntrinsicWithoutFolding(
+          Intrinsic::spv_ptrcast, {Types}, Args);
       GR->buildAssignPtr(B, OpElemTy, PtrCasted);
       NewOp = PtrCasted;
     }

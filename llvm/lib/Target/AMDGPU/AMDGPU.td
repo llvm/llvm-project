@@ -207,10 +207,6 @@ def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "Hardware supports XNACK"
 >;
 
-defm XNACKAnyOnly : AMDGPUSubtargetFeature<"xnack-any-only",
-  "Target only supports XnackSetting to be Any"
->;
-
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
 // XNACK. The current default kernel driver setting is:
 // - graphics ring: XNACK disabled
@@ -1105,6 +1101,11 @@ defm VOPDInsts : AMDGPUSubtargetFeature<"vopd",
 
 defm VALUTransUseHazard : AMDGPUSubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result",
+  /*GenPredicate=*/0
+>;
+
+defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
+  "Hazard when TRANS co-executes with other VALU instruction",
   /*GenPredicate=*/0
 >;
 
@@ -2223,7 +2224,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
-   FeatureSWMMACGfx1250Insts])>;
+   FeatureSWMMACGfx1250Insts,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2247,7 +2249,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
-   FeatureUseAddPC64Inst])>;
+   FeatureUseAddPC64Inst,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2258,8 +2261,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   [FeatureAddressableLocalMemorySize327680,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
-   FeatureXNACKAnyOnly,
-   FeatureGFX125xLowestRateWMMA])>;
+   FeatureGFX125xLowestRateWMMA,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2324,6 +2327,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
+   FeatureTransCoexecutionHazard
 ]>;
 
 //===----------------------------------------------------------------------===//
