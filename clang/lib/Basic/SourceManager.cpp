@@ -583,6 +583,20 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
 
+  llvm::ErrorOr<std::string> Ccsid =
+      llvm::getEncodingNameFromFileTag(SourceFile.getName());
+  if (!Ccsid) {
+    Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+        << SourceFile.getName() << Ccsid.getError().message();
+    return FileID();
+  }
+  if (!Ccsid->empty()) {
+    llvm::ErrorOr<llvm::TextEncodingConverter *> FileTagConverter =
+      llvm::TextEncodingConverterCache::getOrCreateConverter(*Ccsid, "UTF-8");
+    if (FileTagConverter)
+      Converter = *FileTagConverter;
+  }
+
   #ifndef NDEBUG
   // Either the content cache has never been used for a FileID (and, if we are
   // being asked to use a converter, there should be no valid buffer set up for
