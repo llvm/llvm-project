@@ -1595,7 +1595,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::i8, Custom);
     setOperationAction(ISD::CLMUL, {MVT::v8i8, MVT::v16i8}, Legal);
     if (Subtarget->hasAES()) {
-      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64}, Custom);
+      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64, MVT::v4i32},
+                         Custom);
       setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
       setOperationAction(ISD::CLMULH, {MVT::v1i64, MVT::v2i64}, Legal);
     }
@@ -8315,10 +8316,26 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
-          VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
+          VT == MVT::v4i32 || VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
   uint64_t ScalarSize = VT.getScalarSizeInBits();
   APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
+
+  if (VT == MVT::v4i32) {
+    SDValue LoIdx = DAG.getVectorIdxConstant(0, DL);
+    SDValue HiIdx = DAG.getVectorIdxConstant(2, DL);
+    SDValue LoA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), LoIdx);
+    SDValue LoB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), LoIdx);
+    SDValue HiA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), HiIdx);
+    SDValue HiB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), HiIdx);
+    SDValue LoCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, LoA, LoB);
+    SDValue HiCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, HiA, HiB);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoCLMUL, HiCLMUL);
+  }
 
   if (VT == MVT::nxv2i64) {
     SDValue OpA =
