@@ -215,6 +215,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
   warnUsage_.set(UsageWarning::ImpureFinalInPure);
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
+  warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
 }

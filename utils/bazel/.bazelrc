@@ -9,6 +9,9 @@
 
 common --enable_bzlmod --noenable_workspace
 
+# Prevent automatic __init__.py generation from confusing some lit tests.
+common --incompatible_default_to_explicit_init_py
+
 # Prevent invalid caching if input files are modified during a build.
 build --guard_against_concurrent_changes
 
