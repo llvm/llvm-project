@@ -119,6 +119,19 @@ entry:
   ret void
 }
 
+define i1 @align_with_offset_on_gep(ptr %base) {
+; CHECK-LABEL: @align_with_offset_on_gep(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[BASE:%.*]], i64 8, i64 2) ]
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, ptr %base, i64 16
+  call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 8, i64 2)]
+  %i = ptrtoint ptr %base to i16
+  %and = and i16 %i, 7
+  %cmp = icmp eq i16 %and, 2
+  ret i1 %cmp
+}
+
 define void @align_with_constant_offset_0(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_0(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
@@ -208,6 +221,18 @@ define void @redundant_align() {
   %ptr = call ptr @get_ptr()
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
+  ret void
+}
+
+define void @redundant_align_with_offset() {
+; CHECK-LABEL: @redundant_align_with_offset(
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 4) ]
   ret void
 }
 
