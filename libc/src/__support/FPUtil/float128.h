@@ -9,18 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/comparison_operations.h"
-#include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/uint128.h"
-#include <stdint.h>
-#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/FPUtil/generic/mul.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -34,7 +34,7 @@ struct Float128 {
   LIBC_INLINE constexpr Float128 &operator=(const Float128 &) = default;
   LIBC_INLINE constexpr Float128 &operator=(Float128 &&) = default;
 
-  // Floating point type and integer type 
+  // Floating point type and integer type
   template <typename T>
   LIBC_INLINE constexpr explicit Float128(T value)
       : bits(static_cast<UInt128>(0U)) {
@@ -67,7 +67,21 @@ struct Float128 {
   LIBC_INLINE LIBC_CONSTEXPR_DEFAULT operator T() const {
     return fputil::cast<T>(*this);
   }
-// TODO: Integer conversion
+
+  // Integer conversion (Incomplete + not verified with tests)
+  template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
+  LIBC_INLINE constexpr explicit operator T() const {
+    fputil::FPBits<Float128> x_bits(*this);
+    if (x_bits.is_zero())
+      return static_cast<T>(0);
+
+    fputil::DyadicFloat<fputil::FPBits<Float128>::STORAGE_LEN> xd(
+        x_bits.sign(),
+        x_bits.get_explicit_exponent() - fputil::FPBits<Float128>::FRACTION_LEN,
+        x_bits.get_explicit_mantissa());
+    return static_cast<T>(xd.as_mantissa_type_rounded());
+  }
+
   // unary
   LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR Float128 operator-() const {
     fputil::FPBits<Float128> result(*this);
@@ -75,7 +89,7 @@ struct Float128 {
     return result.get_val();
   }
   // operator overloads
-    LIBC_INLINE constexpr Float128 operator+(const Float128 &other) const {
+  LIBC_INLINE constexpr Float128 operator+(const Float128 &other) const {
     return fputil::generic::add<Float128>(*this, other);
   }
 
@@ -114,17 +128,32 @@ struct Float128 {
   LIBC_INLINE constexpr bool operator>=(const Float128 &other) const {
     return fputil::greater_than_or_equals(*this, other);
   }
+
+  LIBC_INLINE constexpr Float128 &operator*=(const Float128 &other) {
+    *this = *this * other;
+    return *this;
+  }
+  LIBC_INLINE constexpr Float128 &operator+=(const Float128 &other) {
+    *this = *this + other;
+    return *this;
+  }
+  LIBC_INLINE constexpr Float128 &operator-=(const Float128 &other) {
+    *this = *this - other;
+    return *this;
+  }
+  LIBC_INLINE constexpr Float128 &operator/=(const Float128 &other) {
+    *this = *this / other;
+    return *this;
+  }
 };
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
 // <--To be removed------------------------------------>
-static_assert(
-    LIBC_NAMESPACE::cpp::is_trivially_constructible<
-        LIBC_NAMESPACE::fputil::Float128>::value);
-static_assert(
-    LIBC_NAMESPACE::cpp::is_trivially_copyable<
-        LIBC_NAMESPACE::fputil::Float128>::value);
+static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
+              LIBC_NAMESPACE::fputil::Float128>::value);
+static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
+              LIBC_NAMESPACE::fputil::Float128>::value);
 // ----------------------------------------------------
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
