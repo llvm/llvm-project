@@ -1080,8 +1080,42 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
       {{AMDGPU::S_SUBB_U32, AMDGPU::S_ADDC_U32},
        {AMDGPU::V_SUBB_U32_e32, AMDGPU::V_ADDC_U32_e32}}};
 
-  unsigned Opc = OpcMap[0][N->isDivergent()][IsAdd];
-  unsigned CarryOpc = OpcMap[1][N->isDivergent()][IsAdd];
+  // The carry is passed between the low and high halves of this i64 add/sub,
+  // and between separate add/sub nodes chained through the carry glue (as
+  // happens when a wider integer add/sub is expanded into several i64
+  // ADDC/ADDE nodes), via either SCC or VCC. Every node in such a glue chain
+  // must agree on which register holds the carry; otherwise the carry crosses
+  // the SALU/VALU boundary with no copy, producing a use of an undefined VCC.
+  // Select the VALU variant if this node is divergent or if any later
+  // carry-in node in this glue chain needs the VALU carry path.
+  unsigned ScalarCarryOpc = OpcMap[1][0][IsAdd];
+  unsigned VectorCarryOpc = OpcMap[1][1][IsAdd];
+  unsigned CarryInOpc = IsAdd ? ISD::ADDE : ISD::SUBE;
+
+  bool IsVALU = N->isDivergent();
+  if (ProduceCarry && !IsVALU) {
+    for (SDNode *User = N->getGluedUser(); User; User = User->getGluedUser()) {
+      if (!User->isMachineOpcode()) {
+        assert(User->getOpcode() == CarryInOpc && "unexpected carry user");
+        if (User->isDivergent()) {
+          IsVALU = true;
+          break;
+        }
+        continue;
+      }
+
+      unsigned UserOpc = User->getMachineOpcode();
+      assert((UserOpc == ScalarCarryOpc || UserOpc == VectorCarryOpc) &&
+             "unexpected selected carry user");
+      if (UserOpc == VectorCarryOpc) {
+        IsVALU = true;
+        break;
+      }
+    }
+  }
+
+  unsigned Opc = OpcMap[0][IsVALU][IsAdd];
+  unsigned CarryOpc = OpcMap[1][IsVALU][IsAdd];
 
   SDNode *AddLo;
   if (!ConsumeCarry) {
