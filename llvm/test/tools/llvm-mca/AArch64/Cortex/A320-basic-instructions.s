@@ -599,7 +599,9 @@ fcsel d9, d10, d11, mi
 fmov     s0, s1
 fabs     s2, s3
 fneg     s4, s5
+fsqrt    h6, h7
 fsqrt    s6, s7
+fsqrt    d6, d7
 fcvt     d8, s9
 fcvt     h10, s11
 frintn   s12, s13
@@ -612,7 +614,6 @@ frinti   s24, s25
 fmov     d0, d1
 fabs     d2, d3
 fneg     d4, d5
-fsqrt    d6, d7
 fcvt     s8, d9
 fcvt     h10, d11
 frintn   d12, d13
@@ -1804,30 +1805,30 @@ drps
 # CHECK-NEXT:  1      2     1.00                        asr	x21, x22, x23
 # CHECK-NEXT:  1      2     1.00                        ror	w24, w25, w26
 # CHECK-NEXT:  1      2     1.00                        ror	x27, x28, x29
-# CHECK-NEXT:  1      5     2.00                        smulh	x30, x29, x28
-# CHECK-NEXT:  1      5     2.00                        smulh	xzr, x27, x26
-# CHECK-NEXT:  1      5     2.00                        umulh	x30, x29, x28
-# CHECK-NEXT:  1      5     2.00                        umulh	x23, x30, xzr
+# CHECK-NEXT:  1      6     4.00                        smulh	x30, x29, x28
+# CHECK-NEXT:  1      6     4.00                        smulh	xzr, x27, x26
+# CHECK-NEXT:  1      6     4.00                        umulh	x30, x29, x28
+# CHECK-NEXT:  1      6     4.00                        umulh	x23, x30, xzr
 # CHECK-NEXT:  1      3     1.00                        madd	w1, w3, w7, w4
 # CHECK-NEXT:  1      3     1.00                        madd	wzr, w0, w9, w11
 # CHECK-NEXT:  1      3     1.00                        madd	w13, wzr, w4, w4
 # CHECK-NEXT:  1      3     1.00                        madd	w19, w30, wzr, w29
 # CHECK-NEXT:  1      3     1.00                        mul	w4, w5, w6
-# CHECK-NEXT:  1      5     2.00                        madd	x1, x3, x7, x4
-# CHECK-NEXT:  1      5     2.00                        madd	xzr, x0, x9, x11
-# CHECK-NEXT:  1      5     2.00                        madd	x13, xzr, x4, x4
-# CHECK-NEXT:  1      5     2.00                        madd	x19, x30, xzr, x29
-# CHECK-NEXT:  1      5     2.00                        mul	x4, x5, x6
+# CHECK-NEXT:  1      4     2.00                        madd	x1, x3, x7, x4
+# CHECK-NEXT:  1      4     2.00                        madd	xzr, x0, x9, x11
+# CHECK-NEXT:  1      4     2.00                        madd	x13, xzr, x4, x4
+# CHECK-NEXT:  1      4     2.00                        madd	x19, x30, xzr, x29
+# CHECK-NEXT:  1      4     2.00                        mul	x4, x5, x6
 # CHECK-NEXT:  1      3     1.00                        msub	w1, w3, w7, w4
 # CHECK-NEXT:  1      3     1.00                        msub	wzr, w0, w9, w11
 # CHECK-NEXT:  1      3     1.00                        msub	w13, wzr, w4, w4
 # CHECK-NEXT:  1      3     1.00                        msub	w19, w30, wzr, w29
 # CHECK-NEXT:  1      3     1.00                        mneg	w4, w5, w6
-# CHECK-NEXT:  1      5     2.00                        msub	x1, x3, x7, x4
-# CHECK-NEXT:  1      5     2.00                        msub	xzr, x0, x9, x11
-# CHECK-NEXT:  1      5     2.00                        msub	x13, xzr, x4, x4
-# CHECK-NEXT:  1      5     2.00                        msub	x19, x30, xzr, x29
-# CHECK-NEXT:  1      5     2.00                        mneg	x4, x5, x6
+# CHECK-NEXT:  1      4     2.00                        msub	x1, x3, x7, x4
+# CHECK-NEXT:  1      4     2.00                        msub	xzr, x0, x9, x11
+# CHECK-NEXT:  1      4     2.00                        msub	x13, xzr, x4, x4
+# CHECK-NEXT:  1      4     2.00                        msub	x19, x30, xzr, x29
+# CHECK-NEXT:  1      4     2.00                        mneg	x4, x5, x6
 # CHECK-NEXT:  1      3     1.00                        smaddl	x3, w5, w2, x9
 # CHECK-NEXT:  1      3     1.00                        smaddl	xzr, w10, w11, x12
 # CHECK-NEXT:  1      3     1.00                        smaddl	x13, wzr, w14, x15
@@ -1846,10 +1847,10 @@ drps
 # CHECK-NEXT:  1      3     1.00                        umsubl	x3, w5, w2, x9
 # CHECK-NEXT:  1      3     1.00                        umsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  1      3     1.00                        umnegl	x19, w20, w21
-# CHECK-NEXT:  1      5     2.00                        smulh	x30, x29, x28
-# CHECK-NEXT:  1      5     2.00                        smulh	x23, x22, xzr
-# CHECK-NEXT:  1      5     2.00                        umulh	x23, x22, xzr
-# CHECK-NEXT:  1      5     2.00                        mul	x19, x20, xzr
+# CHECK-NEXT:  1      6     4.00                        smulh	x30, x29, x28
+# CHECK-NEXT:  1      6     4.00                        smulh	x23, x22, xzr
+# CHECK-NEXT:  1      6     4.00                        umulh	x23, x22, xzr
+# CHECK-NEXT:  1      4     2.00                        mul	x19, x20, xzr
 # CHECK-NEXT:  1      3     1.00                        mneg	w21, w22, w23
 # CHECK-NEXT:  1      3     1.00                        smull	x11, w13, w17
 # CHECK-NEXT:  1      3     1.00                        umull	x11, w13, w17
@@ -1862,36 +1863,38 @@ drps
 # CHECK-NEXT:  1      2     1.00                        ror	x19, x23, #24
 # CHECK-NEXT:  1      2     1.00                        ror	x29, xzr, #63
 # CHECK-NEXT:  1      2     1.00                        ror	w9, w13, #31
-# CHECK-NEXT:  1      3     1.00                        fcmp	s3, s5
-# CHECK-NEXT:  1      3     1.00                        fcmp	s31, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmp	s31, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmpe	s29, s30
-# CHECK-NEXT:  1      3     1.00                        fcmpe	s15, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmpe	s15, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmp	d4, d12
-# CHECK-NEXT:  1      3     1.00                        fcmp	d23, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmp	d23, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmpe	d26, d22
-# CHECK-NEXT:  1      3     1.00                        fcmpe	d29, #0.0
-# CHECK-NEXT:  1      3     1.00                        fcmpe	d29, #0.0
-# CHECK-NEXT:  1      3     1.00                        fccmp	s1, s31, #0, eq
-# CHECK-NEXT:  1      3     1.00                        fccmp	s3, s0, #15, hs
-# CHECK-NEXT:  1      3     1.00                        fccmp	s31, s15, #13, hs
-# CHECK-NEXT:  1      3     1.00                        fccmp	d9, d31, #0, le
-# CHECK-NEXT:  1      3     1.00                        fccmp	d3, d0, #15, gt
-# CHECK-NEXT:  1      3     1.00                        fccmp	d31, d5, #7, ne
-# CHECK-NEXT:  1      3     1.00                        fccmpe	s1, s31, #0, eq
-# CHECK-NEXT:  1      3     1.00                        fccmpe	s3, s0, #15, hs
-# CHECK-NEXT:  1      3     1.00                        fccmpe	s31, s15, #13, hs
-# CHECK-NEXT:  1      3     1.00                        fccmpe	d9, d31, #0, le
-# CHECK-NEXT:  1      3     1.00                        fccmpe	d3, d0, #15, gt
-# CHECK-NEXT:  1      3     1.00                        fccmpe	d31, d5, #7, ne
+# CHECK-NEXT:  1      1     1.00                        fcmp	s3, s5
+# CHECK-NEXT:  1      1     1.00                        fcmp	s31, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmp	s31, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	s29, s30
+# CHECK-NEXT:  1      1     1.00                        fcmpe	s15, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	s15, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmp	d4, d12
+# CHECK-NEXT:  1      1     1.00                        fcmp	d23, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmp	d23, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	d26, d22
+# CHECK-NEXT:  1      1     1.00                        fcmpe	d29, #0.0
+# CHECK-NEXT:  1      1     1.00                        fcmpe	d29, #0.0
+# CHECK-NEXT:  1      5     5.00                        fccmp	s1, s31, #0, eq
+# CHECK-NEXT:  1      5     5.00                        fccmp	s3, s0, #15, hs
+# CHECK-NEXT:  1      5     5.00                        fccmp	s31, s15, #13, hs
+# CHECK-NEXT:  1      5     5.00                        fccmp	d9, d31, #0, le
+# CHECK-NEXT:  1      5     5.00                        fccmp	d3, d0, #15, gt
+# CHECK-NEXT:  1      5     5.00                        fccmp	d31, d5, #7, ne
+# CHECK-NEXT:  1      5     5.00                        fccmpe	s1, s31, #0, eq
+# CHECK-NEXT:  1      5     5.00                        fccmpe	s3, s0, #15, hs
+# CHECK-NEXT:  1      5     5.00                        fccmpe	s31, s15, #13, hs
+# CHECK-NEXT:  1      5     5.00                        fccmpe	d9, d31, #0, le
+# CHECK-NEXT:  1      5     5.00                        fccmpe	d3, d0, #15, gt
+# CHECK-NEXT:  1      5     5.00                        fccmpe	d31, d5, #7, ne
 # CHECK-NEXT:  1      3     1.00                        fcsel	s3, s20, s9, pl
 # CHECK-NEXT:  1      3     1.00                        fcsel	d9, d10, d11, mi
 # CHECK-NEXT:  1      4     1.00                        fmov	s0, s1
 # CHECK-NEXT:  1      4     1.00                        fabs	s2, s3
 # CHECK-NEXT:  1      4     1.00                        fneg	s4, s5
-# CHECK-NEXT:  1      22    29.00                       fsqrt	s6, s7
+# CHECK-NEXT:  1      11    3.00                        fsqrt	h6, h7
+# CHECK-NEXT:  1      14    5.00                        fsqrt	s6, s7
+# CHECK-NEXT:  1      25    10.00                       fsqrt	d6, d7
 # CHECK-NEXT:  1      4     1.00                        fcvt	d8, s9
 # CHECK-NEXT:  1      4     1.00                        fcvt	h10, s11
 # CHECK-NEXT:  1      4     1.00                        frintn	s12, s13
@@ -1904,7 +1907,6 @@ drps
 # CHECK-NEXT:  1      4     1.00                        fmov	d0, d1
 # CHECK-NEXT:  1      4     1.00                        fabs	d2, d3
 # CHECK-NEXT:  1      4     1.00                        fneg	d4, d5
-# CHECK-NEXT:  1      22    29.00                       fsqrt	d6, d7
 # CHECK-NEXT:  1      4     1.00                        fcvt	s8, d9
 # CHECK-NEXT:  1      4     1.00                        fcvt	h10, d11
 # CHECK-NEXT:  1      4     1.00                        frintn	d12, d13
@@ -2553,7 +2555,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]
-# CHECK-NEXT: 465.00 22.00  64.00  450.00 69.00   -     221.00 12.00  87.00
+# CHECK-NEXT: 465.00 22.00  64.00  450.00 83.00   -     269.00 12.00  47.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
@@ -2984,10 +2986,10 @@ drps
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -     asr	x21, x22, x23
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -     ror	w24, w25, w26
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -     ror	x27, x28, x29
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     smulh	x30, x29, x28
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     smulh	xzr, x27, x26
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     umulh	x30, x29, x28
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     umulh	x23, x30, xzr
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     smulh	x30, x29, x28
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     smulh	xzr, x27, x26
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     umulh	x30, x29, x28
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     umulh	x23, x30, xzr
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     madd	w1, w3, w7, w4
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     madd	wzr, w0, w9, w11
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     madd	w13, wzr, w4, w4
@@ -3026,9 +3028,9 @@ drps
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     umsubl	x3, w5, w2, x9
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     umsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     umnegl	x19, w20, w21
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     smulh	x30, x29, x28
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     smulh	x23, x22, xzr
-# CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     umulh	x23, x22, xzr
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     smulh	x30, x29, x28
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     smulh	x23, x22, xzr
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -     umulh	x23, x22, xzr
 # CHECK-NEXT:  -      -      -      -     2.00    -      -      -      -     mul	x19, x20, xzr
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     mneg	w21, w22, w23
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -     smull	x11, w13, w17
@@ -3054,24 +3056,26 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcmpe	d26, d22
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcmpe	d29, #0.0
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcmpe	d29, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmp	s1, s31, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmp	s3, s0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmp	s31, s15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmp	d9, d31, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmp	d3, d0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmp	d31, d5, #7, ne
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmpe	s1, s31, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmpe	s3, s0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmpe	s31, s15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmpe	d9, d31, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmpe	d3, d0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fccmpe	d31, d5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmp	s1, s31, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmp	s3, s0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmp	s31, s15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmp	d9, d31, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmp	d3, d0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmp	d31, d5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmpe	s1, s31, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmpe	s3, s0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmpe	s31, s15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmpe	d9, d31, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmpe	d3, d0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -     5.00    -      -     fccmpe	d31, d5, #7, ne
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcsel	s3, s20, s9, pl
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcsel	d9, d10, d11, mi
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fmov	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fabs	s2, s3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fneg	s4, s5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     29.00  fsqrt	s6, s7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   fsqrt	h6, h7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00   fsqrt	s6, s7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     10.00  fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcvt	d8, s9
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcvt	h10, s11
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     frintn	s12, s13
@@ -3084,7 +3088,6 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fmov	d0, d1
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fneg	d4, d5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     29.00  fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcvt	s8, d9
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     fcvt	h10, d11
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     frintn	d12, d13
