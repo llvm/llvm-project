@@ -57,7 +57,7 @@ public:
                      const InvalidatedSymbols *Invalidated,
                      ArrayRef<const MemRegion *> RequestedRegions,
                      ArrayRef<const MemRegion *> InvalidatedRegions,
-                     const LocationContext *LCtx, const CallEvent *Call) const;
+                     const StackFrame *SF, const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
 
@@ -219,7 +219,7 @@ private:
   ExplodedNode *tryToReportBug(const MemRegion *Region, const CXXRecordDecl *RD,
                                CheckerContext &C, MisuseKind MK) const;
 
-  bool isInMoveSafeContext(const LocationContext *LC) const;
+  bool isInMoveSafeStackFrame(const StackFrame *SF) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
   const ExplodedNode *getMoveLocation(const ExplodedNode *N,
@@ -244,11 +244,12 @@ bool isMovedFrom(ProgramStateRef State, const MemRegion *Region) {
 
 // If a region is removed all of the subregions needs to be removed too.
 static ProgramStateRef removeFromState(ProgramStateRef State,
-                                       const MemRegion *Region) {
+                                       const MemRegion *Region,
+                                       bool Strict = false) {
   if (!Region)
     return State;
   for (auto &E : State->get<TrackedRegionMap>()) {
-    if (E.first->isSubRegionOf(Region))
+    if ((!Strict || E.first != Region) && E.first->isSubRegionOf(Region))
       State = State->remove<TrackedRegionMap>(E.first);
   }
   return State;
@@ -327,8 +328,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
   }
 
   // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 
@@ -361,8 +361,8 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
   if (MK == MK_Dereference && OK.StdKind != SK_SmartPtr)
     MK = MK_FunCall;
 
-  if (!RS || !shouldWarnAbout(OK, MK)
-          || isInMoveSafeContext(C.getLocationContext())) {
+  if (!RS || !shouldWarnAbout(OK, MK) ||
+      isInMoveSafeStackFrame(C.getStackFrame())) {
     // Finalize changes made by the caller.
     C.addTransition(State);
     return;
@@ -402,7 +402,7 @@ ExplodedNode *MoveChecker::tryToReportBug(const MemRegion *Region,
 
     if (const Stmt *MoveStmt = MoveNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-          MoveStmt, C.getSourceManager(), MoveNode->getLocationContext());
+          MoveStmt, C.getSourceManager(), MoveNode->getStackFrame());
 
     // Creating the error message.
     llvm::SmallString<128> Str;
@@ -431,7 +431,7 @@ ExplodedNode *MoveChecker::tryToReportBug(const MemRegion *Region,
 
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT, OS.str(), N, LocUsedForUniqueing,
-        MoveNode->getLocationContext()->getDecl());
+        MoveNode->getStackFrame()->getDecl());
     R->addVisitor(std::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));
     return N;
@@ -529,18 +529,18 @@ bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
 
 // Don't report an error inside a move related operation.
 // We assume that the programmer knows what she does.
-bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
+bool MoveChecker::isInMoveSafeStackFrame(const StackFrame *SF) const {
   do {
-    const auto *CtxDec = LC->getDecl();
-    auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(CtxDec);
-    auto *DtorDec = dyn_cast_or_null<CXXDestructorDecl>(CtxDec);
-    auto *MethodDec = dyn_cast_or_null<CXXMethodDecl>(CtxDec);
+    const auto *SFDec = SF->getDecl();
+    auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(SFDec);
+    auto *DtorDec = dyn_cast_or_null<CXXDestructorDecl>(SFDec);
+    auto *MethodDec = dyn_cast_or_null<CXXMethodDecl>(SFDec);
     if (DtorDec || (CtorDec && CtorDec->isCopyOrMoveConstructor()) ||
         (MethodDec && MethodDec->isOverloadedOperator() &&
          MethodDec->getOverloadedOperator() == OO_Equal) ||
         isStateResetMethod(MethodDec) || isMoveSafeMethod(MethodDec))
       return true;
-  } while ((LC = LC->getParent()));
+  } while ((SF = SF->getParent()));
   return false;
 }
 
@@ -702,25 +702,23 @@ void MoveChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 ProgramStateRef MoveChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> RequestedRegions,
-    ArrayRef<const MemRegion *> InvalidatedRegions,
-    const LocationContext *LCtx, const CallEvent *Call) const {
+    ArrayRef<const MemRegion *> InvalidatedRegions, const StackFrame *SF,
+    const CallEvent *Call) const {
   if (Call) {
     // Relax invalidation upon function calls: only invalidate parameters
     // that are passed directly via non-const pointers or non-const references
     // or rvalue references.
     // In case of an InstanceCall don't invalidate the this-region since
-    // it is fully handled in checkPreCall and checkPostCall.
-    const MemRegion *ThisRegion = nullptr;
-    if (const auto *IC = dyn_cast<CXXInstanceCall>(Call))
-      ThisRegion = IC->getCXXThisVal().getAsRegion();
+    // it is fully handled in checkPreCall and checkPostCall, but do invalidate
+    // its strict subregions, as they are not handled.
 
     // Requested ("explicit") regions are the regions passed into the call
     // directly, but not all of them end up being invalidated.
     // But when they do, they appear in the InvalidatedRegions array as well.
     for (const auto *Region : RequestedRegions) {
-      if (ThisRegion != Region &&
-          llvm::is_contained(InvalidatedRegions, Region))
-        State = removeFromState(State, Region);
+      if (llvm::is_contained(InvalidatedRegions, Region))
+        State = removeFromState(State, Region,
+                                /*Strict=*/isa<CXXInstanceCall>(Call));
     }
   } else {
     // For invalidations that aren't caused by calls, assume nothing. In

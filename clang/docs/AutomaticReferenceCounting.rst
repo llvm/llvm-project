@@ -2318,7 +2318,7 @@ aligned for an object of type ``id``.  The other qualifiers may be used on
 explicitly under-aligned memory.
 
 The runtime tracks ``__weak`` objects which holds non-null values.  It is
-undefined behavior to direct modify a ``__weak`` object which is being tracked
+undefined behavior to directly modify a ``__weak`` object which is being tracked
 by the runtime except through an
 :ref:`objc_storeWeak <arc.runtime.objc_storeWeak>`,
 :ref:`objc_destroyWeak <arc.runtime.objc_destroyWeak>`, or

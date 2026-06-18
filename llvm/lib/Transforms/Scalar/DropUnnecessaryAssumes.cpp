@@ -67,6 +67,10 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   bool Changed = false;
 
+  // Collect assumes created while processing the cache and register them only
+  // after iterating.
+  SmallVector<AssumeInst *> NewAssumes;
+
   for (const WeakVH &Elem : AC.assumptions()) {
     auto *Assume = cast_or_null<AssumeInst>(Elem);
     if (!Assume)
@@ -78,10 +82,15 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       SmallVector<OperandBundleDef> KeptBundles;
       unsigned NumBundles = Assume->getNumOperandBundles();
       for (unsigned I = 0; I != NumBundles; ++I) {
-        auto IsDead = [](OperandBundleUse Bundle) {
+        auto IsDead = [&](OperandBundleUse Bundle) {
           // "ignore" operand bundles are always dead.
           if (Bundle.getTagName() == "ignore")
             return true;
+
+          // "dereferenceable" operand bundles are only dropped if requested
+          // (e.g., after loop vectorization has run).
+          if (Bundle.getTagName() == "dereferenceable")
+            return DropDereferenceable;
 
           // Bundles without arguments do not affect any specific values.
           // Always keep them for now.
@@ -110,7 +119,7 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
           // Otherwise only drop the dead operand bundles.
           CallBase *NewAssume =
               CallBase::Create(Assume, KeptBundles, Assume->getIterator());
-          AC.registerAssumption(cast<AssumeInst>(NewAssume));
+          NewAssumes.push_back(cast<AssumeInst>(NewAssume));
           Assume->eraseFromParent();
         }
 
@@ -137,6 +146,9 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     RecursivelyDeleteTriviallyDeadInstructions(Cond);
     Changed = true;
   }
+
+  for (AssumeInst *NewAssume : NewAssumes)
+    AC.registerAssumption(NewAssume);
 
   if (Changed) {
     PreservedAnalyses PA;

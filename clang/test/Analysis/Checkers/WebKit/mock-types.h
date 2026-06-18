@@ -13,9 +13,31 @@ typedef T type;
 
 template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
+template<typename T, typename U>
+T exchange(T& t, U&& u)
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<U&&>(u);
+  return r;
+}
+
+template<typename T>
+T exchange(T& t, decltype(nullptr))
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<T>(t);
+  return r;
+}
+
 }
 
 #endif
+
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+}
 
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
@@ -180,6 +202,7 @@ template <typename T> struct RefPtr {
     t = o.t;
     o.t = tmp;
   }
+  operator T*() { return t; }
   T *get() const { return t; }
   T *operator->() const { return t; }
   T &operator*() const { return *t; }
@@ -221,12 +244,20 @@ template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 struct RefCountable {
   static Ref<RefCountable> create();
   static std::unique_ptr<RefCountable> makeUnique();
-  void ref() {}
-  void deref() {}
+  void ref() { ++m_refCount; }
+  void deref() {
+    --m_refCount;
+    if (!--m_refCount)
+      delete this;
+  }
+  ~RefCountable();
   void method();
   void constMethod() const;
   int trivial() { return 123; }
   RefCountable* next();
+  
+private:
+  unsigned m_refCount { 0 };
 };
 
 template <typename T> T *downcast(T *t) { return t; }
@@ -274,11 +305,14 @@ public:
 
 class CheckedObj {
 public:
-  void incrementCheckedPtrCount();
-  void decrementCheckedPtrCount();
+  void incrementCheckedPtrCount() { ++m_ptrCount; }
+  void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
   int trivial() { return 123; }
   CheckedObj* next();
+
+private:
+  unsigned m_ptrCount { 0 };
 };
 
 class RefCountableAndCheckable {
@@ -342,8 +376,8 @@ public:
 
 private:
   template <typename T>
-  WeakPtrImpl(T* t)
-    : ptr(static_cast<void*>(t))
+  WeakPtrImpl(T& t)
+    : ptr(static_cast<void*>(&t))
   { }
 };
 
@@ -355,9 +389,9 @@ private:
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  Ref<WeakPtrImpl> createWeakPtrImpl() {
+  WeakPtrImpl& [[clang::annotate_type("webkit.nodelete")]] createWeakPtrImpl() {
     if (!impl)
-      impl = WeakPtrImpl::create(static_cast<T>(*this));
+      impl = WeakPtrImpl::create(static_cast<T&>(*this));
     return *impl;
   }
 
@@ -376,22 +410,30 @@ private:
   RefPtr<WeakPtrImpl> impl;
 
 public:
-  WeakPtr(T& t) {
-    *this = t;
+  WeakPtr(T& t)
+    : impl(t.createWeakPtrImpl()) {
   }
-  WeakPtr(T* t) {
-    *this = t;
+  WeakPtr(T* t)
+    : impl(t ? &t->createWeakPtrImpl() : nullptr) {
   }
 
   template <typename U>
   WeakPtr<T> operator=(U& obj) {
     impl = obj.createWeakPtrImpl();
+    return *this;
   }
 
   template <typename U>
   WeakPtr<T> operator=(U* obj) {
-    impl = obj ? obj->createWeakPtrImpl() : nullptr;
+    if (obj)
+      impl = obj->createWeakPtrImpl();
+    else
+      impl = nullptr;
+    return *this;
   }
+
+  T* operator->() { return get(); }
+  operator T*() { return get(); }
 
   T* get() {
     return impl ? impl->get<T>() : nullptr;

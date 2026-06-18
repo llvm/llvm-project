@@ -157,7 +157,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; SSSE3-LABEL: v2i8:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pcmpgtb %xmm1, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,u,0,u,u,u,u,u,u,u,1]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; SSSE3-NEXT:    movmskpd %xmm0, %eax
 ; SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSSE3-NEXT:    retq
@@ -272,10 +272,12 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm2
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    movmskpd %xmm1, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax

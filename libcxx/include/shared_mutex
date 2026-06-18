@@ -138,6 +138,7 @@ template <class Mutex>
 #    include <__mutex/tag_types.h>
 #    include <__mutex/unique_lock.h>
 #    include <__system_error/throw_system_error.h>
+#    include <__utility/move.h>
 #    include <__utility/swap.h>
 #    include <cerrno>
 #    include <version>
@@ -152,6 +153,7 @@ _LIBCPP_PUSH_MACROS
 #      endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
   mutex __mut_;
@@ -195,12 +197,14 @@ public:
 
   // Exclusive ownership
   _LIBCPP_ACQUIRE_CAPABILITY() _LIBCPP_HIDE_FROM_ABI void lock() { return __base_.lock(); }
-  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock() { return __base_.try_lock(); }
+  [[nodiscard]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock() {
+    return __base_.try_lock();
+  }
   _LIBCPP_RELEASE_CAPABILITY _LIBCPP_HIDE_FROM_ABI void unlock() { return __base_.unlock(); }
 
   // Shared ownership
   _LIBCPP_ACQUIRE_SHARED_CAPABILITY _LIBCPP_HIDE_FROM_ABI void lock_shared() { return __base_.lock_shared(); }
-  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock_shared() {
+  [[nodiscard]] _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock_shared() {
     return __base_.try_lock_shared();
   }
   _LIBCPP_RELEASE_SHARED_CAPABILITY _LIBCPP_HIDE_FROM_ABI void unlock_shared() { return __base_.unlock_shared(); }
@@ -222,15 +226,15 @@ public:
 
   // Exclusive ownership
   void lock() _LIBCPP_ACQUIRE_CAPABILITY();
-  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock();
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock();
   template <class _Rep, class _Period>
-  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
   try_lock_for(const chrono::duration<_Rep, _Period>& __rel_time) {
     return try_lock_until(chrono::steady_clock::now() + __rel_time);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
   try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time) {
     unique_lock<mutex> __lk(__base_.__mut_);
     if (__base_.__state_ & __base_.__write_entered_) {
@@ -262,15 +266,15 @@ public:
 
   // Shared ownership
   _LIBCPP_ACQUIRE_SHARED_CAPABILITY void lock_shared();
-  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) bool try_lock_shared();
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) bool try_lock_shared();
   template <class _Rep, class _Period>
-  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
   try_lock_shared_for(const chrono::duration<_Rep, _Period>& __rel_time) {
     return try_lock_shared_until(chrono::steady_clock::now() + __rel_time);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool
   try_lock_shared_until(const chrono::time_point<_Clock, _Duration>& __abs_time) {
     unique_lock<mutex> __lk(__base_.__mut_);
     if ((__base_.__state_ & __base_.__write_entered_) ||
@@ -303,27 +307,31 @@ private:
   bool __owns_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI shared_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit shared_lock(mutex_type& __m) : __m_(std::addressof(__m)), __owns_(true) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI explicit shared_lock(mutex_type& __m)
+      : __m_(std::addressof(__m)), __owns_(true) {
     __m_->lock_shared();
   }
 
-  _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
       : __m_(std::addressof(__m)),
         __owns_(false) {}
 
-  _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, try_to_lock_t)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, try_to_lock_t)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_shared()) {}
 
-  _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, adopt_lock_t) : __m_(std::addressof(__m)), __owns_(true) {}
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, adopt_lock_t)
+      : __m_(std::addressof(__m)), __owns_(true) {}
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __abs_time)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+  shared_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __abs_time)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_shared_until(__abs_time)) {}
 
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __rel_time)
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+  shared_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __rel_time)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_shared_for(__rel_time)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~shared_lock() {
@@ -334,29 +342,25 @@ public:
   shared_lock(shared_lock const&)            = delete;
   shared_lock& operator=(shared_lock const&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI shared_lock(shared_lock&& __u) _NOEXCEPT : __m_(__u.__m_), __owns_(__u.__owns_) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(shared_lock&& __u) _NOEXCEPT
+      : __m_(__u.__m_),
+        __owns_(__u.__owns_) {
     __u.__m_    = nullptr;
     __u.__owns_ = false;
   }
 
   _LIBCPP_HIDE_FROM_ABI shared_lock& operator=(shared_lock&& __u) _NOEXCEPT {
-    if (__owns_)
-      __m_->unlock_shared();
-    __m_        = nullptr;
-    __owns_     = false;
-    __m_        = __u.__m_;
-    __owns_     = __u.__owns_;
-    __u.__m_    = nullptr;
-    __u.__owns_ = false;
+    if (this != std::addressof(__u))
+      shared_lock(std::move(__u)).swap(*this);
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI void lock();
-  _LIBCPP_HIDE_FROM_ABI bool try_lock();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock();
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __rel_time);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __rel_time);
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __abs_time);
   _LIBCPP_HIDE_FROM_ABI void unlock();
 
   // Setters
@@ -373,11 +377,11 @@ public:
   }
 
   // Getters
-  _LIBCPP_HIDE_FROM_ABI bool owns_lock() const _NOEXCEPT { return __owns_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool owns_lock() const _NOEXCEPT { return __owns_; }
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __owns_; }
 
-  _LIBCPP_HIDE_FROM_ABI mutex_type* mutex() const _NOEXCEPT { return __m_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mutex_type* mutex() const _NOEXCEPT { return __m_; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(shared_lock);
 
@@ -436,6 +440,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(shared_lock<_Mutex>& __x, shared_lock<_Mu
   __x.swap(__y);
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #    endif // _LIBCPP_STD_VER >= 14
@@ -444,7 +449,7 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_THREADS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <optional>
 #    include <system_error>
 #  endif

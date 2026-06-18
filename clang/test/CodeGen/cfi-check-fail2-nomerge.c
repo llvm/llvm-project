@@ -74,8 +74,10 @@ void caller(void (*f)(void)) {
 
 // CHECK: [[CONT5]]:
 // CHECK:   ret void
+
+
 // NO-MERGE-LABEL: define dso_local void @caller(
-// NO-MERGE-SAME: ptr noundef readonly captures(none) [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// NO-MERGE-SAME: ptr nofree noundef readonly captures(none) [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // NO-MERGE-NEXT:  [[ENTRY:.*:]]
 // NO-MERGE-NEXT:    tail call void [[F]]() #[[ATTR5:[0-9]+]]
 // NO-MERGE-NEXT:    ret void
@@ -84,61 +86,61 @@ void caller(void (*f)(void)) {
 // NO-MERGE-LABEL: define weak_odr hidden void @__cfi_check_fail(
 // NO-MERGE-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR0]] {
 // NO-MERGE-NEXT:  [[ENTRY:.*:]]
-// NO-MERGE-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[TMP0]], null, !nosanitize [[META3:![0-9]+]]
-// NO-MERGE-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF4:![0-9]+]], !nosanitize [[META3]]
+// NO-MERGE-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[TMP0]], null, !nosanitize [[META6:![0-9]+]]
+// NO-MERGE-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF7:![0-9]+]], !nosanitize [[META6]]
 // NO-MERGE:       [[TRAP]]:
-// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6:[0-9]+]], !nosanitize [[META3]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6:[0-9]+]], !nosanitize [[META6]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // NO-MERGE:       [[CONT]]:
-// NO-MERGE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP0]], align 4, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP0]], align 4, !nosanitize [[META6]]
 // NO-MERGE-NEXT:    switch i8 [[TMP2]], label %[[CONT6:.*]] [
 // NO-MERGE-NEXT:      i8 0, label %[[HANDLER_CFI_CHECK_FAIL:.*]]
 // NO-MERGE-NEXT:      i8 1, label %[[TRAP]]
 // NO-MERGE-NEXT:      i8 2, label %[[TRAP]]
 // NO-MERGE-NEXT:      i8 3, label %[[TRAP]]
 // NO-MERGE-NEXT:      i8 4, label %[[TRAP]]
-// NO-MERGE-NEXT:    ], !prof [[PROF5:![0-9]+]]
+// NO-MERGE-NEXT:    ], !prof [[PROF8:![0-9]+]]
 // NO-MERGE:       [[HANDLER_CFI_CHECK_FAIL]]:
-// NO-MERGE-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META3]]
-// NO-MERGE-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP5]], i64 [[TMP6]], i64 [[TMP4]]) #[[ATTR7:[0-9]+]], !nosanitize [[META3]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META6]]
+// NO-MERGE-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP5]], i64 [[TMP6]], i64 [[TMP4]]) #[[ATTR7:[0-9]+]], !nosanitize [[META6]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // NO-MERGE:       [[CONT6]]:
-// NO-MERGE-NEXT:    ret void, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    ret void, !nosanitize [[META6]]
 //
 //
 // NO-MERGE-LABEL: define weak void @__cfi_check(
 // NO-MERGE-SAME: i64 noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] align 4096 {
 // NO-MERGE-NEXT:  [[ENTRY:.*:]]
-// NO-MERGE-NEXT:    [[DOTNOT_I:%.*]] = icmp eq ptr [[TMP2]], null, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    br i1 [[DOTNOT_I]], label %[[TRAP_I:.*]], label %[[CONT_I:.*]], !prof [[PROF4]], !nosanitize [[META3]]
+// NO-MERGE-NEXT:    [[DOTNOT_I:%.*]] = icmp eq ptr [[TMP2]], null, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    br i1 [[DOTNOT_I]], label %[[TRAP_I:.*]], label %[[CONT_I:.*]], !prof [[PROF7]], !nosanitize [[META6]]
 // NO-MERGE:       [[TRAP_I]]:
-// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6]], !nosanitize [[META3]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6]], !nosanitize [[META6]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // NO-MERGE:       [[CONT_I]]:
-// NO-MERGE-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 4, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 4, !nosanitize [[META6]]
 // NO-MERGE-NEXT:    switch i8 [[TMP3]], label %[[__CFI_CHECK_FAIL_EXIT:.*]] [
 // NO-MERGE-NEXT:      i8 0, label %[[HANDLER_CFI_CHECK_FAIL_I:.*]]
 // NO-MERGE-NEXT:      i8 1, label %[[TRAP_I]]
 // NO-MERGE-NEXT:      i8 2, label %[[TRAP_I]]
 // NO-MERGE-NEXT:      i8 3, label %[[TRAP_I]]
 // NO-MERGE-NEXT:      i8 4, label %[[TRAP_I]]
-// NO-MERGE-NEXT:    ], !prof [[PROF5]]
+// NO-MERGE-NEXT:    ], !prof [[PROF8]]
 // NO-MERGE:       [[HANDLER_CFI_CHECK_FAIL_I]]:
-// NO-MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META3]]
-// NO-MERGE-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP4]] to i64, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP2]] to i64, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META3]]
-// NO-MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP5]]) #[[ATTR7]], !nosanitize [[META3]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// NO-MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META6]]
+// NO-MERGE-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP4]] to i64, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP2]] to i64, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META6]]
+// NO-MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP5]]) #[[ATTR7]], !nosanitize [[META6]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // NO-MERGE:       [[__CFI_CHECK_FAIL_EXIT]]:
 // NO-MERGE-NEXT:    ret void
 //
 //
 // MERGE-LABEL: define dso_local void @caller(
-// MERGE-SAME: ptr noundef readonly captures(none) [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// MERGE-SAME: ptr nofree noundef readonly captures(none) [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // MERGE-NEXT:  [[ENTRY:.*:]]
 // MERGE-NEXT:    tail call void [[F]]() #[[ATTR5:[0-9]+]]
 // MERGE-NEXT:    ret void
@@ -147,60 +149,64 @@ void caller(void (*f)(void)) {
 // MERGE-LABEL: define weak_odr hidden void @__cfi_check_fail(
 // MERGE-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR0]] {
 // MERGE-NEXT:  [[ENTRY:.*:]]
-// MERGE-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[TMP0]], null, !nosanitize [[META3:![0-9]+]]
-// MERGE-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF4:![0-9]+]], !nosanitize [[META3]]
+// MERGE-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[TMP0]], null, !nosanitize [[META6:![0-9]+]]
+// MERGE-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF7:![0-9]+]], !nosanitize [[META6]]
 // MERGE:       [[TRAP]]:
-// MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6:[0-9]+]], !nosanitize [[META3]]
-// MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6:[0-9]+]], !nosanitize [[META6]]
+// MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // MERGE:       [[CONT]]:
-// MERGE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP0]], align 4, !nosanitize [[META3]]
+// MERGE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP0]], align 4, !nosanitize [[META6]]
 // MERGE-NEXT:    switch i8 [[TMP2]], label %[[CONT6:.*]] [
 // MERGE-NEXT:      i8 0, label %[[HANDLER_CFI_CHECK_FAIL:.*]]
 // MERGE-NEXT:      i8 1, label %[[TRAP]]
 // MERGE-NEXT:      i8 2, label %[[TRAP]]
 // MERGE-NEXT:      i8 3, label %[[TRAP]]
 // MERGE-NEXT:      i8 4, label %[[TRAP]]
-// MERGE-NEXT:    ], !prof [[PROF5:![0-9]+]]
+// MERGE-NEXT:    ], !prof [[PROF8:![0-9]+]]
 // MERGE:       [[HANDLER_CFI_CHECK_FAIL]]:
-// MERGE-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META3]]
-// MERGE-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META3]]
-// MERGE-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize [[META3]]
-// MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META3]]
-// MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP5]], i64 [[TMP6]], i64 [[TMP4]]) #[[ATTR6]], !nosanitize [[META3]]
-// MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// MERGE-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META6]]
+// MERGE-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META6]]
+// MERGE-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize [[META6]]
+// MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META6]]
+// MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP5]], i64 [[TMP6]], i64 [[TMP4]]) #[[ATTR6]], !nosanitize [[META6]]
+// MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // MERGE:       [[CONT6]]:
-// MERGE-NEXT:    ret void, !nosanitize [[META3]]
+// MERGE-NEXT:    ret void, !nosanitize [[META6]]
 //
 //
 // MERGE-LABEL: define weak void @__cfi_check(
 // MERGE-SAME: i64 noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] align 4096 {
 // MERGE-NEXT:  [[ENTRY:.*:]]
-// MERGE-NEXT:    [[DOTNOT_I:%.*]] = icmp eq ptr [[TMP2]], null, !nosanitize [[META3]]
-// MERGE-NEXT:    br i1 [[DOTNOT_I]], label %[[TRAP_I:.*]], label %[[CONT_I:.*]], !prof [[PROF4]], !nosanitize [[META3]]
+// MERGE-NEXT:    [[DOTNOT_I:%.*]] = icmp eq ptr [[TMP2]], null, !nosanitize [[META6]]
+// MERGE-NEXT:    br i1 [[DOTNOT_I]], label %[[TRAP_I:.*]], label %[[CONT_I:.*]], !prof [[PROF7]], !nosanitize [[META6]]
 // MERGE:       [[TRAP_I]]:
-// MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6]], !nosanitize [[META3]]
-// MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR6]], !nosanitize [[META6]]
+// MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // MERGE:       [[CONT_I]]:
-// MERGE-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 4, !nosanitize [[META3]]
+// MERGE-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 4, !nosanitize [[META6]]
 // MERGE-NEXT:    switch i8 [[TMP3]], label %[[__CFI_CHECK_FAIL_EXIT:.*]] [
 // MERGE-NEXT:      i8 0, label %[[HANDLER_CFI_CHECK_FAIL_I:.*]]
 // MERGE-NEXT:      i8 1, label %[[TRAP_I]]
 // MERGE-NEXT:      i8 2, label %[[TRAP_I]]
 // MERGE-NEXT:      i8 3, label %[[TRAP_I]]
 // MERGE-NEXT:      i8 4, label %[[TRAP_I]]
-// MERGE-NEXT:    ], !prof [[PROF5]]
+// MERGE-NEXT:    ], !prof [[PROF8]]
 // MERGE:       [[HANDLER_CFI_CHECK_FAIL_I]]:
-// MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META3]]
-// MERGE-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP4]] to i64, !nosanitize [[META3]]
-// MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP2]] to i64, !nosanitize [[META3]]
-// MERGE-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META3]]
-// MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP5]]) #[[ATTR6]], !nosanitize [[META3]]
-// MERGE-NEXT:    unreachable, !nosanitize [[META3]]
+// MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP1]], metadata !"all-vtables"), !nosanitize [[META6]]
+// MERGE-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP4]] to i64, !nosanitize [[META6]]
+// MERGE-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP2]] to i64, !nosanitize [[META6]]
+// MERGE-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP1]] to i64, !nosanitize [[META6]]
+// MERGE-NEXT:    tail call void @__ubsan_handle_cfi_check_fail_abort(i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP5]]) #[[ATTR6]], !nosanitize [[META6]]
+// MERGE-NEXT:    unreachable, !nosanitize [[META6]]
 // MERGE:       [[__CFI_CHECK_FAIL_EXIT]]:
 // MERGE-NEXT:    ret void
-
-// MERGE: [[ATTR5]] = { nounwind }
-// MERGE: [[ATTR6]] = { noreturn nounwind }
-
-// NO-MERGE: [[ATTR6]] = { noreturn nounwind }
-// NO-MERGE: [[ATTR7]] = { nomerge noreturn nounwind }
+//
+//.
+// NO-MERGE: [[META6]] = !{}
+// NO-MERGE: [[PROF7]] = !{!"branch_weights", i32 1, i32 1048575}
+// NO-MERGE: [[PROF8]] = !{!"branch_weights", i32 -20480, i32 4096, i32 4095, i32 4095, i32 4095, i32 4095}
+//.
+// MERGE: [[META6]] = !{}
+// MERGE: [[PROF7]] = !{!"branch_weights", i32 1, i32 1048575}
+// MERGE: [[PROF8]] = !{!"branch_weights", i32 -20480, i32 4096, i32 4095, i32 4095, i32 4095, i32 4095}
+//.

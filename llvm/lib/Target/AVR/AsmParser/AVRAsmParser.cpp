@@ -91,8 +91,8 @@ class AVRAsmParser : public MCTargetAsmParser {
 
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -252,7 +252,7 @@ public:
       O << "Token: \"" << getToken() << "\"";
       break;
     case k_Register:
-      O << "Register: " << getReg();
+      O << "Register: " << getReg().id();
       break;
     case k_Immediate:
       O << "Immediate: \"";
@@ -262,7 +262,7 @@ public:
     case k_Memri: {
       // only manually print the size for non-negative values,
       // as the sign is inserted automatically.
-      O << "Memri: \"" << getReg() << '+';
+      O << "Memri: \"" << getReg().id() << '+';
       MAI.printExpr(O, *getImm());
       O << "\"";
       break;

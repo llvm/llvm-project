@@ -263,7 +263,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArraySpec &);
 // The name may not match the symbol's name in case of a USE rename.
 class DerivedTypeSpec {
 public:
-  enum class Category { DerivedType, IntrinsicVector, PairVector, QuadVector };
+  enum class Category {
+    DerivedType,
+    IntrinsicVector,
+    PairVector,
+    QuadVector,
+    EnumerationType
+  };
 
   using RawParameter = std::pair<const parser::Keyword *, ParamValue>;
   using RawParameters = std::vector<RawParameter>;
@@ -301,11 +307,15 @@ public:
   void CookParameters(evaluate::FoldingContext &);
   // Evaluates type parameter expressions.
   void EvaluateParameters(SemanticsContext &);
+  void ReevaluateParameters(SemanticsContext &);
   void AddParamValue(SourceName, ParamValue &&);
   // Creates a Scope for the type and populates it with component
   // instantiations that have been specialized with actual type parameter
   // values, which are cooked &/or evaluated if necessary.
   void Instantiate(Scope &containingScope);
+  // Reset instantiation state so a copy can receive a fresh component scope
+  // (e.g. OpenACC use_device with CUDA Fortran component paths).
+  void PrepareForScopeClone();
 
   ParamValue *FindParameter(SourceName);
   const ParamValue *FindParameter(SourceName target) const {
@@ -333,6 +343,9 @@ public:
   bool IsVectorType() const {
     return category_ == Category::IntrinsicVector ||
         category_ == Category::PairVector || category_ == Category::QuadVector;
+  }
+  bool IsEnumerationType() const {
+    return category_ == Category::EnumerationType;
   }
 
 private:

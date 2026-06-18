@@ -92,6 +92,7 @@ function(create_object_library fq_target_name)
   )
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
   #loop through the deps, check if any have the TARGET_TYPE of ENTRYPOINT_OBJ_TARGET_TYPE, and print a warning if they do.

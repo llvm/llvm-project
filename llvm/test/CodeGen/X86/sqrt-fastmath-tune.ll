@@ -7,6 +7,10 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver6      | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m4   | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m6   | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m7   | FileCheck %s --check-prefixes=FAST-SCALAR,FAST-VECTOR
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64      | FileCheck %s --check-prefixes=X86-64
 
 define float @f32_no_daz(float %f) #0 {
@@ -403,6 +407,6 @@ declare float @llvm.sqrt.f32(float) #2
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>) #2
 declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #2
 
-attributes #0 = { "denormal-fp-math"="ieee,ieee" }
-attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
+attributes #0 = { denormal_fpenv(ieee|ieee) }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
 attributes #2 = { nounwind readnone }

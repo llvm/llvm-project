@@ -70,7 +70,7 @@ define float @PR39535min_switch(i64 %i, float %x) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ [[X:%.*]], [[BB1]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[X:%.*]], [[BB1]] ]
 ; CHECK-NEXT:    ret float [[COND]]
 ;
 entry:

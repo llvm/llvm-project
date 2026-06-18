@@ -20,7 +20,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <mutex>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {

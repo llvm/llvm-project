@@ -6,13 +6,8 @@
 ; CHECK-NEXT:   32bit                            - Implements RV32.
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
-; CHECK-NEXT:   add-load-fusion                  - Enable ADD(.UW) + load macrofusion.
-; CHECK-NEXT:   addi-load-fusion                 - Enable ADDI + load macrofusion.
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
-; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
-; CHECK-NEXT:   auipc-load-fusion                - Enable AUIPC + load macrofusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
-; CHECK-NEXT:   bfext-fusion                     - Enable SLLI+SRLI (bitfield extract) macrofusion.
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.
 ; CHECK-NEXT:   d                                - 'D' (Double-Precision Floating-Point).
@@ -23,56 +18,69 @@
 ; CHECK-NEXT:   disable-postmisched-store-clustering - Disable PostRA store clustering in the machine scheduler.
 ; CHECK-NEXT:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
 ; CHECK-NEXT:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
+; CHECK-NEXT:   enable-select-opt                - Enable the select optimize pass for select loop heuristics.
+; CHECK-NEXT:   enable-vsetvli-sched-heuristic   - Enable vsetvli-based scheduling heuristic.
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
-; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
-; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
-; CHECK-NEXT:   experimental-xqciac              - 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension).
-; CHECK-NEXT:   experimental-xqcibi              - 'Xqcibi' (Qualcomm uC Branch Immediate Extension).
-; CHECK-NEXT:   experimental-xqcibm              - 'Xqcibm' (Qualcomm uC Bit Manipulation Extension).
-; CHECK-NEXT:   experimental-xqcicli             - 'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension).
-; CHECK-NEXT:   experimental-xqcicm              - 'Xqcicm' (Qualcomm uC Conditional Move Extension).
-; CHECK-NEXT:   experimental-xqcics              - 'Xqcics' (Qualcomm uC Conditional Select Extension).
-; CHECK-NEXT:   experimental-xqcicsr             - 'Xqcicsr' (Qualcomm uC CSR Extension).
-; CHECK-NEXT:   experimental-xqciint             - 'Xqciint' (Qualcomm uC Interrupts Extension).
-; CHECK-NEXT:   experimental-xqciio              - 'Xqciio' (Qualcomm uC External Input Output Extension).
-; CHECK-NEXT:   experimental-xqcilb              - 'Xqcilb' (Qualcomm uC Long Branch Extension).
-; CHECK-NEXT:   experimental-xqcili              - 'Xqcili' (Qualcomm uC Load Large Immediate Extension).
-; CHECK-NEXT:   experimental-xqcilia             - 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension).
-; CHECK-NEXT:   experimental-xqcilo              - 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension).
-; CHECK-NEXT:   experimental-xqcilsm             - 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension).
-; CHECK-NEXT:   experimental-xqcisim             - 'Xqcisim' (Qualcomm uC Simulation Hint Extension).
-; CHECK-NEXT:   experimental-xqcisls             - 'Xqcisls' (Qualcomm uC Scaled Load Store Extension).
-; CHECK-NEXT:   experimental-xqcisync            - 'Xqcisync' (Qualcomm uC Sync Delay Extension).
-; CHECK-NEXT:   experimental-xrivosvisni         - 'XRivosVisni' (Rivos Vector Integer Small New).
-; CHECK-NEXT:   experimental-xrivosvizip         - 'XRivosVizip' (Rivos Vector Register Zips).
+; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
-; CHECK-NEXT:   experimental-zalasr              - 'Zalasr' (Load-Acquire and Store-Release Instructions).
+; CHECK-NEXT:   experimental-y                   - 'Y' ('Base Y' (CHERI)).
 ; CHECK-NEXT:   experimental-zibi                - 'Zibi' (Branch with Immediate).
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
 ; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
+; CHECK-NEXT:   experimental-zvabd               - 'Zvabd' (Vector Absolute Difference).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
+; CHECK-NEXT:   experimental-zvdot4a8i           - 'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers).
+; CHECK-NEXT:   experimental-zvfbdota32f         - 'Zvfbdota32f' (FP32 batched dot-product extension).
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
+; CHECK-NEXT:   experimental-zvfqwbdota8f        - 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfqwdota8f         - 'Zvfqwdota8f' (OCP FP8 Dot-Product).
+; CHECK-NEXT:   experimental-zvfwbdota16bf       - 'Zvfwbdota16bf' (BF16 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfwdota16bf        - 'Zvfwdota16bf' (BF16 Dot-Product).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
-; CHECK-NEXT:   experimental-zvqdotq             - 'Zvqdotq' (Vector quad widening 4D Dot Product).
+; CHECK-NEXT:   experimental-zvqwbdota16i        - 'Zvqwbdota16i' (16-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvqwbdota8i         - 'Zvqwbdota8i' (8-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvqwdota16i         - 'Zvqwdota16i' (16-bit Integer Dot-Product).
+; CHECK-NEXT:   experimental-zvqwdota8i          - 'Zvqwdota8i' (8-bit Integer Dot-Product).
+; CHECK-NEXT:   experimental-zvvfmm              - 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvvmm               - 'Zvvmm' (Integer Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
+; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
+; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
+; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.
+; CHECK-NEXT:   fusion-add-mem                   - Enable ADD+LOAD/STORE macrofusion.
+; CHECK-NEXT:   fusion-addi-load                 - Enable ADDI + load macrofusion.
+; CHECK-NEXT:   fusion-auipc-addi                - Enable AUIPC+ADDI macrofusion.
+; CHECK-NEXT:   fusion-auipc-load                - Enable AUIPC + load macrofusion.
+; CHECK-NEXT:   fusion-bfext                     - Enable SLLI+SRLI (bitfield extract) macrofusion.
+; CHECK-NEXT:   fusion-ld-add                    - Enable LD+ADD macrofusion.
+; CHECK-NEXT:   fusion-logic-imm-reg             - Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-logic-reg-imm             - Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion.
+; CHECK-NEXT:   fusion-logic-reg-reg             - Enable AND/OR/XOR+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-lui-addi                  - Enable LUI+ADDI macro fusion.
+; CHECK-NEXT:   fusion-lui-load                  - Enable LUI + load macrofusion.
+; CHECK-NEXT:   fusion-mul-add                   - Enable MUL+ADD macrofusion.
+; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
+; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
+; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
+; CHECK-NEXT:   fusion-zexth                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
+; CHECK-NEXT:   fusion-zextw                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
 ; CHECK-NEXT:   i                                - 'I' (Base Integer Instruction Set).
-; CHECK-NEXT:   ld-add-fusion                    - Enable LD+ADD macrofusion.
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
-; CHECK-NEXT:   lui-addi-fusion                  - Enable LUI+ADDI macro fusion.
-; CHECK-NEXT:   lui-load-fusion                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
-; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
+; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference.
 ; CHECK-NEXT:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
-; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
+; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store.
 ; CHECK-NEXT:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf3-segment-load-store - vlseg3eN.v and vsseg3eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-nf4-segment-load-store - vlseg4eN.v and vsseg4eN.v are implemented as a wide memory op and shuffle.
@@ -83,10 +91,11 @@
 ; CHECK-NEXT:   optimized-zero-stride-load       - Optimized (perform fewer memory operations)zero-stride vector load.
 ; CHECK-NEXT:   permissive-zalrsc                - Implementation permits non-base instructions between LR/SC pairs.
 ; CHECK-NEXT:   predictable-select-expensive     - Prefer likely predicted branches over selects.
+; CHECK-NEXT:   prefer-ascending-load-store      - Prefer ascending load/store order for better clustering and performance.
 ; CHECK-NEXT:   prefer-vsetvli-over-read-vlenb   - Prefer vsetvli over read vlenb CSR to calculate VLEN.
 ; CHECK-NEXT:   prefer-w-inst                    - Prefer instructions with W suffix.
 ; CHECK-NEXT:   q                                - 'Q' (Quad-Precision Floating-Point).
-; CHECK-NEXT:   relax                            - Enable Linker relaxation..
+; CHECK-NEXT:   relax                            - Enable Linker relaxation.
 ; CHECK-NEXT:   reserve-x1                       - Reserve X1.
 ; CHECK-NEXT:   reserve-x10                      - Reserve X10.
 ; CHECK-NEXT:   reserve-x11                      - Reserve X11.
@@ -128,22 +137,22 @@
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
 ; CHECK-NEXT:   rvi20u64                         - RISC-V rvi20u64 profile.
-; CHECK-NEXT:   save-restore                     - Enable save/restore..
+; CHECK-NEXT:   save-restore                     - Enable save/restore.
 ; CHECK-NEXT:   sdext                            - 'Sdext' (External debugger).
 ; CHECK-NEXT:   sdtrig                           - 'Sdtrig' (Debugger triggers).
 ; CHECK-NEXT:   sha                              - 'Sha' (Augmented Hypervisor).
 ; CHECK-NEXT:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
-; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
-; CHECK-NEXT:   short-forward-branch-i-minmax    - Enable short forward branch optimization for min,max instructions in Zbb.
-; CHECK-NEXT:   short-forward-branch-i-mul       - Enable short forward branch optimization for mul instruction.
-; CHECK-NEXT:   short-forward-branch-opt         - Enable short forward branch optimization.
+; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
+; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
+; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
+; CHECK-NEXT:   short-forward-branch-imm         - Enable short forward branch optimization for branches with immediates.
+; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
 ; CHECK-NEXT:   shvstvala                        - 'Shvstvala' (vstval provides all needed values).
 ; CHECK-NEXT:   shvstvecd                        - 'Shvstvecd' (vstvec supports Direct mode).
-; CHECK-NEXT:   shxadd-load-fusion               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
 ; CHECK-NEXT:   sifive7                          - SiFive 7-Series processors.
 ; CHECK-NEXT:   single-element-vec-fp64          - Certain vector FP64 operations produce a single result element per cycle.
 ; CHECK-NEXT:   smaia                            - 'Smaia' (Advanced Interrupt Architecture Machine Level).
@@ -181,6 +190,7 @@
 ; CHECK-NEXT:   svinval                          - 'Svinval' (Fine-Grained Address-Translation Cache Invalidation).
 ; CHECK-NEXT:   svnapot                          - 'Svnapot' (NAPOT Translation Contiguity).
 ; CHECK-NEXT:   svpbmt                           - 'Svpbmt' (Page-Based Memory Types).
+; CHECK-NEXT:   svrsw60t59b                      - 'Svrsw60t59b' (PTE Reserved-for-Software Bits 60-59).
 ; CHECK-NEXT:   svvptc                           - 'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
 ; CHECK-NEXT:   tagged-globals                   - Use an instruction sequence for taking the address of a global that allows a memory tag in the upper address bits.
 ; CHECK-NEXT:   unaligned-scalar-mem             - Has reasonably performant unaligned scalar loads and stores.
@@ -190,6 +200,7 @@
 ; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
 ; CHECK-NEXT:   vl-dependent-latency             - Latency of vector instructions is dependent on the dynamic value of vl.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
+; CHECK-NEXT:   xaifet                           - 'XAIFET' (AI Foundry ET Extension).
 ; CHECK-NEXT:   xandesbfhcvt                     - 'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension).
 ; CHECK-NEXT:   xandesperf                       - 'XAndesPerf' (Andes Performance Extension).
 ; CHECK-NEXT:   xandesvbfhcvt                    - 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension).
@@ -197,6 +208,7 @@
 ; CHECK-NEXT:   xandesvpackfph                   - 'XAndesVPackFPH' (Andes Vector Packed FP16 Extension).
 ; CHECK-NEXT:   xandesvsinth                     - 'XAndesVSIntH' (Andes Vector Small INT Handling Extension).
 ; CHECK-NEXT:   xandesvsintload                  - 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension).
+; CHECK-NEXT:   xcheriot                         - 'XCheriot' (CHERIoT extension).
 ; CHECK-NEXT:   xcvalu                           - 'XCValu' (CORE-V ALU Operations).
 ; CHECK-NEXT:   xcvbi                            - 'XCVbi' (CORE-V Immediate Branching).
 ; CHECK-NEXT:   xcvbitmanip                      - 'XCVbitmanip' (CORE-V Bit Manipulation).
@@ -206,11 +218,32 @@
 ; CHECK-NEXT:   xcvsimd                          - 'XCVsimd' (CORE-V SIMD ALU).
 ; CHECK-NEXT:   xmipscbop                        - 'XMIPSCBOP' (MIPS Software Prefetch).
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
-; CHECK-NEXT:   mipsexectl                       - 'XMIPSEXECTL' (MIPS execution control).
+; CHECK-NEXT:   xmipsexectl                      - 'XMIPSEXECTL' (MIPS execution control).
 ; CHECK-NEXT:   xmipslsp                         - 'XMIPSLSP' (MIPS optimization for hardware load-store bonding).
+; CHECK-NEXT:   xqccmp                           - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
+; CHECK-NEXT:   xqci                             - 'Xqci' (Qualcomm uC Extension).
+; CHECK-NEXT:   xqcia                            - 'Xqcia' (Qualcomm uC Arithmetic Extension).
+; CHECK-NEXT:   xqciac                           - 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension).
+; CHECK-NEXT:   xqcibi                           - 'Xqcibi' (Qualcomm uC Branch Immediate Extension).
+; CHECK-NEXT:   xqcibm                           - 'Xqcibm' (Qualcomm uC Bit Manipulation Extension).
+; CHECK-NEXT:   xqcicli                          - 'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension).
+; CHECK-NEXT:   xqcicm                           - 'Xqcicm' (Qualcomm uC Conditional Move Extension).
+; CHECK-NEXT:   xqcics                           - 'Xqcics' (Qualcomm uC Conditional Select Extension).
+; CHECK-NEXT:   xqcicsr                          - 'Xqcicsr' (Qualcomm uC CSR Extension).
+; CHECK-NEXT:   xqciint                          - 'Xqciint' (Qualcomm uC Interrupts Extension).
+; CHECK-NEXT:   xqciio                           - 'Xqciio' (Qualcomm uC External Input Output Extension).
+; CHECK-NEXT:   xqcilb                           - 'Xqcilb' (Qualcomm uC Long Branch Extension).
+; CHECK-NEXT:   xqcili                           - 'Xqcili' (Qualcomm uC Load Large Immediate Extension).
+; CHECK-NEXT:   xqcilia                          - 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension).
+; CHECK-NEXT:   xqcilo                           - 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension).
+; CHECK-NEXT:   xqcilsm                          - 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension).
+; CHECK-NEXT:   xqcisim                          - 'Xqcisim' (Qualcomm uC Simulation Hint Extension).
+; CHECK-NEXT:   xqcisls                          - 'Xqcisls' (Qualcomm uC Scaled Load Store Extension).
+; CHECK-NEXT:   xqcisync                         - 'Xqcisync' (Qualcomm uC Sync Delay Extension).
 ; CHECK-NEXT:   xsfcease                         - 'XSfcease' (SiFive sf.cease Instruction).
 ; CHECK-NEXT:   xsfmm128t                        - 'XSfmm128t' (TE=128 configuration).
 ; CHECK-NEXT:   xsfmm16t                         - 'XSfmm16t' (TE=16 configuration).
+; CHECK-NEXT:   xsfmm32a                         - 'XSfmm32a' (TEW=32-bit accumulation operands - int: 8b; float: fp16, bf16, fp32)
 ; CHECK-NEXT:   xsfmm32a16f                      - 'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)). 
 ; CHECK-NEXT:   xsfmm32a32f                      - 'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b). 
 ; CHECK-NEXT:   xsfmm32a8f                       - 'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8). 
@@ -250,6 +283,7 @@
 ; CHECK-NEXT:   zaamo                            - 'Zaamo' (Atomic Memory Operations).
 ; CHECK-NEXT:   zabha                            - 'Zabha' (Byte and Halfword Atomic Memory Operations).
 ; CHECK-NEXT:   zacas                            - 'Zacas' (Atomic Compare-And-Swap Instructions).
+; CHECK-NEXT:   zalasr                           - 'Zalasr' (Load-Acquire and Store-Release Instructions).
 ; CHECK-NEXT:   zalrsc                           - 'Zalrsc' (Load-Reserved/Store-Conditional).
 ; CHECK-NEXT:   zama16b                          - 'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs).
 ; CHECK-NEXT:   zawrs                            - 'Zawrs' (Wait on Reservation Set).
@@ -270,8 +304,6 @@
 ; CHECK-NEXT:   zcmp                             - 'Zcmp' (sequenced instructions for code-size reduction).
 ; CHECK-NEXT:   zcmt                             - 'Zcmt' (table jump instructions for code-size reduction).
 ; CHECK-NEXT:   zdinx                            - 'Zdinx' (Double in Integer).
-; CHECK-NEXT:   zexth-fusion                     - Enable SLLI+SRLI to be fused to zero extension of halfword.
-; CHECK-NEXT:   zextw-fusion                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   zfa                              - 'Zfa' (Additional Floating-Point).
 ; CHECK-NEXT:   zfbfmin                          - 'Zfbfmin' (Scalar BF16 Converts).
 ; CHECK-NEXT:   zfh                              - 'Zfh' (Half-Precision Floating-Point).
@@ -285,6 +317,7 @@
 ; CHECK-NEXT:   zicboz                           - 'Zicboz' (Cache-Block Zero Instructions).
 ; CHECK-NEXT:   ziccamoa                         - 'Ziccamoa' (Main Memory Supports All Atomics in A).
 ; CHECK-NEXT:   ziccamoc                         - 'Ziccamoc' (Main Memory Supports Atomics in Zacas).
+; CHECK-NEXT:   ziccid                           - 'Ziccid' (Instruction/Data Coherence and Consistency).
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).
@@ -296,6 +329,7 @@
 ; CHECK-NEXT:   zihintpause                      - 'Zihintpause' (Pause Hint).
 ; CHECK-NEXT:   zihpm                            - 'Zihpm' (Hardware Performance Counters).
 ; CHECK-NEXT:   zilsd                            - 'Zilsd' (Load/Store Pair Instructions).
+; CHECK-NEXT:   zilsd-word-align                 - Allow 4-byte alignment for Zilsd LD/SD instructions.
 ; CHECK-NEXT:   zimop                            - 'Zimop' (May-Be-Operations).
 ; CHECK-NEXT:   zk                               - 'Zk' (Standard scalar cryptography extension).
 ; CHECK-NEXT:   zkn                              - 'Zkn' (NIST Algorithm Suite).

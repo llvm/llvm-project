@@ -12,8 +12,8 @@ int128_t foo(void) { return 0; }
 
 int128_t bar(int128_t a, int128_t b) { return a * b; }
 
-// GNU64: define dso_local <2 x i64> @bar(ptr dead_on_return noundef %0, ptr dead_on_return noundef %1)
-// MSC64: define dso_local <2 x i64> @bar(ptr dead_on_return noundef %0, ptr dead_on_return noundef %1)
+// GNU64: define dso_local <2 x i64> @bar(ptr noundef dead_on_return %0, ptr noundef dead_on_return %1)
+// MSC64: define dso_local <2 x i64> @bar(ptr noundef dead_on_return %0, ptr noundef dead_on_return %1)
 
 void vararg(int a, ...) {
   // GNU64-LABEL: define{{.*}} void @vararg

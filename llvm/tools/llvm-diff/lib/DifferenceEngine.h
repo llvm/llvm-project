@@ -17,7 +17,6 @@
 #include "DiffConsumer.h"
 #include "DiffLog.h"
 #include "llvm/ADT/StringRef.h"
-#include <utility>
 
 namespace llvm {
   class Function;

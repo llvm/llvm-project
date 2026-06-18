@@ -81,6 +81,7 @@ void ScalarEnumerationTraits<SymbolKind>::enumeration(IO &io,
   auto SymbolNames = getSymbolTypeNames();
   for (const auto &E : SymbolNames)
     io.enumCase(Value, E.Name, E.Value);
+  io.enumFallback<yaml::Hex16>(Value);
 }
 
 void ScalarBitSetTraits<CompileSym2Flags>::bitset(IO &io,
@@ -386,7 +387,7 @@ template <> void SymbolRecordImpl<InlineSiteSym>::map(IO &IO) {
   IO.mapOptional("PtrParent", Symbol.Parent, 0U);
   IO.mapOptional("PtrEnd", Symbol.End, 0U);
   IO.mapRequired("Inlinee", Symbol.Inlinee);
-  // TODO: The binary annotations
+  IO.mapOptional("AnnotationData", Symbol.AnnotationData);
 }
 
 template <> void SymbolRecordImpl<LocalSym>::map(IO &IO) {
@@ -439,6 +440,15 @@ template <> void SymbolRecordImpl<DefRangeRegisterRelSym>::map(IO &IO) {
   IO.mapRequired("Register", Symbol.Hdr.Register);
   IO.mapRequired("Flags", Symbol.Hdr.Flags);
   IO.mapRequired("BasePointerOffset", Symbol.Hdr.BasePointerOffset);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
+}
+
+template <> void SymbolRecordImpl<DefRangeRegisterRelIndirSym>::map(IO &IO) {
+  IO.mapRequired("Register", Symbol.Hdr.Register);
+  IO.mapRequired("Flags", Symbol.Hdr.Flags);
+  IO.mapRequired("BasePointerOffset", Symbol.Hdr.BasePointerOffset);
+  IO.mapRequired("OffsetInUdt", Symbol.Hdr.OffsetInUdt);
   IO.mapRequired("Range", Symbol.Range);
   IO.mapRequired("Gaps", Symbol.Gaps);
 }
@@ -554,6 +564,14 @@ template <> void SymbolRecordImpl<RegRelativeSym>::map(IO &IO) {
   IO.mapRequired("VarName", Symbol.Name);
 }
 
+template <> void SymbolRecordImpl<RegRelativeIndirSym>::map(IO &IO) {
+  IO.mapRequired("Offset", Symbol.Offset);
+  IO.mapRequired("Type", Symbol.Type);
+  IO.mapRequired("Register", Symbol.Register);
+  IO.mapRequired("OffsetInUdt", Symbol.OffsetInUdt);
+  IO.mapRequired("VarName", Symbol.Name);
+}
+
 template <> void SymbolRecordImpl<ConstantSym>::map(IO &IO) {
   IO.mapRequired("Type", Symbol.Type);
   IO.mapRequired("Value", Symbol.Value);
@@ -627,7 +645,7 @@ fromCodeViewSymbolImpl(CVSymbol Symbol) {
   auto Impl = std::make_shared<SymbolType>(Symbol.kind());
   if (auto EC = Impl->fromCodeViewSymbol(Symbol))
     return std::move(EC);
-  Result.Symbol = Impl;
+  Result.Symbol = std::move(Impl);
   return Result;
 }
 

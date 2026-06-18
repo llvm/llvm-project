@@ -839,7 +839,7 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
     return BoundType();
 
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
-         isa<DIExpression>(IN));
+         isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
     return BoundType(cast<ConstantInt>(MD->getValue()));
@@ -849,6 +849,9 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
 
   if (auto *MD = dyn_cast<DIExpression>(IN))
     return BoundType(MD);
+
+  if (auto *DT = dyn_cast<DIDerivedType>(IN))
+    return BoundType(DT);
 
   return BoundType();
 }
@@ -870,20 +873,22 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 }
 
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
-                                  MDString *Name, Metadata *SizeInBits,
-                                  uint32_t AlignInBits, unsigned Encoding,
+                                  MDString *Name, Metadata *File,
+                                  unsigned LineNo, Metadata *Scope,
+                                  Metadata *SizeInBits, uint32_t AlignInBits,
+                                  unsigned Encoding,
                                   uint32_t NumExtraInhabitants,
                                   uint32_t DataSizeInBits, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                         NumExtraInhabitants, DataSizeInBits, Flags));
-  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(
-      DIBasicType,
-      (Tag, AlignInBits, Encoding, NumExtraInhabitants, DataSizeInBits, Flags),
-      Ops);
+  DEFINE_GETIMPL_LOOKUP(
+      DIBasicType, (Tag, Name, File, LineNo, Scope, SizeInBits, AlignInBits,
+                    Encoding, NumExtraInhabitants, DataSizeInBits, Flags));
+  Metadata *Ops[] = {File, Scope, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIBasicType,
+                       (Tag, LineNo, AlignInBits, Encoding, NumExtraInhabitants,
+                        DataSizeInBits, Flags),
+                       Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -903,18 +908,20 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
 
 DIFixedPointType *
 DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                          Metadata *File, unsigned LineNo, Metadata *Scope,
                           Metadata *SizeInBits, uint32_t AlignInBits,
                           unsigned Encoding, DIFlags Flags, unsigned Kind,
                           int Factor, APInt Numerator, APInt Denominator,
                           StorageType Storage, bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
-                         Kind, Factor, Numerator, Denominator));
-  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(
-      DIFixedPointType,
-      (Tag, AlignInBits, Encoding, Flags, Kind, Factor, Numerator, Denominator),
-      Ops);
+                        (Tag, Name, File, LineNo, Scope, SizeInBits,
+                         AlignInBits, Encoding, Flags, Kind, Factor, Numerator,
+                         Denominator));
+  Metadata *Ops[] = {File, Scope, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIFixedPointType,
+                       (Tag, LineNo, AlignInBits, Encoding, Flags, Kind, Factor,
+                        Numerator, Denominator),
+                       Ops);
 }
 
 bool DIFixedPointType::isSigned() const {
@@ -1441,6 +1448,70 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+
+template <typename ScopeT, typename NodeT>
+static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
+  auto getScope = [](auto *N) { return N->getScope(); };
+
+  return DISubprogram::visitRetainedNode<ScopeT>(
+      N, getScope, getScope, getScope, getScope,
+      [](auto *N) { return nullptr; });
+}
+
+const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
+  return getRawRetainedNodeScopeInternal<const DIScope *>(N);
+}
+
+DIScope *DISubprogram::getRawRetainedNodeScope(MDNode *N) {
+  return getRawRetainedNodeScopeInternal<DIScope *>(N);
+}
+
+const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+void DISubprogram::cleanupRetainedNodes() {
+  // Checks if a metadata node from retainedTypes is a type not belonging to
+  // this subprogram.
+  auto IsAlienType = [this](DINode *N) {
+    auto *T = dyn_cast_or_null<DIType>(N);
+    if (!T)
+      return false;
+
+    DISubprogram *TypeSP = nullptr;
+    // The type might have been global in the previously loaded IR modules.
+    if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
+      TypeSP = LS->getSubprogram();
+
+    return this != TypeSP;
+  };
+
+  // As this is expected to be called during module loading, before
+  // stripping old or incorrect debug info, perform minimal sanity check.
+  if (!isa_and_present<MDTuple>(getRawRetainedNodes()))
+    return;
+
+  MDTuple *RetainedNodes = cast<MDTuple>(getRawRetainedNodes());
+  SmallVector<Metadata *> MDs;
+  MDs.reserve(RetainedNodes->getNumOperands());
+  for (const MDOperand &Node : RetainedNodes->operands()) {
+    // Ignore malformed retainedNodes.
+    if (Node && !isa<DINode>(Node))
+      return;
+
+    auto *N = cast_or_null<DINode>(Node);
+    if (!IsAlienType(N))
+      MDs.push_back(N);
+  }
+
+  if (MDs.size() != RetainedNodes->getNumOperands())
+    replaceRetainedNodes(MDNode::get(getContext(), MDs));
+}
+
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
                                        StorageType Storage,
                                        ArrayRef<Metadata *> Ops)
@@ -2048,16 +2119,13 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
 }
 
 bool DIExpression::extractLeadingOffset(
-    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+    ArrayRef<uint64_t> Ops, int64_t &OffsetInBytes,
+    SmallVectorImpl<uint64_t> &RemainingOps) {
   OffsetInBytes = 0;
   RemainingOps.clear();
 
-  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
-  if (!SingleLocEltsOpt)
-    return false;
-
-  auto ExprOpEnd = expr_op_iterator(SingleLocEltsOpt->end());
-  auto ExprOpIt = expr_op_iterator(SingleLocEltsOpt->begin());
+  auto ExprOpEnd = expr_op_iterator(Ops.end());
+  auto ExprOpIt = expr_op_iterator(Ops.begin());
   while (ExprOpIt != ExprOpEnd) {
     uint64_t Op = ExprOpIt->getOp();
     if (Op == dwarf::DW_OP_deref || Op == dwarf::DW_OP_deref_size ||
@@ -2084,6 +2152,18 @@ bool DIExpression::extractLeadingOffset(
   }
   RemainingOps.append(ExprOpIt.getBase(), ExprOpEnd.getBase());
   return true;
+}
+
+bool DIExpression::extractLeadingOffset(
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt) {
+    OffsetInBytes = 0;
+    RemainingOps.clear();
+    return false;
+  }
+
+  return extractLeadingOffset(*SingleLocEltsOpt, OffsetInBytes, RemainingOps);
 }
 
 bool DIExpression::hasAllLocationOps(unsigned N) const {

@@ -35,16 +35,20 @@ def MyTarget : Target;
 // CHECK-NEXT:  static constexpr llvm::StringTable
 // CHECK-NEXT:  MyTargetSDNodeNames = MyTargetSDNodeNamesStorage;
 // CHECK-EMPTY:
+// CHECK-NEXT:  static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// CHECK-NEXT:   /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
-// CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
-// CHECK-NEXT:      /*NumOpcodes=*/0, MyTargetSDNodeDescs,
-// CHECK-NEXT:      MyTargetSDNodeNames, MyTargetSDTypeConstraints);
+// CHECK-NEXT:      /*NumOpcodes=*/0, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-EMPTY:

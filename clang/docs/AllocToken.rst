@@ -52,8 +52,8 @@ change or removal. These may (experimentally) be selected with ``-Xclang
 The following command-line options affect generated token IDs:
 
 * ``-falloc-token-max=<N>``
-    Configures the maximum number of tokens. No max by default (tokens bounded
-    by ``SIZE_MAX``).
+    Configures the maximum number of token IDs. By default the number of tokens
+    is bounded by ``SIZE_MAX``.
 
 Querying Token IDs with ``__builtin_infer_alloc_token``
 =======================================================
@@ -129,7 +129,7 @@ Fast ABI
 --------
 
 An alternative ABI can be enabled with ``-fsanitize-alloc-token-fast-abi``,
-which encodes the token ID hint in the allocation function name.
+which encodes the token ID in the allocation function name.
 
 .. code-block:: c
 
@@ -173,6 +173,15 @@ For example:
     // Instrumented:
     ptr1 = __alloc_token_custom_malloc(size, token_id);
     ptr2 = __alloc_token_my_malloc(size, token_id);
+
+Note: Even in the default mode (without ``-fsanitize-alloc-token-extended``),
+an *inline* allocation wrapper marked with the `malloc
+<https://clang.llvm.org/docs/AttributeReference.html#malloc>`_ or `alloc_size
+<https://clang.llvm.org/docs/AttributeReference.html#alloc-size>`_ attribute is
+supported if it is inlined into its caller: the inferred token is propagated to
+the allocation call the wrapper returns, which is then instrumented normally.
+Wrappers that are not inlined still require
+``-fsanitize-alloc-token-extended``.
 
 Disabling Instrumentation
 -------------------------

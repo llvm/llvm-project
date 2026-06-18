@@ -126,7 +126,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       __omp_outlined__.exit:
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0, i32 0)
 ; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META7]]
 ; CHECK-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]
@@ -264,7 +264,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
 ; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-DISABLED:       __omp_outlined__.exit:
-; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr null, i64 0)
+; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr null, i64 0, i32 0)
 ; CHECK-DISABLED-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL_I]] to i64
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]
@@ -331,7 +331,7 @@ for.body.i:                                       ; preds = %for.cond.i
   br label %for.cond.i, !llvm.loop !11
 
 __omp_outlined__.exit:                            ; preds = %for.cond.i
-  call void @__kmpc_parallel_51(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0)
+  call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0, i32 0)
   %call.i = call i32 @no_openmp(ptr nonnull %x) #5, !noalias !8
   %idxprom6.i = sext i32 %call.i to i64
   %arrayidx7.i = getelementptr inbounds i32, ptr %x, i64 %idxprom6.i
@@ -377,7 +377,7 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) {
   ret void
 }
 
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 define weak i32 @__kmpc_target_init(ptr, ptr) {
@@ -439,8 +439,8 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="all" "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nounwind willreturn memory(read) "frame-pointer"="all" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR6]] = { nounwind }
 ; CHECK: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }
@@ -451,8 +451,8 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: attributes #[[ATTR1:[0-9]+]] = { alwaysinline }
 ; CHECK-DISABLED: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="all" "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { convergent nounwind willreturn memory(read) "frame-pointer"="all" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind }
+; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
+; CHECK-DISABLED: attributes #[[ATTR5:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK-DISABLED: attributes #[[ATTR8:[0-9]+]] = { convergent nounwind }

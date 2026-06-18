@@ -76,6 +76,12 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
 def callseq_end : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
+def loongarch_probed_alloca : SDNode<"LoongArchISD::PROBED_ALLOCA",
+                                     SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+                                     [SDNPHasChain, SDNPMayStore]>;
+
 // Target-dependent nodes.
 def loongarch_call : SDNode<"LoongArchISD::CALL", SDT_LoongArchCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
@@ -100,14 +106,22 @@ def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
 def loongarch_selectcc : SDNode<"LoongArchISD::SELECT_CC", SDT_LoongArchSelectCC>;
 def loongarch_brcc : SDNode<"LoongArchISD::BR_CC", SDT_LoongArchBrCC,
                             [SDNPHasChain]>;
+
+// 32-bit shifts, directly matching the semantics of the named LoongArch
+// instructions.
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+
+// unsigned 32-bit integer division
 def loongarch_div_w : SDNode<"LoongArchISD::DIV_W", SDT_LoongArchIntBinOpW>;
 def loongarch_div_wu : SDNode<"LoongArchISD::DIV_WU", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_w : SDNode<"LoongArchISD::MOD_W", SDT_LoongArchIntBinOpW>;
 def loongarch_mod_wu : SDNode<"LoongArchISD::MOD_WU", SDT_LoongArchIntBinOpW>;
+
+// CRC check operations
 def loongarch_crc_w_b_w
     : SDNode<"LoongArchISD::CRC_W_B_W", SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crc_w_h_w
@@ -124,37 +138,63 @@ def loongarch_crcc_w_w_w : SDNode<"LoongArchISD::CRCC_W_W_W",
                                   SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
 def loongarch_crcc_w_d_w : SDNode<"LoongArchISD::CRCC_W_D_W",
                                   SDT_LoongArchIntBinOpW, [SDNPHasChain]>;
+
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
     : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
+
+// Byte-swapping and bit-reversal
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
 def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_8b : SDNode<"LoongArchISD::BITREV_8B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
+
+// Bit counting operations
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
+
 def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_ibar : SDNode<"LoongArchISD::IBAR", SDT_LoongArchVI,
                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// FPR<->GPR transfer operations
 def loongarch_movfcsr2gr : SDNode<"LoongArchISD::MOVFCSR2GR",
                                   SDT_LoongArchMovfcsr2gr, [SDNPHasChain]>;
 def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR",
                                   SDT_LoongArchMovgr2fcsr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// Write new value to CSR and return old value.
+// Operand 0: A chain pointer.
+// Operand 1: The new value to write.
+// Operand 2: The address of the required CSR.
+// Result 0: The old value of the CSR.
+// Result 1: The new chain pointer.
 def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
                               [SDNPHasChain, SDNPSideEffect]>;
+
+// Similar to CSRWR but with a write mask.
+// Operand 0: A chain pointer.
+// Operand 1: The new value to write.
+// Operand 2: The write mask.
+// Operand 3: The address of the required CSR.
+// Result 0: The old value of the CSR.
+// Result 1: The new chain pointer.
 def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
                                 SDT_LoongArchCsrxchg,
                                 [SDNPHasChain, SDNPSideEffect]>;
+
+// IOCSR access operations
 def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
                                   [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
@@ -175,9 +215,12 @@ def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
 def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
                                   SDT_LoongArchIocsrwr,
                                   [SDNPHasChain, SDNPSideEffect]>;
+
+// Read CPU configuration information operation
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
 
+// Build and split F64 pair
 def loongarch_build_pair_f64 : SDNode<"LoongArchISD::BUILD_PAIR_F64",
                                       SDT_LoongArchBuildPairF64>;
 def loongarch_split_pair_f64 : SDNode<"LoongArchISD::SPLIT_PAIR_F64",
@@ -437,6 +480,10 @@ def simm20_lu32id : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "lu32id">;
 }
 
+def simm20_pcaddu12i : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddu12i">;
+}
+
 def simm20_pcaddu18i : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
 }
@@ -474,7 +521,7 @@ def SImm26OperandBL: AsmOperandClass {
   let ParserMethod = "parseSImm26Operand";
 }
 
-// A symbol or an imm used in BL/PseudoCALL/PseudoTAIL.
+// A symbol or an imm used in BL/PseudoCALL_SMALL/PseudoTAIL_SMALL.
 def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
   let EncoderMethod = "getImmOpValueAsr<2>";
@@ -530,8 +577,8 @@ def NegImm : SDNodeXForm<imm, [{
 }]>;
 
 // FP immediate patterns.
-def fpimm0    : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
-def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0    : PatLeaf<(fpimm), [{return N->isPosZero();}]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isNegZero();}]>;
 def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
 
 // Return an immediate subtracted from 32.
@@ -763,6 +810,10 @@ class AM_3R<bits<32> op>
   let Constraints = "@earlyclobber $rd";
 }
 
+class AU_3R<bits<32> op> : AM_3R<op> {
+  let DecoderMethod = "DecodeAMOrUDInstruction";
+}
+
 class AMCAS_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj"> {
@@ -814,7 +865,7 @@ def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
 def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDU12I : ALU_1RI20<0x1c000000, simm20>;
+def PCADDU12I : ALU_1RI20<0x1c000000, simm20_pcaddu12i>;
 def AND  : ALU_3R<0x00148000>;
 def OR   : ALU_3R<0x00150000>;
 def NOR  : ALU_3R<0x00140000>;
@@ -885,6 +936,9 @@ def SYSCALL : MISC_I15<0x002b0000>;
 def BREAK   : MISC_I15<0x002a0000>;
 def RDTIMEL_W : RDTIME_2R<0x00006000>;
 def RDTIMEH_W : RDTIME_2R<0x00006400>;
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+def UD : FmtUD<(outs), (ins uimm5:$imm5), "$imm5">;
 
 // The CPUCFG instruction offers a reliable way to probing CPU features.
 // Although support is not guaranteed on LA32R, having compiler support
@@ -1050,7 +1104,7 @@ def STLE_D : STORE_3R<0x387f8000>;
 // Atomic Memory Access Instructions for 64-bits
 def AMSWAP_B     : AM_3R<0x385c0000>;
 def AMSWAP_H     : AM_3R<0x385c8000>;
-def AMSWAP_W     : AM_3R<0x38600000>;
+def AMSWAP_W     : AU_3R<0x38600000>;
 def AMSWAP_D     : AM_3R<0x38608000>;
 def AMADD_B      : AM_3R<0x385d0000>;
 def AMADD_H      : AM_3R<0x385d8000>;
@@ -1373,12 +1427,8 @@ def : Pat<(and GPR:$rj, BstrinsImm:$imm),
 
 /// Traps
 
-// We lower `trap` to `amswap.w rd:$r0, rk:$r1, rj:$r0`, as this is guaranteed
-// to trap with an INE (non-existent on LA32, explicitly documented to INE on
-// LA64). And the resulting signal is different from `debugtrap` like on some
-// other existing ports so programs/porters might have an easier time.
-def PseudoUNIMP : Pseudo<(outs), (ins), [(trap)]>,
-                  PseudoInstExpansion<(AMSWAP_W R0, R1, R0)>;
+// We lower `trap` to `ud 0`, which is an alias for `amswap.w $r0, $r1, $r0`.
+def PseudoUNIMP : Pseudo<(outs), (ins), [(trap)]>, PseudoInstExpansion<(UD 0)>;
 
 // We lower `debugtrap` to `break 0`, as this is guaranteed to exist and work,
 // even for LA32 Primary. Also, because so far the ISA does not provide a
@@ -1393,6 +1443,8 @@ def : PatGpr<ctlz, CLZ_D>;
 def : PatGpr<cttz, CTZ_D>;
 def : Pat<(ctlz (not GPR:$rj)), (CLO_D GPR:$rj)>;
 def : Pat<(cttz (not GPR:$rj)), (CTO_D GPR:$rj)>;
+def : Pat<(cttz (or (not GPR:$rj), 256)), (CTO_D (ANDI GPR:$rj, 255))>;
+def : Pat<(cttz (or (not GPR:$rj), 65536)), (CTO_D (BSTRPICK_D GPR:$rj, 15, 0))>;
 def : PatGpr<loongarch_clzw, CLZ_W>;
 def : PatGpr<loongarch_ctzw, CTZ_W>;
 def : Pat<(loongarch_clzw (not GPR:$rj)), (CLO_W GPR:$rj)>;
@@ -1404,6 +1456,8 @@ def : PatGpr<ctlz, CLZ_W>;
 def : PatGpr<cttz, CTZ_W>;
 def : Pat<(ctlz (not GPR:$rj)), (CLO_W GPR:$rj)>;
 def : Pat<(cttz (not GPR:$rj)), (CTO_W GPR:$rj)>;
+def : Pat<(cttz (or (not GPR:$rj), 256)), (CTO_W (ANDI GPR:$rj, 255))>;
+def : Pat<(cttz (or (not GPR:$rj), 65536)), (CTO_W (BSTRPICK_W GPR:$rj, 15, 0))>;
 } // Predicates = [IsLA32, Has32S]
 
 /// FrameIndex calculations
@@ -1581,21 +1635,21 @@ def : Pat<(brind (add GPRJR:$rj, simm16_lsl2:$imm16)),
 
 // Function call with 'Small' code model.
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func)>;
+def PseudoCALL_SMALL : Pseudo<(outs), (ins bare_symbol:$func)>;
 
-def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
-def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+def : Pat<(loongarch_call tglobaladdr:$func),
+          (PseudoCALL_SMALL tglobaladdr:$func)>;
+def : Pat<(loongarch_call texternalsym:$func),
+          (PseudoCALL_SMALL texternalsym:$func)>;
 
 // Function call with 'Medium' code model.
 let isCall = 1, Defs = [R1, R20], Size = 8 in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_call_medium tglobaladdr:$func),
           (PseudoCALL_MEDIUM tglobaladdr:$func)>;
 def : Pat<(loongarch_call_medium texternalsym:$func),
           (PseudoCALL_MEDIUM texternalsym:$func)>;
-} // Predicates = [IsLA64]
 
 // Function call with 'Large' code model.
 let isCall = 1, Defs = [R1] in
@@ -1612,10 +1666,9 @@ let isCall = 1, Defs = [R1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
                                 [(loongarch_call GPR:$rj)]>,
                          PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_call_medium GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
+let Predicates = [IsLA64] in
 def : Pat<(loongarch_call_large GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
-}
 
 let isCall = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0, Defs = [R1] in
 def PseudoJIRL_CALL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
@@ -1628,24 +1681,22 @@ def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
 
 // Tail call with 'Small' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
-def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst)>;
+def PseudoTAIL_SMALL : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 def : Pat<(loongarch_tail (iPTR tglobaladdr:$dst)),
-          (PseudoTAIL tglobaladdr:$dst)>;
+          (PseudoTAIL_SMALL tglobaladdr:$dst)>;
 def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
-          (PseudoTAIL texternalsym:$dst)>;
+          (PseudoTAIL_SMALL texternalsym:$dst)>;
 
 // Tail call with 'Medium' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     Uses = [R3], Defs = [R20], Size = 8 in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_tail_medium (iPTR tglobaladdr:$dst)),
           (PseudoTAIL_MEDIUM tglobaladdr:$dst)>;
 def : Pat<(loongarch_tail_medium (iPTR texternalsym:$dst)),
           (PseudoTAIL_MEDIUM texternalsym:$dst)>;
-} // Predicates = [IsLA64]
 
 // Tail call with 'Large' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
@@ -1662,10 +1713,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRT:$rj),
                                 [(loongarch_tail GPRT:$rj)]>,
                          PseudoInstExpansion<(JIRL R0, GPR:$rj, 0)>;
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_tail_medium GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
+let Predicates = [IsLA64] in
 def : Pat<(loongarch_tail_large GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
-}
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasSideEffects = 0, mayStore = 0, mayLoad = 0, Uses = [R3] in
@@ -1677,6 +1727,26 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
+
+/// call/tail macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$dst), [], "call", "$dst">;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                        "tail", "$tmp, $dst">;
+
+/// call30/tail30 macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL30 : Pseudo<(outs), (ins bare_symbol:$dst), [], "call30", "$dst">;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL30 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                          "tail30", "$tmp, $dst">;
 
 /// call36/taill36 macro instructions
 let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
@@ -2391,6 +2461,22 @@ def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // Defs = [R3], Uses = [R3]
+
+// Stack probing
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    Defs = [R3], Uses = [R3] in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs),
+                               (ins GPR:$target),
+                               []>,
+                               Sched<[]>;
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   [(loongarch_probed_alloca GPR:$target)]>,
+                                   Sched<[]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

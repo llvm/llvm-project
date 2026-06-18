@@ -93,19 +93,19 @@ define i32 @test_pr62852() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[LOOP]] ], [ -1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 2, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[DEC_1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INC_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INC_1]] = add nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DEC_1]] = add nsw i32 [[IV_1]], -1
 ; CHECK-NEXT:    call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[LSR_IV_NEXT]] to i32
-; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nsw i64 [[LSR_IV1]], 1
 ; CHECK-NEXT:    [[CMP6_1:%.*]] = icmp sgt i32 [[TMP]], 0
 ; CHECK-NEXT:    br i1 [[CMP6_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT]])
+; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 [[INC_1]], -1
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 [[DEC_1]], 53
 ; CHECK-NEXT:    ret i32 [[TMP3]]

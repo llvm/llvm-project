@@ -72,13 +72,44 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
   calculate(F);
 }
 
+bool MachineRegionInfo::invalidate(
+    MachineFunction &F, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG has been preserved.
+  auto PAC = PA.getChecker<MachineRegionInfoAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
+//===----------------------------------------------------------------------===//
+// MachineRegionAnalysis implementation
+//
+AnalysisKey MachineRegionInfoAnalysis::Key;
+MachineRegionInfo
+MachineRegionInfoAnalysis::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo MRI;
+  MRI.recalculate(MF, &MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachineDominanceFrontierAnalysis>(MF));
+  return MRI;
+}
+
+PreservedAnalyses
+MachineRegionInfoPrinterPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo &MRI = MFAM.getResult<MachineRegionInfoAnalysis>(MF);
+  MRI.print(OS);
+  return PreservedAnalyses::all();
+}
+
 //===----------------------------------------------------------------------===//
 // MachineRegionInfoPass implementation
 //
 
-MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {
-  initializeMachineRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+MachineRegionInfoPass::MachineRegionInfoPass() : MachineFunctionPass(ID) {}
 
 MachineRegionInfoPass::~MachineRegionInfoPass() = default;
 
@@ -88,7 +119,7 @@ bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   auto DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto PDT =
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  auto DF = &getAnalysis<MachineDominanceFrontier>();
+  auto DF = &getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
 
   RI.recalculate(F, DT, PDT, DF);
 
@@ -113,7 +144,7 @@ void MachineRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-  AU.addRequired<MachineDominanceFrontier>();
+  AU.addRequired<MachineDominanceFrontierWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -134,7 +165,7 @@ INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
                       "Detect single entry single exit regions", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
                     "Detect single entry single exit regions", true, true)
 

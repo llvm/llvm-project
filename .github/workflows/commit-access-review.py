@@ -9,6 +9,7 @@
 #
 # ===------------------------------------------------------------------------===#
 
+import concurrent.futures
 import datetime
 import github
 import re
@@ -170,80 +171,6 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
     return count
 
 
-def is_new_committer_query_repo(
-    gh: github.Github, user: str, start_date: datetime.datetime
-) -> bool:
-    """
-    Determine if ``user`` is a new committer.  A new committer can keep their
-    commit access even if they don't meet the criteria.
-    """
-    variables = {
-        "user": user,
-    }
-
-    user_query = """
-        query ($user: String!) {
-          user(login: $user) {
-            id
-          }
-        }
-    """
-
-    res_header, res_data = gh._Github__requester.graphql_query(
-        query=user_query, variables=variables
-    )
-    data = res_data["data"]
-    variables["owner"] = "llvm"
-    variables["user_id"] = data["user"]["id"]
-    variables["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
-
-    query = """
-        query ($owner: String!, $user_id: ID!){
-          organization(login: $owner) {
-            repository(name: "llvm-project") {
-              ref(qualifiedName: "main") {
-                target {
-                  ... on Commit {
-                    history(author: {id: $user_id }, first: 5) {
-                      nodes {
-                        committedDate
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-     """
-
-    res_header, res_data = gh._Github__requester.graphql_query(
-        query=query, variables=variables
-    )
-    data = res_data["data"]
-    repo = data["organization"]["repository"]
-    commits = repo["ref"]["target"]["history"]["nodes"]
-    if len(commits) == 0:
-        return True
-    committed_date = commits[-1]["committedDate"]
-    if datetime.datetime.strptime(committed_date, "%Y-%m-%dT%H:%M:%SZ") < start_date:
-        return False
-    return True
-
-
-def is_new_committer(
-    gh: github.Github, user: str, start_date: datetime.datetime
-) -> bool:
-    """
-    Wrapper around is_new_commiter_query_repo to handle exceptions.
-    """
-    try:
-        return is_new_committer_query_repo(gh, user, start_date)
-    except:
-        pass
-    return True
-
-
 def get_review_count(
     gh: github.Github, user: str, start_date: datetime.datetime
 ) -> int:
@@ -338,9 +265,14 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
         date_begin = date_end
 
 
+# 4 because that's how many cores the default github runners have.  Also, if we
+# make this too high, we risk hitting some of GitHub's secondary rate limits.
+THREAD_POOL_MAX_WORKERS = 4
+
+
 def main():
     token = sys.argv[1]
-    gh = github.Github(login_or_token=token)
+    gh = github.Github(auth=github.Auth.Token(token))
     org = gh.get_organization("llvm")
     repo = org.get_repo("llvm-project")
     one_year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
@@ -365,9 +297,16 @@ def main():
         sys.exit(0)
 
     # Step 2 check for reviews
-    for user in list(triage_list.keys()):
-        review_count = get_review_count(gh, user, one_year_ago)
-        triage_list[user].add_reviewed(review_count)
+
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=THREAD_POOL_MAX_WORKERS
+    ) as executor:
+        executor.map(
+            lambda user: triage_list[user].add_reviewed(
+                get_review_count(gh, user, one_year_ago)
+            ),
+            list(triage_list.keys()),
+        )
 
     print("After Reviews:", len(triage_list), "triagers")
 
@@ -375,20 +314,19 @@ def main():
         sys.exit(0)
 
     # Step 3 check for number of commits
-    for user in list(triage_list.keys()):
-        num_commits = get_num_commits(gh, user, one_year_ago)
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=THREAD_POOL_MAX_WORKERS
+    ) as executor:
         # Override the total number of commits to not double count commits and
         # authored PRs.
-        triage_list[user].set_authored(num_commits)
+        executor.map(
+            lambda user: triage_list[user].set_authored(
+                get_num_commits(gh, user, one_year_ago)
+            ),
+            list(triage_list.keys()),
+        )
 
     print("After Commits:", len(triage_list), "triagers")
-
-    # Step 4 check for new committers
-    for user in list(triage_list.keys()):
-        print("Checking", user)
-        if is_new_committer(gh, user, one_year_ago):
-            print("Removing new committer: ", user)
-            del triage_list[user]
 
     print("Complete:", len(triage_list), "triagers")
 

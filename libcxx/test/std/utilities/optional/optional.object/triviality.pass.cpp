@@ -17,7 +17,8 @@
 // constexpr optional(optional&& rhs) noexcept(see below);
 // constexpr optional<T>& operator=(const optional& rhs);
 // constexpr optional<T>& operator=(optional&& rhs) noexcept(see below);
-
+//
+// Also test that std::optional<T&> is always trivially copyable.
 
 #include <optional>
 #include <type_traits>
@@ -62,6 +63,19 @@ struct SpecialMemberTest {
         "trivially move constructible, "
         "trivially move assignable, and"
         "trivially destructible.");
+
+#if TEST_STD_VER >= 26
+    static_assert(std::is_trivially_copyable_v<std::optional<T&>>);
+    static_assert(std::is_trivially_copy_constructible_v<std::optional<T&>>);
+    static_assert(std::is_trivially_move_constructible_v<std::optional<T&>>);
+    static_assert(std::is_trivially_constructible_v<std::optional<T&>, std::optional<T&>&>);
+    static_assert(std::is_trivially_constructible_v<std::optional<T&>, const std::optional<T&>&&>);
+    static_assert(std::is_trivially_copy_assignable_v<std::optional<T&>>);
+    static_assert(std::is_trivially_move_assignable_v<std::optional<T&>>);
+    static_assert(std::is_trivially_assignable_v<std::optional<T&>&, std::optional<T&>&>);
+    static_assert(std::is_trivially_assignable_v<std::optional<T&>&, const std::optional<T&>&&>);
+    static_assert(std::is_trivially_destructible_v<std::optional<T&>>);
+#endif
 };
 
 template <class ...Args> static void sink(Args&&...) {}

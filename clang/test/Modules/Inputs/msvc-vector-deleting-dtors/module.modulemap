@@ -1,0 +1,1 @@
+module msvc_vector_deleting_destructors { header "msvc-vector-deleting-dtors.h" export * }

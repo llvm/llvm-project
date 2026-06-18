@@ -9,7 +9,7 @@
 #include "ZOS.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -28,13 +28,17 @@ ZOS::ZOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 ZOS::~ZOS() {}
 
 void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
-                                ArgStringList &CC1Args,
+                                ArgStringList &CC1Args, StringRef BoundArch,
                                 Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
+                         options::OPT_fvisibility_ms_compat))
+    CC1Args.push_back("-fvisibility=hidden");
 
   if (DriverArgs.hasFlag(options::OPT_fxl_pragma_pack,
                          options::OPT_fno_xl_pragma_pack, true))

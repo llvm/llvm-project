@@ -18,7 +18,7 @@ end module m3
 ! CHECK-LABEL: func.func @_QMm3Pchk(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>> {fir.bindc_name = "c1"}) {
 ! CHECK:         %[[DUMMY_SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[DECLARE:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "_QMm3FdummyEc1"} : (!fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>>, !fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>>)
+! CHECK:         %[[DECLARE:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE]] {{.*}} {uniq_name = "_QMm3FdummyEc1"} : (!fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>>, !fir.class<!fir.array<3x!fir.type<_QMm3Tx1{ix1:i32}>>>)
 
 subroutine s1
   use m3

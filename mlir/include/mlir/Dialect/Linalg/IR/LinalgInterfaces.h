@@ -105,10 +105,26 @@ struct ConvolutionDimensions {
 ///   7. All dimensions appear only once in any given indexing map.
 /// This allows e.g. detecting that some convolution is embedded within
 /// `linalgOp` with some orthogonal heuristic.
-/// When multiple dimension occurrences exist that match any classification
-/// indices are returned in sorted order.
+///
+/// The `outputImage` and `filterLoop` arrays are ordered such that
+/// `outputImage[i]` pairs with `filterLoop[i]` based on the convolution access
+/// pattern in the input indexing map (e.g., `d0 + d2` pairs dimension 0 with
+/// dimension 2). Other dimension sets are returned in sorted order.
+///
 /// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
+
+/// Maps-based overload of `inferConvolutionDims`. The `indexingMaps` are
+/// expected in operand order: input, filter, output. The iterator types are
+/// inferred from the output map: dimensions that appear in the output are
+/// parallel, all others are reduction. Since there is no operation to carry
+/// native `strides`/`dilations` attributes, the strides and dilations are
+/// derived from the convolution access pattern in the input indexing map.
+/// Returns a failure if there are not exactly 3 maps, the output map is not a
+/// projected permutation, or `output_image` (and implicitly `filter_loop`) is
+/// empty.
+FailureOr<ConvolutionDimensions>
+inferConvolutionDims(ArrayRef<AffineMap> indexingMaps);
 
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
 /// By default, we require the `linalgOp` to have non-empty convolved dims
@@ -121,10 +137,9 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp,
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
-/// Checks whether `genericOp` is semantically equivalent to a
-///  `linalg.broadcast`. Returns broadcast dimensions if true.
-std::optional<SmallVector<int64_t>>
-isaBroadcastOpInterface(GenericOp genericOp);
+/// Checks whether `linalgOp` is semantically equivalent to a broadcast
+/// operation. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a
 ///  `linalg.transpose`. Returns permuted dimensions if true.
@@ -132,15 +147,24 @@ std::optional<SmallVector<int64_t>>
 isaTransposeOpInterface(GenericOp genericOp);
 
 /// Checks whether a given `genericOp` is semantically equivalent to a single
-/// linalgelementwise unary op. e.g. linalg.exp.
+/// linalg elementwise unary op, e.g. `linalg.exp` or
+/// `linalg.elementwise kind=#linalg.elementwise_kind<exp>`.
+/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
+/// included in the check. Note that these operations can only be represented by
+/// the category op.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
 /// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
 /// detecting cases where body is is a single computation op.
-bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
+bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
+                                       bool allowNonIdentityMaps = false);
 
 /// Checks whether `genericOp` is semantically equivalent to a single linalg
 /// elementwise binary op e.g. linalg.sub.
-bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
+/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
+/// included in the check. Note that these operations can only be represented by
+/// the category op.
+bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp,
+                                        bool allowNonIdentityMaps = false);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
 /// Supports two patterns:

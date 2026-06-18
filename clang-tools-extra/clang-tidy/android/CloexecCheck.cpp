@@ -36,7 +36,7 @@ static std::string buildFixMsgForStringFlag(const Expr *Arg,
 }
 
 void CloexecCheck::registerMatchersImpl(
-    MatchFinder *Finder, internal::Matcher<FunctionDecl> Function) {
+    MatchFinder *Finder, const internal::Matcher<FunctionDecl> &Function) {
   // We assume all the checked APIs are C functions.
   Finder->addMatcher(
       callExpr(

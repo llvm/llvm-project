@@ -49,8 +49,9 @@ define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vsc
 define <vscale x 4 x i32> @unfoldable_diff_avl_unknown(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: unfoldable_diff_avl_unknown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v14, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v14, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v14
@@ -244,4 +245,15 @@ define <vscale x 1 x i64> @vmerge(<vscale x 1 x i64> %passthru, <vscale x 1 x i6
   %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl)
   %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %avl)
   ret <vscale x 1 x i64> %b
+}
+
+define <vscale x 4 x float> @commute_vfmadd(<vscale x 4 x float> %passthru, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl) {
+; CHECK-LABEL: commute_vfmadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vfmacc.vv v8, v12, v10
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x float> @llvm.riscv.vfmadd(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %passthru, iXLen 7, iXLen %vl, iXLen 3)
+  %w = call <vscale x 4 x float> @llvm.riscv.vmv.v.v(<vscale x 4 x float> %passthru, <vscale x 4 x float> %v, iXLen %vl)
+  ret <vscale x 4 x float> %w
 }

@@ -96,7 +96,7 @@ void ARCTargetLowering::ReplaceNodeResults(SDNode *N,
 
 ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
                                      const ARCSubtarget &Subtarget)
-    : TargetLowering(TM), Subtarget(Subtarget) {
+    : TargetLowering(TM, Subtarget), Subtarget(Subtarget) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &ARC::GPR32RegClass);
 
@@ -591,8 +591,8 @@ SDValue ARCTargetLowering::LowerCallArguments(
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
           Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
-          Alignment, false, false, /*CI=*/nullptr, false, MachinePointerInfo(),
-          MachinePointerInfo()));
+          Alignment, Alignment, false, false, /*CI=*/nullptr, false,
+          MachinePointerInfo(), MachinePointerInfo()));
     } else {
       InVals.push_back(ArgDI.SDV);
     }

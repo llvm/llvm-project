@@ -46,12 +46,12 @@ class AtomicCmpXchgInst;
 class AtomicRMWInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallInst;
 class CallBrInst;
 class CatchPadInst;
 class CatchReturnInst;
 class CatchSwitchInst;
+class CondBrInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
@@ -232,6 +232,7 @@ public:
   BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const TargetTransformInfo *TTI = nullptr;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
   public:
@@ -285,7 +286,7 @@ public:
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
   void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
-            const TargetLibraryInfo *li);
+            const TargetLibraryInfo *li, const TargetTransformInfo &TTI);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
   /// this SelectionDAGBuilder object to be used for a new block. This doesn't
@@ -397,7 +398,7 @@ public:
   }
 
   bool shouldKeepJumpConditionsTogether(
-      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      const FunctionLoweringInfo &FuncInfo, const CondBrInst &I,
       Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
       TargetLoweringBase::CondMergingParams Params) const;
 
@@ -428,6 +429,10 @@ public:
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
+
+  // Lower nofpclass attributes to AssertNoFPClass
+  SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
+                                          const Instruction &I, SDValue Op);
 
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,
@@ -517,7 +522,8 @@ public:
 private:
   // Terminator instructions.
   void visitRet(const ReturnInst &I);
-  void visitBr(const BranchInst &I);
+  void visitUncondBr(const UncondBrInst &I);
+  void visitCondBr(const CondBrInst &I);
   void visitSwitch(const SwitchInst &I);
   void visitIndirectBr(const IndirectBrInst &I);
   void visitUnreachable(const UnreachableInst &I);
@@ -551,9 +557,11 @@ public:
 private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
-  void visitCallBr(const CallBrInst &I);
   void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
+
+  void visitCallBr(const CallBrInst &I);
+  void visitCallBrIntrinsic(const CallBrInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
@@ -620,12 +628,14 @@ private:
   void visitPHI(const PHINode &I);
   void visitCall(const CallInst &I);
   bool visitMemCmpBCmpCall(const CallInst &I);
+  bool visitMemCCpyCall(const CallInst &I);
   bool visitMemPCpyCall(const CallInst &I);
   bool visitMemChrCall(const CallInst &I);
   bool visitStrCpyCall(const CallInst &I, bool isStpcpy);
   bool visitStrCmpCall(const CallInst &I);
   bool visitStrLenCall(const CallInst &I);
   bool visitStrNLenCall(const CallInst &I);
+  bool visitStrstrCall(const CallInst &I);
   bool visitUnaryFloatCall(const CallInst &I, unsigned Opcode);
   bool visitBinaryFloatCall(const CallInst &I, unsigned Opcode);
   void visitAtomicLoad(const LoadInst &I);
@@ -723,8 +733,11 @@ private:
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
 
+public:
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);
+
+private:
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 
