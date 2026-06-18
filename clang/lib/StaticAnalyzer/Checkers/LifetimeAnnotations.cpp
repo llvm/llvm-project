@@ -14,6 +14,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef, LifetimeSourceSet)
 
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *,
                                LifetimeSourceSet)
+REGISTER_SET_WITH_PROGRAMSTATE(DeadSourceSet, const MemRegion *)
 
 namespace {
 class LifetimeAnnotations
