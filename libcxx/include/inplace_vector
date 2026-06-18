@@ -758,7 +758,6 @@ public:
     std::swap_ranges(__smaller.begin(), __smaller.end(), __bigger.begin());
 
     if (__n1 != __n2) {
-      using std::swap;
       std::uninitialized_move(__bigger.data() + __n1, __bigger.data() + __n2, __smaller.data() + __n1);
       __smaller.__size_ = __n2;
       std::destroy(__bigger.data() + __n1, __bigger.data() + __n2);
