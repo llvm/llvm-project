@@ -64,3 +64,12 @@ subroutine use_clashes
   k3(usescalar) = usescalar + 1 ! ok: USE-associated scalar variable
 end subroutine
 
+! Clashes with global-scope program units.
+real function global_func(x)
+  real :: x
+  global_func = x
+end function
+subroutine global_clashes
+  !ERROR: The name 'global_func' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable
+  p1(global_func) = global_func + 1
+end subroutine

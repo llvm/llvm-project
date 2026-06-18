@@ -10466,6 +10466,14 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
         Say(dummyName.source,
             "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
       }
+    } else {
+      // Also check the global scope, which FindSymbol skips
+      const Scope &globals{context().globalScope()};
+      if (auto it{globals.find(dummyName.source)}; it != globals.end()) {
+        // global function/subroutine — definitely not a scalar variable
+        Say(dummyName.source,
+            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
+      }
     }
   }
 
