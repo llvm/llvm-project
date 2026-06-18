@@ -107,4 +107,5 @@ int main(int, char**) {
 // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
 //  static_assert(test());
 #endif
+  return 0;
 }
