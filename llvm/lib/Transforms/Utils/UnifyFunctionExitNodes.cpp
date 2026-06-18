@@ -45,9 +45,12 @@ bool unifyUnreachableBlocks(Function &F) {
 bool unifyReturnBlocks(Function &F) {
   std::vector<BasicBlock *> ReturningBlocks;
 
-  for (BasicBlock &I : F)
+  for (BasicBlock &I : F) {
+    if (I.getTerminatingDeoptimizeCall())
+      return false;
     if (isa<ReturnInst>(I.getTerminator()))
       ReturningBlocks.push_back(&I);
+  }
 
   if (ReturningBlocks.size() <= 1)
     return false;
