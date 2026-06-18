@@ -1602,6 +1602,51 @@ protected:
 #endif
 };
 
+class VPGEPInstruction : public VPInstruction {
+  /// The source element type of the GEP.
+  Type *SourceElementTy;
+
+public:
+  VPGEPInstruction(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
+                   const VPIRFlags &Flags = {},
+                   const VPIRMetadata &Metadata = {},
+                   DebugLoc DL = DebugLoc::getUnknown(), Twine Name = "")
+      : VPInstruction(Instruction::GetElementPtr, Operands, Flags, Metadata, DL,
+                      Name, Operands[0]->getScalarType()),
+        SourceElementTy(SourceElementTy) {}
+
+  static inline bool classof(const VPRecipeBase *R) {
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == Instruction::GetElementPtr;
+  }
+
+  Type *getSourceElementType() const { return SourceElementTy; }
+
+  VPGEPInstruction *clone() override {
+    auto *New = new VPGEPInstruction(getSourceElementType(), operands(), *this,
+                                     *this, getDebugLoc(), getName());
+    New->setUnderlyingValue(getUnderlyingValue());
+    return New;
+  }
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // We mark this instruction as zero-cost because the cost of GEPs in
+    // vectorized code depends on whether the corresponding memory instruction
+    // is scalarized or not. Therefore, we handle GEPs with the memory
+    // instruction cost.
+    return 0;
+  }
+
+  void execute(VPTransformState &State) override;
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// Helper type to provide functions to access incoming values and blocks for
 /// phi-like recipes.
 class VPPhiAccessors {
