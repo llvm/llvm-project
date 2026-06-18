@@ -92,7 +92,8 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
-    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
+        << getDiagSubjectDescription(IssueExpr);
 
     reportAliasingChain(ExprChain);
 

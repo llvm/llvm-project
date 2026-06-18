@@ -76,7 +76,7 @@ struct Y {
 
 void dangligGslPtrFromTemporary() {
   MyIntPointer p = Y{}.a; // cfg-warning {{temporary object does not live long enough}} \
-                          // cfg-note {{destroyed here}}
+                          // cfg-note {{temporary object destroyed here}}
   (void)p;                // cfg-note {{later used here}}
 }
 
@@ -145,32 +145,32 @@ MyLongPointerFromConversion global2;
 
 void initLocalGslPtrWithTempOwner() {
   MyIntPointer p = MyIntOwner{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                 // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                 // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(p);                        // cfg-note {{later used here}}
 
   MyIntPointer pp = p = MyIntOwner{}; // expected-warning {{object backing the pointer 'p' will be}} \
-                                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(p, pp);                         // cfg-note {{later used here}}
 
   p = MyIntOwner{}; // expected-warning {{object backing the pointer 'p' }} \
-                    // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                    // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(p);           // cfg-note {{later used here}}
 
   pp = p; // no warning
   use(p, pp);
 
   global = MyIntOwner{}; // expected-warning {{object backing the pointer 'global' }} \
-                         // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                         // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(global);           // cfg-note {{later used here}}
 
   MyLongPointerFromConversion p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                                // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                                                // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(p2);                                                      // cfg-note {{later used here}}
 
   p2 = MyLongOwnerWithConversion{}; // expected-warning {{object backing the pointer 'p2' }} \
-                                    // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                    // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   global2 = MyLongOwnerWithConversion{};  // expected-warning {{object backing the pointer 'global2' }} \
-                                          // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                          // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(global2, p2);                       // cfg-note 2 {{later used here}}
 }
 
@@ -193,7 +193,7 @@ struct Unannotated {
 
 void modelIterators() {
   std::vector<int>::iterator it = std::vector<int>().begin(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                               // cfg-note {{result of call to 'begin' aliases the storage of temporary object}}
   (void)it; // cfg-note {{later used here}}
 }
@@ -242,12 +242,12 @@ int &danglingRawPtrFromLocal3() {
 // GH100384
 std::string_view containerWithAnnotatedElements() {
   std::string_view c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                          // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                          // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                           // cfg-note {{result of call to 'at' aliases the storage of temporary object}}
   use(c1);                                                // cfg-note {{later used here}}
 
   c1 = std::vector<std::string>().at(0); // expected-warning {{object backing the pointer}} \
-                                         // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                         // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                          // cfg-note {{result of call to 'at' aliases the storage of temporary object}}
   use(c1);                               // cfg-note {{later used here}}
 
@@ -309,28 +309,28 @@ std::string_view danglingRefToOptionalFromTemp4() {
 
 void danglingReferenceFromTempOwner() {
   int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                             // cfg-note {{expression aliases the storage of temporary object}}
   // https://github.com/llvm/llvm-project/issues/175893
   int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                               // cfg-note {{expression aliases the storage of temporary object}}
 
   // https://github.com/llvm/llvm-project/issues/175893
   int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                               // cfg-note {{result of call to 'value' aliases the storage of temporary object}}
 
   const int &r4 = std::vector<int>().at(3); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                             // cfg-note {{result of call to 'at' aliases the storage of temporary object}}
   int &&r5 = std::vector<int>().at(3);      // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                             // cfg-note {{result of call to 'at' aliases the storage of temporary object}}
   use(r, r2, r3, r4, r5);                   // cfg-note 5 {{later used here}}
 
   std::string_view sv = *getTempOptStr();  // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                           // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                           // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                            // cfg-note {{expression aliases the storage of temporary object}}
   use(sv);                                 // cfg-note {{later used here}}
 }
@@ -342,7 +342,7 @@ void testLoops() {
   for (auto i : getTempVec()) // ok
     ;
   for (auto i : *getTempOptVec()) // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{later used here}} \
+                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} cfg-note {{later used here}} \
                                   // cfg-note {{expression aliases the storage of temporary object}}
     ;
 }
@@ -405,18 +405,18 @@ void handleGslPtrInitsThroughReference2() {
 void handleTernaryOperator(bool cond) {
     std::basic_string<char> def;
     std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                                                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
     use(v); // cfg-note {{later used here}}
 }
 
 std::string operator+(std::string_view s1, std::string_view s2);
 void danglingStringviewAssignment(std::string_view a1, std::string_view a2) {
   a1 = std::string(); // expected-warning {{object backing}} \
-                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(a1);            // cfg-note {{later used here}}
 
   a2 = a1 + a1; // expected-warning {{object backing}} \
-                // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+                // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(a2);      // cfg-note {{later used here}}
 }
 
@@ -612,7 +612,7 @@ std::string StrCat(std::string_view, std::string_view);
 void test1() {
   UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}} \
                                          // cfg-warning {{temporary object does not live long enough}} \
-                                         // cfg-note {{destroyed here}}
+                                         // cfg-note {{temporary object destroyed here}}
   use(url);                              // cfg-note {{later used here}}
 }
 
@@ -620,7 +620,7 @@ std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]])
 
 void test() {
   std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
-                                                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                                   // cfg-note {{result of call to 'ReturnStringView' aliases the storage of temporary object}}
   use(svjkk1);                                                    // cfg-note {{later used here}}
 }
@@ -855,7 +855,7 @@ namespace GH118064{
 
 void test() {
   auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}} \
-  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
   // cfg-note {{result of call to 'begin' aliases the storage of temporary object}}
   use(y); // cfg-note {{later used here}}
 }
@@ -871,11 +871,11 @@ std::string_view TakeStr(std::string abc [[clang::lifetimebound]]);
 
 std::string_view test1_1() {
   std::string_view t1 = Ref(std::string()); // expected-warning {{object backing}} \
-                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                             // cfg-note {{result of call to 'Ref' aliases the storage of temporary object}}
   use(t1);                                  // cfg-note {{later used here}}
   t1 = Ref(std::string()); // expected-warning {{object backing}} \
-                           // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                           // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                            // cfg-note {{result of call to 'Ref' aliases the storage of temporary object}}
   use(t1);                 // cfg-note {{later used here}}
   return Ref(std::string()); // expected-warning {{returning address}} \
@@ -884,11 +884,11 @@ std::string_view test1_1() {
 
 std::string_view test1_2() {
   std::string_view t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
-                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                             // cfg-note {{result of call to 'TakeSv' aliases the storage of temporary object}}
   use(t2);                                  // cfg-note {{later used here}}
   t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
-                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                              // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                               // cfg-note {{result of call to 'TakeSv' aliases the storage of temporary object}}
   use(t2);                    // cfg-note {{later used here}}
 
@@ -898,11 +898,11 @@ std::string_view test1_2() {
 
 std::string_view test1_3() {
   std::string_view t3 = TakeStrRef(std::string()); // expected-warning {{temporary}} \
-                                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                    // cfg-note {{result of call to 'TakeStrRef' aliases the storage of temporary object}}
   use(t3);                                         // cfg-note {{later used here}}
   t3 = TakeStrRef(std::string()); // expected-warning {{object backing}} \
-                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                   // cfg-note {{result of call to 'TakeStrRef' aliases the storage of temporary object}}
   use(t3);                        // cfg-note {{later used here}}
   return TakeStrRef(std::string()); // expected-warning {{returning address}} \
@@ -925,11 +925,11 @@ struct Foo {
 };
 std::string_view test2_1(Foo<std::string> r1, Foo<std::string_view> r2) {
   std::string_view t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
-                                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                   // cfg-note {{result of call to 'get' aliases the storage of temporary object}}
   use(t1);                                        // cfg-note {{later used here}}
   t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
-                                 // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                 // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                  // cfg-note {{result of call to 'get' aliases the storage of temporary object}}
   use(t1);                       // cfg-note {{later used here}}
   return r1.get(); // expected-warning {{address of stack}} \
@@ -959,9 +959,9 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(p);                     // cfg-note {{later used here}}
-  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}}
   use(p);                     // cfg-note {{later used here}}
   return bar;                 // expected-warning {{address of stack}} cfg-warning {{stack memory associated with parameter 'bar' is returned}} cfg-note {{returned here}}
 }
@@ -1048,15 +1048,15 @@ void operator_star_arrow_reference() {
   const std::string& r = *v.begin();
 
   auto temporary = []() { return std::vector<std::string>{{"1"}}; };
-  const char* x = temporary().begin()->data();    // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  const char* x = temporary().begin()->data();    // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                   // cfg-note {{result of call to 'begin' aliases the storage of temporary object}} \
   // cfg-note {{expression aliases the storage of temporary object}} \
   // cfg-note {{result of call to 'data' aliases the storage of temporary object}}
-  const char* y = (*temporary().begin()).data();  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  const char* y = (*temporary().begin()).data();  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                   // cfg-note {{result of call to 'begin' aliases the storage of temporary object}} \
   // cfg-note {{expression aliases the storage of temporary object}} \
   // cfg-note {{result of call to 'data' aliases the storage of temporary object}}
-  const std::string& z = (*temporary().begin());  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  const std::string& z = (*temporary().begin());  // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                   // cfg-note {{result of call to 'begin' aliases the storage of temporary object}} \
                                                    // cfg-note {{expression aliases the storage of temporary object}}
 
@@ -1070,15 +1070,15 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
   const std::string& r = (*v.begin()).second;
 
   auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
-  const char* x = temporary().begin()->second.data();   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  const char* x = temporary().begin()->second.data();   // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                         // cfg-note {{result of call to 'begin' aliases the storage of temporary object}} \
                                                         // cfg-note {{expression aliases the storage of temporary object}} \
                                                         // cfg-note {{result of call to 'data' aliases the storage of temporary object}}
-  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                         // cfg-note {{result of call to 'begin' aliases the storage of temporary object}} \
                                                         // cfg-note {{expression aliases the storage of temporary object}} \
                                                         // cfg-note {{result of call to 'data' aliases the storage of temporary object}}
-  const std::string& z = (*temporary().begin()).second; // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                                        // cfg-note {{result of call to 'begin' aliases the storage of temporary object}} \
                                                         // cfg-note {{expression aliases the storage of temporary object}}
 
@@ -1130,22 +1130,22 @@ std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
 void test1() {
   std::string_view k1 = S().sv; // OK
   std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
-                               // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                               // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                // cfg-note {{expression aliases the storage of temporary object}}
 
   std::string_view k3 = Q().get()->sv; // OK
   std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
-                                       // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                       // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                        // cfg-note {{result of call to 'get' aliases the storage of temporary object}} \
                                        // cfg-note {{expression aliases the storage of temporary object}}
 
 
   std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
-                                     // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                     // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                      // cfg-note {{expression aliases the storage of temporary object}} \
                                      // cfg-note {{result of call to 'foo' aliases the storage of temporary object}}
   std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
-                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{temporary object destroyed here}} \
                                             // cfg-note {{result of call to 'get' aliases the storage of temporary object}} \
                                             // cfg-note {{expression aliases the storage of temporary object}} \
                                             // cfg-note {{result of call to 'foo' aliases the storage of temporary object}}
