@@ -56,6 +56,7 @@ LLVM and API reference documentation.
    CIBestPractices
    AIToolPolicy
    CalleeTypeMetadata
+   CallgraphMetadata
    CallGraphSection
    InterfaceExportAnnotations
    PCSectionsMetadata
