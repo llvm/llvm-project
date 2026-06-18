@@ -77,17 +77,27 @@ void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ", via Global)\n";
 }
 
+// Prints every origin in the subtree in DFS pre-order, each labeled by the
+// field edge it was reached through, so a field's origin stays next to the
+// record it belongs to.
+static void dumpUsedOrigins(const OriginNode *N, const FieldDecl *FD,
+                            const OriginManager &OM, llvm::raw_ostream &OS,
+                            bool &First) {
+  if (!N)
+    return;
+  if (!First)
+    OS << ", ";
+  First = false;
+  OM.dump(N->getOriginID(), OS, FD);
+  for (const OriginNode::Edge &E : N->children())
+    dumpUsedOrigins(E.Child, E.FD, OM, OS, First);
+}
+
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
-  size_t NumUsedOrigins = getUsedOrigins()->getLength();
-  size_t I = 0;
-  for (const OriginNode *Cur = getUsedOrigins(); Cur;
-       Cur = Cur->getPointeeChild(), ++I) {
-    OM.dump(Cur->getOriginID(), OS);
-    if (I < NumUsedOrigins - 1)
-      OS << ", ";
-  }
+  bool First = true;
+  dumpUsedOrigins(getUsedOrigins(), nullptr, OM, OS, First);
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
 }
 

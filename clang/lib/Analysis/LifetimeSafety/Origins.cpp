@@ -193,8 +193,9 @@ OriginNode *OriginManager::createSingleOriginNode(OriginID OID) {
 void OriginManager::attachPointeeChild(OriginNode *Parent,
                                        OriginNode *Pointee) {
   assert(Pointee && "pointee subtree must be non-null");
-  Parent->setChildren(
-      {new (Allocator.Allocate<OriginNode *>()) OriginNode *(Pointee), 1});
+  auto *E = new (Allocator.Allocate<OriginNode::Edge>())
+      OriginNode::Edge{nullptr, Pointee};
+  Parent->setChildren({E, 1});
 }
 
 template <typename T>
@@ -281,7 +282,8 @@ OriginNode *OriginManager::getOrCreateNode(const Expr *E) {
   return ExprToNode[E] = buildNodeForType(Type, E);
 }
 
-void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
+void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS,
+                         const FieldDecl *FD) const {
   OS << OID << " (";
   Origin O = getOrigin(OID);
   if (const ValueDecl *VD = O.getDecl()) {
@@ -297,6 +299,8 @@ void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
   }
   if (O.Ty)
     OS << ", Type : " << QualType(O.Ty, 0).getAsString();
+  if (FD)
+    OS << ", Field: " << FD->getName();
   OS << ")";
 }
 
