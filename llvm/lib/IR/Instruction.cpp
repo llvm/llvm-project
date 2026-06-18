@@ -927,6 +927,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
             IgnoreAlignment);
   if (const LoadInst *LI = dyn_cast<LoadInst>(I1))
     return LI->isVolatile() == cast<LoadInst>(I2)->isVolatile() &&
+           LI->isElementwise() == cast<LoadInst>(I2)->isElementwise() &&
            (LI->getAlign() == cast<LoadInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            LI->getOrdering() == cast<LoadInst>(I2)->getOrdering() &&

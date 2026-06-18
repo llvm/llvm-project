@@ -4474,6 +4474,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
     Out << " volatile";
 
+  if (isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise())
+    Out << " elementwise";
+
   // Print out optimization information.
   writeOptimizationInfo(Out, &I);
 
