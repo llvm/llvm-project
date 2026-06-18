@@ -3972,8 +3972,10 @@ Put the above things together, we have
     return x;
   }
 
-We don't have to test all possible syntax combinations, which would be impractical.
-It is fine to test that the syntax construct can be serialized and deserialized.
+The tests for serialization and deserialization are expected to ensure that the data contained
+by the AST node is properly saved and reconstituted. Serialization tests do not need to
+exhaustively test all possible ways the AST node can be used in source, they only need to
+validate that the internal state of the AST node can be round-tripped through serialization.
 
 For example, for contracts, if we choose to implement it as a member of ``FunctionDecl``,
 and if the data structure of contracts is not affected by whether the FunctionDecl is a
