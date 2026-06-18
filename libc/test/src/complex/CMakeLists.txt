@@ -2,6 +2,7 @@ add_custom_target(libc-complex-unittests)
 
 add_fp_unittest(
   carg_test
+  NEED_MPC
   SUITE
     libc-complex-unittests
   SRCS
@@ -12,6 +13,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   cargf_test
+  NEED_MPC
   SUITE
     libc-complex-unittests
   SRCS
