@@ -564,6 +564,7 @@ public:
         .str();
   }
   NODE(parser, OmpApplyClause)
+  NODE(OmpApplyClause, Modifier)
   NODE(parser, OmpArgument)
   NODE(parser, OmpArgumentList)
   NODE(parser, OmpAssumeDirective)

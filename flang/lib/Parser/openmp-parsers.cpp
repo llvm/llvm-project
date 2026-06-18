@@ -1101,6 +1101,8 @@ TYPE_PARSER(construct<OmpAdjustArgsClause::OmpAdjustOp>(
     "NEED_DEVICE_PTR" >>
         pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Need_Device_Ptr)))
 
+TYPE_PARSER(construct<OmpApplyClause::Modifier>(Parser<OmpLoopModifier>{}))
+
 TYPE_PARSER(sourced(construct<OmpLoopModifier>(
     "FUSED" >> pure(llvm::omp::LoopModifier::OMPLM_fused) ||
         "GRID" >> pure(llvm::omp::LoopModifier::OMPLM_grid) ||
@@ -1155,7 +1157,7 @@ TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
-TYPE_PARSER(construct<OmpApplyClause>(maybe(Parser<OmpLoopModifier>{} / ":"),
+TYPE_PARSER(construct<OmpApplyClause>(maybe(nonemptyList(Parser<OmpApplyClause::Modifier>{} / ":")),
     nonemptyList(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
 
 // 2.4 Requires construct [OpenMP 5.0]

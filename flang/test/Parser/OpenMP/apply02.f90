@@ -23,7 +23,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interchange
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = interchanged
 !PARSE-TREE: | | | Scalar -> Integer -> Constant -> Expr = '1_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '1'
@@ -60,7 +60,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = interchange
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = interchanged
 !PARSE-TREE: | | | Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '2'
@@ -95,14 +95,14 @@ end
 !PARSE-TREE: | Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = grid
 !PARSE-TREE: | | | Scalar -> Integer -> Constant -> Expr = '1_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interchange
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | | | OmpLoopModifier
+!PARSE-TREE: | | | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | | | llvm::omp::LoopModifier = interchanged
 !PARSE-TREE: | | | | | Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '2'

@@ -175,8 +175,7 @@ public:
 
   void Enter(const parser::OmpLoopModifier &);
 
-  void Enter(const parser::OmpApplyClause &);
-  void Leave(const parser::OmpApplyClause &);
+  void Leave(const parser::OmpClause::Apply &);
 
   template <typename A> void Enter(const parser::Statement<A> &);
   void Leave(const parser::GotoStmt &);
