@@ -30,7 +30,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -38,53 +37,44 @@
 
 using namespace llvm;
 
-// Fold the symbol materialized by \p Mov into any use that is the base of a
-// memory instruction's address operand. The `mov` is erased once it has no
-// uses left; it is kept for any remaining use, e.g. because the address also
-// feeds arithmetic or escapes.
-static bool foldAddress(MachineInstr &Mov, MachineRegisterInfo &MRI) {
-  const Register AddrReg = Mov.getOperand(0).getReg();
-  const MachineOperand &Sym = Mov.getOperand(1);
+// Try to fold the definition of \p Addr into \p MI's address operand. The
+// defining instruction is erased once it has no uses left; it is kept for any
+// remaining use, e.g. because the address also feeds arithmetic or escapes.
+static bool foldAddress(MachineInstr &MI, MachineOperand &Addr,
+                        MachineRegisterInfo &MRI) {
+  if (!Addr.isReg() || !Addr.getReg().isVirtual())
+    return false;
+
+  MachineInstr *Mov = MRI.getVRegDef(Addr.getReg());
+  if (!Mov || (Mov->getOpcode() != NVPTX::MOV_B32_sym &&
+               Mov->getOpcode() != NVPTX::MOV_B64_sym))
+    return false;
+
+  const MachineOperand &Sym = Mov->getOperand(1);
   if (!Sym.isGlobal() && !Sym.isSymbol())
     return false;
 
-  SmallVector<MachineOperand *, 8> FoldableUses;
-  for (MachineOperand &Use : MRI.use_operands(AddrReg)) {
-    MachineInstr &MI = *Use.getParent();
-    if (!MI.mayLoadOrStore())
-      continue;
+  // The accessed address space must be known and must not be shared.
+  const int AddrSpaceIdx =
+      NVPTX::getNamedOperandIdx(MI.getOpcode(), NVPTX::OpName::addsp);
+  if (AddrSpaceIdx < 0)
+    return false;
+  const auto AddrSpace = MI.getOperand(AddrSpaceIdx).getImm();
+  if (AddrSpace == NVPTX::AddressSpace::Shared ||
+      AddrSpace == NVPTX::AddressSpace::SharedCluster)
+    return false;
 
-    // The register must be the base of the instruction's address operand, and
-    // the accessed address space must be known and must not be shared.
-    const int AddrIdx =
-        NVPTX::getNamedOperandIdx(MI.getOpcode(), NVPTX::OpName::addr);
-    if (AddrIdx < 0 || MI.getOperandNo(&Use) != unsigned(AddrIdx))
-      continue;
-    const int AddrSpaceIdx =
-        NVPTX::getNamedOperandIdx(MI.getOpcode(), NVPTX::OpName::addsp);
-    if (AddrSpaceIdx < 0)
-      continue;
-    const auto AddrSpace = MI.getOperand(AddrSpaceIdx).getImm();
-    if (AddrSpace == NVPTX::AddressSpace::Shared ||
-        AddrSpace == NVPTX::AddressSpace::SharedCluster)
-      continue;
-
-    FoldableUses.push_back(&Use);
+  if (Sym.isGlobal()) {
+    Addr.ChangeToGA(Sym.getGlobal(), Sym.getOffset(), Sym.getTargetFlags());
+  } else {
+    Addr.ChangeToES(Sym.getSymbolName(), Sym.getTargetFlags());
+    Addr.setOffset(Sym.getOffset());
   }
 
-  for (MachineOperand *Use : FoldableUses) {
-    if (Sym.isGlobal()) {
-      Use->ChangeToGA(Sym.getGlobal(), Sym.getOffset(), Sym.getTargetFlags());
-    } else {
-      Use->ChangeToES(Sym.getSymbolName(), Sym.getTargetFlags());
-      Use->setOffset(Sym.getOffset());
-    }
-  }
+  if (!MRI.use_empty(Mov->getOperand(0).getReg()))
+    return true;
 
-  if (!MRI.use_empty(AddrReg))
-    return !FoldableUses.empty();
-
-  Mov.eraseFromParent();
+  Mov->eraseFromParent();
   return true;
 }
 
@@ -94,9 +84,12 @@ static bool foldAddresses(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : make_early_inc_range(MBB))
-      if (MI.getOpcode() == NVPTX::MOV_B32_sym ||
-          MI.getOpcode() == NVPTX::MOV_B64_sym)
-        Changed |= foldAddress(MI, MRI);
+      if (MI.mayLoadOrStore()) {
+        const int AddrIdx =
+            NVPTX::getNamedOperandIdx(MI.getOpcode(), NVPTX::OpName::addr);
+        if (AddrIdx >= 0)
+          Changed |= foldAddress(MI, MI.getOperand(AddrIdx), MRI);
+      }
 
   return Changed;
 }
