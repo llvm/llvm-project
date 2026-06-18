@@ -4,8 +4,9 @@
 ;; lives in this test's Inputs directory. Without path remapping, --source
 ;; cannot load the file from disk.
 ;;
-;; --source-dir: one directory per flag; flags on the command line are
-;; searched in order first-to-last.
+;; --source-dir: each flag appends one directory to the search list, so when
+;; several ``--source-dir`` paths could supply the same file name, the first
+;; flag on the command line is tried before later ones.
 ;;
 ;; --substitute-path: rules are tried in command-line order; the first match
 ;; wins (same as GDB set substitute-path).
@@ -25,11 +26,26 @@
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wron %/p %t.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
 
-;; First --source-dir misses (no source file under %/p alone); second finds
-;; Inputs/source-interleave-x86_64.c via basename lookup.
+;; ``%/p/Inputs`` is listed first and already contains the source; ``%/p`` is
+;; only needed if the first directories do not resolve the file.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
 ; RUN:   --source-dir %/p/Inputs --source-dir %/p %t.o | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE
+
+;; Two ``--source-dir`` trees both contain ``source-interleave-x86_64.c`` (same
+;; line count; distinct in-line markers). The copy from the **earlier** flag
+;; must be the one interleaved (search order is first-to-last on the command line).
+; RUN: mkdir -p %t.sd1 %t.sd2
+; RUN: sed -e 's/int foo() {/int foo() { \/\/SDR-FIRST/' \
+; RUN:   %p/Inputs/source-interleave-x86_64.c > %t.sd1/source-interleave-x86_64.c
+; RUN: sed -e 's/int foo() {/int foo() { \/\/SDR-SECOND/' \
+; RUN:   %p/Inputs/source-interleave-x86_64.c > %t.sd2/source-interleave-x86_64.c
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --source-dir %t.sd1 --source-dir %t.sd2 %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-DIR-ORDER12
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --source-dir %t.sd2 --source-dir %t.sd1 %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-DIR-ORDER21
 
 ;; More specific rule listed first wins (GDB example: /wrong/Inputs before /wrong).
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
@@ -110,6 +126,16 @@
 ; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source Inputs{{[/\\]}}source-interleave-x86_64.c
 ; SOURCE-EMPTY-TO: pushq
 ; SOURCE-EMPTY-TO-NOT: ; int foo
+
+; SOURCE-DIR-ORDER12: <foo>:
+; SOURCE-DIR-ORDER12-NEXT: ; int foo() { //SDR-FIRST
+; SOURCE-DIR-ORDER12-NEXT: pushq
+; SOURCE-DIR-ORDER12-NOT: SDR-SECOND
+
+; SOURCE-DIR-ORDER21: <foo>:
+; SOURCE-DIR-ORDER21-NEXT: ; int foo() { //SDR-SECOND
+; SOURCE-DIR-ORDER21-NEXT: pushq
+; SOURCE-DIR-ORDER21-NOT: SDR-FIRST
 
 ; SOURCE: <foo>:
 ; SOURCE-NEXT: ; int foo() {

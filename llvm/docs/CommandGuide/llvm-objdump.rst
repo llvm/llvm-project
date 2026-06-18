@@ -246,7 +246,7 @@ OPTIONS
   directory with the full path appended, then each search directory with only
   the file name.
   This option may be specified multiple times; each ``--source-dir`` adds one
-  directory. Later options on the command line are searched before earlier ones.
+  directory. Options on the command line are searched in first to last order.
   
 .. option:: --substitute-path <from> <to>
 
