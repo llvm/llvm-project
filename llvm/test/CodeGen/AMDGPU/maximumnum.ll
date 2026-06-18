@@ -33,10 +33,10 @@
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16,GFX12-GISEL,GFX12-FAKE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-TRUE16,GFX1251-SDAG,GFX1251-TRUE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-TRUE16,GFX1251-GISEL,GFX1251-TRUE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-TRUE16,GFX1251-GISEL,GFX1251-TRUE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-FAKE16,GFX1251-SDAG,GFX1251-FAKE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-FAKE16,GFX1251-GISEL,GFX1251-FAKE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1251,GFX1251-FAKE16,GFX1251-GISEL,GFX1251-FAKE16-GISEL %s
 
 define half @v_maximumnum_f16(half %x, half %y) #1 {
 ; GFX7-SDAG-LABEL: v_maximumnum_f16:
@@ -1984,9 +1984,13 @@ define half @v_maximumnum_f16_s_s(half inreg %x, half inreg %y) #1 {
 ; GFX1251-TRUE16-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v0.l, s0, s0
-; GFX1251-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v0.h, s1, s1
-; GFX1251-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-TRUE16-GISEL-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.h
+; GFX1251-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v1.l, s1, s1
+; GFX1251-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1251-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1251-TRUE16-GISEL-NEXT:    s_max_num_f16 s0, s0, s1
+; GFX1251-TRUE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1251-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1251-TRUE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1251-FAKE16-SDAG-LABEL: v_maximumnum_f16_s_s:
@@ -2005,8 +2009,12 @@ define half @v_maximumnum_f16_s_s(half inreg %x, half inreg %y) #1 {
 ; GFX1251-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-FAKE16-GISEL-NEXT:    v_max_num_f16_e64 v0, s0, s0
 ; GFX1251-FAKE16-GISEL-NEXT:    v_max_num_f16_e64 v1, s1, s1
-; GFX1251-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-FAKE16-GISEL-NEXT:    v_max_num_f16_e32 v0, v0, v1
+; GFX1251-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1251-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1251-FAKE16-GISEL-NEXT:    s_max_num_f16 s0, s0, s1
+; GFX1251-FAKE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1251-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1251-FAKE16-GISEL-NEXT:    s_set_pc_i64 s[30:31]
  %result = call half @llvm.maximumnum.f16(half %x, half %y)
   ret half %result
@@ -2512,8 +2520,12 @@ define float @v_maximumnum_f32_s_s(float inreg %x, float inreg %y) #1 {
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1251-GISEL-NEXT:    v_max_num_f32_e64 v1, s1, s1
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-GISEL-NEXT:    v_max_num_f32_e32 v0, v0, v1
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1251-GISEL-NEXT:    s_max_num_f32 s0, s0, s1
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
  %result = call float @llvm.maximumnum.f32(float %x, float %y)
   ret float %result
@@ -8612,7 +8624,7 @@ define <32 x half> @v_maximumnum_v32f16(<32 x half> %x, <32 x half> %y) #1 {
 ; GFX1251-GISEL:       ; %bb.0:
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    scratch_load_b32 v31, off, s32
+; GFX1251-GISEL-NEXT:    scratch_load_b32 v31, off, s32 nv
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f16 v16, v16, v16
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f16 v1, v1, v1
@@ -9712,9 +9724,8 @@ define <2 x double> @v_maximumnum_v2f64(<2 x double> %x, <2 x double> %y) #1 {
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[4:7], v[4:7], v[4:7]
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[4:5]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %result
@@ -9774,20 +9785,12 @@ define <2 x double> @v_maximumnum_v2f64_nnan(<2 x double> %x, <2 x double> %y) #
 ; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[6:7]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1251-SDAG-LABEL: v_maximumnum_v2f64_nnan:
-; GFX1251-SDAG:       ; %bb.0:
-; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[4:7]
-; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1251-GISEL-LABEL: v_maximumnum_v2f64_nnan:
-; GFX1251-GISEL:       ; %bb.0:
-; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[4:5]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[6:7]
-; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1251-LABEL: v_maximumnum_v2f64_nnan:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[4:7]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
   %result = call nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %result
 }
@@ -10054,12 +10057,10 @@ define <3 x double> @v_maximumnum_v3f64(<3 x double> %x, <3 x double> %y) #1 {
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[6:9], v[6:9], v[6:9]
 ; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[10:11], v[10:11], v[10:11]
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[6:7]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[8:9]
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[10:11]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[6:9]
+; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[6:7], v[10:11], v[10:11]
+; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[6:7]
 ; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = call <3 x double> @llvm.maximumnum.v3f64(<3 x double> %x, <3 x double> %y)
   ret <3 x double> %result
@@ -10126,14 +10127,22 @@ define <3 x double> @v_maximumnum_v3f64_nnan(<3 x double> %x, <3 x double> %y) #
 ; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[10:11]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1251-LABEL: v_maximumnum_v3f64_nnan:
-; GFX1251:       ; %bb.0:
-; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[6:7]
-; GFX1251-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[8:9]
-; GFX1251-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[10:11]
-; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1251-SDAG-LABEL: v_maximumnum_v3f64_nnan:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[6:7]
+; GFX1251-SDAG-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[8:9]
+; GFX1251-SDAG-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[10:11]
+; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1251-GISEL-LABEL: v_maximumnum_v3f64_nnan:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[6:9]
+; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[10:11]
+; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = call nnan <3 x double> @llvm.maximumnum.v3f64(<3 x double> %x, <3 x double> %y)
   ret <3 x double> %result
 }
@@ -10446,12 +10455,9 @@ define <4 x double> @v_maximumnum_v4f64(<4 x double> %x, <4 x double> %y) #1 {
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[8:11], v[8:11], v[8:11]
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[4:7], v[4:7], v[4:7]
 ; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[12:15], v[12:15], v[12:15]
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[8:9]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[10:11]
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[12:13]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[6:7], v[6:7], v[14:15]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[8:11]
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[4:7], v[4:7], v[12:15]
 ; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> %x, <4 x double> %y)
   ret <4 x double> %result
@@ -10525,23 +10531,13 @@ define <4 x double> @v_maximumnum_v4f64_nnan(<4 x double> %x, <4 x double> %y) #
 ; GFX12-NEXT:    v_max_num_f64_e32 v[6:7], v[6:7], v[14:15]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1251-SDAG-LABEL: v_maximumnum_v4f64_nnan:
-; GFX1251-SDAG:       ; %bb.0:
-; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[8:11]
-; GFX1251-SDAG-NEXT:    v_pk_max_num_f64 v[4:7], v[4:7], v[12:15]
-; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1251-GISEL-LABEL: v_maximumnum_v4f64_nnan:
-; GFX1251-GISEL:       ; %bb.0:
-; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[8:9]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[10:11]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[12:13]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[6:7], v[6:7], v[14:15]
-; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1251-LABEL: v_maximumnum_v4f64_nnan:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[8:11]
+; GFX1251-NEXT:    v_pk_max_num_f64 v[4:7], v[4:7], v[12:15]
+; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
   %result = call nnan <4 x double> @llvm.maximumnum.v4f64(<4 x double> %x, <4 x double> %y)
   ret <4 x double> %result
 }
