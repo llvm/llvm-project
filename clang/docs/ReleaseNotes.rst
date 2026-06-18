@@ -1044,6 +1044,12 @@ Improvements
     - Improvements
     - Moved checkers
 
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- The checker ``unix.cstring.UninitializedRead`` is now out of alpha.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
