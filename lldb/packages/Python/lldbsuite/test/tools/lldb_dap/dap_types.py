@@ -30,6 +30,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
     runtime_checkable,
 )
 
@@ -188,31 +189,32 @@ class Event(ProtocolMessage):
 
     def __post_init__(self):
         if self.type != MessageType.EVENT:
-            raise ValueError(f"event must have type of 'event': {self}")
+            raise ValueError(f"event must have type of 'event': {self}.")
 
     @classmethod
-    def from_json(cls: Type[T], json: dict, check_class: bool = True) -> T:
+    def from_json(cls: Type[T], json: dict) -> T:
         event_type = json["event"]
 
         if event_type not in Event.__registry:
-            raise ValueError(f"event type '{event_type}' is not registered")
+            raise ValueError(f"event type '{event_type}' is not registered.")
 
         event_class = Event.__registry[event_type]
 
-        if check_class and type(cls) != type(event_class):
+        if cls not in (Event, event_class):
             raise ValueError(
-                f"class: {type(cls)} is not of the expected type {type(event_class)}"
+                f"class: {cls.__name__!r} is not of the expected type {event_class.__name__!r}."
             )
 
-        if not dataclasses.is_dataclass(cls):
-            raise ValueError(f"{cls.__name__} must be a dataclass")
+        if not dataclasses.is_dataclass(event_class):
+            raise ValueError(f"{cls.__name__!r} must be a dataclass.")
 
-        return dict_to_message(event_class, json)
+        return cast(T, dict_to_message(event_class, json))
 
 
 AnyEvent = TypeVar("AnyEvent", bound=Event)
 
 
+@dataclass(frozen=True)
 class EmptyBodyResponse(Response):
     body: None = field(init=False, default=None)
 
@@ -1669,6 +1671,7 @@ class StepInTargetsArgs:
 
 @dataclass(frozen=True)
 class GotoTargetsResponse(Response):
+    @dataclass(frozen=True)
     class Body:
         targets: List[GotoTarget]
 

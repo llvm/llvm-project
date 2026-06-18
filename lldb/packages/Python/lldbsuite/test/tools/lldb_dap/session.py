@@ -118,7 +118,7 @@ class PendingResponse(Generic[AnyResponse]):
             raw = self._future.result(timeout=self._timeout)
         except (TimeoutError, futures.TimeoutError) as e:
             msg = f"\n\tRequest '{self._command}' (seq={self.seq}) timed out after {self._timeout}s"
-            e.args = (f"{e.args[0]}{msg}", *e.args)
+            e.args = (f"{e.args[0]}{msg}", *e.args) if e.args else (msg,)
             raise
         except ConnectionError as e:
             raise DAPError(

@@ -1668,12 +1668,15 @@ class DAPTestSession(Session):
         `value` is Base64-encoded because the DAP protocol requires it.
         """
         if isinstance(value, int):
-            # (bit_length + 7 (rounding up to nearest byte)) // 8 = converts to bytes.
-            byte_length = (value.bit_length() + 7) // 8
-            val_bytes = value.to_bytes(byte_length, "little")
-            data = base64.b64encode(val_bytes).decode()
+            # The minimum bytes needed to represent 'value'.
+            byte_length = max(1, (value.bit_length() + 7) // 8)
+            is_negative = value < 0
+            val_bytes = value.to_bytes(byte_length, "little", signed=is_negative)
+        elif isinstance(value, str):
+            val_bytes = value.encode()
         else:
-            data = base64.b64encode(str(value).encode()).decode()
+            val_bytes = value
+        data = base64.b64encode(val_bytes).decode()
 
         before_request = self.last_response()
         write_args = WriteMemoryArgs(
