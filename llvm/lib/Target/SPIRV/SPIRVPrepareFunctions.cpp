@@ -804,9 +804,9 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
     std::string Key =
         ("spv.mutated_callsite." + F->getName() + "." + Twine(MutatedCallIdx++))
             .str();
-    CB->setMetadata("spv.mutated_callsite",
-                    MDNode::get(F->getContext(),
-                                MDString::get(F->getContext(), Key)));
+    CB->setMetadata(
+        "spv.mutated_callsite",
+        MDNode::get(F->getContext(), MDString::get(F->getContext(), Key)));
 
     std::string Constraints;
     if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
