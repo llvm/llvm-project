@@ -1185,22 +1185,20 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
 }
 
 bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
-  const CXXRecordDecl *RD = FI.getReturnType()->getAsCXXRecordDecl();
+  QualType RetTy = FI.getReturnType();
+  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
   if (!RD)
     return false;
 
-  bool isTrivialForABI = RD->canPassInRegisters() &&
-                         isTrivialForMSVC(RD, FI.getReturnType(), CGM);
+  bool isTrivialForABI =
+      RD->canPassInRegisters() && isTrivialForMSVC(RD, RetTy, CGM);
 
   // MSVC always returns structs indirectly from C++ instance methods.
   bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
 
   if (isIndirectReturn) {
-    CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
-    unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
-    FI.getReturnInfo() =
-        ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);
+    FI.getReturnInfo() = ABIArgInfo::getNaturalIndirectNoCopy(
+        getContext(), RetTy, /*ByVal=*/false);
 
     // MSVC always passes `this` before the `sret` parameter.
     FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());

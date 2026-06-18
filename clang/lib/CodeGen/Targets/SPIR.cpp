@@ -140,8 +140,6 @@ public:
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
-
-  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 };
 } // End anonymous namespace.
 
@@ -171,10 +169,10 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
     // copied to be valid on the device.
     // This behavior follows the CUDA spec
     // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-    // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
+    // and matches the NVPTX implementation. TODO: AddrSpace should be
     // revisited if HIPSPV / byval starts making use of the AS of an indirect
     // arg.
-    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
+    return getNaturalIndirect(Ty, /*byval=*/true);
   }
   return classifyArgumentType(Ty);
 }
@@ -340,8 +338,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // Records with non-trivial destructors/copy-constructors should not be
   // passed by value.
   if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Ignore empty structs/unions.
   if (isEmptyRecord(getContext(), Ty, true))
@@ -441,15 +438,6 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
 
 unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
-}
-
-LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
-  // Types with no viable copy/move must be constructed in-place, use the
-  // default AS so the sret pointer matches the "this" convention.
-  if (RD && !RD->canPassInRegisters())
-    return LangAS::Default;
-  return getLangASFromTargetAS(
-      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(

@@ -21,10 +21,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                     RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+    return getNaturalIndirect(Ty);
   }
 
   // Treat an enum type as its underlying type.
@@ -37,7 +36,7 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
         Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
                                 ? Context.Int128Ty
                                 : Context.LongLongTy))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+      return getNaturalIndirect(Ty);
 
   return (isPromotableIntegerTypeForABI(Ty)
               ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
@@ -49,7 +48,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+    return getNaturalIndirect(RetTy);
 
   // Treat an enum type as its underlying type.
   if (const auto *ED = RetTy->getAsEnumDecl())
@@ -60,8 +59,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
         getContext().getTypeSize(getContext().getTargetInfo().hasInt128Type()
                                      ? getContext().Int128Ty
                                      : getContext().LongLongTy))
-      return getNaturalAlignIndirect(RetTy,
-                                     getDataLayout().getAllocaAddrSpace());
+      return getNaturalIndirect(RetTy);
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
@@ -126,8 +124,7 @@ bool CodeGen::classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
 
   if (const auto *RD = Ty->getAsRecordDecl();
       RD && !isa<CXXRecordDecl>(RD) && !RD->canPassInRegisters()) {
-    FI.getReturnInfo() = Info.getNaturalAlignIndirect(
-        Ty, Info.getDataLayout().getAllocaAddrSpace());
+    FI.getReturnInfo() = Info.getNaturalIndirect(Ty);
     return true;
   }
 

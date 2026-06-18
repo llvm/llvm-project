@@ -59,9 +59,10 @@ static llvm::Value *emitGetParamBuf(CodeGenFunction &CGF,
   return Ret.getScalarVal();
 }
 
-RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
-    CodeGenFunction &CGF, const CUDAKernelCallExpr *E,
-    ReturnValueSlot ReturnValue, llvm::CallBase **CallOrInvoke) {
+RValue
+CGCUDARuntime::EmitCUDADeviceKernelCallExpr(CodeGenFunction &CGF,
+                                            const CUDAKernelCallExpr *E,
+                                            llvm::CallBase **CallOrInvoke) {
   assert(CGM.getContext().getcudaLaunchDeviceDecl() ==
          E->getConfig()->getDirectCallee());
 
@@ -110,14 +111,14 @@ RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
   CGF.EmitCallArgs(LaunchCallArgs,
                    LaunchCalleeFuncTy->getAs<FunctionProtoType>(),
                    LaunchCall->arguments(), LaunchCall->getDirectCallee());
-  // Replace func and paramterbuffer arguments.
+  // Replace func and parameterbuffer arguments.
   LaunchCallArgs[0] = CallArg(RValue::get(KernelCallee.getFunctionPointer()),
                               CGM.getContext().VoidPtrTy);
   LaunchCallArgs[1] = CallArg(RValue::get(Config), CGM.getContext().VoidPtrTy);
   const CGFunctionInfo &LaunchCallInfo = CGM.getTypes().arrangeFreeFunctionCall(
       LaunchCallArgs, LaunchCalleeFuncTy->getAs<FunctionProtoType>(),
       /*ChainCall=*/false);
-  CGF.EmitCall(LaunchCallInfo, LaunchCallee, ReturnValue, LaunchCallArgs,
+  CGF.EmitCall(LaunchCallInfo, LaunchCallee, ReturnValueSlot(), LaunchCallArgs,
                CallOrInvoke,
                /*IsMustTail=*/false, E->getExprLoc());
   CGF.EmitBranch(ContBlock);
@@ -130,7 +131,6 @@ RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
 
 RValue CGCUDARuntime::EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
                                              const CUDAKernelCallExpr *E,
-                                             ReturnValueSlot ReturnValue,
                                              llvm::CallBase **CallOrInvoke) {
   llvm::BasicBlock *ConfigOKBlock = CGF.createBasicBlock("kcall.configok");
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("kcall.end");
@@ -141,7 +141,7 @@ RValue CGCUDARuntime::EmitCUDAKernelCallExpr(CodeGenFunction &CGF,
 
   eval.begin(CGF);
   CGF.EmitBlock(ConfigOKBlock);
-  CGF.EmitSimpleCallExpr(E, ReturnValue, CallOrInvoke);
+  CGF.EmitSimpleCallExpr(E, CallOrInvoke);
   CGF.EmitBranch(ContBlock);
 
   CGF.EmitBlock(ContBlock);

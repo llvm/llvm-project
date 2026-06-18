@@ -72,16 +72,14 @@ ABIArgInfo LanaiABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       --State.FreeRegs; // Non-byval indirects just use one pointer.
       return getNaturalAlignIndirectInReg(Ty);
     }
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   false);
+    return getNaturalIndirect(Ty, false);
   }
 
   // Compute the byval alignment.
-  const unsigned MinABIStackAlignInBytes = 4;
-  unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
+  const CharUnits MinABIStackAlignInBytes = CharUnits::fromQuantity(4);
+  CharUnits TypeAlign = getContext().getTypeAlignInChars(Ty);
   return ABIArgInfo::getIndirect(
-      CharUnits::fromQuantity(4),
-      /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(), /*ByVal=*/true,
+      CharUnits::fromQuantity(4), getNaturalAddrSpace(Ty), /*ByVal=*/true,
       /*Realign=*/TypeAlign > MinABIStackAlignInBytes);
 }
 
@@ -91,13 +89,10 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
-    if (RAA == CGCXXABI::RAA_Indirect) {
+    if (RAA == CGCXXABI::RAA_Indirect)
       return getIndirectResult(Ty, /*ByVal=*/false, State);
-    } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
-      return getNaturalAlignIndirect(
-          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-          /*ByVal=*/true);
-    }
+    if (RAA == CGCXXABI::RAA_DirectInMemory)
+      return getNaturalIndirect(Ty, /*ByVal=*/true);
   }
 
   if (isAggregateTypeForABI(Ty)) {

@@ -176,22 +176,21 @@ public:
   ///
   /// \param Method - The method being called, this may be null if synthesizing
   /// a property setter or getter.
-  virtual CodeGen::RValue
-  GenerateMessageSend(CodeGen::CodeGenFunction &CGF, ReturnValueSlot ReturnSlot,
-                      QualType ResultType, Selector Sel, llvm::Value *Receiver,
-                      const CallArgList &CallArgs,
-                      const ObjCInterfaceDecl *Class = nullptr,
-                      const ObjCMethodDecl *Method = nullptr) = 0;
+  virtual CodeGen::RValue GenerateMessageSend(
+      CodeGen::CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot,
+      QualType ResultType, Selector Sel, llvm::Value *Receiver,
+      const CallArgList &CallArgs, const ObjCInterfaceDecl *Class = nullptr,
+      const ObjCMethodDecl *Method = nullptr) = 0;
 
   /// Generate an Objective-C message send operation.
   ///
   /// This variant allows for the call to be substituted with an optimized
   /// variant.
   CodeGen::RValue GeneratePossiblySpecializedMessageSend(
-      CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
-      Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
-      const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
-      bool isClassMessage);
+      CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot,
+      QualType ResultType, Selector Sel, llvm::Value *Receiver,
+      const CallArgList &Args, const ObjCInterfaceDecl *OID,
+      const ObjCMethodDecl *Method, bool isClassMessage);
 
   /// Generate an Objective-C message send operation to the super
   /// class initiated in a method for Class and with the given Self
@@ -200,7 +199,7 @@ public:
   /// \param Method - The method being called, this may be null if synthesizing
   /// a property setter or getter.
   virtual CodeGen::RValue GenerateMessageSendSuper(
-      CodeGen::CodeGenFunction &CGF, ReturnValueSlot ReturnSlot,
+      CodeGen::CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot,
       QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
       bool isCategoryImpl, llvm::Value *Self, bool IsClassMessage,
       const CallArgList &CallArgs, const ObjCMethodDecl *Method = nullptr) = 0;

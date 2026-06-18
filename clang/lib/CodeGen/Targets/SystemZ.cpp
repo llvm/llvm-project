@@ -417,7 +417,7 @@ ABIArgInfo SystemZABIInfo::classifyReturnType(QualType RetTy) const {
   if (isVectorArgumentType(RetTy))
     return ABIArgInfo::getDirect();
   if (isCompoundType(RetTy) || getContext().getTypeSize(RetTy) > 64)
-    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+    return getNaturalIndirect(RetTy);
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
 }
@@ -428,8 +428,7 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerTypeForABI(Ty))
@@ -446,16 +445,14 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
   // Values that are not 1, 2, 4 or 8 bytes in size are passed indirectly.
   if (Size != 8 && Size != 16 && Size != 32 && Size != 64)
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   /*ByVal=*/false);
+    return getNaturalIndirect(Ty, /*ByVal=*/false);
 
   // Handle small structures.
   if (const auto *RD = Ty->getAsRecordDecl()) {
     // Structures with flexible arrays have variable length, so really
     // fail the size test above.
     if (RD->hasFlexibleArrayMember())
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                     /*ByVal=*/false);
+      return getNaturalIndirect(Ty, /*ByVal=*/false);
 
     // The structure is passed as an unextended integer, a half, a float,
     // or a double.
@@ -471,8 +468,7 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
 
   // Non-structure compounds are passed indirectly.
   if (isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   /*ByVal=*/false);
+    return getNaturalIndirect(Ty, /*ByVal=*/false);
 
   return ABIArgInfo::getDirect(nullptr);
 }
@@ -768,7 +764,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
   // For non-C calling convention, indirect by value for structs and complex.
   if ((CallConv != llvm::CallingConv::C) &&
       (isAggregateTypeForABI(RetTy) || RetTy->isAnyComplexType())) {
-    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+    return getNaturalIndirect(RetTy);
   }
 
   // Vectors are returned directly.
@@ -804,8 +800,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyReturnType(QualType RetTy,
       CoerceTy = llvm::ArrayType::get(CoerceTy, NumElements);
       return ABIArgInfo::getDirectInReg(CoerceTy);
     } else
-      return getNaturalAlignIndirect(RetTy,
-                                     getDataLayout().getAllocaAddrSpace());
+      return getNaturalIndirect(RetTy);
   }
   return (isPromotableIntegerTypeForABI(RetTy)
               ? ABIArgInfo::getExtend(RetTy, CGT.ConvertType(RetTy))
@@ -819,8 +814,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
 
   // Handle the generic C++ ABI.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
   // Integers and enums are extended to full register width.
   if (isPromotableIntegerTypeForABI(Ty))
@@ -828,8 +822,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
 
   // For non-C calling conventions, compound types passed by address copy.
   if ((CallConv != llvm::CallingConv::C) && isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   /*ByVal=*/false);
+    return getNaturalIndirect(Ty, /*ByVal=*/false);
 
   // Complex types are passed by value as per the XPLINK docs.
   // If place available, their members will be placed in FPRs.
@@ -893,8 +886,7 @@ ABIArgInfo ZOSXPLinkABIInfo::classifyArgumentType(QualType Ty, bool IsNamedArg,
 
   // Non-structure compounds are passed indirectly, i.e. arrays.
   if (isCompoundType(Ty))
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   /*ByVal=*/false);
+    return getNaturalIndirect(Ty, /*ByVal=*/false);
 
   return ABIArgInfo::getDirect();
 }

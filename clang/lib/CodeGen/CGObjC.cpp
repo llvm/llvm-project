@@ -122,9 +122,9 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
     Args.add(EmitAnyExpr(SubExpr), ArgQT);
   }
 
-  RValue result = Runtime.GenerateMessageSend(
-      *this, ReturnValueSlot(), BoxingMethod->getReturnType(), Sel, Receiver,
-      Args, ClassDecl, BoxingMethod);
+  RValue result =
+      Runtime.GenerateMessageSend(*this, nullptr, BoxingMethod->getReturnType(),
+                                  Sel, Receiver, Args, ClassDecl, BoxingMethod);
   return Builder.CreateBitCast(result.getScalarVal(),
                                ConvertType(E->getType()));
 }
@@ -247,8 +247,8 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
 
   // Generate the message send.
   RValue result = Runtime.GenerateMessageSend(
-      *this, ReturnValueSlot(), MethodWithObjects->getReturnType(), Sel,
-      Receiver, Args, Class, MethodWithObjects);
+      *this, nullptr, MethodWithObjects->getReturnType(), Sel, Receiver, Args,
+      Class, MethodWithObjects);
 
   // The above message send needs these objects, but in ARC they are
   // passed in a buffer that is essentially __unsafe_unretained.
@@ -454,7 +454,7 @@ static std::optional<llvm::Value *> tryGenerateSpecializedMessageSend(
 }
 
 CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
-    CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
+    CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot, QualType ResultType,
     Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
     const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
     bool isClassMessage) {
@@ -463,8 +463,8 @@ CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
                                             Sel, Method, isClassMessage)) {
     return RValue::get(*SpecializedResult);
   }
-  return GenerateMessageSend(CGF, Return, ResultType, Sel, Receiver, Args, OID,
-                             Method);
+  return GenerateMessageSend(CGF, WithReturnValueSlot, ResultType, Sel,
+                             Receiver, Args, OID, Method);
 }
 
 static void AppendFirstImpliedRuntimeProtocols(
@@ -589,7 +589,7 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
 }
 
 RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
-                                            ReturnValueSlot Return) {
+                                            ReturnSlotFn WithReturnValueSlot) {
   // Only the lookup mechanism and first two arguments of the method
   // implementation vary between runtimes.  We can get the receiver and
   // arguments in generic code.
@@ -703,19 +703,15 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
     // super is only valid in an Objective-C method
     const ObjCMethodDecl *OMD = cast<ObjCMethodDecl>(CurFuncDecl);
     bool isCategoryImpl = isa<ObjCCategoryImplDecl>(OMD->getDeclContext());
-    result = Runtime.GenerateMessageSendSuper(*this, Return, ResultType,
-                                              E->getSelector(),
-                                              OMD->getClassInterface(),
-                                              isCategoryImpl,
-                                              Receiver,
-                                              isClassMessage,
-                                              Args,
-                                              method);
+    result = Runtime.GenerateMessageSendSuper(
+        *this, WithReturnValueSlot, ResultType, E->getSelector(),
+        OMD->getClassInterface(), isCategoryImpl, Receiver, isClassMessage,
+        Args, method);
   } else {
     // Call runtime methods directly if we can.
     result = Runtime.GeneratePossiblySpecializedMessageSend(
-        *this, Return, ResultType, E->getSelector(), Receiver, Args, OID,
-        method, isClassMessage);
+        *this, WithReturnValueSlot, ResultType, E->getSelector(), Receiver,
+        Args, OID, method, isClassMessage);
   }
 
   // For delegate init calls in ARC, implicitly store the result of
@@ -751,15 +747,10 @@ struct FinishARCDealloc final : EHScopeStack::Cleanup {
     llvm::Value *self = CGF.LoadObjCSelf();
 
     CallArgList args;
-    CGF.CGM.getObjCRuntime().GenerateMessageSendSuper(CGF, ReturnValueSlot(),
-                                                      CGF.getContext().VoidTy,
-                                                      method->getSelector(),
-                                                      iface,
-                                                      isCategory,
-                                                      self,
-                                                      /*is class msg*/ false,
-                                                      args,
-                                                      method);
+    CGF.CGM.getObjCRuntime().GenerateMessageSendSuper(
+        CGF, nullptr, CGF.getContext().VoidTy, method->getSelector(), iface,
+        isCategory, self,
+        /*is class msg*/ false, args, method);
   }
 };
 }
@@ -1911,10 +1902,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   Args.add(RValue::get(Count), getContext().getNSUIntegerType());
 
   // Start the enumeration.
-  RValue CountRV =
-      CGM.getObjCRuntime().GenerateMessageSend(*this, ReturnValueSlot(),
-                                               getContext().getNSUIntegerType(),
-                                               FastEnumSel, Collection, Args);
+  RValue CountRV = CGM.getObjCRuntime().GenerateMessageSend(
+      *this, nullptr, getContext().getNSUIntegerType(), FastEnumSel, Collection,
+      Args);
 
   // The initial number of objects that were returned in the buffer.
   llvm::Value *initialBufferLimit = CountRV.getScalarVal();
@@ -2056,9 +2046,8 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
       IsKindOfClassArgs.add(RValue::get(Cls), C.getObjCClassType());
       llvm::Value *IsClass =
           CGM.getObjCRuntime()
-              .GenerateMessageSend(*this, ReturnValueSlot(), C.BoolTy,
-                                   IsKindOfClassSel, CurrentItem,
-                                   IsKindOfClassArgs)
+              .GenerateMessageSend(*this, nullptr, C.BoolTy, IsKindOfClassSel,
+                                   CurrentItem, IsKindOfClassArgs)
               .getScalarVal();
       llvm::Constant *StaticData[] = {
           EmitCheckSourceLocation(S.getBeginLoc()),
@@ -2121,10 +2110,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   // Otherwise, we have to fetch more elements.
   EmitBlock(FetchMoreBB);
 
-  CountRV =
-      CGM.getObjCRuntime().GenerateMessageSend(*this, ReturnValueSlot(),
-                                               getContext().getNSUIntegerType(),
-                                               FastEnumSel, Collection, Args);
+  CountRV = CGM.getObjCRuntime().GenerateMessageSend(
+      *this, nullptr, getContext().getNSUIntegerType(), FastEnumSel, Collection,
+      Args);
 
   // If we got a zero count, we're done.
   llvm::Value *refetchCount = CountRV.getScalarVal();
@@ -2800,19 +2788,15 @@ llvm::Value *CodeGenFunction::EmitObjCMRRAutoreleasePoolPush() {
   const IdentifierInfo *II = &CGM.getContext().Idents.get("alloc");
   Selector AllocSel = getContext().Selectors.getSelector(0, &II);
   CallArgList Args;
-  RValue AllocRV =
-    Runtime.GenerateMessageSend(*this, ReturnValueSlot(),
-                                getContext().getObjCIdType(),
-                                AllocSel, Receiver, Args);
+  RValue AllocRV = Runtime.GenerateMessageSend(
+      *this, nullptr, getContext().getObjCIdType(), AllocSel, Receiver, Args);
 
   // [Receiver init]
   Receiver = AllocRV.getScalarVal();
   II = &CGM.getContext().Idents.get("init");
   Selector InitSel = getContext().Selectors.getSelector(0, &II);
-  RValue InitRV =
-    Runtime.GenerateMessageSend(*this, ReturnValueSlot(),
-                                getContext().getObjCIdType(),
-                                InitSel, Receiver, Args);
+  RValue InitRV = Runtime.GenerateMessageSend(
+      *this, nullptr, getContext().getObjCIdType(), InitSel, Receiver, Args);
   return InitRV.getScalarVal();
 }
 
@@ -2847,8 +2831,8 @@ void CodeGenFunction::EmitObjCMRRAutoreleasePoolPop(llvm::Value *Arg) {
   const IdentifierInfo *II = &CGM.getContext().Idents.get("drain");
   Selector DrainSel = getContext().Selectors.getSelector(0, &II);
   CallArgList Args;
-  CGM.getObjCRuntime().GenerateMessageSend(*this, ReturnValueSlot(),
-                              getContext().VoidTy, DrainSel, Arg, Args);
+  CGM.getObjCRuntime().GenerateMessageSend(*this, nullptr, getContext().VoidTy,
+                                           DrainSel, Arg, Args);
 }
 
 void CodeGenFunction::destroyARCStrongPrecise(CodeGenFunction &CGF,
@@ -3995,12 +3979,10 @@ CodeGenFunction::EmitBlockCopyAndAutorelease(llvm::Value *Block, QualType Ty) {
   CGObjCRuntime &Runtime = CGM.getObjCRuntime();
   llvm::Value *Val = Block;
   RValue Result;
-  Result = Runtime.GenerateMessageSend(*this, ReturnValueSlot(),
-                                       Ty, CopySelector,
-                                       Val, CallArgList(), nullptr, nullptr);
+  Result = Runtime.GenerateMessageSend(*this, nullptr, Ty, CopySelector, Val,
+                                       CallArgList(), nullptr, nullptr);
   Val = Result.getScalarVal();
-  Result = Runtime.GenerateMessageSend(*this, ReturnValueSlot(),
-                                       Ty, AutoreleaseSelector,
+  Result = Runtime.GenerateMessageSend(*this, nullptr, Ty, AutoreleaseSelector,
                                        Val, CallArgList(), nullptr, nullptr);
   Val = Result.getScalarVal();
   return Val;

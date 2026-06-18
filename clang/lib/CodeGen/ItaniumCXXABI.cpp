@@ -1377,18 +1377,15 @@ ItaniumCXXABI::EmitMemberPointerIsNotNull(CodeGenFunction &CGF,
 }
 
 bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
-  const CXXRecordDecl *RD = FI.getReturnType()->getAsCXXRecordDecl();
+  QualType RetTy = FI.getReturnType();
+  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
   if (!RD)
     return false;
 
-  // If C++ prohibits us from making a copy, return by address using the target
-  // hook getSRetAddrSpace to decide the AS.
+  // If C++ prohibits us from making a copy, return by address.
   if (!RD->canPassInRegisters()) {
-    auto Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
-    unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
-    FI.getReturnInfo() =
-        ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);
+    FI.getReturnInfo() = ABIArgInfo::getNaturalIndirectNoCopy(
+        getContext(), RetTy, /*ByVal=*/false);
     return true;
   }
   return false;

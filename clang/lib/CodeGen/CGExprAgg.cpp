@@ -62,8 +62,13 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   //
   // The given function should take a ReturnValueSlot, and return an RValue that
   // points to said slot.
-  void withReturnValueSlot(const Expr *E,
-                           llvm::function_ref<RValue(ReturnValueSlot)> Fn);
+  RValue withReturnValueSlot(const CGFunctionInfo &FnInfo,
+                             llvm::function_ref<RValue(ReturnValueSlot)> Fn);
+
+  ReturnSlotFn makeReturnSlotFn() {
+    return ReturnSlotFn::make<&AggExprEmitter::withReturnValueSlot>(
+        this, IsResultUnused);
+  }
 
   void DoZeroInitPadding(uint64_t &PaddingStart, uint64_t PaddingEnd,
                          const FieldDecl *NextField);
@@ -274,86 +279,101 @@ bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
   return Record->hasObjectMember();
 }
 
-void AggExprEmitter::withReturnValueSlot(
-    const Expr *E, llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
-  QualType RetTy = E->getType();
+RValue AggExprEmitter::withReturnValueSlot(
+    const CGFunctionInfo &FnInfo,
+    llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
+  QualType RetTy = FnInfo.getReturnType();
+
+  // If it makes no observable difference, save a memcpy + temporary.
+  // This is not just an optimization: avoiding the copy may be mandatory in
+  // cases where it would make an observable difference.
+  //
+  // We need to always provide an address if destruction is required.
+  // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
+  // its lifetime before we have the chance to emit a proper destructor call.
   bool RequiresDestruction =
       !Dest.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
 
-  // If it makes no observable difference, save a memcpy + temporary.
-  //
-  // We need to always provide our own temporary if destruction is required.
-  // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
-  // its lifetime before we have the chance to emit a proper destructor call.
-  //
-  // We also need a temporary if the destination is in a different address space
-  // from the sret AS. Use the target hook to get the actual sret AS for this
-  // return type.
-  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
-  LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
-  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
-  bool CanAggregateCopy =
-      RD ? (RD->hasTrivialCopyConstructor() ||
-            RD->hasTrivialMoveConstructor() || RD->hasTrivialCopyAssignment() ||
-            RD->hasTrivialMoveAssignment() || RD->hasAttr<TrivialABIAttr>() ||
-            RD->isUnion())
-         : RetTy.isTriviallyCopyableType(CGF.getContext());
-  bool DestASMismatch = !Dest.isIgnored() && CanAggregateCopy &&
-                        Dest.getAddress()
-                                .getBasePointer()
-                                ->stripPointerCasts()
-                                ->getType()
-                                ->getPointerAddressSpace() != SRetAS;
-  bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
-                 (RequiresDestruction && Dest.isIgnored()) || DestASMismatch;
+  // Determine the addrspace the ABI requires for the sret pointer, using the
+  // actual ABI decision from FnInfo rather than guessing from the QualType.
+  const ABIArgInfo &RetInfo = FnInfo.getReturnInfo();
+  bool ABIReturnsIndirect = RetInfo.isIndirect() || RetInfo.isIndirectAliased();
+  unsigned SRetAS =
+      ABIReturnsIndirect
+          ? RetInfo.getIndirectAddrSpace()
+          : CGF.getContext().getTargetAddressSpace(RetTy.getAddressSpace());
+
+  // Check whether a copy is required because the destination is not in the
+  // addrspace the ABI requires for the sret pointer (and a simple cast won't
+  // suffice because the underlying alloc is in a different addrspace).
+  Address DestAddr = Dest.getAddress();
+  bool addrspaceMismatch = [&] {
+    if (!ABIReturnsIndirect || !DestAddr.isValid())
+      return false;
+    if (DestAddr.getAddressSpace() == SRetAS)
+      return false;
+    llvm::Value *V = DestAddr.getBasePointer()->stripPointerCasts();
+    return V->getType()->getPointerAddressSpace() != SRetAS;
+  }();
+
+  bool NoCopy =
+      // Copy okay by construction (see note on AggValueSlot::AliasedFlag)
+      !Dest.isPotentiallyAliased()
+      // Copy permitted by ObjC semantics
+      && !Dest.requiresGCollection()
+      // No actual copy is performed, since there is no Dest
+      && !(RequiresDestruction && Dest.isIgnored())
+      // ABI sret addrspace requirement is satisfiable with a cast, not a copy
+      && !addrspaceMismatch;
 
   Address RetAddr = Address::invalid();
-
   EHScopeStack::stable_iterator LifetimeEndBlock;
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
-  if (!UseTemp) {
+  if (NoCopy)
     RetAddr = Dest.getAddress();
-    if (RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
-      llvm::Type *SRetPtrTy =
-          llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
-      RetAddr = RetAddr.withPointer(
-          CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
-          RetAddr.isKnownNonNull());
-    }
-  } else {
+  else
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
-    if (CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
-      LifetimeStartInst =
-          cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
-      assert(LifetimeStartInst->getIntrinsicID() ==
-                 llvm::Intrinsic::lifetime_start &&
-             "Last insertion wasn't a lifetime.start?");
+  if (!NoCopy && RetAddr.isValid() &&
+      CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
+    // n.b. If not copying, the caller often already emitted the lifetime start,
+    // so emitting it again is unnecessary, though would be semantically valid.
+    LifetimeStartInst =
+        cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
+    assert(LifetimeStartInst->getIntrinsicID() ==
+               llvm::Intrinsic::lifetime_start &&
+           "Last insertion wasn't a lifetime.start?");
 
-      CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
-          NormalEHLifetimeMarker, RetAddr);
-      LifetimeEndBlock = CGF.EHStack.stable_begin();
-    }
+    CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
+        NormalEHLifetimeMarker, RetAddr);
+    LifetimeEndBlock = CGF.EHStack.stable_begin();
   }
-
+  if (NoCopy && RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
+    llvm::Type *SRetPtrTy =
+        llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
+    RetAddr = RetAddr.withPointer(
+        CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
+        RetAddr.isKnownNonNull());
+  }
   RValue Src =
       EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused,
                                Dest.isExternallyDestructed()));
 
-  if (!UseTemp)
-    return;
+  if (NoCopy)
+    return Src;
 
-  assert(Dest.isIgnored() || Dest.emitRawPointer(CGF) !=
-                                 Src.getAggregatePointer(E->getType(), CGF));
-  EmitFinalDestCopy(E->getType(), Src);
+  assert(Dest.isIgnored() ||
+         Dest.emitRawPointer(CGF) != Src.getAggregatePointer(RetTy, CGF));
+  EmitFinalDestCopy(RetTy, Src);
 
   if (!RequiresDestruction && LifetimeStartInst) {
     // If there's no dtor to run, the copy was the last use of our temporary.
     // Since we're not guaranteed to be in an ExprWithCleanups, clean up
     // eagerly.
     CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
-    CGF.EmitLifetimeEnd(RetAddr.getBasePointer());
+    CGF.EmitLifetimeEnd(LifetimeStartInst->getArgOperand(0));
   }
+  return Src;
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
@@ -1124,14 +1144,11 @@ void AggExprEmitter::VisitCallExpr(const CallExpr *E) {
     return;
   }
 
-  withReturnValueSlot(
-      E, [&](ReturnValueSlot Slot) { return CGF.EmitCallExpr(E, Slot); });
+  CGF.EmitCallExpr(E, /*CallOrInvoke=*/nullptr, makeReturnSlotFn());
 }
 
 void AggExprEmitter::VisitObjCMessageExpr(ObjCMessageExpr *E) {
-  withReturnValueSlot(E, [&](ReturnValueSlot Slot) {
-    return CGF.EmitObjCMessageExpr(E, Slot);
-  });
+  CGF.EmitObjCMessageExpr(E, makeReturnSlotFn());
 }
 
 void AggExprEmitter::VisitBinComma(const BinaryOperator *E) {

@@ -230,8 +230,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                     RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
@@ -304,8 +303,6 @@ public:
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
-
-  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
@@ -464,16 +461,6 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
       PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
-}
-
-LangAS
-AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
-  // Types with no viable copy/move must be constructed in-place , use the
-  // default AS so the sret pointer matches the "this" convention.
-  if (RD && !RD->canPassInRegisters())
-    return LangAS::Default;
-  return getLangASFromTargetAS(
-      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 LangAS
