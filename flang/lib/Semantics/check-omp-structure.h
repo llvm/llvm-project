@@ -32,17 +32,6 @@ static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{
     OmpClauseSet{Clause::OMPC_reduction} | privateSet};
-// omp.td cannot differentiate allowed/not allowed clause list for few
-// directives for fortran. nowait is not allowed on begin directive clause list
-// for below list of directives. Directives with conflicting list of clauses are
-// included in below list.
-static const OmpDirectiveSet noWaitClauseNotAllowedSet{
-    Directive::OMPD_do,
-    Directive::OMPD_do_simd,
-    Directive::OMPD_sections,
-    Directive::OMPD_single,
-    Directive::OMPD_workshare,
-};
 } // namespace omp
 } // namespace llvm
 
@@ -333,10 +322,10 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
-  void CheckTypeParamInquiry(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckTypeParamInquiry(
-      const parser::CharBlock &source, const parser::OmpObjectList &objects);
+  void CheckTypeParamInquiry(const parser::CharBlock &source,
+      const parser::OmpObject &object, llvm::omp::Directive dirId);
+  void CheckTypeParamInquiry(const parser::CharBlock &source,
+      const parser::OmpObject &object, llvm::omp::Clause clauseId);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObject &object, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
@@ -345,10 +334,6 @@ private:
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
-  void CheckSymbolName(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckSymbolNames(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
@@ -407,7 +392,6 @@ private:
       const parser::OmpClause &initClause);
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
-  void CheckTempDescriptorMappings();
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -429,12 +413,6 @@ private:
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
-
-  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
-  // and symbols mapped in TARGET EXIT DATA within the current function scope.
-  // Used to warn about potential issues with mapping temporary descriptors.
-  std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
-  std::set<const Symbol *> tempDescriptorExitMaps_;
 
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into
