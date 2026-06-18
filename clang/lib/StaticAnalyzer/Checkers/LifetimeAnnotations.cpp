@@ -182,22 +182,21 @@ void LifetimeAnnotations::checkLifetimeEnd(const VarDecl *VD,
   }
 }
 
+// FIXME: Use helper functions for checkLocation
 void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  ExplodedNode *N = C.generateNonFatalErrorNode();
-  if (!N)
-    return;
-
   // FIXME: Because of the CFG::LifetimeEnd elements now the analyzer can
   // reason about out-of-scope dangling pointer deref even if there is
   // no annotations in the source code.
   if (const MemRegion *R = Loc.getAsRegion()) {
-    if (R && State->contains<DeadSourceSet>(R))
-      reportUseAfterScope(R, N, C);
+    if (State->contains<DeadSourceSet>(R)) {
+      if (ExplodedNode *N = C.generateNonFatalErrorNode())
+        reportUseAfterScope(R, N, C);
+    }
   }
 
   if (LBMap.isEmpty() && LBMapVal.isEmpty())
@@ -206,12 +205,13 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   // FIXME: If a borrower has multiple bound sources the callback warns
   // if any source has died. The callback should track which source the
   // borrower actually points.
-
   if (SymbolRef LocSym = Loc.getAsSymbol(true)) {
     if (auto *SourceSet = State->get<LifetimeBoundMap>(LocSym)) {
       for (const MemRegion *Source : *SourceSet) {
-        if (State->contains<DeadSourceSet>(Source))
-          reportUseAfterScope(Source, N, C);
+        if (State->contains<DeadSourceSet>(Source)) {
+          if (ExplodedNode *N = C.generateNonFatalErrorNode())
+            reportUseAfterScope(Source, N, C);
+        }
       }
     }
   }
@@ -219,8 +219,11 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
     if (auto *SourceSet = State->get<LifetimeBoundMapVal>(LocRegion)) {
       for (const MemRegion *Source : *SourceSet) {
-        if (State->contains<DeadSourceSet>(Source))
-          reportUseAfterScope(Source, N, C);
+        if (State->contains<DeadSourceSet>(Source)) {
+          if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
+            reportUseAfterScope(Source, N, C);
+          }
+        }
       }
     }
   }
