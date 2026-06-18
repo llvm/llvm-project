@@ -1228,8 +1228,7 @@ mlir::LogicalResult CoboundOpConversion(T op, mlir::PatternRewriter &rewriter,
       builder, loc, ftype, coarrayHandle, dim, result);
   fir::CallOp::create(builder, loc, funcOp, args);
   result = fir::LoadOp::create(builder, loc, result).getResult();
-  if (result.getType() != op.getType())
-    result = builder.createConvert(loc, op.getType(), result);
+  result = builder.createConvert(loc, op.getType(), result);
   rewriter.replaceOp(op, result);
   return mlir::success();
 }
