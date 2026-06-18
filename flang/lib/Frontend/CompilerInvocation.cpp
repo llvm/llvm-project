@@ -878,7 +878,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
   }
 
   // -f{no-}openacc-default-none-scalars-strict
@@ -1550,6 +1550,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
     else
       opts.PrepareForThinLTO = true;
   }
+
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
 
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =

@@ -520,19 +520,6 @@ void AArch64RegisterBankInfo::applyMappingImpl(
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
-  case TargetOpcode::G_INSERT_VECTOR_ELT: {
-    if (foldTruncOfI32Constant(MI, 2, MRI, *this))
-      return applyDefaultMapping(OpdMapper);
-
-    // Extend smaller gpr operands to 32 bit.
-    Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-    LLT OperandType = MRI.getType(MI.getOperand(2).getReg());
-    auto Ext = Builder.buildAnyExt(OperandType.changeElementSize(32),
-                                   MI.getOperand(2).getReg());
-    MRI.setRegBank(Ext.getReg(0), getRegBank(AArch64::GPRRegBankID));
-    MI.getOperand(2).setReg(Ext.getReg(0));
-    return applyDefaultMapping(OpdMapper);
-  }
   case AArch64::G_DUP: {
     if (foldTruncOfI32Constant(MI, 1, MRI, *this))
       return applyDefaultMapping(OpdMapper);
@@ -654,6 +641,8 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqneg:
   case Intrinsic::aarch64_neon_sqabs:
   case Intrinsic::aarch64_neon_scalar_uqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtun:
   case Intrinsic::aarch64_crypto_sha1h:
   case Intrinsic::aarch64_crypto_sha1c:
   case Intrinsic::aarch64_crypto_sha1p:
@@ -1328,13 +1317,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (getRegBank(MI.getOperand(2).getReg(), MRI, TRI) == &AArch64::FPRRegBank)
       OpRegBankIdx[2] = PMI_FirstFPR;
     else {
-      // If the type is i8/i16, and the regbank will be GPR, then we change the
-      // type to i32 in applyMappingImpl.
-      LLT Ty = MRI.getType(MI.getOperand(2).getReg());
-      if (Ty.getSizeInBits() == 8 || Ty.getSizeInBits() == 16) {
-        // Calls applyMappingImpl()
-        MappingID = CustomMappingID;
-      }
       OpRegBankIdx[2] = PMI_FirstGPR;
     }
 

@@ -52,16 +52,14 @@ struct AMDGPUImageDMaskIntrinsic {
 // handling NaNs.
 static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
                            const APFloat &Src2) {
+  assert(!Src0.isNaN() && !Src1.isNaN() && !Src2.isNaN() &&
+         "nans handled separately");
   APFloat Max3 = maxnum(maxnum(Src0, Src1), Src2);
 
-  APFloat::cmpResult Cmp0 = Max3.compare(Src0);
-  assert(Cmp0 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp0 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src0))
     return maxnum(Src1, Src2);
 
-  APFloat::cmpResult Cmp1 = Max3.compare(Src1);
-  assert(Cmp1 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp1 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src1))
     return maxnum(Src0, Src2);
 
   return maxnum(Src0, Src1);
@@ -138,11 +136,15 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   // Modify arguments and types
   Func(Args, OverloadTys);
 
-  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, OverloadTys, Args);
+  CallInst *NewCall =
+      IC.Builder.CreateIntrinsicWithoutFolding(NewIntr, OverloadTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
+  // Copy attributes
+  AttributeList OldAttrList = OldIntr.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -974,6 +976,11 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
                                         ArrayRef<uint8_t> Ids,
                                         const GCNSubtarget &ST,
                                         const DataLayout &DL) {
+  // Identity shuffle (every lane reads itself) folds to the source value.
+  if (all_of(enumerate(Ids),
+             [](const auto &E) { return E.value() == E.index(); }))
+    return Src;
+
   // Uniform shuffle (all lanes read the same value) is handled by cheaper
   // broadcast/readlane intrinsics.
   if (all_equal(Ids))
@@ -1673,15 +1680,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // intrinsic exposes) is one bit per thread, masked with the EXEC
         // register (which contains the bitmask of live threads). So a
         // comparison that always returns true is the same as a read of the
-        // EXEC register.
-        Metadata *MDArgs[] = {MDString::get(II.getContext(), "exec")};
-        MDNode *MD = MDNode::get(II.getContext(), MDArgs);
-        Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
-        CallInst *NewCall = IC.Builder.CreateIntrinsic(Intrinsic::read_register,
-                                                       II.getType(), Args);
-        NewCall->addFnAttr(Attribute::Convergent);
-        NewCall->takeName(&II);
-        return IC.replaceInstUsesWith(II, NewCall);
+        // EXEC register. ballot(true) reads EXEC at the wave-size width, so
+        // zext/trunc the result to the intrinsic's return type.
+        Type *WaveTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
+        Value *Ballot = IC.Builder.CreateIntrinsic(
+            Intrinsic::amdgcn_ballot, WaveTy, IC.Builder.getTrue());
+        Value *Result = IC.Builder.CreateZExtOrTrunc(Ballot, II.getType());
+        return IC.replaceInstUsesWith(II, Result);
       }
 
       // Canonicalize constants to RHS.
@@ -1774,7 +1779,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       Value *Args[] = {SrcLHS, SrcRHS,
                        ConstantInt::get(CC->getType(), SrcPred)};
-      CallInst *NewCall = IC.Builder.CreateIntrinsic(
+      Value *NewCall = IC.Builder.CreateIntrinsic(
           NewIID, {II.getType(), SrcLHS->getType()}, Args);
       NewCall->takeName(&II);
       return IC.replaceInstUsesWith(II, NewCall);
@@ -2212,7 +2217,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[0] = Src0;
     Args[1] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
@@ -2254,7 +2259,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[1] = Src0;
     Args[3] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {II.getArgOperand(5)->getType(), Src0->getType(), Src1->getType()},
         Args, &II);
     NewII->takeName(&II);
@@ -2404,10 +2409,12 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[0] = IC.Builder.CreateShuffleVector(II.getOperand(0), EltMask);
   }
 
-  CallInst *NewCall =
-      IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsicWithoutFolding(
+      II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
+  AttributeList OldAttrList = II.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {

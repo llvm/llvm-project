@@ -712,6 +712,29 @@ LogicalResult verifyConvOutputSize(
 }
 
 //===----------------------------------------------------------------------===//
+// mxint8Type DenseElementTypeInterface implementation.
+//===----------------------------------------------------------------------===//
+size_t mlir::tosa::mxint8Type::getDenseElementBitSize() const { return 8; }
+
+Attribute
+mlir::tosa::mxint8Type::convertToAttribute(ArrayRef<char> rawData) const {
+  assert(rawData.size() == 1 && "expected 1 byte for tosa.mxint8 element");
+  const auto intType = IntegerType::get(getContext(), 8);
+  return intType.convertToAttribute(rawData);
+}
+
+LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
+    Attribute attr, SmallVectorImpl<char> &result) const {
+  const auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr)
+    return failure();
+  const Type attrType = intAttr.getType();
+  if (!attrType.isSignlessInteger(8))
+    return failure();
+  return cast<IntegerType>(attrType).convertFromAttribute(attr, result);
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -3104,18 +3127,6 @@ static FailureOr<int64_t> getZeroPoint(Value val, bool signExtend) {
   return -1;
 }
 
-static FailureOr<int64_t> getConstantScalarIntValue(Value val) {
-  ElementsAttr attr;
-  if (!matchPattern(val, m_Constant(&attr)))
-    return failure();
-
-  if (!llvm::isa<IntegerType>(attr.getElementType()) ||
-      attr.getNumElements() != 1)
-    return failure();
-
-  return attr.getValues<APInt>()[0].getSExtValue();
-}
-
 template <typename T>
 static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
                                      const std::string &operand) {
@@ -3364,6 +3375,37 @@ LogicalResult tosa::GatherOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::RowGatherOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    RowGatherOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outputShape;
+  outputShape.resize(3, ShapedType::kDynamic);
+
+  const ShapeAdaptor valuesShape(adaptor.getValues().getType());
+  if (valuesShape.hasRank()) {
+    outputShape[0] = valuesShape.getDimSize(0);
+    outputShape[2] = valuesShape.getDimSize(2);
+  }
+
+  const ShapeAdaptor indicesShape(adaptor.getIndices().getType());
+  if (indicesShape.hasRank()) {
+    if (outputShape[0] == ShapedType::kDynamic)
+      outputShape[0] = indicesShape.getDimSize(0);
+
+    const FailureOr<int32_t> maybeRowCount =
+        getConstantScalarIntValue<int32_t>(adaptor.getRowCount());
+    if (succeeded(maybeRowCount)) {
+      const int64_t indicesW = indicesShape.getDimSize(1);
+      if (ShapedType::isStatic(indicesW))
+        outputShape[1] = indicesW * maybeRowCount.value();
+    }
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
 LogicalResult tosa::RowGatherBlockScaledOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     RowGatherBlockScaledOp::Adaptor adaptor,
@@ -3384,7 +3426,8 @@ LogicalResult tosa::RowGatherBlockScaledOp::inferReturnTypeComponents(
     if (dataShape[0] == ShapedType::kDynamic)
       dataShape[0] = indicesShape.getDimSize(0);
 
-    if (auto rowCount = getConstantScalarIntValue(adaptor.getRowCount());
+    if (auto rowCount =
+            getConstantScalarIntValue<int32_t>(adaptor.getRowCount());
         succeeded(rowCount) && rowCount.value() > 0) {
       const int64_t indicesW = indicesShape.getDimSize(1);
       if (ShapedType::isStatic(indicesW))
@@ -3455,6 +3498,58 @@ LogicalResult tosa::GatherOp::verify() {
   return success();
 }
 
+LogicalResult tosa::RowGatherOp::verify() {
+  if (failed(verifySameElementTypes(*this, /* inType = */ getValues().getType(),
+                                    /* outType = */ getOutput().getType())))
+    return failure();
+
+  const FailureOr<int32_t> maybeRowCount =
+      getConstantScalarIntValue<int32_t>(getRowCount());
+  if (succeeded(maybeRowCount) && maybeRowCount.value() <= 0)
+    return emitOpError() << "requires row_count to be > 0, got "
+                         << maybeRowCount.value();
+
+  int64_t n = ShapedType::kDynamic;
+  int64_t c = ShapedType::kDynamic;
+  int64_t w = ShapedType::kDynamic;
+
+  const ShapeAdaptor valuesShape(getValues().getType());
+  if (valuesShape.hasRank()) {
+    n = valuesShape.getDimSize(0);
+    c = valuesShape.getDimSize(2);
+  }
+
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  if (indicesShape.hasRank()) {
+    if (failed(tryUpdateDimOrFailure(*this, n, indicesShape.getDimSize(0),
+                                     "indices", "batch")))
+      return failure();
+    w = indicesShape.getDimSize(1);
+  }
+
+  const ShapeAdaptor outputShape(getOutput().getType());
+  if (outputShape.hasRank()) {
+    if (failed(tryUpdateDimOrFailure(*this, n, outputShape.getDimSize(0),
+                                     "output", "batch")) ||
+        failed(tryUpdateDimOrFailure(*this, c, outputShape.getDimSize(2),
+                                     "output", "channels")))
+      return failure();
+
+    if (succeeded(maybeRowCount) && maybeRowCount.value() > 0 &&
+        ShapedType::isStatic(w)) {
+      const int64_t expectedOutputRows = w * maybeRowCount.value();
+      if (ShapedType::isStatic(outputShape.getDimSize(1)) &&
+          outputShape.getDimSize(1) != expectedOutputRows)
+        return emitOpError()
+               << "requires output dimension to be equal to "
+                  "indices[1]*row_count ("
+               << expectedOutputRows << "), got " << outputShape.getDimSize(1);
+    }
+  }
+
+  return success();
+}
+
 LogicalResult tosa::RowGatherBlockScaledOp::verify() {
   const OperandRange values = getValues();
   const ResultRange output = getOutput();
@@ -3488,7 +3583,7 @@ LogicalResult tosa::RowGatherBlockScaledOp::verify() {
                                 "values[1]", "output[1]")))
     return failure();
 
-  if (auto rowCount = getConstantScalarIntValue(getRowCount());
+  if (auto rowCount = getConstantScalarIntValue<int32_t>(getRowCount());
       succeeded(rowCount) && rowCount.value() <= 0)
     return emitOpError() << "requires row_count to be > 0, got "
                          << rowCount.value();
@@ -3527,7 +3622,7 @@ LogicalResult tosa::RowGatherBlockScaledOp::verify() {
                                      "output[0]", "channels")))
       return failure();
 
-    if (auto rowCount = getConstantScalarIntValue(getRowCount());
+    if (auto rowCount = getConstantScalarIntValue<int32_t>(getRowCount());
         succeeded(rowCount) && rowCount.value() > 0 &&
         ShapedType::isStatic(w)) {
       const int64_t expectedOutputRows = w * rowCount.value();
@@ -3556,7 +3651,7 @@ LogicalResult tosa::RowGatherBlockScaledOp::verify() {
                                        "output[1]", "batch")))
         return failure();
 
-      if (auto rowCount = getConstantScalarIntValue(getRowCount());
+      if (auto rowCount = getConstantScalarIntValue<int32_t>(getRowCount());
           succeeded(rowCount) && rowCount.value() > 0 &&
           ShapedType::isStatic(w)) {
         const int64_t expectedOutputRows = w * rowCount.value();

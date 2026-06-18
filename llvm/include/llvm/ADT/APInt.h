@@ -1809,8 +1809,8 @@ public:
     return logBase2();
   }
 
-  /// Compute the square root.
-  LLVM_ABI APInt sqrt() const;
+  /// Compute the floor of the square root of the unsigned value.
+  LLVM_ABI APInt sqrtFloor() const;
 
   /// Get the absolute value.  If *this is < 0 then return -(*this), otherwise
   /// *this.  Note that the "most negative" signed number (e.g. -128 for 8 bit
@@ -2527,12 +2527,6 @@ LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
 
 /// Provide DenseMapInfo for APInt.
 template <> struct DenseMapInfo<APInt, void> {
-  static inline APInt getEmptyKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~0ULL;
-    return V;
-  }
-
   LLVM_ABI static unsigned getHashValue(const APInt &Key);
 
   static bool isEqual(const APInt &LHS, const APInt &RHS) {
