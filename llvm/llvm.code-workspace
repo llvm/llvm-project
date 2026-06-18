@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../flang"
+		},
+		{
+			"path": "../flang-rt"
+		},
+		{
+			"path": "../clang"
+		},
+		{
+			"path": "../offload"
+		},
+		{
+			"path": "../openmp"
+		}
+	],
+	"settings": {}
+}

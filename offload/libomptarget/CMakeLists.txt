@@ -17,8 +17,6 @@ add_library(omptarget SHARED
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
-
-  KernelLanguage/API.cpp
 )
 
 if(LLVM_LINK_LLVM_DYLIB)

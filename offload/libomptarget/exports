@@ -80,9 +80,6 @@ VERS1.0 {
     __tgt_interop_release;
     __tgt_target_sync;
     __tgt_register_rpc_callback;
-    __llvmPushCallConfiguration;
-    __llvmPopCallConfiguration;
-    llvmLaunchKernel;
   local:
     *;
 };

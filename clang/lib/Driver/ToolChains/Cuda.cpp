@@ -301,6 +301,10 @@ CudaInstallationDetector::CudaInstallationDetector(
 
 void CudaInstallationDetector::AddCudaIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false))
+    return;
+
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // Add cuda_wrappers/* to our system include path.  This lets us wrap
     // standard library headers.
@@ -395,7 +399,10 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                     const char *LinkingOutput) const {
   const auto &TC =
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
-  assert(TC.getTriple().isNVPTX() && "Wrong platform");
+
+  bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false);
+  assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   BoundArch GPUArch;
   // If this is a CUDA action we need to extract the device architecture
@@ -418,7 +425,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
-  if (!Args.hasArg(options::OPT_no_cuda_version_check)) {
+  if (!UseLLVMOffload && !Args.hasArg(options::OPT_no_cuda_version_check)) {
     TC.CudaInstallation.CheckCudaVersionSupportsArch(GPUArch.Arch);
   }
 
@@ -540,7 +547,9 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
                                     const char *LinkingOutput) const {
   const auto &TC =
       static_cast<const toolchains::CudaToolChain &>(getToolChain());
-  assert(TC.getTriple().isNVPTX() && "Wrong platform");
+  bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false);
+  assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   ArgStringList CmdArgs;
   if (TC.CudaInstallation.version() <= CudaVersion::CUDA_100)
@@ -588,7 +597,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
   ArgStringList CmdArgs;
 
-  assert(TC.getTriple().isNVPTX() && "Wrong platform");
+  bool UseLLVMOffload = Args.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false);
+  assert((UseLLVMOffload || TC.getTriple().isNVPTX()) && "Wrong platform");
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -963,6 +974,10 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
 
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false))
+    return;
+
   // Check our CUDA version if we're going to include the CUDA headers.
   if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                          true) &&

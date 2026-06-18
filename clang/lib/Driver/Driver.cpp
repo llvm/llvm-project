@@ -1014,20 +1014,18 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
   bool UseLLVMOffload = C.getInputArgs().hasArg(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
-  bool IsCuda =
+  bool IsCuda = !UseLLVMOffload &&
       llvm::any_of(Inputs,
                    [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
                      return types::isCuda(I.first);
-                   }) &&
-      !UseLLVMOffload;
-  bool IsHIP =
+                   });
+  bool IsHIP = !UseLLVMOffload &&
       (llvm::any_of(Inputs,
                     [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
                       return types::isHIP(I.first);
                     }) ||
        C.getInputArgs().hasArg(options::OPT_hip_link) ||
-       C.getInputArgs().hasArg(options::OPT_hipstdpar)) &&
-      !UseLLVMOffload;
+       C.getInputArgs().hasArg(options::OPT_hipstdpar));
   bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
                                          options::OPT_fno_sycl, false);
   bool IsOpenMPOffloading =
@@ -5023,6 +5021,9 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         getFinalPhase(Args) == phases::Preprocess))
     return HostAction;
 
+  bool UseLLVMOffload = Args.hasArg(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+
   ActionList OffloadActions;
   OffloadAction::DeviceDependences DDeps;
 
@@ -5043,9 +5044,9 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     types::ID InputType = Input.first;
     const Arg *InputArg = Input.second;
 
-    // The toolchain can be active for unsupported file types.
-    if ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
-        (Kind == Action::OFK_HIP && !types::isHIP(InputType)))
+    // Allow the toolchain to be active for unsupported file types if we are "offload-cross-compiling" via llvm-offload.
+    if (!UseLLVMOffload && ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
+        (Kind == Action::OFK_HIP && !types::isHIP(InputType))))
       continue;
 
     // Get the product of all bound architectures and toolchains.

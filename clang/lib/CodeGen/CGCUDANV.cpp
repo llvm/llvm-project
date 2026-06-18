@@ -254,9 +254,7 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   VoidTy = CGM.VoidTy;
   PtrTy = CGM.DefaultPtrTy;
 
-  if (CGM.getLangOpts().OffloadViaLLVM)
-    Prefix = "llvm";
-  else if (CGM.getLangOpts().HIP)
+  if (CGM.getLangOpts().HIP)
     Prefix = "hip";
   else
     Prefix = "cuda";
@@ -368,6 +366,12 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
   Address KernelLaunchParams = CGF.CreateTempAllocaWithoutCast(
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
+  Address KernelArgs = CGF.CreateTempAlloca(
+      PtrTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_args",
+      llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
+  Address KernelArgSizes = CGF.CreateTempAlloca(
+      SizeTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_arg_sizes",
+      llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
 
   CGF.Builder.CreateStore(llvm::ConstantInt::get(Int32Ty, Args.size()),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
@@ -408,10 +412,11 @@ Address CGNVCUDARuntime::prepareKernelArgs(CodeGenFunction &CGF,
 // array and kernels are launched using cudaLaunchKernel().
 void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                                             FunctionArgList &Args) {
+  bool UseLLVMOffload = CGF.getLangOpts().OffloadViaLLVM;
   // Build the shadow stack entry at the very start of the function.
-  Address KernelArgs = CGF.getLangOpts().OffloadViaLLVM
-                           ? prepareKernelArgsLLVMOffload(CGF, Args)
-                           : prepareKernelArgs(CGF, Args);
+  Address KernelArgs = UseLLVMOffload
+                          ? prepareKernelArgsLLVMOffload(CGF, Args) :
+                            prepareKernelArgs(CGF, Args);
 
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
 
@@ -435,7 +440,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
     else if (CGF.getLangOpts().CUDA)
       KernelLaunchAPI = KernelLaunchAPI + "_ptsz";
   }
-  auto LaunchKernelName = addPrefixToName(KernelLaunchAPI);
+  /// Use __llvmLaunchKernel for LLVMOffload.
+  auto LaunchKernelName = UseLLVMOffload ? "__llvm" + KernelLaunchAPI : addPrefixToName(KernelLaunchAPI);
   const IdentifierInfo &cudaLaunchKernelII =
       CGM.getContext().Idents.get(LaunchKernelName);
   FunctionDecl *cudaLaunchKernelFD = nullptr;
@@ -953,7 +959,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // Data.
   Values.add(FatBinStr);
   // Unused in fatbin v1.
-  Values.add(llvm::ConstantPointerNull::get(PtrTy));
+  if (CGM.getLangOpts().OffloadViaLLVM && CudaGpuBinary)
+    Values.add(llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, FatBinStr, llvm::ConstantInt::get(CGM.Int32Ty, CudaGpuBinary->getBuffer().size())));
+  else
+   Values.add(llvm::ConstantPointerNull::get(PtrTy));
   llvm::GlobalVariable *FatbinWrapper = Values.finishAndCreateGlobal(
       addUnderscoredPrefixToName("_fatbin_wrapper"), CGM.getPointerAlign(),
       /*constant*/ true);
@@ -1282,10 +1291,13 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
                                        ? llvm::object::OffloadKind::OFK_HIP
                                        : llvm::object::OffloadKind::OFK_Cuda;
-  // For now, just spoof this as OpenMP because that's the runtime it uses.
-  if (CGM.getLangOpts().OffloadViaLLVM)
-    Kind = llvm::object::OffloadKind::OFK_OpenMP;
 
+  // For offload via llvm it doesn't matter if the source is HIP or CUDA or
+  // something else. The bundler will allow LLVM offload kinds for all languages.
+  if (CGM.getLangOpts().OffloadViaLLVM)
+    Kind = llvm::object::OffloadKind::OFK_LLVM;
+
+  llvm::errs() << __PRETTY_FUNCTION__ << " : : " << EmittedKernels.size() << "\n";
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
     llvm::offloading::emitOffloadingEntry(

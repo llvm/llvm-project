@@ -986,10 +986,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include", "llvm_offload_wrappers");
     CmdArgs.append({"-internal-isystem", Args.MakeArgString(P), "-include"});
-    if (JA.isDeviceOffloading(Action::OFK_OpenMP))
+    if (JA.isDeviceOffloading(Action::OFK_OpenMP)) {
       CmdArgs.push_back("__llvm_offload_device.h");
-    else
+    } else {
       CmdArgs.push_back("__llvm_offload_host.h");
+    }
+    CmdArgs.push_back("-include");
+    CmdArgs.push_back("cuda_runtime.h");
   }
 
   // Add -i* options, and automatically translate to

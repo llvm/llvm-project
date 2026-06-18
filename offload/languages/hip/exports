@@ -1,0 +1,10 @@
+VERS1.0 {
+  global:
+    *hip*;
+    llvmLaunchKernel*;
+    __llvm*;
+    __tgt_register_lib;
+    __tgt_unregister_lib;
+  local:
+    *;
+};
