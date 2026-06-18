@@ -553,13 +553,12 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
     bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  // NOTE: This clamps the user-requested number of blocks to the device limit
-  // rather than honoring it exactly, which is non-standard behavior. Truly
-  // honoring an arbitrary value would require launching multiple kernels or
-  // reusing blocks until the requested count has been served.
-  if (UserNumBlocks > 0)
-    return std::min(UserNumBlocks,
-                    GenericDevice.getBlockLimit(EffectiveNumThreads));
+  if (UserNumBlocks > 0) {
+    // TODO: We need to honor any value and consequently allow more than the
+    // block limit. For this we might need to start multiple kernels or let the
+    // blocks start again until the requested number has been started.
+    return std::min(UserNumBlocks, GenericDevice.getBlockLimit());
+  }
 
   // Return the number of blocks required to cover the loop iterations.
   if (isNoLoopMode())
@@ -636,8 +635,7 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
   // If the loops are long running we rather reuse blocks than spawn too many.
   if (GenericDevice.getReuseBlocksForHighTripCount())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
-  return std::min(PreferredNumBlocks,
-                  GenericDevice.getBlockLimit(EffectiveNumThreads));
+  return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
