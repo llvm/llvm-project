@@ -12409,9 +12409,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   auto EvalVectorDotProduct = [&](bool IsSaturating) -> bool {
     APValue Source, OperandA, OperandB;
-    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
-        !EvaluateAsRValue(Info, E->getArg(1), OperandA) ||
-        !EvaluateAsRValue(Info, E->getArg(2), OperandB)) {
+    if (!EvaluateVector(E->getArg(0), Source, Info) ||
+        !EvaluateVector(E->getArg(1), OperandA, Info) ||
+        !EvaluateVector(E->getArg(2), OperandB, Info)) {
       return false;
     }
 
