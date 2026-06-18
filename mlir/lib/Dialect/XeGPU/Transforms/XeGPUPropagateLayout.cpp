@@ -280,10 +280,9 @@ public:
   visitNonControlFlowArguments(RegionSuccessor &successor,
                                ArrayRef<BlockArgument> arguments) override {};
 
-  void
-  visitExternalCall(CallOpInterface call,
-                    ArrayRef<LayoutInfoLattice *> operands,
-                    ArrayRef<const LayoutInfoLattice *> results) override {
+  void visitExternalCall(CallOpInterface call,
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results) override {
   };
 
   void setToExitState(LayoutInfoLattice *lattice) override {

@@ -1564,7 +1564,6 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   auto context = resVecTy.getContext();
   Type elemTy = resVecTy.getElementType();
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
   auto subgroupSize = uArch->getSubgroupSize();
   auto dataShape = resVecTy.getShape();
   const auto *uArchInstruction =
@@ -1595,8 +1594,6 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                       consumerLaneData[rank - 1] == 1;
   assert((consumerLaneData[rank - 2] == 1 || consumerLaneData[rank - 1] == 1) &&
          "Expected consumer lane data to have at most one non-unit dim");
-  unsigned packingfactor =
-      std::max(consumerLaneData[rank - 2], consumerLaneData[rank - 1]);
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
