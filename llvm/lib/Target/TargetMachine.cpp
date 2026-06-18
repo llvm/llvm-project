@@ -103,27 +103,15 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   // of linking together small and large sections, resulting in small
   // references to large data sections. The code model attribute overrides this
   // above.
-  StringRef SectionName;
-  if (GV->hasSection()) {
-    SectionName = GV->getSection();
-  } else if (GV->hasImplicitSection()) {
+  if (GV->hasSection() || GV->hasImplicitSection()) {
     SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(GV, *this);
-    auto Attrs = GV->getAttributes();
-    if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
-      SectionName = Attrs.getAttribute("bss-section").getValueAsString();
-    } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
-      SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
-    } else if (Attrs.hasAttribute("relro-section") &&
-               Kind.isReadOnlyWithRel()) {
-      SectionName = Attrs.getAttribute("relro-section").getValueAsString();
-    } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
-      SectionName = Attrs.getAttribute("data-section").getValueAsString();
+    StringRef SectionName =
+        TargetLoweringObjectFile::getCustomSectionName(GV, Kind);
+    if (!SectionName.empty()) {
+      return IsPrefix(SectionName, ".lbss") ||
+             IsPrefix(SectionName, ".ldata") ||
+             IsPrefix(SectionName, ".lrodata");
     }
-  }
-
-  if (!SectionName.empty()) {
-    return IsPrefix(SectionName, ".lbss") || IsPrefix(SectionName, ".ldata") ||
-           IsPrefix(SectionName, ".lrodata");
   }
 
   // Respect large data threshold for medium and large code models.
