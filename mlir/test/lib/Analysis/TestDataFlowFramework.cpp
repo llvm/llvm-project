@@ -319,6 +319,8 @@ void TestFooAnalysisPass::runOnOperation() {
   os << "function: @" << func.getSymName() << "\n";
 
   func.walk([&](Operation *op) {
+    if (op == func.getOperation())
+      return;
     auto tag = op->getAttrOfType<StringAttr>(kTagAttrName);
     if (!tag)
       return;
@@ -342,6 +344,8 @@ void TestStagedAnalysesPass::runOnOperation() {
     return signalPassFailure();
 
   func.walk([&](Operation *op) {
+    if (op == func.getOperation())
+      return;
     if (!op->hasAttr(kTagAttrName))
       return;
 

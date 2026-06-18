@@ -93,3 +93,13 @@ func.func @test_double_loop() -> () {
   "test.foo"() {tag = "end"} : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: function: @test_tag_on_func
+// CHECK-NOT: on_func ->
+func.func @test_tag_on_func() attributes {tag = "on_func"} {
+  // CHECK: a -> 0
+  "test.foo"() {tag = "a"} : () -> ()
+  return
+}

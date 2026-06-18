@@ -48,3 +48,11 @@ func.func @requires_staged_bar() {
   // CHECK: "test.branch"()[^bb{{[0-9]+}}] {bar_state = true, foo = 2 : ui64, foo_state = 5 : i64, tag = "annotate"} : () -> ()
   "test.branch"() [^bb1] {tag = "annotate", foo = 2 : ui64} : () -> ()
 }
+
+// CHECK-LABEL: func.func @tag_on_func()
+// CHECK-NOT: foo_state
+func.func @tag_on_func() attributes {tag = "annotate"} {
+  // CHECK: "test.foo"() {bar_state = true, foo = 1 : ui64, foo_state = 1 : i64, tag = "annotate"} : () -> ()
+  "test.foo"() {tag = "annotate", foo = 1 : ui64} : () -> ()
+  return
+}
