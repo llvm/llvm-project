@@ -1735,24 +1735,10 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
     Value src = getOperand().getDefiningOp()->getOperand(0);
     Type srcType = getElementTypeOrSelf(src.getType());
     Type dstType = getElementTypeOrSelf(getType());
-    // trunci(zexti(a)) -> trunci(a)
-    // trunci(sexti(a)) -> trunci(a)
-    if (llvm::cast<IntegerType>(srcType).getWidth() >
-        llvm::cast<IntegerType>(dstType).getWidth()) {
-      setOperand(src);
-      return getResult();
-    }
-
     // trunci(zexti(a)) -> a
     // trunci(sexti(a)) -> a
     if (srcType == dstType)
       return src;
-  }
-
-  // trunci(trunci(a)) -> trunci(a))
-  if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
-    setOperand(getOperand().getDefiningOp()->getOperand(0));
-    return getResult();
   }
 
   Type resType = getElementTypeOrSelf(getType());
@@ -1764,15 +1750,44 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+struct TruncIOfExtI : public OpRewritePattern<arith::TruncIOp> {
+  using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::TruncIOp op,
+                                PatternRewriter &rewriter) const override {
+    if (matchPattern(op.getOperand(), m_Op<arith::ExtUIOp>()) ||
+        matchPattern(op.getOperand(), m_Op<arith::ExtSIOp>())) {
+      Value src = op.getOperand().getDefiningOp()->getOperand(0);
+      Type srcType = getElementTypeOrSelf(src.getType());
+      Type dstType = getElementTypeOrSelf(op.getType());
+      // trunci(zexti(a)) -> trunci(a)
+      // trunci(sexti(a)) -> trunci(a)
+      if (llvm::cast<IntegerType>(srcType).getWidth() >
+          llvm::cast<IntegerType>(dstType).getWidth()) {
+        rewriter.modifyOpInPlace(op, [&]() { op.setOperand(src); });
+        return success();
+      }
+    }
+
+    // trunci(trunci(a)) -> trunci(a))
+    if (matchPattern(op.getOperand(), m_Op<arith::TruncIOp>())) {
+      rewriter.modifyOpInPlace(op, [&]() {
+        op.setOperand(op.getOperand().getDefiningOp()->getOperand(0));
+      });
+      return success();
+    }
+    return failure();
+  }
+};
+
 bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return checkWidthChangeCast<std::less, IntegerType>(inputs, outputs);
 }
 
 void arith::TruncIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
-  patterns
-      .add<TruncIExtSIToExtSI, TruncIExtUIToExtUI, TruncIShrSIToTrunciShrUI>(
-          context);
+  patterns.add<TruncIExtSIToExtSI, TruncIExtUIToExtUI, TruncIShrSIToTrunciShrUI,
+               TruncIOfExtI>(context);
 }
 
 LogicalResult arith::TruncIOp::verify() {
@@ -1796,12 +1811,6 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
     if (llvm::APFloatBase::isRepresentableBy(
             srcType.getFloatSemantics(),
             intermediateType.getFloatSemantics())) {
-      // truncf(extf(a)) -> truncf(a)
-      if (srcType.getWidth() > resElemType.getWidth()) {
-        setOperand(src);
-        return getResult();
-      }
-
       // truncf(extf(a)) -> a
       if (srcType == resElemType)
         return src;
@@ -1824,9 +1833,36 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+struct TruncFOfExtF : public OpRewritePattern<arith::TruncFOp> {
+  using OpRewritePattern<arith::TruncFOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::TruncFOp op,
+                                PatternRewriter &rewriter) const override {
+    auto resElemType = cast<FloatType>(getElementTypeOrSelf(op.getType()));
+    if (auto extOp = op.getOperand().getDefiningOp<arith::ExtFOp>()) {
+      Value src = extOp.getIn();
+      auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
+      auto intermediateType =
+          cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
+      // Check if the srcType is representable in the intermediateType.
+      if (llvm::APFloatBase::isRepresentableBy(
+              srcType.getFloatSemantics(),
+              intermediateType.getFloatSemantics())) {
+        // truncf(extf(a)) -> truncf(a)
+        if (srcType.getWidth() > resElemType.getWidth()) {
+          rewriter.modifyOpInPlace(op, [&]() { op.setOperand(src); });
+          return success();
+        }
+      }
+    }
+    return failure();
+  }
+};
+
 void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
-  patterns.add<TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
+  patterns.add<TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP, TruncFOfExtF>(
+      context);
 }
 
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
