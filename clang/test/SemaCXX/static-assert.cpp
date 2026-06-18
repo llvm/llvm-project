@@ -363,4 +363,22 @@ namespace Diagnostics {
                                  // expected-note {{evaluates to '1 == 2'}}
   static_assert(1 << 3 != 8, ""); // expected-error {{failed}} \
                                  // expected-note {{evaluates to '8 != 8'}}
+  enum class TestEnum {
+    A = 0,
+    B = 1
+  };
+
+  template<TestEnum E> struct EnumTemplate {
+    static_assert(E == TestEnum::B, ""); // #enum-assert
+  };
+
+  EnumTemplate<TestEnum::A> test1;
+  // expected-error@#enum-assert {{static assertion failed due to requirement 'Diagnostics::TestEnum::A == Diagnostics::TestEnum::B': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnum::A>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '0 == 1'}}
+
+  EnumTemplate<TestEnum(42)> test2;
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::TestEnum)42 == Diagnostics::TestEnum::B': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<42>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '42 == 1'}}
 }

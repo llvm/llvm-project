@@ -646,6 +646,9 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
