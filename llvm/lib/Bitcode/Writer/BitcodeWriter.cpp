@@ -3565,6 +3565,8 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     if (cast<LoadInst>(I).isAtomic()) {
       Vals.push_back(getEncodedOrdering(cast<LoadInst>(I).getOrdering()));
       Vals.push_back(getEncodedSyncScopeID(cast<LoadInst>(I).getSyncScopeID()));
+      if (cast<LoadInst>(I).isElementwise())
+        Vals.push_back(1);
     }
     break;
   case Instruction::Store:

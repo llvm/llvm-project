@@ -12010,7 +12010,7 @@ Syntax:
 ::
 
       <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
-      <result> = load atomic [volatile] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
+      <result> = load atomic [volatile] [elementwise] <ty>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
       !<nontemp_node> = !{ i32 1 }
       !<empty_node> = !{}
       !<deref_bytes_node> = !{ i64 <dereferenceable_bytes> }
@@ -12037,11 +12037,20 @@ If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer,
 floating-point, or vector type whose bit width is a power of two greater than
-or equal to eight. ``align`` must be
-explicitly specified on atomic loads. Note: if the alignment is not greater or
-equal to the size of the `<value>` type, the atomic operation is likely to
-require a lock and have poor performance. ``!nontemporal`` does not have any
-defined semantics for atomic loads.
+or equal to eight.
+
+If the ``elementwise`` modifier is present, the loaded type must be a fixed
+vector type, and each element type must be a valid scalar atomic load type. The
+load has per-element vector atomic semantics: it behaves as if it were expanded
+into one scalar atomic load per element, and the element loads are not ordered
+with respect to each other. Without ``elementwise``, vector atomic loads keep
+whole-value atomic semantics.
+
+``align`` must be explicitly specified on atomic loads. Note: if the alignment
+is not greater than or equal to the size of the ``<ty>`` type, or the element
+type for an ``elementwise`` load, the atomic operation is likely to require a
+lock and have poor performance. ``!nontemporal`` does not have any defined
+semantics for atomic loads.
 
 The optional constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
