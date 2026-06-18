@@ -28,7 +28,7 @@ func.func @copy_with_custom_element_type(%arg0: memref<10x!test.memref_element>,
 func.func @store_with_custom_element_type(%v : !test.memref_element, %i: index) {
   %alloc = memref.alloc() : memref<4x!test.memref_element>
   // CHECK:           assign
-  // CHECK-SAME:      : <!emitc.opaque<"TestElementT">>
+  // CHECK-SAME:      <!emitc.opaque<"TestElementT">>
   memref.store %v, %alloc[%i] : memref<4x!test.memref_element>
   return
 }
@@ -39,7 +39,7 @@ func.func @store_with_custom_element_type(%v : !test.memref_element, %i: index) 
 func.func @load_with_custom_element_type(%i: index) -> !test.memref_element {
   %alloc = memref.alloc() : memref<4x!test.memref_element>
   // CHECK:           load
-  // CHECK-SAME:      : <!emitc.opaque<"TestElementT">>
+  // CHECK-SAME:      <!emitc.opaque<"TestElementT">>
   %v = memref.load %alloc[%i] : memref<4x!test.memref_element>
   return %v : !test.memref_element
 }
