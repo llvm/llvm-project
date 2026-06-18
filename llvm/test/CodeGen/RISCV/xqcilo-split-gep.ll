@@ -28,14 +28,12 @@ define i32 @split_large_geps(ptr %p, i1 %c) {
 ; RV32XQCILO-LABEL: split_large_geps:
 ; RV32XQCILO:       # %bb.0: # %entry
 ; RV32XQCILO-NEXT:    andi a1, a1, 1
-; RV32XQCILO-NEXT:    lui a2, 5
-; RV32XQCILO-NEXT:    add a0, a0, a2
 ; RV32XQCILO-NEXT:    beqz a1, .LBB0_2
 ; RV32XQCILO-NEXT:  # %bb.1: # %a
-; RV32XQCILO-NEXT:    lw a0, -480(a0)
+; RV32XQCILO-NEXT:    qc.e.lw a0, 20000(a0)
 ; RV32XQCILO-NEXT:    ret
 ; RV32XQCILO-NEXT:  .LBB0_2: # %b
-; RV32XQCILO-NEXT:    lw a0, -476(a0)
+; RV32XQCILO-NEXT:    qc.e.lw a0, 20004(a0)
 ; RV32XQCILO-NEXT:    ret
 entry:
   br i1 %c, label %a, label %b

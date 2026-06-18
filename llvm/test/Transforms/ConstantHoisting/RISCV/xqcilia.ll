@@ -2,17 +2,17 @@
 ; RUN: opt -mtriple=riscv32 -mattr=+xqcilia -passes=consthoist -S < %s \
 ; RUN:   | FileCheck %s --check-prefix=XQCILIA
 
-; A 26-bit constant used several times. RISCVTargetLowering::isLegalAddImmediate
-; only accepts 12-bit immediates, so constant hoisting (which queries it via
-; getIntImmCostInst) considers the constant expensive and hoists it into a
-; register shared by all the adds.
+; A 26-bit constant used several times. With Xqcilia,
+; RISCVTargetLowering::isLegalAddImmediate now accepts 26-bit immediates, so
+; constant hoisting (which queries it via getIntImmCostInst) considers the
+; constant free and leaves it inline in each add instead of hoisting it into a
+; shared register.
 define void @hoist_simm26(i32 %a, i32 %b, i32 %c, ptr %p, ptr %q, ptr %r) {
 ; XQCILIA-LABEL: define void @hoist_simm26(
 ; XQCILIA-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; XQCILIA-NEXT:    [[CONST:%.*]] = bitcast i32 32766 to i32
-; XQCILIA-NEXT:    [[TMP1:%.*]] = add i32 [[A]], [[CONST]]
-; XQCILIA-NEXT:    [[TMP2:%.*]] = add i32 [[B]], [[CONST]]
-; XQCILIA-NEXT:    [[TMP3:%.*]] = add i32 [[C]], [[CONST]]
+; XQCILIA-NEXT:    [[TMP1:%.*]] = add i32 [[A]], 32766
+; XQCILIA-NEXT:    [[TMP2:%.*]] = add i32 [[B]], 32766
+; XQCILIA-NEXT:    [[TMP3:%.*]] = add i32 [[C]], 32766
 ; XQCILIA-NEXT:    store i32 [[TMP1]], ptr [[P]], align 4
 ; XQCILIA-NEXT:    store i32 [[TMP2]], ptr [[Q]], align 4
 ; XQCILIA-NEXT:    store i32 [[TMP3]], ptr [[R]], align 4

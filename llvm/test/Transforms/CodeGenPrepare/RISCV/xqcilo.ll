@@ -5,20 +5,20 @@
 ; Two loads in separate blocks share a base pointer with large (26-bit) byte
 ; offsets. CodeGenPrepare's splitLargeGEPOffsets queries
 ; RISCVTargetLowering::isLegalAddressingMode to decide whether the offsets can
-; be folded into the addressing mode. isLegalAddressingMode only accepts 12-bit
-; offsets, so the large offset is split out into a separate base address
-; (%splitgep) and the second access uses a small offset relative to it.
+; be folded into the addressing mode. With Xqcilo, isLegalAddressingMode now
+; accepts 26-bit offsets, so the GEPs are left intact and each access keeps its
+; full offset instead of being split out into a separate base address.
 define i32 @split_large_geps(ptr %p, i1 %c) {
 ; XQCILO-LABEL: define i32 @split_large_geps(
 ; XQCILO-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; XQCILO-NEXT:  [[ENTRY:.*:]]
-; XQCILO-NEXT:    [[SPLITGEP:%.*]] = getelementptr i8, ptr [[P]], i32 20000
 ; XQCILO-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; XQCILO:       [[A]]:
+; XQCILO-NEXT:    [[SPLITGEP:%.*]] = getelementptr i8, ptr [[P]], i32 20000
 ; XQCILO-NEXT:    [[V0:%.*]] = load i32, ptr [[SPLITGEP]], align 4
 ; XQCILO-NEXT:    br label %[[MERGE:.*]]
 ; XQCILO:       [[B]]:
-; XQCILO-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[SPLITGEP]], i32 4
+; XQCILO-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i32 20004
 ; XQCILO-NEXT:    [[V1:%.*]] = load i32, ptr [[TMP0]], align 4
 ; XQCILO-NEXT:    br label %[[MERGE]]
 ; XQCILO:       [[MERGE]]:
