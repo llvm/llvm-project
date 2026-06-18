@@ -6,12 +6,10 @@ define amdgpu_kernel void @interleave(ptr addrspace(1) nocapture %a, ptr addrspa
 ; CHECK-LABEL: define amdgpu_kernel void @interleave(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b64>, ptr addrspace(1) [[C]], align 8
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b64> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[LD_C1]] to double
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b64 [[LD_C_IDX_12]] to double
-; CHECK-NEXT:    store <2 x b64> zeroinitializer, ptr addrspace(1) [[A]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr addrspace(1) [[C]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr addrspace(1) [[A]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store double [[ADD]], ptr addrspace(1) [[B]], align 8
 ; CHECK-NEXT:    ret void

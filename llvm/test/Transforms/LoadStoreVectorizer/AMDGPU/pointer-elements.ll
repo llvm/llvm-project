@@ -7,14 +7,10 @@ define amdgpu_kernel void @merge_v2p1i8(ptr addrspace(1) nocapture %a, ptr addrs
 ; CHECK-LABEL: define amdgpu_kernel void @merge_v2p1i8(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b64>, ptr addrspace(1) [[B]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b64> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[LD_C1]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr addrspace(1)
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b64 [[LD_C_IDX_12]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr addrspace(1)
-; CHECK-NEXT:    store <2 x b64> zeroinitializer, ptr addrspace(1) [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x ptr addrspace(1)>, ptr addrspace(1) [[B]], align 4
+; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x ptr addrspace(1)> [[TMP0]], i32 0
+; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x ptr addrspace(1)> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), ptr addrspace(1) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -34,14 +30,10 @@ define amdgpu_kernel void @merge_v2p3i8(ptr addrspace(3) nocapture %a, ptr addrs
 ; CHECK-LABEL: define amdgpu_kernel void @merge_v2p3i8(
 ; CHECK-SAME: ptr addrspace(3) captures(none) [[A:%.*]], ptr addrspace(3) readonly captures(none) [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(3) [[B]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C1]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to ptr addrspace(3)
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LD_C_IDX_12]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(3) [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x ptr addrspace(3)>, ptr addrspace(3) [[B]], align 4
+; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x ptr addrspace(3)> [[TMP0]], i32 0
+; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x ptr addrspace(3)> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x ptr addrspace(3)> splat (ptr addrspace(3) null), ptr addrspace(3) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

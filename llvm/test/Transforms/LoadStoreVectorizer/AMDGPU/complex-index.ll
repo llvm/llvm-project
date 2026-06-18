@@ -27,11 +27,9 @@ define amdgpu_kernel void @factorizedVsNonfactorizedAccess(ptr addrspace(1) noca
 ; CHECK-NEXT:    [[MUL9:%.*]] = shl i64 [[ADD7]], 10
 ; CHECK-NEXT:    [[ADD10:%.*]] = add i64 [[MUL9]], [[ADD]]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[ADD10]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LOAD11]] to float
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LOAD22]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP1]] to double
 ; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[CONV]], f0x3FEAB481D8F35506
 ; CHECK-NEXT:    [[CONV12:%.*]] = fptrunc double [[MUL11]] to float
@@ -44,11 +42,9 @@ define amdgpu_kernel void @factorizedVsNonfactorizedAccess(ptr addrspace(1) noca
 ; CHECK-NEXT:    [[CONV34:%.*]] = fpext float [[CONV27]] to double
 ; CHECK-NEXT:    [[STOREVAL2:%.*]] = tail call double @llvm.fmuladd.f64(double f0x3FF4FFAFBBEC946A, double 0.000000e+00, double [[CONV34]])
 ; CHECK-NEXT:    [[CSTOREVAL2:%.*]] = fptrunc double [[STOREVAL2]] to float
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[CSTOREVAL1]] to b32
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x b32> poison, b32 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float [[CSTOREVAL2]] to b32
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x b32> [[TMP4]], b32 [[TMP5]], i32 1
-; CHECK-NEXT:    store <2 x b32> [[TMP6]], ptr addrspace(1) [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[CSTOREVAL1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[CSTOREVAL2]], i32 1
+; CHECK-NEXT:    store <2 x float> [[TMP4]], ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

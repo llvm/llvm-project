@@ -10,7 +10,7 @@
 define amdgpu_kernel void @merge_global_store_2_constants_i8(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i8(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    store <2 x b8> <b8 -56, b8 123>, ptr addrspace(1) [[OUT]], align 2
+; CHECK-NEXT:    store <2 x i8> <i8 -56, i8 123>, ptr addrspace(1) [[OUT]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -23,7 +23,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i8(ptr addrspace(1) %o
 define amdgpu_kernel void @merge_global_store_2_constants_i8_natural_align(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i8_natural_align(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b8> <b8 -56, b8 123>, ptr addrspace(1) [[OUT]], align 1
+; CHECK-NEXT:    store <2 x i8> <i8 -56, i8 123>, ptr addrspace(1) [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(1) %out, i32 1
@@ -36,7 +36,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i8_natural_align(ptr a
 define amdgpu_kernel void @merge_global_store_2_constants_i16(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i16(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b16> <b16 456, b16 123>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <2 x i16> <i16 456, i16 123>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(1) %out, i32 1
@@ -49,7 +49,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i16(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_2_constants_0_i16(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_0_i16(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b16> zeroinitializer, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(1) %out, i32 1
@@ -62,7 +62,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_0_i16(ptr addrspace(1)
 define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b16> <b16 456, b16 123>, ptr addrspace(1) [[OUT]], align 2
+; CHECK-NEXT:    store <2 x i16> <i16 456, i16 123>, ptr addrspace(1) [[OUT]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(1) %out, i32 1
@@ -75,7 +75,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i16_natural_align(ptr 
 define amdgpu_kernel void @merge_global_store_2_constants_i16_align_1(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i16_align_1(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b16> <b16 456, b16 123>, ptr addrspace(1) [[OUT]], align 1
+; CHECK-NEXT:    store <2 x i16> <i16 456, i16 123>, ptr addrspace(1) [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(1) %out, i32 1
@@ -88,7 +88,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i16_align_1(ptr addrsp
 define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b16> <b16 15360, b16 16384>, ptr addrspace(1) [[OUT]], align 2
+; CHECK-NEXT:    store <2 x half> <half 1.000000e+00, half 2.000000e+00>, ptr addrspace(1) [[OUT]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr half, ptr addrspace(1) %out, i32 1
@@ -101,7 +101,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_half_natural_align(ptr
 define amdgpu_kernel void @merge_global_store_2_constants_half_align_1(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_half_align_1(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b16> <b16 15360, b16 16384>, ptr addrspace(1) [[OUT]], align 1
+; CHECK-NEXT:    store <2 x half> <half 1.000000e+00, half 2.000000e+00>, ptr addrspace(1) [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr half, ptr addrspace(1) %out, i32 1
@@ -114,7 +114,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_half_align_1(ptr addrs
 define amdgpu_kernel void @merge_global_store_2_constants_i32(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b32> <b32 456, b32 123>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 456, i32 123>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -151,7 +151,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_f32_i32(ptr addrspace(
 define amdgpu_kernel void @merge_global_store_4_constants_i32(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <4 x b32> <b32 1234, b32 123, b32 456, b32 333>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 1234, i32 123, i32 456, i32 333>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -168,7 +168,7 @@ define amdgpu_kernel void @merge_global_store_4_constants_i32(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_4_constants_f32_order(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_constants_f32_order(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <4 x b32> <b32 1090519040, b32 1065353216, b32 1073741824, b32 1082130432>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x float> <float 8.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
@@ -186,7 +186,7 @@ define amdgpu_kernel void @merge_global_store_4_constants_f32_order(ptr addrspac
 define amdgpu_kernel void @merge_global_store_4_constants_f32(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_constants_f32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <4 x b32> <b32 1090519040, b32 1065353216, b32 1073741824, b32 1082130432>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x float> <float 8.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
@@ -221,7 +221,7 @@ define amdgpu_kernel void @merge_global_store_4_constants_mixed_i32_f32(ptr addr
 define amdgpu_kernel void @merge_global_store_3_constants_i32(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_3_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <3 x b32> <b32 1234, b32 123, b32 456>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <3 x i32> <i32 1234, i32 123, i32 456>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -236,7 +236,7 @@ define amdgpu_kernel void @merge_global_store_3_constants_i32(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_2_constants_i64(ptr addrspace(1) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_constants_i64(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b64> <b64 456, b64 123>, ptr addrspace(1) [[OUT]], align 8
+; CHECK-NEXT:    store <2 x i64> <i64 456, i64 123>, ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i64, ptr addrspace(1) %out, i64 1
@@ -250,8 +250,8 @@ define amdgpu_kernel void @merge_global_store_4_constants_i64(ptr addrspace(1) %
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_constants_i64(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i64, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x b64> <b64 456, b64 333>, ptr addrspace(1) [[OUT_GEP_2]], align 8
-; CHECK-NEXT:    store <2 x b64> <b64 1234, b64 123>, ptr addrspace(1) [[OUT]], align 8
+; CHECK-NEXT:    store <2 x i64> <i64 456, i64 333>, ptr addrspace(1) [[OUT_GEP_2]], align 8
+; CHECK-NEXT:    store <2 x i64> <i64 1234, i64 123>, ptr addrspace(1) [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i64, ptr addrspace(1) %out, i64 1
@@ -268,16 +268,12 @@ define amdgpu_kernel void @merge_global_store_4_constants_i64(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LO1]] to i32
-; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[HI2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b32> poison, b32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x b32> [[TMP5]], b32 [[TMP6]], i32 1
-; CHECK-NEXT:    store <2 x b32> [[TMP7]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LO1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[HI2]], i32 1
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -296,16 +292,12 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32_nonzero_base(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IN_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[IN]], i32 2
 ; CHECK-NEXT:    [[OUT_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(1) [[IN_GEP_0]], align 4
-; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LO1]] to i32
-; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[HI2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b32> poison, b32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x b32> [[TMP5]], b32 [[TMP6]], i32 1
-; CHECK-NEXT:    store <2 x b32> [[TMP7]], ptr addrspace(1) [[OUT_GEP_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[IN_GEP_0]], align 4
+; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LO1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[HI2]], i32 1
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) [[OUT_GEP_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %in.gep.0 = getelementptr i32, ptr addrspace(1) %in, i32 2
@@ -324,16 +316,12 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32_nonzero_base(
 define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LO1]] to i32
-; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[HI2]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b32> poison, b32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x b32> [[TMP5]], b32 [[TMP6]], i32 1
-; CHECK-NEXT:    store <2 x b32> [[TMP7]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[HI2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LO1]], i32 1
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -350,24 +338,16 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(ptr a
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[X1]] to i32
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[Y2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[Z3]] to i32
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[W4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[TMP4]] to b32
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32 [[TMP5]] to b32
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -392,20 +372,14 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(ptr addrspace
 define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <3 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[X1]] to i32
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <3 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[Y2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <3 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[Z3]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x b32> poison, b32 [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <3 x b32> [[TMP6]], b32 [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32 [[TMP4]] to b32
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <3 x b32> [[TMP8]], b32 [[TMP9]], i32 2
-; CHECK-NEXT:    store <3 x b32> [[TMP10]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i32> poison, i32 [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> [[TMP2]], i32 [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> [[TMP3]], i32 [[Z3]], i32 2
+; CHECK-NEXT:    store <3 x i32> [[TMP4]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -426,24 +400,16 @@ define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(ptr addrspace
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_adjacent_loads_f32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[X1]] to float
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[Y2]] to float
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[Z3]] to float
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[W4]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float [[TMP4]] to b32
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float [[TMP5]] to b32
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Z3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[W4]], i32 3
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr float, ptr addrspace(1) %out, i32 1
@@ -470,24 +436,16 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32_nonzero_base(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IN_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[IN]], i32 11
 ; CHECK-NEXT:    [[OUT_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 7
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[IN_GEP_0]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[X1]] to i32
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[Y2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[Z3]] to i32
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[W4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[TMP4]] to b32
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32 [[TMP5]] to b32
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr addrspace(1) [[OUT_GEP_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN_GEP_0]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT_GEP_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %in.gep.0 = getelementptr i32, ptr addrspace(1) %in, i32 11
@@ -514,25 +472,17 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32_nonzero_base(
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[X1]] to i32
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[Y2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[Z3]] to i32
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[W4]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[TMP4]] to b32
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32 [[TMP5]] to b32
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -561,25 +511,17 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(ptr a
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[X1]] to i32
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[Y2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[Z3]] to i32
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[W4]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier() #[[ATTR3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP5]] to b32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b32> poison, b32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP4]] to b32
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b32> [[TMP7]], b32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[TMP3]] to b32
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b32> [[TMP9]], b32 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b32> [[TMP11]], b32 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b32> [[TMP13]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[W4]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Y2]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[X1]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -608,24 +550,16 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(ptr a
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b8>, ptr addrspace(1) [[IN]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[X1]] to i8
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[Y2]] to i8
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[Z3]] to i8
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[W4]] to i8
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[TMP2]] to b8
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b8> poison, b8 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 [[TMP3]] to b8
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b8> [[TMP7]], b8 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8 [[TMP4]] to b8
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b8> [[TMP9]], b8 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i8 [[TMP5]] to b8
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b8> [[TMP11]], b8 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b8> [[TMP13]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[Z3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[W4]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(1) %out, i8 1
@@ -650,24 +584,16 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8(ptr addrspace(
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8_natural_align(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8_natural_align(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b8>, ptr addrspace(1) [[IN]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x b8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[X1]] to i8
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x b8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b8 [[Y2]] to i8
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x b8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b8 [[Z3]] to i8
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x b8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b8 [[W4]] to i8
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 [[TMP2]] to b8
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x b8> poison, b8 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8 [[TMP3]] to b8
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x b8> [[TMP7]], b8 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8 [[TMP4]] to b8
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x b8> [[TMP9]], b8 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i8 [[TMP5]] to b8
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x b8> [[TMP11]], b8 [[TMP12]], i32 3
-; CHECK-NEXT:    store <4 x b8> [[TMP13]], ptr addrspace(1) [[OUT]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN]], align 1
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[Y2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[Z3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[W4]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr addrspace(1) [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(1) %out, i8 1
@@ -697,15 +623,11 @@ define amdgpu_kernel void @merge_global_store_4_vector_elts_loads_v4i32(ptr addr
 ; CHECK-NEXT:    [[Y:%.*]] = extractelement <4 x i32> [[VEC]], i32 1
 ; CHECK-NEXT:    [[Z:%.*]] = extractelement <4 x i32> [[VEC]], i32 2
 ; CHECK-NEXT:    [[W:%.*]] = extractelement <4 x i32> [[VEC]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[X]] to b32
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x b32> poison, b32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[Y]] to b32
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x b32> [[TMP2]], b32 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[Z]] to b32
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x b32> [[TMP4]], b32 [[TMP5]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[W]] to b32
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x b32> [[TMP6]], b32 [[TMP7]], i32 3
-; CHECK-NEXT:    store <4 x b32> [[TMP8]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[Y]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[W]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1
@@ -728,7 +650,7 @@ define amdgpu_kernel void @merge_global_store_4_vector_elts_loads_v4i32(ptr addr
 define amdgpu_kernel void @merge_local_store_2_constants_i8(ptr addrspace(3) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_local_store_2_constants_i8(
 ; CHECK-SAME: ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b8> <b8 -56, b8 123>, ptr addrspace(3) [[OUT]], align 2
+; CHECK-NEXT:    store <2 x i8> <i8 -56, i8 123>, ptr addrspace(3) [[OUT]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(3) %out, i32 1
@@ -741,7 +663,7 @@ define amdgpu_kernel void @merge_local_store_2_constants_i8(ptr addrspace(3) %ou
 define amdgpu_kernel void @merge_local_store_2_constants_i32(ptr addrspace(3) %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_local_store_2_constants_i32(
 ; CHECK-SAME: ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    store <2 x b32> <b32 456, b32 123>, ptr addrspace(3) [[OUT]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 456, i32 123>, ptr addrspace(3) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(3) %out, i32 1
@@ -770,8 +692,8 @@ define amdgpu_kernel void @merge_local_store_4_constants_i32(ptr addrspace(3) %o
 ; CHECK-LABEL: define amdgpu_kernel void @merge_local_store_4_constants_i32(
 ; CHECK-SAME: ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i32, ptr addrspace(3) [[OUT]], i32 2
-; CHECK-NEXT:    store <2 x b32> <b32 456, b32 333>, ptr addrspace(3) [[OUT_GEP_2]], align 4
-; CHECK-NEXT:    store <2 x b32> <b32 1234, b32 123>, ptr addrspace(3) [[OUT]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 456, i32 333>, ptr addrspace(3) [[OUT_GEP_2]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 1234, i32 123>, ptr addrspace(3) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(3) %out, i32 1
@@ -788,7 +710,7 @@ define amdgpu_kernel void @merge_local_store_4_constants_i32(ptr addrspace(3) %o
 define amdgpu_kernel void @merge_global_store_5_constants_i32(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_5_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    store <4 x b32> <b32 9, b32 12, b32 16, b32 -12>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 9, i32 12, i32 16, i32 -12>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 4
 ; CHECK-NEXT:    store i32 11, ptr addrspace(1) [[IDX4]], align 4
 ; CHECK-NEXT:    ret void
@@ -808,9 +730,9 @@ define amdgpu_kernel void @merge_global_store_5_constants_i32(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_6_constants_i32(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_6_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store <4 x b32> <b32 13, b32 15, b32 62, b32 63>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 13, i32 15, i32 62, i32 63>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 4
-; CHECK-NEXT:    store <2 x b32> <b32 11, b32 123>, ptr addrspace(1) [[IDX4]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 11, i32 123>, ptr addrspace(1) [[IDX4]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 13, ptr addrspace(1) %out, align 4
@@ -830,9 +752,9 @@ define amdgpu_kernel void @merge_global_store_6_constants_i32(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_7_constants_i32(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_7_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store <4 x b32> <b32 34, b32 999, b32 65, b32 33>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 34, i32 999, i32 65, i32 33>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 4
-; CHECK-NEXT:    store <3 x b32> <b32 98, b32 91, b32 212>, ptr addrspace(1) [[IDX4]], align 4
+; CHECK-NEXT:    store <3 x i32> <i32 98, i32 91, i32 212>, ptr addrspace(1) [[IDX4]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 34, ptr addrspace(1) %out, align 4
@@ -854,9 +776,9 @@ define amdgpu_kernel void @merge_global_store_7_constants_i32(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_8_constants_i32(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_global_store_8_constants_i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store <4 x b32> <b32 34, b32 999, b32 65, b32 33>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 34, i32 999, i32 65, i32 33>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 4
-; CHECK-NEXT:    store <4 x b32> <b32 98, b32 91, b32 212, b32 999>, ptr addrspace(1) [[IDX4]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 98, i32 91, i32 212, i32 999>, ptr addrspace(1) [[IDX4]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 34, ptr addrspace(1) %out, align 4

@@ -6,13 +6,10 @@ define void @base_case(i1 %cnd, ptr addrspace(1) %a, ptr addrspace(1) %b, ptr ad
 ; CHECK-SAME: i1 [[CND:%.*]], ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SELECTED:%.*]] = select i1 [[CND]], ptr addrspace(1) [[A]], ptr addrspace(1) [[B]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x b32>, ptr addrspace(1) [[SELECTED]], align 4
-; CHECK-NEXT:    [[VAL01:%.*]] = extractelement <3 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[VAL01]] to i32
-; CHECK-NEXT:    [[VAL12:%.*]] = extractelement <3 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[VAL12]] to i32
-; CHECK-NEXT:    [[VAL23:%.*]] = extractelement <3 x b32> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[VAL23]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[SELECTED]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <3 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i32> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[T0:%.*]] = insertelement <3 x i32> poison, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[T1:%.*]] = insertelement <3 x i32> [[T0]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[T2:%.*]] = insertelement <3 x i32> [[T1]], i32 [[TMP3]], i32 2
@@ -51,11 +48,9 @@ define void @scev_targeting_complex_case(i1 %cnd, ptr addrspace(1) %a, ptr addrs
 ; CHECK-NEXT:    [[GEP_B_BASE_X16_P4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i64 [[BASE_X16_P4]]
 ; CHECK-NEXT:    [[SELECTED_BASE_X16_P0_OR_4:%.*]] = select i1 [[CND]], ptr addrspace(1) [[GEP_A_BASE_X16]], ptr addrspace(1) [[GEP_B_BASE_X16_P4]]
 ; CHECK-NEXT:    [[SELECTED_BASE_X16_P40_OR_44:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[SELECTED_BASE_X16_P0_OR_4]], i64 10
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[SELECTED_BASE_X16_P40_OR_44]], align 4
-; CHECK-NEXT:    [[VAL01:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[VAL01]] to i32
-; CHECK-NEXT:    [[VAL12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[VAL12]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[SELECTED_BASE_X16_P40_OR_44]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[T0:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x i32> [[T0]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    store <2 x i32> [[T1]], ptr addrspace(1) [[OUT]], align 8
@@ -105,11 +100,9 @@ define void @nested_selects(i1 %cnd0, i1 %cnd1, ptr addrspace(1) %a, ptr addrspa
 ; CHECK-NEXT:    [[GEP_B_BASE_X4_P5:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[A]], i64 [[SEXT_X4_P5]]
 ; CHECK-NEXT:    [[SELECTED_1_L:%.*]] = select i1 [[CND1]], ptr addrspace(1) [[GEP_A_BASE_P2]], ptr addrspace(1) [[GEP_B_BASE_X4_P5]]
 ; CHECK-NEXT:    [[SELECTED_0_L:%.*]] = select i1 [[CND0]], ptr addrspace(1) [[GEP_A_BASE]], ptr addrspace(1) [[SELECTED_1_L]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[SELECTED_0_L]], align 4
-; CHECK-NEXT:    [[VAL01:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[VAL01]] to i32
-; CHECK-NEXT:    [[VAL12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[VAL12]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[SELECTED_0_L]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[T0:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[T1:%.*]] = insertelement <2 x i32> [[T0]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    store <2 x i32> [[T1]], ptr addrspace(1) [[OUT]], align 8

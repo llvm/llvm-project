@@ -24,13 +24,13 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32(ptr add
 ; ELT8-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32(
 ; ELT8-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ELT8-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i32, ptr addrspace(5) [[OUT]], i32 2
-; ELT8-NEXT:    store <2 x b32> <b32 9, b32 1>, ptr addrspace(5) [[OUT]], align 4
-; ELT8-NEXT:    store <2 x b32> <b32 23, b32 19>, ptr addrspace(5) [[OUT_GEP_2]], align 4
+; ELT8-NEXT:    store <2 x i32> <i32 9, i32 1>, ptr addrspace(5) [[OUT]], align 4
+; ELT8-NEXT:    store <2 x i32> <i32 23, i32 19>, ptr addrspace(5) [[OUT_GEP_2]], align 4
 ; ELT8-NEXT:    ret void
 ;
 ; ELT16-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32(
 ; ELT16-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; ELT16-NEXT:    store <4 x b32> <b32 9, b32 1, b32 23, b32 19>, ptr addrspace(5) [[OUT]], align 4
+; ELT16-NEXT:    store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, ptr addrspace(5) [[OUT]], align 4
 ; ELT16-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(5) %out, i32 1
@@ -60,13 +60,13 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align1(
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align1(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
 ; ELT8-UNALIGNED-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i32, ptr addrspace(5) [[OUT]], i32 2
-; ELT8-UNALIGNED-NEXT:    store <2 x b32> <b32 9, b32 1>, ptr addrspace(5) [[OUT]], align 1
-; ELT8-UNALIGNED-NEXT:    store <2 x b32> <b32 23, b32 19>, ptr addrspace(5) [[OUT_GEP_2]], align 1
+; ELT8-UNALIGNED-NEXT:    store <2 x i32> <i32 9, i32 1>, ptr addrspace(5) [[OUT]], align 1
+; ELT8-UNALIGNED-NEXT:    store <2 x i32> <i32 23, i32 19>, ptr addrspace(5) [[OUT_GEP_2]], align 1
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align1(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <4 x b32> <b32 9, b32 1, b32 23, b32 19>, ptr addrspace(5) [[OUT]], align 1
+; ELT16-UNALIGNED-NEXT:    store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, ptr addrspace(5) [[OUT]], align 1
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(5) %out, i32 1
@@ -95,13 +95,13 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align2(
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align2(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
 ; ELT8-UNALIGNED-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i32, ptr addrspace(5) [[OUT]], i32 2
-; ELT8-UNALIGNED-NEXT:    store <2 x b32> <b32 9, b32 1>, ptr addrspace(5) [[OUT]], align 2
-; ELT8-UNALIGNED-NEXT:    store <2 x b32> <b32 23, b32 19>, ptr addrspace(5) [[OUT_GEP_2]], align 2
+; ELT8-UNALIGNED-NEXT:    store <2 x i32> <i32 9, i32 1>, ptr addrspace(5) [[OUT]], align 2
+; ELT8-UNALIGNED-NEXT:    store <2 x i32> <i32 23, i32 19>, ptr addrspace(5) [[OUT_GEP_2]], align 2
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align2(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <4 x b32> <b32 9, b32 1, b32 23, b32 19>, ptr addrspace(5) [[OUT]], align 2
+; ELT16-UNALIGNED-NEXT:    store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, ptr addrspace(5) [[OUT]], align 2
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(5) %out, i32 1
@@ -118,17 +118,17 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32_align2(
 define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8(ptr addrspace(5) %out) #0 {
 ; ELT4-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8(
 ; ELT4-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-NEXT:    store <4 x b8> <b8 9, b8 1, b8 23, b8 19>, ptr addrspace(5) [[OUT]], align 4
+; ELT4-NEXT:    store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, ptr addrspace(5) [[OUT]], align 4
 ; ELT4-NEXT:    ret void
 ;
 ; ELT8-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8(
 ; ELT8-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-NEXT:    store <4 x b8> <b8 9, b8 1, b8 23, b8 19>, ptr addrspace(5) [[OUT]], align 4
+; ELT8-NEXT:    store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, ptr addrspace(5) [[OUT]], align 4
 ; ELT8-NEXT:    ret void
 ;
 ; ELT16-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8(
 ; ELT16-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-NEXT:    store <4 x b8> <b8 9, b8 1, b8 23, b8 19>, ptr addrspace(5) [[OUT]], align 4
+; ELT16-NEXT:    store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, ptr addrspace(5) [[OUT]], align 4
 ; ELT16-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(5) %out, i32 1
@@ -157,17 +157,17 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8_align1(p
 ;
 ; ELT4-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8_align1(
 ; ELT4-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-UNALIGNED-NEXT:    store <4 x b8> <b8 9, b8 1, b8 23, b8 19>, ptr addrspace(5) [[OUT]], align 1
+; ELT4-UNALIGNED-NEXT:    store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, ptr addrspace(5) [[OUT]], align 1
 ; ELT4-UNALIGNED-NEXT:    ret void
 ;
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8_align1(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-UNALIGNED-NEXT:    store <4 x b8> <b8 9, b8 1, b8 23, b8 19>, ptr addrspace(5) [[OUT]], align 1
+; ELT8-UNALIGNED-NEXT:    store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, ptr addrspace(5) [[OUT]], align 1
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8_align1(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <4 x b8> <b8 9, b8 1, b8 23, b8 19>, ptr addrspace(5) [[OUT]], align 1
+; ELT16-UNALIGNED-NEXT:    store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, ptr addrspace(5) [[OUT]], align 1
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(5) %out, i32 1
@@ -184,17 +184,17 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8_align1(p
 define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16(ptr addrspace(5) %out) #0 {
 ; ELT4-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16(
 ; ELT4-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 4
+; ELT4-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 4
 ; ELT4-NEXT:    ret void
 ;
 ; ELT8-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16(
 ; ELT8-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 4
+; ELT8-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 4
 ; ELT8-NEXT:    ret void
 ;
 ; ELT16-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16(
 ; ELT16-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 4
+; ELT16-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 4
 ; ELT16-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(5) %out, i32 1
@@ -214,17 +214,17 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align2(
 ;
 ; ELT4-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align2(
 ; ELT4-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-UNALIGNED-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 2
+; ELT4-UNALIGNED-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 2
 ; ELT4-UNALIGNED-NEXT:    ret void
 ;
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align2(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-UNALIGNED-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 2
+; ELT8-UNALIGNED-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 2
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align2(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 2
+; ELT16-UNALIGNED-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 2
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(5) %out, i32 1
@@ -245,17 +245,17 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align1(
 ;
 ; ELT4-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align1(
 ; ELT4-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-UNALIGNED-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 1
+; ELT4-UNALIGNED-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 1
 ; ELT4-UNALIGNED-NEXT:    ret void
 ;
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align1(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-UNALIGNED-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 1
+; ELT8-UNALIGNED-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 1
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align1(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 1
+; ELT16-UNALIGNED-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 1
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(5) %out, i32 1
@@ -268,17 +268,17 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align1(
 define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align8(ptr addrspace(5) %out) #0 {
 ; ELT4-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align8(
 ; ELT4-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 8
+; ELT4-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 8
 ; ELT4-NEXT:    ret void
 ;
 ; ELT8-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align8(
 ; ELT8-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 8
+; ELT8-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 8
 ; ELT8-NEXT:    ret void
 ;
 ; ELT16-LABEL: define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v2i16_align8(
 ; ELT16-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-NEXT:    store <2 x b16> <b16 9, b16 12>, ptr addrspace(5) [[OUT]], align 8
+; ELT16-NEXT:    store <2 x i16> <i16 9, i16 12>, ptr addrspace(5) [[OUT]], align 8
 ; ELT16-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i16, ptr addrspace(5) %out, i32 1
@@ -303,13 +303,13 @@ define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i32(ptr add
 ; ELT8-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i32(
 ; ELT8-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
 ; ELT8-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i32, ptr addrspace(5) [[OUT]], i32 2
-; ELT8-NEXT:    store <2 x b32> <b32 9, b32 1>, ptr addrspace(5) [[OUT]], align 4
+; ELT8-NEXT:    store <2 x i32> <i32 9, i32 1>, ptr addrspace(5) [[OUT]], align 4
 ; ELT8-NEXT:    store i32 23, ptr addrspace(5) [[OUT_GEP_2]], align 4
 ; ELT8-NEXT:    ret void
 ;
 ; ELT16-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i32(
 ; ELT16-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-NEXT:    store <3 x b32> <b32 9, b32 1, b32 23>, ptr addrspace(5) [[OUT]], align 4
+; ELT16-NEXT:    store <3 x i32> <i32 9, i32 1, i32 23>, ptr addrspace(5) [[OUT]], align 4
 ; ELT16-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(5) %out, i32 1
@@ -335,13 +335,13 @@ define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i32_align1(
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i32_align1(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
 ; ELT8-UNALIGNED-NEXT:    [[OUT_GEP_2:%.*]] = getelementptr i32, ptr addrspace(5) [[OUT]], i32 2
-; ELT8-UNALIGNED-NEXT:    store <2 x b32> <b32 9, b32 1>, ptr addrspace(5) [[OUT]], align 1
+; ELT8-UNALIGNED-NEXT:    store <2 x i32> <i32 9, i32 1>, ptr addrspace(5) [[OUT]], align 1
 ; ELT8-UNALIGNED-NEXT:    store i32 23, ptr addrspace(5) [[OUT_GEP_2]], align 1
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i32_align1(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <3 x b32> <b32 9, b32 1, b32 23>, ptr addrspace(5) [[OUT]], align 1
+; ELT16-UNALIGNED-NEXT:    store <3 x i32> <i32 9, i32 1, i32 23>, ptr addrspace(5) [[OUT]], align 1
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(5) %out, i32 1
@@ -366,17 +366,17 @@ define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i8_align1(p
 ;
 ; ELT4-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i8_align1(
 ; ELT4-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT4-UNALIGNED-NEXT:    store <3 x b8> <b8 9, b8 1, b8 23>, ptr addrspace(5) [[OUT]], align 1
+; ELT4-UNALIGNED-NEXT:    store <3 x i8> <i8 9, i8 1, i8 23>, ptr addrspace(5) [[OUT]], align 1
 ; ELT4-UNALIGNED-NEXT:    ret void
 ;
 ; ELT8-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i8_align1(
 ; ELT8-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT8-UNALIGNED-NEXT:    store <3 x b8> <b8 9, b8 1, b8 23>, ptr addrspace(5) [[OUT]], align 1
+; ELT8-UNALIGNED-NEXT:    store <3 x i8> <i8 9, i8 1, i8 23>, ptr addrspace(5) [[OUT]], align 1
 ; ELT8-UNALIGNED-NEXT:    ret void
 ;
 ; ELT16-UNALIGNED-LABEL: define amdgpu_kernel void @merge_private_store_3_vector_elts_loads_v4i8_align1(
 ; ELT16-UNALIGNED-SAME: ptr addrspace(5) [[OUT:%.*]]) #[[ATTR0]] {
-; ELT16-UNALIGNED-NEXT:    store <3 x b8> <b8 9, b8 1, b8 23>, ptr addrspace(5) [[OUT]], align 1
+; ELT16-UNALIGNED-NEXT:    store <3 x i8> <i8 9, i8 1, i8 23>, ptr addrspace(5) [[OUT]], align 1
 ; ELT16-UNALIGNED-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i8, ptr addrspace(5) %out, i8 1

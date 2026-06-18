@@ -9,15 +9,11 @@ define void @vect_zext_bitcast_f32_to_i32_idx(ptr addrspace(1) %arg1, i32 %base)
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nuw i32 [[BASE]], 0
 ; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i32 [[ADD1]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[ARG1]], i64 [[ZEXT1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LOAD11]] to i32
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LOAD22]] to i32
-; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[LOAD33]] to i32
-; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[LOAD44]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    ret void
 ;
   %add1 = add nuw i32 %base, 0
@@ -85,15 +81,11 @@ define void @vect_zext_bitcast_i8_st4_to_i32_idx(ptr addrspace(1) %arg1, i32 %ba
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nuw i32 [[BASE]], 0
 ; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i32 [[ADD1]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG1]], i64 [[ZEXT1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LOAD11]] to i32
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[LOAD22]] to i32
-; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[LOAD33]] to i32
-; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[LOAD44]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    ret void
 ;
   %add1 = add nuw i32 %base, 0
@@ -121,11 +113,9 @@ define void @vect_zext_bitcast_negative_ptr_delta(ptr addrspace(1) %p, i32 %base
 ; CHECK-NEXT:    [[A_OFFSET:%.*]] = add nuw i32 [[BASE]], 4
 ; CHECK-NEXT:    [[A_OFFSET_ZEXTED:%.*]] = zext i32 [[A_OFFSET]] to i64
 ; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[P]], i64 [[A_OFFSET_ZEXTED]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr addrspace(1) [[A_PTR]], align 4
-; CHECK-NEXT:    [[A_VAL1:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[A_VAL1]] to i32
-; CHECK-NEXT:    [[B_VAL2:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[B_VAL2]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[A_PTR]], align 4
+; CHECK-NEXT:    [[A_VAL1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B_VAL2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    ret void
 ;
   %a.offset = add nuw i32 %base, 4

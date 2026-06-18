@@ -12,12 +12,10 @@ define amdgpu_kernel void @basic_merge_sext_index(ptr addrspace(1) nocapture %a,
 ; CHECK-NEXT:    [[SEXT_ID_X:%.*]] = sext i32 [[ID_X]] to i64
 ; CHECK-NEXT:    [[A_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[SEXT_ID_X]]
 ; CHECK-NEXT:    [[C_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[SEXT_ID_X]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_IDX_X]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C1]] to float
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_IDX_12]] to float
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[C_IDX_X]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[B]], align 4
 ; CHECK-NEXT:    ret void
@@ -49,12 +47,10 @@ define amdgpu_kernel void @basic_merge_zext_index(ptr addrspace(1) nocapture %a,
 ; CHECK-NEXT:    [[ZEXT_ID_X:%.*]] = zext i32 [[ID_X]] to i64
 ; CHECK-NEXT:    [[A_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[ZEXT_ID_X]]
 ; CHECK-NEXT:    [[C_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[ZEXT_ID_X]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_IDX_X]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C1]] to float
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_IDX_12]] to float
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[C_IDX_X]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[B]], align 4
 ; CHECK-NEXT:    ret void
@@ -86,12 +82,10 @@ define amdgpu_kernel void @merge_op_zext_index(ptr addrspace(1) nocapture noalia
 ; CHECK-NEXT:    [[ZEXT_ID_X:%.*]] = zext i32 [[SHL]] to i64
 ; CHECK-NEXT:    [[A_0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[ZEXT_ID_X]]
 ; CHECK-NEXT:    [[C_0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[ZEXT_ID_X]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_0]], align 4
-; CHECK-NEXT:    [[LD_C_01:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C_01]] to float
-; CHECK-NEXT:    [[LD_C_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_12]] to float
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A_0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[C_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A_0]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[B]], align 4
 ; CHECK-NEXT:    ret void
@@ -128,12 +122,10 @@ define amdgpu_kernel void @merge_op_sext_index(ptr addrspace(1) nocapture noalia
 ; CHECK-NEXT:    [[ZEXT_ID_X:%.*]] = sext i32 [[SHL]] to i64
 ; CHECK-NEXT:    [[A_0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[ZEXT_ID_X]]
 ; CHECK-NEXT:    [[C_0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[ZEXT_ID_X]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_0]], align 4
-; CHECK-NEXT:    [[LD_C_01:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C_01]] to float
-; CHECK-NEXT:    [[LD_C_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_12]] to float
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A_0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[C_0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A_0]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[B]], align 4
 ; CHECK-NEXT:    ret void
@@ -177,16 +169,12 @@ define amdgpu_kernel void @zext_trunc_phi_1(ptr addrspace(1) nocapture noalias %
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    [[C_0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[C]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[A_0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[A]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_0]], align 4
-; CHECK-NEXT:    [[LD_C_01:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C_01]] to i32
-; CHECK-NEXT:    [[LD_C_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_12]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP1]] to b32
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x b32> poison, b32 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2]] to b32
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x b32> [[TMP4]], b32 [[TMP5]], i32 1
-; CHECK-NEXT:    store <2 x b32> [[TMP6]], ptr addrspace(1) [[A_0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[C_0]], align 4
+; CHECK-NEXT:    [[LD_C_01:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[LD_C_12:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[LD_C_01]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[LD_C_12]], i32 1
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr addrspace(1) [[A_0]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]

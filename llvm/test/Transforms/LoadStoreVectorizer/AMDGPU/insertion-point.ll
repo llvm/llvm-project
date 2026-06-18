@@ -13,14 +13,12 @@ define amdgpu_kernel void @insert_load_point(ptr addrspace(1) nocapture %a, ptr 
 ; CHECK-NEXT:    [[A_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[IDX]]
 ; CHECK-NEXT:    [[C_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[IDX]]
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_IDX_X]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C1]] to float
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_IDX_12]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[C_IDX_X]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[W:%.*]] = add i32 [[Y]], 9
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[Z]], [[W]]
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[B]], align 4
 ; CHECK-NEXT:    store i32 [[FOO]], ptr addrspace(3) null, align 4
@@ -53,14 +51,12 @@ define amdgpu_kernel void @insert_store_point(ptr addrspace(1) nocapture %a, ptr
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[IDX]]
 ; CHECK-NEXT:    [[C_IDX_X:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[C]], i64 [[IDX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(1) [[C_IDX_X]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[LD_C1]] to float
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[LD_C_IDX_12]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[C_IDX_X]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], 4
 ; CHECK-NEXT:    [[W:%.*]] = add i32 [[Y]], 9
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A_IDX_X]], align 4
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[Z]], [[W]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[B]], align 4
@@ -99,7 +95,7 @@ define float @insert_store_point_alias(ptr addrspace(1) nocapture %a, i64 %idx) 
 ; CHECK-NEXT:    [[A_IDX_1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A_IDX]], i64 1
 ; CHECK-NEXT:    [[A_IDX_2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A_IDX_1]], i64 1
 ; CHECK-NEXT:    [[A_IDX_3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A_IDX_2]], i64 1
-; CHECK-NEXT:    store <3 x b32> zeroinitializer, ptr addrspace(1) [[A_IDX]], align 4
+; CHECK-NEXT:    store <3 x float> zeroinitializer, ptr addrspace(1) [[A_IDX]], align 4
 ; CHECK-NEXT:    [[X:%.*]] = load float, ptr addrspace(1) [[A_IDX_2]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A_IDX_3]], align 4
 ; CHECK-NEXT:    ret float [[X]]
@@ -128,7 +124,7 @@ define float @insert_store_point_alias_ooo(ptr addrspace(1) nocapture %a, i64 %i
 ; CHECK-NEXT:    [[A_IDX:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 [[IDX]]
 ; CHECK-NEXT:    [[A_IDX_1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A_IDX]], i64 1
 ; CHECK-NEXT:    [[A_IDX_2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A_IDX_1]], i64 1
-; CHECK-NEXT:    store <3 x b32> zeroinitializer, ptr addrspace(1) [[A_IDX_1]], align 4
+; CHECK-NEXT:    store <3 x float> zeroinitializer, ptr addrspace(1) [[A_IDX_1]], align 4
 ; CHECK-NEXT:    [[X:%.*]] = load float, ptr addrspace(1) [[A_IDX_2]], align 4
 ; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A_IDX]], align 4
 ; CHECK-NEXT:    ret float [[X]]

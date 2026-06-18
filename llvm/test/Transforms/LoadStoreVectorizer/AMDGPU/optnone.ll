@@ -19,7 +19,7 @@ define amdgpu_kernel void @optnone(ptr addrspace(1) %out) noinline optnone {
 define amdgpu_kernel void @do_opt(ptr addrspace(1) %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @do_opt(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    store <2 x b32> <b32 456, b32 123>, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 456, i32 123>, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i32 1

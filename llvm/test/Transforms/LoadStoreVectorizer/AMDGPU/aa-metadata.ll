@@ -8,7 +8,7 @@ define amdgpu_kernel void @vectorize_alias_scope(ptr addrspace(1) nocapture %a, 
 ; SCOPE-LABEL: @vectorize_alias_scope(
 ; SCOPE-NEXT:  entry:
 ; SCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope [[META0:![0-9]+]]
-; SCOPE-NEXT:    store <2 x b32> zeroinitializer, ptr addrspace(1) [[A:%.*]], align 4, !noalias [[META0]]
+; SCOPE-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A:%.*]], align 4, !noalias [[META0]]
 ; SCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias [[META0]]
 ; SCOPE-NEXT:    ret void
 ;

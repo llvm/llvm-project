@@ -221,7 +221,6 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s0, s2, 0
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
-; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 22
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -249,7 +248,6 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; TONGA-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; TONGA-NEXT:    s_cselect_b32 s0, s2, 0
 ; TONGA-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
-; TONGA-NEXT:    v_bfe_i32 v0, v0, 0, 22
 ; TONGA-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; TONGA-NEXT:    s_endpgm
 ;
@@ -277,7 +275,6 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; GFX9-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-NEXT:    s_cselect_b32 s0, s2, 0
 ; GFX9-NEXT:    v_add_u32_e32 v0, s0, v2
-; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 22
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX9-NEXT:    s_endpgm
 ;

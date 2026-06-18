@@ -5,16 +5,12 @@ define void @int16x2(ptr nocapture align 4 %ptr) {
 ; CHECK-LABEL: define void @int16x2(
 ; CHECK-SAME: ptr align 4 captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i16, ptr [[PTR]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b16>, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <2 x b16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b16 [[L01]] to i16
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x b16> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b16 [[L12]] to i16
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP3]] to b16
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x b16> poison, b16 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i16 [[TMP2]] to b16
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x b16> [[TMP5]], b16 [[TMP6]], i32 1
-; CHECK-NEXT:    store <2 x b16> [[TMP7]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <2 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> poison, i16 [[L12]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> [[TMP2]], i16 [[L01]], i32 1
+; CHECK-NEXT:    store <2 x i16> [[TMP3]], ptr [[PTR0]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i16, ptr %ptr, i64 0

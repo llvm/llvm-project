@@ -317,16 +317,14 @@ define amdgpu_kernel void @v_test_class_full_mask_f32(ptr addrspace(1) %out, ptr
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x1ff
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v2, v3
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -363,15 +361,13 @@ define amdgpu_kernel void @test_class_inline_imm_constant_dynamic_mask_f32(ptr a
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, 1.0, v2
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -410,16 +406,14 @@ define amdgpu_kernel void @test_class_lit_constant_dynamic_mask_f32(ptr addrspac
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x44800000
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v3, v2
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -752,15 +746,13 @@ define amdgpu_kernel void @test_class_inline_imm_constant_dynamic_mask_f64(ptr a
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, 1.0, v2
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -799,17 +791,15 @@ define amdgpu_kernel void @test_class_lit_constant_dynamic_mask_f64(ptr addrspac
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v4, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x40900000
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v4
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-GISEL-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -849,18 +839,16 @@ define amdgpu_kernel void @test_fold_or_class_f32_0(ptr addrspace(1) %out, ptr a
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], v0, 1
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 3
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
-; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[6:7], v0, 3
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -903,20 +891,18 @@ define amdgpu_kernel void @test_fold_or3_class_f32_0(ptr addrspace(1) %out, ptr 
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], v0, 1
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 2
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[6:7], v0, 2
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[8:9], v0, 4
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[8:9]
-; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -962,37 +948,35 @@ define amdgpu_kernel void @test_fold_or_all_tests_class_f32_0(ptr addrspace(1) %
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s10, 0
-; SI-GISEL-NEXT:    s_mov_b32 s11, 0xf000
-; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x80
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[8:9], s[6:7]
-; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x100
+; SI-GISEL-NEXT:    s_mov_b32 s6, 0
+; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
+; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x80
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x100
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x200
-; SI-GISEL-NEXT:    s_mov_b32 s10, -1
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[6:7], v0, 1
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[8:9], v0, 2
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[8:9], v0, 1
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[10:11], v0, 2
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[12:13], v0, 4
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[14:15], v0, 8
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[16:17], v0, 16
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[18:19], v0, 32
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[20:21], v0, 64
-; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, v1
+; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, v2
 ; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], v0, v3
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[12:13]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[14:15]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[16:17]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[18:19]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[20:21]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], vcc
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[10:11]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[14:15]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[16:17]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[18:19]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[20:21]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], vcc
+; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[8:9], s[0:1]
 ; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
-; SI-GISEL-NEXT:    s_mov_b64 s[6:7], s[10:11]
+; SI-GISEL-NEXT:    s_mov_b32 s6, -1
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -1050,18 +1034,16 @@ define amdgpu_kernel void @test_fold_or_class_f32_1(ptr addrspace(1) %out, ptr a
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], v0, 4
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 8
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
-; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 4
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[6:7], v0, 8
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -1104,16 +1086,14 @@ define amdgpu_kernel void @test_fold_or_class_f32_2(ptr addrspace(1) %out, ptr a
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
-; SI-GISEL-NEXT:    s_mov_b32 s6, -1
+; SI-GISEL-NEXT:    s_mov_b32 s2, 0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
+; SI-GISEL-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[2:3], v0, 7
-; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; SI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 7
+; SI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[4:5]
+; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1

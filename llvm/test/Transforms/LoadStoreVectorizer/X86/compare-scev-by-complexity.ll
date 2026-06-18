@@ -38,11 +38,9 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[PREHEADER_ADDRESS0_IDX:%.*]] = add nuw nsw i32 [[ADD7_I_7]], [[MUL_I_I]]
 ; CHECK-NEXT:    [[PREHEADER_ADDRESS0_IDX_ZEXT:%.*]] = zext i32 [[PREHEADER_ADDRESS0_IDX]] to i64
 ; CHECK-NEXT:    [[PREHEADER_LOAD0_ADDRESS:%.*]] = getelementptr inbounds float, ptr @other_value, i64 [[PREHEADER_ADDRESS0_IDX_ZEXT]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr [[PREHEADER_LOAD0_ADDRESS]], align 4, !tbaa [[FLOAT_TBAA1:![0-9]+]]
-; CHECK-NEXT:    [[PREHEADER_LOAD0_1:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[PREHEADER_LOAD0_1]] to float
-; CHECK-NEXT:    [[PREHEADER_LOAD1_2:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[PREHEADER_LOAD1_2]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[PREHEADER_LOAD0_ADDRESS]], align 4, !tbaa [[FLOAT_TBAA1:![0-9]+]]
+; CHECK-NEXT:    [[PREHEADER_LOAD0_1:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[PREHEADER_LOAD1_2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[COMMON_ADDRESS_IDX:%.*]] = add nuw nsw i32 [[ADD7_I_7]], [[CONV3_I42_I]]
 ; CHECK-NEXT:    [[PREHEADER_HEADER_COMMON_ADDRESS_IDX_ZEXT:%.*]] = zext i32 [[COMMON_ADDRESS_IDX]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY23:.*]]
@@ -56,8 +54,8 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[LOOP_HEADER_ADDRESS1_IDX_ZEXT:%.*]] = zext i32 [[LOOP_HEADER_ADDRESS1_IDX]] to i64
 ; CHECK-NEXT:    [[LOOP_HEADER_LOAD1_ADDRESS:%.*]] = getelementptr inbounds float, ptr @other_value, i64 [[LOOP_HEADER_ADDRESS1_IDX_ZEXT]]
 ; CHECK-NEXT:    [[LOOP_HEADER_LOAD1_:%.*]] = load float, ptr [[LOOP_HEADER_LOAD1_ADDRESS]], align 4, !tbaa [[FLOAT_TBAA1]]
-; CHECK-NEXT:    store float [[TMP1]], ptr @a, align 4, !tbaa [[FLOAT_TBAA1]]
-; CHECK-NEXT:    store float [[TMP2]], ptr @b, align 4, !tbaa [[FLOAT_TBAA1]]
+; CHECK-NEXT:    store float [[PREHEADER_LOAD0_1]], ptr @a, align 4, !tbaa [[FLOAT_TBAA1]]
+; CHECK-NEXT:    store float [[PREHEADER_LOAD1_2]], ptr @b, align 4, !tbaa [[FLOAT_TBAA1]]
 ; CHECK-NEXT:    store float [[LOOP_HEADER_LOAD0_]], ptr @c, align 4, !tbaa [[FLOAT_TBAA1]]
 ; CHECK-NEXT:    store float [[LOOP_HEADER_LOAD1_]], ptr @d, align 4, !tbaa [[FLOAT_TBAA1]]
 ; CHECK-NEXT:    [[LOADED_CND:%.*]] = load i8, ptr @cnd, align 1
