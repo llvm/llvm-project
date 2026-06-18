@@ -406,6 +406,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       break;
 
 // RISC-V vector types.
+// TODO: Handle NF.
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
   case BuiltinType::Id: {                                                      \
