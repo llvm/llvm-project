@@ -3771,6 +3771,8 @@ void RISCVAsmParser::emitQCELILoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   };
   std::optional<CompressedForm> Compressed;
   switch (Opcode) {
+  default:
+    break;
   case RISCV::PseudoQCAccessLBU:
     Compressed = {RISCV::PseudoQCAccessC_LBU, RISCV::FeatureStdExtZcb};
     break;
