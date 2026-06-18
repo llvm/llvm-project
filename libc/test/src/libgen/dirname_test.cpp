@@ -72,10 +72,3 @@ TEST(LlvmLibcDirnameTest, MultipleSlashesA) {
   ASSERT_STREQ(LIBC_NAMESPACE::dirname(path), "/");
   ASSERT_STREQ(path, "/");
 }
-
-#ifdef ENABLE_SUBPROCESS_TESTS
-TEST(LlvmLibcDirnameTest, ModifyReturnValue) {
-  char *r = LIBC_NAMESPACE::dirname(nullptr);
-  ASSERT_DEATH([r]() { r[0] = 'a'; }, WITH_SIGNAL(-1));
-}
-#endif

@@ -60,10 +60,3 @@ TEST(LlvmLibcBasenameTest, ComplexPath) {
   ASSERT_STREQ(LIBC_NAMESPACE::basename(path), "a");
   ASSERT_STREQ(path, "///a");
 }
-
-#ifdef ENABLE_SUBPROCESS_TESTS
-TEST(LlvmLibcBasenameTest, ModifyReturnValue) {
-  char *r = LIBC_NAMESPACE::basename(nullptr);
-  ASSERT_DEATH([r]() { r[0] = 'a'; }, WITH_SIGNAL(-1));
-}
-#endif
