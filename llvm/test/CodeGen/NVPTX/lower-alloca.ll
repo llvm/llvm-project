@@ -1,6 +1,7 @@
 ; RUN: opt < %s -S -nvptx-lower-alloca -infer-address-spaces | FileCheck %s
 ; RUN: opt < %s -S -nvptx-lower-alloca | FileCheck %s --check-prefix LOWERALLOCAONLY
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
+; RUN: llc < %s -O0 -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTXO0
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
@@ -9,6 +10,7 @@ target triple = "nvptx64-unknown-unknown"
 define ptx_kernel void @kernel() {
 ; LABEL: @lower_alloca
 ; PTX-LABEL: .visible .entry kernel(
+; PTXO0-LABEL: .visible .entry kernel(
   %A = alloca i32
 ; CHECK: [[A:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK: [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
@@ -19,6 +21,9 @@ define ptx_kernel void @kernel() {
 ; LOWERALLOCAONLY: store i32 0, ptr [[GENERIC]], align 4
 ; LOWERALLOCAONLY: call void @callee(ptr [[GENERIC]])
 ; PTX: st.local.b32 [%SPL], 0
+; PTXO0: mov.b64 %SPL, __local_depot0;
+; PTXO0: cvta.local.u64 [[SP:%rd[0-9]+]], {{%rd[0-9]+}};
+; PTXO0: st.b32 {{\[}}[[SP]]{{\]}}, 0;
   store i32 0, ptr %A
   call void @callee(ptr %A)
   ret void
