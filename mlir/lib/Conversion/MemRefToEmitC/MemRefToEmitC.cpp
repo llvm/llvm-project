@@ -100,21 +100,17 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
-static FailureOr<Value>
-calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
-                              OpBuilder &builder,
-                              const TypeConverter *typeConverter) {
+static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
+                                           OpBuilder &builder,
+                                           Type convertedElementType) {
   assert(isMemRefTypeLegalForEmitC(memrefType) &&
          "incompatible memref type for EmitC conversion");
 
-  Type elementType = typeConverter->convertType(memrefType.getElementType());
-  if (!elementType) {
-    return failure();
-  }
   emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
       builder, loc, emitc::SizeTType::get(builder.getContext()),
       builder.getStringAttr("sizeof"), ValueRange{},
-      ArrayAttr::get(builder.getContext(), {TypeAttr::get(elementType)}));
+      ArrayAttr::get(builder.getContext(),
+                     {TypeAttr::get(convertedElementType)}));
 
   IndexType indexType = builder.getIndexType();
   int64_t numElements = llvm::product_of(memrefType.getShape());
@@ -198,13 +194,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
           loc, "failed to convert memref element type");
     }
     IndexType indexType = rewriter.getIndexType();
-    FailureOr<Value> totalSizeOrFail = calculateMemrefTotalSizeBytes(
-        loc, memrefType, rewriter, getTypeConverter());
-    if (failed(totalSizeOrFail)) {
-      return rewriter.notifyMatchFailure(
-          loc, "Failed to calculate total size of memref in bytes.");
-    }
-    Value totalSizeBytes = *totalSizeOrFail;
+    Value totalSizeBytes =
+        calculateMemrefTotalSizeBytes(loc, memrefType, rewriter, elementType);
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
@@ -299,18 +290,20 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
     emitc::AddressOfOp targetPtr =
         createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
 
-    FailureOr<Value> totalSizeOrFail = calculateMemrefTotalSizeBytes(
-        loc, srcMemrefType, rewriter, getTypeConverter());
-    if (failed(totalSizeOrFail)) {
+    Type convertedElementType =
+        getTypeConverter()->convertType(srcMemrefType.getElementType());
+    if (!convertedElementType) {
       return rewriter.notifyMatchFailure(
-          loc, "Failed to calculate total size of memref in bytes.");
+          loc, "failed to convert memref element type");
     }
+    Value totalSizeInBytes = calculateMemrefTotalSizeBytes(
+        loc, srcMemrefType, rewriter, convertedElementType);
     emitc::CallOpaqueOp memCpyCall =
         emitc::CallOpaqueOp::create(rewriter, loc, TypeRange{}, "memcpy",
                                     ValueRange{
                                         targetPtr.getResult(),
                                         srcPtr.getResult(),
-                                        *totalSizeOrFail,
+                                        totalSizeInBytes,
                                     });
 
     rewriter.replaceOp(copyOp, memCpyCall.getResults());
