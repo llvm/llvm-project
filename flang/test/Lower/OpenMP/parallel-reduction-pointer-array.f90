@@ -19,7 +19,7 @@ deallocate(r)
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } init {
@@ -41,7 +41,6 @@ end program
 ! CHECK:             %[[VAL_11:.*]] = fir.shape %[[VAL_10]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_12:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_10]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_11]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:             %[[VAL_13:.*]] = arith.constant true
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:             %[[VAL_17:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index) -> !fir.shapeshift<1>
@@ -105,7 +104,7 @@ end program
 ! CHECK:           fir.call @_FortranAPointerSetBounds(%[[VAL_15]], %[[VAL_14]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<{{.*}}>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_21:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_19]], %[[VAL_4]], %[[VAL_5]], %[[VAL_20]], %[[VAL_7]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_21:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_19]], %[[VAL_4]], %[[VAL_5]], %[[VAL_20]], %[[VAL_7]], {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_24:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_25:.*]] = arith.constant 10 : i32

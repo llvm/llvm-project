@@ -41,6 +41,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -68,9 +69,10 @@ static cl::opt<unsigned> TileSize(
     "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
     cl::desc(
         "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<bool> TileUseLoops("fuse-matrix-use-loops", cl::init(false),
-                                  cl::Hidden,
-                                  cl::desc("Generate loop nest for tiling."));
+static cl::opt<unsigned>
+    TileLoopsThreshold("fuse-matrix-loops-threshold", cl::init(200), cl::Hidden,
+                       cl::desc("Generate loop nests for tiling when expected "
+                                "number of operations exceeds threshold."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -97,6 +99,16 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
 static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
                                             cl::init(false));
 
+static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
+    "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
+    cl::desc("Illegal remainder vectors over this size in bits should be split "
+             "in the inner loop of matmul"),
+    cl::init(0));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
@@ -115,17 +127,15 @@ static bool isSplat(Value *V) {
 
 /// Match any mul operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyMul(const LTy &L, const RTy &R) {
+static auto m_AnyMul(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Mul(L, R), m_FMul(L, R));
 }
 
 /// Match any add operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyAdd(const LTy &L, const RTy &R) {
+static auto m_AnyAdd(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Add(L, R), m_FAdd(L, R));
 }
-
-namespace {
 
 // Given an element pointer \p BasePtr to the start of a (sub) matrix, compute
 // the start address of vector \p VecIdx with type (\p EltType x \p NumElements)
@@ -167,9 +177,9 @@ namespace {
 //         v_2_0 |v_2_1 |v_2_2 |v_2_3
 //         v_3_0 {v_3_1 {v_3_2  v_3_3
 //
-Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
-                         unsigned NumElements, Type *EltType,
-                         IRBuilder<> &Builder) {
+static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
+                                unsigned NumElements, Type *EltType,
+                                IRBuilder<> &Builder) {
 
   assert((!isa<ConstantInt>(Stride) ||
           cast<ConstantInt>(Stride)->getZExtValue() >= NumElements) &&
@@ -183,7 +193,7 @@ Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
   if (isa<ConstantInt>(VecStart) && cast<ConstantInt>(VecStart)->isZero())
     VecStart = BasePtr;
   else
-    VecStart = Builder.CreateGEP(EltType, BasePtr, VecStart, "vec.gep");
+    VecStart = Builder.CreateInBoundsGEP(EltType, BasePtr, VecStart, "vec.gep");
 
   return VecStart;
 }
@@ -241,9 +251,12 @@ raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
 
 } // namespace
 
-static bool isUniformShape(Value *V) {
+static bool isShapePreserving(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I)
+    return true;
+
+  if (isa<SelectInst>(I))
     return true;
 
   if (I->isBinaryOp())
@@ -296,6 +309,16 @@ static bool isUniformShape(Value *V) {
   }
 }
 
+/// Return an iterator over the operands of \p I that should share shape
+/// information with \p I.
+static iterator_range<Use *> getShapedOperandsForInst(Instruction *I) {
+  assert(isShapePreserving(I) &&
+         "Can't retrieve shaped operands for an instruction that does not "
+         "preserve shape information");
+  auto Ops = I->operands();
+  return isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
+}
+
 /// Return the ShapeInfo for the result of \p I, it it can be determined.
 static std::optional<ShapeInfo>
 computeShapeInfoForInst(Instruction *I,
@@ -325,9 +348,8 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
-  if (isUniformShape(I) || isa<SelectInst>(I)) {
-    auto Ops = I->operands();
-    auto ShapedOps = isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
+  if (isShapePreserving(I)) {
+    auto ShapedOps = getShapedOperandsForInst(I);
     // Find the first operand that has a known shape and use that.
     for (auto &Op : ShapedOps) {
       auto OpShape = ShapeMap.find(Op.get());
@@ -337,6 +359,8 @@ computeShapeInfoForInst(Instruction *I,
   }
   return std::nullopt;
 }
+
+namespace {
 
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
 ///
@@ -371,7 +395,8 @@ class LowerMatrixIntrinsics {
   LoopInfo *LI = nullptr;
   OptimizationRemarkEmitter *ORE = nullptr;
 
-  /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
+  /// Contains estimates of the number of operations (loads, stores, compute)
+  /// required to lower a matrix operation.
   struct OpInfoTy {
     /// Number of stores emitted to generate this matrix.
     unsigned NumStores = 0;
@@ -593,6 +618,24 @@ public:
                                 .getFixedValue()));
   }
 
+  /// Estimate the number of native vector operations for a multiply of matrices
+  /// with dimensions \p R x \p M and \p M x \p C. Native ops are computed as
+  /// ceil(ElementCount * ElementBits / RegisterBits).
+  ///
+  /// Native vector ops per operation type (VF = native vector elements):
+  ///   FMAs:    C * ceil(R/VF) * M (one FMA per VF output elements)
+  ///   A loads: ceil(R/VF) * M (A has M columns, ceil(R/VF) native loads each)
+  ///   B loads: ceil(M/VF) * C (B has C columns, ceil(M/VF) native loads each)
+  ///   Stores:  C * ceil(R/VF) (one store per VF output elements)
+  unsigned getNumNativeVectorOps(Type *EltType, unsigned R, unsigned M,
+                                 unsigned C) {
+    unsigned NumFMAs = C * getNumOps(EltType, R) * M;
+    unsigned NumALoads = getNumOps(EltType, R) * M;
+    unsigned NumBLoads = getNumOps(EltType, M) * C;
+    unsigned NumStores = getNumOps(EltType, R) * C;
+    return NumFMAs + NumALoads + NumBLoads + NumStores;
+  }
+
   /// Return the set of vectors that a matrix value is lowered to.
   ///
   /// If we lowered \p MatrixVal, just return the cache result matrix. Otherwise
@@ -703,10 +746,9 @@ public:
       case Intrinsic::matrix_column_major_store:
         return true;
       default:
-        return isUniformShape(II);
+        break;
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
-           isa<SelectInst>(V);
+    return isShapePreserving(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -793,9 +835,8 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
-      } else if (isUniformShape(V) || isa<SelectInst>(V)) {
-        auto Ops = cast<Instruction>(V)->operands();
-        auto ShapedOps = isa<SelectInst>(V) ? drop_begin(Ops) : Ops;
+      } else if (isShapePreserving(V)) {
+        auto ShapedOps = getShapedOperandsForInst(cast<Instruction>(V));
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
         for (Use &U : ShapedOps) {
@@ -861,9 +902,10 @@ public:
     // it conditionally instead.
     auto S = ShapeMap.find(&Old);
     if (S != ShapeMap.end()) {
+      ShapeInfo Shape = S->second;
       ShapeMap.erase(S);
       if (supportsShapeInfo(New))
-        ShapeMap.insert({New, S->second});
+        ShapeMap.insert({New, Shape});
     }
     Old.replaceAllUsesWith(New);
   }
@@ -1295,6 +1337,24 @@ public:
     return commonAlignment(InitialAlign, ElementSizeInBits / 8);
   }
 
+  IntegerType *getIndexType(Value *Ptr) const {
+    return cast<IntegerType>(DL.getIndexType(Ptr->getType()));
+  }
+
+  Value *getIndex(Value *Ptr, uint64_t V) const {
+    return ConstantInt::get(getIndexType(Ptr), V);
+  }
+
+  Value *castToIndexType(Value *Ptr, Value *V, IRBuilder<> &Builder) const {
+    assert(isa<IntegerType>(V->getType()) &&
+           "Attempted to cast non-integral type to integer index");
+    // In case the data layout's index type differs in width from the type of
+    // the value we're given, truncate or zero extend to the appropriate width.
+    // We zero extend here as indices are unsigned.
+    return Builder.CreateZExtOrTrunc(V, getIndexType(Ptr),
+                                     V->getName() + ".cast");
+  }
+
   /// Load a matrix with \p Shape starting at \p Ptr and using \p Stride between
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
@@ -1304,6 +1364,7 @@ public:
     Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
     Value *EltPtr = Ptr;
     MatrixTy Result;
+    Stride = castToIndexType(Ptr, Stride, Builder);
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
       Value *GEP = computeVectorAddr(
           EltPtr, Builder.getIntN(Stride->getType()->getScalarSizeInBits(), I),
@@ -1325,14 +1386,14 @@ public:
                       ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
-    Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
                                                    ResultShape.NumColumns);
 
     return loadMatrix(TileTy, TileStart, Align,
-                      Builder.getInt64(MatrixShape.getStride()), IsVolatile,
+                      getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
                       ResultShape, Builder);
   }
 
@@ -1363,14 +1424,15 @@ public:
                    MaybeAlign MAlign, bool IsVolatile, ShapeInfo MatrixShape,
                    Value *I, Value *J, Type *EltTy, IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
-    Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
                                                    StoreVal.getNumColumns());
 
     storeMatrix(TileTy, StoreVal, TileStart, MAlign,
-                Builder.getInt64(MatrixShape.getStride()), IsVolatile, Builder);
+                getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
+                Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
@@ -1380,6 +1442,7 @@ public:
                        IRBuilder<> &Builder) {
     auto *VType = cast<FixedVectorType>(Ty);
     Value *EltPtr = Ptr;
+    Stride = castToIndexType(Ptr, Stride, Builder);
     for (auto Vec : enumerate(StoreVal.vectors())) {
       Value *GEP = computeVectorAddr(
           EltPtr,
@@ -1541,7 +1604,7 @@ public:
                   m_Load(m_Value()),
                   m_CombineOr(m_Intrinsic<Intrinsic::matrix_transpose>(),
                               m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                                  m_Value(), m_SpecificInt(1))))));
+                                  m_Value(), m_One())))));
     };
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
@@ -1698,6 +1761,31 @@ public:
     ToRemove.push_back(MatMul);
   }
 
+  /// Given \p Remainder iterations of the the matmul inner loop,
+  /// potentially lower \p Blocksize that is used for the underlying
+  /// vector.
+  unsigned capBlockSize(unsigned BlockSize, unsigned Remainder, Type *EltType) {
+    if (BlockSize <= Remainder)
+      return BlockSize;
+
+    // If the remainder is also a legal type just use it.
+    auto *VecTy = FixedVectorType::get(EltType, Remainder);
+    if (TTI.isTypeLegal(VecTy))
+      return Remainder;
+
+    // Similarly, if the vector is small enough that we don't want
+    // to split further.
+    if (VecTy->getPrimitiveSizeInBits() <= SplitMatmulRemainderOverThreshold)
+      return Remainder;
+
+    // Gradually lower the vectorization factor to cover the
+    // remainder.
+    do {
+      BlockSize /= 2;
+    } while (BlockSize > Remainder);
+    return BlockSize;
+  }
+
   /// Compute \p Result += \p A * \p B for input matrices with left-associating
   /// addition.
   ///
@@ -1735,10 +1823,8 @@ public:
         bool isSumZero = isa<ConstantAggregateZero>(Result.getColumn(J));
 
         for (unsigned I = 0; I < R; I += BlockSize) {
-          // Gradually lower the vectorization factor to cover the remainder.
-          while (I + BlockSize > R)
-            BlockSize /= 2;
-
+          // Lower block size to make sure we stay within bounds.
+          BlockSize = capBlockSize(BlockSize, R - I, Result.getElementType());
           Value *Sum = IsTiled ? Result.extractVector(I, J, BlockSize, Builder)
                                : nullptr;
           for (unsigned K = 0; K < M; ++K) {
@@ -1763,9 +1849,8 @@ public:
         unsigned BlockSize = VF;
         bool isSumZero = isa<ConstantAggregateZero>(Result.getRow(I));
         for (unsigned J = 0; J < C; J += BlockSize) {
-          // Gradually lower the vectorization factor to cover the remainder.
-          while (J + BlockSize > C)
-            BlockSize /= 2;
+          // Lower the vectorization factor to cover the remainder.
+          BlockSize = capBlockSize(BlockSize, C - J, Result.getElementType());
 
           Value *Sum = nullptr;
           for (unsigned K = 0; K < M; ++K) {
@@ -1789,14 +1874,31 @@ public:
   /// Ensure that the memory in \p Load does not alias \p Store by potentially
   /// copying it to a new location.  This new or otherwise the original location
   /// is returned.
-  Value *getNonAliasingPointer(LoadInst *Load, StoreInst *Store,
-                               CallInst *MatMul) {
+  std::pair<Value *, AllocaInst *>
+  getNonAliasingPointer(LoadInst *Load, StoreInst *Store, CallInst *MatMul) {
     MemoryLocation StoreLoc = MemoryLocation::get(Store);
     MemoryLocation LoadLoc = MemoryLocation::get(Load);
 
     // If we can statically determine noalias we're good.
     if (AA->isNoAlias(LoadLoc, StoreLoc))
-      return Load->getPointerOperand();
+      return {Load->getPointerOperand(), nullptr};
+
+    // If the pointers are in different address spaces, we cannot compare them
+    // at runtime. Conservatively copy the load operand to a new buffer.
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
+    if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
+      auto *VT = cast<FixedVectorType>(Load->getType());
+      auto *ArrayTy =
+          ArrayType::get(VT->getElementType(), VT->getNumElements());
+      AllocaInst *Alloca =
+          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+      IRBuilder<> Builder(MatMul);
+      Builder.CreateLifetimeStart(Alloca);
+      Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
+                           Load->getPointerOperand(), Load->getAlign(),
+                           LoadLoc.Size.getValue());
+      return {Alloca, Alloca};
+    }
 
     // Create code to check if the memory locations of the Load and Store
     // overlap and if they do, copy Load's operand to a new buffer.
@@ -1826,37 +1928,41 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *IntPtrTy = Builder.getIntPtrTy(Load->getDataLayout());
-    Value *StoreBegin = Builder.CreatePtrToInt(
-        const_cast<Value *>(StoreLoc.Ptr), IntPtrTy, "store.begin");
-    Value *StoreEnd = Builder.CreateAdd(
-        StoreBegin, ConstantInt::get(IntPtrTy, StoreLoc.Size.getValue()),
-        "store.end", true, true);
-    Value *LoadBegin = Builder.CreatePtrToInt(const_cast<Value *>(LoadLoc.Ptr),
-                                              IntPtrTy, "load.begin");
-    Builder.CreateCondBr(Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1,
-                         Fusion);
+    Type *AddrTy = DL.getAddressType(Store->getPointerOperand()->getType());
+    Value *StoreBegin = Store->getPointerOperand();
+    Value *StoreEnd = Builder.CreatePtrAdd(
+        StoreBegin, ConstantInt::get(AddrTy, StoreLoc.Size.getValue()),
+        "store.end",
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
+    Value *LoadBegin = Load->getPointerOperand();
+    CondBrInst *BR1 = Builder.CreateCondBr(
+        Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1, Fusion);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR1, DEBUG_TYPE);
 
     // Check if the store begins before the end of the load location. If the
     // condition holds, they alias, otherwise they are guaranteed to not
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1, Check1->begin());
-    Value *LoadEnd = Builder.CreateAdd(
-        LoadBegin, ConstantInt::get(IntPtrTy, LoadLoc.Size.getValue()),
-        "load.end", true, true);
-    Builder.CreateCondBr(Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy,
-                         Fusion);
 
-    // Copy load operand to new alloca.
-    Builder.SetInsertPoint(Copy, Copy->begin());
     auto *VT = cast<FixedVectorType>(Load->getType());
     // Use an array type for the alloca, to avoid potentially huge alignment
     // requirements for large vector types.
     auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
     AllocaInst *Alloca =
-        Builder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    Builder.CreateLifetimeStart(Alloca);
 
+    Value *LoadEnd = Builder.CreatePtrAdd(
+        LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
+        "load.end",
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
+    CondBrInst *BR2 = Builder.CreateCondBr(
+        Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
+
+    // Copy load operand to new alloca.
+    Builder.SetInsertPoint(Copy, Copy->begin());
     Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
@@ -1871,7 +1977,7 @@ public:
     DTUpdates.push_back({DT->Insert, Check1, Copy});
     DTUpdates.push_back({DT->Insert, Check1, Fusion});
     DT->applyUpdates(DTUpdates);
-    return PHI;
+    return {PHI, Alloca};
   }
 
   bool isFusionProfitable(CallInst *MatMul) {
@@ -1993,11 +2099,16 @@ public:
     const unsigned M = LShape.NumColumns;
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
-    Value *APtr = getNonAliasingPointer(LoadOp0, Store, MatMul);
-    Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
+    auto [APtr, AAlloca] = getNonAliasingPointer(LoadOp0, Store, MatMul);
+    auto [BPtr, BAlloca] = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    if (TileUseLoops && (R % TileSize == 0 && C % TileSize == 0))
+    // Use loop-based tiling when the number of expected operations exceeds
+    // threshold.
+    unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
+    bool UseLoops =
+        (NumOps > TileLoopsThreshold) && R % TileSize == 0 && C % TileSize == 0;
+    if (UseLoops)
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
@@ -2011,19 +2122,27 @@ public:
             const unsigned TileM = std::min(M - K, unsigned(TileSize));
             MatrixTy A =
                 loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
-                           LShape, Builder.getInt64(I), Builder.getInt64(K),
+                           LShape, getIndex(APtr, I), getIndex(APtr, K),
                            {TileR, TileM}, EltType, Builder);
             MatrixTy B =
                 loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
-                           RShape, Builder.getInt64(K), Builder.getInt64(J),
+                           RShape, getIndex(BPtr, K), getIndex(BPtr, J),
                            {TileM, TileC}, EltType, Builder);
             emitMatrixMultiply(Res, A, B, Builder, true, false,
                                getFastMathFlags(MatMul));
           }
           storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
-                      Builder.getInt64(I), Builder.getInt64(J), EltType,
-                      Builder);
+                      getIndex(CPtr, I), getIndex(CPtr, J), EltType, Builder);
         }
+    }
+
+    // End the lifetime of the allocas used for alias-safe copies.
+    {
+      IRBuilder<> Builder(Store);
+      if (AAlloca)
+        Builder.CreateLifetimeEnd(AAlloca);
+      if (BAlloca)
+        Builder.CreateLifetimeEnd(BAlloca);
     }
 
     // Mark eliminated instructions as fused and remove them.
@@ -2049,7 +2168,7 @@ public:
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
                            SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
-    if (!FuseMatrix || !DT)
+    if (!FuseMatrix || !DT || TileSize == 0)
       return;
 
     assert(AA && LI && "Analyses should be available");
@@ -2152,7 +2271,7 @@ public:
                                    LoadOp1->getParent() == StoreParent;
       for (unsigned Idx = 0; Idx != LifetimeEnds.size();) {
         IntrinsicInst *End = LifetimeEnds[Idx];
-        auto Inc = make_scope_exit([&Idx]() { Idx++; });
+        llvm::scope_exit Inc([&Idx]() { Idx++; });
         // If the lifetime.end is guaranteed to be before the loads or after the
         // store, it won't interfere with fusion.
         if (DT->dominates(End, LoadOp0) && DT->dominates(End, LoadOp1))
@@ -2254,15 +2373,14 @@ public:
   /// Lower load instructions.
   MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
                      IRBuilder<> &Builder) {
-    return LowerLoad(Inst, Ptr, Inst->getAlign(),
-                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
-                     Builder);
+    return LowerLoad(Inst, Ptr, Inst->getAlign(), getIndex(Ptr, SI.getStride()),
+                     Inst->isVolatile(), SI, Builder);
   }
 
   MatrixTy VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
                       Value *Ptr, IRBuilder<> &Builder) {
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
+                      getIndex(Ptr, SI.getStride()), Inst->isVolatile(), SI,
                       Builder);
   }
 
@@ -2377,16 +2495,23 @@ public:
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
     SmallVector<Value*> CondV;
+    Instruction *MDFrom = nullptr;
     if (isa<FixedVectorType>(Cond->getType())) {
       MatrixTy C = getMatrix(Cond, Shape, Builder);
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
       llvm::fill(CondV, Cond);
+      if (!ProfcheckDisableMetadataFixes)
+        MDFrom = Inst;
     }
 
-    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
-      Result.addVector(Builder.CreateSelect(CV, AV, BV));
+    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors())) {
+      assert(!(isa<VectorType>(CV->getType()) && static_cast<bool>(MDFrom)) &&
+             "If we have a vector conditional, we should be propagating "
+             "profile information.");
+      Result.addVector(Builder.CreateSelect(CV, AV, BV, "", MDFrom));
+    }
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());

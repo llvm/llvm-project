@@ -44,6 +44,16 @@ def TestTypeInterface
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeC", (ins "::mlir::Location":$loc)
     >,
+    // Check that we can have multiple method with the same name.
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "int":$value)
+    >,
+    InterfaceMethod<"Prints the type name, with a value prefixed.",
+      "void", "printTypeC", (ins "::mlir::Location":$loc, "float":$value),
+      [{}], /*defaultImplementation=*/[{
+        emitRemark(loc) << $_type << " - " << value << " - Float TestC";
+      }]
+    >,
     // It should be possible to use the interface type name as result type
     // as well as in the implementation.
     InterfaceMethod<"Prints the type name and returns the type as interface.",
@@ -81,6 +91,18 @@ def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
     StaticInterfaceMethod<"Returns the argument.",
       "unsigned", "staticGetArgument", (ins "unsigned":$arg), "",
       "return arg;">,
+    // Overloaded method (same name, different arity) used to check that an
+    // external model can override an overloaded interface method by its source
+    // name. Both overloads have a default so other models stay unaffected.
+    InterfaceMethod<"Overloaded method, single argument.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg), "",
+      "return 1000 + arg;">,
+    InterfaceMethod<"Overloaded method, two arguments.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg, "unsigned":$arg2),
+      "", "return 2000 + arg + arg2;">,
+    InterfaceMethod<"Overloaded method, three arguments.",
+      "unsigned", "getOverloadedValue", (ins "unsigned":$arg, "unsigned":$arg2, "unsigned":$arg3),
+      "", "return 3000 + arg + arg2 + arg3;">,
   ];
 }
 

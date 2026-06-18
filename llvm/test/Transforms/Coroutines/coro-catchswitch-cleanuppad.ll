@@ -5,7 +5,7 @@
 declare i32 @__CxxFrameHandler3(...)
 define ptr @f2(i1 %val) presplitcoroutine personality ptr @__CxxFrameHandler3 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f2, ptr null)
   %valueA = call i32 @f();
   %valueB = call i32 @f();
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
@@ -80,8 +80,8 @@ cleanup2:
 ; CHECK: cleanup2.corodispatch:
 ; CHECK:   %1 = phi i8 [ 0, %handler2 ], [ 1, %catch.dispatch.2 ]
 ; CHECK:   %2 = cleanuppad within %h1 []
-; CHECK:   %switch = icmp ult i8 %1, 1
-; CHECK:   br i1 %switch, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
+; CHECK:   %3 = icmp eq i8 %1, 0
+; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
 
 ; CHECK: cleanup2.from.handler2:
 ; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4

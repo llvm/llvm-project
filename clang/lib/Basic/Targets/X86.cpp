@@ -396,8 +396,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXFP8 = true;
     } else if (Feature == "+amx-movrs") {
       HasAMXMOVRS = true;
-    } else if (Feature == "+amx-transpose") {
-      HasAMXTRANSPOSE = true;
     } else if (Feature == "+amx-avx512") {
       HasAMXAVX512 = true;
     } else if (Feature == "+amx-tf32") {
@@ -448,6 +446,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCF = true;
     } else if (Feature == "+zu") {
       HasZU = true;
+    } else if (Feature == "+jmpabs") {
+      HasJMPABS = true;
     } else if (Feature == "+branch-hint") {
       HasBranchHint = true;
     }
@@ -625,6 +625,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_ArrowlakeS:
   case CK_Lunarlake:
   case CK_Pantherlake:
+  case CK_Wildcatlake:
+  case CK_Novalake:
   case CK_Sierraforest:
   case CK_Grandridge:
   case CK_Graniterapids:
@@ -716,8 +718,20 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_ZNVER5:
     defineCPUMacros(Builder, "znver5");
     break;
+  case CK_ZNVER6:
+    defineCPUMacros(Builder, "znver6");
+    break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
+    break;
+  case CK_C86_4G_M4:
+    defineCPUMacros(Builder, "c86_4g_m4");
+    break;
+  case CK_C86_4G_M6:
+    defineCPUMacros(Builder, "c86_4g_m6");
+    break;
+  case CK_C86_4G_M7:
+    defineCPUMacros(Builder, "c86_4g_m7");
     break;
   }
 
@@ -923,8 +937,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_FP8__");
   if (HasAMXMOVRS)
     Builder.defineMacro("__AMX_MOVRS__");
-  if (HasAMXTRANSPOSE)
-    Builder.defineMacro("__AMX_TRANSPOSE__");
   if (HasAMXAVX512)
     Builder.defineMacro("__AMX_AVX512__");
   if (HasAMXTF32)
@@ -969,7 +981,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CF__");
   if (HasZU)
     Builder.defineMacro("__ZU__");
-  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF && HasZU)
+  if (HasJMPABS)
+    Builder.defineMacro("__JMPABS__");
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
+      HasZU && HasJMPABS)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
@@ -1066,7 +1081,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-movrs", true)
       .Case("amx-tf32", true)
       .Case("amx-tile", true)
-      .Case("amx-transpose", true)
       .Case("avx", true)
       .Case("avx10.1", true)
       .Case("avx10.2", true)
@@ -1171,6 +1185,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("nf", true)
       .Case("cf", true)
       .Case("zu", true)
+      .Case("jmpabs", true)
       .Default(false);
 }
 
@@ -1187,7 +1202,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-movrs", HasAMXMOVRS)
       .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
-      .Case("amx-transpose", HasAMXTRANSPOSE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
       .Case("avx10.2", HasAVX10_2)
@@ -1295,6 +1309,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("nf", HasNF)
       .Case("cf", HasCF)
       .Case("zu", HasZU)
+      .Case("jmpabs", HasJMPABS)
       .Case("branch-hint", HasBranchHint)
       .Default(false);
 }
@@ -1306,15 +1321,15 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 // X86TargetInfo::hasFeature for a somewhat comprehensive list).
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY) .Case(STR, true)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
 
 static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
 
 #include "llvm/TargetParser/X86TargetParser.def"
@@ -1516,6 +1531,7 @@ bool X86TargetInfo::validateAsmConstraint(
     if (auto Len = matchAsmCCConstraint(Name)) {
       Name += Len - 1;
       Info.setAllowsRegister();
+      Info.setOutputOperandBounds(0, 2);
       return true;
     }
     return false;
@@ -1612,6 +1628,8 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ArrowlakeS:
     case CK_Lunarlake:
     case CK_Pantherlake:
+    case CK_Wildcatlake:
+    case CK_Novalake:
     case CK_Sierraforest:
     case CK_Grandridge:
     case CK_Graniterapids:
@@ -1642,6 +1660,11 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER3:
     case CK_ZNVER4:
     case CK_ZNVER5:
+    case CK_ZNVER6:
+    // Hygon
+    case CK_C86_4G_M4:
+    case CK_C86_4G_M6:
+    case CK_C86_4G_M7:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:
@@ -1836,4 +1859,13 @@ X86_64TargetInfo::getTargetBuiltins() const {
       {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
        "__builtin_ia32_"},
   };
+}
+
+unsigned
+MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                             bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
+
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
 }

@@ -6,24 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "startup/linux/do_start.h"
-
-#include <sys/mman.h>
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-#ifdef SYS_mmap2
-static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
-#elif SYS_mmap
-static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
-#else
-#error "mmap and mmap2 syscalls not available."
-#endif
 
 void init_tls(TLSDescriptor &tls_descriptor) {
   if (app.tls.size == 0) {
@@ -42,17 +35,12 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 
   uintptr_t alloc_size = size_of_pointers + padding + app.tls.size;
 
-  // We cannot call the mmap function here as the functions set errno on
-  // failure. Since errno is implemented via a thread local variable, we cannot
-  // use errno before TLS is setup.
-  long mmap_ret_val = syscall_impl<long>(MMAP_SYSCALL_NUMBER, nullptr,
-                                         alloc_size, PROT_READ | PROT_WRITE,
-                                         MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  // We cannot check the return value with MAP_FAILED as that is the return
-  // of the mmap function and not the mmap syscall.
-  if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.page_size)
+  ErrorOr<void *> mmap_ret =
+      linux_syscalls::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
+                           MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  if (!mmap_ret.has_value())
     syscall_impl<long>(SYS_exit, 1);
-  uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
+  uintptr_t thread_ptr = uintptr_t(mmap_ret.value());
   uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
   inline_memcpy(reinterpret_cast<char *>(tls_addr),
                 reinterpret_cast<const char *>(app.tls.address),
@@ -65,7 +53,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
   if (size == 0)
     return;
-  syscall_impl<long>(SYS_munmap, addr, size);
+  linux_syscalls::munmap(reinterpret_cast<void *>(addr), size);
 }
 
 bool set_thread_ptr(uintptr_t val) {

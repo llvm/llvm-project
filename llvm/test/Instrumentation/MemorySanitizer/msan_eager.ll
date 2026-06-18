@@ -36,7 +36,7 @@ define noundef i32 @LoadedRet() nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSLD]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
@@ -69,8 +69,8 @@ define void @NormalArg(i32 noundef %a) nounwind uwtable sanitize_memory {
 
 define void @NormalArgAfterNoUndef(i32 noundef %a, i32 %b) nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @NormalArgAfterNoUndef(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 0 to ptr
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
@@ -80,7 +80,7 @@ define void @NormalArgAfterNoUndef(i32 noundef %a, i32 %b) nounwind uwtable sani
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[TMP9]]
@@ -106,7 +106,7 @@ define void @PartialArg(i32 %a) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[TMP9]]
@@ -135,7 +135,7 @@ define void @CallNormalArgAfterNoUndef() nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @CallNormalArgAfterNoUndef(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @NormalRet() #[[ATTR0]]
-; CHECK-NEXT:    store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @NormalArgAfterNoUndef(i32 [[R]], i32 [[R]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -157,7 +157,7 @@ define void @CallWithLoaded() nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSLD]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP6]]) #[[ATTR3]]
 ; CHECK-NEXT:    unreachable

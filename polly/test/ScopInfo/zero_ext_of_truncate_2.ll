@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void f(unsigned long *restrict I, unsigned *restrict A, unsigned N) {
 ;      for (unsigned i = 0; i < N; i++) {
@@ -8,10 +8,14 @@
 ;      }
 ;    }
 ;
+; CHECK:         {{^ *}}Context:
+; CHECK-NEXT:    [N, tmp] -> {  : -2147483648 <= N <= 2147483647 and -9223372036854775808 <= tmp <= 9223372036854775807 }
 ; CHECK:         Assumed Context:
-; CHECK-NEXT:    [N, tmp] -> { : }
-; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [N, tmp] -> { : N > 0 and (tmp < 0 or tmp >= 2147483648) }
+; CHECK-NEXT:    [N, tmp] -> {  :  }
+; CHECK:         Invalid Context:
+; CHECK-NEXT:    [N, tmp] -> {  : tmp <= -2147483649 or tmp >= 2147483648 or (N > 0 and tmp < 0) }
+; CHECK:         Defined Behavior Context:
+; CHECK-NEXT:    [N, tmp] -> {  : -2147483648 <= tmp <= 2147483647 and ((0 < N <= 2147483647 and tmp >= 0) or N = 0) }
 ;
 ; CHECK:         Domain :=
 ; CHECK-NEXT:    [N, tmp] -> { Stmt_if_then[i0] : tmp >= 0 and tmp < i0 < N };

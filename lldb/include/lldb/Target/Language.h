@@ -24,6 +24,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
 
@@ -165,8 +167,10 @@ public:
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
 
+  static llvm::Expected<lldb::LanguageType>
+  GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
   // return false from callback to stop iterating
-  static void ForEach(std::function<bool(Language *)> callback);
+  static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
@@ -177,8 +181,6 @@ public:
   virtual bool IsTopLevelFunction(Function &function);
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
-
-  virtual const Highlighter *GetHighlighter() const { return nullptr; }
 
   virtual lldb::TypeCategoryImplSP GetFormatters();
 
@@ -318,7 +320,9 @@ public:
   ///
   /// This function should only return true if there is a high confidence
   /// that the name actually belongs to this language.
-  virtual bool SymbolNameFitsToLanguage(Mangled name) const { return false; }
+  virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
+    return false;
+  }
 
   /// An individual data formatter may apply to several types and cross language
   /// boundaries. Each of those languages may want to customize the display of
@@ -404,7 +408,14 @@ public:
   GetLanguageTypeFromString(const char *string) = delete;
   static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
+  /// Returns the internal LLDB name for the specified language. When presenting
+  /// the language name to users, use \ref GetDisplayNameForLanguageType
+  /// instead.
   static const char *GetNameForLanguageType(lldb::LanguageType language);
+
+  /// Returns a user-friendly name for the specified language.
+  static llvm::StringRef
+  GetDisplayNameForLanguageType(lldb::LanguageType language);
 
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);
@@ -420,7 +431,8 @@ public:
                                                     llvm::StringRef suffix);
 
   // return false from callback to stop iterating
-  static void ForAllLanguages(std::function<bool(lldb::LanguageType)> callback);
+  static void ForAllLanguages(
+      llvm::function_ref<IterationAction(lldb::LanguageType)> callback);
 
   static bool LanguageIsCPlusPlus(lldb::LanguageType language);
 
@@ -458,7 +470,7 @@ public:
     return ConstString();
   }
 
-  virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+  virtual llvm::StringRef GetInstanceName() { return {}; }
 
   /// Given a symbol context list of matches which supposedly represent the
   /// same file and line number in a CU, erases those that should be ignored
@@ -508,5 +520,12 @@ private:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb::LanguageType> {
+  static void format(const lldb::LanguageType &language, llvm::raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // LLDB_TARGET_LANGUAGE_H

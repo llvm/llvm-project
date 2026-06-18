@@ -42,6 +42,10 @@ clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 
+clang_tablegen(DiagnosticStableIDs.inc -gen-clang-diags-stable-ids
+  SOURCE Diagnostic.td
+  TARGET ClangDiagnosticStableIDs)
+
 clang_tablegen(DiagnosticAllCompatIDs.inc
   -gen-clang-diags-compat-ids
   SOURCE Diagnostic.td
@@ -90,6 +94,14 @@ clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
 
+clang_tablegen(BuiltinsAArch64.inc -gen-clang-builtins
+  SOURCE BuiltinsAArch64.td
+  TARGET ClangBuiltinsAArch64)
+
+clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
+  SOURCE BuiltinsAMDGPU.td
+  TARGET ClangBuiltinsAMDGPU)
+
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
@@ -121,6 +133,10 @@ clang_tablegen(BuiltinsSPIRVVK.inc -gen-clang-builtins
 clang_tablegen(BuiltinsSPIRVCL.inc -gen-clang-builtins
   SOURCE BuiltinsSPIRVCL.td
   TARGET ClangBuiltinsSPIRVCL)
+
+clang_tablegen(BuiltinsSystemZ.inc -gen-clang-builtins
+  SOURCE BuiltinsSystemZ.td
+  TARGET ClangBuiltinsSystemZ)
 
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td
@@ -159,6 +175,9 @@ clang_tablegen(arm_mve_builtin_aliases.inc -gen-arm-mve-builtin-aliases
 clang_tablegen(arm_sve_builtins.inc -gen-arm-sve-builtins
   SOURCE arm_sve.td
   TARGET ClangARMSveBuiltins)
+clang_tablegen(arm_sve_builtins.json -gen-arm-sve-builtins-json
+  SOURCE arm_sve.td
+  TARGET ClangARMSveBuiltinsJSON)
 clang_tablegen(arm_sve_builtin_cg.inc -gen-arm-sve-builtin-codegen
   SOURCE arm_sve.td
   TARGET ClangARMSveBuiltinCG)
@@ -174,6 +193,9 @@ clang_tablegen(arm_sve_streaming_attrs.inc -gen-arm-sve-streaming-attrs
 clang_tablegen(arm_sme_builtins.inc -gen-arm-sme-builtins
   SOURCE arm_sme.td
   TARGET ClangARMSmeBuiltins)
+clang_tablegen(arm_sme_builtins.json -gen-arm-sme-builtins-json
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltinsJSON)
 clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
   SOURCE arm_sme.td
   TARGET ClangARMSmeBuiltinCG)

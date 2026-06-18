@@ -43,8 +43,10 @@ enum ActionType {
   GenClangAttrParsedAttrList,
   GenClangAttrParsedAttrImpl,
   GenClangAttrParsedAttrKinds,
+  GenClangAttrIsTypeDependent,
   GenClangAttrTextNodeDump,
   GenClangAttrNodeTraverse,
+  GenClangAttrUndocumentedAttrList,
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
@@ -54,6 +56,7 @@ enum ActionType {
   GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
+  GenClangDiagsStableIDs,
   GenClangDiagsInterface,
   GenClangCommentNodes,
   GenClangDeclNodes,
@@ -89,12 +92,14 @@ enum ActionType {
   GenArmMveBuiltinAliases,
   GenArmSveHeader,
   GenArmSveBuiltins,
+  GenArmSveBuiltinsJSON,
   GenArmSveBuiltinCG,
   GenArmSveTypeFlags,
   GenArmSveRangeChecks,
   GenArmSveStreamingAttrs,
   GenArmSmeHeader,
   GenArmSmeBuiltins,
+  GenArmSmeBuiltinsJSON,
   GenArmSmeBuiltinCG,
   GenArmSmeRangeChecks,
   GenArmSmeStreamingAttrs,
@@ -114,7 +119,10 @@ enum ActionType {
   GenRISCVAndesVectorBuiltins,
   GenRISCVAndesVectorBuiltinCG,
   GenRISCVAndesVectorBuiltinSema,
+  GenHLSLAliasIntrinsics,
+  GenHLSLInlineIntrinsics,
   GenAttrDocs,
+  GenBuiltinDocs,
   GenDiagDocs,
   GenOptDocs,
   GenDataCollectors,
@@ -177,10 +185,16 @@ cl::opt<ActionType> Action(
         clEnumValN(GenClangAttrParsedAttrKinds,
                    "gen-clang-attr-parsed-attr-kinds",
                    "Generate a clang parsed attribute kinds"),
+        clEnumValN(GenClangAttrIsTypeDependent,
+                   "gen-clang-attr-is-type-dependent",
+                   "Generate clang is type dependent attribute code"),
         clEnumValN(GenClangAttrTextNodeDump, "gen-clang-attr-text-node-dump",
                    "Generate clang attribute text node dumper"),
         clEnumValN(GenClangAttrNodeTraverse, "gen-clang-attr-node-traverse",
                    "Generate clang attribute traverser"),
+        clEnumValN(GenClangAttrUndocumentedAttrList,
+                   "gen-clang-attr-undocumented-list",
+                   "Generate a list of undocumented attributes"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
         clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
@@ -195,6 +209,8 @@ cl::opt<ActionType> Action(
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
                    "Generate Clang diagnostic name index"),
+        clEnumValN(GenClangDiagsStableIDs, "gen-clang-diags-stable-ids",
+                   "Generate Clang diagnostic stable IDs"),
         clEnumValN(GenClangDiagsInterface, "gen-clang-diags-iface",
                    "Generate Clang diagnostic interface headers"),
         clEnumValN(GenClangBasicReader, "gen-clang-basic-reader",
@@ -266,6 +282,8 @@ cl::opt<ActionType> Action(
                    "Generate arm_sve.h for clang"),
         clEnumValN(GenArmSveBuiltins, "gen-arm-sve-builtins",
                    "Generate arm_sve_builtins.inc for clang"),
+        clEnumValN(GenArmSveBuiltinsJSON, "gen-arm-sve-builtins-json",
+                   "Generate arm_sve_buitins.json"),
         clEnumValN(GenArmSveBuiltinCG, "gen-arm-sve-builtin-codegen",
                    "Generate arm_sve_builtin_cg_map.inc for clang"),
         clEnumValN(GenArmSveTypeFlags, "gen-arm-sve-typeflags",
@@ -278,6 +296,8 @@ cl::opt<ActionType> Action(
                    "Generate arm_sme.h for clang"),
         clEnumValN(GenArmSmeBuiltins, "gen-arm-sme-builtins",
                    "Generate arm_sme_builtins.inc for clang"),
+        clEnumValN(GenArmSmeBuiltinsJSON, "gen-arm-sme-builtins-json",
+                   "Generate arm_sme_buitins.json"),
         clEnumValN(GenArmSmeBuiltinCG, "gen-arm-sme-builtin-codegen",
                    "Generate arm_sme_builtin_cg_map.inc for clang"),
         clEnumValN(GenArmSmeRangeChecks, "gen-arm-sme-sema-rangechecks",
@@ -332,8 +352,16 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRISCVAndesVectorBuiltinSema,
                    "gen-riscv-andes-vector-builtin-sema",
                    "Generate riscv_andes_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenHLSLAliasIntrinsics, "gen-hlsl-alias-intrinsics",
+                   "Generate HLSL alias intrinsic overloads for "
+                   "hlsl_alias_intrinsics.h"),
+        clEnumValN(GenHLSLInlineIntrinsics, "gen-hlsl-inline-intrinsics",
+                   "Generate HLSL inline intrinsic overloads for "
+                   "hlsl_intrinsics.h"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
+        clEnumValN(GenBuiltinDocs, "gen-builtin-docs",
+                   "Generate builtin documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
                    "Generate diagnostic documentation"),
         clEnumValN(GenOptDocs, "gen-opt-docs", "Generate option documentation"),
@@ -417,11 +445,17 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangAttrParsedAttrKinds:
     EmitClangAttrParsedAttrKinds(Records, OS);
     break;
+  case GenClangAttrIsTypeDependent:
+    EmitClangAttrIsTypeDependent(Records, OS);
+    break;
   case GenClangAttrTextNodeDump:
     EmitClangAttrTextNodeDump(Records, OS);
     break;
   case GenClangAttrNodeTraverse:
     EmitClangAttrNodeTraverse(Records, OS);
+    break;
+  case GenClangAttrUndocumentedAttrList:
+    EmitClangUndocumentedAttrList(Records, OS);
     break;
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
@@ -443,6 +477,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangDiagsIndexName:
     EmitClangDiagsIndexName(Records, OS);
+    break;
+  case GenClangDiagsStableIDs:
+    EmitClangDiagsStableIDs(Records, OS);
     break;
   case GenClangDiagsInterface:
     EmitClangDiagsInterface(OS, ClangComponent);
@@ -551,6 +588,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenArmSveBuiltins:
     EmitSveBuiltins(Records, OS);
     break;
+  case GenArmSveBuiltinsJSON:
+    EmitSveBuiltinsJSON(Records, OS);
+    break;
   case GenArmSveBuiltinCG:
     EmitSveBuiltinCG(Records, OS);
     break;
@@ -568,6 +608,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenArmSmeBuiltins:
     EmitSmeBuiltins(Records, OS);
+    break;
+  case GenArmSmeBuiltinsJSON:
+    EmitSmeBuiltinsJSON(Records, OS);
     break;
   case GenArmSmeBuiltinCG:
     EmitSmeBuiltinCG(Records, OS);
@@ -626,8 +669,17 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenRISCVAndesVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
     break;
+  case GenHLSLAliasIntrinsics:
+    EmitHLSLAliasIntrinsics(Records, OS);
+    break;
+  case GenHLSLInlineIntrinsics:
+    EmitHLSLInlineIntrinsics(Records, OS);
+    break;
   case GenAttrDocs:
     EmitClangAttrDocs(Records, OS);
+    break;
+  case GenBuiltinDocs:
+    EmitClangBuiltinDocs(Records, OS);
     break;
   case GenDiagDocs:
     EmitClangDiagDocs(Records, OS);

@@ -16,6 +16,7 @@ contains
   subroutine host()
     real, device :: a
     integer(8) :: stream
+    integer(4) :: nbytes
 
 ! CHECK-LABEL: func.func @_QMtest_callPhost()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QMtest_callFhostEa"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
@@ -57,6 +58,10 @@ contains
     call dev_kernel1<<<*,32,0,stream>>>(a)
 ! CHECK: cuf.kernel_launch @_QMtest_callPdev_kernel1<<<%c-1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c32{{.*}}, %c1{{.*}}, %c1{{.*}}, %c0{{.*}}, %{{.*}} : !fir.ref<i64>>>>(%{{.*}}) : (!fir.ref<f32>)
 
+    call dev_kernel1<<<*, 32, 0.8 * nbytes>>>(a)
+! CHECK: %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! CHECK: %[[BYTES:.*]] = fir.convert %[[MUL]] : (f32) -> i32
+! CHECK: cuf.kernel_launch @_QMtest_callPdev_kernel1<<<%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[BYTES]]>>>(%{{.*}}) : (!fir.ref<f32>)
   end
 
 end

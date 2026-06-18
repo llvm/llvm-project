@@ -106,22 +106,30 @@ target triple = "x86_64-unknown-linux-gnu"
 ; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,8
 ; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
 
+;; The `.section` directive is omitted for .data with -unique-section-names=false.
+; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
+
 ; For @data_with_unknown_hotness
 ; SYM: 	       .type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness
 ; SYM:         .section .data..Ldata_with_unknown_hotness,"aw",@progbits
 ; UNIQ:        .section  .data,"aw",@progbits,unique,9
-; The `.section` directive is omitted for .data with -unique-section-names=false.
-; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
+
 ; AGG:         .data
 ; COMMON:      .Ldata_with_unknown_hotness:
 
-; For @hot_data_custom_bar_section
-; It has an explicit section attribute 'var' and shouldn't have hot or unlikely suffix.
+; For variables that are not eligible for section prefix annotation
 ; COMMON:      .type hot_data_custom_bar_section,@object
 ; SYM-NEXT:    .section bar,"aw",@progbits
 ; SYM:         hot_data_custom_bar_section
 ; UNIQ:        .section bar,"aw",@progbits
 ; AGG:         .section bar,"aw",@progbits
+
+; SYM:      .section .data.llvm.fake_var,"aw"
+; UNIQ:     .section .data,"aw"
+; AGG:      .data
+
+;; No section for linker declaration
+; COMMON-NOT:  qux
 
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1
@@ -137,6 +145,8 @@ target triple = "x86_64-unknown-linux-gnu"
 @data3 = internal global i32 3
 @data_with_unknown_hotness = private global i32 5
 @hot_data_custom_bar_section = internal global i32 101 #0
+@llvm.fake_var = internal global i32 123
+@qux = external global i64
 
 define void @cold_func(i32 %0) !prof !15 {
   %2 = load i32, ptr @cold_bss

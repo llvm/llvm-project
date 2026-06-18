@@ -163,9 +163,9 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; LINUX-NEXT:    ld %f10, 8(%r3)
 ; LINUX-NEXT:    ld %f0, 16(%r3)
 ; LINUX-NEXT:    ld %f2, 24(%r3)
-; LINUX-NEXT:    la %r3, 16(%r2)
-; LINUX-NEXT:    la %r4, 48(%r2)
 ; LINUX-NEXT:    la %r2, 176(%r15)
+; LINUX-NEXT:    la %r3, 16(%r13)
+; LINUX-NEXT:    la %r4, 48(%r13)
 ; LINUX-NEXT:    std %f0, 176(%r15)
 ; LINUX-NEXT:    std %f2, 184(%r15)
 ; LINUX-NEXT:    brasl %r14, sincosl@PLT
@@ -183,19 +183,24 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
   ret { <2 x fp128>, <2 x fp128> } %result
 }
 
-
-; ZOS: .quad	R(@@FSIN@B)                     * Offset 0 function descriptor of @@FSIN@B
-; ZOS: .quad	V(@@FSIN@B)
-; ZOS: .quad	R(@@FCOS@B)                     * Offset 16 function descriptor of @@FCOS@B
-; ZOS: .quad	V(@@FCOS@B)
-; ZOS: .quad	R(@@SSIN@B)                     * Offset 32 function descriptor of @@SSIN@B
-; ZOS: .quad	V(@@SSIN@B)
-; ZOS: .quad	R(@@SCOS@B)                     * Offset 48 function descriptor of @@SCOS@B
-; ZOS: .quad	V(@@SCOS@B)
-; ZOS: .quad	R(@@LSIN@B)                     * Offset 64 function descriptor of @@LSIN@B
-; ZOS: .quad	V(@@LSIN@B)
-; ZOS: .quad	R(@@LCOS@B)                     * Offset 80 function descriptor of @@LCOS@B
-; ZOS: .quad	V(@@LCOS@B)
+; ZOS: * Offset 0 function descriptor of @@FSIN@B
+; ZOS: DC RD(@@FSIN@B)
+; ZOS: DC VD(@@FSIN@B)
+; ZOS: * Offset 16 function descriptor of @@FCOS@B
+; ZOS: DC RD(@@FCOS@B)
+; ZOS: DC VD(@@FCOS@B)
+; ZOS: * Offset 32 function descriptor of @@SSIN@B
+; ZOS: DC RD(@@SSIN@B)
+; ZOS: DC VD(@@SSIN@B)
+; ZOS: * Offset 48 function descriptor of @@SCOS@B
+; ZOS: DC RD(@@SCOS@B)
+; ZOS: DC VD(@@SCOS@B)
+; ZOS: * Offset 64 function descriptor of @@LSIN@B
+; ZOS: DC RD(@@LSIN@B)
+; ZOS: DC VD(@@LSIN@B)
+; ZOS: * Offset 80 function descriptor of @@LCOS@B
+; ZOS: DC RD(@@LCOS@B)
+; ZOS: DC VD(@@LCOS@B)
 
 
 attributes #0 = { nounwind }

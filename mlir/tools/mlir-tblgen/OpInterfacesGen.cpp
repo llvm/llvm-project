@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -42,10 +43,10 @@ static raw_ostream &emitCPPType(StringRef type, raw_ostream &os) {
 /// Emit the method name and argument list for the given method. If 'addThisArg'
 /// is true, then an argument is added to the beginning of the argument list for
 /// the concrete value.
-static void emitMethodNameAndArgs(const InterfaceMethod &method,
+static void emitMethodNameAndArgs(const InterfaceMethod &method, StringRef name,
                                   raw_ostream &os, StringRef valueType,
                                   bool addThisArg, bool addConst) {
-  os << method.getName() << '(';
+  os << name << '(';
   if (addThisArg) {
     if (addConst)
       os << "const ";
@@ -183,11 +184,13 @@ static void emitInterfaceDefMethods(StringRef interfaceQualName,
     emitInterfaceMethodDoc(method, os);
     emitCPPType(method.getReturnType(), os);
     os << interfaceQualName << "::";
-    emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
+    emitMethodNameAndArgs(method, method.getName(), os, valueType,
+                          /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface);
 
     // Forward to the method on the concrete operation type.
-    os << " {\n      return " << implValue << "->" << method.getName() << '(';
+    os << " {\n      return " << implValue << "->" << method.getUniqueName()
+       << '(';
     if (!method.isStatic()) {
       os << implValue << ", ";
       os << (isOpInterface ? "getOperation()" : "*this");
@@ -239,7 +242,7 @@ void InterfaceGenerator::emitConceptDecl(const Interface &interface) {
   for (auto &method : interface.getMethods()) {
     os << "    ";
     emitCPPType(method.getReturnType(), os);
-    os << "(*" << method.getName() << ")(";
+    os << "(*" << method.getUniqueName() << ")(";
     if (!method.isStatic()) {
       os << "const Concept *impl, ";
       emitCPPType(valueType, os) << (method.arg_empty() ? "" : ", ");
@@ -286,16 +289,20 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     os << "  class " << modelClass << " : public Concept {\n  public:\n";
     os << "    using Interface = " << interface.getFullyQualifiedName()
        << ";\n";
+    // The Concept's function-pointer members and these wrapper signatures are
+    // named by the unique name so that overloaded interface methods stay
+    // distinct here; only the forward target (the concrete model call) uses the
+    // shared source name. Do not collapse these to getName().
     os << "    " << modelClass << "() : Concept{";
     llvm::interleaveComma(
         interface.getMethods(), os,
-        [&](const InterfaceMethod &method) { os << method.getName(); });
+        [&](const InterfaceMethod &method) { os << method.getUniqueName(); });
     os << "} {}\n\n";
 
     // Insert each of the virtual method overrides.
     for (auto &method : interface.getMethods()) {
       emitCPPType(method.getReturnType(), os << "    static inline ");
-      emitMethodNameAndArgs(method, os, valueType,
+      emitMethodNameAndArgs(method, method.getUniqueName(), os, valueType,
                             /*addThisArg=*/!method.isStatic(),
                             /*addConst=*/false);
       os << ";\n";
@@ -319,6 +326,8 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     if (method.isStatic())
       os << "static ";
     emitCPPType(method.getReturnType(), os);
+    // External models declare methods by their non-unique source names so that
+    // overloaded methods can be overridden by implementers.
     os << method.getName() << "(";
     if (!method.isStatic()) {
       emitCPPType(valueType, os);
@@ -340,17 +349,13 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
 }
 
 void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
   for (auto &method : interface.getMethods()) {
     os << "template<typename " << valueTemplate << ">\n";
     emitCPPType(method.getReturnType(), os);
     os << "detail::" << interface.getName() << "InterfaceTraits::Model<"
        << valueTemplate << ">::";
-    emitMethodNameAndArgs(method, os, valueType,
+    emitMethodNameAndArgs(method, method.getUniqueName(), os, valueType,
                           /*addThisArg=*/!method.isStatic(),
                           /*addConst=*/false);
     os << " {\n  ";
@@ -384,7 +389,7 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     emitCPPType(method.getReturnType(), os);
     os << "detail::" << interface.getName() << "InterfaceTraits::FallbackModel<"
        << valueTemplate << ">::";
-    emitMethodNameAndArgs(method, os, valueType,
+    emitMethodNameAndArgs(method, method.getUniqueName(), os, valueType,
                           /*addThisArg=*/!method.isStatic(),
                           /*addConst=*/false);
     os << " {\n  ";
@@ -395,7 +400,9 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     else
       os << "return static_cast<const " << valueTemplate << " *>(impl)->";
 
-    // Add the arguments to the call.
+    // Add the arguments to the call. Forward by the (possibly non-unique)
+    // method name so that overloaded interface methods resolve to the right
+    // concrete-model overload.
     os << method.getName() << '(';
     if (!method.isStatic())
       os << "tablegen_opaque_val" << (method.arg_empty() ? "" : ", ");
@@ -415,7 +422,8 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     os << "detail::" << interface.getName()
        << "InterfaceTraits::ExternalModel<ConcreteModel, " << valueTemplate
        << ">::";
-
+    // External models expose (possibly overloaded) methods by their original
+    // source names, hiding the internal name mangling from implementers.
     os << method.getName() << "(";
     if (!method.isStatic()) {
       emitCPPType(valueType, os);
@@ -440,18 +448,11 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
                         method.isStatic() ? &ctx : &nonStaticMethodFmt);
     os << "\n}\n";
   }
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
-  os << "namespace detail {\n";
+  auto cppNamespace = (interface.getCppNamespace() + "::detail").str();
+  llvm::NamespaceEmitter ns(os, cppNamespace);
 
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
@@ -477,7 +478,8 @@ void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
     emitInterfaceMethodDoc(method, os, "    ");
     os << "    " << (method.isStatic() ? "static " : "");
     emitCPPType(method.getReturnType(), os);
-    emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
+    emitMethodNameAndArgs(method, method.getName(), os, valueType,
+                          /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface && !method.isStatic());
     os << " {\n      " << tblgen::tgfmt(defaultImpl->trim(), &traitMethodFmt)
        << "\n    }\n";
@@ -501,10 +503,6 @@ void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
-  os << "}// namespace detail\n";
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static void emitInterfaceDeclMethods(const Interface &interface,
@@ -514,7 +512,8 @@ static void emitInterfaceDeclMethods(const Interface &interface,
   for (auto &method : interface.getMethods()) {
     emitInterfaceMethodDoc(method, os, "  ");
     emitCPPType(method.getReturnType(), os << "  ");
-    emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
+    emitMethodNameAndArgs(method, method.getName(), os, valueType,
+                          /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface);
     os << ";\n";
   }
@@ -529,42 +528,27 @@ static void emitInterfaceDeclMethods(const Interface &interface,
 }
 
 void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
-  std::string comments = tblgen::emitSummaryAndDescComments(
-      "", interface.getDescription().value_or(""));
-  if (!comments.empty()) {
-    os << comments << "\n";
-  }
+  tblgen::emitSummaryAndDescComments(os, "",
+                                     interface.getDescription().value_or(""));
 
   StringRef interfaceName = interface.getName();
   os << "class " << interfaceName << ";\n";
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
-  for (StringRef ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
 
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
-  std::string comments = tblgen::emitSummaryAndDescComments(
-      "", interface.getDescription().value_or(""));
-  if (!comments.empty()) {
-    os << comments << "\n";
-  }
+  tblgen::emitSummaryAndDescComments(os, "",
+                                     interface.getDescription().value_or(""));
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
@@ -633,9 +617,6 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   }
 
   os << "};\n";
-
-  for (StringRef ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 bool InterfaceGenerator::emitInterfaceDecls() {

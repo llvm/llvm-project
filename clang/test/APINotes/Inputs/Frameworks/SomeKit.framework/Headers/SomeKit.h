@@ -57,4 +57,8 @@ __attribute__((objc_root_class))
 @property (class, nonatomic, readwrite, retain) A *implicitGetSetClass;
 @end
 
+@protocol InitializableProtocolDUMP
+- (instancetype)initWithValue:(int)value;
+@end
+
 #endif

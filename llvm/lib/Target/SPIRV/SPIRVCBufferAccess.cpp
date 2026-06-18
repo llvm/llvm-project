@@ -35,6 +35,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ReplaceConstant.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #define DEBUG_TYPE "spirv-cbuffer-access"
 using namespace llvm;
@@ -53,9 +55,23 @@ static Instruction *findHandleDef(GlobalVariable *HandleVar) {
 }
 
 static bool replaceCBufferAccesses(Module &M) {
-  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(M);
+  std::optional<hlsl::CBufferMetadata> CBufMD =
+      hlsl::CBufferMetadata::get(M, [](Type *Ty) {
+        if (auto *TET = dyn_cast<TargetExtType>(Ty))
+          return TET->getName() == "spirv.Padding";
+        return false;
+      });
   if (!CBufMD)
     return false;
+
+  SmallPtrSet<GlobalVariable *, 8> CBufferHandles;
+  SmallVector<Constant *> CBufferGlobals;
+  for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
+    CBufferHandles.insert(Mapping.Handle);
+    for (const hlsl::CBufferMember &Member : Mapping.Members)
+      CBufferGlobals.push_back(Member.GV);
+  }
+  convertUsersOfConstantsToInstructions(CBufferGlobals);
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
     Instruction *HandleDef = findHandleDef(Mapping.Handle);
@@ -67,27 +83,35 @@ static bool replaceCBufferAccesses(Module &M) {
     // The handle definition should dominate all uses of the cbuffer members.
     // We'll insert our getpointer calls right after it.
     IRBuilder<> Builder(HandleDef->getNextNode());
+    auto *HandleTy = cast<TargetExtType>(Mapping.Handle->getValueType());
+    auto *LayoutTy = cast<StructType>(HandleTy->getTypeParameter(0));
+    const StructLayout *SL = M.getDataLayout().getStructLayout(LayoutTy);
 
-    for (uint32_t Index = 0; Index < Mapping.Members.size(); ++Index) {
-      GlobalVariable *MemberGV = Mapping.Members[Index].GV;
+    for (const hlsl::CBufferMember &Member : Mapping.Members) {
+      GlobalVariable *MemberGV = Member.GV;
       if (MemberGV->use_empty()) {
         continue;
       }
 
+      uint32_t IndexInStruct = SL->getElementContainingOffset(Member.Offset);
+
       // Create the getpointer intrinsic call.
-      Value *IndexVal = Builder.getInt32(Index);
+      Value *IndexVal = Builder.getInt32(IndexInStruct);
       Type *PtrType = MemberGV->getType();
       Value *GetPointerCall = Builder.CreateIntrinsic(
           PtrType, Intrinsic::spv_resource_getpointer, {HandleDef, IndexVal});
 
-      // We cannot use replaceAllUsesWith here because some uses may be
-      // ConstantExprs, which cannot be replaced with non-constants.
-      SmallVector<User *, 4> Users(MemberGV->users());
-      for (User *U : Users) {
-        U->replaceUsesOfWith(MemberGV, GetPointerCall);
-      }
+      MemberGV->replaceAllUsesWith(GetPointerCall);
     }
   }
+
+  // Remove cbuffer handle globals from @llvm.compiler.used list.
+  llvm::removeFromUsedLists(M, [&](Constant *C) -> bool {
+    auto *GV = dyn_cast<GlobalVariable>(C);
+    return GV && CBufferHandles.contains(GV);
+  });
+  for (GlobalVariable *HandleGV : CBufferHandles)
+    HandleGV->removeDeadConstantUsers();
 
   // Now that all uses are replaced, clean up the globals and metadata.
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {

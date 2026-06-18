@@ -9,7 +9,7 @@ program loop_transformation_construct
   integer :: y(I)
 
   !$omp do
-  !$omp unroll
+  !$omp unroll partial(2)
   do x = 1, I
     y(x) = y(x) * 5
   end do

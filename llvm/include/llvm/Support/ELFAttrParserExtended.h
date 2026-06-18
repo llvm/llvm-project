@@ -25,7 +25,7 @@ class ScopedPrinter;
 class LLVM_ABI ELFExtendedAttrParser : public ELFAttributeParser {
 protected:
   ScopedPrinter *Sw;
-  DataExtractor De{ArrayRef<uint8_t>{}, true, 0};
+  DataExtractor De{ArrayRef<uint8_t>{}, true};
   DataExtractor::Cursor Cursor{0};
 
   // Data structure for holding Extended ELF Build Attribute subsection
@@ -36,7 +36,7 @@ protected:
                        const unsigned Tag);
 
 public:
-  virtual ~ELFExtendedAttrParser() { static_cast<void>(!Cursor.takeError()); }
+  ~ELFExtendedAttrParser() override { static_cast<void>(!Cursor.takeError()); }
   Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) override;
 
   std::optional<unsigned> getAttributeValue(unsigned Tag) const override;

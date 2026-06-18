@@ -4,6 +4,9 @@ set(LLVM_OPTIONAL_SOURCES ClangdToolMain.cpp)
 add_clang_library(clangdMain STATIC
   ClangdMain.cpp
   Check.cpp
+
+  # Disable PCH, gRPC adds -pthread.
+  DISABLE_PCH_REUSE
   )
 
 add_clang_tool(clangd

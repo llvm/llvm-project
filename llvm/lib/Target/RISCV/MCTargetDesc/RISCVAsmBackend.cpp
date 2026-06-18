@@ -14,6 +14,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
@@ -87,10 +88,13 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_call", 0, 64, 0},
       {"fixup_riscv_call_plt", 0, 64, 0},
 
+      // Qualcomm fixups
       {"fixup_riscv_qc_e_branch", 0, 48, 0},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 0, 32, 0},
       {"fixup_riscv_qc_e_call_plt", 0, 48, 0},
+      {"fixup_qc_access_16", 0, 0, 0},
+      {"fixup_qc_access_32", 0, 0, 0},
 
       // Andes fixups
       {"fixup_riscv_nds_branch_10", 0, 32, 0},
@@ -195,6 +199,10 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return RISCV::PseudoLongBEQ;
   case RISCV::BNE:
     return RISCV::PseudoLongBNE;
+  case RISCV::BEQI:
+    return RISCV::PseudoLongBEQI;
+  case RISCV::BNEI:
+    return RISCV::PseudoLongBNEI;
   case RISCV::BLT:
     return RISCV::PseudoLongBLT;
   case RISCV::BGE:
@@ -284,6 +292,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   }
   case RISCV::BEQ:
   case RISCV::BNE:
+  case RISCV::BEQI:
+  case RISCV::BNEI:
   case RISCV::BLT:
   case RISCV::BGE:
   case RISCV::BLTU:
@@ -366,7 +376,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
   unsigned PCBytes;
   if (Value > 60000) {
-    PCBytes = getContext().getAsmInfo()->getCodePointerSize();
+    PCBytes = getContext().getAsmInfo().getCodePointerSize();
     OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PCBytes + 1)
        << uint8_t(dwarf::DW_LNE_set_address);
     OS.write_zeros(PCBytes);
@@ -401,7 +411,7 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCFragment &F) const {
       AddrDelta.evaluateKnownAbsolute(Value, *Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
-  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo().getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     F.clearVarContents();
@@ -631,6 +641,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
             (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
     return Value;
   }
+  case RISCV::fixup_qc_access_16:
+  case RISCV::fixup_qc_access_32:
+    return 0;
   case RISCV::fixup_riscv_nds_branch_10: {
     if (!isInt<11>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -674,8 +687,8 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
 //
 // \returns nullptr if this isn't a S_PCREL_LO pointing to a known PC-relative
 // HI fixup.
-static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
-                                      const MCFragment **DFOut) {
+const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
+                               const MCFragment **DFOut) {
   MCValue AUIPCLoc;
   if (!Expr.getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
@@ -730,6 +743,10 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   default:
     // Use default handling for `Value` and `IsResolved`.
     return {};
+  case RISCV::fixup_qc_access_16:
+  case RISCV::fixup_qc_access_32:
+    // Never resolved in the assembler
+    return false;
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s: {
     AUIPCFixup =
@@ -780,6 +797,8 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   case RISCV::fixup_riscv_qc_abs20_u:
   case RISCV::fixup_riscv_qc_e_32:
   case RISCV::fixup_riscv_qc_e_call_plt:
+  case RISCV::fixup_qc_access_16:
+  case RISCV::fixup_qc_access_32:
     VendorIdentifier = "QUALCOMM";
     break;
   case RISCV::fixup_riscv_nds_branch_10:
@@ -822,8 +841,10 @@ static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
   default:
     break;
   case RISCV::fixup_riscv_rvc_jump:
+  case RISCV::fixup_riscv_branch:
   case RISCV::fixup_riscv_rvc_branch:
-  case RISCV::fixup_riscv_jal:
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_rvc_imm:
     return false;
   }
   return true;
@@ -954,12 +975,64 @@ RISCVAsmBackend::createObjectTargetWriter() const {
   return createRISCVELFObjectWriter(OSABI, Is64Bit);
 }
 
+class DarwinRISCVAsmBackend : public RISCVAsmBackend {
+public:
+  DarwinRISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
+                        bool IsLittleEndian, const MCTargetOptions &Options)
+      : RISCVAsmBackend(STI, OSABI, Is64Bit, IsLittleEndian, Options) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    const Triple &TT = STI.getTargetTriple();
+    uint32_t CPUType = cantFail(MachO::getCPUType(TT));
+    uint32_t CPUSubType = cantFail(MachO::getCPUSubType(TT));
+    return createRISCVMachObjectWriter(CPUType, CPUSubType);
+  }
+
+  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                uint64_t &FixedValue, bool IsResolved) override;
+
+  std::optional<bool> evaluateFixup(const MCFragment &F, MCFixup &Fixup,
+                                    MCValue &Target, uint64_t &Value) override {
+    const MCFixup *AUIPCFixup;
+    const MCFragment *AUIPCDF;
+    const MCFixupKind FKind = Fixup.getKind();
+    if ((FKind == RISCV::fixup_riscv_pcrel_lo12_i) ||
+        (FKind == RISCV::fixup_riscv_pcrel_lo12_s)) {
+      AUIPCFixup =
+          getPCRelHiFixup(cast<MCSpecifierExpr>(*Fixup.getValue()), &AUIPCDF);
+      if (!AUIPCFixup) {
+        getContext().reportError(Fixup.getLoc(),
+                                 "could not find corresponding %pcrel_hi");
+        return true;
+      }
+
+      return false;
+    }
+
+    // Use default handling for all other cases.
+    return {};
+  }
+};
+
 MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  if (TT.isOSBinFormatMachO())
+    return new DarwinRISCVAsmBackend(STI, OSABI, TT.isArch64Bit(),
+                                     TT.isLittleEndian(), Options);
+
   return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
                              Options);
+}
+
+bool DarwinRISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                                     const MCValue &Target,
+                                     uint64_t &FixedValue, bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  return IsResolved;
 }

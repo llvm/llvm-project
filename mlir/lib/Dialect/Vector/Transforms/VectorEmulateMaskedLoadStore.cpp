@@ -48,7 +48,7 @@ namespace {
 ///
 struct VectorMaskedLoadOpConverter final
     : OpRewritePattern<vector::MaskedLoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedLoadOp maskedLoadOp,
                                 PatternRewriter &rewriter) const override {
@@ -84,9 +84,9 @@ struct VectorMaskedLoadOpConverter final
             scf::YieldOp::create(builder, loc, iValue);
           });
       iValue = ifOp.getResult(0);
-
-      indices.back() =
-          arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      if (!indices.empty())
+        indices.back() =
+            arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.replaceOp(maskedLoadOp, iValue);
@@ -117,7 +117,7 @@ struct VectorMaskedLoadOpConverter final
 ///
 struct VectorMaskedStoreOpConverter final
     : OpRewritePattern<vector::MaskedStoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedStoreOp maskedStoreOp,
                                 PatternRewriter &rewriter) const override {
@@ -148,8 +148,9 @@ struct VectorMaskedStoreOpConverter final
           llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
 
       rewriter.setInsertionPointAfter(ifOp);
-      indices.back() =
-          arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      if (!indices.empty())
+        indices.back() =
+            arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.eraseOp(maskedStoreOp);

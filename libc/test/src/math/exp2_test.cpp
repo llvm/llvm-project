@@ -60,9 +60,9 @@ TEST_F(LlvmLibcExp2Test, TrickyInputs) {
 
 TEST_F(LlvmLibcExp2Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t START = FPBits(0.25).uintval();
+  constexpr uint64_t STOP = FPBits(4.0).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
@@ -101,10 +101,10 @@ TEST_F(LlvmLibcExp2Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Exp2 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Exp2 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, mx, mr, 0.5, rounding_mode);
     }
   };

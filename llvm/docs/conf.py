@@ -273,7 +273,8 @@ def process_rst(name):
 
         if len(header) != len(title):
             print(
-                "error: invalid header in %r (does not match title)" % file_subpath,
+                "error: invalid header length in %r (does not match length of title)"
+                % file_subpath,
                 file=sys.stderr,
             )
         if " - " not in title:

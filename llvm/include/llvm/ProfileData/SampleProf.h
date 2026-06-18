@@ -14,6 +14,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -315,13 +316,22 @@ struct LineLocation {
   uint32_t Discriminator;
 };
 
-struct LineLocationHash {
-  uint64_t operator()(const LineLocation &Loc) const {
-    return Loc.getHashCode();
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+
+} // end namespace sampleprof
+
+template <> struct DenseMapInfo<sampleprof::LineLocation> {
+  static unsigned getHashValue(const sampleprof::LineLocation &Val) {
+    return DenseMapInfo<uint64_t>::getHashValue(Val.getHashCode());
+  }
+
+  static bool isEqual(const sampleprof::LineLocation &LHS,
+                      const sampleprof::LineLocation &RHS) {
+    return LHS == RHS;
   }
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+namespace sampleprof {
 
 /// Key represents type of a C++ polymorphic class type by its vtable and value
 /// represents its counter.
@@ -331,7 +341,7 @@ using TypeCountMap = std::map<FunctionId, uint64_t>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
 /// and written as ULEB128. Values are written as ULEB128 as well.
-std::error_code
+LLVM_ABI std::error_code
 serializeTypeMap(const TypeCountMap &Map,
                  const MapVector<FunctionId, uint32_t> &NameTable,
                  raw_ostream &OS);
@@ -360,7 +370,7 @@ public:
   };
 
   using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
-  using CallTargetMap = std::unordered_map<FunctionId, uint64_t>;
+  using CallTargetMap = DenseMap<FunctionId, uint64_t>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -522,7 +532,13 @@ struct SampleContextFrame {
   }
 
   uint64_t getHashCode() const {
-    uint64_t NameHash = Func.getHashCode();
+    // Context frame hash is heavily used in llvm-profgen context-sensitive
+    // pre-inliner. Use a lightweight hashing here to avoid speed regression.
+    uint64_t NameHash = 0;
+    if (Func.isStringRef())
+      NameHash = std::hash<std::string>{}(Func.str());
+    else
+      NameHash = Func.getHashCode();
     uint64_t LocId = Location.getHashCode();
     return NameHash + (LocId << 5) + LocId;
   }
@@ -766,8 +782,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
-using LocToLocMap =
-    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 /// Representation of the samples collected for a function.
 ///
@@ -973,11 +988,11 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
-      const LineLocation &Loc, StringRef CalleeName,
-      SampleProfileReaderItaniumRemapper *Remapper,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
+                        SampleProfileReaderItaniumRemapper *Remapper,
+                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                            *FuncNameToProfNameMap = nullptr) const;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1072,7 +1087,7 @@ public:
     TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
     bool Overflowed = false;
 
-    for (const auto [Type, Count] : Other) {
+    for (const auto &[Type, Count] : Other) {
       FunctionId TypeId(Type);
       bool RowOverflow = false;
       TypeCounts[TypeId] = SaturatingMultiplyAdd(
@@ -1148,10 +1163,10 @@ public:
   /// corresponding function is no less than \p Threshold, add its corresponding
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
-  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S,
-                            const HashKeyMap<std::unordered_map, FunctionId,
-                                             Function *>  &SymbolMap,
-                            uint64_t Threshold) const {
+  void findInlinedFunctions(
+      DenseSet<GlobalValue::GUID> &S,
+      const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
+      uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
     auto IsDeclaration = [](const Function *F) {
@@ -1214,13 +1229,30 @@ public:
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
     // of "B" in knownSuffixes.
-    const char *KnownSuffixes[] = {LLVMSuffix, PartSuffix, UniqSuffix};
+    const SmallVector<StringRef> KnownSuffixes{LLVMSuffix, PartSuffix,
+                                               UniqSuffix};
+    return getCanonicalFnName(FnName, KnownSuffixes, Attr);
+  }
+
+  static StringRef getCanonicalCoroFnName(StringRef FnName,
+                                          StringRef Attr = "selected") {
+    // A local coroutine function from another CU can be promoted to a global
+    // function during ThinLTO import. This will create a linkage name like
+    // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
+    // the coroutine suffixes to avoid pseudo probe mismatch.
+    const SmallVector<StringRef, 3> CoroSuffixes{".cleanup", ".destroy",
+                                                 ".resume", LLVMSuffix};
+    return getCanonicalFnName(FnName, CoroSuffixes, Attr);
+  }
+
+  static StringRef getCanonicalFnName(StringRef FnName,
+                                      ArrayRef<StringRef> Suffixes,
+                                      StringRef Attr = "selected") {
     if (Attr == "" || Attr == "all")
       return FnName.split('.').first;
     if (Attr == "selected") {
       StringRef Cand(FnName);
-      for (const auto &Suf : KnownSuffixes) {
-        StringRef Suffix(Suf);
+      for (const auto Suffix : Suffixes) {
         // If the profile contains ".__uniq." suffix, don't strip the
         // suffix for names in the IR.
         if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
@@ -1229,7 +1261,7 @@ public:
         if (It == StringRef::npos)
           continue;
         auto Dit = Cand.rfind('.');
-        if (Dit == It + Suffix.size() - 1)
+        if (Dit == It || Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
       }
       return Cand;
@@ -1287,11 +1319,11 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  LLVM_ABI const FunctionSamples *findFunctionSamples(
-      const DILocation *DIL,
-      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamples(const DILocation *DIL,
+                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                          *FuncNameToProfNameMap = nullptr) const;
 
   LLVM_ABI static bool ProfileIsProbeBased;
 
@@ -1658,6 +1690,7 @@ public:
   }
 
   unsigned size() { return Syms.size(); }
+  void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
@@ -1680,12 +1713,6 @@ private:
 using namespace sampleprof;
 // Provide DenseMapInfo for SampleContext.
 template <> struct DenseMapInfo<SampleContext> {
-  static inline SampleContext getEmptyKey() { return SampleContext(); }
-
-  static inline SampleContext getTombstoneKey() {
-    return SampleContext(FunctionId(~1ULL));
-  }
-
   static unsigned getHashValue(const SampleContext &Val) {
     return Val.getHashCode();
   }

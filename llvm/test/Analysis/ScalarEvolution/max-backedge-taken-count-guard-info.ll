@@ -774,9 +774,9 @@ define void @crash(ptr %ptr) {
 ; CHECK-LABEL: 'crash'
 ; CHECK-NEXT:  Classifying expressions for: @crash
 ; CHECK-NEXT:    %text.addr.5 = phi ptr [ %incdec.ptr112, %while.cond111 ], [ null, %while.body ]
-; CHECK-NEXT:    --> {null,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {null,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Uniform }
 ; CHECK-NEXT:    %incdec.ptr112 = getelementptr inbounds i8, ptr %text.addr.5, i64 -1
-; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Variant }
+; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Uniform }
 ; CHECK-NEXT:    %lastout.2271 = phi ptr [ %incdec.ptr126, %while.body125 ], [ %ptr, %while.end117 ]
 ; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + (-1 * (ptrtoint ptr %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:    %incdec.ptr126 = getelementptr inbounds i8, ptr %lastout.2271, i64 1
@@ -1431,7 +1431,7 @@ define void @ptr_induction_early_exit_eq_1_with_align_on_load(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
@@ -1470,7 +1470,7 @@ define void @ptr_induction_early_exit_eq_1_with_align_on_arguments(ptr align 8 %
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
@@ -1511,7 +1511,7 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_1(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
@@ -1556,7 +1556,7 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_2(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)

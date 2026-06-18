@@ -20,7 +20,7 @@ func.func @main() {
   %alloca = memref.alloca() : memref<1xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.dim"(%{{.*}}, %{{.*}}) : (memref<1xf32>, index) -> index
+  // CHECK-NEXT: memref.dim %{{.*}}, %{{.*}} : memref<1xf32> 
   // CHECK-NEXT: ^ index is out of bounds
   // CHECK-NEXT: Location: loc({{.*}})
   %dim = memref.dim %alloca, %c4 : memref<1xf32>

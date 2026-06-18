@@ -22,8 +22,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 \
 ; RUN:   -verify-machineinstrs | FileCheck -check-prefix=RV64I %s
 
-declare float @llvm.sqrt.f32(float)
-
 define float @sqrt_f32(float %a) nounwind {
 ; RV32IF-LABEL: sqrt_f32:
 ; RV32IF:       # %bb.0:
@@ -70,8 +68,6 @@ define float @sqrt_f32(float %a) nounwind {
   %1 = call float @llvm.sqrt.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powi_f32(float %a, i32 %b) nounwind {
 ; RV32IF-LABEL: powi_f32:
@@ -134,8 +130,6 @@ define float @powi_f32(float %a, i32 %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.sin.f32(float)
-
 define float @sin_f32(float %a) nounwind {
 ; RV32IF-LABEL: sin_f32:
 ; RV32IF:       # %bb.0:
@@ -177,8 +171,6 @@ define float @sin_f32(float %a) nounwind {
   %1 = call float @llvm.sin.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.cos.f32(float)
 
 define float @cos_f32(float %a) nounwind {
 ; RV32IF-LABEL: cos_f32:
@@ -359,8 +351,6 @@ define float @sincos_f32(float %a) nounwind {
   ret float %3
 }
 
-declare float @llvm.pow.f32(float, float)
-
 define float @pow_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: pow_f32:
 ; RV32IF:       # %bb.0:
@@ -403,8 +393,6 @@ define float @pow_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.exp.f32(float)
-
 define float @exp_f32(float %a) nounwind {
 ; RV32IF-LABEL: exp_f32:
 ; RV32IF:       # %bb.0:
@@ -446,8 +434,6 @@ define float @exp_f32(float %a) nounwind {
   %1 = call float @llvm.exp.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.exp2.f32(float)
 
 define float @exp2_f32(float %a) nounwind {
 ; RV32IF-LABEL: exp2_f32:
@@ -533,8 +519,6 @@ define float @exp10_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.log.f32(float)
-
 define float @log_f32(float %a) nounwind {
 ; RV32IF-LABEL: log_f32:
 ; RV32IF:       # %bb.0:
@@ -576,8 +560,6 @@ define float @log_f32(float %a) nounwind {
   %1 = call float @llvm.log.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.log10.f32(float)
 
 define float @log10_f32(float %a) nounwind {
 ; RV32IF-LABEL: log10_f32:
@@ -621,8 +603,6 @@ define float @log10_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.log2.f32(float)
-
 define float @log2_f32(float %a) nounwind {
 ; RV32IF-LABEL: log2_f32:
 ; RV32IF:       # %bb.0:
@@ -664,8 +644,6 @@ define float @log2_f32(float %a) nounwind {
   %1 = call float @llvm.log2.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.fma.f32(float, float, float)
 
 define float @fma_f32(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fma_f32:
@@ -713,8 +691,6 @@ define float @fma_f32(float %a, float %b, float %c) nounwind {
   %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
   ret float %1
 }
-
-declare float @llvm.fmuladd.f32(float, float, float)
 
 define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fmuladd_f32:
@@ -773,8 +749,6 @@ define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
   ret float %1
 }
 
-declare float @llvm.fabs.f32(float)
-
 define float @fabs_f32(float %a) nounwind {
 ; RV32IF-LABEL: fabs_f32:
 ; RV32IF:       # %bb.0:
@@ -815,8 +789,6 @@ define float @fabs_f32(float %a) nounwind {
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.minnum.f32(float, float)
 
 define float @minnum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: minnum_f32:
@@ -865,8 +837,6 @@ define float @minnum_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.maxnum.f32(float, float)
-
 define float @maxnum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: maxnum_f32:
 ; RV32IF:       # %bb.0:
@@ -913,8 +883,6 @@ define float @maxnum_f32(float %a, float %b) nounwind {
   %1 = call float @llvm.maxnum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.copysign.f32(float, float)
 
 define float @copysign_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: copysign_f32:
@@ -963,8 +931,6 @@ define float @copysign_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.floor.f32(float)
-
 define float @floor_f32(float %a) nounwind {
 ; RV32IF-LABEL: floor_f32:
 ; RV32IF:       # %bb.0:
@@ -982,9 +948,9 @@ define float @floor_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: floor_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB18_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
@@ -1009,9 +975,9 @@ define float @floor_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: floor_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB18_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
@@ -1055,8 +1021,6 @@ define float @floor_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.ceil.f32(float)
-
 define float @ceil_f32(float %a) nounwind {
 ; RV32IF-LABEL: ceil_f32:
 ; RV32IF:       # %bb.0:
@@ -1074,9 +1038,9 @@ define float @ceil_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: ceil_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB19_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rup
@@ -1101,9 +1065,9 @@ define float @ceil_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: ceil_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB19_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rup
@@ -1147,8 +1111,6 @@ define float @ceil_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.trunc.f32(float)
-
 define float @trunc_f32(float %a) nounwind {
 ; RV32IF-LABEL: trunc_f32:
 ; RV32IF:       # %bb.0:
@@ -1166,9 +1128,9 @@ define float @trunc_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: trunc_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB20_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
@@ -1193,9 +1155,9 @@ define float @trunc_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: trunc_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB20_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
@@ -1239,8 +1201,6 @@ define float @trunc_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.rint.f32(float)
-
 define float @rint_f32(float %a) nounwind {
 ; RV32IF-LABEL: rint_f32:
 ; RV32IF:       # %bb.0:
@@ -1258,9 +1218,9 @@ define float @rint_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: rint_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB21_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0
@@ -1285,9 +1245,9 @@ define float @rint_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: rint_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB21_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0
@@ -1331,8 +1291,6 @@ define float @rint_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.nearbyint.f32(float)
-
 define float @nearbyint_f32(float %a) nounwind {
 ; RV32IF-LABEL: nearbyint_f32:
 ; RV32IF:       # %bb.0:
@@ -1375,8 +1333,6 @@ define float @nearbyint_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.round.f32(float)
-
 define float @round_f32(float %a) nounwind {
 ; RV32IF-LABEL: round_f32:
 ; RV32IF:       # %bb.0:
@@ -1394,9 +1350,9 @@ define float @round_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: round_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB23_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rmm
@@ -1421,9 +1377,9 @@ define float @round_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: round_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB23_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rmm
@@ -1467,8 +1423,6 @@ define float @round_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.roundeven.f32(float)
-
 define float @roundeven_f32(float %a) nounwind {
 ; RV32IF-LABEL: roundeven_f32:
 ; RV32IF:       # %bb.0:
@@ -1486,9 +1440,9 @@ define float @roundeven_f32(float %a) nounwind {
 ;
 ; RV32IZFINX-LABEL: roundeven_f32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    lui a1, 307200
-; RV32IZFINX-NEXT:    fabs.s a2, a0
-; RV32IZFINX-NEXT:    flt.s a1, a2, a1
+; RV32IZFINX-NEXT:    fabs.s a1, a0
+; RV32IZFINX-NEXT:    lui a2, 307200
+; RV32IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV32IZFINX-NEXT:    beqz a1, .LBB24_2
 ; RV32IZFINX-NEXT:  # %bb.1:
 ; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rne
@@ -1513,9 +1467,9 @@ define float @roundeven_f32(float %a) nounwind {
 ;
 ; RV64IZFINX-LABEL: roundeven_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    lui a1, 307200
-; RV64IZFINX-NEXT:    fabs.s a2, a0
-; RV64IZFINX-NEXT:    flt.s a1, a2, a1
+; RV64IZFINX-NEXT:    fabs.s a1, a0
+; RV64IZFINX-NEXT:    lui a2, 307200
+; RV64IZFINX-NEXT:    flt.s a1, a1, a2
 ; RV64IZFINX-NEXT:    beqz a1, .LBB24_2
 ; RV64IZFINX-NEXT:  # %bb.1:
 ; RV64IZFINX-NEXT:    fcvt.w.s a1, a0, rne
@@ -1558,8 +1512,6 @@ define float @roundeven_f32(float %a) nounwind {
   %1 = call float @llvm.roundeven.f32(float %a)
   ret float %1
 }
-
-declare iXLen @llvm.lrint.iXLen.f32(float)
 
 define iXLen @lrint_f32(float %a) nounwind {
 ; RV32IF-LABEL: lrint_f32:
@@ -1607,9 +1559,6 @@ define iXLen @lrint_f32(float %a) nounwind {
   %1 = call iXLen @llvm.lrint.iXLen.f32(float %a)
   ret iXLen %1
 }
-
-declare i32 @llvm.lround.i32.f32(float)
-declare i64 @llvm.lround.i64.f32(float)
 
 define iXLen @lround_f32(float %a) nounwind {
 ; RV32IF-LABEL: lround_f32:
@@ -1707,8 +1656,6 @@ define i32 @lround_i32_f32(float %a) nounwind {
   ret i32 %1
 }
 
-declare i64 @llvm.llrint.i64.f32(float)
-
 define i64 @llrint_f32(float %a) nounwind {
 ; RV32IF-LABEL: llrint_f32:
 ; RV32IF:       # %bb.0:
@@ -1763,8 +1710,6 @@ define i64 @llrint_f32(float %a) nounwind {
   %1 = call i64 @llvm.llrint.i64.f32(float %a)
   ret i64 %1
 }
-
-declare i64 @llvm.llround.i64.f32(float)
 
 define i64 @llround_f32(float %a) nounwind {
 ; RV32IF-LABEL: llround_f32:
@@ -1821,7 +1766,6 @@ define i64 @llround_f32(float %a) nounwind {
   ret i64 %1
 }
 
-declare i1 @llvm.is.fpclass.f32(float, i32)
 define i1 @fpclass(float %x) {
 ; RV32IF-LABEL: fpclass:
 ; RV32IF:       # %bb.0:
@@ -1860,53 +1804,53 @@ define i1 @fpclass(float %x) {
 ;
 ; RV32I-LABEL: fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 1
-; RV32I-NEXT:    lui a2, 2048
-; RV32I-NEXT:    lui a3, 522240
-; RV32I-NEXT:    lui a4, 1046528
-; RV32I-NEXT:    srli a5, a1, 1
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    xor a6, a5, a3
-; RV32I-NEXT:    slt a3, a3, a5
-; RV32I-NEXT:    add a4, a5, a4
-; RV32I-NEXT:    addi a5, a5, -1
-; RV32I-NEXT:    sltu a2, a5, a2
+; RV32I-NEXT:    lui a1, 2048
+; RV32I-NEXT:    lui a2, 522240
+; RV32I-NEXT:    slli a3, a0, 1
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    srli a4, a3, 1
 ; RV32I-NEXT:    srli a0, a0, 31
-; RV32I-NEXT:    seqz a1, a1
-; RV32I-NEXT:    seqz a5, a6
-; RV32I-NEXT:    srli a4, a4, 24
-; RV32I-NEXT:    and a2, a2, a0
-; RV32I-NEXT:    or a1, a1, a5
-; RV32I-NEXT:    sltiu a4, a4, 127
+; RV32I-NEXT:    addi a5, a4, -1
+; RV32I-NEXT:    sltu a1, a5, a1
+; RV32I-NEXT:    xor a5, a4, a2
+; RV32I-NEXT:    seqz a3, a3
+; RV32I-NEXT:    seqz a5, a5
+; RV32I-NEXT:    or a3, a3, a5
+; RV32I-NEXT:    lui a5, 1046528
+; RV32I-NEXT:    and a1, a1, a0
+; RV32I-NEXT:    add a5, a4, a5
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    srli a5, a5, 24
+; RV32I-NEXT:    slt a2, a2, a4
+; RV32I-NEXT:    sltiu a3, a5, 127
 ; RV32I-NEXT:    or a1, a1, a2
-; RV32I-NEXT:    or a1, a1, a3
-; RV32I-NEXT:    and a0, a4, a0
+; RV32I-NEXT:    and a0, a3, a0
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 33
-; RV64I-NEXT:    lui a2, 2048
-; RV64I-NEXT:    lui a3, 522240
-; RV64I-NEXT:    lui a4, 1046528
-; RV64I-NEXT:    srli a5, a1, 33
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    xor a6, a5, a3
-; RV64I-NEXT:    slt a3, a3, a5
-; RV64I-NEXT:    add a4, a5, a4
-; RV64I-NEXT:    addi a5, a5, -1
-; RV64I-NEXT:    sltu a2, a5, a2
+; RV64I-NEXT:    lui a1, 2048
+; RV64I-NEXT:    lui a2, 522240
+; RV64I-NEXT:    slli a3, a0, 33
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    srli a4, a3, 33
 ; RV64I-NEXT:    srliw a0, a0, 31
-; RV64I-NEXT:    seqz a1, a1
-; RV64I-NEXT:    seqz a5, a6
-; RV64I-NEXT:    srliw a4, a4, 24
-; RV64I-NEXT:    and a2, a2, a0
-; RV64I-NEXT:    or a1, a1, a5
-; RV64I-NEXT:    sltiu a4, a4, 127
+; RV64I-NEXT:    addi a5, a4, -1
+; RV64I-NEXT:    sltu a1, a5, a1
+; RV64I-NEXT:    xor a5, a4, a2
+; RV64I-NEXT:    seqz a3, a3
+; RV64I-NEXT:    seqz a5, a5
+; RV64I-NEXT:    or a3, a3, a5
+; RV64I-NEXT:    lui a5, 1046528
+; RV64I-NEXT:    and a1, a1, a0
+; RV64I-NEXT:    add a5, a4, a5
+; RV64I-NEXT:    or a1, a3, a1
+; RV64I-NEXT:    srliw a3, a5, 24
+; RV64I-NEXT:    slt a2, a2, a4
+; RV64I-NEXT:    sltiu a3, a3, 127
 ; RV64I-NEXT:    or a1, a1, a2
-; RV64I-NEXT:    or a1, a1, a3
-; RV64I-NEXT:    and a0, a4, a0
+; RV64I-NEXT:    and a0, a3, a0
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
   %cmp = call i1 @llvm.is.fpclass.f32(float %x, i32 639)
@@ -1951,17 +1895,17 @@ define i1 @isnan_fpclass(float %x) {
 ;
 ; RV32I-LABEL: isnan_fpclass:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 522240
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    srli a0, a0, 1
-; RV32I-NEXT:    lui a1, 522240
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: isnan_fpclass:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; nan
@@ -2001,8 +1945,8 @@ define i1 @isqnan_fpclass(float %x) {
 ;
 ; RV32I-LABEL: isqnan_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, 523264
+; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    slt a0, a1, a0
@@ -2010,8 +1954,8 @@ define i1 @isqnan_fpclass(float %x) {
 ;
 ; RV64I-LABEL: isqnan_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    lui a1, 523264
+; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
@@ -2058,10 +2002,10 @@ define i1 @issnan_fpclass(float %x) {
 ;
 ; RV32I-LABEL: issnan_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    lui a1, 523264
-; RV32I-NEXT:    lui a2, 522240
+; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    srli a0, a0, 1
+; RV32I-NEXT:    lui a2, 522240
 ; RV32I-NEXT:    slt a1, a0, a1
 ; RV32I-NEXT:    slt a0, a2, a0
 ; RV32I-NEXT:    and a0, a0, a1
@@ -2069,10 +2013,10 @@ define i1 @issnan_fpclass(float %x) {
 ;
 ; RV64I-LABEL: issnan_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    lui a1, 523264
-; RV64I-NEXT:    lui a2, 522240
+; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a0, a0, 33
+; RV64I-NEXT:    lui a2, 522240
 ; RV64I-NEXT:    slt a1, a0, a1
 ; RV64I-NEXT:    slt a0, a2, a0
 ; RV64I-NEXT:    and a0, a0, a1
@@ -2119,18 +2063,18 @@ define i1 @isinf_fpclass(float %x) {
 ;
 ; RV32I-LABEL: isinf_fpclass:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 522240
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    srli a0, a0, 1
-; RV32I-NEXT:    lui a1, 522240
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: isinf_fpclass:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -2183,8 +2127,8 @@ define i1 @isposinf_fpclass(float %x) {
 ;
 ; RV64I-LABEL: isposinf_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    lui a1, 522240
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -2232,8 +2176,8 @@ define i1 @isneginf_fpclass(float %x) {
 ;
 ; RV64I-LABEL: isneginf_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    lui a1, 1046528
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -2280,17 +2224,15 @@ define i1 @isfinite_fpclass(float %x) {
 ; RV32I-LABEL: isfinite_fpclass:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 1
-; RV32I-NEXT:    srli a0, a0, 1
-; RV32I-NEXT:    lui a1, 522240
-; RV32I-NEXT:    slt a0, a0, a1
+; RV32I-NEXT:    srli a0, a0, 24
+; RV32I-NEXT:    sltiu a0, a0, 255
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: isfinite_fpclass:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 33
-; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    lui a1, 522240
-; RV64I-NEXT:    slt a0, a0, a1
+; RV64I-NEXT:    srli a0, a0, 56
+; RV64I-NEXT:    sltiu a0, a0, 255
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
   ret i1 %1
@@ -2385,20 +2327,20 @@ define i1 @isnegfinite_fpclass(float %x) {
 ;
 ; RV32I-LABEL: isnegfinite_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 1
-; RV32I-NEXT:    lui a2, 522240
-; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    slt a1, a1, a2
+; RV32I-NEXT:    lui a1, 522240
+; RV32I-NEXT:    slli a2, a0, 1
+; RV32I-NEXT:    srli a2, a2, 1
+; RV32I-NEXT:    slt a1, a2, a1
 ; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: isnegfinite_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 33
-; RV64I-NEXT:    lui a2, 522240
-; RV64I-NEXT:    srli a1, a1, 33
-; RV64I-NEXT:    slt a1, a1, a2
+; RV64I-NEXT:    lui a1, 522240
+; RV64I-NEXT:    slli a2, a0, 33
+; RV64I-NEXT:    srli a2, a2, 33
+; RV64I-NEXT:    slt a1, a2, a1
 ; RV64I-NEXT:    srliw a0, a0, 31
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -2445,19 +2387,17 @@ define i1 @isnotfinite_fpclass(float %x) {
 ; RV32I-LABEL: isnotfinite_fpclass:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 1
-; RV32I-NEXT:    lui a1, 522240
-; RV32I-NEXT:    srli a0, a0, 1
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    srli a0, a0, 24
+; RV32I-NEXT:    sltiu a0, a0, 255
+; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: isnotfinite_fpclass:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 33
-; RV64I-NEXT:    lui a1, 522240
-; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    srli a0, a0, 56
+; RV64I-NEXT:    sltiu a0, a0, 255
+; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ox207 = "inf|nan"
   ret i1 %1
@@ -2504,8 +2444,6 @@ define float @tan_f32(float %a) nounwind {
   %1 = call float @llvm.tan.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.maximumnum.f32(float, float)
 
 define float @maximumnum_float(float %x, float %y) {
 ; RV32IF-LABEL: maximumnum_float:
@@ -2561,8 +2499,6 @@ define float @maximumnum_float(float %x, float %y) {
   %z = call float @llvm.maximumnum.f32(float %x, float %y)
   ret float %z
 }
-
-declare float @llvm.minimumnum.f32(float, float)
 
 define float @minimumnum_float(float %x, float %y) {
 ; RV32IF-LABEL: minimumnum_float:
@@ -3049,4 +2985,85 @@ define float @tanh_f32(float %a) nounwind {
 ; RV64I-NEXT:    ret
   %1 = call float @llvm.tanh.f32(float %a)
   ret float %1
+}
+
+define { float, float } @test_modf_f32(float %a) nounwind {
+; RV32IF-LABEL: test_modf_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    addi sp, sp, -16
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    addi a0, sp, 8
+; RV32IF-NEXT:    call modff
+; RV32IF-NEXT:    flw fa1, 8(sp)
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: test_modf_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    addi a1, sp, 8
+; RV32IZFINX-NEXT:    call modff
+; RV32IZFINX-NEXT:    lw a1, 8(sp)
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: test_modf_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    addi a0, sp, 4
+; RV64IF-NEXT:    call modff
+; RV64IF-NEXT:    flw fa1, 4(sp)
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: test_modf_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    addi a1, sp, 4
+; RV64IZFINX-NEXT:    call modff
+; RV64IZFINX-NEXT:    lw a1, 4(sp)
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
+; RV64IFD-LABEL: test_modf_f32:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    addi sp, sp, -16
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    addi a0, sp, 4
+; RV64IFD-NEXT:    call modff
+; RV64IFD-NEXT:    flw fa1, 4(sp)
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: test_modf_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    call modff
+; RV32I-NEXT:    lw a1, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: test_modf_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi a1, sp, 4
+; RV64I-NEXT:    call modff
+; RV64I-NEXT:    lw a1, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %result = call { float, float } @llvm.modf.f32(float %a)
+  ret { float, float } %result
 }

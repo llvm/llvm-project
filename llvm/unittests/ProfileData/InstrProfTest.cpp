@@ -914,7 +914,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_THAT(ValueData, SizeIs(0));
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
@@ -932,7 +932,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(2U, ValueData[4].Count);
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
                               {5000, 2}, {6000, 1}};

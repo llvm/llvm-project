@@ -13,6 +13,7 @@
 #include "TreeTestBase.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -153,6 +154,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
       FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
   CompilerInstance Compiler(Invocation);
   Compiler.setDiagnostics(Diags);
+  Compiler.setVirtualFileSystem(FS);
   Compiler.setFileManager(FileMgr);
   Compiler.setSourceManager(SourceMgr);
 

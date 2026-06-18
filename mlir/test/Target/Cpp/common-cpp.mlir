@@ -89,20 +89,22 @@ func.func @opaque_types(%arg0: !emitc.opaque<"bool">, %arg1: !emitc.opaque<"char
   return %2 : !emitc.opaque<"status_t">
 }
 
-// CHECK-LABEL: int32_t* apply() {
-func.func @apply() -> !emitc.ptr<i32> {
+// CHECK-LABEL: void address_of() {
+func.func @address_of() {
   // CHECK-NEXT: int32_t [[V1:[^ ]*]];
   %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   // CHECK-NEXT: int32_t* [[V2:[^ ]*]] = &[[V1]];
-  %1 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  // CHECK-NEXT: int32_t [[V3:[^ ]*]];
-  %2 = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
-  // CHECK-NEXT: int32_t [[V4:[^ ]*]] = *[[V2]];
-  %3 = emitc.apply "*"(%1) : (!emitc.ptr<i32>) -> i32
-  // CHECK-NEXT: [[V3]] = [[V4]];
-  emitc.assign %3 : i32 to %2 : !emitc.lvalue<i32>
-  // CHECK-NEXT: return [[V2]];
-  return %1 : !emitc.ptr<i32>
+  %1 = emitc.address_of %0 : !emitc.lvalue<i32>
+  return
+}
+
+// CHECK-LABEL: void dereference
+// CHECK-SAME:                   (int32_t* [[ARG0:[^ ]*]]) {
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]] = *[[ARG0]];
+  %2 = emitc.dereference %arg0 : !emitc.ptr<i32>
+  emitc.load %2 : !emitc.lvalue<i32>
+  return
 }
 
 // CHECK: void array_type(int32_t v1[3], float v2[10][20])

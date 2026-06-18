@@ -48,9 +48,9 @@ ENUM_CLASS(Intent, Default, In, Out, InOut)
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
-    Id, Iomsg, Iostat, Name, Named, Newunit, Nextrec, Nml, Number, Opened, Pad,
-    Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round, Sequential, Sign,
-    Size, Status, Stream, Unformatted, Unit, Write,
+    Id, Iomsg, Iostat, Leading_Zero, Name, Named, Newunit, Nextrec, Nml, Number,
+    Opened, Pad, Pending, Pos, Position, Read, Readwrite, Rec, Recl, Round,
+    Sequential, Sign, Size, Status, Stream, Unformatted, Unit, Write,
     Carriagecontrol, // nonstandard
     Convert, // nonstandard
     Dispose, // nonstandard
@@ -65,15 +65,21 @@ using Label = std::uint64_t;
 ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 
 // CUDA data attributes; mutually exclusive
-ENUM_CLASS(
-    CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture, Unified)
+ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture,
+    Unified, UseDevice, Value)
 
 // OpenACC device types
 ENUM_CLASS(
     OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
 
+// OpenMP dependence kinds
+ENUM_CLASS(OmpDependenceKind, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
+
 // OpenMP memory-order types
 ENUM_CLASS(OmpMemoryOrderType, Acq_Rel, Acquire, Relaxed, Release, Seq_Cst)
+
+// OpenMP device-type
+ENUM_CLASS(OmpDeviceType, Any, Host, Nohost)
 
 // Fortran names may have up to 63 characters (See Fortran 2018 C601).
 static constexpr int maxNameLen{63};
@@ -85,9 +91,10 @@ ENUM_CLASS(IgnoreTKR,
     Kind, // K - don't check kind
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
-    Managed, // M - don't check managed storage
-    Contiguous) // C - don't check for storage sequence association with a
+    Managed, // M - don't check managed/unified storage
+    Contiguous, // C - don't check for storage sequence association with a
                 // potentially non-contiguous object
+    Pointer) // P - ignore pointer and allocatable matching
 using IgnoreTKRSet = EnumSet<IgnoreTKR, 8>;
 // IGNORE_TKR(A) = IGNORE_TKR(TKRDM)
 static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,
@@ -98,6 +105,10 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
     std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
     bool isHostDeviceProcedure,
     const LanguageFeatureControl *features = nullptr);
+
+// Format vector type as Fortran string
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 

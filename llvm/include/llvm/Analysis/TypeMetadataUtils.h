@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 
@@ -46,14 +47,14 @@ struct DevirtCallSite {
 
 /// Given a call to the intrinsic \@llvm.type.test, find all devirtualizable
 /// call sites based on the call and return them in DevirtCalls.
-void findDevirtualizableCallsForTypeTest(
+LLVM_ABI void findDevirtualizableCallsForTypeTest(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     SmallVectorImpl<CallInst *> &Assumes, const CallInst *CI,
     DominatorTree &DT);
 
 /// Given a call to the intrinsic \@llvm.type.checked.load, find all
 /// devirtualizable call sites based on the call and return them in DevirtCalls.
-void findDevirtualizableCallsForTypeCheckedLoad(
+LLVM_ABI void findDevirtualizableCallsForTypeCheckedLoad(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     SmallVectorImpl<Instruction *> &LoadedPtrs,
     SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses,
@@ -76,19 +77,19 @@ void findDevirtualizableCallsForTypeCheckedLoad(
 /// }
 ///
 /// For such (sub-)expressions, getPointerAtOffset returns the @target pointer.
-Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
-                             Constant *TopLevelGlobal = nullptr);
+LLVM_ABI Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
+                                      Constant *TopLevelGlobal = nullptr);
 
 /// Given a vtable and a specified offset, returns the function and the trivial
 /// pointer at the specified offset in pair iff the pointer at the specified
 /// offset is a function or an alias to a function. Returns a pair of nullptr
 /// otherwise.
-std::pair<Function *, Constant *>
+LLVM_ABI std::pair<Function *, Constant *>
 getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
 
 /// Finds the same "relative pointer" pattern as described above, where the
 /// target is `C`, and replaces the entire pattern with a constant zero.
-void replaceRelativePointerUsersWithZero(Constant *C);
+LLVM_ABI void replaceRelativePointerUsersWithZero(Constant *C);
 
 } // namespace llvm
 

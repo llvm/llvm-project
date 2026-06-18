@@ -1,8 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
 
 #import "objc-mock-types.h"
+#import "mock-system-header.h"
 
 void someFunction();
+extern "C" CFStringRef LocalGlobalCFString;
+extern "C" NSString *LocalGlobalNSString;
 
 namespace raw_ptr {
 void foo() {
@@ -535,6 +538,41 @@ unsigned foo() {
 
 } // namespace ns_retained_return_value
 
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  auto *string = provideAutoreleased();
+  consume(string);
+}
+
+} // autoreleased
+
+namespace ns_global {
+
+void consumeCFString(CFStringRef);
+void consumeNSString(NSString *);
+
+void cf() {
+  auto *str = kCFURLTagNamesKey;
+  consumeCFString(str);
+  auto *localStr = LocalGlobalCFString;
+  // expected-warning@-1{{Local variable 'localStr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeCFString(localStr);
+}
+
+void ns() {
+  auto *str = NSApplicationDidBecomeActiveNotification;
+  consumeNSString(str);
+  auto *localStr = LocalGlobalNSString;
+  // expected-warning@-1{{Local variable 'localStr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeNSString(localStr);
+}
+
+}
+
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
 
@@ -554,6 +592,16 @@ SomeObj* provide();
 
 - (void)storeSomeObj {
   auto *obj = [self getSomeObj];
+  // expected-warning@-1{{Local variable 'obj' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   [obj doWork];
+  auto *obj2 = [SomeObj sharedInstance];
+  [obj2 doWork];
+}
+
+- (void)assignToGuardianArg:(RetainPtr<SomeObj>&)obj {
+  SomeObj* ptr = obj.get();
+  // expected-warning@-1{{Local variable 'ptr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  obj = nullptr;
+  [ptr doWork];
 }
 @end

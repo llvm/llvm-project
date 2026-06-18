@@ -2,11 +2,11 @@
 ; Test that we are able to generate the Xqcics instructions
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32I
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcics -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcics -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCICS
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcics,+experimental-xqcicm -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcics,+xqcicm -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCICM
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcicm,+xqcics,+xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i32 @select_cc_example_eq_s1(i32 %a, i32 %b, i32 %x, i32 %y) {
@@ -92,22 +92,22 @@ define i32 @select_cc_example_eq_s3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_eq_s3:
 ; RV32IXQCICS:       # %bb.0: # %entry
-; RV32IXQCICS-NEXT:    andi a0, a0, 1
 ; RV32IXQCICS-NEXT:    li a1, 25
+; RV32IXQCICS-NEXT:    andi a0, a0, 1
 ; RV32IXQCICS-NEXT:    qc.selectieqi a0, 0, a1, 12
 ; RV32IXQCICS-NEXT:    ret
 ;
 ; RV32IXQCICM-LABEL: select_cc_example_eq_s3:
 ; RV32IXQCICM:       # %bb.0: # %entry
-; RV32IXQCICM-NEXT:    andi a0, a0, 1
 ; RV32IXQCICM-NEXT:    li a1, 25
+; RV32IXQCICM-NEXT:    andi a0, a0, 1
 ; RV32IXQCICM-NEXT:    qc.selectieqi a0, 0, a1, 12
 ; RV32IXQCICM-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: select_cc_example_eq_s3:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    andi a0, a0, 1
 ; RV32IXQCI-NEXT:    li a1, 25
+; RV32IXQCI-NEXT:    andi a0, a0, 1
 ; RV32IXQCI-NEXT:    qc.selectieqi a0, 0, a1, 12
 ; RV32IXQCI-NEXT:    ret
 entry:
@@ -119,12 +119,13 @@ entry:
 define i32 @select_cc_example_eq(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_eq:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 11
-; RV32I-NEXT:    beq a0, a1, .LBB3_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:  .LBB3_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a4, 11
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a4, .LBB3_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB3_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_eq:
@@ -152,12 +153,13 @@ entry:
 define i32 @select_cc_example_eq_c(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_eq_c:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 11
-; RV32I-NEXT:    beq a0, a1, .LBB4_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:  .LBB4_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a4, 11
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a4, .LBB4_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB4_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_eq_c:
@@ -185,12 +187,13 @@ entry:
 define i32 @select_cc_example_ne(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_ne:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 11
-; RV32I-NEXT:    bne a0, a1, .LBB5_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:  .LBB5_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a4, 11
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a4, .LBB5_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB5_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_ne:
@@ -218,12 +221,13 @@ entry:
 define i32 @select_cc_example_ne_c(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_ne_c:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 11
-; RV32I-NEXT:    bne a0, a1, .LBB6_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:  .LBB6_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a4, 11
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a4, .LBB6_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB6_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_ne_c:
@@ -251,11 +255,12 @@ entry:
 define i32 @select_cc_example_eqi(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_eqi:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    beq a0, a1, .LBB7_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB7_2: # %entry
+; RV32I-NEXT:    mv a3, a0
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a3, a1, .LBB7_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB7_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_eqi:
@@ -270,8 +275,7 @@ define i32 @select_cc_example_eqi(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_eqi:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.line a2, a0, a1, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectieq a0, a1, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, %b
@@ -282,11 +286,12 @@ entry:
 define i32 @select_cc_example_eqi_c(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_eqi_c:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    bne a0, a1, .LBB8_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB8_2: # %entry
+; RV32I-NEXT:    mv a3, a0
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a3, a1, .LBB8_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB8_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_eqi_c:
@@ -301,8 +306,7 @@ define i32 @select_cc_example_eqi_c(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_eqi_c:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.lieq a2, a0, a1, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectine a0, a1, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, %b
@@ -313,11 +317,12 @@ entry:
 define i32 @select_cc_example_nei(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_nei:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    bne a0, a1, .LBB9_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB9_2: # %entry
+; RV32I-NEXT:    mv a3, a0
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a3, a1, .LBB9_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB9_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_nei:
@@ -332,8 +337,7 @@ define i32 @select_cc_example_nei(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_nei:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.lieq a2, a0, a1, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectine a0, a1, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp ne i32 %a, %b
@@ -344,11 +348,12 @@ entry:
 define i32 @select_cc_example_nei_c(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_nei_c:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    beq a0, a1, .LBB10_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB10_2: # %entry
+; RV32I-NEXT:    mv a3, a0
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a3, a1, .LBB10_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB10_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_nei_c:
@@ -363,8 +368,7 @@ define i32 @select_cc_example_nei_c(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_nei_c:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.line a2, a0, a1, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectieq a0, a1, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp ne i32 %a, %b
@@ -375,12 +379,13 @@ entry:
 define i32 @select_cc_example_ieqi(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_ieqi:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    beq a0, a1, .LBB11_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB11_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a3, .LBB11_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB11_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_ieqi:
@@ -395,8 +400,7 @@ define i32 @select_cc_example_ieqi(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_ieqi:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.linei a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 12
@@ -407,12 +411,13 @@ entry:
 define i32 @select_cc_example_ieqi_c1(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_ieqi_c1:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    beq a0, a1, .LBB12_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB12_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a3, .LBB12_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB12_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_ieqi_c1:
@@ -427,8 +432,7 @@ define i32 @select_cc_example_ieqi_c1(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_ieqi_c1:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.linei a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 12, %a
@@ -439,12 +443,13 @@ entry:
 define i32 @select_cc_example_ieqi_c2(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_ieqi_c2:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    bne a0, a1, .LBB13_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB13_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a3, .LBB13_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB13_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_ieqi_c2:
@@ -459,8 +464,7 @@ define i32 @select_cc_example_ieqi_c2(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_ieqi_c2:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.lieqi a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectinei a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 12
@@ -471,12 +475,13 @@ entry:
 define i32 @select_cc_example_ieqi_c3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_ieqi_c3:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    bne a0, a1, .LBB14_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB14_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a3, .LBB14_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB14_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_ieqi_c3:
@@ -491,8 +496,7 @@ define i32 @select_cc_example_ieqi_c3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_ieqi_c3:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.lieqi a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectinei a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp eq i32 12, %a
@@ -503,12 +507,13 @@ entry:
 define i32 @select_cc_example_inei(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_inei:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    bne a0, a1, .LBB15_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB15_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a3, .LBB15_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB15_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_inei:
@@ -523,8 +528,7 @@ define i32 @select_cc_example_inei(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_inei:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.lieqi a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectinei a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp ne i32 %a, 12
@@ -535,12 +539,13 @@ entry:
 define i32 @select_cc_example_inei_c1(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_inei_c1:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    bne a0, a1, .LBB16_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB16_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a3, .LBB16_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB16_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_inei_c1:
@@ -555,8 +560,7 @@ define i32 @select_cc_example_inei_c1(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_inei_c1:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.lieqi a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectinei a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp ne i32 12, %a
@@ -567,12 +571,13 @@ entry:
 define i32 @select_cc_example_inei_c2(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_inei_c2:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    beq a0, a1, .LBB17_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB17_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a3, .LBB17_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB17_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_inei_c2:
@@ -587,8 +592,7 @@ define i32 @select_cc_example_inei_c2(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_inei_c2:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.linei a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp ne i32 %a, 12
@@ -599,12 +603,13 @@ entry:
 define i32 @select_cc_example_inei_c3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; RV32I-LABEL: select_cc_example_inei_c3:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, 12
-; RV32I-NEXT:    beq a0, a1, .LBB18_2
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    li a2, 11
-; RV32I-NEXT:  .LBB18_2: # %entry
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    li a3, 12
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a3, .LBB18_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB18_2: # %entry
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCICS-LABEL: select_cc_example_inei_c3:
@@ -619,8 +624,7 @@ define i32 @select_cc_example_inei_c3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCI-LABEL: select_cc_example_inei_c3:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    qc.linei a2, a0, 12, 11
-; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 12, a2, 11
 ; RV32IXQCI-NEXT:    ret
 entry:
   %cmp = icmp ne i32 12, %a
@@ -690,3 +694,127 @@ entry:
   ret i32 %sel
 }
 
+define i32 @select_cc_example_eq1(i32 %a, i32 %b, i32 %x, i32 %y) {
+; RV32I-LABEL: select_cc_example_eq1:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    mv a3, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beq a1, a3, .LBB21_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB21_2: # %entry
+; RV32I-NEXT:    ret
+;
+; RV32IXQCICS-LABEL: select_cc_example_eq1:
+; RV32IXQCICS:       # %bb.0: # %entry
+; RV32IXQCICS-NEXT:    qc.selectieq a0, a1, a2, 11
+; RV32IXQCICS-NEXT:    ret
+;
+; RV32IXQCICM-LABEL: select_cc_example_eq1:
+; RV32IXQCICM:       # %bb.0: # %entry
+; RV32IXQCICM-NEXT:    qc.selectieq a0, a1, a2, 11
+; RV32IXQCICM-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_cc_example_eq1:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    qc.selectieq a0, a1, a2, 11
+; RV32IXQCI-NEXT:    ret
+entry:
+  %cmp = icmp eq i32 %b, %a
+  %sel = select i1 %cmp, i32 %x, i32 11
+  ret i32 %sel
+}
+
+define i32 @select_cc_example_ne1(i32 %a, i32 %b, i32 %x, i32 %y) {
+; RV32I-LABEL: select_cc_example_ne1:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    mv a3, a0
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bne a1, a3, .LBB22_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:  .LBB22_2: # %entry
+; RV32I-NEXT:    ret
+;
+; RV32IXQCICS-LABEL: select_cc_example_ne1:
+; RV32IXQCICS:       # %bb.0: # %entry
+; RV32IXQCICS-NEXT:    qc.selectine a0, a1, a2, 11
+; RV32IXQCICS-NEXT:    ret
+;
+; RV32IXQCICM-LABEL: select_cc_example_ne1:
+; RV32IXQCICM:       # %bb.0: # %entry
+; RV32IXQCICM-NEXT:    qc.selectine a0, a1, a2, 11
+; RV32IXQCICM-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_cc_example_ne1:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    qc.selectine a0, a1, a2, 11
+; RV32IXQCI-NEXT:    ret
+entry:
+  %cmp = icmp ne i32 %b, %a
+  %sel = select i1 %cmp, i32 %x, i32 11
+  ret i32 %sel
+}
+
+
+define i32 @select_cc_example_eq2(i32 %a, i32 %b, i32 %x, i32 %y) {
+; RV32I-LABEL: select_cc_example_eq2:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    beq a1, a0, .LBB23_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB23_2:
+; RV32I-NEXT:    li a0, 15
+; RV32I-NEXT:    ret
+;
+; RV32IXQCICS-LABEL: select_cc_example_eq2:
+; RV32IXQCICS:       # %bb.0: # %entry
+; RV32IXQCICS-NEXT:    qc.selectiieq a0, a1, 15, 11
+; RV32IXQCICS-NEXT:    ret
+;
+; RV32IXQCICM-LABEL: select_cc_example_eq2:
+; RV32IXQCICM:       # %bb.0: # %entry
+; RV32IXQCICM-NEXT:    qc.selectiieq a0, a1, 15, 11
+; RV32IXQCICM-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_cc_example_eq2:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    qc.selectiieq a0, a1, 15, 11
+; RV32IXQCI-NEXT:    ret
+entry:
+  %cmp = icmp eq i32 %b, %a
+  %sel = select i1 %cmp, i32 15, i32 11
+  ret i32 %sel
+}
+
+define i32 @select_cc_example_ne2(i32 %a, i32 %b, i32 %x, i32 %y) {
+; RV32I-LABEL: select_cc_example_ne2:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    bne a1, a0, .LBB24_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    li a0, 11
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB24_2:
+; RV32I-NEXT:    li a0, 15
+; RV32I-NEXT:    ret
+;
+; RV32IXQCICS-LABEL: select_cc_example_ne2:
+; RV32IXQCICS:       # %bb.0: # %entry
+; RV32IXQCICS-NEXT:    qc.selectiine a0, a1, 15, 11
+; RV32IXQCICS-NEXT:    ret
+;
+; RV32IXQCICM-LABEL: select_cc_example_ne2:
+; RV32IXQCICM:       # %bb.0: # %entry
+; RV32IXQCICM-NEXT:    qc.selectiine a0, a1, 15, 11
+; RV32IXQCICM-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_cc_example_ne2:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    qc.selectiine a0, a1, 15, 11
+; RV32IXQCI-NEXT:    ret
+entry:
+  %cmp = icmp ne i32 %b, %a
+  %sel = select i1 %cmp, i32 15, i32 11
+  ret i32 %sel
+}

@@ -26,6 +26,10 @@
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X7 < %t %s
 // CHECK-FIXED-X7: "-target-feature" "+reserve-x7"
 
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x8 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X8 %s
+// CHECK-NO-FIXED-X8: error: unsupported option '-ffixed-x8' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X8-NOT: "+reserve-x8"
+
 // RUN: %clang --target=aarch64-none-gnu -ffixed-x9 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X9 < %t %s
 // CHECK-FIXED-X9: "-target-feature" "+reserve-x9"
@@ -54,9 +58,21 @@
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X15 < %t %s
 // CHECK-FIXED-X15: "-target-feature" "+reserve-x15"
 
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x16 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X16 %s
+// CHECK-NO-FIXED-X16: error: unsupported option '-ffixed-x16' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X16-NOT: "+reserve-x16"
+
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x17 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X17 %s
+// CHECK-NO-FIXED-X17: error: unsupported option '-ffixed-x17' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X17-NOT: "+reserve-x17"
+
 // RUN: %clang --target=aarch64-none-gnu -ffixed-x18 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X18 < %t %s
 // CHECK-FIXED-X18: "-target-feature" "+reserve-x18"
+
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x19 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X19 %s
+// CHECK-NO-FIXED-X19: error: unsupported option '-ffixed-x19' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X19-NOT: "+reserve-x19"
 
 // RUN: %clang --target=aarch64-none-gnu -ffixed-x20 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X20 < %t %s
@@ -93,6 +109,18 @@
 // RUN: %clang --target=aarch64-none-gnu -ffixed-x28 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X28 < %t %s
 // CHECK-FIXED-X28: "-target-feature" "+reserve-x28"
+
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x29 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X29 %s
+// CHECK-NO-FIXED-X29: error: unsupported option '-ffixed-x29' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X29-NOT: "+reserve-x29"
+
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x30 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X30 %s
+// CHECK-NO-FIXED-X30: error: unsupported option '-ffixed-x30' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X30-NOT: "+reserve-x30"
+
+// RUN: not %clang --target=aarch64-none-gnu -ffixed-x31 -### %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FIXED-X31 %s
+// CHECK-NO-FIXED-X31: error: unsupported option '-ffixed-x31' for target 'aarch64-none-gnu'
+// CHECK-NO-FIXED-X31-NOT: "+reserve-x31"
 
 // Test multiple of reserve-x# options together.
 // RUN: %clang --target=aarch64-none-gnu \

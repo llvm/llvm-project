@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
@@ -26,7 +27,8 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/STLExtras.h"
+#include <algorithm>
 
 namespace mlir {
 namespace memref {
@@ -76,10 +78,10 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
   return std::make_pair(
       memref::ReinterpretCastOp::create(
           rewriter, loc, source,
-          /* offset = */ linearizedInfo.linearizedOffset,
-          /* shapes = */
+          /*offset=*/linearizedInfo.linearizedOffset,
+          /*sizes=*/
           ArrayRef<OpFoldResult>{linearizedInfo.linearizedSize},
-          /* strides = */
+          /*strides=*/
           ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)}),
       getValueFromOpFoldResult(rewriter, loc, linearizedIndices));
 }
@@ -96,156 +98,317 @@ static bool checkLayout(Value val) {
 }
 
 namespace {
-static Value getTargetMemref(Operation *op) {
-  return llvm::TypeSwitch<Operation *, Value>(op)
-      .template Case<memref::LoadOp, memref::StoreOp, memref::AllocaOp,
-                     memref::AllocOp>([](auto op) { return op.getMemref(); })
-      .template Case<vector::LoadOp, vector::StoreOp, vector::MaskedLoadOp,
-                     vector::MaskedStoreOp, vector::TransferReadOp,
-                     vector::TransferWriteOp>(
-          [](auto op) { return op.getBase(); })
-      .Default([](auto) { return Value{}; });
+static bool hasSupportedElementType(Value memref) {
+  auto type = cast<MemRefType>(memref.getType());
+  return type.getElementType().isIntOrFloat();
 }
 
-template <typename T>
-static void castAllocResult(T oper, T newOper, Location loc,
-                            PatternRewriter &rewriter) {
-  memref::ExtractStridedMetadataOp stridedMetadata =
-      memref::ExtractStridedMetadataOp::create(rewriter, loc, oper);
-  rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-      oper, cast<MemRefType>(oper.getType()), newOper,
-      /*offset=*/rewriter.getIndexAttr(0),
-      stridedMetadata.getConstifiedMixedSizes(),
-      stridedMetadata.getConstifiedMixedStrides());
-}
+/// Compute the type that will be used to linearize the memref.
+/// Used so we don't create IR like `getLinearizedMemRefOffsetAndSize` would.
+static FailureOr<MemRefType> getFlattenedMemRefType(MemRefType sourceType) {
+  int64_t sourceOffset;
+  SmallVector<int64_t> sourceStrides;
+  if (failed(sourceType.getStridesAndOffset(sourceStrides, sourceOffset)))
+    return failure();
 
-template <typename T>
-static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
-                      Value offset) {
-  Location loc = op->getLoc();
-  llvm::TypeSwitch<Operation *>(op.getOperation())
-      .template Case<memref::AllocOp>([&](auto oper) {
-        auto newAlloc = memref::AllocOp::create(
-            rewriter, loc, cast<MemRefType>(flatMemref.getType()),
-            oper.getAlignmentAttr());
-        castAllocResult(oper, newAlloc, loc, rewriter);
-      })
-      .template Case<memref::AllocaOp>([&](auto oper) {
-        auto newAlloca = memref::AllocaOp::create(
-            rewriter, loc, cast<MemRefType>(flatMemref.getType()),
-            oper.getAlignmentAttr());
-        castAllocResult(oper, newAlloca, loc, rewriter);
-      })
-      .template Case<memref::LoadOp>([&](auto op) {
-        auto newLoad =
-            memref::LoadOp::create(rewriter, loc, op->getResultTypes(),
-                                   flatMemref, ValueRange{offset});
-        newLoad->setAttrs(op->getAttrs());
-        rewriter.replaceOp(op, newLoad.getResult());
-      })
-      .template Case<memref::StoreOp>([&](auto op) {
-        auto newStore =
-            memref::StoreOp::create(rewriter, loc, op->getOperands().front(),
-                                    flatMemref, ValueRange{offset});
-        newStore->setAttrs(op->getAttrs());
-        rewriter.replaceOp(op, newStore);
-      })
-      .template Case<vector::LoadOp>([&](auto op) {
-        auto newLoad =
-            vector::LoadOp::create(rewriter, loc, op->getResultTypes(),
-                                   flatMemref, ValueRange{offset});
-        newLoad->setAttrs(op->getAttrs());
-        rewriter.replaceOp(op, newLoad.getResult());
-      })
-      .template Case<vector::StoreOp>([&](auto op) {
-        auto newStore =
-            vector::StoreOp::create(rewriter, loc, op->getOperands().front(),
-                                    flatMemref, ValueRange{offset});
-        newStore->setAttrs(op->getAttrs());
-        rewriter.replaceOp(op, newStore);
-      })
-      .template Case<vector::MaskedLoadOp>([&](auto op) {
-        auto newMaskedLoad = vector::MaskedLoadOp::create(
-            rewriter, loc, op.getType(), flatMemref, ValueRange{offset},
-            op.getMask(), op.getPassThru());
-        newMaskedLoad->setAttrs(op->getAttrs());
-        rewriter.replaceOp(op, newMaskedLoad.getResult());
-      })
-      .template Case<vector::MaskedStoreOp>([&](auto op) {
-        auto newMaskedStore = vector::MaskedStoreOp::create(
-            rewriter, loc, flatMemref, ValueRange{offset}, op.getMask(),
-            op.getValueToStore());
-        newMaskedStore->setAttrs(op->getAttrs());
-        rewriter.replaceOp(op, newMaskedStore);
-      })
-      .template Case<vector::TransferReadOp>([&](auto op) {
-        auto newTransferRead = vector::TransferReadOp::create(
-            rewriter, loc, op.getType(), flatMemref, ValueRange{offset},
-            op.getPadding());
-        rewriter.replaceOp(op, newTransferRead.getResult());
-      })
-      .template Case<vector::TransferWriteOp>([&](auto op) {
-        auto newTransferWrite = vector::TransferWriteOp::create(
-            rewriter, loc, op.getVector(), flatMemref, ValueRange{offset});
-        rewriter.replaceOp(op, newTransferWrite);
-      })
-      .Default([&](auto op) {
-        op->emitOpError("unimplemented: do not know how to replace op.");
-      });
-}
-
-template <typename T>
-static ValueRange getIndices(T op) {
-  if constexpr (std::is_same_v<T, memref::AllocaOp> ||
-                std::is_same_v<T, memref::AllocOp>) {
-    return ValueRange{};
-  } else {
-    return op.getIndices();
+  auto flatDimSize = SaturatedInteger::wrap(0);
+  for (auto [size, stride] :
+       llvm::zip_equal(sourceType.getShape(), sourceStrides)) {
+    auto dimSize =
+        SaturatedInteger::wrap(size) * SaturatedInteger::wrap(stride);
+    flatDimSize = flatDimSize.smax(dimSize);
+    if (flatDimSize.isSaturated())
+      break;
   }
+
+  if (sourceType.getLayout().isIdentity())
+    return MemRefType::get(
+        {flatDimSize.asInteger()}, sourceType.getElementType(),
+        MemRefLayoutAttrInterface{}, sourceType.getMemorySpace());
+
+  return MemRefType::get(
+      {flatDimSize.asInteger()}, sourceType.getElementType(),
+      StridedLayoutAttr::get(sourceType.getContext(), sourceOffset, {1}),
+      sourceType.getMemorySpace());
 }
 
-template <typename T>
-static LogicalResult canBeFlattened(T op, PatternRewriter &rewriter) {
-  return llvm::TypeSwitch<Operation *, LogicalResult>(op.getOperation())
-      .template Case<vector::TransferReadOp, vector::TransferWriteOp>(
-          [&](auto oper) {
-            // For vector.transfer_read/write, must make sure:
-            // 1. all accesses are inbound, and
-            // 2. has an identity or minor identity permutation map.
-            auto permutationMap = oper.getPermutationMap();
-            if (!permutationMap.isIdentity() &&
-                !permutationMap.isMinorIdentity()) {
-              return rewriter.notifyMatchFailure(
-                  oper, "only identity permutation map is supported");
-            }
-            mlir::ArrayAttr inbounds = oper.getInBounds();
-            if (llvm::any_of(inbounds, [](Attribute attr) {
-                  return !cast<BoolAttr>(attr).getValue();
-                })) {
-              return rewriter.notifyMatchFailure(oper,
-                                                 "only inbounds are supported");
-            }
-            return success();
-          })
-      .Default([&](auto op) { return success(); });
+/// Return whether `memref` has the basic properties needed for linearizing it
+/// into a 1-D reinterpret_cast.
+static LogicalResult checkFlattenableMemref(Operation *op, Value memref,
+                                            PatternRewriter &rewriter) {
+  if (!needFlattening(memref))
+    return rewriter.notifyMatchFailure(op, "memref does not need flattening");
+  if (!checkLayout(memref))
+    return rewriter.notifyMatchFailure(op, "unsupported memref layout");
+  if (!hasSupportedElementType(memref))
+    return rewriter.notifyMatchFailure(op, "unsupported element type");
+  return success();
 }
 
-template <typename T>
-struct MemRefRewritePattern : public OpRewritePattern<T> {
-  using OpRewritePattern<T>::OpRewritePattern;
-  LogicalResult matchAndRewrite(T op,
+/// Wrapeer around checking if the last memref dimension is contiguous that
+/// provides nice failures message.
+static LogicalResult hasUnitTrailingStride(Operation *op,
+                                           TypedValue<MemRefType> memref,
+                                           PatternRewriter &rewriter) {
+  if (!memref.getType().areTrailingDimsContiguous(1))
+    return rewriter.notifyMatchFailure(
+        op, "cannot preserve non-unit trailing access stride");
+
+  return success();
+}
+
+static LogicalResult
+canLinearizeAccessedShape(memref::IndexedAccessOpInterface op,
+                          TypedValue<MemRefType> memref,
+                          PatternRewriter &rewriter) {
+  SmallVector<int64_t> accessedShape = op.getAccessedShape();
+  if (accessedShape.empty())
+    return success();
+  if (accessedShape.size() > 1)
+    return rewriter.notifyMatchFailure(
+        op, "cannot preserve multi-dimensional accessed shape");
+
+  return hasUnitTrailingStride(op, memref, rewriter);
+}
+
+static LogicalResult canFlattenTransferOp(VectorTransferOpInterface op,
+                                          TypedValue<MemRefType> memref,
+                                          PatternRewriter &rewriter) {
+  // For vector.transfer_read/write, must make sure:
+  // 1. all accesses are inbounds,
+  // 2. has a minor identity permutation map, and
+  // 3. has at most one transfer dimension.
+  AffineMap permutationMap = op.getPermutationMap();
+  if (!permutationMap.isMinorIdentity())
+    return rewriter.notifyMatchFailure(
+        op, "only identity or minor identity permutation map is supported");
+
+  if (op.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(op, "only inbounds are supported");
+
+  if (op.getTransferRank() > 1)
+    return rewriter.notifyMatchFailure(
+        op, "cannot flatten multi-dimensional vector transfer");
+
+  if (op.getTransferRank() > 0 &&
+      failed(hasUnitTrailingStride(op, memref, rewriter)))
+    return failure();
+
+  return success();
+}
+
+// Pattern for memref::AllocOp and memref::AllocaOp.
+//
+// The "source" memref for these ops is the op's own result, so the generic
+// indexed access pattern cannot be used: getFlattenMemrefAndOffset would
+// insert ExtractStridedMetadataOp and ReinterpretCastOp that use op.result
+// before this op in the block. After replaceOpWithNewOp the original result is
+// RAUW'd to the new ReinterpretCastOp, leaving the earlier ops with forward
+// references (domination violations) caught by
+// MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS.
+//
+// Instead, sizes and strides are computed from the op's operands and type
+// (which all dominate the op), avoiding any reference to op.result until the
+// final replaceOpWithNewOp.
+template <typename AllocLikeOp>
+struct AllocLikeFlattenPattern final : public OpRewritePattern<AllocLikeOp> {
+  using Base = OpRewritePattern<AllocLikeOp>;
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(AllocLikeOp op,
                                 PatternRewriter &rewriter) const override {
-    LogicalResult canFlatten = canBeFlattened(op, rewriter);
-    if (failed(canFlatten)) {
-      return canFlatten;
+    if (!needFlattening(op.getMemref()) || !checkLayout(op.getMemref()))
+      return failure();
+
+    Location loc = op->getLoc();
+    auto memrefType = cast<MemRefType>(op.getType());
+    auto elemType = memrefType.getElementType();
+    if (!elemType.isIntOrFloat())
+      return failure();
+    unsigned elemBitWidth = elemType.getIntOrFloatBitWidth();
+
+    SmallVector<OpFoldResult> sizes = op.getMixedSizes();
+
+    int64_t staticOffset;
+    SmallVector<int64_t> staticStrides;
+    if (failed(memrefType.getStridesAndOffset(staticStrides, staticOffset)))
+      return failure();
+    if (staticOffset == ShapedType::kDynamic)
+      return rewriter.notifyMatchFailure(op, "dynamic offset not supported");
+    SmallVector<OpFoldResult> strides;
+    strides.reserve(staticStrides.size());
+    for (int64_t stride : staticStrides) {
+      if (stride == ShapedType::kDynamic)
+        return rewriter.notifyMatchFailure(op,
+                                           "dynamic stride cannot be computed");
+      strides.push_back(rewriter.getIndexAttr(stride));
     }
 
-    Value memref = getTargetMemref(op);
-    if (!needFlattening(memref) || !checkLayout(memref))
+    // Compute the linearized flat extent from sizes and strides (no SSA ops
+    // referencing op.result are created here).
+    memref::LinearizedMemRefInfo linearizedInfo;
+    OpFoldResult linearizedOffset;
+    std::tie(linearizedInfo, linearizedOffset) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, elemBitWidth, elemBitWidth, rewriter.getIndexAttr(0),
+            sizes, strides);
+    (void)linearizedOffset;
+
+    // The total allocation must cover [0, staticOffset + linearizedExtent).
+    // When the offset is non-zero, add it to the computed extent so that the
+    // buffer is large enough for elements accessed at positions
+    // [staticOffset, staticOffset + linearizedExtent).
+    OpFoldResult flatSizeOfr = linearizedInfo.linearizedSize;
+    if (staticOffset != 0) {
+      AffineExpr s0;
+      bindSymbols(rewriter.getContext(), s0);
+      flatSizeOfr = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, s0 + staticOffset, {flatSizeOfr});
+    }
+
+    // Build the flat 1-D MemRefType. The linearized size may be static or
+    // dynamic (OpFoldResult of either IntegerAttr or a Value).
+    int64_t flatDimSize = ShapedType::kDynamic;
+    if (auto attr = dyn_cast<Attribute>(flatSizeOfr))
+      if (auto intAttr = dyn_cast<IntegerAttr>(attr))
+        flatDimSize = intAttr.getInt();
+
+    auto flatMemrefType =
+        MemRefType::get({flatDimSize}, memrefType.getElementType(),
+                        StridedLayoutAttr::get(rewriter.getContext(), 0, {1}),
+                        memrefType.getMemorySpace());
+
+    // Collect the flat dynamic-size operand (empty for fully-static case).
+    SmallVector<Value, 1> dynSizes;
+    if (flatDimSize == ShapedType::kDynamic)
+      dynSizes.push_back(getValueFromOpFoldResult(rewriter, loc, flatSizeOfr));
+
+    auto newOp = AllocLikeOp::create(rewriter, loc, flatMemrefType, dynSizes,
+                                     op.getAlignmentAttr());
+    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
+        op, cast<MemRefType>(op.getType()), newOp,
+        rewriter.getIndexAttr(staticOffset), sizes, strides);
+    return success();
+  }
+};
+
+/// Pattern that flattens any IndexedAccessOpInterface op.
+struct IndexedAccessOpFlattenPattern final
+    : public OpInterfaceRewritePattern<memref::IndexedAccessOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(memref::IndexedAccessOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    TypedValue<MemRefType> memref = op.getAccessedMemref();
+    if (!memref)
+      return rewriter.notifyMatchFailure(op, "not accessing a memref");
+    if (failed(checkFlattenableMemref(op, memref, rewriter)))
       return failure();
-    auto &&[flatMemref, offset] = getFlattenMemrefAndOffset(
-        rewriter, op->getLoc(), memref, getIndices<T>(op));
-    replaceOp<T>(op, rewriter, flatMemref, offset);
+    if (failed(canLinearizeAccessedShape(op, memref, rewriter)))
+      return failure();
+
+    auto [flatMemref, offset] = getFlattenMemrefAndOffset(
+        rewriter, op->getLoc(), memref, op.getIndices());
+    std::optional<SmallVector<Value>> replacementValues =
+        op.updateMemrefAndIndices(rewriter, flatMemref, ValueRange{offset});
+    if (replacementValues)
+      rewriter.replaceOp(op, *replacementValues);
+    return success();
+  }
+};
+
+/// Flatten operations that use VectorTransferOpInterface. Transfer ops have
+/// permutation-map and in_bounds semantics that are separate from
+/// IndexedAccessOpInterface, so use updateStartingPosition directly.
+struct VectorTransferOpFlattenPattern final
+    : public OpInterfaceRewritePattern<VectorTransferOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(VectorTransferOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    auto memref = dyn_cast<TypedValue<MemRefType>>(op.getBase());
+    if (!memref)
+      return rewriter.notifyMatchFailure(op, "not accessing a memref");
+    if (failed(checkFlattenableMemref(op, memref, rewriter)))
+      return failure();
+    if (failed(canFlattenTransferOp(op, memref, rewriter)))
+      return failure();
+
+    FailureOr<MemRefType> flatMemrefType =
+        getFlattenedMemRefType(memref.getType());
+    if (failed(flatMemrefType))
+      return failure();
+    AffineMap newPermutationMap = AffineMap::getMinorIdentityMap(
+        /*dims=*/1, op.getTransferRank(), op.getContext());
+    if (failed(
+            op.mayUpdateStartingPosition(*flatMemrefType, newPermutationMap)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed op-specific preconditions");
+
+    auto [flatMemref, offset] = getFlattenMemrefAndOffset(
+        rewriter, op->getLoc(), memref, op.getIndices());
+    op.updateStartingPosition(rewriter, flatMemref, ValueRange{offset},
+                              AffineMapAttr::get(newPermutationMap));
+    return success();
+  }
+};
+
+/// Flatten the source and destination memref/index pairs of indexed memcpy-like
+/// operations such as memref.dma_start.
+struct FlattenedMemrefAccess {
+  Value memref;
+  Value index;
+};
+
+/// Flatten all IndexedMemCopyOpInterface operations.
+struct IndexedMemCopyOpFlattenPattern final
+    : public OpInterfaceRewritePattern<memref::IndexedMemCopyOpInterface> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(memref::IndexedMemCopyOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    TypedValue<MemRefType> src = op.getSrc();
+    TypedValue<MemRefType> dst = op.getDst();
+    if (!src && !dst)
+      return rewriter.notifyMatchFailure(op, "not copying between memrefs");
+
+    auto tryFlatten =
+        [&](TypedValue<MemRefType> memref,
+            ValueRange indices) -> std::optional<FlattenedMemrefAccess> {
+      if (!memref || !needFlattening(memref))
+        return std::nullopt;
+      if (failed(checkFlattenableMemref(op, memref, rewriter)))
+        return std::nullopt;
+
+      auto [flatMemref, offset] =
+          getFlattenMemrefAndOffset(rewriter, op->getLoc(), memref, indices);
+      return FlattenedMemrefAccess{flatMemref, offset};
+    };
+
+    std::optional<FlattenedMemrefAccess> newSrc =
+        tryFlatten(src, op.getSrcIndices());
+    std::optional<FlattenedMemrefAccess> newDst =
+        tryFlatten(dst, op.getDstIndices());
+    if (!newSrc && !newDst)
+      return rewriter.notifyMatchFailure(
+          op, "no source or destination memref needed flattening");
+
+    Value srcMemref = src;
+    ValueRange srcIndices = op.getSrcIndices();
+    if (newSrc) {
+      srcMemref = newSrc->memref;
+      srcIndices = ValueRange(newSrc->index);
+    }
+
+    Value dstMemref = dst;
+    ValueRange dstIndices = op.getDstIndices();
+    if (newDst) {
+      dstMemref = newDst->memref;
+      dstIndices = ValueRange(newDst->index);
+    }
+
+    op.setMemrefsAndIndices(rewriter, srcMemref, srcIndices, dstMemref,
+                            dstIndices);
     return success();
   }
 };
@@ -256,7 +419,7 @@ struct FlattenMemrefsPass
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect, arith::ArithDialect,
-                    memref::MemRefDialect, vector::VectorDialect>();
+                    memref::MemRefDialect>();
   }
 
   void runOnOperation() override {
@@ -271,26 +434,10 @@ struct FlattenMemrefsPass
 
 } // namespace
 
-void memref::populateFlattenVectorOpsOnMemrefPatterns(
-    RewritePatternSet &patterns) {
-  patterns.insert<MemRefRewritePattern<vector::LoadOp>,
-                  MemRefRewritePattern<vector::StoreOp>,
-                  MemRefRewritePattern<vector::TransferReadOp>,
-                  MemRefRewritePattern<vector::TransferWriteOp>,
-                  MemRefRewritePattern<vector::MaskedLoadOp>,
-                  MemRefRewritePattern<vector::MaskedStoreOp>>(
-      patterns.getContext());
-}
-
-void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
-  patterns.insert<MemRefRewritePattern<memref::LoadOp>,
-                  MemRefRewritePattern<memref::StoreOp>,
-                  MemRefRewritePattern<memref::AllocOp>,
-                  MemRefRewritePattern<memref::AllocaOp>>(
-      patterns.getContext());
-}
-
 void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
-  populateFlattenMemrefOpsPatterns(patterns);
-  populateFlattenVectorOpsOnMemrefPatterns(patterns);
+  patterns.insert<IndexedAccessOpFlattenPattern, IndexedMemCopyOpFlattenPattern,
+                  VectorTransferOpFlattenPattern,
+                  AllocLikeFlattenPattern<memref::AllocOp>,
+                  AllocLikeFlattenPattern<memref::AllocaOp>>(
+      patterns.getContext());
 }

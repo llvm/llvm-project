@@ -31,6 +31,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -93,12 +94,11 @@ class LLVMFuzzerInputBuffer : public MemoryBuffer
         init(Data, Data+Size, false);
       }
 
-
-    virtual BufferKind getBufferKind() const {
-      return MemoryBuffer_Malloc; // it's not disk-backed so I think that's
-                                  // the intent ... though AFAIK it
-                                  // probably came from an mmap or sbrk
-    }
+      virtual BufferKind getBufferKind() const override {
+        return MemoryBuffer_Malloc; // it's not disk-backed so I think that's
+                                    // the intent ... though AFAIK it
+                                    // probably came from an mmap or sbrk
+      }
 
   private:
     const char *Data;
@@ -115,7 +115,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
     createMCAsmParser(SrcMgr, Ctx, Str, MAI));
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-    TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
     errs() << ProgName
@@ -142,6 +142,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   static const std::vector<std::string> NoIncludeDirs;
   SrcMgr.setIncludeDirs(NoIncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   static std::string ArchName;
   std::string Error;
@@ -154,7 +155,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     abort();
   }
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI) {
     errs() << "Unable to create target register info!\n";
     abort();
@@ -162,28 +163,28 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI) {
     errs() << "Unable to create target asm info!\n";
     abort();
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
   if (!STI) {
     errs() << "Unable to create subtargettarget info!\n";
     abort();
   }
 
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());
 
   const unsigned OutputAsmVariant = 0;
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-  MCInstPrinter *IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-      *MAI, *MCII, *MRI);
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
   if (!IP) {
     errs()
       << "error: unable to create instruction printer for target triple '"
@@ -204,7 +205,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCStreamer> Str;
 
   if (FileType == OFT_AssemblyFile) {
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");

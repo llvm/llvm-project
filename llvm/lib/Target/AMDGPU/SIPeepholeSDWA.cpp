@@ -118,7 +118,7 @@ public:
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
   MachineRegisterInfo *getMRI() const {
-    return &getParentInst()->getParent()->getParent()->getRegInfo();
+    return &getParentInst()->getMF()->getRegInfo();
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -399,6 +399,9 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
+  assert((!Sext || !TII->getSubtarget().zeroesHigh16BitsOfDest(
+                       getParentInst()->getOpcode())) &&
+         "Cannot use sign-extension with instruction that zeroes high bits");
   switch (MI.getOpcode()) {
   case AMDGPU::V_CVT_F32_FP8_sdwa:
   case AMDGPU::V_CVT_F32_BF8_sdwa:
@@ -708,18 +711,16 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   }
 
   case AMDGPU::V_LSHRREV_B16_e32:
-  case AMDGPU::V_ASHRREV_I16_e32:
   case AMDGPU::V_LSHLREV_B16_e32:
   case AMDGPU::V_LSHRREV_B16_e64:
   case AMDGPU::V_LSHRREV_B16_opsel_e64:
-  case AMDGPU::V_ASHRREV_I16_e64:
   case AMDGPU::V_LSHLREV_B16_opsel_e64:
   case AMDGPU::V_LSHLREV_B16_e64: {
+    // V_ASHRREV_I16_e32 and V_ASHRREV_I16_e64 are
+    // not included here because they zero-fill the high 16-bits.
+
     // from: v_lshrrev_b16_e32 v1, 8, v0
     // to SDWA src:v0 src_sel:BYTE_1
-
-    // from: v_ashrrev_i16_e32 v1, 8, v0
-    // to SDWA src:v0 src_sel:BYTE_1 sext:1
 
     // from: v_lshlrev_b16_e32 v1, 8, v0
     // to SDWA dst:v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD
@@ -739,11 +740,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
         Opcode == AMDGPU::V_LSHLREV_B16_opsel_e64 ||
         Opcode == AMDGPU::V_LSHLREV_B16_e64)
       return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
-    return std::make_unique<SDWASrcOperand>(
-        Src1, Dst, BYTE_1, false, false,
-        Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
-            Opcode != AMDGPU::V_LSHRREV_B16_opsel_e64 &&
-            Opcode != AMDGPU::V_LSHRREV_B16_e64);
+    return std::make_unique<SDWASrcOperand>(Src1, Dst, BYTE_1, false, false,
+                                            false);
     break;
   }
 
@@ -1284,7 +1282,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     // Clone the instruction to allow revoking changes
     // made to MI during the processing of the operands
     // if the conversion fails.
-    SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    SDWAInst = MI.getMF()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
   } else {
     SDWAInst = createSDWAVersion(MI);
@@ -1334,19 +1332,21 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
   const MCInstrDesc &Desc = TII->get(MI.getOpcode());
   unsigned ConstantBusCount = 0;
   for (MachineOperand &Op : MI.explicit_uses()) {
-    if (!Op.isImm() && !(Op.isReg() && !TRI->isVGPR(*MRI, Op.getReg())))
+    if (Op.isReg()) {
+      if (TRI->isVGPR(*MRI, Op.getReg()))
+        continue;
+
+      if (ST.hasSDWAScalar() && ConstantBusCount == 0) {
+        ++ConstantBusCount;
+        continue;
+      }
+    } else if (!Op.isImm())
       continue;
 
     unsigned I = Op.getOperandNo();
-    if (Desc.operands()[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
+    const TargetRegisterClass *OpRC = TII->getRegClass(Desc, I);
+    if (!OpRC || !TRI->isVSSuperClass(OpRC))
       continue;
-
-    if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&
-        TRI->isSGPRReg(*MRI, Op.getReg())) {
-      ++ConstantBusCount;
-      continue;
-    }
 
     Register VGPR = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     auto Copy = BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
@@ -1354,8 +1354,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
     if (Op.isImm())
       Copy.addImm(Op.getImm());
     else if (Op.isReg())
-      Copy.addReg(Op.getReg(), Op.isKill() ? RegState::Kill : 0,
-                  Op.getSubReg());
+      Copy.addReg(Op.getReg(), getKillRegState(Op.isKill()), Op.getSubReg());
     Op.ChangeToRegister(VGPR, false);
   }
 }

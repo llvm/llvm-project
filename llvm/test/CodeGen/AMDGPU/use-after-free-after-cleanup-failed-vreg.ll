@@ -1,4 +1,4 @@
-; RUN: not llc -mcpu=gfx1100 -mtriple=amdgcn-amd-amdhsa -stress-regalloc=4 -filetype=null -verify-machineinstrs %s 2>&1 | FileCheck %s
+; RUN: not llc -mcpu=gfx1100 -mtriple=amdgcn-amd-amdhsa -stress-regalloc=4 -amdgpu-enable-rewrite-partial-reg-uses=0 -filetype=null -verify-machineinstrs %s 2>&1 | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: ran out of registers during register allocation in function 'f'
 ; CHECK-NOT: Bad machine code

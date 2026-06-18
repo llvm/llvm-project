@@ -81,13 +81,14 @@ public:
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
                                        SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
+  bool tryWideningMulAcc(SDNode *Node, const SDLoc &DL);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, Subtarget->getXLen(), ShAmt);
   }
-  bool selectShiftMask32(SDValue N, SDValue &ShAmt) {
-    return selectShiftMask(N, 32, ShAmt);
+  template <unsigned Size> bool selectShiftMask(SDValue N, SDValue &ShAmt) {
+    return selectShiftMask(N, Size, ShAmt);
   }
 
   bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);
@@ -152,6 +153,9 @@ public:
     return selectRVVSimm5(N, Width, Imm);
   }
 
+  bool selectVMNOTOp(SDValue N, SDValue &Res);
+  bool selectVMNOT_VLOp(SDNode *Parent, SDValue N, SDValue &Res);
+
   void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
                                   const SDLoc &DL, unsigned CurOp,
                                   bool IsMasked, bool IsStridedOrIndexed,
@@ -165,6 +169,7 @@ public:
   void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
 
   void selectVSETVLI(SDNode *Node);
+  void selectXSfmmVSET(SDNode *Node);
 
   void selectSF_VC_X_SE(SDNode *Node);
 

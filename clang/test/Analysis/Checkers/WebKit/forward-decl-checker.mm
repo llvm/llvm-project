@@ -11,6 +11,8 @@ class Obj;
 
 Obj* provide_obj_ptr();
 void receive_obj_ptr(Obj* p = nullptr);
+void receive_obj_ref(Obj&);
+void receive_obj_rref(Obj&&);
 sqlite3* open_db();
 void close_db(sqlite3*);
 
@@ -38,6 +40,17 @@ Obj& ref() {
   return obj;
 }
 
+void opaque_call_arg(Obj* obj, Obj&& otherObj, const RefPtr<Obj>& safeObj, WeakPtr<Obj> weakObj, std::unique_ptr<Obj>& uniqObj) {
+  receive_obj_ref(*obj);
+  receive_obj_ptr(&*obj);
+  receive_obj_rref(std::move(otherObj));
+  receive_obj_rref(WTF::move(otherObj));
+  receive_obj_ref(*safeObj.get());
+  receive_obj_ptr(weakObj.get());
+  // expected-warning@-1{{Call argument for parameter 'p' uses a forward declared type 'Obj *'}}
+  receive_obj_ref(*uniqObj);
+}
+
 Obj&& provide_obj_rval();
 void receive_obj_rval(Obj&& p);
 
@@ -47,6 +60,7 @@ void rval(Obj&& arg) {
   auto &&obj = provide_obj_rval();
   // expected-warning@-1{{Local variable 'obj' uses a forward declared type 'Obj &&'}}
   receive_obj_rval(std::move(arg));
+  receive_obj_rval(WTF::move(arg));
 }
 
 ObjCObj *provide_objcobj();
@@ -55,6 +69,10 @@ ObjCObj *objc_ptr() {
   receive_objcobj(provide_objcobj());
   auto *objcobj = provide_objcobj();
   return objcobj;
+}
+
+void obj_ptr_null_callee(ObjCObj* (*cb)()) {
+  receive_objcobj(cb());
 }
 
 struct WrapperObj {
@@ -72,6 +90,7 @@ void construct_ptr(Obj&& arg) {
   WrapperObj wrapper2(provide_obj_ref());
   // expected-warning@-1{{Call argument for parameter 'obj' uses a forward declared type 'Obj &'}}
   WrapperObj wrapper3(std::move(arg));
+  WrapperObj wrapper4(WTF::move(arg));
 }
 
 JSStringRef provide_opaque_ptr();

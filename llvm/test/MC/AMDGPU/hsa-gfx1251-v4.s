@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s 2>&1 | FileCheck --check-prefix=W64-ERR %s
+// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+wavefrontsize64,-wavefrontsize32 --amdhsa-code-object-version=4 < %s -filetype=null 2>&1 | FileCheck --check-prefix=W64-ERR %s
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
@@ -52,7 +52,7 @@
 // OBJDUMP-NEXT: 00e0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00f0 00000cc0 80000000 00040000 00000000
 // max_lds_size
-// OBJDUMP-NEXT: 0100 00000600 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0100 00000500 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0110 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0120 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0130 00000cc0 80000000 00040000 00000000
@@ -178,6 +178,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_next_free_sgpr 32
 // ASM-NEXT: .amdhsa_named_barrier_count 3
 // ASM-NEXT: .amdhsa_reserve_vcc 0
+// ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 1
 // ASM-NEXT: .amdhsa_float_denorm_mode_32 1
@@ -230,13 +231,13 @@ max_vgprs:
 
 .p2align 6
 .amdhsa_kernel max_lds_size
- .amdhsa_group_segment_fixed_size 393216
+ .amdhsa_group_segment_fixed_size 327680
  .amdhsa_next_free_vgpr 1
  .amdhsa_next_free_sgpr 1
 .end_amdhsa_kernel
 
 // ASM: .amdhsa_kernel max_lds_size
-// ASM: .amdhsa_group_segment_fixed_size 393216
+// ASM: .amdhsa_group_segment_fixed_size 327680
 // ASM: .end_amdhsa_kernel
 
 // Test maximum VGPR allocation

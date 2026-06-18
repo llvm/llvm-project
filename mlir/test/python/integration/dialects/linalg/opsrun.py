@@ -25,13 +25,13 @@ func.func @main() -> i32 attributes {llvm.emit_c_interface} {
   %O1 = memref.alloc() : memref<16xi32>
   %O2 = memref.alloc() : memref<4x16xi32>
 
-  %val0 = arith.constant 1.0 : f32
-  %val1 = arith.constant 2.0 : f32
-  %val2 = arith.constant 3.0 : f32
+  %val0 = arith.constant 1 : i32
+  %val1 = arith.constant 2 : i32
+  %val2 = arith.constant 3 : i32
 
-  call @fill_0d_on_buffers(%val0, %O0) : (f32, memref<i32>) -> ()
-  call @fill_1d_on_buffers(%val1, %O1) : (f32, memref<16xi32>) -> ()
-  call @fill_2d_on_buffers(%val2, %O2) : (f32, memref<4x16xi32>) -> ()
+  call @fill_0d_on_buffers(%val0, %O0) : (i32, memref<i32>) -> ()
+  call @fill_1d_on_buffers(%val1, %O1) : (i32, memref<16xi32>) -> ()
+  call @fill_2d_on_buffers(%val2, %O2) : (i32, memref<4x16xi32>) -> ()
 
   %c0 = arith.constant 0 : index
   %res0 = memref.load %O0[] : memref<i32>
@@ -149,19 +149,18 @@ def transform(module, boilerplate):
 def test_fill_builtin():
     with Context() as ctx, Location.unknown():
         module = Module.create()
-        f32 = F32Type.get()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
 
-            @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+            @func.FuncOp.from_py_func(i32, MemRefType.get([], i32))
             def fill_0d_on_buffers(value, out):
                 linalg.fill(value, outs=[out])
 
-            @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+            @func.FuncOp.from_py_func(i32, MemRefType.get([16], i32))
             def fill_1d_on_buffers(value, out):
                 linalg.fill(value, outs=[out])
 
-            @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+            @func.FuncOp.from_py_func(i32, MemRefType.get([4, 16], i32))
             def fill_2d_on_buffers(value, out):
                 linalg.fill(value, outs=[out])
 
@@ -184,19 +183,18 @@ test_fill_builtin()
 def test_fill_generic():
     with Context() as ctx, Location.unknown():
         module = Module.create()
-        f32 = F32Type.get()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
 
-            @func.FuncOp.from_py_func(f32, MemRefType.get([], i32))
+            @func.FuncOp.from_py_func(i32, MemRefType.get([], i32))
             def fill_0d_on_buffers(value, out):
                 linalg.fill(value, outs=[out], emit_generic=True)
 
-            @func.FuncOp.from_py_func(f32, MemRefType.get([16], i32))
+            @func.FuncOp.from_py_func(i32, MemRefType.get([16], i32))
             def fill_1d_on_buffers(value, out):
                 linalg.fill(value, outs=[out], emit_generic=True)
 
-            @func.FuncOp.from_py_func(f32, MemRefType.get([4, 16], i32))
+            @func.FuncOp.from_py_func(i32, MemRefType.get([4, 16], i32))
             def fill_2d_on_buffers(value, out):
                 linalg.fill(value, outs=[out], emit_generic=True)
 

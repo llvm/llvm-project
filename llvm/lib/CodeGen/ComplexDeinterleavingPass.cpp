@@ -126,16 +126,7 @@ hash_code hash_value(const ComplexValue &Arg) {
 } // end namespace
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
-namespace llvm {
-template <> struct DenseMapInfo<ComplexValue> {
-  static inline ComplexValue getEmptyKey() {
-    return {DenseMapInfo<Value *>::getEmptyKey(),
-            DenseMapInfo<Value *>::getEmptyKey()};
-  }
-  static inline ComplexValue getTombstoneKey() {
-    return {DenseMapInfo<Value *>::getTombstoneKey(),
-            DenseMapInfo<Value *>::getTombstoneKey()};
-  }
+template <> struct llvm::DenseMapInfo<ComplexValue> {
   static unsigned getHashValue(const ComplexValue &Val) {
     return hash_combine(DenseMapInfo<Value *>::getHashValue(Val.Real),
                         DenseMapInfo<Value *>::getHashValue(Val.Imag));
@@ -144,7 +135,6 @@ template <> struct DenseMapInfo<ComplexValue> {
     return LHS.Real == RHS.Real && LHS.Imag == RHS.Imag;
   }
 };
-} // end namespace llvm
 
 namespace {
 template <typename T, typename IterT>
@@ -160,10 +150,7 @@ public:
   static char ID;
 
   ComplexDeinterleavingLegacyPass(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {
-    initializeComplexDeinterleavingLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), TM(TM) {}
 
   StringRef getPassName() const override {
     return "Complex Deinterleaving Pass";
@@ -1744,8 +1731,8 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
   if (Factor != 2)
     return false;
 
-  auto *Br = dyn_cast<BranchInst>(B->getTerminator());
-  if (!Br || Br->getNumSuccessors() != 2)
+  auto *Br = dyn_cast<CondBrInst>(B->getTerminator());
+  if (!Br)
     return false;
 
   // Identify simple one-block loop
@@ -2075,12 +2062,12 @@ ComplexDeinterleavingGraph::identifyDeinterleave(ComplexValues &Vals) {
   }
 
   Value *RealOp1 = RealShuffle->getOperand(1);
-  if (!isa<UndefValue>(RealOp1) && !isa<ConstantAggregateZero>(RealOp1)) {
+  if (!isa<UndefValue>(RealOp1) && !match(RealOp1, m_Zero())) {
     LLVM_DEBUG(dbgs() << " - RealOp1 is not undef or zero.\n");
     return nullptr;
   }
   Value *ImagOp1 = ImagShuffle->getOperand(1);
-  if (!isa<UndefValue>(ImagOp1) && !isa<ConstantAggregateZero>(ImagOp1)) {
+  if (!isa<UndefValue>(ImagOp1) && !match(ImagOp1, m_Zero())) {
     LLVM_DEBUG(dbgs() << " - ImagOp1 is not undef or zero.\n");
     return nullptr;
   }
@@ -2436,7 +2423,7 @@ void ComplexDeinterleavingGraph::processReductionSingle(
 
   Value *NewInit = nullptr;
   if (auto *C = dyn_cast<Constant>(Init)) {
-    if (C->isZeroValue())
+    if (C->isNullValue())
       NewInit = Constant::getNullValue(NewVTy);
   }
 
@@ -2477,8 +2464,10 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *FinalReductionReal = ReductionInfo[Real].second;
   auto *FinalReductionImag = ReductionInfo[Imag].second;
 
-  Builder.SetInsertPoint(
-      &*FinalReductionReal->getParent()->getFirstInsertionPt());
+  auto *Br = cast<CondBrInst>(BackEdge->getTerminator());
+  BasicBlock *ExitBB = Br->getSuccessor(Br->getSuccessor(0) == BackEdge);
+  Builder.SetInsertPoint(&*ExitBB->getFirstInsertionPt());
+
   auto *Deinterleave = Builder.CreateIntrinsic(Intrinsic::vector_deinterleave2,
                                                OperationReplacement->getType(),
                                                OperationReplacement);

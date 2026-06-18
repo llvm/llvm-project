@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangStandard.h"
+#include "clang/Config/config.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -128,42 +130,68 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.RawStringLiterals = Std.hasRawStringLiterals();
+  Opts.AllowLiteralDigitSeparator = Std.allowLiteralDigitSeparator();
   Opts.NamedLoops = Std.isC2y();
 
   Opts.HLSL = Lang == Language::HLSL;
-  if (Opts.HLSL && Opts.IncludeDefaultHeader)
-    Includes.push_back("hlsl.h");
+  if (Opts.HLSL) {
+    if (Opts.IncludeDefaultHeader)
+      Includes.push_back("hlsl.h");
+    // Set maximum matrix dimension to 4 for HLSL
+    Opts.MaxMatrixDimension = 4;
+  }
 
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
-  if (LangStd == LangStandard::lang_opencl10)
+  switch (LangStd) {
+  case LangStandard::lang_opencl10:
     Opts.OpenCLVersion = 100;
-  else if (LangStd == LangStandard::lang_opencl11)
+    break;
+  case LangStandard::lang_opencl11:
     Opts.OpenCLVersion = 110;
-  else if (LangStd == LangStandard::lang_opencl12)
+    break;
+  case LangStandard::lang_opencl12:
     Opts.OpenCLVersion = 120;
-  else if (LangStd == LangStandard::lang_opencl20)
+    break;
+  case LangStandard::lang_opencl20:
     Opts.OpenCLVersion = 200;
-  else if (LangStd == LangStandard::lang_opencl30)
+    break;
+  case LangStandard::lang_opencl30:
     Opts.OpenCLVersion = 300;
-  else if (LangStd == LangStandard::lang_openclcpp10)
+    break;
+  case LangStandard::lang_opencl31:
+    Opts.OpenCLVersion = 310;
+    break;
+  case LangStandard::lang_openclcpp10:
     Opts.OpenCLCPlusPlusVersion = 100;
-  else if (LangStd == LangStandard::lang_openclcpp2021)
+    break;
+  case LangStandard::lang_openclcpp2021:
     Opts.OpenCLCPlusPlusVersion = 202100;
-  else if (LangStd == LangStandard::lang_hlsl2015)
+    break;
+  case LangStandard::lang_hlsl2015:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2015;
-  else if (LangStd == LangStandard::lang_hlsl2016)
+    break;
+  case LangStandard::lang_hlsl2016:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2016;
-  else if (LangStd == LangStandard::lang_hlsl2017)
+    break;
+  case LangStandard::lang_hlsl2017:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2017;
-  else if (LangStd == LangStandard::lang_hlsl2018)
+    break;
+  case LangStandard::lang_hlsl2018:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2018;
-  else if (LangStd == LangStandard::lang_hlsl2021)
+    break;
+  case LangStandard::lang_hlsl2021:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2021;
-  else if (LangStd == LangStandard::lang_hlsl202x)
+    break;
+  case LangStandard::lang_hlsl202x:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202x;
-  else if (LangStd == LangStandard::lang_hlsl202y)
+    break;
+  case LangStandard::lang_hlsl202y:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202y;
+    break;
+  default:
+    break;
+  }
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {
@@ -242,4 +270,47 @@ LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
     llvm::errs() << "\n " #NAME " Override is " << get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
+}
+
+std::optional<uint32_t> LangOptions::getCPlusPlusLangStd() const {
+  if (!CPlusPlus)
+    return std::nullopt;
+
+  LangStandard::Kind Std;
+  if (CPlusPlus26)
+    Std = LangStandard::lang_cxx26;
+  else if (CPlusPlus23)
+    Std = LangStandard::lang_cxx23;
+  else if (CPlusPlus20)
+    Std = LangStandard::lang_cxx20;
+  else if (CPlusPlus17)
+    Std = LangStandard::lang_cxx17;
+  else if (CPlusPlus14)
+    Std = LangStandard::lang_cxx14;
+  else if (CPlusPlus11)
+    Std = LangStandard::lang_cxx11;
+  else
+    Std = LangStandard::lang_cxx98;
+
+  return LangStandard::getLangStandardForKind(Std).getVersion();
+}
+
+std::optional<uint32_t> LangOptions::getCLangStd() const {
+  LangStandard::Kind Std;
+  if (C2y)
+    Std = LangStandard::lang_c2y;
+  else if (C23)
+    Std = LangStandard::lang_c23;
+  else if (C17)
+    Std = LangStandard::lang_c17;
+  else if (C11)
+    Std = LangStandard::lang_c11;
+  else if (C99)
+    Std = LangStandard::lang_c99;
+  else if (!GNUMode && Digraphs)
+    Std = LangStandard::lang_c94;
+  else
+    return std::nullopt;
+
+  return LangStandard::getLangStandardForKind(Std).getVersion();
 }

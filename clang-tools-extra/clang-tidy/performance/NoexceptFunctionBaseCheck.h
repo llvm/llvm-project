@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTFUNCTIONCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTFUNCTIONCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTFUNCTIONBASECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTFUNCTIONBASECHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/ExceptionSpecAnalyzer.h"
@@ -27,8 +27,7 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11 && LangOpts.CXXExceptions;
   }
-  void
-  check(const ast_matchers::MatchFinder::MatchResult &Result) final override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
@@ -47,4 +46,4 @@ private:
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTFUNCTIONCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTFUNCTIONBASECHECK_H

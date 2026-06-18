@@ -35,6 +35,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -43,6 +44,8 @@ using namespace llvm;
 
 const char SanCovTracePCIndirName[] = "__sanitizer_cov_trace_pc_indir";
 const char SanCovTracePCName[] = "__sanitizer_cov_trace_pc";
+const char SanCovTracePCEntryName[] = "__sanitizer_cov_trace_pc_entry";
+const char SanCovTracePCExitName[] = "__sanitizer_cov_trace_pc_exit";
 const char SanCovTraceCmp1[] = "__sanitizer_cov_trace_cmp1";
 const char SanCovTraceCmp2[] = "__sanitizer_cov_trace_cmp2";
 const char SanCovTraceCmp4[] = "__sanitizer_cov_trace_cmp4";
@@ -98,6 +101,10 @@ static cl::opt<int> ClCoverageLevel(
 
 static cl::opt<bool> ClTracePC("sanitizer-coverage-trace-pc",
                                cl::desc("Experimental pc tracing"), cl::Hidden);
+
+static cl::opt<bool> ClTracePCEntryExit(
+    "sanitizer-coverage-trace-pc-entry-exit",
+    cl::desc("pc tracing with separate entry/exit callbacks"), cl::Hidden);
 
 static cl::opt<bool> ClTracePCGuard("sanitizer-coverage-trace-pc-guard",
                                     cl::desc("pc tracing with a guard"),
@@ -208,6 +215,7 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TraceDiv |= ClDIVTracing;
   Options.TraceGep |= ClGEPTracing;
   Options.TracePC |= ClTracePC;
+  Options.TracePCEntryExit |= ClTracePCEntryExit;
   Options.TracePCGuard |= ClTracePCGuard;
   Options.Inline8bitCounters |= ClInline8bitCounters;
   Options.InlineBoolFlag |= ClInlineBoolFlag;
@@ -219,7 +227,7 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TraceLoads |= ClLoadTracing;
   Options.TraceStores |= ClStoreTracing;
   Options.GatedCallbacks |= ClGatedCallbacks;
-  if (!Options.TracePCGuard && !Options.TracePC &&
+  if (!Options.TracePCGuard && !Options.TracePC && !Options.TracePCEntryExit &&
       !Options.Inline8bitCounters && !Options.StackDepth &&
       !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores)
     Options.TracePCGuard = true; // TracePCGuard is default.
@@ -256,6 +264,7 @@ private:
                          ArrayRef<GetElementPtrInst *> GepTraceTargets);
   void InjectTraceForLoadsAndStores(Function &F, ArrayRef<LoadInst *> Loads,
                                     ArrayRef<StoreInst *> Stores);
+  void InjectTraceForExits(Function &F);
   void InjectTraceForSwitch(Function &F,
                             ArrayRef<Instruction *> SwitchTraceTargets,
                             Value *&FunctionGateCmp);
@@ -288,6 +297,7 @@ private:
   FunctionCallee SanCovStackDepthCallback;
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
+  FunctionCallee SanCovTracePCEntry, SanCovTracePCExit;
   std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
   std::array<FunctionCallee, 4> SanCovTraceConstCmpFunction;
   std::array<FunctionCallee, 5> SanCovLoadFunction;
@@ -317,6 +327,18 @@ private:
   const SpecialCaseList *Blocklist;
 };
 } // namespace
+
+SanitizerCoveragePass::SanitizerCoveragePass(
+    SanitizerCoverageOptions Options, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    const std::vector<std::string> &AllowlistFiles,
+    const std::vector<std::string> &BlocklistFiles)
+    : Options(std::move(Options)),
+      VFS(VFS ? std::move(VFS) : vfs::getRealFileSystem()) {
+  if (AllowlistFiles.size() > 0)
+    Allowlist = SpecialCaseList::createOrDie(AllowlistFiles, *this->VFS);
+  if (BlocklistFiles.size() > 0)
+    Blocklist = SpecialCaseList::createOrDie(BlocklistFiles, *this->VFS);
+}
 
 PreservedAnalyses SanitizerCoveragePass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
@@ -515,6 +537,8 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   }
 
   SanCovTracePC = M.getOrInsertFunction(SanCovTracePCName, VoidTy);
+  SanCovTracePCEntry = M.getOrInsertFunction(SanCovTracePCEntryName, VoidTy);
+  SanCovTracePCExit = M.getOrInsertFunction(SanCovTracePCExitName, VoidTy);
   SanCovTracePCGuard =
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, PtrTy);
 
@@ -634,7 +658,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
                              const SanitizerCoverageOptions &Options) {
   if (!Options.NoPrune)
     if (CMP->hasOneUse())
-      if (auto BR = dyn_cast<BranchInst>(CMP->user_back()))
+      if (auto BR = dyn_cast<CondBrInst>(CMP->user_back()))
         for (BasicBlock *B : BR->successors())
           if (IsBackEdge(BR->getParent(), B, DT))
             return false;
@@ -740,6 +764,9 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   InjectTraceForDiv(F, DivTraceTargets);
   InjectTraceForGep(F, GepTraceTargets);
   InjectTraceForLoadsAndStores(F, Loads, Stores);
+
+  if (Options.TracePCEntryExit)
+    InjectTraceForExits(F);
 }
 
 GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
@@ -852,6 +879,7 @@ bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
   CreateFunctionLocalArrays(F, AllBlocks);
   for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
     InjectCoverageAtBlock(F, *AllBlocks[i], i, FunctionGateCmp, IsLeafFunc);
+
   return true;
 }
 
@@ -866,7 +894,7 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
     Function &F, ArrayRef<Instruction *> IndirCalls) {
   if (IndirCalls.empty())
     return;
-  assert(Options.TracePC || Options.TracePCGuard ||
+  assert(Options.TracePC || Options.TracePCEntryExit || Options.TracePCGuard ||
          Options.Inline8bitCounters || Options.InlineBoolFlag);
   for (auto *I : IndirCalls) {
     InstrumentationIRBuilder IRB(I);
@@ -985,6 +1013,15 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
   }
 }
 
+void ModuleSanitizerCoverage::InjectTraceForExits(Function &F) {
+  EscapeEnumerator EE(F, "sancov_exit");
+  while (IRBuilder<> *AtExit = EE.Next()) {
+    InstrumentationIRBuilder::ensureDebugInfo(*AtExit, F);
+    AtExit->CreateCall(SanCovTracePCExit, {})
+        ->setTailCallKind(CallInst::TCK_NoTail);
+  }
+}
+
 void ModuleSanitizerCoverage::InjectTraceForCmp(
     Function &F, ArrayRef<Instruction *> CmpTraceTargets,
     Value *&FunctionGateCmp) {
@@ -1050,8 +1087,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   InstrumentationIRBuilder IRB(&*IP);
   if (EntryLoc)
     IRB.SetCurrentDebugLocation(EntryLoc);
-  if (Options.TracePC) {
-    IRB.CreateCall(SanCovTracePC)
+  if (Options.TracePC || (IsEntryBB && Options.TracePCEntryExit)) {
+    FunctionCallee Callee = IsEntryBB && Options.TracePCEntryExit
+                                ? SanCovTracePCEntry
+                                : SanCovTracePC;
+    IRB.CreateCall(Callee)
         ->setCannotMerge(); // gets the PC using GET_CALLER_PC.
   }
   if (Options.TracePCGuard) {
@@ -1084,8 +1124,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto ThenTerm = SplitBlockAndInsertIfThen(
         IRB.CreateIsNull(Load), &*IP, false,
         MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-    IRBuilder<> ThenIRB(ThenTerm);
+    InstrumentationIRBuilder ThenIRB(ThenTerm);
     auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    if (EntryLoc)
+      Store->setDebugLoc(EntryLoc);
     Load->setNoSanitizeMetadata();
     Store->setNoSanitizeMetadata();
   }
@@ -1110,17 +1152,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           InsertBefore = AI->getNextNode();
 
           // Make an estimate on the stack usage.
-          if (AI->isStaticAlloca()) {
-            uint32_t Bytes = DL.getTypeAllocSize(AI->getAllocatedType());
-            if (AI->isArrayAllocation()) {
-              if (const ConstantInt *arraySize =
-                      dyn_cast<ConstantInt>(AI->getArraySize())) {
-                Bytes *= arraySize->getZExtValue();
-              } else {
-                HasDynamicAlloc = true;
-              }
-            }
-            EstimatedStackSize += Bytes;
+          if (auto AllocaSize = AI->getAllocationSize(DL)) {
+            if (AllocaSize->isFixed())
+              EstimatedStackSize += AllocaSize->getFixedValue();
+            else
+              HasDynamicAlloc = true;
           } else {
             HasDynamicAlloc = true;
           }
@@ -1131,7 +1167,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           EstimatedStackSize >= Options.StackDepthCallbackMin) {
         if (InsertBefore)
           IRB.SetInsertPoint(InsertBefore);
-        IRB.CreateCall(SanCovStackDepthCallback)->setCannotMerge();
+        auto Call = IRB.CreateCall(SanCovStackDepthCallback);
+        if (EntryLoc)
+          Call->setDebugLoc(EntryLoc);
+        Call->setCannotMerge();
       }
     } else {
       // Check stack depth.  If it's the deepest so far, record it.
@@ -1144,8 +1183,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       auto ThenTerm = SplitBlockAndInsertIfThen(
           IsStackLower, &*IP, false,
           MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-      IRBuilder<> ThenIRB(ThenTerm);
+      InstrumentationIRBuilder ThenIRB(ThenTerm);
       auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
+      if (EntryLoc)
+        Store->setDebugLoc(EntryLoc);
       LowestStack->setNoSanitizeMetadata();
       Store->setNoSanitizeMetadata();
     }
@@ -1207,7 +1248,7 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
         if (CB->isIndirectCall()) {
           // TODO(navidem): handle indirect calls, for now mark its existence.
           CFs.push_back((Constant *)IRB.CreateIntToPtr(
-              ConstantInt::get(IntptrTy, -1), PtrTy));
+              ConstantInt::getAllOnesValue(IntptrTy), PtrTy));
         } else {
           auto CalledF = CB->getCalledFunction();
           if (CalledF && !CalledF->isIntrinsic())

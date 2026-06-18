@@ -30,7 +30,7 @@ def main(builtin_params={}):
     lit_config = lit.LitConfig.LitConfig(
         progname=os.path.basename(sys.argv[0]),
         path=opts.path,
-        quiet=opts.quiet,
+        diagnostic_level=opts.diagnostic_level,
         useValgrind=opts.useValgrind,
         valgrindLeakCheck=opts.valgrindLeakCheck,
         valgrindArgs=opts.valgrindArgs,
@@ -44,6 +44,7 @@ def main(builtin_params={}):
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
         update_tests=opts.update_tests,
+        maxIndividualTestTime=opts.maxIndividualTestTime,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -68,18 +69,6 @@ def main(builtin_params={}):
         print(" ".join(sorted(features)))
         sys.exit(0)
 
-    # Command line overrides configuration for maxIndividualTestTime.
-    if opts.maxIndividualTestTime is not None:  # `not None` is important (default: 0)
-        if opts.maxIndividualTestTime != lit_config.maxIndividualTestTime:
-            lit_config.note(
-                (
-                    "The test suite configuration requested an individual"
-                    " test timeout of {0} seconds but a timeout of {1} seconds was"
-                    " requested on the command line. Forcing timeout to be {1}"
-                    " seconds."
-                ).format(lit_config.maxIndividualTestTime, opts.maxIndividualTestTime)
-            )
-            lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
 
     determine_order(discovered_tests, opts.order)
 
@@ -89,6 +78,9 @@ def main(builtin_params={}):
         if opts.filter.search(t.getFullName())
         and not opts.filter_out.search(t.getFullName())
     ]
+
+    if opts.filterFailed:
+        selected_tests = [t for t in selected_tests if t.previous_failure]
 
     if not selected_tests:
         sys.stderr.write(
@@ -119,6 +111,7 @@ def main(builtin_params={}):
     selected_tests = selected_tests[: opts.max_tests]
 
     mark_xfail(discovered_tests, opts)
+    mark_unsupported(discovered_tests, opts)
 
     mark_excluded(discovered_tests, selected_tests)
 
@@ -245,6 +238,18 @@ def mark_xfail(selected_tests, opts):
             t.exclude_xfail = True
 
 
+def mark_unsupported(selected_tests, opts):
+    for t in selected_tests:
+        test_file = os.sep.join(t.path_in_suite)
+        test_full_name = t.getFullName()
+        if test_file in opts.unsupported or test_full_name in opts.unsupported:
+            # Add a special feature that's always present to mark as unsupported.
+            t.config.available_features.add("lit-unsupported-marker")
+            t.unsupported.append("lit-unsupported-marker")
+        if test_file in opts.unsupported_not or test_full_name in opts.unsupported_not:
+            t.unsupported_not = True
+
+
 def mark_excluded(discovered_tests, selected_tests):
     excluded_tests = set(discovered_tests) - set(selected_tests)
     result = lit.Test.Result(lit.Test.EXCLUDED)
@@ -332,7 +337,7 @@ def print_results(tests, elapsed, opts):
             opts.printPathRelativeCWD,
         )
 
-    print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
+    print_summary(total_tests, tests_by_code, opts.terse_summary, elapsed)
 
 
 def print_group(tests, code, shown_codes, printPathRelativeCWD):

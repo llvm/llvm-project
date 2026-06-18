@@ -76,6 +76,11 @@ def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 
+def disassemble_EQ : Joined<["--"], "disassemble=">,
+  HelpText<"Specify a symbol name to diasassemble. "
+           "Accept demangled names when --demangle is "
+           "specified, otherwise accept mangled names">;
+
 def disassemble_zeroes : Flag<["--"], "disassemble-zeroes">,
   HelpText<"Do not skip blocks of zeroes when disassembling">;
 def : Flag<["-"], "z">, Alias<disassemble_zeroes>,
@@ -207,8 +212,9 @@ def syms : Flag<["--"], "syms">,
   HelpText<"Display the symbol table">;
 def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">;
 
-def symbolize_operands : Flag<["--"], "symbolize-operands">,
-  HelpText<"Symbolize instruction operands when disassembling">;
+defm symbolize_operands : B<"symbolize-operands",
+  "Symbolize instruction operands when disassembling (default for BPF)",
+  "Do not symbolize instruction operands when disassembling">;
 
 def pretty_pgo_analysis_map : Flag<["--"], "pretty-pgo-analysis-map">,
                               HelpText<"Display PGO analysis values with "
@@ -229,6 +235,10 @@ def unwind_info : Flag<["--"], "unwind-info">,
   HelpText<"Display unwind information">;
 def : Flag<["-"], "u">, Alias<unwind_info>,
   HelpText<"Alias for --unwind-info">;
+
+def unwind_show_wod_pool : Flag<["--"], "unwind-show-wod-pool">,
+  HelpText<"Also display the raw Windows x64 unwind V3 WOD pool with byte offsets "
+           "(requires --unwind-info)">;
 
 def wide : Flag<["--"], "wide">,
   HelpText<"Ignored for compatibility with GNU objdump">;

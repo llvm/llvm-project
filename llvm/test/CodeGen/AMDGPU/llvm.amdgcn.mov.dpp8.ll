@@ -5,6 +5,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
 
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: error: <unknown>:0:0: in function dpp8_test void (ptr addrspace(1), i32): intrinsic not supported on subtarget
+
 ; GFX10PLUS-LABEL: {{^}}dpp8_test:
 ; GFX10PLUS: v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
 ; GFX10PLUS: v_mov_b32_dpp [[SRC]], [[SRC]]  dpp8:[1,0,0,0,0,0,0,0]{{$}}

@@ -1,9 +1,8 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-ENUM
-// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-IMPL
-// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-ENUM
+// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s  | FileCheck %s --check-prefix=CHECK-IMPL
+// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-// XFAIL: vg_leak
-
+#define TEST_INTRINSICS_SUPPRESS_DEFS
 include "llvm/IR/Intrinsics.td"
 
 // Make sure we can return up to 257 values. Intrinsics are in alphabetical order.
@@ -16,43 +15,50 @@ include "llvm/IR/Intrinsics.td"
 
 // Make sure the encoding table is correctly generated.
 // CHECK-IMPL: IIT_LongEncodingTable
-// CHECK-IMPL-NEXT: 21, 255
-// CHECK-IMPL-SAME: 15, 1, 15, 9, 15, 17, 15, 25, 15, 33, 15, 41, 15, 49, 15, 57, 15, 65, 15, 73, 15, 81,
 // CHECK-IMPL-NEXT: 21, 0
-// CHECK-IMPL-SAME: 15, 1, 15, 9, 0
+// CHECK-IMPL-SAME: 15, 0, 1, 15, 1, 1, 0
+
 // CHECK-IMPL-NEXT: 21, 7
-// CHECK-IMPL-SAME: 15, 1, 15, 9, 15, 17, 15, 25, 15, 33, 15, 41, 15, 49, 15, 57, 15, 65, 0
+// CHECK-IMPL-SAME: 15, 0, 1, 15, 1, 1, 15, 2, 1, 15, 3, 1, 15, 4, 1, 15, 5, 1
+// CHECK-IMPL-SAME: 15, 6, 1, 15, 7, 1, 15, 8, 1, 0
+
 // CHECK-IMPL-NEXT: 21, 8
-// CHECK-IMPL-SAME: 15, 1, 15, 9, 15, 17, 15, 25, 15, 33, 15, 41, 15, 49, 15, 57, 15, 65, 15, 73, 0
+// CHECK-IMPL-SAME: 15, 0, 1, 15, 1, 1, 15, 2, 1, 15, 3, 1, 15, 4, 1, 15, 5, 1
+// CHECK-IMPL-SAME: 15, 6, 1, 15, 7, 1, 15, 8, 1, 15, 9, 1, 0
+
+// CHECK-IMPL-NEXT: 21, 255
+// There should be list of 257 '4's (IIT code for i32) followed by 0. We just
+// match the suffix that ends with 0 (IIT_Done).
+// CHECK-IMPL-SAME: 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0
 def int_returns_a0_results : Intrinsic<
                              [],
-                             [], [], "llvm.returns.a0.results">;
+                             [], []>;
 
 def int_returns_b1_results : Intrinsic<
                              [llvm_anyint_ty],
-                             [], [], "llvm.returns.b1.results">;
+                             [], []>;
 
 def int_returns_c2_results : Intrinsic<
                              !listsplat(llvm_anyint_ty, 2),
-                             [], [], "llvm.returns.c2.results">;
+                             [], []>;
 
 def int_returns_d9_results : Intrinsic<
                              !listsplat(llvm_anyint_ty, 9),
-                             [], [], "llvm.returns.d9.results">;
+                             [], []>;
 
 def int_returns_e10_results : Intrinsic<
                               !listsplat(llvm_anyint_ty, 10),
-                              [], [], "llvm.returns.e10.results">;
+                              [], []>;
 
 def int_returns_f257_results : Intrinsic<
-                               !listsplat(llvm_anyint_ty, 257),
-                               [], [], "llvm.returns.f257.results">;
+                               !listsplat(llvm_i32_ty, 257),
+                               [], []>;
 
 #ifdef ENABLE_ERROR
 // CHECK-ERROR: error: intrinsics can only return upto 257 values, 'int_returns_g258_results' returns 258 values
 // CHECK-ERROR-NEXT: def int_returns_g258_results : Intrinsic<
 def int_returns_g258_results : Intrinsic<
-                               !listsplat(llvm_anyint_ty, 258),
-                               [], [], "llvm.returns.g258.results">;
+                               !listsplat(llvm_i32_ty, 258),
+                               [], []>;
 
 #endif

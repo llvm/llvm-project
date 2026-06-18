@@ -14,16 +14,19 @@ use iso_c_binding
   type(c_ptr), pointer :: p
   integer :: x, y, z
 
-  associate (a => x)
-  !$omp allocate(x) allocator(omp_default_mem_alloc)
-
   !ERROR: PRIVATE clause is not allowed on the ALLOCATE directive
   !$omp allocate(y) private(y)
-  !ERROR: List item 'z' in ALLOCATE directive must not be a dummy argument
-  !$omp allocate(z)
-  !ERROR: List item 'p' in ALLOCATE directive must not have POINTER attribute
+  !ERROR: A list item in a declarative ALLOCATE cannot have the ALLOCATABLE or POINTER attribute
   !$omp allocate(p)
-  !ERROR: List item 'a' in ALLOCATE directive must not be an associate name
+
+  associate (a => x)
+  block
+  !ERROR: A list item on a declarative ALLOCATE must be declared in the same scope in which the directive appears
+  !$omp allocate(x) allocator(omp_default_mem_alloc)
+
+  !ERROR: A list item on a declarative ALLOCATE must be declared in the same scope in which the directive appears
+  !ERROR: A list item in a declarative ALLOCATE cannot be an associate name
   !$omp allocate(a)
+  end block
   end associate
 end subroutine allocate

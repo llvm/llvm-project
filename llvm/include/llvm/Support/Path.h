@@ -207,12 +207,12 @@ LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path,
 LLVM_ABI StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND,
                                            Style style = Style::native);
 
-/// In-place remove any './' and optionally '../' components from a path.
+/// Remove './' and optionally '../' components, and canonicalize separators.
 ///
-/// @param path processed path
+/// @param path processed path.
 /// @param remove_dot_dot specify if '../' (except for leading "../") should be
-/// removed
-/// @result True if path was changed
+/// removed.
+/// @result True if path was changed.
 LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
                           bool remove_dot_dot = false,
                           Style style = Style::native);
@@ -263,6 +263,15 @@ LLVM_ABI void append(SmallVectorImpl<char> &path, const_iterator begin,
 /// @param result Holds the result of the transformation.
 LLVM_ABI void native(const Twine &path, SmallVectorImpl<char> &result,
                      Style style = Style::native);
+
+/// Convert path to the native form and return it as a std::string. This is used
+/// to give paths to users and operating system calls in the platform's normal
+/// way. For example, on Windows all '/' are converted to '\'. On Unix, it
+/// converts all '\' to '/'.
+///
+/// @param path A path that is transformed to native format.
+[[nodiscard]] LLVM_ABI std::string native(const Twine &path,
+                                          Style style = Style::native);
 
 /// Convert path to the native form in place. This is used to give paths to
 /// users and operating system calls in the platform's normal way. For example,
@@ -565,6 +574,18 @@ LLVM_ABI bool is_absolute_gnu(const Twine &path, Style style = Style::native);
 /// @param path Input path.
 /// @result True if the path is relative, false if it is not.
 LLVM_ABI bool is_relative(const Twine &path, Style style = Style::native);
+
+/// Make \a path an absolute path.
+///
+/// Makes \a path absolute using the \a current_directory if it is not already.
+/// An empty \a path will result in the \a current_directory.
+///
+/// /absolute/path   => /absolute/path
+/// relative/../path => <current-directory>/relative/../path
+///
+/// @param path A path that is modified to be an absolute path.
+LLVM_ABI void make_absolute(const Twine &current_directory,
+                            SmallVectorImpl<char> &path);
 
 } // end namespace path
 } // end namespace sys

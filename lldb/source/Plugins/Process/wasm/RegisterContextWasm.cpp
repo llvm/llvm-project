@@ -22,7 +22,7 @@ using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private::wasm;
 
 RegisterContextWasm::RegisterContextWasm(
-    wasm::ThreadWasm &thread, uint32_t concrete_frame_idx,
+    ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
     GDBRemoteDynamicRegisterInfoSP reg_info_sp)
     : GDBRemoteRegisterContext(thread, concrete_frame_idx, reg_info_sp, false,
                                false) {}

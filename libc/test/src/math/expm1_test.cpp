@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/expm1.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -36,17 +42,17 @@ TEST_F(LlvmLibcExpm1Test, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = INPUTS[i];
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
-                                   LIBC_NAMESPACE::expm1(x), 0.5);
+                                   LIBC_NAMESPACE::expm1(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, -x,
-                                   LIBC_NAMESPACE::expm1(-x), 0.5);
+                                   LIBC_NAMESPACE::expm1(-x), TOLERANCE + 0.5);
   }
 }
 
 TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t START = FPBits(0.25).uintval();
+  constexpr uint64_t STOP = FPBits(4.0).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);

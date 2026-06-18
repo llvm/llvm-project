@@ -29,10 +29,6 @@ class MCSection;
 
 class LLVM_ABI MCObjectFileInfo {
 protected:
-  /// True if target object file supports a weak_definition of constant 0 for an
-  /// omitted EH frame.
-  bool SupportsWeakOmittedEHFrame = false;
-
   /// True if the target object file supports emitting a compact unwind section
   /// without an associated EH frame section.
   bool SupportsCompactUnwindWithoutEHFrame = false;
@@ -260,9 +256,6 @@ public:
   virtual ~MCObjectFileInfo();
   MCContext &getContext() const { return *Ctx; }
 
-  bool getSupportsWeakOmittedEHFrame() const {
-    return SupportsWeakOmittedEHFrame;
-  }
   bool getSupportsCompactUnwindWithoutEHFrame() const {
     return SupportsCompactUnwindWithoutEHFrame;
   }
@@ -380,7 +373,8 @@ public:
 
   MCSection *getPseudoProbeSection(const MCSection &TextSec) const;
 
-  MCSection *getPseudoProbeDescSection(StringRef FuncName) const;
+  MCSection *getPseudoProbeDescSection(StringRef FuncName,
+                                       uint64_t FuncHash) const;
 
   MCSection *getLLVMStatsSection() const;
 

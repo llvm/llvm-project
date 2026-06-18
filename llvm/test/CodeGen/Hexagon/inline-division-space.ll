@@ -14,7 +14,7 @@ entry:
 ; Function Attrs: optsize
 define dso_local float @testFloat(float %a, float %b) local_unnamed_addr #0 {
 entry:
-;CHECK: call __hexagon_divsf3
+;CHECK: jump __hexagon_divsf3
   %div = fdiv float %a, %b
   ret float %div
 }
@@ -22,7 +22,7 @@ entry:
 ; Function Attrs: optsize
 define dso_local double @testDouble(double %a, double %b) local_unnamed_addr #0 {
 entry:
-;CHECK: call __hexagon_divdf3
+;CHECK: jump __hexagon_divdf3
   %div = fdiv double %a, %b
   ret double %div
 }

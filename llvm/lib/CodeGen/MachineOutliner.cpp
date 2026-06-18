@@ -65,6 +65,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -243,11 +244,6 @@ struct InstructionMapper {
     if (LegalInstrNumber >= IllegalInstrNumber)
       report_fatal_error("Instruction mapping overflow!");
 
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-
     // Statistics.
     ++NumLegalInUnsignedVec;
     return MINumber;
@@ -282,12 +278,6 @@ struct InstructionMapper {
 
     assert(LegalInstrNumber < IllegalInstrNumber &&
            "Instruction mapping overflow!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
 
     return MINumber;
   }
@@ -417,14 +407,7 @@ struct InstructionMapper {
     }
   }
 
-  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
-    // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
-    // changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
-  }
+  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {}
 };
 
 /// An interprocedural pass which finds repeated sequences of
@@ -488,9 +471,7 @@ struct MachineOutliner : public ModulePass {
     ModulePass::getAnalysisUsage(AU);
   }
 
-  MachineOutliner() : ModulePass(ID) {
-    initializeMachineOutlinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachineOutliner() : ModulePass(ID) {}
 
   /// Remark output explaining that not outlining a set of candidates would be
   /// better than outlining that set.
@@ -593,14 +574,11 @@ struct MachineOutliner : public ModulePass {
 
 char MachineOutliner::ID = 0;
 
-namespace llvm {
-ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
+ModulePass *llvm::createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
   MachineOutliner *OL = new MachineOutliner();
   OL->RunOutlinerMode = RunOutlinerMode;
   return OL;
 }
-
-} // namespace llvm
 
 INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
                 false)
@@ -976,6 +954,12 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
+      // Also clear debug locations on any bundled instructions.
+      if (NewMI.isBundledWithSucc()) {
+        auto BundleEnd = getBundleEnd(NewMI.getIterator());
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I)
+          I->setDebugLoc(DL);
+      }
     }
   }
 
@@ -1156,6 +1140,8 @@ bool MachineOutliner::outline(
                  Last = std::next(CallInst.getReverse());
              Iter != Last; Iter++) {
           MachineInstr *MI = &*Iter;
+          if (MI->isDebugInstr())
+            continue;
           SmallSet<Register, 2> InstrUseRegs;
           for (MachineOperand &MOP : MI->operands()) {
             // Skip over anything that isn't a register.
@@ -1260,7 +1246,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   for (Function &F : M) {
     LLVM_DEBUG(dbgs() << "MAPPING FUNCTION: " << F.getName() << "\n");
 
-    if (F.hasFnAttribute("nooutline")) {
+    if (F.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG(dbgs() << "SKIP: Function has nooutline attribute\n");
       continue;
     }

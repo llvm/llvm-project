@@ -4,8 +4,6 @@
 ; RUN: llc -O3 -mtriple=riscv32 -mattr=+xcvbitmanip -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-O3
 
-declare i32 @llvm.riscv.cv.bitmanip.extract(i32, i32)
-
 define i32 @test.cv.extractr(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.extractr:
 ; CHECK:       # %bb.0:
@@ -33,8 +31,6 @@ define i32 @test.cv.extract1023(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.extractu(i32, i32)
-
 define i32 @test.cv.extractur(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.extractur:
 ; CHECK:       # %bb.0:
@@ -52,8 +48,6 @@ define i32 @test.cv.extractu(i32 %a) {
   %1 = call i32 @llvm.riscv.cv.bitmanip.extractu(i32 %a, i32 65)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.bitmanip.insert(i32, i32, i32)
 
 define i32 @test.cv.insert(i32 %c, i32 %a) {
 ; CHECK-LABEL: test.cv.insert:
@@ -73,8 +67,6 @@ define i32 @test.cv.insertr(i32 %c, i32 %b, i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.bclr(i32, i32)
-
 define i32 @test.cv.bclrr(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.bclrr:
 ; CHECK:       # %bb.0:
@@ -92,8 +84,6 @@ define i32 @test.cv.bclr(i32 %a) {
   %1 = call i32 @llvm.riscv.cv.bitmanip.bclr(i32 %a, i32 65)
   ret i32 %1
 }
-
-declare i32 @llvm.riscv.cv.bitmanip.bset(i32, i32)
 
 define i32 @test.cv.bsetr(i32 %a, i32 %b) {
 ; CHECK-LABEL: test.cv.bsetr:
@@ -113,8 +103,6 @@ define i32 @test.cv.bset(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.cttz.i32(i32, i1)
-
 define i32 @test.cv.ff1(i32 %a) {
 ; CHECK-LABEL: test.cv.ff1:
 ; CHECK:       # %bb.0:
@@ -123,8 +111,6 @@ define i32 @test.cv.ff1(i32 %a) {
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 0)
   ret i32 %1
 }
-
-declare i32 @llvm.ctlz.i32(i32, i1)
 
 define i32 @test.cv.fl1(i32 %a) {
 ; CHECK-LABEL: test.cv.fl1:
@@ -135,8 +121,6 @@ define i32 @test.cv.fl1(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.clb(i32)
-
 define i32 @test.cv.clb(i32 %a) {
 ; CHECK-LABEL: test.cv.clb:
 ; CHECK:       # %bb.0:
@@ -146,8 +130,6 @@ define i32 @test.cv.clb(i32 %a) {
   ret i32 %1
 }
 
-declare i32 @llvm.ctpop(i32)
-
 define i32 @test.cv.cnt(i32 %a) {
 ; CHECK-LABEL: test.cv.cnt:
 ; CHECK:       # %bb.0:
@@ -156,8 +138,6 @@ define i32 @test.cv.cnt(i32 %a) {
   %1 = call i32 @llvm.ctpop(i32 %a)
   ret i32 %1
 }
-
-declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 define i32 @test.llvm.fshl.imm(i32 %a) {
 ; CHECK-LABEL: test.llvm.fshl.imm:
@@ -187,8 +167,6 @@ define i32 @test.llvm.fshl.reg(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-
 define i32 @test.llvm.fshr.imm(i32 %a) {
 ; CHECK-LABEL: test.llvm.fshr.imm:
 ; CHECK:       # %bb.0:
@@ -208,8 +186,6 @@ define i32 @test.llvm.fshr.reg(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.cv.bitmanip.bitrev(i32, i32, i32)
-
 define i32 @test.cv.bitrev(i32 %a) {
 ; CHECK-LABEL: test.cv.bitrev:
 ; CHECK:       # %bb.0:
@@ -218,8 +194,6 @@ define i32 @test.cv.bitrev(i32 %a) {
   %1 = call i32 @llvm.riscv.cv.bitmanip.bitrev(i32 %a, i32 1, i32 2)
   ret i32 %1
 }
-
-declare i32 @llvm.bitreverse(i32)
 
 define i32 @test.llvm.bitrev(i32 %a) {
 ; CHECK-LABEL: test.llvm.bitrev:

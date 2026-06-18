@@ -409,7 +409,8 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
 
   DIFile *F = DIB.createFile("main.c", "/");
   DICompileUnit *CU = DIB.createCompileUnit(
-      dwarf::DW_LANG_C, DIB.createFile("main.c", "/"), "llvm-c", true, "", 0);
+      DISourceLanguageName(dwarf::DW_LANG_C), DIB.createFile("main.c", "/"),
+      "llvm-c", true, "", 0);
 
   DIVariable *DataLocation =
       DIB.createTempGlobalVariableFwdDecl(CU, "dl", "_dl", F, 1, nullptr, true);
@@ -525,14 +526,16 @@ TEST(DIBuilder, FixedPointType) {
   DIBuilder DIB(*M);
 
   DIFixedPointType *Ty = DIB.createBinaryFixedPointType(
-      {}, 32, 0, dwarf::DW_ATE_signed_fixed, DINode::FlagZero, -4);
+      {}, nullptr, 0, nullptr, 32, 0, dwarf::DW_ATE_signed_fixed,
+      DINode::FlagZero, -4);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointBinary);
   EXPECT_TRUE(Ty->getFactor() == -4);
   EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_signed_fixed);
   EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 
-  Ty = DIB.createDecimalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createDecimalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                       dwarf::DW_ATE_unsigned_fixed,
                                        DINode::FlagZero, -7);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointDecimal);
@@ -542,7 +545,8 @@ TEST(DIBuilder, FixedPointType) {
 
   APSInt Num(APInt(32, 1));
   APSInt Denom(APInt(33, 72));
-  Ty = DIB.createRationalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createRationalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                        dwarf::DW_ATE_unsigned_fixed,
                                         DINode::FlagZero, Num, Denom);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointRational);
@@ -645,7 +649,7 @@ TEST(AssignmentTrackingTest, Utils) {
     define dso_local void @fun3() !dbg !21 {
     entry:
       %local = alloca i32, align 4, !DIAssignID !24
-        #dbg_assign(i32 undef, !22, !DIExpression(), !24, i32* undef, !DIExpression(), !23)
+        #dbg_assign(i32 undef, !22, !DIExpression(), !24, ptr undef, !DIExpression(), !23)
       ret void
     }
 
@@ -783,11 +787,11 @@ TEST(AssignmentTrackingTest, InstrMethods) {
       %Local = alloca [2 x i32], align 4, !DIAssignID !12
       call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !12, metadata [2 x i32]* %Local, metadata !DIExpression()), !dbg !18
       %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %Local, i64 0, i64 0, !dbg !19
-      store i32 5, i32* %arrayidx, align 4, !dbg !20, !DIAssignID !21
-      call void @llvm.dbg.assign(metadata i32 5, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !21, metadata i32* %arrayidx, metadata !DIExpression()), !dbg !18
+      store i32 5, ptr %arrayidx, align 4, !dbg !20, !DIAssignID !21
+      call void @llvm.dbg.assign(metadata i32 5, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !21, metadata ptr %arrayidx, metadata !DIExpression()), !dbg !18
       %arrayidx1 = getelementptr inbounds [2 x i32], [2 x i32]* %Local, i64 0, i64 1, !dbg !22
-      store i32 6, i32* %arrayidx1, align 4, !dbg !23, !DIAssignID !24
-      call void @llvm.dbg.assign(metadata i32 6, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !24, metadata i32* %arrayidx1, metadata !DIExpression()), !dbg !18
+      store i32 6, ptr %arrayidx1, align 4, !dbg !23, !DIAssignID !24
+      call void @llvm.dbg.assign(metadata i32 6, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !24, metadata ptr %arrayidx1, metadata !DIExpression()), !dbg !18
       ret void, !dbg !25
     }
 
@@ -1250,6 +1254,84 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI2->getExpression(), Expr2);
 }
 
+TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
+  LLVMContext C;
+
+  // Create IR with 3 levels of inlining:
+  // main() calls inline1() which calls inline2() which calls inline3()
+  // We'll test from the perspective of code in inline3()
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define void @main() !dbg !10 {
+      ret void, !dbg !20
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+    !1 = !DIFile(filename: "test.c", directory: "/test")
+    !2 = !{i32 2, !"Debug Info Version", i32 3}
+
+    ; Subprograms for each function in the call chain
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, type: !14, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, type: !14, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, type: !14, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, type: !14, unit: !0)
+    !14 = !DISubroutineType(types: !15)
+    !15 = !{null}
+
+    ; Location in inline3 (line 401), inlined at location !21
+    !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)
+
+    ; Location in inline2 (line 301) where inline3 was called, inlined at !22
+    !21 = !DILocation(line: 301, column: 10, scope: !12, inlinedAt: !22)
+
+    ; Location in inline1 (line 201) where inline2 was called, inlined at !23
+    !22 = !DILocation(line: 201, column: 15, scope: !11, inlinedAt: !23)
+
+    ; Location in main (line 101) where inline1 was called (no more inlinedAt)
+    !23 = !DILocation(line: 101, column: 3, scope: !10)
+  )");
+
+  ASSERT_TRUE(M);
+
+  Function *MainFunc = M->getFunction("main");
+  ASSERT_TRUE(MainFunc);
+  Instruction &RetInst = MainFunc->getEntryBlock().front();
+
+  // Use getDebugLoc() to get the location from the ret instruction.
+  const DILocation *InnermostLoc = RetInst.getDebugLoc().get();
+  ASSERT_TRUE(InnermostLoc);
+
+  // Test getScope() - should return the immediate scope (inline3).
+  DILocalScope *ImmediateScope = InnermostLoc->getScope();
+  ASSERT_TRUE(ImmediateScope);
+  EXPECT_TRUE(isa<DISubprogram>(ImmediateScope));
+  EXPECT_EQ(cast<DISubprogram>(ImmediateScope)->getName(), "inline3");
+
+  // Test getInlinedAt() - should return the next level in the inlining chain.
+  const DILocation *NextLevel = InnermostLoc->getInlinedAt();
+  ASSERT_TRUE(NextLevel);
+  EXPECT_EQ(NextLevel->getLine(), 301u);
+  EXPECT_EQ(cast<DISubprogram>(NextLevel->getScope())->getName(), "inline2");
+
+  // Test getInlinedAtLocation() - should return the outermost location.
+  const DILocation *OutermostLoc = InnermostLoc->getInlinedAtLocation();
+  ASSERT_TRUE(OutermostLoc);
+  EXPECT_EQ(OutermostLoc->getLine(), 101u);
+  EXPECT_EQ(OutermostLoc->getColumn(), 3u);
+  EXPECT_EQ(OutermostLoc->getInlinedAt(), nullptr);
+  EXPECT_EQ(cast<DISubprogram>(OutermostLoc->getScope())->getName(), "main");
+
+  // Test getInlinedAtScope() - should return the scope of the outermost
+  // location.
+  DILocalScope *InlinedAtScope = InnermostLoc->getInlinedAtScope();
+  ASSERT_TRUE(InlinedAtScope);
+  EXPECT_TRUE(isa<DISubprogram>(InlinedAtScope));
+  EXPECT_EQ(cast<DISubprogram>(InlinedAtScope)->getName(), "main");
+  EXPECT_EQ(InlinedAtScope, OutermostLoc->getScope());
+}
+
 // Test that the hashing function for DISubprograms representing methods produce
 // the same result after replacing their scope (the type containing the
 // subprogram) from a temporary DIType with the permanent one.
@@ -1259,8 +1341,8 @@ TEST(DIBuilder, HashingDISubprogram) {
   DIBuilder DIB(*M);
 
   DIFile *F = DIB.createFile("main.c", "/");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
 
   llvm::TempDIType ForwardDeclaredType =
       llvm::TempDIType(DIB.createReplaceableCompositeType(
@@ -1305,8 +1387,8 @@ TEST(DIBuilder, CompositeTypes) {
   DIBuilder DIB(*M);
 
   DIFile *F = DIB.createFile("main.c", "/");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
 
   DICompositeType *Class =
       DIB.createClassType(CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
@@ -1336,6 +1418,68 @@ TEST(DIBuilder, CompositeTypes) {
   DICompositeType *Enum = DIB.createEnumerationType(
       CU, "MyEnum", F, 0, 8, 8, {}, nullptr, 0, "EnumUniqueIdentifier");
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
+}
+
+TEST(DIBuilder, CompositeTypeAnnotations) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
+
+  auto MakeAnnotations = [&](StringRef Tag, StringRef Value) {
+    Metadata *Ops[2] = {MDString::get(Ctx, Tag), MDString::get(Ctx, Value)};
+    SmallVector<Metadata *, 1> Nodes;
+    Nodes.push_back(MDNode::get(Ctx, Ops));
+    return DIB.getOrCreateArray(Nodes);
+  };
+
+  DINodeArray ClassAnnotations = MakeAnnotations("class_tag", "class_value");
+  DICompositeType *Class = DIB.createClassType(
+      CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0, nullptr, nullptr,
+      "ClassUniqueIdentifier", ClassAnnotations);
+  EXPECT_EQ(Class->getAnnotations().get(), ClassAnnotations.get());
+
+  DINodeArray StructAnnotations = MakeAnnotations("struct_tag", "struct_value");
+  DICompositeType *Struct = DIB.createStructType(
+      CU, "MyStruct", F, 0, 8, 8, {}, {}, {}, 0, {}, "StructUniqueIdentifier",
+      nullptr, 0, StructAnnotations);
+  EXPECT_EQ(Struct->getAnnotations().get(), StructAnnotations.get());
+
+  DINodeArray DynStructAnnotations =
+      MakeAnnotations("dyn_struct_tag", "dyn_struct_value");
+  DIScope *SPScope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIVariable *Len = DIB.createAutoVariable(SPScope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+  DICompositeType *DynStruct = DIB.createStructType(
+      CU, "MyDynStruct", F, 0, Len, 8, DINode::FlagZero, nullptr, {}, 0,
+      nullptr, "DynStructUniqueIdentifier", nullptr, 0, DynStructAnnotations);
+  EXPECT_EQ(DynStruct->getAnnotations().get(), DynStructAnnotations.get());
+
+  DINodeArray UnionAnnotations = MakeAnnotations("union_tag", "union_value");
+  DICompositeType *Union =
+      DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {}, {}, 0,
+                          "UnionUniqueIdentifier", UnionAnnotations);
+  EXPECT_EQ(Union->getAnnotations().get(), UnionAnnotations.get());
+
+  DICompositeType *NoAnnotClass =
+      DIB.createClassType(CU, "NoAnnotClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
+                          nullptr, nullptr, "NoAnnotClassUniqueIdentifier");
+  EXPECT_EQ(NoAnnotClass->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotStruct =
+      DIB.createStructType(CU, "NoAnnotStruct", F, 0, 8, 8, {}, {}, {}, 0, {},
+                           "NoAnnotStructUniqueIdentifier");
+  EXPECT_EQ(NoAnnotStruct->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotUnion =
+      DIB.createUnionType(CU, "NoAnnotUnion", F, 0, 8, 8, {}, {}, 0,
+                          "NoAnnotUnionUniqueIdentifier");
+  EXPECT_EQ(NoAnnotUnion->getAnnotations().get(), nullptr);
 }
 
 TEST(DIBuilder, DynamicOffsetAndSize) {

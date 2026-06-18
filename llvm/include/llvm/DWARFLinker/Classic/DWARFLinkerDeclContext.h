@@ -84,15 +84,17 @@ public:
   DeclContext() : DefinedInClangModule(0), Parent(*this) {}
 
   DeclContext(unsigned Hash, uint32_t Line, uint32_t ByteSize, uint16_t Tag,
-              StringRef Name, StringRef File, const DeclContext &Parent,
-              DWARFDie LastSeenDIE = DWARFDie(), unsigned CUId = 0)
+              StringRef Name, StringRef NameForUniquing, StringRef File,
+              const DeclContext &Parent, DWARFDie LastSeenDIE = DWARFDie(),
+              unsigned CUId = 0)
       : QualifiedNameHash(Hash), Line(Line), ByteSize(ByteSize), Tag(Tag),
-        DefinedInClangModule(0), Name(Name), File(File), Parent(Parent),
-        LastSeenDIE(LastSeenDIE), LastSeenCompileUnitID(CUId) {}
+        DefinedInClangModule(0), Name(Name), NameForUniquing(NameForUniquing),
+        File(File), Parent(Parent), LastSeenDIE(LastSeenDIE),
+        LastSeenCompileUnitID(CUId) {}
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
-  bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
+  LLVM_ABI bool setLastSeenDIE(CompileUnit &U, const DWARFDie &Die);
 
   void setHasCanonicalDIE() { HasCanonicalDIE = true; }
 
@@ -100,6 +102,7 @@ public:
 
   uint32_t getCanonicalDIEOffset() const { return CanonicalDIEOffset; }
   void setCanonicalDIEOffset(uint32_t Offset) { CanonicalDIEOffset = Offset; }
+  llvm::StringRef getCanonicalName() const { return Name; }
 
   bool isDefinedInClangModule() const { return DefinedInClangModule; }
   void setDefinedInClangModule(bool Val) { DefinedInClangModule = Val; }
@@ -115,6 +118,7 @@ private:
   uint16_t Tag = dwarf::DW_TAG_compile_unit;
   unsigned DefinedInClangModule : 1;
   StringRef Name;
+  StringRef NameForUniquing;
   StringRef File;
   const DeclContext &Parent;
   DWARFDie LastSeenDIE;
@@ -139,10 +143,9 @@ public:
   ///
   /// FIXME: The invalid bit along the return value is to emulate some
   /// dsymutil-classic functionality.
-  PointerIntPair<DeclContext *, 1> getChildDeclContext(DeclContext &Context,
-                                                       const DWARFDie &DIE,
-                                                       CompileUnit &Unit,
-                                                       bool InClangModule);
+  LLVM_ABI PointerIntPair<DeclContext *, 1>
+  getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
+                      CompileUnit &Unit, bool InClangModule);
 
   DeclContext &getRoot() { return Root; }
 
@@ -168,19 +171,14 @@ private:
 
 /// Info type for the DenseMap storing the DeclContext pointers.
 struct DeclMapInfo : private DenseMapInfo<DeclContext *> {
-  using DenseMapInfo<DeclContext *>::getEmptyKey;
-  using DenseMapInfo<DeclContext *>::getTombstoneKey;
-
   static unsigned getHashValue(const DeclContext *Ctxt) {
     return Ctxt->QualifiedNameHash;
   }
 
   static bool isEqual(const DeclContext *LHS, const DeclContext *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return RHS == LHS;
     return LHS->QualifiedNameHash == RHS->QualifiedNameHash &&
            LHS->Line == RHS->Line && LHS->ByteSize == RHS->ByteSize &&
-           LHS->Name.data() == RHS->Name.data() &&
+           LHS->NameForUniquing.data() == RHS->NameForUniquing.data() &&
            LHS->File.data() == RHS->File.data() &&
            LHS->Parent.QualifiedNameHash == RHS->Parent.QualifiedNameHash;
   }

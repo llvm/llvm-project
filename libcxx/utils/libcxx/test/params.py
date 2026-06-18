@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
+from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [
@@ -75,6 +75,9 @@ _warningFlags = [
 
     # We're not annotating all the APIs, since that's a lot of annotations compared to how many we actually care about
     "-Wno-nullability-completeness",
+
+    # Technically not a warning flag, but might as well be:
+    "-flax-vector-conversions=none",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
@@ -359,6 +362,7 @@ DEFAULT_PARAMETERS = [
         if experimental
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
+            AddFeature("libcpp-has-no-experimental-optional-iterator"),
             AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
             AddFeature("libcpp-has-no-experimental-hardening-observe-semantic"),
@@ -416,7 +420,6 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
-                AddFeature("libcpp-hardening-mode={}".format(hardening_mode))               if hardening_mode != "undefined" else None,
             ],
         ),
     ),

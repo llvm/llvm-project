@@ -832,8 +832,8 @@ static mlir::Type getEleTy(mlir::Type ty) {
 static bool isAssumedSize(llvm::SmallVectorImpl<mlir::Value> &extents) {
   if (extents.empty())
     return false;
-  auto cstLen = fir::getIntIfConstant(extents.back());
-  return cstLen.has_value() && *cstLen == -1;
+  return llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+      extents.back().getDefiningOp());
 }
 
 // Extract extents from the ShapeOp/ShapeShiftOp into the result vector.

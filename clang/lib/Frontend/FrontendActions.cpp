@@ -9,13 +9,13 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
@@ -128,7 +128,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   std::string OutputFile;
   std::unique_ptr<raw_pwrite_stream> OS =
-      CreateOutputFile(CI, InFile, /*ref*/ OutputFile);
+      CreateOutputFile(CI, InFile, /*ref*/ OutputFile, SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -142,8 +142,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
       CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
-      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
-      +CI.getLangOpts().CacheGeneratedPCH));
+      FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
 
@@ -163,10 +162,13 @@ bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 
 std::unique_ptr<llvm::raw_pwrite_stream>
 GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
-                                    std::string &OutputFile) {
+                                    std::string &OutputFile,
+                                    bool SetOnlyIfDifferent) {
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
   std::unique_ptr<raw_pwrite_stream> OS = CI.createDefaultOutputFile(
-      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false);
+      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false,
+      /*CreateMissingDirectories=*/false, /*ForceUseTemporary=*/false,
+      SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -188,7 +190,8 @@ bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
 std::vector<std::unique_ptr<ASTConsumer>>
 GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
                                               StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
+  if (!OS)
+    OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return {};
 
@@ -206,9 +209,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
       /*IncludeTimestamps=*/
       +CI.getFrontendOpts().BuildingImplicitModule &&
           +CI.getFrontendOpts().IncludeTimestamps,
-      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule,
-      /*ShouldCacheASTInMemory=*/
-      +CI.getFrontendOpts().BuildingImplicitModule));
+      /*BuildingImplicitModule=*/+CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
   return Consumers;
@@ -251,16 +252,17 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
       ModuleMapFile = InFile;
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
-    CI.getFrontendOpts().OutputFile =
-        HS.getCachedModuleFileName(CI.getLangOpts().CurrentModule,
-                                   ModuleMapFile);
+    ModuleFileName FileName = HS.getCachedModuleFileName(
+        CI.getLangOpts().CurrentModule, ModuleMapFile);
+    CI.getFrontendOpts().OutputFile = FileName.str();
   }
 
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, /*Extension=*/"",
                                     /*RemoveFileOnSignal=*/false,
                                     /*CreateMissingDirectories=*/true,
-                                    /*ForceUseTemporary=*/true);
+                                    /*ForceUseTemporary=*/true,
+                                    /*SetOnlyIfDifferent=*/SetOnlyIfDifferent);
 }
 
 bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
@@ -367,11 +369,9 @@ void VerifyPCHAction::ExecuteAction() {
       /*AllowConfigurationMismatch*/ true,
       /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
-  Reader->ReadAST(getCurrentFile(),
-                  Preamble ? serialization::MK_Preamble
-                           : serialization::MK_PCH,
-                  SourceLocation(),
-                  ASTReader::ARR_ConfigurationMismatch);
+  Reader->ReadAST(ModuleFileName::makeExplicit(getCurrentFile()),
+                  Preamble ? serialization::MK_Preamble : serialization::MK_PCH,
+                  SourceLocation(), ASTReader::ARR_ConfigurationMismatch);
 }
 
 namespace {
@@ -454,8 +454,6 @@ private:
       return "ConstraintsCheck";
     case CodeSynthesisContext::ConstraintSubstitution:
       return "ConstraintSubstitution";
-    case CodeSynthesisContext::ConstraintNormalization:
-      return "ConstraintNormalization";
     case CodeSynthesisContext::RequirementParameterInstantiation:
       return "RequirementParameterInstantiation";
     case CodeSynthesisContext::ParameterMappingSubstitution:
@@ -476,6 +474,10 @@ private:
       return "TypeAliasTemplateInstantiation";
     case CodeSynthesisContext::PartialOrderingTTP:
       return "PartialOrderingTTP";
+    case CodeSynthesisContext::SYCLKernelLaunchLookup:
+      return "SYCLKernelLaunchLookup";
+    case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution:
+      return "SYCLKernelLaunchOverloadResolution";
     }
     return "";
   }
@@ -619,9 +621,11 @@ namespace {
   /// file.
   class DumpModuleInfoListener : public ASTReaderListener {
     llvm::raw_ostream &Out;
+    FileManager &FileMgr;
 
   public:
-    DumpModuleInfoListener(llvm::raw_ostream &Out) : Out(Out) { }
+    DumpModuleInfoListener(llvm::raw_ostream &Out, FileManager &FileMgr)
+        : Out(Out), FileMgr(FileMgr) {}
 
 #define DUMP_BOOLEAN(Value, Text)                       \
     Out.indent(4) << Text << ": " << (Value? "Yes" : "No") << "\n"
@@ -712,8 +716,12 @@ namespace {
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                  StringRef ModuleFilename,
-                                 StringRef SpecificModuleCachePath,
+                                 StringRef ContextHash,
                                  bool Complain) override {
+      std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+          FileMgr, HSOpts.ModuleCachePath, HSOpts.DisableModuleHash,
+          std::string(ContextHash));
+
       Out.indent(2) << "Header search options:\n";
       Out.indent(4) << "System root [-isysroot=]: '" << HSOpts.Sysroot << "'\n";
       Out.indent(4) << "Resource dir [ -resource-dir=]: '" << HSOpts.ResourceDir << "'\n";
@@ -798,7 +806,7 @@ namespace {
     /// \returns true to continue receiving the next input file, false to stop.
     bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                    StringRef Filename, bool isSystem,
-                                   bool isOverridden,
+                                   bool isOverridden, time_t StoredTime,
                                    bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
@@ -822,6 +830,9 @@ namespace {
       }
 
       Out << "\n";
+
+      if (StoredTime > 0)
+        Out.indent(4) << "MTime: " << llvm::itostr(StoredTime) << "\n";
 
       return true;
     }
@@ -898,7 +909,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
 
   Preprocessor &PP = CI.getPreprocessor();
-  DumpModuleInfoListener Listener(Out);
+  DumpModuleInfoListener Listener(Out, CI.getFileManager());
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -951,18 +962,18 @@ void DumpModuleInfoAction::ExecuteAction() {
     if (Primary) {
       if (!Primary->submodules().empty())
         Out << "   Sub Modules:\n";
-      for (auto *MI : Primary->submodules()) {
+      for (Module *MI : Primary->submodules()) {
         PrintSubMapEntry(MI->Name, MI->Kind);
       }
       if (!Primary->Imports.empty())
         Out << "   Imports:\n";
-      for (auto *IMP : Primary->Imports) {
+      for (Module *IMP : Primary->Imports) {
         PrintSubMapEntry(IMP->Name, IMP->Kind);
       }
       if (!Primary->Exports.empty())
         Out << "   Exports:\n";
       for (unsigned MN = 0, N = Primary->Exports.size(); MN != N; ++MN) {
-        if (Module *M = Primary->Exports[MN].getPointer()) {
+        if (Module *M = Primary->Exports[MN].first) {
           PrintSubMapEntry(M->Name, M->Kind);
         }
       }
@@ -1231,20 +1242,6 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   }
   printDependencyDirectivesAsSource(FromFile.getBuffer(), Directives,
                                     llvm::outs());
-}
-
-void GetDependenciesByModuleNameAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  Preprocessor &PP = CI.getPreprocessor();
-  SourceManager &SM = PP.getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
 }
 
 //===----------------------------------------------------------------------===//

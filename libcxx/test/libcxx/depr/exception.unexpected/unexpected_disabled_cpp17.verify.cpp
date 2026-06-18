@@ -11,7 +11,7 @@
 // When built with modules, this test gives diagnostics like declaration of
 // 'unexpected' must be imported from module 'std.expected.unexpected' before
 // it is required. Therefore disable it in this configuration.
-// UNSUPPORTED: clang-modules-build
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // test unexpected
 

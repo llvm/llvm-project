@@ -26,19 +26,26 @@ def SDT_LoongArchMOVFR2GR_S_LA64
 def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def SDT_LoongArchITOF : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0, 1>]>;
 
 // ISD::BRCOND is custom-lowered to LoongArchISD::BRCOND for floating-point
 // comparisons to prevent recursive lowering.
 def loongarch_brcond : SDNode<"LoongArchISD::BRCOND", SDTBrcond, [SDNPHasChain]>;
+
+// FPR<->GPR transfer operations
 def loongarch_movgr2fr_w
     : SDNode<"LoongArchISD::MOVGR2FR_W", SDT_LoongArchMOVGR2FR_W>;
 def loongarch_movgr2fr_w_la64
     : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
 def loongarch_movfr2gr_s_la64
     : SDNode<"LoongArchISD::MOVFR2GR_S_LA64", SDT_LoongArchMOVFR2GR_S_LA64>;
+
 def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
+
+// Floating point approximate reciprocal operation
 def loongarch_frecipe : SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchFRECIPE>;
 def loongarch_frsqrte : SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchFRSQRTE>;
+def loongarch_sitof : SDNode<"LoongArchISD::SITOF", SDT_LoongArchITOF>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -346,6 +353,9 @@ def : Pat<(fneg (fma FPR32:$fj, FPR32:$fk, (fneg FPR32:$fa))),
 // fnmsub.s: -fj * fk + fa (the nsz flag on the FMA)
 def : Pat<(fma_nsz (fneg FPR32:$fj), FPR32:$fk, FPR32:$fa),
           (FNMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
+
+// ffint.s.w
+def : Pat<(loongarch_sitof FPR32:$fj), (FFINT_S_W FPR32:$fj)>;
 } // Predicates = [HasBasicF]
 
 let Predicates = [HasBasicF, IsLA64] in {

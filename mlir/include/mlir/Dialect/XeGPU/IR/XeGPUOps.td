@@ -17,6 +17,7 @@ include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
+
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
 //   * The parent dialect of the operation.
@@ -76,11 +77,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
        For the case of dynamic memrefs or pointer, the shape and layout information of the
        memory region should be explicitly passed via `shape` and `strides` parameters.
 
-    - `offsets`: index values represents offsets from the "source" at the each dimension
-        at which the subview of the target memory will be created. It is encoded via
-        "offsets" and "const_offsets", such that it can accept various forms, such as,
-        operands (e.g., [%c0, %c]) and attributes (e.g., [2, 4]).
-
     - `shape`: the shape information of the memory region pointed by the "source". It is
          typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
         But if "source" is simply a pointer represented as uint64_t type, or a memref
@@ -99,41 +95,34 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Example 1 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
     %0 = memref.alloc() : memref<1024x1024xf32>
-    %c0 = arith.constant 0 : index
-    %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0[%c0, %c0]: memref<1024x1024xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0 : memref<1024x1024xf32> -> TensorDesc<8x16xf32>
     ```
 
     Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
-    %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
     ```
 
     Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
     ```mlir
     %0 = ... : ui64
-    %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0[%c0, %c0], [%h, %w], [%w, %c1]: ui64 -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: ui64 -> TensorDesc<8x16xf32>
     ```
   }];
 
   let arguments = (ins
     XeGPU_BaseAddrType: $source,
-    Variadic<Index>: $offsets,
     Variadic<Index>: $shape,
     Variadic<Index>: $strides,
-    OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
     OptionalAttr<DenseI64ArrayAttr>: $const_shape,
     OptionalAttr<DenseI64ArrayAttr>: $const_strides
   );
 
   let assemblyFormat = [{
     $source ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
     (`,` `shape` `:` custom<DynamicIndexList>($shape, $const_shape)^
      `,` `strides``:` custom<DynamicIndexList>($strides, $const_strides))?
     attr-dict `:` type($source) `->` qualified(type($TensorDesc))
@@ -147,14 +136,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source)>,
 
     OpBuilder<(ins "Type": $tdesc, "Value ": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $shape,
-                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
-
-    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-
-    OpBuilder<(ins "Type": $tdesc, "Value": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets,
                    "llvm::ArrayRef<OpFoldResult>": $shape,
                    "llvm::ArrayRef<OpFoldResult>": $strides)>
   ];
@@ -178,14 +159,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// Return the shape of the TensorDesc
     llvm::ArrayRef<int64_t> getTensorDescShape() {
       return getType().getShape();
-    }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
     }
 
     SmallVector<OpFoldResult> getMixedSizes() {
@@ -236,7 +209,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       return static_cast<unsigned>(MemorySpace::Global);
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getType().getLayout());
     }
 
@@ -247,43 +220,83 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
   }];
 }
 
-def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
+def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
   let summary = "prefetches a n-D block to cache";
   let description = [{
     It issues an instruction to prefetch a block of data from continuous
     memory regions to each level of the cache based on their cache policy.
 
-    Example:
+    The tensor descriptor can be n-dimensional. When the
+    tensor descriptor has more than 2 dimensions, the leading dimensions are
+    treated as **batch dimensions** that are unrolled to unit dimensions during
+    lowering. At the subgroup level, the prefetch_nd operation executes at 2D
+    granularity to match the 2D block IO hardware support. The number of offset
+    indices must match the rank of the tensor descriptor.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+    - `TensorDesc`: A tensor descriptor specifying the base nd-region of
+      memory and tensor tile to be prefetched. Can be 1D, 2D, 3D, or higher
+      dimensional where leading dimensions are batch dimensions.
+
+    - `offsets`: index values representing per-dimension offsets from the
+      base position encoded in `TensorDesc`. It is encoded via "offsets"
+      and "const_offsets". The number of offsets must match the tensor descriptor rank.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] An cache-hint attribute
+      indicating the desired behavior at the L1, L2, and L3 cache levels.
+
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand.
+       Only valid at the workgroup and subgroup levels.
+
+    Example 1 (Workgroup level, 2D):
     ```mlir
-      xegpu.prefetch_nd %tdesc {l1_hint = #xegpu.cache_hint<cached>,
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      xegpu.prefetch_nd %tdesc[%c0, %c1] {l1_hint = #xegpu.cache_hint<cached>,
                                 l2_hint = #xegpu.cache_hint<cached>,
-                                l3_hint = #xegpu.cache_hint<cached>}
-        : !xegpu.tensor_desc<8x16xf16>
+                                l3_hint = #xegpu.cache_hint<cached>,
+                                layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]> }
+        : !xegpu.tensor_desc<32x256xf16>
+    ```
+
+    Example 2 (3D with batch dimension):
+    ```mlir
+      // Prefetch 4 independent 8x16 blocks
+      xegpu.prefetch_nd %tdesc[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>}>
+        : !xegpu.tensor_desc<4x8x16xf16>
     ```
 
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+                       DenseI64ArrayAttr: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     xegpu::TensorDescType getTensorDescType() {
       return getTensorDesc().getType();
     }
 
-   SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
+    }
+
+   SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
@@ -295,20 +308,17 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 
   let assemblyFormat = [{
     $TensorDesc ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:` qualified(type($TensorDesc))
   }];
 
   let builders = [
     OpBuilder<(ins "Value": $TensorDesc,
-                   "xegpu::CachePolicyAttr": $l1_hint,
-                   "xegpu::CachePolicyAttr": $l2_hint,
-                   "xegpu::CachePolicyAttr": $l3_hint)>,
-    OpBuilder<(ins "Value": $TensorDesc,
                    "ArrayRef<OpFoldResult>": $offsets,
                    "xegpu::CachePolicyAttr": $l1_hint,
                    "xegpu::CachePolicyAttr": $l2_hint,
-                   "xegpu::CachePolicyAttr": $l3_hint)>
+                   "xegpu::CachePolicyAttr": $l3_hint,
+                   "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
   let hasVerifier = 1;
@@ -316,7 +326,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
 
 
 def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>, AnchorLayoutInterface
   ]> {
   let summary = "loads a n-D block from memory (represented by TensorDesc)"
                 "to registers (represented by vector)";
@@ -325,42 +335,83 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     a block of data from memory to register. It takes a set of optional cache
     hints for each level of cache, L1, L2 and L3. If hardware does not have a
     correspoding cache, Corresponding cache hint attribute will be masked.
-    VNNI transformation is an hardware feature for Intel GPU, which is used to
-    do data packing during the load for B operand of matrix operation, if
-    the bit width of the data type is less then 32 bits, e.g., fp16. And
-    transpose is another Intel hardware feature, which will do transpose
-    operation when loading the data if the bit width of the data type is
-    fp32 or fp64. It implies that vnni and transpose cannot exit at the
-    same time. It is only available to 1D or 2D blocked tensor_desc.
 
-    In SIMT mode, result vector represents the data to be loaded by each work-item.
+    The tensor descriptor can be 1D, 2D, 3D, or higher dimensional. When the
+    tensor descriptor has more than 2 dimensions, the leading dimensions are
+    treated as **batch dimensions** that are unrolled to unit dimensions during
+    lowering. At the subgroup level, the load_nd operation executes at 2D
+    granularity to match the 2D block IO hardware support. The result vector
+    has the same shape as the tensor descriptor. The number of offset indices
+    must match the rank of the tensor descriptor.
 
-    Example 1:
+    On Intel GPUs, hardware-supported packing rearranges data elements during
+    the load of the B operand when the element bit-width is less than 32 bits
+    (for example, fp16). The transpose feature reorders data during the load
+    when the element type is fp32 or fp64. These two features are mutually
+    exclusive and shall not be enabled simultaneously. Both features support only
+    2D blocked tensor_desc.
+
+    At lane level, result vector represents the data to be loaded by each lane.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+
+    - `TensorDesc`: A tensor descriptor specifying the base nd-region of memory
+      and the tensor tile to be loaded. Can be 1D, 2D, 3D, or higher dimensional
+      where leading dimensions are batch dimensions.
+
+    - `offsets`: Index values representing per-dimension offsets from the base position
+      encoded in `TensorDesc`. They are encoded via `offsets` and `const_offsets`.
+      The number of offsets must match the tensor descriptor rank.
+
+    - `packed`: [optional] A unit attribute indicating that packing is applied
+      during the load when supported by the hardware. Only valid at lane level.
+
+    - `transpose`: [optional] An attribute describing a hardware-supported transpose
+      to be applied during the load. Only valid at Lane level.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
+      desired behavior at the L1, L2, and L3 cache levels.
+
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as the result of the load (they are identical). Only valid at workgroup and subgroup levels.
+
+    Example 1 (Workgroup level, 2D):
     ```mlir
       xegpu.load_nd %1 {transpose = [1, 0],
                         l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>,
-                        l3_hint = #xegpu.cache_hint<streaming>}
-              : !xegpu.tensor_desc<8x16xf32> -> vector<16x8xf32>
+                        l3_hint = #xegpu.cache_hint<streaming>,
+                        layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
+              : !xegpu.tensor_desc<32x256xf32> -> vector<32x256xf32>
     ```
-    Example 2 (SIMT mode):
+
+    Example 2 (lane level, 2D):
     ```mlir
       xegpu.load_nd %1 {l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>}>
         : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
     ```
 
+    Example 3 (3D with batch dimension):
+    ```mlir
+      // Load 4 independent 8x16 blocks
+      %result = xegpu.load_nd %tdesc[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>}>
+        : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
+    ```
 
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+                       DenseI64ArrayAttr: $const_offsets,
                        OptionalAttr<UnitAttr>: $packed,
                        OptionalAttr<DenseI64ArrayAttr>: $transpose,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let results = (outs XeGPU_ValueType: $value);
 
@@ -373,15 +424,19 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return getTensorDesc().getType();
     }
 
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
+    }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
@@ -389,36 +444,31 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       return getTensorDescType().getShape();
     }
 
-
   }];
 
   let assemblyFormat = [{
     $TensorDesc ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:` qualified(type($TensorDesc)) `->` type($value)
   }];
 
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $TensorDesc,
-                    "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>,
-    OpBuilder<(ins "Type": $value, "Value": $TensorDesc,
                     "ArrayRef<OpFoldResult>": $offsets,
                     "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
   let hasVerifier = 1;
 }
 
 def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>
+  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>, AnchorLayoutInterface
   ]> {
-  let summary = "stores a n-D block register region back to memory, currently only supports 2D";
+  let summary = "stores a n-D block register region back to memory";
 
   let description = [{
     StoreNdOp essentially mimics the hardware block write instruction io
@@ -426,18 +476,49 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     by the TensorDesc. It takes a set of optional cache hints for each level
     of cache, L1, L2 and L3. If hardware does not have a correspoding cache,
     Corresponding cache hint attribute will be masked.
-    It is only available to 1D or 2D blocked tensor_desc.
 
-    In SIMT mode, the input vector represents the data to be stored by each work-item.
+    The tensor descriptor can be 1D, 2D, 3D, or higher dimensional. When the
+    tensor descriptor has more than 2 dimensions, the leading dimensions are
+    treated as **batch dimensions** that are unrolled to unit dimensions during
+    lowering. At the subgroup level, the store_nd operation executes at 2D
+    granularity to match the 2D block IO hardware support. The value vector
+    must have the same shape as the tensor descriptor. The number of offset
+    indices must match the rank of the tensor descriptor.
 
-    Example 1:
+    At lane level, the input vector represents the data to be stored by each lane.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+
+    - `value`: A vector value representing the tensor tile to be stored. Can be
+      1D, 2D, 3D, or higher dimensional where leading dimensions are batch dimensions.
+
+    - `TensorDesc`: A tensor descriptor specifying the base nd-region of memory and
+      the tensor tile to be stored. Can be 1D, 2D, 3D, or higher dimensional
+      where leading dimensions are batch dimensions.
+
+    - `offsets`: Index values representing per-dimension offsets from the base position
+      encoded in `TensorDesc`. They are encoded via `offsets` and `const_offsets`.
+      The number of offsets must match the tensor descriptor rank.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
+      desired behavior at the L1, L2, and L3 cache levels.
+
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
+      the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
+
+    Example 1 (Workgroup level, 2D):
     ```mlir
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
-                             l3_hint = #xegpu.cache_hint<write_through>}
-                             : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+                             l3_hint = #xegpu.cache_hint<write_through>,
+                             layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
+                             : vector<32x256xf16>, !xegpu.tensor_desc<32x256xf16>
     ```
-    Example 2 (SIMT mode):
+
+    Example 2 (lane level, 2D):
     ```mlir
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
@@ -445,16 +526,23 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                              : vector<8xf16>, !xegpu.tensor_desc<8x16xf16>
     ```
 
+    Example 3 (3D with batch dimension):
+    ```mlir
+      // Store 4 independent 8x16 blocks
+      xegpu.store_nd %value, %tdesc[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>}>
+        : vector<4x8x16xf16>, !xegpu.tensor_desc<4x8x16xf16>
+    ```
 
   }];
 
   let arguments = (ins XeGPU_ValueType: $value,
                        XeGPU_TensorDesc: $TensorDesc,
                        Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+                       DenseI64ArrayAttr: $const_offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
-                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
+                       OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint,
+                       OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     VectorType getValueType() {
@@ -465,15 +553,19 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
       return getTensorDesc().getType();
     }
 
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      auto statics = getConstOffsets().value_or(SmallVector<int64_t>());
-      auto dynamics = getOffsets();
-      if (statics.size() == 0 && dynamics.size() == 0)
-        return {};
-      return getMixedValues(statics, dynamics, getContext());
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
     }
 
-    xegpu::DistributeLayoutAttr getLayoutAttr() {
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
+    }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+
+    xegpu::DistributeLayoutAttr getDescLayoutAttr() {
       return dyn_cast_if_present<xegpu::DistributeLayoutAttr>(getTensorDescType().getLayout());
     }
 
@@ -486,176 +578,24 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
    let assemblyFormat = [{
     $value `,`
     $TensorDesc ``
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets)
+    custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `:`  type($value) `,` qualified(type($TensorDesc))
   }];
 
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $TensorDesc,
-                   "xegpu::CachePolicyAttr": $l1_hint,
-                   "xegpu::CachePolicyAttr": $l2_hint,
-                   "xegpu::CachePolicyAttr": $l3_hint)>,
-    OpBuilder<(ins "Value": $value, "Value": $TensorDesc,
                   "ArrayRef<OpFoldResult>": $offsets,
                   "xegpu::CachePolicyAttr": $l1_hint,
                   "xegpu::CachePolicyAttr": $l2_hint,
-                  "xegpu::CachePolicyAttr": $l3_hint)>
+                  "xegpu::CachePolicyAttr": $l3_hint,
+                  "xegpu::DistributeLayoutAttr": $layout)>
   ];
 
 
   let hasVerifier = 1;
 }
 
-def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
-                [Pure, AllTypesMatch<["TensorDesc", "result"]>]> {
-  let summary = "It updates the offsets for the TensorDesc.";
-  let description = [{The op updates the offset of the given TensorDesc.
-    The offsets are relative offset to the current position in the number
-    of elements. It will result in a same type TensorDesc as the input.
-
-  Example:
-  ```
-    %2 = xegpu.update_nd_offset %1, [0, 16]: !xegpu.tensor_desc<8x16xf32>
-  ```
-  }];
-
-  let arguments = (ins
-    XeGPU_TensorDesc: $TensorDesc,
-    Variadic<Index>: $offsets,
-    DenseI64ArrayAttr: $const_offsets);
-
-  let results = (outs XeGPU_TensorDesc: $result);
-
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      Builder b(getContext());
-      return getMixedValues(getConstOffsets(), getOffsets(), b);
-    }
-
-    size_t getNumOffsets() {
-      return getMixedOffsets().size();
-    }
-
-    OpFoldResult getOffset(unsigned idx) {
-      assert(idx < getNumOffsets() && "Invalid out of bound access.");
-      return getMixedOffsets()[idx];
-    }
-  }];
-
-  let assemblyFormat = [{
-    $TensorDesc `,`
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    attr-dict `:` qualified(type($result))
-  }];
-
-  let hasVerifier = 1;
-}
-
-def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
-  let summary = "create scattered tensor descriptors (TensorDesc).";
-  let description = [{
-    "create_tdesc" is similar to "create_nd_tdesc" in terms that it creates
-    a Tensor Descriptor (TensorDescType) for a memory region. While "create_nd_tdesc"
-    is for creating continuous subviews, "create_tdesc" is for creating non-continuous
-    (scattered) subviews, allowing each work-item in a subgroup specifying their own offset.
-    It accepts the following parameters:
-
-    Arguments:
-    - `source`: a 1D memref or pointer (i64, i32, ui64, ui32) represents the flattened
-      memory object.
-    - `offsets`: a vector containing offsets of each access point. Its size
-      is fixed to the hardware supportted subgroup size, e.g., 16 on PVC,
-      implying each element in the vector corresponds to a work-item (SIMT lane)
-      in the subgroup.
-
-    Results:
-    - `res`: scattered tensor descriptor
-
-    The first dimension of the result TensorDesc corresponds to work-items, so it should
-    match the dimension of offsets. It may also has a second dimension corresponding to
-    the chunk_size if the chunk size is larger than 1.
-
-    Example 1: It assumes subgroup size is 4, and accesses a[0], a[16], a[32], a[64]
-    ```mlir
-    %a = memref.alloc() : memref<1024xf32>
-    %0 = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
-    %1 = xegpu.create_tdesc %a, %0: memref<1024xf32>, vector<4xindex> -> TensorDesc<4xf32>
-    ```
-
-    Example 2: It assumes subgroup size is 4, and each workitem access 8 elements.
-               It will access totally 32 data elements: a[0:7], a[16:23], a[32:39], a[64:71]
-    ```mlir
-    %0 = memref.alloc() : memref<1024xf32>
-    %off = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
-    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
-          -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>>
-    ```
-
-    Example 3: It is similar to Example 2, but there is some overlaps among workitems.
-               It accesses: a[0:7], a[4:11], a[8:15], a[12:19]
-    ```mlir
-    %0 = memref.alloc() : memref<1024xf32>
-    %off = arith.constant dense<[0, 4, 8, 12]> : vector<4xindex>
-    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
-          -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>>
-    ```
-  }];
-
-  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
-      XeGPU_OffsetType:$offsets);
-  let results = (outs XeGPU_TensorDesc:$TensorDesc);
-
-  let builders = [
-    OpBuilder<(ins "xegpu::TensorDescType": $TensorDesc, "mlir::Value": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-    OpBuilder<(ins "xegpu::TensorDescType": $TensorDesc, "mlir::Value": $source,
-                   "llvm::ArrayRef<int64_t>": $offsets)>,
-  ];
-
-  let assemblyFormat = [{
-    $source `,` $offsets attr-dict `:`  type($source) `,` type($offsets) `->` qualified(type($TensorDesc))
-  }];
-
-  let extraClassDeclaration = [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    mlir::VectorType getOffsetsType() {
-      return getOffsets().getType();
-    }
-
-    size_t getNumOffsets() {
-      return getOffsetsType().getNumElements();
-    }
-
-    mlir::Value getViewSource() { return getSource(); }
-
-    unsigned getSourceMemorySpace() {
-      auto srcTy = getSource().getType();
-      if (auto memrefTy = llvm::dyn_cast<mlir::MemRefType>(srcTy)) {
-        auto attr = memrefTy.getMemorySpace();
-        if (attr) {
-          if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(attr))
-            return static_cast<unsigned>(intAttr.getInt());
-          if (auto memSpaceAttr = llvm::dyn_cast<MemorySpaceAttr>(attr))
-            return static_cast<unsigned>(memSpaceAttr.getValue());
-        }
-      }
-      // take global as default memory scope.
-      return static_cast<unsigned>(MemorySpace::Global);
-    }
-
-  }];
-
-  let hasVerifier = 1;
-}
-
-def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
+def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
   let summary = "prefetches a set of scattered data points to cache";
 
   let description = [{
@@ -664,31 +604,41 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     As compared to prefetch_nd, which works on non-scattered TensorDesc,
     it works on scattered TensorDesc instead.
 
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
     Arguments:
+
     - `source`: represents the memory region to be loaded from, which can be either a
-        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
-        In case of tensor_desc, offsets come from the producer create_tdesc op.
-        tensor_desc cannot be used in SIMT mode.
-    - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
+        1D memref or pointer (ui64, ui32, i64 or i32).
+
+    - `offsets`: represents offsets from source.
         offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
-    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
-    - `offset_align_byte`: required if `source` is a pointer. If `source` is not a pointer,
+        or 1 at lane level. scalar offset is also valid for lane level.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `offset_align_byte`: [optional] required if `source` is a pointer. If `source` is not a pointer,
         it is not allowed. Represents the alignment in bytes of each offset in offsets.
 
-    Example 1:
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` or `offsets`
+      operand. Only valid at workgroup and subgroup levels.
+
+    Example 1 (Workgroup level):
     ```mlir
-      xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
+      %a = memref.alloc() : memref<256xf16>
+      %offsets = arith.constant dense<[0, 1, ..., 255]> : vector<256xindex>
+      xegpu.prefetch %a[%offsets] {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
-                             l3_hint = #xegpu.cache_hint<cached>}
-        : !xegpu.tensor_desc<16xf16>
+                             l3_hint = #xegpu.cache_hint<cached>,
+                             layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>
+                             }
+        : memref<256xf16>, vector<256xindex>
     ```
 
-    Example 2:
-    A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
-    It combines "create scattered TensorTdesc" and "prefetch with scattered TensorTdesc".
+    Example 2 (lane level):
+    A variant accepts memref or integer (raw pointer) as base and offsets directly.
     The source operand could be a raw pointer (ui64, ui32, i64, i32).
-    Please refer to create_tdesc for the restriction of memref.
     ```mlir
       %a = memref.alloc() : memref<1024xf32>
       %0 = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
@@ -698,8 +648,8 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
         : memref<1024xf32>, vector<4xindex>
     ```
 
-    Example 3 (SIMT mode):
-    SIMT mode only accepts the offsets variant.
+    Example 3 (lane level):
+    lane level only accepts the offsets variant.
     ```mlir
       xegpu.prefetch %0[%1] {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
@@ -707,8 +657,8 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
         : memref<256xf32>, vector<1xindex>
     ```
 
-    Example 4 (SIMT mode):
-    SIMT mode only accepts the offsets variant.
+    Example 4 (lane level):
+    lane level only accepts the offsets variant.
     ```mlir
       xegpu.prefetch %0[%1] {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
@@ -719,115 +669,94 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
-      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
+      AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<I64Attr>:$offset_align_byte);
+      OptionalAttr<I64Attr>:$offset_align_byte,
+      OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     Type getSourceType() {
       return getSource().getType();
     }
 
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
-      }
-      return TypedValue<xegpu::TensorDescType>();
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
     }
 
-    xegpu::TensorDescType getTensorDescType() {
-      return dyn_cast<xegpu::TensorDescType>(getSourceType());
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
     }
 
   }];
 
   let assemblyFormat = [{
-    $source
-    (`[` $offsets^ `]`)?
+    $source `[` $offsets `]`
     prop-dict
     attr-dict `:` type(operands)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value": $source,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
-  ];
-
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
+def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
   let summary = "load a set of scattered data points from memory.";
 
-  let description = [{ It (aka. load) load data per each work-item. The output
+  let description = [{ It (aka. load) load data per each lane. The output
     describes the data being loaded at the subgroup level, so its size is
-    consistent with the number of work-items in a subgroup. When the chunk size
+    consistent with the number of lanes in a subgroup. When the chunk size
     is larger than 2, the output vector is a 2D vector, with dim-0 correspoding
-    to work-items, and dim-1 corresponding to the chunk size loaded by each work-item.
+    to lanes, and dim-1 corresponding to the chunk size loaded by each lane.
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
-    addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
+    addresses/offsets as long as they are masked. Each mask element applies to one lane.
 
-    In SIMT mode, the result is a 1D vector that represents the data to be loaded by
-    each work-item. If size is not 1, size should be equal to the chunk size,
+    In lane level, the result is a 1D vector that represents the data to be loaded by
+    each lane. If size is not 1, size should be equal to the chunk size.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
 
     Arguments:
+
     - `source`: represents the memory region to be loaded from, which can be either a
-        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
-        In case of tensor_desc, offsets come from the producer create_tdesc op.
-        tensor_desc cannot be used in SIMT mode.
-    - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
+        1D memref or pointer (ui64, ui32, i64 or i32).
+
+    - `offsets`: represents offsets from source.
         offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+        or 1 at lane level. scalar offset is also valid for lane level.
+
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
-        mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
-        scalar mask is also valid for SIMT mode.
-    - `chunk_size`: (optional) represents contiguous number of elements to load from per work item.
-    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+        mask is a vector of size equal to the subgroup size, or 1 at lane level.
+        scalar mask is also valid for lane level.
+
+    - `chunk_size`: [optional] represents contiguous number of elements to load from per work item.
+
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
+      of load. Only valid at workgroup and subgroup levels.
 
     Results:
     - `res`: represents loaded data
 
-
-  Example 1:
-  ```mlir
-    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
-                             l2_hint = #xegpu.cache_hint<uncached>,
-                             l3_hint = #xegpu.cache_hint<uncached>}>
-          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
-            vector<16xi1> -> vector<16xf32>
-  ```
-
-  Example 2:
-  ```mlir
-    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
-                             l2_hint = #xegpu.cache_hint<uncached>,
-                             l3_hint = #xegpu.cache_hint<uncached>}>
-          : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
-            vector<16xi1> -> vector<16x8xf32>
-  ```
-
-  Example 3:
-  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
-  It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc".
-  The source operand could be a raw pointer (ui64, ui32, i64, i32). Please refer to create_tdesc
-  for the restriction of memref.
+  Example 1 (Subgroup level):
+  A variant accepts memref as base pointer or the source operand
+  could be a raw pointer (ui64, ui32, i64, i32).
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %offsets = vector.step : vector<16xindex>
     %mask = vector.constant_mask [16]: vector<16xi1>
     %val = xegpu.load %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
-                           l3_hint = #xegpu.cache_hint<cached>}
+                           l3_hint = #xegpu.cache_hint<cached>,
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
   ```
 
-  Example 4 (SIMT mode):
-  SIMT mode only accepts the offsets variant. chunk_size can be inferred from result
+  Example 2 (lane level):
+  lane level only accepts the offsets variant. chunk_size can be inferred from result
   type. In this example, chunk_size is 8.
   ```mlir
     %2 = xegpu.load %1[%2], %0 <{l1_hint = #xegpu.cache_hint<cached>,
@@ -838,13 +767,14 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
 
   }];
 
-  let arguments = (ins XeGPU_GatherScatterSourceType:$source,
-      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+  let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
+      AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
-  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value);
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
+      OptionalAttr<DistributeLayoutAttr>:$layout);
+  let results = (outs XeGPU_ValueOrScalarType:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
 
@@ -852,15 +782,12 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
       return getSource().getType();
     }
 
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getSource());
-      }
-      return TypedValue<xegpu::TensorDescType>();
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
     }
 
-    xegpu::TensorDescType getTensorDescType() {
-       return dyn_cast<xegpu::TensorDescType>(getSourceType());
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
     }
 
     mlir::Type getElementType() {
@@ -879,14 +806,15 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   }];
 
   let assemblyFormat = [{
-    $source
-    (`[` $offsets^ `]`)? `,`
+    $source `[` $offsets `]` `,`
     $mask prop-dict
     attr-dict `:` type(operands) `->` type($value)
   }];
 
   let builders = [
-    OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
+    OpBuilder<(ins "Type": $value, "Value": $source,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
@@ -895,13 +823,14 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
                     "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
    ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
   let summary = "store data to scattered memory locations.";
   let description =
       [{ It (aka. store) stores data to scattered memory locations. The value is
@@ -911,45 +840,38 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
   introduced on purpose, making sure users are aware of this implicit transformation.
 
-  In SIMT mode, the result is a 1D vector that represents the data to be stored by
-  each work-item. If size is not 1, size should be equal to the chunk size.
+  In lane level, the result is a 1D vector that represents the data to be stored by
+  each lane. If size is not 1, size should be equal to the chunk size.
+
+  This operation serves as an anchor through which users assign a layout attribute
+  to govern computation distribution.
 
     Arguments:
+
     - `value`: represents the data to be stored.
+
     - `dest`: represents the memory region to be stored to, which can be either a
-        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
-        In case of tensor_desc, offsets come from the producer create_tdesc op.
-        tensor_desc cannot be used in SIMT mode.
-    - `offsets`: represents offsets from dest. required if `source` in not a TensorDescType.
+        1D memref or pointer (ui64, ui32, i64 or i32).
+
+    - `offsets`: represents offsets from dest.
         offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 in SIMT mode. scalar offset is also valid for SIMT mode.
+        or 1 at lane level. scalar offset is also valid for lane level.
+
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
-        mask is a vector of size equal to the subgroup size, or 1 in SIMT mode.
-        scalar mask is also valid for SIMT mode.
-    - `chunk_size`: (optional) represents contiguous number of elements to store to per work item.
-    - `l1_hint`, `l2_hint`, `l3_hint`: are optional cache hints for each level of cache.
+        mask is a vector of size equal to the subgroup size, or 1 at lane level.
+        scalar mask is also valid for lane level.
 
-  Example 1:
-  ```mlir
-    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
-                             l2_hint = #xegpu.cache_hint<write_back>,
-                             l3_hint = #xegpu.cache_hint<write_through>}>
-          : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
-  ```
+    - `chunk_size`: [optional] represents contiguous number of elements to store to per work item.
 
-  Example 2:
-  ```mlir
-    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
-                             l2_hint = #xegpu.cache_hint<write_back>,
-                             l3_hint = #xegpu.cache_hint<write_through>}>
-          : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
-  ```
+    - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
-  Example 3:
-  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
-  It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc".
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
+      to be stored. Only valid at workgroup and subgroup levels.
+
+
+  Example 1 (Subgroup level):
+  A variant accepts memref as base pointer and an offset.
   The dest operand could be a raw pointer (uint64_t).
-  Please refer to create_tdesc for the restriction of memref.
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %val = arith.constant dense<0.0> : vector<16xf32>
@@ -957,12 +879,13 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     %mask = vector.constant_mask [16]: vector<16xi1>
     xegpu.store %val, %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
-                           l3_hint = #xegpu.cache_hint<cached>}
-      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+                           l3_hint = #xegpu.cache_hint<cached>,
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+      : vector<16xf32>, memref<1024xf32>, vector<16xi1>, vector<16xindex>
   ```
 
-  Example 4 (SIMT mode):
-  SIMT mode only accepts the offsets variant. chunk_size can be inferred from value
+  Example 2 (Lane level):
+  Lane level IR only accepts the offsets variant. chunk_size can be inferred from value
   type. In this example, chunk_size is 8.
   ```mlir
     xegpu.store %0, %1[%2], %3 <{l1_hint = #xegpu.cache_hint<uncached>,
@@ -973,28 +896,26 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
 
   }];
 
-  let arguments = (ins AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$value,
-      XeGPU_GatherScatterSourceType:$dest,
-      Optional<AnyTypeOf<[XeGPU_OffsetType, Index]>>:$offsets,
+  let arguments = (ins XeGPU_ValueOrScalarType:$value,
+      XeGPU_GatherScatterBaseAddrType:$dest,
+      AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
       AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
-      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint);
+      OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
+      OptionalAttr<DistributeLayoutAttr>:$layout);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
       return getDest().getType();
     }
 
-    TypedValue<xegpu::TensorDescType> getTensorDesc() {
-      if (auto tdescType = getTensorDescType()) {
-        return llvm::cast<TypedValue<xegpu::TensorDescType>>(getDest());
-      }
-      return TypedValue<xegpu::TensorDescType>();
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
     }
 
-    xegpu::TensorDescType getTensorDescType() {
-      return dyn_cast<xegpu::TensorDescType>(getDestType());
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
     }
 
     mlir::Type getElementType() {
@@ -1013,114 +934,123 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
 
   let assemblyFormat = [{
     $value `,`
-    $dest
-    (`[` $offsets^ `]`)? `,`
+    $dest `[` $offsets `]` `,`
     $mask
     prop-dict
     attr-dict `:`  type(operands)
   }];
 
   let builders = [
-    OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,
-                    "xegpu::CachePolicyAttr": $l1_hint,
-                    "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>,
-    OpBuilder<(ins "Value": $value, "Value": $dest, 
+    OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
                     "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
-                    "xegpu::CachePolicyAttr": $l3_hint)>
+                    "xegpu::CachePolicyAttr": $l3_hint)>,
+    OpBuilder<(ins "Value": $value, "Value": $dest,
+                    "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
+                    "IntegerAttr": $chunk_size,
+                    "xegpu::CachePolicyAttr": $l1_hint,
+                    "xegpu::CachePolicyAttr": $l2_hint,
+                    "xegpu::CachePolicyAttr": $l3_hint,
+                    "xegpu::DistributeLayoutAttr": $layout)>
    ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
-          [AllTypesMatch<["TensorDesc", "result"]>]> {
-  let summary = "It updates the offsets for the given tensor descriptor";
-
-  let description = [{It behaves similar to `update_nd_offset` in terms that
-    it updates offset of a TensorDesc, and the offsets are relative offset to
-    the current position in the number of elements. However, `update_nd_offset`
-    is to update the start point of a 2D block, so its offset constains two
-    elements representing the shift in each dimension. `update_offset` is to
-    update the offset per work-item, so its offsets contains values representing
-    shifts for each work-item.
-
-    Example:
-    ```mlir
-      %off = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
-      %2 = xegpu.update_offset %1, %off :
-              !xegpu.tensor_desc<4x2xf32, #xegpu.scattered_tdesc_attr<chunk_size=2>>, vector<4xindex>
-    ```
-
-  }];
-
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                       XeGPU_OffsetType: $offsets);
-  let results = (outs XeGPU_TensorDesc: $result);
-
-  let builders = [
-    OpBuilder<(ins "mlir::Value": $TensorDesc,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-    OpBuilder<(ins "mlir::Value": $TensorDesc,
-                   "llvm::ArrayRef<int64_t>": $offsets)>
-  ];
-
-  let extraClassDeclaration = [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    mlir::VectorType getOffsetsType() {
-      return getOffsets().getType();
-    }
-
-    size_t getNumOffsets() {
-      return getOffsetsType().getNumElements();
-    }
-  }];
-
-  let assemblyFormat = [{
-    $TensorDesc `,` $offsets attr-dict `:` qualified(type($TensorDesc)) `,` type($offsets)
-  }];
-
-  let hasVerifier = 1;
-}
-
-def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]> {
+def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>, AnchorLayoutInterface]> {
   let summary = "It performs mma computation";
 
   let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
     size, B of `kxn` size, and accumulate on matrix C of `mxn` to the same size
-    matrix , `m=8`, `n=16` and `k=8 * 32/bit_width_of_elem_type`. So for fp16
-    data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
-    and `C/D: vector<8x16xf32>`. Besides the matrix size requirements, DPAS
-    also requires A and B to be loaded with the required data layout. Specially,
-    VNNI layout is required for B operand. It is achieved via adding `packed`
-    attribute to the `load_nd` operator.  Due to the VNNI transformation, B operands
-    can be represented as a 3D vector, with the last dimension representing the VNNI
-    factor, which is computed as `32/bit_width_of_elem_type`. Thus, `B: vector<16x16xf16>`
-    can be represented as `B: vector<8x16x2xf16>`.
+    matrix.
 
-    In SIMT code, each work-item from a subgroup holds a data fragment for A, B, C and the result,
+    The operands can be 2D, 3D, or 4D vectors. When the vectors have more than 2
+    dimensions, the leading dimensions are treated as **batch dimensions** that
+    must match across all operands (lhs, rhs, acc, and result). The batch
+    dimensions represent independent matrix multiplications that are executed in
+    parallel. For example:
+    - 2D: `A: vector<8x16xf16>`, `B: vector<16x16xf16>` -> `C: vector<8x16xf32>`
+    - 3D: `A: vector<4x8x16xf16>`, `B: vector<4x16x16xf16>` -> `C: vector<4x8x16xf32>`
+      (4 independent 8x16 matrix multiplications)
+    - 4D: `A: vector<2x4x8x16xf16>`, `B: vector<2x4x16x16xf16>` -> `C: vector<2x4x8x16xf32>`
+      (2x4=8 independent 8x16 matrix multiplications)
+
+    The last 2 dimensions are always the core matrix multiplication dimensions
+    (M, K for lhs; K, N for rhs; M, N for result).
+
+    In lane level code, each lane from a subgroup holds a data fragment for A, B, C and the result,
     which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
     (https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html)
     for more details about the fragment distribution.
 
-    Note: on PVC, the hardware can perform load with VNNI transformation when data
-          element type is 16-bit or lower precision, taking 2 or 4 elements from
-          the first dimension and inserted into the newly added innermost dimension.
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+
+    - `lhs`: A vector value representing the left-hand-side matrix tile (A) participating in the
+      matrix multiply. Can be 1D, 2D, 3D, or 4D where leading dimensions are batch dimensions.
+
+    - `rhs`: A vector value representing the right-hand-side matrix tile (B). Can be 1D, 2D, 3D, or 4D
+      where leading dimensions are batch dimensions.
+
+    - `acc`: [optional] A vector value representing the accumulator matrix tile (C). When present, the
+      result is computed as `lhs * rhs + acc`; otherwise, the accumulator is implicitly assumed to be zero.
+      Must have the same batch dimensions as lhs and rhs.
+
+    - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
+      operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
+      that govern distribution at the subgroup and/or lane level. Only valid at workgroup and subgroup
+      level.
+
+    Example 1 (Workgroup level, 2D):
+
+    ```mlir
+      %d = xegpu.dpas %a, %b, %c <{
+          layout_a = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 128]>,
+          layout_b = #xegpu.layout<sg_layout = [4, 8], sg_data = [128, 16]>,
+          layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}
+          : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32> -> vector<64x128xf32>
+    ```
+
+    Example 2 (Lane level, 1D):
+
+    ```mlir
+      %d = xegpu.dpas %a, %b, %c
+            :  vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
+    ```
+
+    Example 3 (Workgroup level, 3D with batch):
+
+    ```mlir
+      // 4 independent 8x16 matrix multiplications
+      %d = xegpu.dpas %a, %b, %c
+          : vector<4x8x16xf16>, vector<4x16x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
+    ```
   }];
 
   let arguments = (ins
     XeGPU_DpasOprType : $lhs,
     XeGPU_DpasOprType : $rhs,
-    Optional<XeGPU_DpasResType>: $acc);
+    Optional<XeGPU_DpasResType>: $acc,
+    OptionalAttr<DistributeLayoutAttr>:$layout_a,
+    OptionalAttr<DistributeLayoutAttr>:$layout_b,
+    OptionalAttr<DistributeLayoutAttr>:$layout_cd
+  );
   let results = (outs XeGPU_DpasResType: $result);
 
   let extraClassDeclaration = [{
+
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayoutCd().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutCdAttr(anchorLayout);
+    }
+
     VectorType getLhsType() {
       return getLhs().getType();
     }
@@ -1154,7 +1084,8 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
       MemoryEffects<[MemRead, MemWrite]>,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
-      AllShapesMatch<["tensorDesc", "value", "result"]>]> {
+      AllShapesMatch<["tensorDesc", "value", "result"]>,
+      AnchorLayoutInterface]> {
   let summary = "Atomic read-modify-write operation on the TensorDesc. ";
 
   let description = [{
@@ -1164,13 +1095,46 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     has the same shape with `TensorDesc`, and is used to enable or disable specific
     data points of the `TensorDesc`. The `value` operand represents the new value to
     be applied during the modification.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+    - `kind`: An attribute that specifies the atomic operation to be performed
+      (e.g., add, min, max, exchange, etc.).
+
+    - `tensorDesc`: A `TensorDesc` describing the memory region on which the atomic
+      read-modify-write is performed.
+
+    - `mask`: A predicate mask with the same shape as `tensorDesc`. Only elements
+      with a true (non-zero) mask value participate in the atomic operation;
+      masked-out elements are not modified.
+
+    - `value`: The input values used by the atomic operation. It must have the same
+      shape and element type as `tensorDesc` and `result`.
+
+    - `layout`: [optional] An attribute that identifies the operation as an anchor,
+      enabling users to assign a layout that governs distribution at the subgroup
+      and/or lane level. Only valid at workgroup and subgroup levels.
   }];
 
   let arguments = (ins
     AtomicRMWKindAttr:$kind,
     XeGPU_TensorDesc:$tensorDesc,
     XeGPU_MaskType:$mask,
-    XeGPU_ValueType:$value);
+    XeGPU_ValueType:$value,
+    OptionalAttr<DistributeLayoutAttr>:$layout);
+
+  let extraClassDeclaration = [{
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
+    }
+
+  }];
 
   let results = (outs XeGPU_ValueType:$result);
 
@@ -1241,36 +1205,59 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   }];
   let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
                        XeGPU_FenceScopeAttr: $fence_scope);
-  let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
+  let assemblyFormat = [{`memory_kind` `=` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
-def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["source", "result"]>]> {
-    let summary = "Convert the layout of the input operand";
+def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", "result"]>,
+      MemoryEffects<[MemRead, MemWrite]>,
+      AnchorLayoutInterface]> {
+  let summary = "Convert the layout of the input operand";
     let description = [{
-      `convert_layout` redistribute data across subgroups and/or work-items from the `input_layout` to
+      `convert_layout` redistribute data across subgroups and/or lanes from the `input_layout` to
       the `target_layout`. Both `input_layout` and `target_layout` must correspond to the same programming
-      scope, such as workgroup-level (wg) or subgroup-level (sg) code. This operation is not valid once
+      scope, such as workgroup level (wg) or subgroup level (sg) code. This operation is not valid once
       the IR is lowered to WI level because that is the end result of all distributions.
+
+      This operation serves as an anchor through which users assign a layout attribute
+      to govern computation distribution.
+
+      Arguments:
+      - `source`: The input vector whose data is to be redistributed. The source and
+      result types must match.
+      - `input_layout`: The layout attribute describing the current distribution of `source`
+      across subgroups and/or lanes.
+      - `target_layout`: The layout attribute describing the desired distribution of the result
+      across subgroups and/or lanes.
+
+      Example (Subgroup level):
+        ```mlir
+          %coop_a = xegpu.convert_layout %a <{
+                input_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>,
+                target_layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}>
+            : vector<128x128xf16>
+        ```
     }];
-    let arguments = (ins XeGPU_VectorType: $source,
+    let arguments = (ins XeGPU_VectorOrScalarType: $source,
                          DistributeLayoutAttr: $input_layout,
                          DistributeLayoutAttr: $target_layout);
-    let results = (outs XeGPU_VectorType: $result);
+    let results = (outs XeGPU_VectorOrScalarType: $result);
     let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
     }];
+    let extraClassDeclaration = [{
+      xegpu::DistributeLayoutAttr getAnchorLayout() {
+        return getTargetLayout();
+      }
 
-    let hasFolder = 1;
+      void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+        setTargetLayoutAttr(anchorLayout);
+      }
+
+    }];
+
     let hasVerifier = 1;
-    let hasCanonicalizer = 1;
 }
-
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
-class StaticShared1DMemRefOf<list<Type> allowedTypes> :
-  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
-     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
-     "mlir::MemRefType">;
 
 class SizeInBits<string name> :
   StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
@@ -1288,42 +1275,77 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
+     - `source` : 1D or 2D statically shaped memref, representing the raw SLM buffer. The provided memref must be contiguous.
+
     Results:
-     - `mem_desc` : the memory descriptor.
+     - `mem_desc` : the memory descriptor (1D or higher).
+
+    Example (1D):
+    ```mlir
+      %mdesc = xegpu.create_mem_desc %mref
+        : memref<128xi8, 3> -> !xegpu.mem_desc<64xf16>
+    ```
+
+    Example (2D with layout):
+    ```mlir
+      %mdesc = xegpu.create_mem_desc %mref
+        : memref<4096xi8, 3>
+          -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<stride = [1, 32], block = [16, 16]>>
+    ```
+
   }];
-  let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
+  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
   let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
-                              AllElementTypesMatch<["mem_desc", "res"]>,
-                              AllRanksMatch<["mem_desc", "res"]>]>  {
+                              AllElementTypesMatch<["mem_desc", "res"]>, AnchorLayoutInterface]>  {
   let arguments = (ins XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
-  let results = (outs XeGPU_ValueType:$res);
+  let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
   }];
 
   let description = [{
-    This operation loads a 2D block of data from shared local memory (SLM) as specified
-    by the provided 2D `mem_desc`. Only 2D memory descriptors are supported; use the
-    subview operation to obtain a compatible 2D `mem_desc` from a higher-rank descriptor if needed.
+    This operation loads a block of data from shared local memory (SLM) as specified
+    by the provided `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
 
     Arguments:
      - `mem_desc`: the memory descriptor identifying the SLM region.
-     - `offsets`: the coordinates within the matrix to read from.
-     - `layout`: [optional] An attribute for guiding distributions among
-                 subgroups and/or work-items. It currently can accept either
-                 LayoutAttr or SliceAttr.
+     - `offsets`: the coordinates within the memory descriptor to read from.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
+        to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
+        across all lanes. Only used on subgroup and lane level.
+     - `layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
+      the result of load (they are identical).
+        Only valid at workgroup and subgroup levels.
+
     Results:
-     - `res`: the matrix elements loaded from SLM.
+     - `res`: the elements loaded from SLM.
+
+    Example (1D):
+    ```mlir
+        %1 = xegpu.load_matrix %0[%c0] : !xegpu.mem_desc<64xf16>, index -> vector<16xf16>
+    ```
+
+    Example (Workgroup level, 2D):
+    ```mlir
+        %c0 = arith.constant 0 : index
+        %1 = xegpu.load_matrix %0[%c0, %c0] <{
+                layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 16]> }>
+          : !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [16, 16]>>
+          , index, index -> vector<128x128xf16>
+    ```
   }];
 
   let builders = [
@@ -1336,37 +1358,66 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     }
 
     ArrayRef<int64_t> getDataShape() {
-      return getRes().getType().getShape();
+      auto resTy = getRes().getType();
+      if (auto vecTy = llvm::dyn_cast<VectorType>(resTy))
+        return vecTy.getShape();
+      return {};
     }
+
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
+    }
+
   }];
 
   let hasVerifier = 1;
 }
 
 def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
-                              AllElementTypesMatch<["mem_desc", "data"]>,
-                              AllRanksMatch<["mem_desc", "data"]>]> {
+                              AllElementTypesMatch<["mem_desc", "data"]>, AnchorLayoutInterface]> {
   let arguments = (ins
-    XeGPU_ValueType:$data,
+    XeGPU_ValueOrScalarType:$data,
     XeGPU_MemDesc:$mem_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
-    This operation stores a 2D `data` fragment into the shared local memory region
-    specified by a 2D `mem_desc`. Only 2D memory descriptors are supported; use the
-    subview operation to obtain a 2D `mem_desc` from a higher-rank descriptor if needed.
+    This operation stores a `data` fragment into the shared local memory region
+    specified by a `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
 
     Arguments:
      - `mem_desc`: the memory descriptor specifying the SLM region.
-     - `offsets`: the coordinates within the matrix where the data will be written.
-     - `data`: the values to be stored in the matrix.
-     - `layout`: [optional] An attribute for guiding distributions among
-                 subgroups and/or work-items. It currently can accept either
-                 LayoutAttr or SliceAttr.
+     - `offsets`: the coordinates within the memory descriptor where the data will be written.
+     - `data`: the values to be stored.
+     - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
+        to a subgroup block store. When this attribute is present, the offsets are subgroup-uniform
+        across all lanes. Only used on subgroup and lane level.
+     - `layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
+        the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
+
+    Example (1D):
+    ```mlir
+        xegpu.store_matrix %1, %0[%c0] : vector<16xf16>, !xegpu.mem_desc<64xf16>, index
+    ```
+
+    Example (Workgroup level, 2D):
+    ```mlir
+        %c0 = arith.constant 0 : index
+        xegpu.store_matrix %1, %0[%c0, %c0] <{
+                layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 16]> }>
+          : vector<128x128xf16>, !xegpu.mem_desc<128x128xf16>>, index, index
+    ```
   }];
   let builders = [
     OpBuilder<(ins "Value" : $data, "TypedValue<MemDescType>": $mem_desc,
@@ -1378,7 +1429,18 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     }
 
     ArrayRef<int64_t> getDataShape() {
-      return getData().getType().getShape();
+      auto DataTy = getData().getType();
+      if (auto vecTy = llvm::dyn_cast<VectorType>(DataTy))
+        return vecTy.getShape();
+      return {};
+    }
+
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayout().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutAttr(anchorLayout);
     }
 
   }];
@@ -1386,41 +1448,156 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
-def XeGPU_MemDescSubviewOp: XeGPU_Op<"mem_desc_subview",
-          [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
-  let description = [{
-    Creates a subview of a memory descriptor. The resulting memory descriptor can have
-    a lower rank than the source; in this case, the result dimensions correspond to the
-    higher-order dimensions of the source memory descriptor.
+def XeGPU_TruncfOp
+    : XeGPU_Op<"truncf", [AllRanksMatch<["source", "result"]>,
+                          AllShapesMatch<["source", "result"]>, Pure]> {
+  let summary = "It performs floating point truncation from higher precision "
+                "to lower precision.";
 
-    Arguments:
-     - `src` : a memory descriptor.
-     - `offsets` : the coordinates within the matrix the subview will be created from.
+  let description =
+      [{The `xegpu.truncf` operation truncates floating point values from a higher
+    precision type to a lower precision type.
+    Converts `f16` and `bf16` to microscaling float types.
+    Rounding mode defaults to round to nearest even.
 
-    Results:
-    - `res` : a memory descriptor with smaller size.
+    Example:
+    ```mlir
+      %res = xegpu.truncf %src : vector<16xf16> -> vector<16xf8E5M2>
+    ```
 
   }];
-  let arguments = (ins XeGPU_MemDesc:$src,
-                       Variadic<Index>:$offsets,
-                       DenseI64ArrayAttr:$const_offsets);
-  let results = (outs XeGPU_MemDesc:$res);
-  let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
-                         attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
-  let builders = [
-    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets)>
-  ];
+
+  let arguments = (ins FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$source);
+  let results = (outs FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$result);
 
   let extraClassDeclaration = [{
-    mlir::Value getViewSource() { return getSrc(); }
 
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    Type getSourceType() {
+      return getSource().getType();
     }
+
+    Type getResultType() {
+      return getResult().getType();
+    }
+
+  }];
+
+  let assemblyFormat = [{
+    $source attr-dict `:` type(operands) `->` type(results)
   }];
 
   let hasVerifier = 1;
 }
 
+def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
+                                          AnchorLayoutInterface]> {
+  let summary = "It performs scaled mma computation";
+
+  let description =
+      [{DPAS MX performs matrix multiplication on matrix A and Matrix B
+    of low precision data type. A is of size`mxk`
+    size, B is of size `kxn`, and accumulate on matrix C of size `mxn` to the same size
+    matrix.
+
+    The operands can be 2D, 3D, or 4D vectors. When the vectors have more than 2
+    dimensions, the leading dimensions are treated as **batch dimensions** that
+    must match across all operands (a, b, acc, result, scale_a, scale_b). The batch
+    dimensions represent independent matrix multiplications that are executed in
+    parallel. For example:
+    - 2D: `A: vector<8x32xf8E5M2>`, `B: vector<32x16xf8E5M2>` -> `C: vector<8x16xbf16>`
+    - 3D: `A: vector<4x8x32xf8E5M2>`, `B: vector<4x32x16xf8E5M2>` -> `C: vector<4x8x16xbf16>`
+      (4 independent 8x16 scaled matrix multiplications)
+    - 4D: `A: vector<2x4x8x32xf8E5M2>`, `B: vector<2x4x32x16xf8E5M2>` -> `C: vector<2x4x8x16xbf16>`
+      (2x4=8 independent 8x16 scaled matrix multiplications)
+
+    The last 2 dimensions are always the core matrix multiplication dimensions
+    (M, K for a; K, N for b; M, N for result). The scale vectors also follow the
+    same batch dimension structure.
+
+    In lane level code, each lane from a subgroup holds a data fragment for A, B, Acc and the result,
+    which are represented as 1D vectors.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+
+    - `a`: A vector value representing the left-hand-side matrix tile (A) participating in the
+      matrix multiply. Can be 1D, 2D, 3D, or 4D where leading dimensions are batch dimensions.
+
+    - `b`: A vector value representing the right-hand-side matrix tile (B). Can be 1D, 2D, 3D, or 4D
+      where leading dimensions are batch dimensions.
+
+    - `acc`: A vector value representing the accumulator matrix tile (C). The
+      result is computed as `a * b + acc`. Must have the same batch dimensions as a and b.
+
+    - `scale_a`: A floating point vector/scalar value used to scale `a` for
+      matrix multiplication. When a vector, must have matching batch dimensions.
+
+    - `scale_b`: A floating point vector/scalar value used to scale `b` for
+      matrix multiplication. When a vector, must have matching batch dimensions.
+
+    - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
+      operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
+      that govern distribution at the subgroup and/or lane level. Only valid at workgroup and subgroup
+      level.
+
+  }];
+
+  let arguments = (ins XeGPU_DpasOprType:$a, XeGPU_DpasOprType:$b,
+      Optional<XeGPU_DpasResType>:$acc,
+      Optional<AnyTypeOf<[F8E8M0FNU,
+                          VectorOfRankAndType<[1, 2, 3, 4], [F8E8M0FNU]>]>>:$scale_a,
+      Optional<AnyTypeOf<[F8E8M0FNU,
+                          VectorOfRankAndType<[1, 2, 3, 4], [F8E8M0FNU]>]>>:$scale_b,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b,
+      OptionalAttr<DistributeLayoutAttr>:$layout_cd,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a_scale,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b_scale);
+  let results = (outs XeGPU_DpasResType:$result);
+  let extraClassDeclaration = [{
+
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayoutCd().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutCdAttr(anchorLayout);
+    }
+
+    VectorType getAType() {
+      return getA().getType();
+    }
+
+    VectorType getBType() {
+      return getB().getType();
+    }
+
+    VectorType getAccType() {
+      return getAcc().getType();
+    }
+
+    Type getScaleAType() {
+      return getScaleA().getType();
+    }
+
+    Type getScaleBType() {
+      return getScaleB().getType();
+    }
+
+    VectorType getResultType() {
+      return getResult().getType();
+    }
+
+  }];
+  let assemblyFormat = [{
+    $a `,` $b (`,` $acc^)?
+    (`scale_a` `=` $scale_a^)?
+    (`scale_b` `=` $scale_b^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

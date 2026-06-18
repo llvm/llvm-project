@@ -65,6 +65,14 @@ public:
     }
   };
 
+  // VirtRegMap state parsed from MIR and waiting to be consumed by
+  // VirtRegMap::init().
+  struct PendingVirtRegMapEntry {
+    Register VReg;
+    Register SplitFrom;      // NoReg if absent.
+    MCRegister AssignedPhys; // NoReg if absent.
+  };
+
 private:
   MachineFunction *MF;
   SmallPtrSet<Delegate *, 1> TheDelegates;
@@ -106,6 +114,10 @@ private:
   IndexedMap<std::pair<unsigned, SmallVector<Register, 4>>,
              VirtReg2IndexFunctor>
       RegAllocHints;
+
+  /// Hold the register properties that are used to populate the VirtRegMap
+  /// pass when deserializing from .mir files.
+  SmallVector<PendingVirtRegMapEntry, 0> PendingVirtRegMapEntries;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -511,7 +523,16 @@ public:
   /// hasOneUse - Return true if there is exactly one instruction using the
   /// specified register.
   bool hasOneUse(Register RegNo) const {
-    return hasSingleElement(use_operands(RegNo));
+    MachineOperand *Head = getRegUseDefListHead(RegNo);
+    if (!Head)
+      return false;
+    // Prev links are circular, and defs always precede uses.
+    MachineOperand *Tail = Head->Contents.Reg.Prev;
+    if (!Tail->isUse())
+      return false;
+    if (Tail == Head)
+      return true;
+    return Tail->Contents.Reg.Prev->isDef();
   }
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
@@ -634,10 +655,9 @@ public:
   /// function. Writing to a constant register has no effect.
   LLVM_ABI bool isConstantPhysReg(MCRegister PhysReg) const;
 
-  /// Get an iterator over the pressure sets affected by the given physical or
-  /// virtual register. If RegUnit is physical, it must be a register unit (from
-  /// MCRegUnitIterator).
-  PSetIterator getPressureSets(Register RegUnit) const;
+  /// Get an iterator over the pressure sets affected by the virtual register
+  /// or register unit.
+  PSetIterator getPressureSets(VirtRegOrUnit VRegOrUnit) const;
 
   //===--------------------------------------------------------------------===//
   // Virtual Register Info
@@ -798,6 +818,25 @@ public:
 
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
   LLVM_ABI void clearVirtRegs();
+
+  void addPendingVirtRegMapEntry(PendingVirtRegMapEntry Entry) {
+    assert(Entry.VReg.isVirtual());
+    assert(!Entry.SplitFrom.isValid() || Entry.SplitFrom.isVirtual());
+    assert(!Entry.AssignedPhys.isValid() || Entry.AssignedPhys.isPhysical());
+    PendingVirtRegMapEntries.push_back(Entry);
+  }
+
+  ArrayRef<PendingVirtRegMapEntry> getPendingVirtRegMapEntries() const {
+    return PendingVirtRegMapEntries;
+  }
+
+  void clearPendingVirtRegMapEntries() { PendingVirtRegMapEntries.clear(); }
+
+  void copyPendingVirtRegMapEntriesFrom(const MachineRegisterInfo &Other) {
+    assert(getNumVirtRegs() == Other.getNumVirtRegs() &&
+           "expected MachineFunction clone to preserve virtual registers");
+    PendingVirtRegMapEntries = Other.PendingVirtRegMapEntries;
+  }
 
   /// setRegAllocationHint - Specify a register allocation hint for the
   /// specified virtual register. This is typically used by target, and in case
@@ -982,7 +1021,7 @@ public:
   /// root registers, the root register and all super registers are reserved.
   /// This currently iterates the register hierarchy and may be slower than
   /// expected.
-  LLVM_ABI bool isReservedRegUnit(unsigned Unit) const;
+  LLVM_ABI bool isReservedRegUnit(MCRegUnit Unit) const;
 
   /// isAllocatable - Returns true when PhysReg belongs to an allocatable
   /// register class and it hasn't been reserved.
@@ -1249,15 +1288,16 @@ class PSetIterator {
 public:
   PSetIterator() = default;
 
-  PSetIterator(Register RegUnit, const MachineRegisterInfo *MRI) {
+  PSetIterator(VirtRegOrUnit VRegOrUnit, const MachineRegisterInfo *MRI) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-    if (RegUnit.isVirtual()) {
-      const TargetRegisterClass *RC = MRI->getRegClass(RegUnit);
+    if (VRegOrUnit.isVirtualReg()) {
+      const TargetRegisterClass *RC =
+          MRI->getRegClass(VRegOrUnit.asVirtualReg());
       PSet = TRI->getRegClassPressureSets(RC);
       Weight = TRI->getRegClassWeight(RC).RegWeight;
     } else {
-      PSet = TRI->getRegUnitPressureSets(RegUnit);
-      Weight = TRI->getRegUnitWeight(RegUnit);
+      PSet = TRI->getRegUnitPressureSets(VRegOrUnit.asMCRegUnit());
+      Weight = TRI->getRegUnitWeight(VRegOrUnit.asMCRegUnit());
     }
     if (*PSet == -1)
       PSet = nullptr;
@@ -1278,8 +1318,8 @@ public:
 };
 
 inline PSetIterator
-MachineRegisterInfo::getPressureSets(Register RegUnit) const {
-  return PSetIterator(RegUnit, this);
+MachineRegisterInfo::getPressureSets(VirtRegOrUnit VRegOrUnit) const {
+  return PSetIterator(VRegOrUnit, this);
 }
 
 } // end namespace llvm

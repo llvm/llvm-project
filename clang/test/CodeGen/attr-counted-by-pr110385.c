@@ -26,10 +26,10 @@ struct bucket2 {
 void init(void * __attribute__((pass_dynamic_object_size(0))));
 
 // CHECK-LABEL: define dso_local void @test1(
-// CHECK-SAME: ptr noundef readonly captures(none) [[FOO:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[FOO:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[GROWABLE:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GROWABLE]], align 8, !tbaa [[_ZTS8VARIABLEPTR_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GROWABLE]], align 8, !tbaa [[_ZTS8VARIABLEPTR_TBAA5:![0-9]+]]
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
 // CHECK-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
@@ -61,11 +61,11 @@ void test2(struct bucket2 *foo) {
         init(foo->growable.array);
 }
 //.
-// CHECK: [[_ZTS8VARIABLEPTR_TBAA2]] = !{[[META3:![0-9]+]], [[META7:![0-9]+]], i64 8}
-// CHECK: [[META3]] = !{!"bucket", [[META4:![0-9]+]], i64 0, [[META7]], i64 8, [[META4]], i64 16}
-// CHECK: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// CHECK: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META2:![0-9]+]] = !{!"int", [[META3:![0-9]+]], i64 0}
+// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[_ZTS8VARIABLEPTR_TBAA5]] = !{[[META6:![0-9]+]], [[META7:![0-9]+]], i64 8}
+// CHECK: [[META6]] = !{!"bucket", [[META2]], i64 0, [[META7]], i64 8, [[META2]], i64 16}
 // CHECK: [[META7]] = !{!"p1 _ZTS8variable", [[META8:![0-9]+]], i64 0}
-// CHECK: [[META8]] = !{!"any pointer", [[META5]], i64 0}
+// CHECK: [[META8]] = !{!"any pointer", [[META3]], i64 0}
 //.

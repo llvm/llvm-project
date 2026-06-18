@@ -20,6 +20,38 @@ include "llvm/TableGen/SearchableTable.td"
 // SPARC Subtarget features.
 //
 
+// Some words about SPARC ISA versions and feature levels:
+// - V7: The first public version, used in some early Sun 4 models. Lacks integer
+//       multiply and divide in hardware, and doesn't have a formal memory model,
+//       though in practice the few multiprocessor machines that do exist
+//       are sequentially consistent.
+// - V8: Adds hardware multiply and divide, and formally defines TSO and PSO
+//       memory models. Most 32-bit chips currently used are of this version.
+// - V9: Adds 64-bit capability and RMO memory model, aside from new instructions.
+//       Note that unlike most other architectures, instructions that operate
+//       on 64-bit registers (e.g casx) are still available even in 32-bit ILP32
+//       mode - the G/O registers are always 64-bit regardless of runtime bitness.
+//       To let compilers take advantage of this feature, Sun defined an extension
+//       to the 32-bit ABI called V8+. It's still possible, though, to compile for
+//       V9 ISA level while not emitting any of the 64-bit instructions, that is
+//       why -mv8plus is defined separately from the usual -mcpu flags.
+//       (OTOH, the combination of `-mcpu=v8 -mv8plus` is effectively a no-op)
+//
+// As for memory models, the ordering from weakest to strongest is as follows:
+// (weaker) RMO -> PSO -> TSO -> SC (stronger)
+// Those are defined in such a way that code compiled for a weaker model will
+// run fine on processors that only implements a stronger model.
+// For simplcity, LLVM targets the weakest model available in a particular
+// ISA version: RMO for v9, and PSO for v7/v8.
+//
+// As for triples, Linux/BSD and Solaris follows different conventions:
+// Linux/BSD name | Solaris name | Meaning
+// ---------------|--------------|-------------
+// sparc-*-*      | sparc-*-*    | 32-bit SPARC
+// sparc64-*-*    | sparcv9-*-*  | 64-bit SPARC
+// Rather confusingly, Solaris calls the 64-bit triple "sparcv9".
+// LLVM accepts both sparc64- and sparcv9- forms for 64-bit triples.
+
 def FeatureSoftMulDiv
   : SubtargetFeature<"soft-mul-div", "UseSoftMulDiv", "true",
                      "Use software emulation for integer multiply and divide">;
@@ -95,6 +127,9 @@ def FeatureSoftFloat : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
 def TuneSlowRDPC : SubtargetFeature<"slow-rdpc", "HasSlowRDPC", "true",
                                     "rd %pc, %XX is slow", [FeatureV9]>;
 
+def TuneNoPredictor : SubtargetFeature<"no-predictor", "HasNoPredictor", "true",
+                                    "Processor has no branch predictor, branches stall execution", []>;
+
 //==== Features added predmoninantly for LEON subtarget support
 include "LeonFeatures.td"
 
@@ -122,6 +157,8 @@ include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
 include "SparcInstrInfo.td"
+
+defm : RemapAllTargetPseudoPointerOperands<sparc_ptr_rc>;
 
 def SparcInstrInfo : InstrInfo;
 
@@ -174,12 +211,15 @@ def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,
                                FeatureVIS2],
                               [TuneSlowRDPC]>;
 def : Proc<"niagara",         [FeatureV9, FeatureV8Deprecated, FeatureVIS,
-                               FeatureVIS2, FeatureUA2005]>;
+                               FeatureVIS2, FeatureUA2005],
+                              [TuneNoPredictor]>;
 def : Proc<"niagara2",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2, FeatureUA2005]>;
+                               FeatureVIS, FeatureVIS2, FeatureUA2005],
+                              [TuneNoPredictor]>;
 def : Proc<"niagara3",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2, FeatureVIS3,
-                               FeatureUA2005, FeatureUA2007]>;
+                               FeatureUA2005, FeatureUA2007],
+                              [TuneNoPredictor]>;
 def : Proc<"niagara4",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2, FeatureVIS3,
                                FeatureUA2005, FeatureUA2007, FeatureOSA2011,

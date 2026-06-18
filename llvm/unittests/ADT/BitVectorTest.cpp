@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
+#include <initializer_list>
 
 using namespace llvm;
 
@@ -21,7 +22,7 @@ template <typename T>
 class BitVectorTest : public ::testing::Test { };
 
 // Test both BitVector and SmallBitVector with the same suite of tests.
-typedef ::testing::Types<BitVector, SmallBitVector> BitVectorTestTypes;
+using BitVectorTestTypes = ::testing::Types<BitVector, SmallBitVector>;
 TYPED_TEST_SUITE(BitVectorTest, BitVectorTestTypes, );
 
 TYPED_TEST(BitVectorTest, TrivialOperation) {
@@ -835,19 +836,27 @@ TYPED_TEST(BitVectorTest, BinOps) {
   A.resize(65);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(B));
+  EXPECT_TRUE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 
   B.resize(64);
   A.set(64);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 
   B.set(63);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_FALSE(B.subsetOf(A));
 
   A.set(63);
   EXPECT_TRUE(A.anyCommon(B));
   EXPECT_TRUE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 
   B.resize(70);
   B.set(64);
@@ -855,9 +864,90 @@ TYPED_TEST(BitVectorTest, BinOps) {
   A.resize(64);
   EXPECT_FALSE(A.anyCommon(B));
   EXPECT_FALSE(B.anyCommon(A));
+  EXPECT_FALSE(A.subsetOf(B));
+  EXPECT_FALSE(B.subsetOf(A));
+
+  B.set(63);
+  B.reset(64);
+  EXPECT_TRUE(A.anyCommon(B));
+  EXPECT_TRUE(B.anyCommon(A));
+  EXPECT_TRUE(A.subsetOf(B));
+  EXPECT_TRUE(B.subsetOf(A));
 }
 
-typedef std::vector<std::pair<int, int>> RangeList;
+template <typename VecType>
+static inline VecType
+createBitVectorFromBits(uint32_t Size, std::initializer_list<int> SetBits) {
+  VecType V;
+  V.resize(Size);
+  for (int BitIndex : SetBits)
+    V.set(BitIndex);
+  return V;
+}
+
+TYPED_TEST(BitVectorTest, BinOpsLiteral) {
+  // More tests of binary operations with more focus on the semantics and
+  // less focus on mutability.
+
+  auto AnyCommon = [](uint32_t SizeLHS, std::initializer_list<int> SetBitsLHS,
+                      uint32_t SizeRHS, std::initializer_list<int> SetBitsRHS) {
+    auto LHS = createBitVectorFromBits<TypeParam>(SizeLHS, SetBitsLHS);
+    auto RHS = createBitVectorFromBits<TypeParam>(SizeRHS, SetBitsRHS);
+    return LHS.anyCommon(RHS);
+  };
+  auto SubsetOf = [](uint32_t SizeLHS, std::initializer_list<int> SetBitsLHS,
+                     uint32_t SizeRHS, std::initializer_list<int> SetBitsRHS) {
+    auto LHS = createBitVectorFromBits<TypeParam>(SizeLHS, SetBitsLHS);
+    auto RHS = createBitVectorFromBits<TypeParam>(SizeRHS, SetBitsRHS);
+    return LHS.subsetOf(RHS);
+  };
+
+  // clang-format off
+
+  // Test small-sized vectors.
+  EXPECT_TRUE (AnyCommon(10, {1, 2, 3}, 10, {3, 4, 5}));
+  EXPECT_FALSE(AnyCommon(10, {1, 2, 3}, 10, {4, 5}));
+
+  EXPECT_FALSE(SubsetOf(10, {1, 2, 3}, 10, {2, 3, 4}));
+  EXPECT_TRUE (SubsetOf(10, {2, 3},    10, {2, 3, 4}));
+  EXPECT_FALSE(SubsetOf(10, {1, 2, 3}, 10, {2, 3}));
+  EXPECT_TRUE (SubsetOf(10, {1, 2, 3}, 10, {1, 2, 3}));
+
+  // Test representations of empty sets of various sizes.
+  EXPECT_FALSE(AnyCommon(10,  {}, 10,  {}));
+  EXPECT_FALSE(AnyCommon(10,  {}, 123, {}));
+  EXPECT_FALSE(AnyCommon(123, {}, 10,  {}));
+  EXPECT_FALSE(AnyCommon(123, {}, 123, {}));
+  EXPECT_TRUE(SubsetOf(10,  {}, 10,  {}));
+  EXPECT_TRUE(SubsetOf(10,  {}, 123, {}));
+  EXPECT_TRUE(SubsetOf(123, {}, 10,  {}));
+  EXPECT_TRUE(SubsetOf(123, {}, 123, {}));
+
+  // Test handling of the remainder words.
+  EXPECT_FALSE(AnyCommon(10,  {1, 2},  123, {5, 70}));
+  EXPECT_TRUE (AnyCommon(10,  {1, 2},  123, {1, 70}));
+  EXPECT_FALSE(AnyCommon(123, {5, 70}, 10,  {1, 2}));
+  EXPECT_TRUE (AnyCommon(123, {1, 70}, 10,  {1, 2}));
+
+  EXPECT_FALSE(AnyCommon(10,  {1, 2}, 123, {5}));
+  EXPECT_TRUE (AnyCommon(10,  {1, 2}, 123, {1}));
+  EXPECT_FALSE(AnyCommon(123, {5},    10,  {1, 2}));
+  EXPECT_TRUE (AnyCommon(123, {1},    10,  {1, 2}));
+
+  EXPECT_FALSE(SubsetOf(10,  {1, 2},     123, {2, 70}));
+  EXPECT_TRUE (SubsetOf(10,  {1, 2},     123, {1, 2, 70}));
+  EXPECT_FALSE(SubsetOf(123, {2, 70},    10,  {1, 2}));
+  EXPECT_FALSE(SubsetOf(123, {1, 2, 70}, 10,  {1, 2}));
+
+  EXPECT_FALSE(SubsetOf(10,  {1, 2}, 123, {2}));
+  EXPECT_TRUE (SubsetOf(10,  {1, 2}, 123, {1, 2}));
+  EXPECT_TRUE (SubsetOf(123, {2},    10,  {1, 2}));
+  EXPECT_TRUE (SubsetOf(123, {1, 2}, 10,  {1, 2}));
+
+  // clang-format on
+}
+
+using RangeList = std::vector<std::pair<int, int>>;
 
 template <typename VecType>
 static inline VecType createBitVector(uint32_t Size,
@@ -1342,11 +1432,13 @@ TYPED_TEST(BitVectorTest, DenseSet) {
   I = Set.insert(C);
   EXPECT_EQ(true, I.second);
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // Occupancy lives in the used-bit array rather than a sentinel key stored in
+  // a bucket, so a value equal to the Empty/Tombstone key can be inserted like
+  // any other.
   TypeParam D;
-  EXPECT_DEATH(Set.insert(D),
-               "Empty/Tombstone value shouldn't be inserted into map!");
-#endif
+  EXPECT_EQ(true, Set.insert(D).second);
+  EXPECT_EQ(1U, Set.count(D));
+  EXPECT_EQ(true, Set.erase(D));
 
   EXPECT_EQ(3U, Set.size());
   EXPECT_EQ(1U, Set.count(A));

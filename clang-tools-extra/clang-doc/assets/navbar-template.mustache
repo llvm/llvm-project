@@ -1,0 +1,33 @@
+<nav class="navbar">
+    <div class="navbar__container">
+        {{#ProjectName}}
+        <div class="navbar__logo">
+            {{ProjectName}}
+        </div>
+        {{/ProjectName}}
+        <div class="navbar__menu">
+            <ul class="navbar__links">
+                <li class="navbar__item">
+                    <a href="{{Homepage}}" class="navbar__link">Home</a>
+                </li>
+            </ul>
+        </div>
+        <button id="themeToggle"><span class="material-symbols-rounded">routine</span></button>
+    </div>
+    {{#HasContexts}}
+    <div class="navbar-breadcrumb-container">
+        {{#Contexts}}
+        <a href="{{RelativePath}}{{DocumentationFileName}}.html"><div class="navbar-breadcrumb-item">{{Name}}</div></a>{{^End}}::{{/End}}
+        {{/Contexts}}
+    </div>
+    {{/HasContexts}}
+</nav>
+<script>
+    themeToggle.onclick = () => {
+      const currentTheme = root.getAttribute("color-scheme");
+      const next = currentTheme === "dark" ? "light" : "dark";
+      changeHighlightJS(next);
+      root.setAttribute("color-scheme", next);
+      localStorage.setItem("theme", next);
+    };
+</script>

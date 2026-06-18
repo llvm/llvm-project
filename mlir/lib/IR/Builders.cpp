@@ -34,6 +34,10 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 
 FloatType Builder::getF8E8M0Type() { return Float8E8M0FNUType::get(context); }
 
+FloatType Builder::getF8E4M3FNType() { return Float8E4M3FNType::get(context); }
+
+FloatType Builder::getF8E5M2Type() { return Float8E5M2Type::get(context); }
+
 FloatType Builder::getBF16Type() { return BFloat16Type::get(context); }
 
 FloatType Builder::getF16Type() { return Float16Type::get(context); }
@@ -215,7 +219,8 @@ IntegerAttr Builder::getUI32IntegerAttr(uint32_t value) {
 }
 
 IntegerAttr Builder::getI16IntegerAttr(int16_t value) {
-  return IntegerAttr::get(getIntegerType(16), APInt(16, value));
+  return IntegerAttr::get(getIntegerType(16),
+                          APInt(16, value, /*isSigned=*/true));
 }
 
 IntegerAttr Builder::getI8IntegerAttr(int8_t value) {
@@ -489,13 +494,6 @@ OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
   SmallVector<OpFoldResult, 4> foldResults;
   LDBG() << "Trying to fold: "
          << OpWithFlags(op, OpPrintingFlags().skipRegions());
-  if (op->getName().getStringRef() == "vector.extract") {
-    Operation *parent = op->getParentOp();
-    while (parent && parent->getName().getStringRef() != "spirv.func")
-      parent = parent->getParentOp();
-    if (parent)
-      parent->dump();
-  }
   if (failed(op->fold(foldResults)))
     return cleanupFailure();
 

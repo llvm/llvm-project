@@ -128,7 +128,7 @@ struct LoopVectorizeResult {
 };
 
 /// The LoopVectorize Pass.
-struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
+struct LoopVectorizePass : public OptionalPassInfoMixin<LoopVectorizePass> {
 private:
   /// If false, consider all loops for interleaving.
   /// If true, only loops that explicitly request interleaving are considered.
@@ -145,7 +145,7 @@ public:
   LoopInfo *LI;
   TargetTransformInfo *TTI;
   DominatorTree *DT;
-  BlockFrequencyInfo *BFI;
+  std::function<BlockFrequencyInfo &()> GetBFI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
   AssumptionCache *AC;
@@ -164,23 +164,6 @@ public:
 
   LLVM_ABI bool processLoop(Loop *L);
 };
-
-/// Reports a vectorization failure: print \p DebugMsg for debugging
-/// purposes along with the corresponding optimization remark \p RemarkName.
-/// If \p I is passed, it is an instruction that prevents vectorization.
-/// Otherwise, the loop \p TheLoop is used for the location of the remark.
-LLVM_ABI void reportVectorizationFailure(
-    const StringRef DebugMsg, const StringRef OREMsg, const StringRef ORETag,
-    OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
-
-/// Same as above, but the debug message and optimization remark are identical
-inline void reportVectorizationFailure(const StringRef DebugMsg,
-                                       const StringRef ORETag,
-                                       OptimizationRemarkEmitter *ORE,
-                                       Loop *TheLoop,
-                                       Instruction *I = nullptr) {
-  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
-}
 
 /// A marker analysis to determine if extra passes should be run after loop
 /// vectorization.

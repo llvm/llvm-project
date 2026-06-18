@@ -9,6 +9,7 @@
 #include "UnwindWasm.h"
 #include "Plugins/Process/gdb-remote/ThreadGDBRemote.h"
 #include "ProcessWasm.h"
+#include "RegisterContextWasm.h"
 #include "ThreadWasm.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -17,21 +18,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace process_gdb_remote;
 using namespace wasm;
-
-class WasmGDBRemoteRegisterContext : public GDBRemoteRegisterContext {
-public:
-  WasmGDBRemoteRegisterContext(ThreadGDBRemote &thread,
-                               uint32_t concrete_frame_idx,
-                               GDBRemoteDynamicRegisterInfoSP &reg_info_sp,
-                               uint64_t pc)
-      : GDBRemoteRegisterContext(thread, concrete_frame_idx, reg_info_sp, false,
-                                 false) {
-    // Wasm does not have a fixed set of registers but relies on a mechanism
-    // named local and global variables to store information such as the stack
-    // pointer. The only actual register is the PC.
-    PrivateSetRegisterValue(0, pc);
-  }
-};
 
 lldb::RegisterContextSP
 UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
@@ -43,9 +29,9 @@ UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   ProcessWasm *wasm_process =
       static_cast<ProcessWasm *>(thread->GetProcess().get());
 
-  return std::make_shared<WasmGDBRemoteRegisterContext>(
-      *gdb_thread, frame->GetConcreteFrameIndex(),
-      wasm_process->GetRegisterInfo(), m_frames[frame->GetFrameIndex()]);
+  return std::make_shared<RegisterContextWasm>(*gdb_thread,
+                                               frame->GetConcreteFrameIndex(),
+                                               wasm_process->GetRegisterInfo());
 }
 
 uint32_t UnwindWasm::DoGetFrameCount() {

@@ -99,6 +99,9 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
     return eCallbackReturnContinue;
 
   CompileUnit *cu = context.comp_unit;
+  if (!cu)
+    return eCallbackReturnContinue;
+
   FileSpec cu_file_spec = cu->GetPrimaryFile();
   std::vector<uint32_t> line_matches;
   context.target_sp->GetSourceManager().FindLinesMatchingRegex(
@@ -119,11 +122,11 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
       for (size_t i = 0; i < sc_list.GetSize(); i++) {
         SymbolContext sc_ctx;
         sc_list.GetContextAtIndex(i, sc_ctx);
-        std::string name(
+        std::string name =
             sc_ctx
                 .GetFunctionName(
                     Mangled::NamePreference::ePreferDemangledWithoutArguments)
-                .AsCString());
+                .GetString();
         if (!m_function_names.count(name)) {
           sc_to_remove.push_back(i);
         }
