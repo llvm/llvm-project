@@ -6992,7 +6992,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(
     return ReplaceWith(VPI, RecipeBuilder.handleReplication(VPI, Range));
   };
 
-  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPlanTransforms::runPass(
       "lowerMemoryIdioms", ProcessSubset, Plan, [&](VPInstruction *VPI) {
