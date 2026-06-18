@@ -137,6 +137,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/OverridePureVirtualsTests.cpp
   tweaks/PopulateSwitchTests.cpp
   tweaks/RawStringLiteralTests.cpp
+  tweaks/ReplaceQualifiedWithAliasTests.cpp
   tweaks/RemoveUsingNamespaceTests.cpp
   tweaks/ScopifyEnumTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
