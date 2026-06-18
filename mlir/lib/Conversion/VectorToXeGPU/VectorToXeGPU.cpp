@@ -825,7 +825,8 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
                                   /*l1_hint=*/xegpu::CachePolicyAttr{},
                                   /*l2_hint=*/xegpu::CachePolicyAttr{},
                                   /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                  /*layout=*/nullptr, /*coalesce_hint=*/nullptr);
+                                  /*layout=*/nullptr,
+                                  /*coalesce_hint=*/nullptr);
     rewriter.eraseOp(scatterOp);
     return success();
   }
