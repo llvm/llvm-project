@@ -756,6 +756,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNo);
+    const bool IsIntel = MI->getInlineAsmDialect() == InlineAsm::AD_Intel;
 
     switch (ExtraCode[0]) {
     default:
@@ -778,9 +779,9 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
-        O << '(';
+        O << (IsIntel ? '[' : '(');
         PrintOperand(MI, OpNo, O);
-        O << ')';
+        O << (IsIntel ? ']' : ')');
         return false;
       }
 
@@ -804,7 +805,8 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
     case 'A': // Print '*' before a register (it must be a register)
       if (MO.isReg()) {
-        O << '*';
+        if (!IsIntel)
+          O << '*';
         PrintOperand(MI, OpNo, O);
         return false;
       }
