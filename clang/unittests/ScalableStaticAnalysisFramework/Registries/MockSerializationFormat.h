@@ -44,6 +44,16 @@ public:
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override;
+
+  llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override;
+
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &E,
+                                    llvm::StringRef Path) override;
+
   llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override;
 
   llvm::Error writeWPASuite(const WPASuite &Suite,

@@ -160,6 +160,36 @@ struct SelectOpInterface
     populateBounds(cast<SelectOp>(op), dim, cstr);
   }
 };
+
+struct MinSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<MinSIOpInterface,
+                                                   arith::MinSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto minOp = cast<arith::MinSIOp>(op);
+    assert(value == minOp.getResult() && "invalid value");
+
+    AffineExpr lhs = cstr.getExpr(minOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(minOp.getRhs());
+    cstr.bound(value) <= lhs;
+    cstr.bound(value) <= rhs;
+  }
+};
+
+struct MaxSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<MaxSIOpInterface,
+                                                   arith::MaxSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto maxOp = cast<arith::MaxSIOp>(op);
+    assert(value == maxOp.getResult() && "invalid value");
+    
+    AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
+    cstr.bound(value) >= lhs;
+    cstr.bound(value) >= rhs;
+  }
+};
 } // namespace
 } // namespace arith
 } // namespace mlir
@@ -173,5 +203,7 @@ void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
     arith::FloorDivSIOp::attachInterface<arith::FloorDivSIOpInterface>(*ctx);
     arith::SelectOp::attachInterface<arith::SelectOpInterface>(*ctx);
+    arith::MinSIOp::attachInterface<arith::MinSIOpInterface>(*ctx);
+    arith::MaxSIOp::attachInterface<arith::MaxSIOpInterface>(*ctx);
   });
 }

@@ -18,6 +18,8 @@
 namespace llvm {
 
 class MachineIRBuilder;
+class SIInstrInfo;
+class SIMachineFunctionInfo;
 
 namespace AMDGPU {
 
@@ -38,7 +40,9 @@ struct WaterfallInfo {
 // instruction(s).
 class RegBankLegalizeHelper {
   MachineFunction &MF;
+  const SIMachineFunctionInfo *MFI;
   const GCNSubtarget &ST;
+  const SIInstrInfo &TII;
   MachineIRBuilder &B;
   MachineRegisterInfo &MRI;
   const MachineUniformityInfo &MUI;
@@ -113,6 +117,10 @@ private:
                   const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs,
                   WaterfallInfo &WFI);
 
+  unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
+                            Register &VOffsetReg, Register &SOffsetReg,
+                            int64_t &InstOffsetVal, Align Alignment);
+
   bool splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
   bool widenLoad(MachineInstr &MI, LLT WideTy, LLT MergeTy = LLT());
@@ -138,6 +146,7 @@ private:
   bool lowerSplitBitCount64To32(MachineInstr &MI);
   bool lowerUnpackMinMax(MachineInstr &MI);
   bool lowerUnpackAExt(MachineInstr &MI);
+  bool lowerSBufToBuf(MachineInstr &MI, WaterfallInfo &WFI);
   bool lowerExtrVecEltToSel(MachineInstr &MI);
   bool lowerExtrVecEltTo32(MachineInstr &MI);
   bool lowerInsVecEltToSel(MachineInstr &MI);

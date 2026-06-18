@@ -1286,6 +1286,15 @@ func.func @test_gather_tensor_size_invalid(%arg0: tensor<536870912x21x3xf32>, %a
 
 // -----
 
+func.func @test_row_gather_tensor_size_invalid(%arg0: tensor<536870912x21x3xf32>, %arg1: tensor<536870912x26xi32>) -> tensor<536870912x52x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<536870912x21x3xf32>, tensor<536870912x26xi32>, tensor<1xi32>) -> tensor<536870912x52x3xf32>
+  return %0 : tensor<536870912x52x3xf32>
+}
+
+// -----
+
 func.func @test_custom_tensor_size_invalid(%arg0: tensor<536870912xi32>) -> tensor<536870912xi32> {
   // expected-error@+1 {{'tosa.custom' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.custom %arg0 {operator_name="custom_test", domain_name="tosa.mlir_test", implementation_attrs="" } : (tensor<536870912xi32>) -> (tensor<536870912xi32>)

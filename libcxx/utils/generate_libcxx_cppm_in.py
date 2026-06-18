@@ -12,7 +12,6 @@ import sys
 from libcxx.header_information import (
     module_c_headers,
     module_headers,
-    header_restrictions,
     headers_not_available,
     libcxx_root,
 )
@@ -46,16 +45,7 @@ module;
 """
         )
         for header in sorted(module_headers if module == "std" else module_c_headers):
-            if header in header_restrictions:
-                module_cpp_in.write(
-                    f"""\
-#if {header_restrictions[header]}
-#  include <{header}>
-#endif
-"""
-                )
-            else:
-                module_cpp_in.write(f"#include <{header}>\n")
+            module_cpp_in.write(f"#include <{header}>\n")
 
         module_cpp_in.write(
             """

@@ -300,7 +300,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
     const Align RetAlignment =
-        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
+        getPTXParamAlign(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -1406,17 +1406,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
-      if (MaybeAlign StackAlign =
-              getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
-        return StackAlign.value();
-
-      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
-      MaybeAlign ParamAlign =
-          Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
-      return std::max(TypeAlign, ParamAlign.valueOrOne());
-    };
-
     if (Arg.hasByValAttr()) {
       // param has byVal attribute.
       Type *ETy = Arg.getParamByValType();
@@ -1427,9 +1416,11 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
       const Align OptimalAlign =
-          IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : getFunctionByValParamAlign(
-                             F, ETy, Arg.getParamAlign().valueOrOne(), DL);
+          IsKernelFunc
+              ? getPTXParamAlign(
+                    F, ETy, Arg.getArgNo() + AttributeList::FirstArgIndex, DL)
+              : getDeviceByValParamAlign(F, ETy,
+                                         Arg.getParamAlign().valueOrOne(), DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
@@ -1441,7 +1432,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
-      Align OptimalAlign = GetOptimalAlignForParam(Ty);
+      Align OptimalAlign = getPTXParamAlign(
+          F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(Ty) << "]";
@@ -1690,7 +1682,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         break;
       }
       // A symbol-relative integer whose offset is applied outside the
-      // ptrtoint, e.g. add/sub(ptrtoint(@g), C). It can't fold to a ConstantInt
+      // ptrtoint, e.g. add(ptrtoint(@g), C). It can't fold to a ConstantInt
       // because it references a symbol; emit it through lowerConstantForGV, the
       // same path scalar symbol-relative integer globals use.
       AggBuffer->addSymbol(Cexpr, Cexpr);
@@ -1991,15 +1983,12 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
 
   // The MC library also has a right-shift operator, but it isn't consistently
   // signed or unsigned between different targets.
-  case Instruction::Add:
-  case Instruction::Sub: {
+  case Instruction::Add: {
     const MCExpr *LHS = lowerConstantForGV(CE->getOperand(0), ProcessingGeneric);
     const MCExpr *RHS = lowerConstantForGV(CE->getOperand(1), ProcessingGeneric);
     switch (CE->getOpcode()) {
     default: llvm_unreachable("Unknown binary operator constant cast expr");
     case Instruction::Add: return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
-    case Instruction::Sub:
-      return MCBinaryExpr::createSub(LHS, RHS, Ctx);
     }
   }
   }

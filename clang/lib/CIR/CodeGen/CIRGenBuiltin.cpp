@@ -1171,7 +1171,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIconjf:
   case Builtin::BIconjl: {
     mlir::Value complex = emitComplexExpr(e->getArg(0));
-    mlir::Value conj = builder.createNot(complex);
+    mlir::Value conj = builder.createComplexConj(loc, complex);
     return RValue::getComplex(conj);
   }
 
@@ -1265,6 +1265,27 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     auto result = cir::ExpectOp::create(builder, loc, argValue.getType(),
                                         argValue, expectedValue, probAttr);
     return RValue::get(result);
+  }
+
+  case Builtin::BI__builtin_bswapg: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    // CIR models bool as cir.bool rather than an integer, so peel it off
+    // before the cast below.  Like classic codegen's i1 case, it byte-swaps
+    // to itself.
+    if (mlir::isa<cir::BoolType>(arg.getType()))
+      return RValue::get(arg);
+    auto argTy = mlir::cast<cir::IntType>(arg.getType());
+    // A single bit or a single byte byte-swaps to itself.
+    if (argTy.getWidth() == 1 || argTy.getWidth() == 8)
+      return RValue::get(arg);
+    assert(argTy.getWidth() % 16 == 0 &&
+           "__builtin_bswapg requires a single byte or a multiple of 16 bits");
+    // cir.byte_swap requires an unsigned operand.  Reinterpret a signed
+    // argument as unsigned of the same width; createBuiltinBitOp casts the
+    // swapped result back to the builtin's (possibly signed) return type.
+    if (argTy.isSigned())
+      arg = builder.createIntCast(arg, builder.getUIntNTy(argTy.getWidth()));
+    return RValue::get(createBuiltinBitOp<cir::ByteSwapOp>(*this, e, arg));
   }
 
   case Builtin::BI__builtin_bswap16:
