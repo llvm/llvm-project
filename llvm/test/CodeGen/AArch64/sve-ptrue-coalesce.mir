@@ -193,7 +193,6 @@ body:             |
     RET_ReallyLR
 
 ...
-
 ---
 name:            keep_ptrue_h_when_b_user_would_observe_extra_lanes
 alignment:       2
@@ -327,6 +326,92 @@ body:             |
   bb.2:
     %1:ppr_3b = PTRUE_H 31, implicit $vg
     %4:ppr = CMPEQ_PPzZZ_H %1, %2, %3, implicit-def dead $nzcv
+    RET_ReallyLR
+
+...
+---
+name:            ptrue_s_replaces_and_updates_ptrue_d_for_ld1w_sdiv_st1w
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64common }
+  - { id: 1, class: ppr_3b }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: zpr }
+  - { id: 5, class: zpr }
+  - { id: 6, class: zpr }
+  - { id: 7, class: zpr }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%6' }
+body:             |
+  bb.0:
+    liveins: $x0, $z0
+
+    ; CHECK-LABEL: name: ptrue_s_replaces_and_updates_ptrue_d_for_ld1w_sdiv_st1w
+    ; CHECK: liveins: $x0, $z0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z0
+    ; CHECK-NEXT: [[PTRUE_S:%[0-9]+]]:ppr_3b = PTRUE_S 31, implicit $vg
+    ; CHECK-NEXT: [[LD1W_D_IMM:%[0-9]+]]:zpr = LD1W_D_IMM [[PTRUE_S]], [[COPY]], 0 :: (load (<vscale x 1 x s64>))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:zpr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[PTRUE_D:%[0-9]+]]:ppr_3b = PTRUE_D 31, implicit $vg
+    ; CHECK-NEXT: [[SDIV_ZPZZ_S_UNDEF:%[0-9]+]]:zpr = SDIV_ZPZZ_S_UNDEF [[PTRUE_D]], [[DEF]], [[COPY1]]
+    ; CHECK-NEXT: ST1W_IMM [[SDIV_ZPZZ_S_UNDEF]], [[PTRUE_D]], [[COPY]], 0 :: (store (<vscale x 4 x s32>))
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:gpr64common = COPY $x0
+    %6:zpr = COPY $z0
+    %1:ppr_3b = PTRUE_S 31, implicit $vg
+    %2:zpr = LD1W_D_IMM %1, %0, 0 :: (load (<vscale x 1 x s64>))
+    %7:zpr = IMPLICIT_DEF
+    %3:ppr_3b = PTRUE_D 31, implicit $vg
+    %4:zpr = SDIV_ZPZZ_S_UNDEF %3, %7, %6
+    ST1W_IMM %4, %3, %0, 0 :: (store (<vscale x 4 x s32>))
+    RET_ReallyLR
+
+...
+---
+name:            ptrue_s_replaces_and_updates_ptrue_d_for_ld1w_clz_st1w
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64common }
+  - { id: 1, class: ppr_3b }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: zpr }
+  - { id: 5, class: zpr }
+  - { id: 6, class: zpr }
+  - { id: 7, class: zpr }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%6' }
+body:             |
+  bb.0:
+    liveins: $x0, $z0
+
+    ; CHECK-LABEL: name: ptrue_s_replaces_and_updates_ptrue_d_for_ld1w_clz_st1w
+    ; CHECK: liveins: $x0, $z0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z0
+    ; CHECK-NEXT: [[PTRUE_D:%[0-9]+]]:ppr_3b = PTRUE_D 31, implicit $vg
+    ; CHECK-NEXT: [[LD1W_D_IMM:%[0-9]+]]:zpr = LD1W_D_IMM [[PTRUE_D]], [[COPY]], 0 :: (load (<vscale x 1 x s64>))
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:zpr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[PTRUE_S:%[0-9]+]]:ppr_3b = PTRUE_S 31, implicit $vg
+    ; CHECK-NEXT: [[CLZ_ZPmZ_S_UNDEF:%[0-9]+]]:zpr = CLZ_ZPmZ_S_UNDEF [[DEF]], [[PTRUE_D]], [[LD1W_D_IMM]]
+    ; CHECK-NEXT: ST1W_IMM [[CLZ_ZPmZ_S_UNDEF]], [[PTRUE_S]], [[COPY]], 0 :: (store (<vscale x 4 x s32>))
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:gpr64common = COPY $x0
+    %6:zpr = COPY $z0
+    %1:ppr_3b = PTRUE_D 31, implicit $vg
+    %2:zpr = LD1W_D_IMM %1, %0, 0 :: (load (<vscale x 1 x s64>))
+    %7:zpr = IMPLICIT_DEF
+    %3:ppr_3b = PTRUE_S 31, implicit $vg
+    %4:zpr = CLZ_ZPmZ_S_UNDEF %7, %1, %2
+    ST1W_IMM %4, %3, %0, 0 :: (store (<vscale x 4 x s32>))
     RET_ReallyLR
 
 ...
