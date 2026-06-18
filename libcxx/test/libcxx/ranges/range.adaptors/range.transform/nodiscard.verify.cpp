@@ -30,41 +30,43 @@ void test() {
   const auto const_identity_view     = TestView{} | std::views::transform(std::identity{});
   const auto const_transformed_range = range | std::views::transform(f);
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  identity_view.begin();
+  {
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    identity_view.begin();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_identity_view.begin();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    const_identity_view.begin();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  transformed_range.begin();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    transformed_range.begin();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_transformed_range.begin();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    const_transformed_range.begin();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  identity_view.end();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    identity_view.end();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_identity_view.end();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    const_identity_view.end();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  transformed_range.end();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    transformed_range.end();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_transformed_range.end();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    const_transformed_range.end();
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(f);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::views::transform(f);
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(range, f);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::views::transform(range, f);
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  range | std::views::transform(f);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    range | std::views::transform(f);
 
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::all | std::views::transform(f);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::views::all | std::views::transform(f);
+  }
 
   //===---------------------------------------------------------------------------------------===//
   //=== ADL-based begin() / end() ===//
