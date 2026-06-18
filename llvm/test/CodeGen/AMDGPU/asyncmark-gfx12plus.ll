@@ -471,15 +471,13 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ; GISEL-NEXT:    s_lshl_b32 s1, s0, 2
 ; GISEL-NEXT:    s_add_co_i32 s4, s18, s8
 ; GISEL-NEXT:    s_add_co_u32 s1, s10, s1
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s1
 ; GISEL-NEXT:    ds_load_b32 v1, v0
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GISEL-NEXT:    s_add_co_i32 s1, s4, s1
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GISEL-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v2, s1
 ; GISEL-NEXT:    s_add_co_i32 s1, s9, s19
 ; GISEL-NEXT:    global_store_b32 v1, v2, s[2:3] scale_offset
 ; GISEL-NEXT:    ; wait_asyncmark(0)
