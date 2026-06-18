@@ -999,7 +999,7 @@ static bool hoistPtrAuth(PHINode *PN, DomTreeUpdater *DTU) {
   if (std::any_of(II->getParent()->begin(), BasicBlock::iterator(II),
                   [](Instruction &I) { return !I.willReturn(); }))
     return false;
-  
+
   // Because SplitEdge may change the number of successors for the phi, keep
   // trying until we run through the incoming blocks with a unique successor
   // for each.
