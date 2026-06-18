@@ -55,6 +55,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -256,10 +257,95 @@ class WebAssemblyFixIrreducibleControlFlow final : public MachineFunctionPass {
   void makeSingleEntryLoop(const BlockSet &Entries, BlockSet &Blocks,
                            MachineFunction &MF, const ReachabilityGraph &Graph);
 
+  void makeSingleEntryLoopEHPad(const BlockSet &Entries, BlockSet &Blocks,
+                                MachineFunction &MF,
+                                const ReachabilityGraph &Graph);
+
 public:
   static char ID; // Pass identification, replacement for typeid
   WebAssemblyFixIrreducibleControlFlow() : MachineFunctionPass(ID) {}
 };
+
+static bool entriesHasEHPad(const BlockSet &Entries) {
+  return llvm::any_of(
+      Entries, [](const MachineBasicBlock *MBB) { return MBB->isEHPad(); });
+}
+
+// Clone MBB for the PredMBB -> MBB edge while preserving the cloned block's
+// outgoing fallthrough behavior.
+static MachineBasicBlock *cloneBlockForPredecessor(MachineBasicBlock *MBB,
+                                                   MachineBasicBlock *PredMBB,
+                                                   MachineFunction *MF) {
+  assert(PredMBB->isSuccessor(MBB) &&
+         "cannot clone edge: PredMBB does not branch to MBB");
+
+  MachineBasicBlock *FallThrough = MBB->getFallThrough(false);
+  bool PredFallsThrough = PredMBB->isLayoutSuccessor(MBB);
+  MachineBasicBlock *Clone = MF->CreateMachineBasicBlock(MBB->getBasicBlock());
+  Clone->setIsEHPad(MBB->isEHPad());
+
+  if (PredFallsThrough)
+    MF->insert(std::next(PredMBB->getIterator()), Clone);
+  else
+    MF->push_back(Clone);
+
+  for (const auto &LiveIn : MBB->liveins())
+    Clone->addLiveIn(LiveIn);
+
+  for (auto *Succ : MBB->successors())
+    Clone->addSuccessor(Succ);
+
+  for (const MachineInstr &MI : *MBB) {
+    MachineInstr *NewMI = MF->CloneMachineInstr(&MI);
+    if (NewMI->getOpcode() == WebAssembly::EH_LABEL) {
+      MCSymbol *Sym = MF->getContext().createTempSymbol();
+      NewMI->getOperand(0).ChangeToMCSymbol(Sym);
+    }
+    Clone->push_back(NewMI);
+  }
+
+  for (MachineInstr &MI : PredMBB->terminators())
+    for (MachineOperand &MO : MI.operands())
+      if (MO.isMBB() && MO.getMBB() == MBB)
+        MO.setMBB(Clone);
+
+  if (FallThrough && !Clone->isLayoutSuccessor(FallThrough)) {
+    const auto &TII = *MF->getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+    BuildMI(Clone, DebugLoc(), TII.get(WebAssembly::BR)).addMBB(FallThrough);
+  }
+  PredMBB->replaceSuccessor(MBB, Clone);
+
+  return Clone;
+}
+
+void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoopEHPad(
+    const BlockSet &Entries, BlockSet &Blocks, MachineFunction &MF,
+    const ReachabilityGraph &Graph) {
+  SmallSetVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>, 8>
+      PredEHPadEdges;
+
+  // Clone only normal predecessors inside the same SCC. Other predecessors keep
+  // entering the original EH pad.
+  for (auto Entry : Entries) {
+    if (Entry->isEHPad())
+      for (auto Pred : Entry->predecessors())
+        if (Blocks.count(Pred) && !Pred->isEHPad() &&
+            Graph.getSCCId(Pred) == Graph.getSCCId(Entry))
+          PredEHPadEdges.insert({Pred, Entry});
+  }
+  assert(!PredEHPadEdges.empty() &&
+         "EH pad irreducibility requires a clonable in-SCC predecessor");
+
+  for (const auto &Edge : PredEHPadEdges) {
+    auto *Pred = Edge.first;
+    auto *EHPadEntry = Edge.second;
+
+    MachineBasicBlock *CloneMBB =
+        cloneBlockForPredecessor(EHPadEntry, Pred, &MF);
+
+    Blocks.insert(CloneMBB);
+  }
+}
 
 bool WebAssemblyFixIrreducibleControlFlow::processRegion(
     MachineBasicBlock *Entry, BlockSet &Blocks, MachineFunction &MF) {
@@ -301,7 +387,11 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
           Graph.getLoopEntriesForSCC(Graph.getSCCId(LoopEntry));
 
       if (MutualLoopEntries.size() > 1) {
-        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        if (entriesHasEHPad(MutualLoopEntries)) {
+          makeSingleEntryLoopEHPad(MutualLoopEntries, Blocks, MF, Graph);
+        } else {
+          makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        }
         FoundIrreducibility = true;
         Changed = true;
         break;
@@ -353,6 +443,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
     const BlockSet &Entries, BlockSet &Blocks, MachineFunction &MF,
     const ReachabilityGraph &Graph) {
   assert(Entries.size() >= 2);
+  assert(!entriesHasEHPad(Entries) && "Entries must not have EHPad");
 
   // Sort the entries to ensure a deterministic build.
   BlockVector SortedEntries = getSortedEntries(Entries);
