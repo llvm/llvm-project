@@ -162,6 +162,13 @@ protected:
   void printFPImmOperand(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 
+  template <typename LookupFn, typename DecodeFn>
+  void printNamedHintOp(unsigned Encoded, raw_ostream &O,
+                        LookupFn LookupByEncoding, DecodeFn DecodeValue);
+
+  static unsigned decodeIdentityHint(unsigned Value) { return Value; }
+  static unsigned decodeBTIHint(unsigned Value) { return Value ^ 32; }
+
   void printVectorList(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O,
                        StringRef LayoutSuffix);

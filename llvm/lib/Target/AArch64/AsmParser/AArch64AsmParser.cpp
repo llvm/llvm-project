@@ -300,6 +300,24 @@ private:
   ParseStatus tryParseImmRange(OperandVector &Operands);
   template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
   ParseStatus tryParsePHintInstOperand(OperandVector &Operands);
+  template <typename LookupFn, typename CreateFn>
+  ParseStatus tryParseNamedHintOperand(OperandVector &Operands,
+                                       LookupFn LookupByName,
+                                       CreateFn CreateOperand) {
+    SMLoc S = getLoc();
+    const AsmToken &Tok = getTok();
+    if (Tok.isNot(AsmToken::Identifier))
+      return TokError("invalid operand for instruction");
+
+    auto Entry = LookupByName(Tok.getString());
+    if (!Entry)
+      return TokError("invalid operand for instruction");
+
+    Operands.push_back(
+        CreateOperand(Entry->Encoding, Tok.getString(), S, getContext()));
+    Lex(); // Eat identifier token.
+    return ParseStatus::Success;
+  }
 
 public:
   enum AArch64MatchResultTy {
@@ -490,31 +508,16 @@ private:
     unsigned Val;
   };
 
-  struct PSBHintOp {
+  struct NamedHintOp {
     const char *Data;
     unsigned Length;
     unsigned Val;
   };
-  struct PHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
-  struct BTIHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
-  struct CMHPriorityHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
-  struct TIndexHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
+  using PSBHintOp = NamedHintOp;
+  using PHintOp = NamedHintOp;
+  using BTIHintOp = NamedHintOp;
+  using CMHPriorityHintOp = NamedHintOp;
+  using TIndexHintOp = NamedHintOp;
 
   struct SVCROp {
     const char *Data;
@@ -523,28 +526,28 @@ private:
   };
 
   union {
-    struct TokOp Tok;
-    struct RegOp Reg;
-    struct MatrixRegOp MatrixReg;
-    struct MatrixTileListOp MatrixTileList;
-    struct VectorListOp VectorList;
-    struct VectorIndexOp VectorIndex;
-    struct ImmOp Imm;
-    struct ShiftedImmOp ShiftedImm;
-    struct ImmRangeOp ImmRange;
-    struct CondCodeOp CondCode;
-    struct FPImmOp FPImm;
-    struct BarrierOp Barrier;
-    struct SysRegOp SysReg;
-    struct SysCRImmOp SysCRImm;
-    struct PrefetchOp Prefetch;
-    struct PSBHintOp PSBHint;
-    struct PHintOp PHint;
-    struct BTIHintOp BTIHint;
-    struct CMHPriorityHintOp CMHPriorityHint;
-    struct TIndexHintOp TIndexHint;
-    struct ShiftExtendOp ShiftExtend;
-    struct SVCROp SVCR;
+    TokOp Tok;
+    RegOp Reg;
+    MatrixRegOp MatrixReg;
+    MatrixTileListOp MatrixTileList;
+    VectorListOp VectorList;
+    VectorIndexOp VectorIndex;
+    ImmOp Imm;
+    ShiftedImmOp ShiftedImm;
+    ImmRangeOp ImmRange;
+    CondCodeOp CondCode;
+    FPImmOp FPImm;
+    BarrierOp Barrier;
+    SysRegOp SysReg;
+    SysCRImmOp SysCRImm;
+    PrefetchOp Prefetch;
+    PSBHintOp PSBHint;
+    PHintOp PHint;
+    BTIHintOp BTIHint;
+    CMHPriorityHintOp CMHPriorityHint;
+    TIndexHintOp TIndexHint;
+    ShiftExtendOp ShiftExtend;
+    SVCROp SVCR;
   };
 
   // Keep the MCContext around as the MCExprs may need manipulated during
@@ -2540,15 +2543,33 @@ public:
     return Op;
   }
 
+  struct IdentityHintEncoding {
+    unsigned operator()(unsigned Val) const { return Val; }
+  };
+
+  struct BTIHintEncoding {
+    unsigned operator()(unsigned Val) const { return Val | 32; }
+  };
+
+  template <KindTy Kind, NamedHintOp AArch64Operand::*Member,
+            typename Encode = IdentityHintEncoding>
   static std::unique_ptr<AArch64Operand>
-  CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_PHint, Ctx);
-    Op->PHint.Val = Val;
-    Op->PHint.Data = Str.data();
-    Op->PHint.Length = Str.size();
+  CreateNamedHintOperand(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx,
+                         Encode EncodeVal = {}) {
+    auto Op = std::make_unique<AArch64Operand>(Kind, Ctx);
+    auto &Hint = Op.get()->*Member;
+    Hint.Val = EncodeVal(Val);
+    Hint.Data = Str.data();
+    Hint.Length = Str.size();
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
+  CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    return CreateNamedHintOperand<k_PHint, &AArch64Operand::PHint>(Val, Str, S,
+                                                                   Ctx);
   }
 
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
@@ -2566,8 +2587,8 @@ public:
                                                         MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_Prefetch, Ctx);
     Op->Prefetch.Val = Val;
-    Op->Barrier.Data = Str.data();
-    Op->Barrier.Length = Str.size();
+    Op->Prefetch.Data = Str.data();
+    Op->Prefetch.Length = Str.size();
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -2577,48 +2598,29 @@ public:
                                                        StringRef Str,
                                                        SMLoc S,
                                                        MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_PSBHint, Ctx);
-    Op->PSBHint.Val = Val;
-    Op->PSBHint.Data = Str.data();
-    Op->PSBHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
+    return CreateNamedHintOperand<k_PSBHint, &AArch64Operand::PSBHint>(Val, Str,
+                                                                       S, Ctx);
   }
 
   static std::unique_ptr<AArch64Operand> CreateBTIHint(unsigned Val,
                                                        StringRef Str,
                                                        SMLoc S,
                                                        MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_BTIHint, Ctx);
-    Op->BTIHint.Val = Val | 32;
-    Op->BTIHint.Data = Str.data();
-    Op->BTIHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
+    return CreateNamedHintOperand<k_BTIHint, &AArch64Operand::BTIHint,
+                                  BTIHintEncoding>(Val, Str, S, Ctx);
   }
 
   static std::unique_ptr<AArch64Operand>
   CreateCMHPriorityHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_CMHPriorityHint, Ctx);
-    Op->CMHPriorityHint.Val = Val;
-    Op->CMHPriorityHint.Data = Str.data();
-    Op->CMHPriorityHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
+    return CreateNamedHintOperand<k_CMHPriorityHint,
+                                  &AArch64Operand::CMHPriorityHint>(Val, Str, S,
+                                                                    Ctx);
   }
 
   static std::unique_ptr<AArch64Operand>
   CreateTIndexHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_TIndexHint, Ctx);
-    Op->TIndexHint.Val = Val;
-    Op->TIndexHint.Data = Str.data();
-    Op->TIndexHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
+    return CreateNamedHintOperand<k_TIndexHint, &AArch64Operand::TIndexHint>(
+        Val, Str, S, Ctx);
   }
 
   static std::unique_ptr<AArch64Operand>
@@ -3295,19 +3297,8 @@ ParseStatus AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
 
 /// tryParsePSBHint - Try to parse a PSB operand, mapped to Hint command
 ParseStatus AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto PSB = AArch64PSBHint::lookupPSBByName(Tok.getString());
-  if (!PSB)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreatePSBHint(
-      PSB->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
+  return tryParseNamedHintOperand(Operands, AArch64PSBHint::lookupPSBByName,
+                                  AArch64Operand::CreatePSBHint);
 }
 
 ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
@@ -3345,54 +3336,22 @@ ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
 
 /// tryParseBTIHint - Try to parse a BTI operand, mapped to Hint command
 ParseStatus AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto BTI = AArch64BTIHint::lookupBTIByName(Tok.getString());
-  if (!BTI)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreateBTIHint(
-      BTI->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
+  return tryParseNamedHintOperand(Operands, AArch64BTIHint::lookupBTIByName,
+                                  AArch64Operand::CreateBTIHint);
 }
 
 /// tryParseCMHPriorityHint - Try to parse a CMHPriority operand
 ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto CMHPriority =
-      AArch64CMHPriorityHint::lookupCMHPriorityHintByName(Tok.getString());
-  if (!CMHPriority)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreateCMHPriorityHint(
-      CMHPriority->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
+  return tryParseNamedHintOperand(
+      Operands, AArch64CMHPriorityHint::lookupCMHPriorityHintByName,
+      AArch64Operand::CreateCMHPriorityHint);
 }
 
 /// tryParseTIndexHint - Try to parse a TIndex operand
 ParseStatus AArch64AsmParser::tryParseTIndexHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto TIndex = AArch64TIndexHint::lookupTIndexByName(Tok.getString());
-  if (!TIndex)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreateTIndexHint(
-      TIndex->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
+  return tryParseNamedHintOperand(Operands,
+                                  AArch64TIndexHint::lookupTIndexByName,
+                                  AArch64Operand::CreateTIndexHint);
 }
 
 /// tryParseAdrpLabel - Parse and validate a source label for the ADRP
@@ -4423,19 +4382,8 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
 
 ParseStatus
 AArch64AsmParser::tryParsePHintInstOperand(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto PH = AArch64PHint::lookupPHintByName(Tok.getString());
-  if (!PH)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreatePHintInst(
-      PH->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
+  return tryParseNamedHintOperand(Operands, AArch64PHint::lookupPHintByName,
+                                  AArch64Operand::CreatePHintInst);
 }
 
 /// tryParseNeonVectorRegister - Parse a vector register operand.
