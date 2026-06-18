@@ -5068,8 +5068,10 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // We expect the load to become LT.first loads of type LT.second. The
     // latency will be the latency of the last load plus the time it gets to get
     // there, which will be the amount of other loads before that (i.e. total
-    // loads - 1). We get the latency from the SchedModel, and assume that the
-    // loads become the variant with unsigned integer offset.
+    // loads - 1) multiplied by how long it takes to get through them (the
+    // reciprocal of the throughput). We get the latency and reciprocal
+    // throughput from the SchedModel, and assume that the loads become the
+    // variant with unsigned integer offset.
     unsigned Inst = 0;
     if (LT.second.isScalableVector() ||
         ST->useSVEForFixedLengthVectors(LT.second)) {
@@ -5115,7 +5117,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     const MCSchedModel &Sched = ST->getSchedModel();
     const TargetInstrInfo *TII = ST->getInstrInfo();
     unsigned SchedClass = TII->get(Inst).getSchedClass();
-    return (LT.first - 1) + Sched.computeInstrLatency(*ST, SchedClass);
+    const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+    return (LT.first - 1) * Sched.getReciprocalThroughput(*ST, *SCD) +
+           Sched.computeInstrLatency(*ST, *SCD);
   }
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&

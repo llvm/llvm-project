@@ -18,9 +18,9 @@ define void @scalable_loads() {
 ; A510-LABEL: 'scalable_loads'
 ; A510-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %res.nxv8i8 = load <vscale x 8 x i8>, ptr undef, align 8
 ; A510-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %res.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
-; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %res.nxv32i8 = load <vscale x 32 x i8>, ptr undef, align 32
+; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:2 for: %res.nxv32i8 = load <vscale x 32 x i8>, ptr undef, align 32
 ; A510-NEXT:  Cost Model: Found costs of Invalid for: %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef, align 8
-; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %res.nxv32i1 = load <vscale x 32 x i1>, ptr undef, align 4
+; A510-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:2 for: %res.nxv32i1 = load <vscale x 32 x i1>, ptr undef, align 4
 ; A510-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %res.nxv16i1 = load <vscale x 16 x i1>, ptr undef, align 2
 ; A510-NEXT:  Cost Model: Found costs of Invalid for: %res.nxv4i1 = load <vscale x 4 x i1>, ptr undef, align 1
 ; A510-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
