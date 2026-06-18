@@ -455,8 +455,7 @@ struct MIFThisImageOpConversion
           getCoarrayHandle(builder, loc, op.getCoarray());
       if (mlir::Value d = op.getDim()) {
         mlir::Value dim = builder.createTemporary(loc, i32Ty);
-        if (d.getType() != i32Ty)
-          d = fir::ConvertOp::create(builder, loc, i32Ty, d);
+        d = builder.createConvert(loc, i32Ty, d);
         fir::StoreOp::create(builder, loc, d, dim);
         result = builder.createTemporary(loc, i64Ty);
         ftype = mlir::FunctionType::get(builder.getContext(),
