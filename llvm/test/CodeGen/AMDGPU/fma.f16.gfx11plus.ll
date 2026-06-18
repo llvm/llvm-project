@@ -39,10 +39,10 @@ define amdgpu_kernel void @fma_v2f16_divergent(
   ; GFX11-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_CNDMASK_B16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
-  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.7, addrspace 1)
-  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.9, addrspace 1)
+  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.4, addrspace 1)
+  ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.5, addrspace 1)
   ; GFX11-NEXT:   [[V_PK_FMA_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_FMA_F16 0, killed [[REG_SEQUENCE4]], 8, killed [[S_LOAD_DWORD_IMM1]], 8, killed [[S_LOAD_DWORD_IMM2]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_PK_FMA_F16_]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.3, addrspace 1)
+  ; GFX11-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_PK_FMA_F16_]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
       ptr addrspace(1) %r,
     ptr addrspace(1) %fptr,

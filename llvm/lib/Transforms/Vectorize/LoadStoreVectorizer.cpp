@@ -163,9 +163,7 @@ using Chain = SmallVector<ChainElem, 1>;
 /// mixes scalar types, the lane width is the GCD of scalar sizes in the chain.
 /// Mixed chains are normalized to \p b<GCD> (LLVM byte types) so loads/stores
 /// use untyped byte lanes and \p Builder.CreateBitPreservingCastChain restores
-/// int/float/pointer types without ptrtoint/inttoptr for pointers. For sub-byte
-/// GCD widths (\p GCD < 8), uses \p i<GCD> instead of \p b<GCD> because narrow
-/// byte vectors are less common in codegen than \p i1/\p i4 chains.
+/// int/float/pointer types without ptrtoint/inttoptr for pointers.
 ///
 /// \returns The chosen element type for the vectorized load or store.
 Type *getChainElemTy(ArrayRef<ChainElem> C, LLVMContext &Ctx,
@@ -184,11 +182,6 @@ Type *getChainElemTy(ArrayRef<ChainElem> C, LLVMContext &Ctx,
     LLVM_DEBUG(dbgs() << "LSV: using homogeneous scalar element type "
                       << *HomogeneousScalarTy << "\n");
     return HomogeneousScalarTy;
-  }
-  if (GCDSize < 8) {
-    LLVM_DEBUG(dbgs() << "LSV: using normalized element type i" << GCDSize
-                      << "\n");
-    return Type::getIntNTy(Ctx, GCDSize);
   }
   LLVM_DEBUG(dbgs() << "LSV: using normalized byte element type b" << GCDSize
                     << "\n");
