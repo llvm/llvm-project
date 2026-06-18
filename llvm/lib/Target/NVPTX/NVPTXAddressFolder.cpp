@@ -42,8 +42,8 @@ using namespace llvm;
 // remaining use, e.g. because the address also feeds arithmetic or escapes.
 static bool foldAddress(MachineInstr &MI, MachineOperand &Addr,
                         MachineRegisterInfo &MRI) {
-  if (!Addr.isReg() || !Addr.getReg().isVirtual())
-    return false;
+  assert(Addr.isReg() && "Expected an address register");
+  assert(Addr.getReg().isVirtual() && "Expected a virtual address register");
 
   MachineInstr *Mov = MRI.getVRegDef(Addr.getReg());
   if (!Mov || (Mov->getOpcode() != NVPTX::MOV_B32_sym &&
@@ -68,13 +68,11 @@ static bool foldAddress(MachineInstr &MI, MachineOperand &Addr,
     Addr.ChangeToGA(Sym.getGlobal(), Sym.getOffset(), Sym.getTargetFlags());
   } else {
     Addr.ChangeToES(Sym.getSymbolName(), Sym.getTargetFlags());
-    Addr.setOffset(Sym.getOffset());
   }
 
-  if (!MRI.use_empty(Mov->getOperand(0).getReg()))
-    return true;
+  if (MRI.use_empty(Mov->getOperand(0).getReg()))
+    Mov->eraseFromParent();
 
-  Mov->eraseFromParent();
   return true;
 }
 
@@ -87,7 +85,7 @@ static bool foldAddresses(MachineFunction &MF) {
       if (MI.mayLoadOrStore()) {
         const int AddrIdx =
             NVPTX::getNamedOperandIdx(MI.getOpcode(), NVPTX::OpName::addr);
-        if (AddrIdx >= 0)
+        if (AddrIdx >= 0 && MI.getOperand(AddrIdx).isReg())
           Changed |= foldAddress(MI, MI.getOperand(AddrIdx), MRI);
       }
 
