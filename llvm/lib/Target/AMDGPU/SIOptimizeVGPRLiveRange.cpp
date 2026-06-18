@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

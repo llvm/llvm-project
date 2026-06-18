@@ -117,8 +117,6 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   CI->setVirtualFileSystem(FM->getVirtualFileSystemPtr());
   CI->setFileManager(FM);
   CI->createDiagnostics();
-  if (!CI->hasDiagnostics())
-    return EXIT_FAILURE;
 
   // Execute, verify and gather AST results.
   // An invocation is ran for each unique target triple and for each header

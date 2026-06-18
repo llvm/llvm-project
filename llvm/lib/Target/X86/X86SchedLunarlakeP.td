@@ -83,7 +83,7 @@ def LNLPPort00_01_02_03_04_05 : ProcResGroup<[LNLPPort00, LNLPPort01, LNLPPort02
 // VEC EU has 180 reservation stations.
 def LNLPVPort00_01_02_03    : ProcResGroup<[LNLPVPort00, LNLPVPort01, LNLPVPort02,
                                           LNLPVPort03]>{
-  let BufferSize = 180; // EU for INT and VEC are seperated 
+  let BufferSize = 180; // EU for INT and VEC are separated 
                         // VEC QUEUE SIZE = 60 + VEC EU RS (60+60)
 }
 // STD has 48 reservation stations.

@@ -28,7 +28,6 @@ cc_library(
         exclude = [
             "Generators.cpp",
             "HTMLGenerator.cpp",
-            "HTMLMustacheGenerator.cpp",
             "MDGenerator.cpp",
             "YAMLGenerator.cpp",
         ],
@@ -42,6 +41,7 @@ cc_library(
         "//clang:index",
         "//clang:lex",
         "//clang:tooling",
+        "//clang:unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",
@@ -53,7 +53,6 @@ cc_library(
     srcs = [
         "Generators.cpp",
         "HTMLGenerator.cpp",
-        "HTMLMustacheGenerator.cpp",
         "MDGenerator.cpp",
         "YAMLGenerator.cpp",
     ],
@@ -82,6 +81,7 @@ cc_binary(
         ":lib",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
         "//clang:driver",
         "//clang:frontend",
         "//clang:tooling",

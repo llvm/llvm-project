@@ -44,6 +44,9 @@
 #   Maximum cold context total size: 0
 #   Maximum warm context total size: 666
 #   Maximum hot context total size: 0
+#   Num hot symbols and string literals: 2
+#   Num known cold symbols: 2
+#   Num known cold string literals: 2
 ---
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
@@ -76,7 +79,7 @@ HeapProfileRecords:
 DataAccessProfiles:
   SampledRecords:
     - Symbol:          abcde
-      AccessCount:     100
+      AccessCount:     202
       Locations:
       - FileName:      file2.h
         Line:          123
@@ -88,8 +91,8 @@ DataAccessProfiles:
         - FileName:        file.cpp
           Line:            233
   KnownColdSymbols:
-    - foo
     - bar
+    - foo
   KnownColdStrHashes: [ 999, 1001 ]
 ...
 ;--- memprof-in-v3.yaml
@@ -229,11 +232,14 @@ HeapProfileRecords:
 #   Maximum cold context total size: 0
 #   Maximum warm context total size: 0
 #   Maximum hot context total size: 0
+#   Num hot symbols and string literals: 2
+#   Num known cold symbols: 2
+#   Num known cold string literals: 2
 ---
 DataAccessProfiles:
   SampledRecords:
     - Symbol:          abcde
-      AccessCount:     100
+      AccessCount:     202
       Locations:
       - FileName:      file2.h
         Line:          123
@@ -245,7 +251,7 @@ DataAccessProfiles:
         - FileName:        file.cpp
           Line:            233
   KnownColdSymbols:
-    - foo
     - bar
+    - foo
   KnownColdStrHashes: [ 999, 1001 ]
 ...

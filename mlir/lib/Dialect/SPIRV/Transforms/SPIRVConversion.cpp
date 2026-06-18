@@ -53,6 +53,10 @@ static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
                << "--scalable vectors are not supported -> BAIL\n");
     return std::nullopt;
   }
+  if (vecType.getRank() == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "--0-D vectors are not supported -> BAIL\n");
+    return std::nullopt;
+  }
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
   std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(
       1, mlir::spirv::getComputeVectorSize(vecType.getShape().back()));
@@ -502,6 +506,11 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
                << type << " illegal: cannot handle zero-element tensors\n");
     return nullptr;
   }
+  if (arrayElemCount > std::numeric_limits<unsigned>::max()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot fit tensor into target type\n");
+    return nullptr;
+  }
 
   Type arrayElemType = convertScalarType(targetEnv, options, scalarType);
   if (!arrayElemType)
@@ -623,9 +632,9 @@ static spirv::Dim convertRank(int64_t rank) {
 
 static spirv::ImageFormat getImageFormat(Type elementType) {
   return TypeSwitch<Type, spirv::ImageFormat>(elementType)
-      .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
-      .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
-      .Case<IntegerType>([](IntegerType intType) {
+      .Case([](Float16Type) { return spirv::ImageFormat::R16f; })
+      .Case([](Float32Type) { return spirv::ImageFormat::R32f; })
+      .Case([](IntegerType intType) {
         auto const isSigned = intType.isSigned() || intType.isSignless();
 #define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
   case BIT_WIDTH:                                                              \
@@ -1013,7 +1022,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                             : TypeRange()));
 
     // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
         newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
@@ -1044,6 +1053,15 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
                  << fnType << " illegal: declarations are unsupported\n");
       return failure();
     }
+
+    // Bail out early for dynamically-shaped argument types: getZeroAttr
+    // requires a statically-shaped type. VectorType is always statically
+    // shaped, so this correctly skips it without a special-case guard.
+    if (llvm::any_of(fnType.getInputs(), [](Type argType) {
+          auto shapedType = dyn_cast<ShapedType>(argType);
+          return shapedType && !shapedType.hasStaticShape();
+        }))
+      return failure();
 
     // Create a new func op with the original type and copy the function body.
     auto newFuncOp = func::FuncOp::create(rewriter, funcOp.getLoc(),
@@ -1457,6 +1475,8 @@ std::optional<SmallVector<int64_t>>
 mlir::spirv::getNativeVectorShape(Operation *op) {
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
     if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
+      if (vecType.getRank() == 0)
+        return std::nullopt;
       SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
       nativeSize.back() =
           mlir::spirv::getComputeVectorSize(vecType.getShape().back());

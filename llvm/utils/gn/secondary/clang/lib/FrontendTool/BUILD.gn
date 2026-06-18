@@ -12,6 +12,10 @@ static_library("FrontendTool") {
     "//clang/lib/Frontend",
     "//clang/lib/Frontend/Rewrite",
     "//clang/lib/Options",
+    "//clang/lib/ScalableStaticAnalysisFramework/Analyses",
+    "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/Frontend",
+    "//clang/lib/ScalableStaticAnalysisFramework/SourceTransformation",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]

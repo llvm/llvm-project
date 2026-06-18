@@ -17,7 +17,7 @@ end
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> BlockConstruct
 !PARSE-TREE: | | | BlockStmt ->
@@ -54,23 +54,23 @@ end
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | OmpClause -> GraphReset -> OmpGraphResetClause -> Scalar -> Logical -> Expr = 'y'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'y'
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | | | OmpBeginDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | | | | OmpClauseList ->
-!PARSE-TREE: | | | | Flags = None
+!PARSE-TREE: | | | | Flags = {}
 !PARSE-TREE: | | | Block
 !PARSE-TREE: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> ContinueStmt
 !PARSE-TREE: | | | OmpEndDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | | | | OmpClauseList ->
-!PARSE-TREE: | | | | Flags = None
+!PARSE-TREE: | | | | Flags = {}
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 
 
 subroutine f02
@@ -87,9 +87,9 @@ end
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> GraphReset ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}

@@ -8,10 +8,23 @@ import re
 import sys
 
 import util
-from util import to_string
 
 
 class DiffFlags:
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "ignore_all_space",
+        "ignore_space_change",
+        "ignore_matching_lines",
+        "ignore_matching_lines_regex",
+        "unified_diff",
+        "num_context_lines",
+        "recursive_diff",
+        "strip_trailing_cr",
+    )
+
     def __init__(self):
         self.ignore_all_space = False
         self.ignore_space_change = False
@@ -67,10 +80,9 @@ def compareTwoBinaryFiles(flags, filepaths, filelines):
         filepaths[1].encode(),
         n=flags.num_context_lines,
     )
-    diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
 
     for diff in diffs:
-        sys.stdout.write(to_string(diff))
+        sys.stdout.write(diff.decode(errors="backslashreplace"))
         exitCode = 1
     return exitCode
 
@@ -117,7 +129,7 @@ def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
         filepaths[1],
         n=flags.num_context_lines,
     ):
-        sys.stdout.write(to_string(diff))
+        sys.stdout.write(diff)
         exitCode = 1
     return exitCode
 

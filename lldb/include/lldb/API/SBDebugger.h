@@ -190,11 +190,13 @@ public:
   /// Client can specify empty string or null to get all settings.
   ///
   /// Example usages:
+  /// \code
   /// lldb::SBStructuredData settings = debugger.GetSetting();
   /// lldb::SBStructuredData settings = debugger.GetSetting(nullptr);
   /// lldb::SBStructuredData settings = debugger.GetSetting("");
   /// lldb::SBStructuredData settings = debugger.GetSetting("target.arg0");
   /// lldb::SBStructuredData settings = debugger.GetSetting("target");
+  /// \endcode
   lldb::SBStructuredData GetSetting(const char *setting = nullptr);
 
   /// Set whether the debugger should run in asynchronous mode.
@@ -360,7 +362,7 @@ public:
                                            const char *arch);
 
   /// Find a target with the specified unique ID.
-  lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id);
+  lldb::SBTarget FindTargetByGloballyUniqueID(lldb::user_id_t id) const;
 
   /// Get the number of targets in the debugger.
   uint32_t GetNumTargets();
@@ -515,13 +517,21 @@ public:
   uint32_t GetTerminalWidth() const;
 
   /// Set the terminal width.
+  LLDB_DEPRECATED_FIXME("Use SetTerminalDimensions",
+                        "SetTerminalDimensions(uint32_t, uint32_t)")
   void SetTerminalWidth(uint32_t term_width);
 
   /// Get the terminal height.
   uint32_t GetTerminalHeight() const;
 
   /// Set the terminal height.
+  LLDB_DEPRECATED_FIXME("Use SetTerminalDimensions",
+                        "SetTerminalDimensions(uint32_t, uint32_t)")
   void SetTerminalHeight(uint32_t term_height);
+
+  /// Set the terminal width and height together. Prefer this over the
+  /// single-axis setters when both are known, e.g. when handling a resize.
+  void SetTerminalDimensions(uint32_t term_width, uint32_t term_height);
 
   /// Get the unique ID of this debugger.
   lldb::user_id_t GetID();

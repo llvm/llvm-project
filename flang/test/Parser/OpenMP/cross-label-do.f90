@@ -29,10 +29,10 @@ end
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '10'
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | | | OmpBeginLoopDirective
+!PARSE-TREE: | | | OmpBeginDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | | | | OmpClauseList ->
-!PARSE-TREE: | | | | Flags = None
+!PARSE-TREE: | | | | Flags = {CrossesLabelDo}
 !PARSE-TREE: | | | Block
 !PARSE-TREE: | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !PARSE-TREE: | | | | | NonLabelDoStmt

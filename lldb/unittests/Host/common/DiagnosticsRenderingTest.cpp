@@ -10,7 +10,7 @@ class ErrorDisplayTest : public ::testing::Test {};
 
 std::string Render(std::vector<DiagnosticDetail> details) {
   StreamString stream;
-  RenderDiagnosticDetails(stream, 0, true, details);
+  RenderDiagnosticDetails(stream, 0, true, details, /*force_ascii=*/true);
   return stream.GetData();
 }
 } // namespace
@@ -26,6 +26,18 @@ TEST_F(ErrorDisplayTest, RenderStatus) {
     ASSERT_TRUE(StringRef(result).contains("foo"));
   }
 
+  {
+    // Test that a single-character token (length=1) renders as just a caret
+    // with no underlines.
+    SourceLocation loc1 = {FileSpec{"a.c"}, 1, 6, 1, false, true};
+    std::string result =
+        Render({DiagnosticDetail{loc1, eSeverityError, "X", "X"}});
+    llvm::SmallVector<StringRef> lines;
+    StringRef(result).split(lines, '\n');
+    //                123456
+    ASSERT_EQ(lines[0], "     ^");
+    ASSERT_EQ(lines[1], "     error: X");
+  }
   {
     // Test that diagnostics on the same column can be handled and all
     // three errors are diagnosed.

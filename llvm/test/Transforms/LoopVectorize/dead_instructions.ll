@@ -44,16 +44,16 @@ define i64 @dead_instructions_01(ptr %a, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP6:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP7:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP6]] = add i64 [[TMP5]], [[R]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP7]] = add i64 [[TMP6]], [[R]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP6]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ [[TMP7]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[TMP8]]
 ;
 entry:
   br label %for.body

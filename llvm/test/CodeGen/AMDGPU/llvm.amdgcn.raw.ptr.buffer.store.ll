@@ -347,11 +347,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v2f16(ptr addrspace(8) inreg %rsrc, <2 x half> %data, i32 %offset) {
 ; VERDE-LABEL: buffer_store_v2f16:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_or_b32_e32 v0, v0, v1
-; VERDE-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v2f16:
@@ -366,15 +362,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v4f16(ptr addrspace(8) inreg %rsrc, <4 x half> %data, i32 %offset) #0 {
 ; VERDE-LABEL: buffer_store_v4f16:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v5, v1
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; VERDE-NEXT:    v_or_b32_e32 v1, v2, v1
-; VERDE-NEXT:    v_lshlrev_b32_e32 v2, 16, v5
-; VERDE-NEXT:    v_or_b32_e32 v0, v0, v2
-; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v4, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v4f16:
@@ -389,23 +377,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v8f16(ptr addrspace(8) inreg %rsrc, <8 x half> %data, i32 %offset) #0 {
 ; VERDE-LABEL: buffer_store_v8f16:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v9, v5
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VERDE-NEXT:    v_lshlrev_b32_e32 v5, 16, v7
-; VERDE-NEXT:    v_or_b32_e32 v5, v6, v5
-; VERDE-NEXT:    v_lshlrev_b32_e32 v6, 16, v9
-; VERDE-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_or_b32_e32 v4, v4, v6
-; VERDE-NEXT:    v_or_b32_e32 v3, v2, v3
-; VERDE-NEXT:    v_or_b32_e32 v2, v0, v1
-; VERDE-NEXT:    buffer_store_dwordx4 v[2:5], v8, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v8f16:
@@ -420,11 +392,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v2bf16(ptr addrspace(8) inreg %rsrc, <2 x bfloat> %data, i32 %offset) {
 ; VERDE-LABEL: buffer_store_v2bf16:
 ; VERDE:       ; %bb.0:
-; VERDE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; VERDE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VERDE-NEXT:    v_alignbit_b32 v0, v1, v0, 16
-; VERDE-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v2bf16:
@@ -438,15 +406,7 @@ define amdgpu_ps void @buffer_store_v2bf16(ptr addrspace(8) inreg %rsrc, <2 x bf
 define amdgpu_ps void @buffer_store_v4bf16(ptr addrspace(8) inreg %rsrc, <4 x bfloat> %data, i32 %offset) #0 {
 ; VERDE-LABEL: buffer_store_v4bf16:
 ; VERDE:       ; %bb.0:
-; VERDE-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; VERDE-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; VERDE-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; VERDE-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; VERDE-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VERDE-NEXT:    v_alignbit_b32 v2, v3, v2, 16
-; VERDE-NEXT:    v_alignbit_b32 v1, v1, v0, 16
-; VERDE-NEXT:    buffer_store_dwordx2 v[1:2], v4, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v4bf16:
@@ -476,10 +436,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v2i16(ptr addrspace(8) inreg %rsrc, <2 x i16> %data, i32 %offset) {
 ; VERDE-LABEL: buffer_store_v2i16:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VERDE-NEXT:    v_or_b32_e32 v0, v0, v1
-; VERDE-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v2i16:
@@ -494,13 +451,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v4i16(ptr addrspace(8) inreg %rsrc, <4 x i16> %data, i32 %offset) #0 {
 ; VERDE-LABEL: buffer_store_v4i16:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; VERDE-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VERDE-NEXT:    v_or_b32_e32 v2, v2, v3
-; VERDE-NEXT:    v_or_b32_e32 v1, v0, v1
-; VERDE-NEXT:    buffer_store_dwordx2 v[1:2], v4, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v4i16:
@@ -521,19 +472,7 @@ main_body:
 define amdgpu_ps void @buffer_store_v8i16(ptr addrspace(8) inreg %rsrc, <8 x i16> %data, i32 %offset) #0 {
 ; VERDE-LABEL: buffer_store_v8i16:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; VERDE-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; VERDE-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; VERDE-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; VERDE-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; VERDE-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VERDE-NEXT:    v_or_b32_e32 v6, v6, v7
-; VERDE-NEXT:    v_or_b32_e32 v5, v4, v5
-; VERDE-NEXT:    v_or_b32_e32 v4, v2, v3
-; VERDE-NEXT:    v_or_b32_e32 v3, v0, v1
-; VERDE-NEXT:    buffer_store_dwordx4 v[3:6], v8, s[0:3], 0 offen
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 offen
 ; VERDE-NEXT:    s_endpgm
 ;
 ; CHECK-LABEL: buffer_store_v8i16:

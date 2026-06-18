@@ -19,83 +19,6 @@
 using namespace mlir;
 
 namespace {
-/// Move an scf.if op that is directly before the scf.condition op in the while
-/// before region, and whose condition matches the condition of the
-/// scf.condition op, down into the while after region.
-///
-/// scf.while (%init) : (...) -> ... {
-///   %cond = ...
-///   %res = scf.if %cond -> (...) {
-///     use1(%init)
-///     %then_val = ...
-///      ... // then block
-///     scf.yield %then_val
-///   } else {
-///     scf.yield %init
-///   }
-///   scf.condition(%cond) %res
-/// } do {
-/// ^bb0(%arg):
-///   use2(%arg)
-///    ...
-///
-/// becomes
-/// scf.while (%init) : (...) -> ... {
-///   %cond = ...
-///   scf.condition(%cond) %init
-/// } do {
-/// ^bb0(%arg): :
-///   use1(%arg)
-///    ... // if then block
-///   %then_val = ...
-///   use2(%then_val)
-///    ...
-struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
-  using OpRewritePattern<scf::WhileOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(scf::WhileOp op,
-                                PatternRewriter &rewriter) const override {
-    // Check that the first opeation produces one result and that result must
-    // have exactly two uses (these two uses come from the `scf.if` and
-    // `scf.condition` operations).
-    Operation &condOp = op.getBeforeBody()->front();
-    if (condOp.getNumResults() != 1 || !condOp.getResult(0).hasNUses(2))
-      return failure();
-
-    Value condVal = condOp.getResult(0);
-    auto ifOp = dyn_cast<scf::IfOp>(condOp.getNextNode());
-    if (!ifOp || ifOp.getCondition() != condVal)
-      return failure();
-
-    auto term = dyn_cast<scf::ConditionOp>(ifOp->getNextNode());
-    if (!term || term.getCondition() != condVal)
-      return failure();
-
-    // Check that if results and else yield operands match the scf.condition op
-    // arguments and while before arguments respectively.
-    if (!llvm::equal(ifOp->getResults(), term.getArgs()) ||
-        !llvm::equal(ifOp.elseYield()->getOperands(), op.getBeforeArguments()))
-      return failure();
-
-    // Update uses and move the if op into the after region.
-    rewriter.replaceAllUsesWith(op.getAfterArguments(),
-                                ifOp.thenYield()->getOperands());
-    rewriter.replaceUsesWithIf(op.getBeforeArguments(), op.getAfterArguments(),
-                               [&](OpOperand &use) {
-                                 return ifOp.getThenRegion().isAncestor(
-                                     use.getOwner()->getParentRegion());
-                               });
-    rewriter.modifyOpInPlace(
-        term, [&]() { term.getArgsMutable().assign(op.getBeforeArguments()); });
-
-    rewriter.eraseOp(ifOp.thenYield());
-    rewriter.inlineBlockBefore(ifOp.thenBlock(), op.getAfterBody(),
-                               op.getAfterBody()->begin());
-    rewriter.eraseOp(ifOp);
-    return success();
-  }
-};
-
 struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -344,5 +267,5 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
 }
 
 void mlir::scf::populateUpliftWhileToForPatterns(RewritePatternSet &patterns) {
-  patterns.add<UpliftWhileOp, WhileMoveIfDown>(patterns.getContext());
+  patterns.add<UpliftWhileOp>(patterns.getContext());
 }

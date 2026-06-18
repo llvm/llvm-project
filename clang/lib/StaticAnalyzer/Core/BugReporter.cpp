@@ -25,7 +25,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
@@ -108,10 +107,9 @@ using CallWithEntryStack = SmallVector<CallWithEntry, 6>;
 using VisitorsDiagnosticsTy =
     llvm::DenseMap<const ExplodedNode *, std::vector<PathDiagnosticPieceRef>>;
 
-/// A map from PathDiagnosticPiece to the LocationContext of the inlined
+/// A map from PathDiagnosticPiece to the StackFrame of the inlined
 /// function call it represents.
-using LocationContextMap =
-    llvm::DenseMap<const PathPieces *, const LocationContext *>;
+using StackFrameMap = llvm::DenseMap<const PathPieces *, const StackFrame *>;
 
 /// A helper class that contains everything needed to construct a
 /// PathDiagnostic object. It does no much more then providing convenient
@@ -124,8 +122,8 @@ class PathDiagnosticConstruct {
   const ExplodedNode *CurrentNode;
   /// A mapping from parts of the bug path (for example, a function call, which
   /// would span backwards from a CallExit to a CallEnter with the nodes in
-  /// between them) with the location contexts it is associated with.
-  LocationContextMap LCM;
+  /// between them) with the stack frames it is associated with.
+  StackFrameMap SFM;
   const SourceManager &SM;
 
 public:
@@ -144,18 +142,18 @@ public:
                           const PathSensitiveBugReport *R,
                           const Decl *AnalysisEntryPoint);
 
-  /// \returns the location context associated with the current position in the
+  /// \returns the stack frame associated with the current position in the
   /// bug path.
-  const LocationContext *getCurrLocationContext() const {
+  const StackFrame *getCurrStackFrame() const {
     assert(CurrentNode && "Already reached the root!");
-    return CurrentNode->getLocationContext();
+    return CurrentNode->getStackFrame();
   }
 
-  /// Same as getCurrLocationContext (they should always return the same
-  /// location context), but works after reaching the root of the bug path as
+  /// Same as getCurrStackFrame (they should always return the same
+  /// stack frame), but works after reaching the root of the bug path as
   /// well.
-  const LocationContext *getLocationContextForActivePath() const {
-    return LCM.find(&PD->getActivePath())->getSecond();
+  const StackFrame *getStackFrameForActivePath() const {
+    return SFM.find(&PD->getActivePath())->getSecond();
   }
 
   const ExplodedNode *getCurrentNode() const { return CurrentNode; }
@@ -168,7 +166,7 @@ public:
   }
 
   const ParentMap &getParentMap() const {
-    return getCurrLocationContext()->getParentMap();
+    return getCurrStackFrame()->getParentMap();
   }
 
   const SourceManager &getSourceManager() const { return SM; }
@@ -177,18 +175,20 @@ public:
     return getParentMap().getParent(S);
   }
 
-  void updateLocCtxMap(const PathPieces *Path, const LocationContext *LC) {
-    assert(Path && LC);
-    LCM[Path] = LC;
+  void updateStackFrameMap(const PathPieces *Path, const StackFrame *SF) {
+    assert(Path && SF);
+    SFM[Path] = SF;
   }
 
-  const LocationContext *getLocationContextFor(const PathPieces *Path) const {
-    assert(LCM.count(Path) &&
-           "Failed to find the context associated with these pieces!");
-    return LCM.find(Path)->getSecond();
+  const StackFrame *getStackFrameFor(const PathPieces *Path) const {
+    assert(SFM.count(Path) &&
+           "Failed to find the stack frame associated with these pieces!");
+    return SFM.find(Path)->getSecond();
   }
 
-  bool isInLocCtxMap(const PathPieces *Path) const { return LCM.count(Path); }
+  bool isInStackFrameMap(const PathPieces *Path) const {
+    return SFM.count(Path);
+  }
 
   PathPieces &getActivePath() { return PD->getActivePath(); }
   PathPieces &getMutablePieces() { return PD->getMutablePieces(); }
@@ -324,7 +324,7 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
   CallExitEnd CExit = P.castAs<CallExitEnd>();
 
   // FIXME: Use CallEvent to abstract this over all calls.
-  const Stmt *CallSite = CExit.getCalleeContext()->getCallSite();
+  const Expr *CallSite = CExit.getCalleeStackFrame()->getCallSite();
   const auto *CE = dyn_cast_or_null<CallExpr>(CallSite);
   if (!CE)
     return {};
@@ -468,10 +468,10 @@ static bool removeUnneededCalls(const PathDiagnosticConstruct &C,
     switch (piece->getKind()) {
       case PathDiagnosticPiece::Call: {
         auto &call = cast<PathDiagnosticCallPiece>(*piece);
-        // Check if the location context is interesting.
+        // Check if the stack frame is interesting.
         if (!removeUnneededCalls(
                 C, call.path, R,
-                R->isInteresting(C.getLocationContextFor(&call.path))))
+                R->isInteresting(C.getStackFrameFor(&call.path))))
           continue;
 
         containsSomethingInteresting = true;
@@ -611,10 +611,9 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
     const PathDiagnosticConstruct &C) const {
   if (const Stmt *S = C.getCurrentNode()->getNextStmtForDiagnostics())
-    return PathDiagnosticLocation(S, getSourceManager(),
-                                  C.getCurrLocationContext());
+    return PathDiagnosticLocation(S, getSourceManager(), C.getCurrStackFrame());
 
-  return PathDiagnosticLocation::createDeclEnd(C.getCurrLocationContext(),
+  return PathDiagnosticLocation::createDeclEnd(C.getCurrStackFrame(),
                                                getSourceManager());
 }
 
@@ -632,7 +631,7 @@ PathDiagnosticLocation PathDiagnosticBuilder::ExecutionContinues(
        << '.';
   else {
     os << "Execution jumps to the end of the ";
-    const Decl *D = C.getCurrLocationContext()->getDecl();
+    const Decl *D = C.getCurrStackFrame()->getDecl();
     if (isa<ObjCMethodDecl>(D))
       os << "method";
     else if (isa<FunctionDecl>(D))
@@ -670,61 +669,61 @@ static const Stmt *getEnclosingParent(const Stmt *S, const ParentMap &PM) {
 }
 
 static PathDiagnosticLocation
-getEnclosingStmtLocation(const Stmt *S, const LocationContext *LC,
+getEnclosingStmtLocation(const Stmt *S, const StackFrame *SF,
                          bool allowNestedContexts = false) {
   if (!S)
     return {};
 
-  const SourceManager &SMgr = LC->getDecl()->getASTContext().getSourceManager();
+  const SourceManager &SMgr = SF->getDecl()->getASTContext().getSourceManager();
 
-  while (const Stmt *Parent = getEnclosingParent(S, LC->getParentMap())) {
+  while (const Stmt *Parent = getEnclosingParent(S, SF->getParentMap())) {
     switch (Parent->getStmtClass()) {
       case Stmt::BinaryOperatorClass: {
         const auto *B = cast<BinaryOperator>(Parent);
         if (B->isLogicalOp())
-          return PathDiagnosticLocation(allowNestedContexts ? B : S, SMgr, LC);
+          return PathDiagnosticLocation(allowNestedContexts ? B : S, SMgr, SF);
         break;
       }
       case Stmt::CompoundStmtClass:
       case Stmt::StmtExprClass:
-        return PathDiagnosticLocation(S, SMgr, LC);
+        return PathDiagnosticLocation(S, SMgr, SF);
       case Stmt::ChooseExprClass:
         // Similar to '?' if we are referring to condition, just have the edge
         // point to the entire choose expression.
         if (allowNestedContexts || cast<ChooseExpr>(Parent)->getCond() == S)
-          return PathDiagnosticLocation(Parent, SMgr, LC);
+          return PathDiagnosticLocation(Parent, SMgr, SF);
         else
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
       case Stmt::BinaryConditionalOperatorClass:
       case Stmt::ConditionalOperatorClass:
         // For '?', if we are referring to condition, just have the edge point
         // to the entire '?' expression.
         if (allowNestedContexts ||
             cast<AbstractConditionalOperator>(Parent)->getCond() == S)
-          return PathDiagnosticLocation(Parent, SMgr, LC);
+          return PathDiagnosticLocation(Parent, SMgr, SF);
         else
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
       case Stmt::CXXForRangeStmtClass:
         if (cast<CXXForRangeStmt>(Parent)->getBody() == S)
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
         break;
       case Stmt::DoStmtClass:
-          return PathDiagnosticLocation(S, SMgr, LC);
+        return PathDiagnosticLocation(S, SMgr, SF);
       case Stmt::ForStmtClass:
         if (cast<ForStmt>(Parent)->getBody() == S)
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
         break;
       case Stmt::IfStmtClass:
         if (cast<IfStmt>(Parent)->getCond() != S)
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
         break;
       case Stmt::ObjCForCollectionStmtClass:
         if (cast<ObjCForCollectionStmt>(Parent)->getBody() == S)
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
         break;
       case Stmt::WhileStmtClass:
         if (cast<WhileStmt>(Parent)->getCond() != S)
-          return PathDiagnosticLocation(S, SMgr, LC);
+          return PathDiagnosticLocation(S, SMgr, SF);
         break;
       default:
         break;
@@ -735,7 +734,7 @@ getEnclosingStmtLocation(const Stmt *S, const LocationContext *LC,
 
   assert(S && "Cannot have null Stmt for PathDiagnosticLocation");
 
-  return PathDiagnosticLocation(S, SMgr, LC);
+  return PathDiagnosticLocation(S, SMgr, SF);
 }
 
 //===----------------------------------------------------------------------===//
@@ -782,7 +781,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
   PathDiagnosticLocation End;
 
   if (const Stmt *S = Dst->getLabel()) {
-    End = PathDiagnosticLocation(S, SM, C.getCurrLocationContext());
+    End = PathDiagnosticLocation(S, SM, C.getCurrStackFrame());
 
     switch (S->getStmtClass()) {
     default:
@@ -834,7 +833,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForGotoOP(
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
   const PathDiagnosticLocation &End =
-      getEnclosingStmtLocation(S, C.getCurrLocationContext());
+      getEnclosingStmtLocation(S, C.getCurrStackFrame());
   os << "Control jumps to line " << End.asLocation().getExpansionLineNumber();
   return std::make_shared<PathDiagnosticControlFlowPiece>(Start, End, sbuf);
 }
@@ -857,13 +856,12 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForBinaryOP(
 
     if (*(Src->succ_begin() + 1) == Dst) {
       os << "false";
-      End = PathDiagnosticLocation(B->getLHS(), SM, C.getCurrLocationContext());
+      End = PathDiagnosticLocation(B->getLHS(), SM, C.getCurrStackFrame());
       Start =
         PathDiagnosticLocation::createOperatorLoc(B, SM);
     } else {
       os << "true";
-      Start =
-          PathDiagnosticLocation(B->getLHS(), SM, C.getCurrLocationContext());
+      Start = PathDiagnosticLocation(B->getLHS(), SM, C.getCurrStackFrame());
       End = ExecutionContinues(C);
     }
   } else {
@@ -873,12 +871,11 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForBinaryOP(
 
     if (*(Src->succ_begin() + 1) == Dst) {
       os << "false";
-      Start =
-          PathDiagnosticLocation(B->getLHS(), SM, C.getCurrLocationContext());
+      Start = PathDiagnosticLocation(B->getLHS(), SM, C.getCurrStackFrame());
       End = ExecutionContinues(C);
     } else {
       os << "true";
-      End = PathDiagnosticLocation(B->getLHS(), SM, C.getCurrLocationContext());
+      End = PathDiagnosticLocation(B->getLHS(), SM, C.getCurrStackFrame());
       Start =
         PathDiagnosticLocation::createOperatorLoc(B, SM);
     }
@@ -889,14 +886,14 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForBinaryOP(
 void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
     PathDiagnosticConstruct &C, BlockEdge BE) const {
   const SourceManager &SM = getSourceManager();
-  const LocationContext *LC = C.getCurrLocationContext();
+  const StackFrame *SF = C.getCurrStackFrame();
   const CFGBlock *Src = BE.getSrc();
   const CFGBlock *Dst = BE.getDst();
   const Stmt *T = Src->getTerminatorStmt();
   if (!T)
     return;
 
-  auto Start = PathDiagnosticLocation::createBegin(T, SM, LC);
+  auto Start = PathDiagnosticLocation::createBegin(T, SM, SF);
   switch (T->getStmtClass()) {
   default:
     break;
@@ -938,7 +935,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
     PathDiagnosticLocation End = ExecutionContinues(C);
 
     if (const Stmt *S = End.asStmt())
-      End = getEnclosingStmtLocation(S, C.getCurrLocationContext());
+      End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
 
     C.getActivePath().push_front(
         std::make_shared<PathDiagnosticControlFlowPiece>(Start, End, sbuf));
@@ -963,7 +960,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       PathDiagnosticLocation End = ExecutionContinues(os, C);
 
       if (const Stmt *S = End.asStmt())
-        End = getEnclosingStmtLocation(S, C.getCurrLocationContext());
+        End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(Start, End, sbuf));
@@ -971,7 +968,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       PathDiagnosticLocation End = ExecutionContinues(C);
 
       if (const Stmt *S = End.asStmt())
-        End = getEnclosingStmtLocation(S, C.getCurrLocationContext());
+        End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
@@ -988,14 +985,14 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
       os << "Loop condition is false. ";
       PathDiagnosticLocation End = ExecutionContinues(os, C);
       if (const Stmt *S = End.asStmt())
-        End = getEnclosingStmtLocation(S, C.getCurrLocationContext());
+        End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(Start, End, sbuf));
     } else {
       PathDiagnosticLocation End = ExecutionContinues(C);
       if (const Stmt *S = End.asStmt())
-        End = getEnclosingStmtLocation(S, C.getCurrLocationContext());
+        End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
@@ -1008,7 +1005,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
     PathDiagnosticLocation End = ExecutionContinues(C);
 
     if (const Stmt *S = End.asStmt())
-      End = getEnclosingStmtLocation(S, C.getCurrLocationContext());
+      End = getEnclosingStmtLocation(S, C.getCurrStackFrame());
 
     if (*(Src->succ_begin() + 1) == Dst)
       C.getActivePath().push_front(
@@ -1162,8 +1159,8 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     if (C.shouldAddPathEdges()) {
       // Add an edge to the start of the function.
-      const StackFrameContext *CalleeLC = CE->getCalleeContext();
-      const Decl *D = CalleeLC->getDecl();
+      const StackFrame *CalleeSF = CE->getCalleeStackFrame();
+      const Decl *D = CalleeSF->getDecl();
       // Add the edge only when the callee has body. We jump to the beginning
       // of the *declaration*, however we expect it to be followed by the
       // body. This isn't the case for autosynthesized property accessors in
@@ -1183,26 +1180,26 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     if (VisitedEntireCall) {
       Call = cast<PathDiagnosticCallPiece>(C.getActivePath().front().get());
     } else {
-      // The path terminated within a nested location context, create a new
+      // The path terminated within a nested stack frame, create a new
       // call piece to encapsulate the rest of the path pieces.
-      const Decl *Caller = CE->getLocationContext()->getDecl();
+      const Decl *Caller = CE->getStackFrame()->getDecl();
       Call = PathDiagnosticCallPiece::construct(C.getActivePath(), Caller);
       assert(C.getActivePath().size() == 1 &&
              C.getActivePath().front().get() == Call);
 
       // Since we just transferred the path over to the call piece, reset the
-      // mapping of the active path to the current location context.
-      assert(C.isInLocCtxMap(&C.getActivePath()) &&
+      // mapping of the active path to the current stack frame.
+      assert(C.isInStackFrameMap(&C.getActivePath()) &&
              "When we ascend to a previously unvisited call, the active path's "
              "address shouldn't change, but rather should be compacted into "
              "a single CallEvent!");
-      C.updateLocCtxMap(&C.getActivePath(), C.getCurrLocationContext());
+      C.updateStackFrameMap(&C.getActivePath(), C.getCurrStackFrame());
 
-      // Record the location context mapping for the path within the call.
-      assert(!C.isInLocCtxMap(&Call->path) &&
+      // Record the stack frame mapping for the path within the call.
+      assert(!C.isInStackFrameMap(&Call->path) &&
              "When we ascend to a previously unvisited call, this must be the "
-             "first time we encounter the caller context!");
-      C.updateLocCtxMap(&Call->path, CE->getCalleeContext());
+             "first time we encounter the caller stack frame!");
+      C.updateStackFrameMap(&Call->path, CE->getCalleeStackFrame());
     }
     Call->setCallee(*CE, SM);
 
@@ -1216,9 +1213,9 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     return;
   }
 
-  assert(C.getCurrLocationContext() == C.getLocationContextForActivePath() &&
+  assert(C.getCurrStackFrame() == C.getStackFrameForActivePath() &&
          "The current position in the bug path is out of sync with the "
-         "location context associated with the active path!");
+         "stack frame associated with the active path!");
 
   // Have we encountered an exit from a function call?
   if (std::optional<CallExitEnd> CE = P.getAs<CallExitEnd>()) {
@@ -1226,11 +1223,11 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     // We are descending into a call (backwards).  Construct
     // a new call piece to contain the path pieces for that call.
     auto Call = PathDiagnosticCallPiece::construct(*CE, SM);
-    // Record the mapping from call piece to LocationContext.
-    assert(!C.isInLocCtxMap(&Call->path) &&
+    // Record the mapping from call piece to StackFrame.
+    assert(!C.isInStackFrameMap(&Call->path) &&
            "We just entered a call, this must've been the first time we "
-           "encounter its context!");
-    C.updateLocCtxMap(&Call->path, CE->getCalleeContext());
+           "encounter its stack frame!");
+    C.updateStackFrameMap(&Call->path, CE->getCalleeStackFrame());
 
     if (C.shouldAddPathEdges()) {
       // Add the edge to the return site.
@@ -1256,7 +1253,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
     // as a terminator and as a terminator condition.
     if (!isa<ObjCForCollectionStmt>(PS->getStmt())) {
       PathDiagnosticLocation L =
-          PathDiagnosticLocation(PS->getStmt(), SM, C.getCurrLocationContext());
+          PathDiagnosticLocation(PS->getStmt(), SM, C.getCurrStackFrame());
       addEdgeToPath(C.getActivePath(), PrevLoc, L);
     }
 
@@ -1272,7 +1269,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     // Are we jumping to the head of a loop?  Add a special diagnostic.
     if (const Stmt *Loop = BE->getSrc()->getLoopTarget()) {
-      PathDiagnosticLocation L(Loop, SM, C.getCurrLocationContext());
+      PathDiagnosticLocation L(Loop, SM, C.getCurrStackFrame());
       const Stmt *Body = nullptr;
 
       if (const auto *FS = dyn_cast<ForStmt>(Loop))
@@ -1331,7 +1328,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
         if (!str.empty()) {
           PathDiagnosticLocation L(TermCond ? TermCond : Term, SM,
-                                   C.getCurrLocationContext());
+                                   C.getCurrStackFrame());
           auto PE = std::make_shared<PathDiagnosticEventPiece>(L, str);
           PE->setPrunable(true);
           addEdgeToPath(C.getActivePath(), PrevLoc, PE->getLocation());
@@ -1342,7 +1339,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
           }
         }
       } else if (isa<BreakStmt, ContinueStmt, GotoStmt>(Term)) {
-        PathDiagnosticLocation L(Term, SM, C.getCurrLocationContext());
+        PathDiagnosticLocation L(Term, SM, C.getCurrStackFrame());
         addEdgeToPath(C.getActivePath(), PrevLoc, L);
       }
     }
@@ -1448,8 +1445,8 @@ using OptimizedCallsSet = llvm::DenseSet<const PathDiagnosticCallPiece *>;
 /// This avoids a "swoosh" effect, where an edge from a top-level statement A
 /// points to a sub-expression B.1 that's not at the start of B. In these cases,
 /// we'd like to see an edge from A to B, then another one from B to B.1.
-static void addContextEdges(PathPieces &pieces, const LocationContext *LC) {
-  const ParentMap &PM = LC->getParentMap();
+static void addContextEdges(PathPieces &pieces, const StackFrame *SF) {
+  const ParentMap &PM = SF->getParentMap();
   PathPieces::iterator Prev = pieces.end();
   for (PathPieces::iterator I = pieces.begin(), E = Prev; I != E;
        Prev = I, ++I) {
@@ -1466,7 +1463,7 @@ static void addContextEdges(PathPieces &pieces, const LocationContext *LC) {
     while (NextSrcContext.isValid() && NextSrcContext.asStmt() != InnerStmt) {
       SrcContexts.push_back(NextSrcContext);
       InnerStmt = NextSrcContext.asStmt();
-      NextSrcContext = getEnclosingStmtLocation(InnerStmt, LC,
+      NextSrcContext = getEnclosingStmtLocation(InnerStmt, SF,
                                                 /*allowNested=*/true);
     }
 
@@ -1479,7 +1476,7 @@ static void addContextEdges(PathPieces &pieces, const LocationContext *LC) {
       // We are looking at an edge. Is the destination within a larger
       // expression?
       PathDiagnosticLocation DstContext =
-          getEnclosingStmtLocation(Dst, LC, /*allowNested=*/true);
+          getEnclosingStmtLocation(Dst, SF, /*allowNested=*/true);
       if (!DstContext.isValid() || DstContext.asStmt() == Dst)
         break;
 
@@ -1793,9 +1790,9 @@ static void removeIdenticalEvents(PathPieces &path) {
 static bool optimizeEdges(const PathDiagnosticConstruct &C, PathPieces &path,
                           OptimizedCallsSet &OCS) {
   bool hasChanges = false;
-  const LocationContext *LC = C.getLocationContextFor(&path);
-  assert(LC);
-  const ParentMap &PM = LC->getParentMap();
+  const StackFrame *SF = C.getStackFrameFor(&path);
+  assert(SF);
+  const ParentMap &PM = SF->getParentMap();
   const SourceManager &SM = C.getSourceManager();
 
   for (PathPieces::iterator I = path.begin(), E = path.end(); I != E; ) {
@@ -1951,7 +1948,7 @@ static bool optimizeEdges(const PathDiagnosticConstruct &C, PathPieces &path,
   if (!hasChanges) {
     // Adjust edges into subexpressions to make them more uniform
     // and aesthetically pleasing.
-    addContextEdges(path, LC);
+    addContextEdges(path, SF);
     // Remove "cyclical" edges that include one or more context edges.
     removeContextCycles(path, SM);
     // Hoist edges originating from branch conditions to branches
@@ -1979,7 +1976,7 @@ static void dropFunctionEntryEdge(const PathDiagnosticConstruct &C,
   if (!FirstEdge)
     return;
 
-  const Decl *D = C.getLocationContextFor(&Path)->getDecl();
+  const Decl *D = C.getStackFrameFor(&Path)->getDecl();
   PathDiagnosticLocation EntryLoc =
       PathDiagnosticLocation::createBegin(D, C.getSourceManager());
   if (FirstEdge->getStartLocation() != EntryLoc)
@@ -2010,7 +2007,7 @@ PathDiagnosticConstruct::PathDiagnosticConstruct(
       SM(CurrentNode->getCodeDecl().getASTContext().getSourceManager()),
       PD(generateEmptyDiagnosticForReport(R, getSourceManager(),
                                           AnalysisEntryPoint)) {
-  LCM[&PD->getActivePath()] = ErrorNode->getLocationContext();
+  SFM[&PD->getActivePath()] = ErrorNode->getStackFrame();
 }
 
 PathDiagnosticBuilder::PathDiagnosticBuilder(
@@ -2075,9 +2072,8 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (PDC->shouldAddPathEdges()) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrameContext *CalleeLC =
-        Construct.getLocationContextForActivePath()->getStackFrame();
-    const Decl *D = CalleeLC->getDecl();
+    const StackFrame *CalleeSF = Construct.getStackFrameForActivePath();
+    const Decl *D = CalleeSF->getDecl();
     addEdgeToPath(Construct.getActivePath(), PrevLoc,
                   PathDiagnosticLocation::createBegin(D, SM));
   }
@@ -2208,9 +2204,7 @@ const Decl *PathSensitiveBugReport::getDeclWithIssue() const {
   const ExplodedNode *N = getErrorNode();
   if (!N)
     return nullptr;
-
-  const LocationContext *LC = N->getLocationContext();
-  return LC->getStackFrame()->getDecl();
+  return N->getStackFrame()->getDecl();
 }
 
 void BasicBugReport::Profile(llvm::FoldingSetNodeID& hash) const {
@@ -2334,10 +2328,10 @@ void PathSensitiveBugReport::markInteresting(SVal V,
   markInteresting(V.getAsSymbol(), TKind);
 }
 
-void PathSensitiveBugReport::markInteresting(const LocationContext *LC) {
-  if (!LC)
+void PathSensitiveBugReport::markInteresting(const StackFrame *SF) {
+  if (!SF)
     return;
-  InterestingLocationContexts.insert(LC);
+  InterestingStackFrames.insert(SF);
 }
 
 std::optional<bugreporter::TrackingKind>
@@ -2404,10 +2398,10 @@ bool PathSensitiveBugReport::isInteresting(const MemRegion *R) const {
   return getInterestingnessKind(R).has_value();
 }
 
-bool PathSensitiveBugReport::isInteresting(const LocationContext *LC)  const {
-  if (!LC)
+bool PathSensitiveBugReport::isInteresting(const StackFrame *SF) const {
+  if (!SF)
     return false;
-  return InterestingLocationContexts.count(LC);
+  return InterestingStackFrames.count(SF);
 }
 
 const Stmt *PathSensitiveBugReport::getStmt() const {
@@ -2418,7 +2412,7 @@ const Stmt *PathSensitiveBugReport::getStmt() const {
   const Stmt *S = nullptr;
 
   if (std::optional<BlockEntrance> BE = ProgP.getAs<BlockEntrance>()) {
-    CFGBlock &Exit = ProgP.getLocationContext()->getCFG()->getExit();
+    CFGBlock &Exit = ProgP.getStackFrame()->getCFG()->getExit();
     if (BE->getBlock() == &Exit)
       S = ErrorNode->getPreviousStmtForDiagnostics();
   }
@@ -2444,7 +2438,7 @@ static bool exitingDestructor(const ExplodedNode *N) {
   while (N && !N->getLocation().getAs<StmtPoint>()) {
     N = N->getFirstPred();
   }
-  return N && isa<CXXDestructorDecl>(N->getLocationContext()->getDecl());
+  return N && isa<CXXDestructorDecl>(N->getStackFrame()->getDecl());
 }
 
 static const Stmt *
@@ -2465,23 +2459,25 @@ PathSensitiveBugReport::getLocation() const {
   assert(ErrorNode && "Cannot create a location with a null node.");
   const Stmt *S = ErrorNode->getStmtForDiagnostics();
     ProgramPoint P = ErrorNode->getLocation();
-  const LocationContext *LC = P.getLocationContext();
-  SourceManager &SM =
-      ErrorNode->getState()->getStateManager().getContext().getSourceManager();
+    const StackFrame *SF = P.getStackFrame();
+    SourceManager &SM = ErrorNode->getState()
+                            ->getStateManager()
+                            .getContext()
+                            .getSourceManager();
 
-  if (!S) {
-    // If this is an implicit call, return the implicit call point location.
+    if (!S) {
+      // If this is an implicit call, return the implicit call point location.
       if (std::optional<PreImplicitCall> PIE = P.getAs<PreImplicitCall>())
       return PathDiagnosticLocation(PIE->getLocation(), SM);
     if (auto FE = P.getAs<FunctionExitPoint>()) {
       if (const ReturnStmt *RS = FE->getStmt())
-        return PathDiagnosticLocation::createBegin(RS, SM, LC);
+        return PathDiagnosticLocation::createBegin(RS, SM, SF);
 
       S = findReasonableStmtCloseToFunctionExit(ErrorNode);
     }
     if (!S)
       S = ErrorNode->getNextStmtForDiagnostics();
-  }
+    }
 
   if (S) {
     // Attributed statements usually have corrupted begin locations,
@@ -2499,17 +2495,16 @@ PathSensitiveBugReport::getLocation() const {
       return PathDiagnosticLocation::createOperatorLoc(B, SM);
 
     if (P.getAs<PostStmtPurgeDeadSymbols>())
-      return PathDiagnosticLocation::createEnd(S, SM, LC);
+      return PathDiagnosticLocation::createEnd(S, SM, SF);
 
     if (S->getBeginLoc().isValid())
-      return PathDiagnosticLocation(S, SM, LC);
+      return PathDiagnosticLocation(S, SM, SF);
 
     return PathDiagnosticLocation(
-        PathDiagnosticLocation::getValidSourceLocation(S, LC), SM);
+        PathDiagnosticLocation::getValidSourceLocation(S, SF), SM);
   }
 
-  return PathDiagnosticLocation::createDeclEnd(ErrorNode->getLocationContext(),
-                                               SM);
+  return PathDiagnosticLocation::createDeclEnd(ErrorNode->getStackFrame(), SM);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3010,7 +3005,7 @@ void PathSensitiveBugReporter::emitReport(std::unique_ptr<BugReport> R) {
              "Error node must either be a sink or have a tag");
 
       const AnalysisDeclContext *DeclCtx =
-          E->getLocationContext()->getAnalysisDeclContext();
+          E->getStackFrame()->getAnalysisDeclContext();
       // The source of autosynthesized body can be handcrafted AST or a model
       // file. The locations from handcrafted ASTs have no valid source
       // locations and have to be discarded. Locations from model files should
@@ -3262,11 +3257,11 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
   while (N) {
     if (N->getFirstPred() == nullptr) {
       // First node: show signature of the entrance point.
-      const Decl *D = N->getLocationContext()->getDecl();
+      const Decl *D = N->getStackFrame()->getDecl();
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (auto CE = N->getLocationAs<CallEnter>()) {
       // Inlined function: show signature.
-      const Decl* D = CE->getCalleeContext()->getDecl();
+      const Decl *D = CE->getCalleeStackFrame()->getDecl();
       populateExecutedLinesWithFunctionSignature(D, SM, *ExecutedLines);
     } else if (const Stmt *S = N->getStmtForDiagnostics()) {
       populateExecutedLinesWithStmt(S, SM, *ExecutedLines);

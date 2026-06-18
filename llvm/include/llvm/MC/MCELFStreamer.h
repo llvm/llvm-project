@@ -28,7 +28,7 @@ class MCCodeEmitter;
 class MCExpr;
 class MCInst;
 
-class MCELFStreamer : public MCObjectStreamer {
+class LLVM_ABI MCELFStreamer : public MCObjectStreamer {
 public:
   MCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                 std::unique_ptr<MCObjectWriter> OW,
@@ -47,7 +47,7 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void initSections(const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
@@ -148,11 +148,11 @@ private:
   bool SeenIdent = false;
 };
 
-MCELFStreamer *createARMELFStreamer(MCContext &Context,
-                                    std::unique_ptr<MCAsmBackend> TAB,
-                                    std::unique_ptr<MCObjectWriter> OW,
-                                    std::unique_ptr<MCCodeEmitter> Emitter,
-                                    bool IsThumb, bool IsAndroid);
+LLVM_ABI MCELFStreamer *
+createARMELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                     std::unique_ptr<MCObjectWriter> OW,
+                     std::unique_ptr<MCCodeEmitter> Emitter, bool IsThumb,
+                     bool IsAndroid);
 
 } // end namespace llvm
 

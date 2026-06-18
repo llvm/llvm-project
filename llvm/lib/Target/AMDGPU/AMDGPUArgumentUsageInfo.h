@@ -10,14 +10,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/Pass.h"
 #include <variant>
 
 namespace llvm {
 
-class Function;
 class LLT;
 class raw_ostream;
 class TargetRegisterClass;
@@ -26,7 +23,6 @@ class TargetRegisterInfo;
 struct ArgDescriptor {
 private:
   friend struct AMDGPUFunctionArgInfo;
-  friend class AMDGPUArgumentUsageInfo;
 
   std::variant<std::monostate, MCRegister, unsigned> Val;
 
@@ -166,34 +162,7 @@ struct AMDGPUFunctionArgInfo {
   getPreloadedValue(PreloadedValue Value) const;
 
   static AMDGPUFunctionArgInfo fixedABILayout();
-};
-
-class AMDGPUArgumentUsageInfo : public ImmutablePass {
-private:
-  DenseMap<const Function *, AMDGPUFunctionArgInfo> ArgInfoMap;
-
-public:
-  static char ID;
-
-  static const AMDGPUFunctionArgInfo ExternFunctionInfo;
   static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
-
-  AMDGPUArgumentUsageInfo() : ImmutablePass(ID) { }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  bool doInitialization(Module &M) override;
-  bool doFinalization(Module &M) override;
-
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
-  void setFuncArgInfo(const Function &F, const AMDGPUFunctionArgInfo &ArgInfo) {
-    ArgInfoMap[&F] = ArgInfo;
-  }
-
-  const AMDGPUFunctionArgInfo &lookupFuncArgInfo(const Function &F) const;
 };
 
 } // end namespace llvm

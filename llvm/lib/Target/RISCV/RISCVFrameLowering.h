@@ -47,11 +47,10 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -116,6 +115,10 @@ private:
                                    const DebugLoc &DL, int64_t Amount,
                                    MachineInstr::MIFlag Flag, bool EmitCFI,
                                    bool DynAllocation) const;
+
+  /// Emit target zero call-used regs.
+  void emitZeroCallUsedRegs(BitVector RegsToZero,
+                            MachineBasicBlock &MBB) const override;
 };
 } // namespace llvm
 #endif

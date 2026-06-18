@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-stringview-nullptr -std=c++17 %t
+// RUN: %check_clang_tidy %s bugprone-stringview-nullptr -std=c++17-or-later %t
 
 namespace std {
 

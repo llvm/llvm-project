@@ -15,19 +15,7 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def uimm2_lsb0 : RISCVOp,
-                 ImmLeaf<XLenVT, [{return isShiftedUInt<1, 1>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<2, "Lsb0">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2_LSB0";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<1, 1>(Imm);
-  }];
-}
+def uimm2_lsb0 : RISCVUImmLsbZeroOp<2, 1>;
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
@@ -104,8 +92,8 @@ def negstackadj : RISCVOp<OtherVT> {
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoadB_ri<bits<6> funct6, string OpcodeStr>
-    : RVInst16CLB<funct6, 0b00, (outs GPRC:$rd),
-                  (ins GPRCMem:$rs1, uimm2:$imm),
+    : RVInst16CLB<funct6, OPC_C0, (outs GPRC:$rd),
+                  (ins BasePtrC:$rs1, uimm2:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -115,8 +103,8 @@ class CLoadB_ri<bits<6> funct6, string OpcodeStr>
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
                 DAGOperand rty = GPRC>
-    : RVInst16CLH<funct6, funct1, 0b00, (outs rty:$rd),
-                  (ins GPRCMem:$rs1, uimm2_lsb0:$imm),
+    : RVInst16CLH<funct6, funct1, OPC_C0, (outs rty:$rd),
+                  (ins BasePtrC:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -125,8 +113,8 @@ class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStoreB_rri<bits<6> funct6, string OpcodeStr>
-    : RVInst16CSB<funct6, 0b00, (outs),
-                  (ins GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
+    : RVInst16CSB<funct6, OPC_C0, (outs),
+                  (ins GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -136,8 +124,8 @@ class CStoreB_rri<bits<6> funct6, string OpcodeStr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr,
                   DAGOperand rty = GPRC>
-    : RVInst16CSH<funct6, funct1, 0b00, (outs),
-                  (ins rty:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+    : RVInst16CSH<funct6, funct1, OPC_C0, (outs),
+                  (ins rty:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -146,7 +134,7 @@ class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
-  RVInst16CU<0b100111, funct5, 0b01, (outs GPRC:$rd_wb), (ins GPRC:$rd),
+  RVInst16CU<0b100111, funct5, OPC_C1, (outs GPRC:$rd_wb), (ins GPRC:$rd),
              OpcodeStr, "$rd"> {
   let Constraints = "$rd = $rd_wb";
 }
@@ -219,12 +207,12 @@ def C_SH_INX : CStoreH_rri<0b100011, 0b0, "c.sh", GPRF16C>,
 let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
-def CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
+def CM_MVA01S : RVInst16CA<0b101011, 0b11, OPC_C2, (outs),
                             (ins SR07:$rs1, SR07:$rs2), "cm.mva01s", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
 let Uses = [X10, X11] in
-def CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
+def CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2, (outs SR07:$rs1, SR07:$rs2),
                             (ins), "cm.mvsa01", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
@@ -262,7 +250,7 @@ def CM_POP : RVInstZcCPPP<0b11010, "cm.pop">,
 
 let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmt],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
+def CM_JT : RVInst16CJ<0b101, OPC_C2, (outs), (ins uimm5:$index),
                        "cm.jt", "$index">{
   bits<5> index;
 
@@ -271,7 +259,7 @@ def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
 }
 
 let Defs = [X1] in
-def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
+def CM_JALT : RVInst16CJ<0b101, OPC_C2, (outs), (ins uimm8ge32:$index),
                          "cm.jalt", "$index">{
   bits<8> index;
 
@@ -319,22 +307,22 @@ def : CompressPat<(XORI GPRC:$rs1, GPRC:$rs1, -1),
 }
 
 let Predicates = [HasStdExtZcb] in{
-def : CompressPat<(LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm),
-                  (C_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm)>;
-def : CompressPat<(LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-def : CompressPat<(LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
-                  (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
-def : CompressPat<(SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm),
+                  (C_LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
+                  (C_SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 
 let isCompressOnly = true in {
-def : CompressPat<(LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_LH_INX GPRF16C:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
-def : CompressPat<(SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
-                  (C_SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 }
 }// Predicates = [HasStdExtZcb]
 

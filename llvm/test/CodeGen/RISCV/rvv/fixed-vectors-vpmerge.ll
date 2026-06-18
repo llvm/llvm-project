@@ -779,8 +779,8 @@ define <4 x i64> @vpmerge_vx_v4i64(i64 %a, <4 x i64> %vb, <4 x i1> %m, i32 zeroe
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -800,8 +800,8 @@ define <4 x i64> @vpmerge_vx_v4i64(i64 %a, <4 x i64> %vb, <4 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -16
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
+; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32ZVFHMIN-NEXT:    vlse64.v v10, (a0), zero
@@ -848,8 +848,8 @@ define <8 x i64> @vpmerge_vx_v8i64(i64 %a, <8 x i64> %vb, <8 x i1> %m, i32 zeroe
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
@@ -869,8 +869,8 @@ define <8 x i64> @vpmerge_vx_v8i64(i64 %a, <8 x i64> %vb, <8 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -16
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    sw a1, 12(sp)
+; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFHMIN-NEXT:    vlse64.v v12, (a0), zero
@@ -1306,11 +1306,11 @@ define <32 x double> @vpmerge_vv_v32f64(<32 x double> %va, <32 x double> %vb, <3
 ; CHECK-NEXT:  .LBB83_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    addi a0, a2, -16
 ; CHECK-NEXT:    sltu a1, a2, a0
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
@@ -1339,11 +1339,11 @@ define <32 x double> @vpmerge_vf_v32f64(double %a, <32 x double> %vb, <32 x i1> 
 ; CHECK-NEXT:  .LBB84_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    addi a1, a0, -16
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v16, v16, fa0, v0
@@ -1352,4 +1352,49 @@ define <32 x double> @vpmerge_vf_v32f64(double %a, <32 x double> %vb, <32 x i1> 
   %va = shufflevector <32 x double> %elt.head, <32 x double> poison, <32 x i32> zeroinitializer
   %v = call <32 x double> @llvm.vp.merge.v32f64(<32 x i1> %m, <32 x double> %va, <32 x double> %vb, i32 %evl)
   ret <32 x double> %v
+}
+
+define <4 x i32> @splat_v4i32(i32 %x, i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat = shufflevector <4 x i32> %head, <4 x i32> poison, <4 x i32> zeroinitializer
+  %v = call <4 x i32> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x i32> %splat, <4 x i32> poison, i32 %evl)
+  ret <4 x i32> %v
+}
+
+define <4 x float> @splat_v4f32(float %x, i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    ret
+  %head = insertelement <4 x float> poison, float %x, i32 0
+  %splat = shufflevector <4 x float> %head, <4 x float> poison, <4 x i32> zeroinitializer
+  %v = call <4 x float> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x float> %splat, <4 x float> poison, i32 %evl)
+  ret <4 x float> %v
+}
+
+define <4 x i32> @splat_v4i32_const(i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4i32_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    ret
+  %v = call <4 x i32> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x i32> splat (i32 1), <4 x i32> poison, i32 %evl)
+  ret <4 x i32> %v
+}
+
+define <4 x float> @splat_v4f32_const(i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4f32_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 270976
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    ret
+  %v = call <4 x float> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x float> splat (float 42.0), <4 x float> poison, i32 %evl)
+  ret <4 x float> %v
 }

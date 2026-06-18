@@ -36,14 +36,14 @@ using testing::Not;
 // note, which is not universally enabled by default (even when using Clang).
 // Disable until we can reliably detect whether this is the case and skip it if
 // not. See https://github.com/llvm/llvm-project/issues/168891.
-#if 0
 TEST(SignalsTest, PrintsSymbolizerMarkup) {
-  auto Exit =
-      make_scope_exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
+  scope_exit Exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
   setenv("LLVM_ENABLE_SYMBOLIZER_MARKUP", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);
   PrintStackTrace(RawStream);
+  if (!StringRef(Res).contains("SupportTests"))
+    GTEST_SKIP() << "build ID could not be found for the main binary";
   EXPECT_THAT(Res, MatchesRegex(TAG_BEGIN "reset" TAG_END ".*"));
   // Module line for main binary
   EXPECT_THAT(Res,
@@ -56,10 +56,9 @@ TEST(SignalsTest, PrintsSymbolizerMarkup) {
   // Backtrace line
   EXPECT_THAT(Res, MatchesRegex(".*" TAG_BEGIN "bt:0:" P_REGEX ".*"));
 }
-#endif
 
 TEST(SignalsTest, SymbolizerMarkupDisabled) {
-  auto Exit = make_scope_exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
+  scope_exit Exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
   setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);

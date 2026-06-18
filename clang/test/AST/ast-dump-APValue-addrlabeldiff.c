@@ -1,5 +1,5 @@
 // Test without serialization:
-// RUN: %clang_cc1 -std=c23 -ast-dump %s -ast-dump-filter Test \
+// RUN: %clang_cc1 -std=c23 -ast-dump %s -ast-dump-filter Test -triple=i686 \
 // RUN: | FileCheck --strict-whitespace --match-full-lines %s
 //
 // Test with serialization:
@@ -12,7 +12,7 @@
 
 // CHECK:  |   |-value: AddrLabelDiff &&l2 - &&l1
 int Test(void) {
-  constexpr char ar = &&l2 - &&l1;
+  constexpr __INTPTR_TYPE__ ar = &&l2 - &&l1;
 l1:
   return 10;
 l2:

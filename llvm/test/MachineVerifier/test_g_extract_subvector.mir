@@ -1,10 +1,9 @@
-# RUN: not --crash llc -o - -run-pass=none -verify-machineinstrs -mtriple=arm64 %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
+
 ---
-name:            g_extract_subvector
-tracksRegLiveness: true
-liveins:
-body:             |
+name: g_extract_subvector
+body: |
   bb.0:
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
@@ -51,13 +50,13 @@ body:             |
     ; CHECK: Destination type and index must not cause extract to overrun the source vector
     %17:_(<3 x s32>) = G_EXTRACT_SUBVECTOR  %15, 3
 
-    ; CHECK: Vector types must both be fixed or both be scalable
+    ; CHECK: Cannot extract a scalable vector from a fixed length vector
     %18:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %15, 0
-
-    ; CHECK: Vector types must both be fixed or both be scalable
-    %19:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 0
 
     ; CHECK: Index must be a multiple of the destination vector's minimum vector length
     %20:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %12, 1
+
+    ; CHECK: Destination type and index must not cause extract to overrun the source vector
+    %21:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %12, 4
 
 ...

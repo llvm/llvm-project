@@ -5,3 +5,9 @@
 define void @arg_not_pointer(i32 dead_on_return %arg) {
   ret void
 }
+
+; CHECK: Attribute 'dead_on_return(4)' applied to incompatible type!
+; CHECK-NEXT: ptr @arg_not_pointer2
+define void @arg_not_pointer2(i32 dead_on_return(4) %arg) {
+  ret void
+}

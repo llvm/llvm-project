@@ -16,26 +16,28 @@ using namespace clang;
 using namespace clang::interp;
 
 Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
-                   llvm::SmallVectorImpl<PrimType> &&ParamTypes,
-                   llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-                   llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
+                   llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
                    bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
     : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
-      ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      ParamOffsets(std::move(ParamOffsets)), IsValid(false),
+      ParamDescriptors(std::move(ParamDescriptors)), IsValid(false),
       IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
       HasBody(false), Defined(false) {
+
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
     Immediate = F->isImmediateFunction();
-    Constexpr = F->isConstexpr() || F->hasAttr<MSConstexprAttr>();
+    Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
-      Kind = FunctionKind::Ctor;
+      ExplicitThisPointer = CD->isExplicitObjectMemberFunction();
+      Kind = CD->isCopyOrMoveConstructor() ? FunctionKind::CopyOrMoveCtor
+                                           : FunctionKind::Ctor;
     } else if (const auto *CD = dyn_cast<CXXDestructorDecl>(F)) {
+      ExplicitThisPointer = CD->isExplicitObjectMemberFunction();
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Dtor;
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+      ExplicitThisPointer = MD->isExplicitObjectMemberFunction();
       Virtual = MD->isVirtual();
       if (IsLambdaStaticInvoker)
         Kind = FunctionKind::LambdaStaticInvoker;
@@ -44,20 +46,16 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
         Kind = FunctionKind::CopyOrMoveOperator;
     } else {
+      ExplicitThisPointer = false;
       Virtual = false;
     }
   } else {
+    ExplicitThisPointer = false;
     Variadic = false;
     Virtual = false;
     Immediate = false;
     Constexpr = false;
   }
-}
-
-Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
-  auto It = Params.find(Offset);
-  assert(It != Params.end() && "Invalid parameter offset");
-  return It->second;
 }
 
 SourceInfo Function::getSource(CodePtr PC) const {

@@ -244,6 +244,42 @@ void RewriterBase::eraseBlock(Block *block) {
   block->erase();
 }
 
+Operation *RewriterBase::eraseOpResults(Operation *op,
+                                        const BitVector &eraseIndices) {
+  assert(op->getNumResults() == eraseIndices.size() &&
+         "number of op results and bitvector size must match");
+
+  // Gather new result types.
+  SmallVector<Type> newResultTypes;
+  newResultTypes.reserve(op->getNumResults() - eraseIndices.count());
+  for (OpResult result : op->getResults())
+    if (!eraseIndices[result.getResultNumber()])
+      newResultTypes.push_back(result.getType());
+
+  // Create a new operation and inline all regions.
+  InsertionGuard g(*this);
+  setInsertionPoint(op);
+  OperationState state(op->getLoc(), op->getName().getStringRef(),
+                       op->getOperands(), newResultTypes, op->getAttrs());
+  for ([[maybe_unused]] auto i : llvm::seq<unsigned>(0, op->getNumRegions()))
+    state.addRegion();
+  Operation *newOp = create(state);
+  for (const auto &[index, region] : llvm::enumerate(op->getRegions())) {
+    // Move all blocks of `region` into `newRegion`.
+    Region &newRegion = newOp->getRegion(index);
+    inlineRegionBefore(region, newRegion, newRegion.begin());
+  }
+
+  // Replace the original operation with the new operation.
+  SmallVector<Value> replacements(op->getNumResults(), Value());
+  unsigned nextResultIdx = 0;
+  for (auto i : llvm::seq<unsigned>(0, op->getNumResults()))
+    if (!eraseIndices[i])
+      replacements[i] = newOp->getResult(nextResultIdx++);
+  replaceOp(op, replacements);
+  return newOp;
+}
+
 void RewriterBase::finalizeOpModification(Operation *op) {
   // Notify the listener that the operation was modified.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
@@ -278,9 +314,9 @@ void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
   assert(from.size() == to.size() && "incorrect number of replacements");
   bool allReplaced = true;
   for (auto it : llvm::zip_equal(from, to)) {
-    bool r;
+    bool r = true;
     replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
-                      /*allUsesReplaced=*/&r);
+                      /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
     allReplaced &= r;
   }
   if (allUsesReplaced)

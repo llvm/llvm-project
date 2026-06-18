@@ -7,12 +7,10 @@
 // CHECK-LABEL: define dso_local ptr addrspace(8) @_Z31test_amdgcn_make_buffer_rsrc_p0Pvsii(
 // CHECK-SAME: ptr noundef [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr addrspace(8), align 16, addrspace(5)
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[STRIDE_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[NUM_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[FLAGS_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // CHECK-NEXT:    [[STRIDE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[STRIDE_ADDR]] to ptr
 // CHECK-NEXT:    [[NUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[NUM_ADDR]] to ptr
@@ -36,11 +34,9 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0(void *p, short
 // CHECK-LABEL: define dso_local ptr addrspace(8) @_Z47test_amdgcn_make_buffer_rsrc_p0_stride_constantPvii(
 // CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[NUM:%.*]], i32 noundef [[FLAGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr addrspace(8), align 16, addrspace(5)
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[NUM_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[FLAGS_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // CHECK-NEXT:    [[NUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[NUM_ADDR]] to ptr
 // CHECK-NEXT:    [[FLAGS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[FLAGS_ADDR]] to ptr
@@ -61,11 +57,9 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_stride_constan
 // CHECK-LABEL: define dso_local ptr addrspace(8) @_Z44test_amdgcn_make_buffer_rsrc_p0_num_constantPvsi(
 // CHECK-SAME: ptr noundef [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[FLAGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr addrspace(8), align 16, addrspace(5)
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[STRIDE_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[FLAGS_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // CHECK-NEXT:    [[STRIDE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[STRIDE_ADDR]] to ptr
 // CHECK-NEXT:    [[FLAGS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[FLAGS_ADDR]] to ptr
@@ -85,11 +79,9 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_num_constant(v
 // CHECK-LABEL: define dso_local ptr addrspace(8) @_Z46test_amdgcn_make_buffer_rsrc_p0_flags_constantPvsi(
 // CHECK-SAME: ptr noundef [[P:%.*]], i16 noundef signext [[STRIDE:%.*]], i32 noundef [[NUM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr addrspace(8), align 16, addrspace(5)
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[STRIDE_ADDR:%.*]] = alloca i16, align 2, addrspace(5)
 // CHECK-NEXT:    [[NUM_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // CHECK-NEXT:    [[STRIDE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[STRIDE_ADDR]] to ptr
 // CHECK-NEXT:    [[NUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[NUM_ADDR]] to ptr

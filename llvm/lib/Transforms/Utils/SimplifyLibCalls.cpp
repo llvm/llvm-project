@@ -240,11 +240,15 @@ static Value *convertStrToInt(CallInst *CI, StringRef &Str, Value *EndPtr,
     B.CreateStore(StrEnd, EndPtr);
   }
 
-  if (Negate)
+  if (Negate) {
     // Unsigned negation doesn't overflow.
     Result = -Result;
+    // For unsigned numbers, discard sign bits.
+    if (!AsSigned)
+      Result &= maxUIntN(NBits);
+  }
 
-  return ConstantInt::get(RetTy, Result);
+  return ConstantInt::get(RetTy, Result, AsSigned);
 }
 
 static bool isOnlyUsedInComparisonWithZero(Value *V) {
@@ -260,11 +264,11 @@ static bool isOnlyUsedInComparisonWithZero(Value *V) {
 }
 
 static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
-                                 const DataLayout &DL) {
+                                 const SimplifyQuery &SQ) {
   if (!isOnlyUsedInComparisonWithZero(CI))
     return false;
 
-  if (!isDereferenceableAndAlignedPointer(Str, Align(1), APInt(64, Len), DL))
+  if (!isDereferenceablePointer(Str, APInt(64, Len), SQ))
     return false;
 
   if (CI->getFunction()->hasFnAttribute(Attribute::SanitizeMemory))
@@ -577,8 +581,8 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strcmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2)
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(Str1.compare(Str2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(Str1.compare(Str2), -1, 1));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
     return B.CreateNeg(B.CreateZExt(
@@ -604,13 +608,14 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   }
 
   // strcmp to memcmp
+  SimplifyQuery SQ(DL, TLI, DT, AC, CI);
   if (!HasStr1 && HasStr2) {
-    if (canTransformToMemCmp(CI, Str1P, Len2, DL))
+    if (canTransformToMemCmp(CI, Str1P, Len2, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len2, *CI->getModule()),
                                        B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
-    if (canTransformToMemCmp(CI, Str2P, Len1, DL))
+    if (canTransformToMemCmp(CI, Str2P, Len1, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len1, *CI->getModule()),
                                        B, DL, TLI));
@@ -657,8 +662,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     // Avoid truncating the 64-bit Length to 32 bits in ILP32.
     StringRef SubStr1 = substr(Str1, Length);
     StringRef SubStr2 = substr(Str2, Length);
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(SubStr1.compare(SubStr2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(SubStr1.compare(SubStr2), -1, 1));
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
@@ -1534,7 +1539,7 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
   int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
   Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
   Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
-  Value *Res = ConstantInt::get(CI->getType(), IRes);
+  Value *Res = ConstantInt::getSigned(CI->getType(), IRes);
   return B.CreateSelect(Cmp, Zero, Res);
 }
 
@@ -1933,7 +1938,15 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
 // Replace a libcall \p CI with a call to intrinsic \p IID
 static Value *replaceUnaryCall(CallInst *CI, IRBuilderBase &B,
                                Intrinsic::ID IID) {
-  CallInst *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
+  Value *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
+  NewCall->takeName(CI);
+  return copyFlags(*CI, NewCall);
+}
+
+static Value *replaceBinaryCall(CallInst *CI, IRBuilderBase &B,
+                                Intrinsic::ID IID) {
+  Value *NewCall = B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
+                                           CI->getArgOperand(1), CI);
   NewCall->takeName(CI);
   return copyFlags(*CI, NewCall);
 }
@@ -2011,10 +2024,11 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     R = isBinary ? B.CreateIntrinsic(IID, B.getFloatTy(), V)
                  : B.CreateIntrinsic(IID, B.getFloatTy(), V[0]);
   } else {
-    AttributeList CalleeAttrs = CalleeFn->getAttributes();
-    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
-                                         CalleeAttrs)
-                 : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CalleeAttrs);
+    AttributeList CallsiteAttrs = CI->getAttributes();
+    R = isBinary
+            ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
+                                    CallsiteAttrs)
+            : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CallsiteAttrs);
   }
   return B.CreateFPExt(R, B.getDoubleTy());
 }
@@ -2067,8 +2081,7 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
     }
 
     if (AbsOp)
-      return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, CI, "cabs"));
+      return copyFlags(*CI, B.CreateFAbs(AbsOp, CI, "cabs"));
 
     if (!CI->isFast())
       return nullptr;
@@ -2239,9 +2252,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
       hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l)) {
 
     if (Pow->doesNotAccessMemory()) {
-      CallInst *NewExp10 =
-          B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10");
-      return copyFlags(*Pow, NewExp10);
+      return B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10", {},
+                               [Pow](CallInst *CI) { CI->copyIRFlags(Pow); });
     }
 
     return copyFlags(*Pow, emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10,
@@ -2330,7 +2342,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
 
   // Handle signed zero base by expanding to fabs(sqrt(x)).
   if (!Pow->hasNoSignedZeros())
-    Sqrt = B.CreateUnaryIntrinsic(Intrinsic::fabs, Sqrt, nullptr, "abs");
+    Sqrt = B.CreateFAbs(Sqrt, nullptr, "abs");
 
   Sqrt = copyFlags(*Pow, Sqrt);
 
@@ -2394,7 +2406,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
     return Base;
 
   // pow(x, 2.0) -> x * x
-  if (match(Expo, m_SpecificFP(2.0)))
+  if (match(Expo, m_SpecificFP(2.0)) && Pow->doesNotAccessMemory())
     return B.CreateFMul(Base, Base, "square");
 
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
@@ -2516,17 +2528,8 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   return Ret;
 }
 
-Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
-  Module *M = CI->getModule();
-
-  // If we can shrink the call to a float function rather than a double
-  // function, do that first.
-  Function *Callee = CI->getCalledFunction();
-  StringRef Name = Callee->getName();
-  if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(M, Name))
-    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
-      return Ret;
-
+Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B,
+                                           Intrinsic::ID IID) {
   // The LLVM intrinsics minnum/maxnum correspond to fmin/fmax. Canonicalize to
   // the intrinsics for improved optimization (for example, vectorization).
   // No-signed-zeros is implied by the definitions of fmax/fmin themselves.
@@ -2536,9 +2539,6 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   // might be impractical."
   FastMathFlags FMF = CI->getFastMathFlags();
   FMF.setNoSignedZeros();
-
-  Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
-                                                            : Intrinsic::maxnum;
   return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
                                                 CI->getArgOperand(1), FMF));
 }
@@ -2640,9 +2640,12 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
           Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
-      auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
-      NewLog->copyMetadata(*Log);
-      return copyFlags(*Log, NewLog);
+      Value *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
+      if (auto *I = dyn_cast<Instruction>(NewLog)) {
+        I->copyMetadata(*Log);
+        return copyFlags(*Log, I);
+      }
+      return NewLog;
     }
   } else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
              LogID == Intrinsic::log10) {
@@ -2839,8 +2842,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
-  Value *FabsCall =
-      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, I, "fabs");
+  Value *FabsCall = B.CreateFAbs(RepeatOp, I, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
@@ -2854,11 +2856,10 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
 
-  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
-  // case. If we know those do not happen, then we can convert the fmod into
-  // frem.
-  bool IsNoNan = CI->hasNoNaNs();
-  if (!IsNoNan) {
+  // fmod(x,y) sets errno if y == 0 or x == +/-inf. frem does not set errno,
+  // so the fold is valid only when we can prove fmod wouldn't either.
+  bool IsNoErrno = CI->hasNoNaNs();
+  if (!IsNoErrno) {
     SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
     KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf, SQ);
     if (Known0.isKnownNeverInfinity()) {
@@ -2867,16 +2868,12 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
       Function *F = CI->getParent()->getParent();
       const fltSemantics &FltSem =
           CI->getType()->getScalarType()->getFltSemantics();
-      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
+      IsNoErrno = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
-  if (IsNoNan) {
-    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
-    if (auto *FRemI = dyn_cast<Instruction>(FRem))
-      FRemI->setHasNoNaNs(true);
-    return FRem;
-  }
+  if (IsNoErrno)
+    return B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
   return nullptr;
 }
 
@@ -3030,15 +3027,27 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_cos:
   case LibFunc_cosf:
   case LibFunc_cosl:
+
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
     return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
 
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
 
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl:
+
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanl:
+
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_tanhl:
 
   case LibFunc_erf:
   case LibFunc_erff:
@@ -3159,7 +3168,7 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   B.CreateAlignedStore(
-      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      ConstantInt::getSigned(B.getIntNTy(IntBW), QuotInt.getExtValue()),
       CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
 }
@@ -3183,12 +3192,12 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
       !match(CI->getArgOperand(1), m_APFloat(Y)))
     return nullptr;
 
+  // C99 fdim(x, y) = (x > y) ? x - y : +0.
+  if (X->compare(*Y) != APFloat::cmpGreaterThan && !X->isNaN() && !Y->isNaN())
+    return ConstantFP::getZero(CI->getType());
   APFloat Difference = *X;
   Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
-
-  APFloat MaxVal =
-      maximum(Difference, APFloat::getZero(CI->getType()->getFltSemantics()));
-  return ConstantFP::get(CI->getType(), MaxVal);
+  return ConstantFP::get(CI->getType(), Difference);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3377,6 +3386,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     }
     // printf("%s", str"\n") --> puts(str)
     if (OperandStr.back() == '\n') {
+      if (!isLibFuncEmittable(CI->getModule(), TLI, LibFunc_puts))
+        return nullptr;
       OperandStr = OperandStr.drop_back();
       Value *GV = B.CreateGlobalString(OperandStr, "str");
       return copyFlags(*CI, emitPutS(GV, B, TLI));
@@ -3387,6 +3398,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   // printf("foo\n") --> puts("foo")
   if (FormatStr.back() == '\n' &&
       !FormatStr.contains('%')) { // No format characters.
+    if (!isLibFuncEmittable(CI->getModule(), TLI, LibFunc_puts))
+      return nullptr;
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
@@ -3508,7 +3521,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
-      Value *PtrDiff = B.CreatePtrDiff(B.getInt8Ty(), V, Dest);
+      Value *PtrDiff = B.CreatePtrDiff(V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 
@@ -4119,10 +4132,19 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:
+    return optimizeFMinFMax(CI, Builder, Intrinsic::minnum);
   case LibFunc_fmaxf:
   case LibFunc_fmax:
   case LibFunc_fmaxl:
-    return optimizeFMinFMax(CI, Builder);
+    return optimizeFMinFMax(CI, Builder, Intrinsic::maxnum);
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numl:
+    return replaceBinaryCall(CI, Builder, Intrinsic::minimumnum);
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numl:
+    return replaceBinaryCall(CI, Builder, Intrinsic::maximumnum);
   case LibFunc_cabs:
   case LibFunc_cabsf:
   case LibFunc_cabsl:

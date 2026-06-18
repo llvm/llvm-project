@@ -52,10 +52,10 @@ extern llvm::codegenoptions::DebugInfoKind noDebugInfo;
 
 /// Optimizer Passes
 extern llvm::cl::opt<bool> disableCfgConversion;
+extern llvm::cl::opt<bool> disableFirAliasTags;
 extern llvm::cl::opt<bool> disableFirAvc;
 extern llvm::cl::opt<bool> disableFirMao;
-
-extern llvm::cl::opt<bool> disableFirAliasTags;
+extern llvm::cl::opt<bool> enableFirLICM;
 extern llvm::cl::opt<bool> useOldAliasTags;
 
 /// CodeGen Passes
@@ -65,6 +65,7 @@ extern llvm::cl::opt<bool> disableDebugInfo;
 extern llvm::cl::opt<bool> disableFirToLlvmIr;
 extern llvm::cl::opt<bool> disableLlvmIrToLlvm;
 extern llvm::cl::opt<bool> disableBoxedProcedureRewrite;
+extern llvm::cl::opt<bool> enableSafeTrampoline;
 
 extern llvm::cl::opt<bool> disableExternalNameConversion;
 extern llvm::cl::opt<bool> enableConstantArgumentGlobalisation;

@@ -16,7 +16,7 @@ corresponding `linalg.generic` IR for the composition.
 ## Basic usage
 
 The tool is bundled with the MLIR Python bindings. To use from the CMake build
-tree, MLIR must be build with Python bindings enabled
+tree, MLIR must be built with Python bindings enabled
 (`-DMLIR_ENABLE_BINDINGS_PYTHON=ON`). Then add the `python` directory in the
 build tree to your `PYTHONPATH` environment variable (i.e. `export
 PYTHONPATH=$PWD/build/tools/mlir/python_packages/mlir_core`). Optionally, use an
@@ -24,7 +24,7 @@ installed MLIR package, if available, to avoid building.
 
 ```shell
 # Dump the `core_named_ops.py` module as YAML.
-python -m mlir.dialects.linalg.opdsl.dump_oplib .ops.core_named_ops
+python -m mlir.dialects.linalg.opdsl.dump_oplib.ops.core_named_ops
 ```
 
 Alternatively, run the `$PWD/build/bin/update_core_linalg_named_ops.sh` script,
@@ -311,16 +311,17 @@ An example for a rank polymorphic operation is `fill`:
 
 ```python
 @linalg_structured_op
-def fill(value=ScalarDef(T1),
-         O=TensorDef(U, output=True)):
-  O[None] = TypeFn.cast_signed(U, value)
+def fill(value=ScalarDef(T),
+         O=TensorDef(T, output=True)):
+  O[None] = value
 ```
 
-The operation sets the elements of the output tensor `O` to `value`. All
-operands are either scalars or rank zero tensors that are accessed using the
-index `None`. The operation thus performs a scalar computation that trivially
-extends to a multi-dimensional pointwise computation. As a result, we may use
-`fill` with arbitrary ranked output tensors:
+The operation sets the elements of the output tensor `O` to `value`. The value
+type must match the element type of the output tensor. All operands are either
+scalars or rank zero tensors that are accessed using the index `None`. The
+operation thus performs a scalar computation that trivially extends to a
+multi-dimensional pointwise computation. As a result, we may use `fill` with
+arbitrary ranked output tensors:
 
 ```python
 tensor_2d = tensor.EmptyOp([4, 8], f32)

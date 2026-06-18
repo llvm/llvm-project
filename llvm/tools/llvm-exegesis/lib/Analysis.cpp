@@ -196,7 +196,7 @@ std::vector<Analysis::ResolvedSchedClassAndPoints>
 Analysis::makePointsPerSchedClass() const {
   std::vector<ResolvedSchedClassAndPoints> Entries;
   // Maps SchedClassIds to index in result.
-  std::unordered_map<unsigned, size_t> SchedClassIdToIndex;
+  DenseMap<unsigned, size_t> SchedClassIdToIndex;
   const auto &Points = Clustering_.getPoints();
   for (size_t PointId = 0, E = Points.size(); PointId < E; ++PointId) {
     const Benchmark &Point = Points[PointId];
@@ -214,7 +214,7 @@ Analysis::makePointsPerSchedClass() const {
     const auto IndexIt = SchedClassIdToIndex.find(SchedClassId);
     if (IndexIt == SchedClassIdToIndex.end()) {
       // Create a new entry.
-      SchedClassIdToIndex.emplace(SchedClassId, Entries.size());
+      SchedClassIdToIndex.try_emplace(SchedClassId, Entries.size());
       ResolvedSchedClassAndPoints Entry(ResolvedSchedClass(
           State_.getSubtargetInfo(), SchedClassId, WasVariant));
       Entry.PointIds.push_back(PointId);
@@ -244,12 +244,9 @@ static void writeParallelSnippetHtml(raw_ostream &OS,
 static void writeLatencySnippetHtml(raw_ostream &OS,
                                     const std::vector<MCInst> &Instructions,
                                     const MCInstrInfo &InstrInfo) {
-  bool First = true;
+  ListSeparator LS(" &rarr; ");
   for (const MCInst &Instr : Instructions) {
-    if (First)
-      First = false;
-    else
-      OS << " &rarr; ";
+    OS << LS;
     writeEscaped<kEscapeHtml>(OS, InstrInfo.getName(Instr.getOpcode()));
   }
 }

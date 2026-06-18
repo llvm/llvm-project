@@ -4,7 +4,7 @@
 ; RUN: FileCheck --check-prefixes=32BIT %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
-; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefixes=64BIT %s
 
 %struct.S0 = type {}

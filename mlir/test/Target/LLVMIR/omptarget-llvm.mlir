@@ -156,6 +156,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_8:.*]] = load i32, ptr %[[VAL_7]], align 4
 // CHECK:         %[[VAL_9:.*]] = icmp slt i32 %[[VAL_8]], 10
 // CHECK:         %[[VAL_10:.*]] = load i32, ptr %[[VAL_6]], align 4
+// CHECK:         %[[DEV_I64_BEGIN:.*]] = sext i32 %[[VAL_10:.*]] to i64
 // CHECK:         br label %[[VAL_11:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_12:.*]]
 // CHECK:         br i1 %[[VAL_9]], label %[[VAL_13:.*]], label %[[VAL_14:.*]]
@@ -176,7 +177,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr null, ptr %[[VAL_22]], align 8
 // CHECK:         %[[VAL_23:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
 // CHECK:         %[[VAL_24:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 %[[DEV_I64_BEGIN]], i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp_if.else:                                      ; preds = %[[VAL_11]]
 // CHECK:         br label %[[VAL_25]]
@@ -184,6 +185,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_26:.*]] = load i32, ptr %[[VAL_7]], align 4
 // CHECK:         %[[VAL_27:.*]] = icmp sgt i32 %[[VAL_26]], 10
 // CHECK:         %[[VAL_28:.*]] = load i32, ptr %[[VAL_6]], align 4
+// CHECK:         %[[DEV_I64_END:.*]] = sext i32 %[[VAL_28]] to i64
 // CHECK:         br i1 %[[VAL_27]], label %[[VAL_29:.*]], label %[[VAL_30:.*]]
 // CHECK:       omp_if.then2:                                     ; preds = %[[VAL_25]]
 // CHECK:         %[[ARR_OFFSET3:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16]], i64 0, i64 0
@@ -202,7 +204,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr null, ptr %[[VAL_36]], align 8
 // CHECK:         %[[VAL_37:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_38:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 %[[DEV_I64_END]], i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
 // CHECK:         br label %[[VAL_39:.*]]
 // CHECK:       omp_if.else8:                                     ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_39]]
@@ -562,10 +564,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_20:.*]] = icmp sgt i64 %[[VAL_15]], 1
 // CHECK:         %[[VAL_21:.*]] = and i64 %[[VAL_22:.*]], 8
 // CHECK:         %[[VAL_23:.*]] = icmp ne ptr %[[VAL_24:.*]], %[[VAL_19]]
-// CHECK:         %[[VAL_25:.*]] = and i64 %[[VAL_22]], 16
-// CHECK:         %[[VAL_26:.*]] = icmp ne i64 %[[VAL_25]], 0
-// CHECK:         %[[VAL_27:.*]] = and i1 %[[VAL_23]], %[[VAL_26]]
-// CHECK:         %[[VAL_28:.*]] = or i1 %[[VAL_20]], %[[VAL_27]]
+// CHECK:         %[[VAL_28:.*]] = or i1 %[[VAL_20]], %[[VAL_23]]
 // CHECK:         %[[VAL_29:.*]] = icmp eq i64 %[[VAL_21]], 0
 // CHECK:         %[[VAL_30:.*]] = and i1 %[[VAL_28]], %[[VAL_29]]
 // CHECK:         br i1 %[[VAL_30]], label %[[VAL_31:.*]], label %[[VAL_32:.*]]
@@ -583,28 +582,24 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_45:.*]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 0, i32 0
 // CHECK:         %[[VAL_46:.*]] = call i64 @__tgt_mapper_num_components(ptr %[[VAL_37]])
 // CHECK:         %[[VAL_47:.*]] = shl i64 %[[VAL_46]], 48
-// CHECK:         %[[VAL_48:.*]] = add nuw i64 3, %[[VAL_47]]
 // CHECK:         %[[VAL_49:.*]] = and i64 %[[VAL_22]], 3
 // CHECK:         %[[VAL_50:.*]] = icmp eq i64 %[[VAL_49]], 0
 // CHECK:         br i1 %[[VAL_50]], label %[[VAL_51:.*]], label %[[VAL_52:.*]]
 // CHECK:       omp.type.alloc:                                   ; preds = %[[VAL_41]]
-// CHECK:         %[[VAL_53:.*]] = and i64 %[[VAL_48]], -4
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.alloc.else:                              ; preds = %[[VAL_41]]
 // CHECK:         %[[VAL_54:.*]] = icmp eq i64 %[[VAL_49]], 1
 // CHECK:         br i1 %[[VAL_54]], label %[[VAL_55:.*]], label %[[VAL_56:.*]]
 // CHECK:       omp.type.to:                                      ; preds = %[[VAL_52]]
-// CHECK:         %[[VAL_57:.*]] = and i64 %[[VAL_48]], -3
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.to.else:                                 ; preds = %[[VAL_52]]
 // CHECK:         %[[VAL_58:.*]] = icmp eq i64 %[[VAL_49]], 2
 // CHECK:         br i1 %[[VAL_58]], label %[[VAL_59:.*]], label %[[VAL_42]]
 // CHECK:       omp.type.from:                                    ; preds = %[[VAL_56]]
-// CHECK:         %[[VAL_60:.*]] = and i64 %[[VAL_48]], -2
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.end:                                     ; preds = %[[VAL_59]], %[[VAL_56]], %[[VAL_55]], %[[VAL_51]]
-// CHECK:         %[[VAL_61:.*]] = phi i64 [ %[[VAL_53]], %[[VAL_51]] ], [ %[[VAL_57]], %[[VAL_55]] ], [ %[[VAL_60]], %[[VAL_59]] ], [ %[[VAL_48]], %[[VAL_56]] ]
-// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_43]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
+// CHECK:         %[[VAL_61:.*]] = phi i64 [ 0, %[[VAL_51]] ], [ 1, %[[VAL_55]] ], [ 2, %[[VAL_59]] ], [ 3, %[[VAL_56]] ]
+// CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_45]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
 // CHECK:         %[[VAL_44]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 1
 // CHECK:         %[[VAL_62:.*]] = icmp eq ptr %[[VAL_44]], %[[VAL_17]]
 // CHECK:         br i1 %[[VAL_62]], label %[[VAL_63:.*]], label %[[VAL_41]]
@@ -622,3 +617,20 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         br label %[[VAL_40]]
 // CHECK:       omp.done:                                         ; preds = %[[VAL_68]], %[[VAL_63]], %[[VAL_32]]
 // CHECK:         ret void
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPomp_target_is_device_ptr(%arg0 : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.ptr)
+        map_clauses(is_device_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target map_entries(%map -> %ptr_arg : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
+// CHECK-LABEL: define void @_QPomp_target_is_device_ptr
