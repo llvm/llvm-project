@@ -99,6 +99,11 @@ static cl::opt<bool>
                cl::desc("Replace narrow shifts with wider shifts."),
                cl::Hidden);
 
+static cl::opt<bool> SplitGatherIntrinsics("x86-split-gather-intrinsics",
+                                           cl::init(false),
+                                           cl::desc("Split Gather Intrinsics."),
+                                           cl::Hidden);
+
 static cl::opt<int> BrMergingLikelyBias(
     "x86-br-merging-likely-bias", cl::init(0),
     cl::desc("Increases 'x86-br-merging-base-cost' in cases that it is likely "
@@ -28364,6 +28369,74 @@ bool X86::isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
   return !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
 }
 
+SDValue LowerGatherToScalarOps(SDValue Op, SelectionDAG &DAG, SDValue Src,
+                               SDValue Mask, SDValue Base, SDValue Index,
+                               SDValue ScaleOp, SDValue Chain) {
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  EVT EltVT = VT.getVectorElementType();
+
+  bool IsAllOnes = false;
+  if (auto *ConstMask = dyn_cast<ConstantSDNode>(Mask))
+    IsAllOnes = ConstMask->isAllOnes();
+  else if (Mask.getValueType().isVector() &&
+           ISD::isBuildVectorAllOnes(Mask.getNode()))
+    IsAllOnes = true;
+  if (!IsAllOnes)
+    return SDValue();
+
+  EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+  auto *ScaleConst = dyn_cast<ConstantSDNode>(ScaleOp);
+  if (!ScaleConst)
+    return SDValue();
+  SDValue Scale = DAG.getConstant(ScaleConst->getZExtValue(), dl, PtrVT);
+
+  SmallVector<SDValue, 16> NewChains;
+  SmallVector<SDValue, 16> ScalarLoads;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue LaneIdx = DAG.getIntPtrConstant(i, dl);
+    SDValue Idx = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
+                              Index.getValueType().getVectorElementType(),
+                              Index, LaneIdx);
+    SDValue ExtIdx = DAG.getZExtOrTrunc(Idx, dl, PtrVT);
+    SDValue Addr = DAG.getNode(ISD::ADD, dl, PtrVT, Base,
+                               DAG.getNode(ISD::MUL, dl, PtrVT, ExtIdx, Scale));
+    SDValue Ld = DAG.getLoad(EltVT, dl, Chain, Addr, MachinePointerInfo());
+    ScalarLoads.push_back(Ld);
+    NewChains.push_back(Ld.getValue(1));
+  }
+
+  unsigned EltsPerXMM = 128 / EltVT.getSizeInBits();
+  EVT XMMVT = (EltVT == MVT::f32) ? MVT::v4f32 : MVT::v2f64;
+  SmallVector<SDValue, 4> XMMs;
+  for (unsigned i = 0; i < NumElts; i += EltsPerXMM) {
+    SmallVector<SDValue, 4> Elts;
+    for (unsigned j = 0; j < EltsPerXMM; ++j)
+      Elts.push_back(ScalarLoads[i + j]);
+    XMMs.push_back(DAG.getBuildVector(XMMVT, dl, Elts));
+  }
+
+  EVT YMMVT = (EltVT == MVT::f32) ? MVT::v8f32 : MVT::v4f64;
+  SDValue YMMs[2];
+  for (unsigned i = 0; i < 2; ++i) {
+    SDValue UndefY = DAG.getUNDEF(YMMVT);
+    SDValue Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, YMMVT, UndefY,
+                             XMMs[i * 2], DAG.getIntPtrConstant(0, dl));
+    YMMs[i] = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, YMMVT, Lo, XMMs[i * 2 + 1],
+                          DAG.getIntPtrConstant(EltsPerXMM, dl));
+  }
+
+  SDValue UndefZ = DAG.getUNDEF(VT);
+  SDValue ZLo = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, UndefZ, YMMs[0],
+                            DAG.getIntPtrConstant(0, dl));
+  SDValue FinalZ = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, ZLo, YMMs[1],
+                               DAG.getIntPtrConstant(NumElts / 2, dl));
+
+  SDValue TotalChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, NewChains);
+  return DAG.getMergeValues({FinalZ, TotalChain}, dl);
+}
+
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -28759,6 +28832,20 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Index = Op.getOperand(4);
     SDValue Mask  = Op.getOperand(5);
     SDValue Scale = Op.getOperand(6);
+
+    if (SplitGatherIntrinsics && Subtarget.hasSlowGather()) {
+      if (auto *IntrinsicNode = cast<ConstantSDNode>(Op.getOperand(1))) {
+        unsigned IntNo = IntrinsicNode->getZExtValue();
+        if (IntNo == Intrinsic::x86_avx512_mask_gather_dps_512 ||
+            IntNo == Intrinsic::x86_avx512_mask_gather_dpd_512) {
+          SDValue Lowered = LowerGatherToScalarOps(Op, DAG, Src, Mask, Base,
+                                                   Index, Scale, Chain);
+          if (Lowered.getNode())
+            return Lowered;
+        }
+      }
+    }
+
     return getGatherNode(Op, DAG, Src, Mask, Base, Index, Scale,
                          Chain, Subtarget);
   }
