@@ -40,6 +40,8 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
@@ -55,6 +57,8 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
+; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
 ; CHECK-NEXT:    s_add_co_i32 s7, s7, s6
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
@@ -70,13 +74,10 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    s_add_co_i32 s4, s4, s5
 ; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
 ; CHECK-NEXT:    s_add_co_i32 s21, s21, s20
-; CHECK-NEXT:    s_wait_dscnt 0x4
 ; CHECK-NEXT:    v_dual_add_nc_u32 v0, v11, v15 :: v_dual_add_nc_u32 v1, v10, v14
 ; CHECK-NEXT:    v_dual_add_nc_u32 v2, v9, v13 :: v_dual_add_nc_u32 v3, v8, v12
-; CHECK-NEXT:    s_wait_dscnt 0x2
 ; CHECK-NEXT:    v_dual_add_nc_u32 v4, v19, v23 :: v_dual_add_nc_u32 v5, v18, v22
 ; CHECK-NEXT:    v_dual_add_nc_u32 v6, v17, v21 :: v_dual_add_nc_u32 v7, v16, v20
-; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_dual_add_nc_u32 v8, v27, v31 :: v_dual_add_nc_u32 v9, v26, v30
 ; CHECK-NEXT:    v_dual_add_nc_u32 v10, v25, v29 :: v_dual_add_nc_u32 v11, v24, v28
 ; CHECK-NEXT:    s_add_co_i32 s19, s19, s18
@@ -93,9 +94,6 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    v_dual_add_nc_u32 v5, v5, v9 :: v_dual_add_nc_u32 v4, v4, v8
 ; CHECK-NEXT:    v_dual_add_nc_u32 v0, v3, v0 :: v_dual_add_nc_u32 v1, v2, v1
 ; CHECK-NEXT:    v_dual_add_nc_u32 v2, v12, v5 :: v_dual_add_nc_u32 v3, v13, v4
-; CHECK-NEXT:    s_barrier_signal -1
-; CHECK-NEXT:    s_barrier_wait -1
-; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; CHECK-NEXT:    global_store_b128 v32, v[0:3], s[16:17]
 ; CHECK-NEXT:    s_endpgm
 entry:
