@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -verify=nowarn -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -Wno-spir-compat
+// nowarn-no-diagnostics
 
 // OpenCL spec: read_imagei and read_imageui support nearest filter only.
 // CLK_FILTER_LINEAR in the sampler results in undefined behavior; warn.
