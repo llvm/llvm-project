@@ -12,11 +12,11 @@
 ;; FIXME: only the 'k/kk' sub-nest is costed, 'a.i' (a fork) should not have a
 ;; cost, and 'a.j'/'a.jj' are wrongly costed as loop-invariant.
 
-; CHECK-DAG: Loop 'a.k' has cost = 10000000000
-; CHECK-DAG: Loop 'a.kk' has cost = 1300000000
-; CHECK-DAG: Loop 'a.i' has cost = 100000000
-; CHECK-DAG: Loop 'a.j' has cost = 100000000
-; CHECK-DAG: Loop 'a.jj' has cost = 100000000
+; CHECK: Loop 'a.k' has cost = 10000000000
+; CHECK-NEXT: Loop 'a.kk' has cost = 1300000000
+; CHECK-NEXT: Loop 'a.i' has cost = 100000000
+; CHECK-NEXT: Loop 'a.j' has cost = 100000000
+; CHECK-NEXT: Loop 'a.jj' has cost = 100000000
 
 define void @fork_at_top(ptr %A, ptr %B) {
 entry:
@@ -29,7 +29,7 @@ a.j:
   br label %a.jj
 a.jj:
   %jjv = phi i64 [ 0, %a.j ], [ %jjv.n, %a.jj ]
-  %ga = getelementptr inbounds [100 x [100 x double]], ptr %A, i64 0, i64 %jjv, i64 %jv
+  %ga = getelementptr inbounds [100 x double], ptr %A, i64 %jjv, i64 %jv
   store double 1.0, ptr %ga
   %jjv.n = add nsw i64 %jjv, 1
   %jj.e = icmp eq i64 %jjv.n, 100
@@ -43,7 +43,7 @@ a.k:
   br label %a.kk
 a.kk:
   %kkv = phi i64 [ 0, %a.k ], [ %kkv.n, %a.kk ]
-  %gb = getelementptr inbounds [100 x [100 x double]], ptr %B, i64 0, i64 %kv, i64 %kkv
+  %gb = getelementptr inbounds [100 x double], ptr %B, i64 %kv, i64 %kkv
   store double 1.0, ptr %gb
   %kkv.n = add nsw i64 %kkv, 1
   %kk.e = icmp eq i64 %kkv.n, 100
@@ -68,10 +68,10 @@ exit:
 ;; FIXME: only the 'l' sub-nest is costed, and the fork loops 'b.i'/'b.j' should
 ;; not have a cost.
 
-; CHECK-DAG: Loop 'b.l' has cost = 13000000
-; CHECK-DAG: Loop 'b.i' has cost = 1000000
-; CHECK-DAG: Loop 'b.j' has cost = 1000000
-; CHECK-DAG: Loop 'b.k' has cost = 1000000
+; CHECK: Loop 'b.l' has cost = 13000000
+; CHECK-NEXT: Loop 'b.i' has cost = 1000000
+; CHECK-NEXT: Loop 'b.j' has cost = 1000000
+; CHECK-NEXT: Loop 'b.k' has cost = 1000000
 
 define void @fork_in_middle(ptr %C, ptr %D) {
 entry:
