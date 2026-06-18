@@ -981,6 +981,34 @@ bool CandidateHeuristics::tryMemoryPipeline(
   return true;
 }
 
+bool CandidateHeuristics::tryCoexecSlot(
+    GenericSchedulerBase::SchedCandidate &TryCand,
+    GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary &Zone) {
+  assert(Zone.isTop() && Zone.HazardRec &&
+         "Co-execution slots are only modeled for the top boundary");
+  auto *HazardRec = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
+  std::optional<unsigned> Stage = HazardRec->getCurrentCoExecStage();
+  if (!Stage.has_value())
+    return false;
+
+  const CoExecInfo &Info = HazardRec->getActiveCoExecInfo();
+
+  InstructionFlavor TryFlavor = classifyFlavor(*TryCand.SU->getInstr(), *SII);
+  InstructionFlavor CandFlavor = classifyFlavor(*Cand.SU->getInstr(), *SII);
+
+  unsigned TryStage = *Stage + getStallCosts(TryCand.SU, Zone).Effective;
+  unsigned CandStage = *Stage + getStallCosts(Cand.SU, Zone).Effective;
+
+  if (tryLess(Info.isAvoided(TryStage, TryFlavor),
+              Info.isAvoided(CandStage, CandFlavor), TryCand, Cand,
+              GenericSchedulerBase::RegCritical))
+    return true;
+
+  return tryGreater(Info.isPreferred(TryStage, TryFlavor),
+                    Info.isPreferred(CandStage, CandFlavor), TryCand, Cand,
+                    GenericSchedulerBase::RegCritical);
+}
+
 bool CandidateHeuristics::tryCriticalResourceDependency(
     GenericSchedulerBase::SchedCandidate &TryCand,
     GenericSchedulerBase::SchedCandidate &Cand, SchedBoundary *Zone) const {
@@ -1335,6 +1363,11 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
 
     if (Heurs.tryMemoryPipeline(TryCand, Cand, *Zone)) {
       LastAMDGPUReason = AMDGPUSchedReason::MemoryPipeline;
+      return TryCand.Reason != NoCand;
+    }
+
+    if (Heurs.tryCoexecSlot(TryCand, Cand, *Zone)) {
+      LastAMDGPUReason = AMDGPUSchedReason::CoexecSlot;
       return TryCand.Reason != NoCand;
     }
 
