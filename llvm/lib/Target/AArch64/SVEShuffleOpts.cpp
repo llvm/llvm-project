@@ -212,12 +212,17 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
   }
 }
 
-static bool processLoop(Loop &L, const AArch64TargetLowering &TL,
-                        DataLayout DL) {
+static bool processLoop(Loop &L, const AArch64Subtarget &ST, DataLayout DL) {
+  // At present, we only want to do this for innermost loops when SVE
+  // is available.
+  if (!L.isInnermost() || !ST.isSVEorStreamingSVEAvailable())
+    return false;
+
   // TODO: Pull other shuffles into the tbl where possible.
   // TODO: Add more advanced cases, such as introducing shuffles so that
   //       the SVE odd/even BT narrowing instructions can be used.
   // TODO: Support other deinterleaves.
+  const AArch64TargetLowering &TL = *ST.getTargetLowering();
   assert(DL.isLittleEndian() &&
          "Shuffle optimizations unsupported for big endian targets.");
   DeinterleaveMap Candidates;
@@ -239,16 +244,15 @@ struct SVEShuffleOpts : public LoopPass {
   SVEShuffleOpts() : LoopPass(ID) {}
 
   bool runOnLoop(Loop *L, LPPassManager &PM) override {
+    if (skipLoop(L))
+      return false;
+
     TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
     const AArch64TargetMachine &TM = TPC.getTM<AArch64TargetMachine>();
     const AArch64Subtarget &ST =
         *TM.getSubtargetImpl(*L->getHeader()->getParent());
 
-    // If we don't have SVE skip it.
-    if (skipLoop(L) || !L->isInnermost() || !ST.isSVEorStreamingSVEAvailable())
-      return false;
-
-    return processLoop(*L, *ST.getTargetLowering(), TM.createDataLayout());
+    return processLoop(*L, ST, TM.createDataLayout());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -274,11 +278,7 @@ PreservedAnalyses SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
   const AArch64Subtarget &ST =
       *TM.getSubtargetImpl(*L.getHeader()->getParent());
 
-  // If we don't have SVE skip it.
-  if (!L.isInnermost() || !ST.isSVEorStreamingSVEAvailable())
-    return PreservedAnalyses::all();
-
-  if (processLoop(L, *ST.getTargetLowering(), TM.createDataLayout())) {
+  if (processLoop(L, ST, TM.createDataLayout())) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetIRAnalysis>();
