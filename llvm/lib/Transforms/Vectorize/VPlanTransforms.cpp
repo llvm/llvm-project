@@ -4349,13 +4349,17 @@ struct EarlyExitInfo {
 /// Successor(s): middle.block, middle.block, for.body
 ///
 /// We currently expect LoopVectorizationLegality to ensure that:
+/// * There must also be a counted exit. We will need to support speculative
+///   or first-faulting loads before we can remove this restriction.
+/// * Any stores within the loop must not alias with the load used for the
+///   uncountable exit. We can relax this a bit with runtime aliasing checks.
+/// * Other memory operations in the loop can take place before or after the
+///   uncountable exit, but must also be unconditional. We need to support
+///   combining the conditions in VPlanPredicator.
 /// * The loop must have a single unconditional load contributing to the
 ///   uncountable exit comparison, and the other term must be loop-invariant.
-/// * There must also be a counted exit.
-/// * Other memory operations in the loop can take place before or after the
-///   uncountable exit, but must also be unconditional.
-/// * Any stores within the loop must not alias with any other memory
-///   operations.
+///   Improving upon this requires work in getRecipesForUncountableExit to
+///   handle more complex recipe graphs.
 static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
