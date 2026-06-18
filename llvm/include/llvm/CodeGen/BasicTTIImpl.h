@@ -654,7 +654,9 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // Disable relative lookup tables for all AArch64 targets.
+    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
+    // small code model allows a 4GB span of text + data, which might not fit
+    // in the 32-bit offsets relative lookup tables generate.
     if (TargetTriple.isAArch64())
       return false;
 
