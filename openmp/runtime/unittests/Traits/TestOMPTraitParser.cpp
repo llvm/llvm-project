@@ -978,4 +978,109 @@ TEST_F(ParserTest, DoubleComma) {
                "failed to parse trait specification \\(,,uid\\(b\\)\\)");
 }
 
+//===----------------------------------------------------------------------===//
+// parse_single_device Tests
+//===----------------------------------------------------------------------===//
+
+TEST(ParseSingleDeviceTest, ValidSingleDigit) {
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("5"), 0, 10);
+  EXPECT_EQ(result, 5);
+}
+
+TEST(ParseSingleDeviceTest, ValidMultiDigit) {
+  int result =
+      kmp_trait_context::parse_single_device(kmp_str_ref("123"), 0, 200);
+  EXPECT_EQ(result, 123);
+}
+
+TEST(ParseSingleDeviceTest, Zero) {
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("0"), 0, 10);
+  EXPECT_EQ(result, 0);
+}
+
+TEST(ParseSingleDeviceTest, AtMax) {
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("10"), 0, 10);
+  EXPECT_EQ(result, 10);
+}
+
+TEST(ParseSingleDeviceTest, AtMin) {
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("2"), 2, 10);
+  EXPECT_EQ(result, 2);
+}
+
+TEST(ParseSingleDeviceTest, AboveMaxClampsToMax) {
+  // Values above the maximum are warned about and clamped to the maximum.
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("11"), 0, 10);
+  EXPECT_EQ(result, 10);
+}
+
+TEST(ParseSingleDeviceTest, BelowMinClampsToMin) {
+  // Values below the minimum are warned about and clamped to the minimum.
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("2"), 5, 10);
+  EXPECT_EQ(result, 5);
+}
+
+TEST(ParseSingleDeviceTest, NegativeValue) {
+  // Negative device numbers are allowed within range.
+  int result =
+      kmp_trait_context::parse_single_device(kmp_str_ref("-1"), -5, 10);
+  EXPECT_EQ(result, -1);
+}
+
+TEST(ParseSingleDeviceTest, NegativeBelowMinClampsToMin) {
+  // Negative values below the minimum are clamped to the minimum.
+  int result = kmp_trait_context::parse_single_device(kmp_str_ref("-7"), 0, 10);
+  EXPECT_EQ(result, 0);
+}
+
+TEST(ParseSingleDeviceTest, NonInteger) {
+  ASSERT_DEATH(kmp_trait_context::parse_single_device(kmp_str_ref("abc"), 0, 10,
+                                                      "non_integer"),
+               "OMP: Error #[0-9]+: legacy device number parser while parsing "
+               "non_integer: failed to parse device number \\(abc\\)");
+}
+
+TEST(ParseSingleDeviceTest, EmptyString) {
+  ASSERT_DEATH(
+      kmp_trait_context::parse_single_device(kmp_str_ref(""), 0, 10, "empty"),
+      "OMP: Error #[0-9]+: legacy device number parser while parsing empty: "
+      "failed to parse device number \\(\\)");
+}
+
+TEST(ParseSingleDeviceTest, LeadingSpaces) {
+  // consume_integer skips leading spaces
+  int result =
+      kmp_trait_context::parse_single_device(kmp_str_ref("  7"), 0, 10);
+  EXPECT_EQ(result, 7);
+}
+
+TEST(ParseSingleDeviceTest, LargeNumber) {
+  int result =
+      kmp_trait_context::parse_single_device(kmp_str_ref("999999"), 0, 1000000);
+  EXPECT_EQ(result, 999999);
+}
+
+TEST(ParseSingleDeviceTest, TrailingGarbage) {
+  // Trailing non-integer characters must not be silently ignored.
+  ASSERT_DEATH(kmp_trait_context::parse_single_device(kmp_str_ref("10abc"), 0,
+                                                      100, "trailing_garbage"),
+               "OMP: Error #[0-9]+: legacy device number parser while parsing "
+               "trailing_garbage: failed to parse device number \\(10abc\\)");
+}
+
+TEST(ParseSingleDeviceTest, TrailingList) {
+  // Only a single device is accepted; a comma-separated list must fail.
+  ASSERT_DEATH(kmp_trait_context::parse_single_device(kmp_str_ref("10,11"), 0,
+                                                      100, "trailing_list"),
+               "OMP: Error #[0-9]+: legacy device number parser while parsing "
+               "trailing_list: failed to parse device number \\(10,11\\)");
+}
+
+TEST(ParseSingleDeviceTest, TrailingSpaces) {
+  // Trailing whitespace is allowed.
+  int result =
+      kmp_trait_context::parse_single_device(kmp_str_ref("7  "), 0, 10);
+  EXPECT_EQ(result, 7);
+}
+
 } // namespace

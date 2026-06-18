@@ -292,3 +292,27 @@ kmp_trait_context *kmp_trait_context::parse_from_spec(kmp_str_ref spec,
     KMP_FATAL(TraitParserFailed, dbg_name, spec.copy());
   return context;
 }
+
+int kmp_trait_context::parse_single_device(kmp_str_ref spec, int device_num_min,
+                                           int device_num_max,
+                                           const char *dbg_name) {
+  int device_num;
+  kmp_str_ref orig_spec = spec;
+
+  spec.skip_space();
+  if (!spec.consume_integer(device_num, /*allow_zero=*/true,
+                            /*allow_negative=*/true))
+    KMP_FATAL(TraitParserLegacyFailed, dbg_name, orig_spec.copy());
+  spec.skip_space();
+  if (!spec.empty())
+    KMP_FATAL(TraitParserLegacyFailed, dbg_name, orig_spec.copy());
+
+  if (device_num < device_num_min) {
+    KMP_WARNING(TraitParserValueTooSmall, dbg_name, device_num, device_num_min);
+    device_num = device_num_min;
+  } else if (device_num > device_num_max) {
+    KMP_WARNING(TraitParserValueTooLarge, dbg_name, device_num, device_num_max);
+    device_num = device_num_max;
+  }
+  return device_num;
+}
