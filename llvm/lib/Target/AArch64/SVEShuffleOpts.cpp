@@ -71,6 +71,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -104,14 +105,15 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   assert(IntId == Intrinsic::vector_deinterleave4 &&
          "Only deinterleave4 supported currently");
 
-  // This pass currently only handles legal scalable vector types with an
-  // element type that is at least 16 bits. TBL zeroes elements with an
-  // out-of-bounds index, but for the largest possible SVE vector (2048b) a
-  // maximum value for i8 elements (256) is not large enough to encode an
-  // 'out of bounds' value.
-  // TODO: If we know vscale is 8 or less, then we could use tbls for bytes.
+  ConstantRange VScaleRange = getVScaleRange(I->getFunction(), 64);
+  // TBL zeroes elements with an out-of-bounds index, but for the largest
+  // possible SVE vector (2048b) the maximum value for i8 elements (255) is not
+  // large enough to encode an 'out of bounds' value. So we can only perform
+  // this optimization for i8 elements if we know vscale is < 16.
   EVT InputVT = TL.getValueType(DL, I->getOperand(0)->getType());
-  if (!InputVT.isScalableVector() || InputVT.getScalarSizeInBits() < 16 ||
+  if (!InputVT.isScalableVector() ||
+      (InputVT.getScalarSizeInBits() < 16 &&
+       (!VScaleRange.getUpper().ult(16) || VScaleRange.isUpperWrapped())) ||
       TL.getTypeConversion(I->getContext(), InputVT).first !=
           TargetLoweringBase::TypeLegal)
     return;

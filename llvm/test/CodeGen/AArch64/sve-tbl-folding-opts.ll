@@ -464,44 +464,39 @@ exit:
   ret void
 }
 
-;; TODO: If we know vscale is small enough, then we can do extensions via tbl
-;;       even for 8b elements.
+;; If we know vscale is small enough, then we can do extensions via tbl even for
+;; 8b elements.
 define void @zext_nxv16i8_to_nxv16i32_deinterleave_in_loop_max_vscale_8(ptr %src, ptr %dst, <vscale x 16 x i1> %mask) #1 {
 ; CHECK-LABEL: zext_nxv16i8_to_nxv16i32_deinterleave_in_loop_max_vscale_8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z7.s, #0, #4
+; CHECK-NEXT:    mov w9, #-254 // =0xffffff02
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov z6.s, w9
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cnth x9
+; CHECK-NEXT:    movprfx z4, z7
+; CHECK-NEXT:    orr z4.s, z4.s, #0xffffff00
+; CHECK-NEXT:    movprfx z5, z7
+; CHECK-NEXT:    orr z5.s, z5.s, #0xffffff01
+; CHECK-NEXT:    orr z6.d, z7.d, z6.d
+; CHECK-NEXT:    orr z7.s, z7.s, #0xffffff03
 ; CHECK-NEXT:  .LBB5_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1b { z4.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld1b { z24.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, x9
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-NEXT:    uunpkhi z5.h, z4.b
-; CHECK-NEXT:    uunpklo z4.h, z4.b
-; CHECK-NEXT:    uunpkhi z6.s, z5.h
-; CHECK-NEXT:    uunpklo z5.s, z5.h
-; CHECK-NEXT:    uunpkhi z7.s, z4.h
-; CHECK-NEXT:    uunpklo z4.s, z4.h
-; CHECK-NEXT:    uzp1 z24.s, z5.s, z6.s
-; CHECK-NEXT:    uzp2 z5.s, z5.s, z6.s
-; CHECK-NEXT:    uzp1 z25.s, z4.s, z7.s
-; CHECK-NEXT:    uzp2 z4.s, z4.s, z7.s
-; CHECK-NEXT:    uzp1 z6.s, z25.s, z24.s
-; CHECK-NEXT:    uzp2 z7.s, z4.s, z5.s
-; CHECK-NEXT:    uzp2 z24.s, z25.s, z24.s
-; CHECK-NEXT:    uzp1 z4.s, z4.s, z5.s
-; CHECK-NEXT:    and z6.s, z6.s, #0xff
-; CHECK-NEXT:    and z24.s, z24.s, #0xff
-; CHECK-NEXT:    and z7.s, z7.s, #0xff
-; CHECK-NEXT:    and z4.s, z4.s, #0xff
-; CHECK-NEXT:    add z0.s, z0.s, z6.s
-; CHECK-NEXT:    add z2.s, z2.s, z24.s
-; CHECK-NEXT:    add z3.s, z3.s, z7.s
-; CHECK-NEXT:    add z1.s, z1.s, z4.s
+; CHECK-NEXT:    tbl z25.b, { z24.b }, z4.b
+; CHECK-NEXT:    tbl z26.b, { z24.b }, z5.b
+; CHECK-NEXT:    tbl z27.b, { z24.b }, z6.b
+; CHECK-NEXT:    tbl z24.b, { z24.b }, z7.b
+; CHECK-NEXT:    add z0.s, z0.s, z25.s
+; CHECK-NEXT:    add z1.s, z1.s, z26.s
+; CHECK-NEXT:    add z2.s, z2.s, z27.s
+; CHECK-NEXT:    add z3.s, z3.s, z24.s
 ; CHECK-NEXT:    b.ne .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    str z0, [x1]
