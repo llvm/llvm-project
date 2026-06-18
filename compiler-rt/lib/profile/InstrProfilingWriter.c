@@ -343,6 +343,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
   /* The data and names sections are omitted in lightweight mode. */
   if (NumData == 0 && NamesSize == 0) {
     Header.CountersDelta = 0;
+    Header.BitmapDelta = 0;
     Header.NamesDelta = 0;
     Header.UniformCountersDelta = 0;
   }
