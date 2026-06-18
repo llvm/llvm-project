@@ -420,6 +420,8 @@ Modified Compiler Flags
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+- ``-fprofile-update=atomic`` will now promote counter updates out of loops,
+  similar to the non-atomic case ([#202487](https://github.com/llvm/llvm-project/pull/202487)).
 
 - The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
   and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
@@ -805,6 +807,7 @@ Bug Fixes to AST Handling
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
 - Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
+- Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1040,6 +1043,12 @@ Improvements
     - New checkers and features
     - Improvements
     - Moved checkers
+
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- The checker ``unix.cstring.UninitializedRead`` is now out of alpha.
 
 .. _release-notes-sanitizers:
 

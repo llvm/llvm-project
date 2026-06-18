@@ -5394,11 +5394,12 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   });
 
   for (auto *U : Users) {
-    for (auto &AssumeVH : AC.assumptionsFor(U)) {
-      if (!AssumeVH)
-        continue;
-      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
-    }
+    // Re-queue U and its users: freezing U's operand can expose a fold on a
+    // user of U (e.g. a freeze of U can now be pushed through it) that would
+    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
+    auto *UI = cast<Instruction>(U);
+    Worklist.pushUsersToWorkList(*UI);
+    Worklist.push(UI);
   }
 
   return Changed;

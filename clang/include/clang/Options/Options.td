@@ -4821,9 +4821,9 @@ defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 defm split_lto_unit : BoolFOption<"split-lto-unit",
   CodeGenOpts<"EnableSplitLTOUnit">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Enables splitting of the LTO unit">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, FlangOption, FC1Option]>>;
 defm force_emit_vtables : BoolFOption<"force-emit-vtables",
   CodeGenOpts<"ForceEmitVTables">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5045,8 +5045,8 @@ defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
 def femit_dwarf_unwind_EQ : Joined<["-"], "femit-dwarf-unwind=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"When to emit DWARF unwind (EH frame) info">,
-  Values<"always,no-compact-unwind,default">,
-  NormalizedValues<["Always", "NoCompactUnwind", "Default"]>,
+  Values<"always,no-compact-unwind,dwarf-only,default">,
+  NormalizedValues<["Always", "NoCompactUnwind", "DwarfOnly", "Default"]>,
   NormalizedValuesScope<"llvm::EmitDwarfUnwindType">,
   MarshallingInfoEnum<CodeGenOpts<"EmitDwarfUnwind">, "Default">;
 defm emit_compact_unwind_non_canonical : BoolFOption<"emit-compact-unwind-non-canonical",
