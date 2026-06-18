@@ -163,11 +163,11 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 #  if _LIBCPP_STD_VER >= 26
+#    include <__algorithm/equal.h>
 #    include <__algorithm/fill_n.h>
 #    include <__algorithm/lexicographical_compare_three_way.h>
 #    include <__algorithm/min.h>
 #    include <__algorithm/move.h>
-#    include <__algorithm/move_backward.h>
 #    include <__algorithm/ranges_copy.h>
 #    include <__algorithm/ranges_copy_n.h>
 #    include <__algorithm/remove.h>
@@ -217,7 +217,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, size_t _Cap>
 class inplace_vector {
 private:
-  static constexpr decltype(auto) __get_size_type() {
+  static constexpr auto __get_size_type() {
     if constexpr (_Cap <= std::numeric_limits<unsigned char>::max() && sizeof(unsigned char) < sizeof(std::size_t))
       return static_cast<unsigned char>(0);
     else if constexpr (_Cap <= std::numeric_limits<unsigned short>::max() &&
@@ -238,24 +238,6 @@ private:
   };
   __size_type __size_{0};
 
-  constexpr void __init() {
-    if consteval {
-      if constexpr (is_trivially_copyable_v<_Tp> && is_trivially_default_constructible_v<_Tp> &&
-                    is_trivially_assignable_v<_Tp&, _Tp>) {
-        for (size_t __i{0}; __i < _Cap; ++__i) {
-          __elems_[__i] = _Tp();
-        }
-      } else {
-#    if !defined(__cpp_trivial_union)
-        // TODO: Clang emits a -Wformat-security warning for this when it's in a consteval block. File bug for this
-        _LIBCPP_VERBOSE_ABORT("%s",
-                              "std::inplace_vector<T,N> currently cannot be used in constant expressions for "
-                              "non-trivial T on compilers where P3074 is not implemented.");
-#    endif
-      }
-    }
-  }
-
 public:
   using value_type      = _Tp;
   using pointer         = _Tp*;
@@ -275,33 +257,6 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 private:
-  struct _ConstructTransaction {
-    constexpr explicit _ConstructTransaction(inplace_vector& __v, size_type __n)
-        : __v_(__v), __pos_(__v.data() + __v.__size_), __new_end_(__v.data() + __v.__size_ + __n) {}
-
-    constexpr ~_ConstructTransaction() { __v_.__size_ = __pos_ - __v_.data(); }
-
-    inplace_vector& __v_;
-    pointer __pos_;
-    const_pointer const __new_end_;
-
-    _ConstructTransaction(_ConstructTransaction const&)            = delete;
-    _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
-  };
-
-  constexpr void __move_range(pointer __from_s, pointer __from_e, pointer __to) {
-    pointer __old_last  = data() + __size_;
-    difference_type __n = __old_last - __to;
-    {
-      pointer __i = __from_s + __n;
-      _ConstructTransaction __tx(*this, __from_e - __i);
-      for (pointer __pos = __tx.__pos_; __i < __from_e; ++__i, ++__pos, __tx.__pos_ = __pos) {
-        std::construct_at(__pos, std::move(*__i));
-      }
-    }
-    std::move_backward(__from_s, __from_s + __n, __old_last);
-  }
-
   template <class _It, class _Sentinel>
   constexpr void __assign(_It __first, _Sentinel __last) {
     if constexpr (std::sized_sentinel_for<_Sentinel, _It>) {
@@ -317,7 +272,7 @@ private:
       }
       __size_ = __d;
     } else {
-      size_t __d = 0;
+      size_type __d = 0;
       for (; __first != __last && __d < __size_; (void)++__first, ++__d) {
         data()[__d] = *__first;
       }
@@ -385,17 +340,31 @@ private:
 
 public:
   // [inplace.vector.cons], construct/copy/destroy
-  constexpr inplace_vector() noexcept { __init(); }
+  constexpr inplace_vector() noexcept {
+    if consteval {
+      if constexpr (is_trivially_copyable_v<_Tp> && is_trivially_default_constructible_v<_Tp> &&
+                    is_trivially_assignable_v<_Tp&, _Tp>) {
+        for (size_t __i{0}; __i < _Cap; ++__i) {
+          __elems_[__i] = _Tp();
+        }
+      } else {
+#    if !defined(__cpp_trivial_union)
+        // TODO: Clang emits a -Wformat-security warning for this when it's in a consteval block. File bug for this
+        _LIBCPP_VERBOSE_ABORT("%s",
+                              "std::inplace_vector<T,N> currently cannot be used in constant expressions for "
+                              "non-trivial T on compilers where P3074 is not implemented.");
+#    endif
+      }
+    }
+  }
 
-  constexpr explicit inplace_vector(size_type __n) {
-    __init();
+  constexpr explicit inplace_vector(size_type __n) : inplace_vector() {
     reserve(__n);
     std::uninitialized_value_construct_n(data(), __n);
     __size_ = __n;
   }
 
-  constexpr inplace_vector(size_type __n, const _Tp& __c) {
-    __init();
+  constexpr inplace_vector(size_type __n, const _Tp& __c) : inplace_vector() {
     reserve(__n);
     std::uninitialized_fill_n(data(), __n, __c);
     __size_ = __n;
@@ -403,8 +372,7 @@ public:
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  constexpr inplace_vector(_InputIterator __first, _InputIterator __last) {
-    __init();
+  constexpr inplace_vector(_InputIterator __first, _InputIterator __last) : inplace_vector() {
     if constexpr (std::sized_sentinel_for<_InputIterator, _InputIterator>) {
       auto __n = std::ranges::distance(__first, __last);
       reserve(__n);
@@ -423,8 +391,7 @@ public:
   }
 
   template <_ContainerCompatibleRange<_Tp> _Range>
-  constexpr inplace_vector(from_range_t, _Range&& __rg) {
-    __init();
+  constexpr inplace_vector(from_range_t, _Range&& __rg) : inplace_vector() {
     append_range(__rg);
   }
 
@@ -432,8 +399,8 @@ public:
     requires is_trivially_copy_constructible_v<_Tp>
   = default;
 
-  constexpr inplace_vector(const inplace_vector& __x) noexcept(is_nothrow_copy_constructible_v<_Tp>) {
-    __init();
+  constexpr inplace_vector(const inplace_vector& __x) noexcept(is_nothrow_copy_constructible_v<_Tp>)
+      : inplace_vector() {
     std::uninitialized_copy(__x.begin(), __x.end(), data());
     __size_ = __x.size();
   }
@@ -442,14 +409,12 @@ public:
     requires is_trivially_move_constructible_v<_Tp>
   = default;
 
-  constexpr inplace_vector(inplace_vector&& __x) noexcept(is_nothrow_move_constructible_v<_Tp>) {
-    __init();
+  constexpr inplace_vector(inplace_vector&& __x) noexcept(is_nothrow_move_constructible_v<_Tp>) : inplace_vector() {
     std::uninitialized_move(__x.begin(), __x.end(), data());
     __size_ = __x.size();
   }
 
-  constexpr inplace_vector(std::initializer_list<_Tp> __il) {
-    __init();
+  constexpr inplace_vector(std::initializer_list<_Tp> __il) : inplace_vector() {
     reserve(__il.size());
     std::uninitialized_copy(__il.begin(), __il.end(), data());
     __size_ = __il.size();
@@ -690,11 +655,9 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         size() < capacity(),
         "inplace_vector<T,N>::unchecked_emplace_back(Args...): Adding element when size() >= capacity()");
-    {
-      _ConstructTransaction __tx(*this, 1);
-      std::construct_at(data() + __size_, std::forward<_Args>(__args)...);
-      __tx.__pos_++;
-    }
+
+    std::construct_at(data() + __size_, std::forward<_Args>(__args)...);
+    ++__size_;
 
     return back();
   }
@@ -713,9 +676,9 @@ public:
     if (__position == end()) {
       emplace_back(std::forward<_Args>(__args)...);
     } else {
-      _Tp __temp_value = _Tp(std::forward<_Args>(__args)...);
-      __move_range(__p, data() + __size_, __p + 1);
-      *__p = std::move(__temp_value);
+      std::construct_at(data() + __size_, std::forward<_Args>(__args)...);
+      __size_++;
+      std::rotate(__p, data() + __size_ - 1, data() + __size_);
     }
 
     return __make_iter(__p);
@@ -757,7 +720,7 @@ public:
   }
 
   constexpr iterator insert(const_iterator __position, std::initializer_list<_Tp> __il) {
-    return __insert(__position, __il.begin(), __il.end());
+    return insert(__position, __il.begin(), __il.end());
   }
 
   constexpr iterator erase(const_iterator __position) {
@@ -809,16 +772,7 @@ public:
   }
 
   friend constexpr bool operator==(const inplace_vector& __x, const inplace_vector& __y) {
-    if (__x.size() != __y.size()) {
-      return false;
-    }
-
-    for (size_type __i{0}; __i < __x.size(); __i++) {
-      if (__x[__i] != __y[__i]) {
-        return false;
-      }
-    }
-    return true;
+    return __x.size() == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin(), __y.end());
   }
 
   friend constexpr auto operator<=>(const inplace_vector& __x, const inplace_vector& __y)
@@ -967,11 +921,13 @@ public:
 
   // element access
   [[nodiscard, noreturn]] constexpr reference operator[](size_type) {
-    _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::operator[]: access with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::operator[]: access with N == 0");
+    __libcpp_unreachable();
   }
 
   [[nodiscard, noreturn]] constexpr const_reference operator[](size_type) const {
-    _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::operator[] const: access with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::operator[] const: access with N == 0");
+    __libcpp_unreachable();
   }
 
   [[nodiscard, noreturn]] constexpr reference at(size_type) {
@@ -983,19 +939,23 @@ public:
   }
 
   [[nodiscard, noreturn]] constexpr reference front() {
-    _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::front(): access with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::front(): access with N == 0");
+    __libcpp_unreachable();
   }
 
   [[nodiscard, noreturn]] constexpr const_reference front() const {
-    _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::front() const: access with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::front() const: access with N == 0");
+    __libcpp_unreachable();
   }
 
   [[nodiscard, noreturn]] constexpr reference back() {
-    _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::back(): access with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::back(): access with N == 0");
+    __libcpp_unreachable();
   }
 
   [[nodiscard, noreturn]] constexpr const_reference back() const {
-    _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::back() const: access with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::back() const: access with N == 0");
+    __libcpp_unreachable();
   }
 
   // [inplace.vector.data], data access
@@ -1019,7 +979,10 @@ public:
     }
   }
 
-  constexpr void pop_back() { _LIBCPP_VERBOSE_ABORT("inplace_vector<T,0>::pop_back(): use with N == 0"); }
+  constexpr void pop_back() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::pop_back(): use with N == 0");
+    __libcpp_unreachable();
+  }
 
   template <class... _Args>
   [[nodiscard]] constexpr optional<reference> try_emplace_back(_Args&&...) {
@@ -1073,12 +1036,15 @@ public:
   }
 
   [[noreturn]] constexpr iterator erase(const_iterator) {
-    _LIBCPP_VERBOSE_ABORT("std::inplace_vector<T,0>::erase(const_iterator): use with N == 0");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "inplace_vector<T,0>::erase(): use with N == 0");
+    __libcpp_unreachable();
   }
 
   constexpr iterator erase(const_iterator __f, const_iterator __l) {
     if (__f != __l) {
-      _LIBCPP_VERBOSE_ABORT("std::inplace_vector<T,0>::erase(const_iterator, const_iterator): use with N == 0");
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          false, "inplace_vector<T,0>::erase(const_iterator, const_iterator): use with N == 0");
+      __libcpp_unreachable();
     }
 
     return begin();
