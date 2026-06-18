@@ -330,8 +330,10 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
     DotAddress += Func->estimateColdSize();
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
   }
   return DotAddress;
 }
@@ -399,8 +401,10 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     else
       DotAddress += Func->estimateHotSize();
 
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
     ++CurrentIndex;
   }
 

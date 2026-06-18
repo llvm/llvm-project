@@ -1336,6 +1336,21 @@ namespace StmtExprs {
            i;
         }) == 300);
   }
+
+  constexpr int f(int k) {
+    switch (k) {
+    case 0:
+      return 0;
+
+      ({  // both-note {{jump enters a statement expression}}
+        case 1:// both-error {{cannot jump from switch statement to this case label}} \
+               // both-note  {{not supported}}
+          return 1;
+      });
+    }
+  }
+  static_assert(f(1) == 1, ""); // both-error {{constant expression}} both-note {{in call}}
+
 }
 #endif
 

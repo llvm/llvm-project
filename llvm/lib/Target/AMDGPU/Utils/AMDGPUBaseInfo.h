@@ -375,10 +375,23 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
                                       unsigned MaxWaves,
                                       unsigned TotalNumVGPRs);
 
-/// \returns Occupancy for a given \p SGPRs usage, \p MaxWaves possible, and \p
-/// Gen.
+/// \returns Whether allocated SGPRs can reduce occupancy on subtarget \p STI
+/// (true pre-GFX10). One named capability so callers don't test the version.
+bool isSGPROccupancyLimited(const MCSubtargetInfo &STI);
+
+/// \returns SGPR-limited occupancy (waves per EU) for subtarget \p STI: the
+/// inverse of getMaxNumSGPRs(). Unlike getMaxNumSGPRs() the budget is not
+/// clamped to the addressable count, since the allocated count callers pass in
+/// can exceed it.
+unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs);
+
+/// \returns SGPR-limited occupancy computed from explicit budget parameters
+/// (\p MaxWaves, \p TotalNumSGPRs, \p Granule, \p TrapReserve). Subtarget-free
+/// core shared by the overload above and the occupancy MCExpr. Callers must
+/// check isSGPROccupancyLimited() first.
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
-                                  AMDGPUSubtarget::Generation Gen);
+                                  unsigned TotalNumSGPRs, unsigned Granule,
+                                  unsigned TrapReserve);
 
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used. We actually return the number of blocks -1, since

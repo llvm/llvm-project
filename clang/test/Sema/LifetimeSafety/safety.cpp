@@ -1287,6 +1287,88 @@ void comma_safe() {
   (void)*p;  // no-warning
 }
 
+// GNU binary conditional operator `a ?: b`.
+void binary_conditional_false_unsafe(MyObj* in) {
+  MyObj* p;
+  {
+    MyObj temp;
+    p = in ?: &temp;  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                   // expected-note {{destroyed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void binary_conditional_common_unsafe(MyObj* fallback) {
+  MyObj* p;
+  {
+    MyObj temp;
+    MyObj* t = &temp;   // expected-warning {{local variable 'temp' does not live long enough}}
+    p = t ?: fallback;
+  }                     // expected-note {{destroyed here}}
+  (void)*p;             // expected-note {{later used here}}
+}
+
+void binary_conditional_safe(MyObj* in) {
+  MyObj fallback;
+  MyObj* p = in ?: &fallback;
+  (void)*p;  // no-warning
+}
+
+void binary_conditional_nested(MyObj* a, MyObj* b) {
+  MyObj* p;
+  {
+    MyObj temp;
+    p = a ?: b ?: &temp;  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*p;               // expected-note {{later used here}}
+}
+
+void binary_conditional_masked_by_conditional(bool cond, MyObj* in) {
+  MyObj safe;
+  MyObj* keep = &safe;
+  MyObj* p;
+  {
+    MyObj temp;
+    p = cond ? keep : (in ?: &temp);  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                                   // expected-note {{destroyed here}}
+  (void)*p;                           // expected-note {{later used here}}
+}
+
+void binary_conditional_use_after_free(int* in) {
+  int* h = new int;  // expected-warning {{allocated object does not live long enough}}
+  int* p = in ?: h;
+  delete h;          // expected-note {{freed here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+int** binary_conditional_double_ptr(int** in) {
+  int* local = nullptr;
+  int** p = in ?: &local;  // expected-warning {{stack memory associated with local variable 'local' is returned}}
+  return p;                // expected-note {{returned here}}
+}
+
+// A constexpr operator bool folds the condition and prunes an arm; the surviving
+// value must still flow without tripping the origin shape invariant.
+struct [[gsl::Pointer]] TrueView {
+  const int *p;
+  constexpr TrueView(const int &x [[clang::lifetimebound]]) : p(&x) {}
+  constexpr explicit operator bool() const { return true; }
+};
+struct [[gsl::Pointer]] FalseView {
+  const int *p;
+  constexpr FalseView(const int &x [[clang::lifetimebound]]) : p(&x) {}
+  constexpr explicit operator bool() const { return false; }
+};
+
+TrueView binary_conditional_folded_true(TrueView fb) {
+  int local = 0;
+  return TrueView(local) ?: fb;  // expected-warning {{stack memory associated with local variable 'local' is returned}} expected-note {{returned here}}
+}
+
+FalseView binary_conditional_folded_false(FalseView fb) {
+  int local = 0;
+  return FalseView(local) ?: fb;  // no-warning (result is always fb)
+}
+
 // FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
 // information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {
@@ -2786,6 +2868,22 @@ void throw_branches(bool cond, int *value) {
 void nested_throw_branches(bool cond, bool cond2, int *value) {
   (void)(cond ? (cond2 ? throw 1 : value) : throw 2);
   (void)(cond ? throw 1 : (cond2 ? value : throw 2));
+}
+
+// A `throw` arm of a binary conditional `a ?: b` carries no origins; flowing it
+// must not crash, and the common value's loans must still flow.
+int *binary_conditional_throw_select(int *in) {
+  return in ?: throw 1; // no-warning (in is caller storage)
+}
+
+void binary_conditional_throw_void(int *in) {
+  in ?: throw 1; // no-warning
+}
+
+int *binary_conditional_throw_dangling() {
+  int x;
+  int *p = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  return p ?: throw 1; // expected-note {{returned here}}
 }
 
 #endif

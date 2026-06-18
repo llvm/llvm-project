@@ -14,7 +14,6 @@ unittest("VectorizeTests") {
     "VPlanHCFGTest.cpp",
     "VPlanPatternMatchTest.cpp",
     "VPlanTest.cpp",
-    "VPlanUncountableExitTest.cpp",
     "VPlanVerifierTest.cpp",
   ]
 }

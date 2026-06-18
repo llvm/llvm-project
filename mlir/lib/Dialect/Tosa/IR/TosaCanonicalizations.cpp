@@ -271,6 +271,48 @@ struct AvgPool2dAdaptiveToAvgPool2d
   }
 };
 
+struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
+                                PatternRewriter &rewriter) const override {
+    // Prevent canonicalization if input/output shapes don't align
+    if (op.getInput().getType() != op.getOutput().getType())
+      return rewriter.notifyMatchFailure(
+          op, "expected input and output types to match");
+
+    const auto inputType = llvm::cast<ShapedType>(op.getInput().getType());
+    if (!llvm::isa<FloatType>(inputType.getElementType()))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected floating-point input type");
+
+    // For statically known zero points, the verifier ensures zero points are
+    // zero for floating-point types
+    if (!matchPattern(op.getInputZp(), m_Constant()) ||
+        !matchPattern(op.getOutputZp(), m_Constant()))
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected input and output zero points to be statically verifiable");
+
+    if (!llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit kernel");
+
+    if (!llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit stride");
+
+    if (!llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }))
+      return rewriter.notifyMatchFailure(op, "expected zero padding");
+
+    rewriter.replaceOp(op, op.getInput());
+    return success();
+  }
+};
+
+void AvgPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<AvgPool2dIsNoOp>(context);
+}
+
 void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<AvgPool2dAdaptiveToAvgPool2d>(context);
@@ -285,6 +327,15 @@ struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
     Value output = op.getOutput();
     ShapedType inputType = llvm::cast<ShapedType>(input.getType());
     ShapedType outputType = llvm::cast<ShapedType>(output.getType());
+
+    if (input.getType() == output.getType() &&
+        llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }) &&
+        op.getNanMode() == tosa::NanPropagationMode::PROPAGATE) {
+      rewriter.replaceOp(op, input);
+      return success();
+    }
 
     if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
       return failure();
