@@ -70,6 +70,40 @@ void test_copy_ctor_exception_for_strong_guarantee(std::vector<throwing_data<T>,
   }
 }
 
+// Test the no-reallocation path of resize(n, x): reserve enough capacity
+// ahead of time so resize fits within it, and trigger the throw partway
+// through copying the new element.
+template <typename T, typename Alloc>
+void test_in_place_copy_ctor_exception_for_strong_guarantee(
+    std::vector<throwing_data<T>, Alloc>& v, const std::vector<T>& values) {
+  assert(v.empty() && !values.empty());
+  std::size_t new_size = 2 * values.size();
+  // Set the existing-elements counter high enough that fill never throws
+  // and existing elements never trigger the throw on later operations.
+  int throw_after_fill = values.size() + 1000;
+  v.reserve(new_size);
+  for (std::size_t i = 0; i < values.size(); ++i)
+    v.emplace_back(values[i], throw_after_fill);
+
+  throwing_data<T>* old_data = v.data();
+  std::size_t old_size       = v.size();
+  std::size_t old_cap        = v.capacity();
+
+  try {
+    // t carries its own counter so the throw fires partway through the new
+    // copies (independent of the existing-elements counter).
+    int n = static_cast<int>(values.size() / 2 + 1);
+    throwing_data<T> t(T(), n);
+    v.resize(new_size, t);
+  } catch (...) {
+    assert(v.data() == old_data);
+    assert(v.size() == old_size);
+    assert(v.capacity() == old_cap);
+    for (std::size_t i = 0; i < v.size(); ++i)
+      assert(v[i].data_ == values[i]);
+  }
+}
+
 // Check the strong exception guarantee during reallocation failures
 void test_allocation_exceptions() {
   //
@@ -223,9 +257,60 @@ void test_copy_ctor_exceptions() {
     test_copy_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
+
+  // Same per-allocator coverage but for the no-reallocation path of
+  // resize(n, x). See https://llvm.org/PR59293.
+  {
+    {
+      int a[] = {1, 2, 3, 4, 5};
+      std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
+      std::vector<throwing_data<int> > v;
+      test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      int a[] = {1, 2, 3, 4, 5};
+      std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
+      std::vector<throwing_data<int>, min_allocator<throwing_data<int> > > v;
+      test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      std::vector<int> in(10, 42);
+      std::vector<throwing_data<int>, safe_allocator<throwing_data<int> > > v;
+      test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      std::vector<int> in(10, 42);
+      std::vector<throwing_data<int>, test_allocator<throwing_data<int> > > v;
+      test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      std::vector<int> in(10, 42);
+      std::vector<throwing_data<int>, limited_allocator<throwing_data<int>, 100> > v;
+      test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+#if TEST_STD_VER >= 23
+    {
+      std::vector<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+      std::vector<throwing_data<int>, increasing_allocator<throwing_data<int>>> v;
+      test_in_place_copy_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+#endif
+  }
 }
 
 int main(int, char**) {
   test_allocation_exceptions();
   test_copy_ctor_exceptions();
+  return 0;
 }

@@ -95,6 +95,36 @@ void test_copy_ctor_exception_for_strong_guarantee(std::vector<throwing_data<T>,
   }
 }
 
+// Test the no-reallocation path of resize(n): reserve enough capacity ahead
+// of time so resize fits within it, and trigger the throw partway through
+// constructing the new elements.
+template <typename T, typename Alloc>
+void test_in_place_default_ctor_exception_for_strong_guarantee(
+    std::vector<throwing_default_t<T>, Alloc>& v, const std::vector<T>& values) {
+  assert(v.empty() && !values.empty());
+  std::size_t new_size = 2 * values.size();
+  v.reserve(new_size);
+  for (std::size_t i = 0; i < values.size(); ++i)
+    v.emplace_back(values[i]);
+
+  throwing_default_t<T>* old_data = v.data();
+  std::size_t old_size            = v.size();
+  std::size_t old_cap             = v.capacity();
+
+  // Trigger an exception halfway through new-element default construction.
+  throwing_default_t<T>::throw_after = static_cast<int>(values.size() / 2);
+
+  try {
+    v.resize(new_size);
+  } catch (...) {
+    assert(v.data() == old_data);
+    assert(v.size() == old_size);
+    assert(v.capacity() == old_cap);
+    for (std::size_t i = 0; i < v.size(); ++i)
+      assert(v[i].data_ == values[i]);
+  }
+}
+
 #if TEST_STD_VER >= 11
 
 template <typename T, typename Alloc>
@@ -287,6 +317,56 @@ void test_default_ctor_exceptions() {
     test_default_ctor_exception_for_strong_guarantee(v, in);
   }
   check_new_delete_called();
+
+  // Same per-allocator coverage but for the no-reallocation path of resize(n).
+  // See https://llvm.org/PR59293.
+  {
+    {
+      int a[] = {1, 2, 3, 4, 5};
+      std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
+      std::vector<throwing_default_t<int> > v;
+      test_in_place_default_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      int a[] = {1, 2, 3, 4, 5};
+      std::vector<int> in(a, a + sizeof(a) / sizeof(a[0]));
+      std::vector<throwing_default_t<int>, min_allocator<throwing_default_t<int> > > v;
+      test_in_place_default_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      std::vector<int> in(10, 42);
+      std::vector<throwing_default_t<int>, safe_allocator<throwing_default_t<int> > > v;
+      test_in_place_default_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      std::vector<int> in(10, 42);
+      std::vector<throwing_default_t<int>, test_allocator<throwing_default_t<int> > > v;
+      test_in_place_default_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+    {
+      std::vector<int> in(10, 42);
+      std::vector<throwing_default_t<int>, limited_allocator<throwing_default_t<int>, 100> > v;
+      test_in_place_default_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+
+#if TEST_STD_VER >= 23
+    {
+      std::vector<int> in{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+      std::vector<throwing_default_t<int>, increasing_allocator<throwing_default_t<int>>> v;
+      test_in_place_default_ctor_exception_for_strong_guarantee(v, in);
+    }
+    check_new_delete_called();
+#endif
+  }
 }
 
 // Check the strong exception guarantee during copy-constructor failures
@@ -391,4 +471,5 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
   test_move_ctor_exceptions();
 #endif
+  return 0;
 }
