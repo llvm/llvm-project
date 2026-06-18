@@ -25,4 +25,4 @@ static_assert(1.0 == __builtin_exp(0.0));
 static_assert(0x1.5bf0a8b145769p1 == __builtin_exp(1.0));
 
 // No constexpr for overflow.
-static_assert(InfDouble == __builtin_expf(1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(InfDouble == __builtin_exp(1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
