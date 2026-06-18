@@ -2961,8 +2961,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (<3 x s32>) from %ir.p.kernarg.offset1, align 16, addrspace 4)
   ; GCN-NEXT:   [[SHUF:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[LOAD]](<3 x s32>), [[DEF]], shufflemask(0, 1)
-  ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[SHUF]](<2 x s32>)
-  ; GCN-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[BITCAST]](s64)
+  ; GCN-NEXT:   [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[SHUF]](<2 x s32>)
   ; GCN-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<3 x s32>), [[C]](s32)
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -2986,7 +2985,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C3]](s32)
   ; GCN-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INTTOPTR]](p1)
+  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](p1)
   ; GCN-NEXT:   $vgpr0 = COPY [[FRAME_INDEX]](p5)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr2 = COPY [[UV1]](s32)

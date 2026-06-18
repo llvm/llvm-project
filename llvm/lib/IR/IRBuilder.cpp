@@ -139,6 +139,19 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
     return CreateBitCast(In, Ty);
   };
 
+  // Unlike plain integers, a byte (or vector of bytes) of the same size as a
+  // pointer can be reinterpreted as that pointer with a direct bitcast. This
+  // preserves pointer provenance (the bitcast result is *based on* its
+  // operand), whereas routing through inttoptr/ptrtoint would discard it.
+  // Prefer the direct bitcast whenever the sizes line up; size-mismatched cases
+  // fall through to the integer-based handling below.
+  if (OldTy->isByteOrByteVectorTy() && NewTy->isPtrOrPtrVectorTy() &&
+      DL.getTypeSizeInBits(OldTy) == DL.getTypeSizeInBits(NewTy))
+    return CreateBitCastLike(V, NewTy);
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isByteOrByteVectorTy() &&
+      DL.getTypeSizeInBits(OldTy) == DL.getTypeSizeInBits(NewTy))
+    return CreateBitCastLike(V, NewTy);
+
   // Byte (and byte-vector) types are not integers, but like integers they can
   // be reinterpreted as a pointer-sized integer before/after an inttoptr or
   // ptrtoint step.  Treat them the same as integers here so we never attempt a

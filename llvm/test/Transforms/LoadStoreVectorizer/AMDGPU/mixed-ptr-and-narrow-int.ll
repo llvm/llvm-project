@@ -14,8 +14,7 @@ define amdgpu_kernel void @load_i16_i16_ptr32_i16(ptr addrspace(3) nocapture rea
 ; CHECK-NEXT:    [[X12:%.*]] = extractelement <4 x b16> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b16 [[X12]] to i16
 ; CHECK-NEXT:    [[X23:%.*]] = shufflevector <4 x b16> [[TMP0]], <4 x b16> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b16> [[X23]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x b16> [[X23]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[X3:%.*]] = load i16, ptr addrspace(3) [[O8]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -42,8 +41,7 @@ define amdgpu_kernel void @store_i16_i16_ptr32_i16(ptr addrspace(3) nocapture al
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x b16> poison, b16 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[B]] to b16
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x b16> [[TMP1]], b16 [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr addrspace(3) [[P]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP9]] to <2 x b16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast ptr addrspace(3) [[P]] to <2 x b16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x b16> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x b16> [[TMP3]], b16 [[TMP5]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x b16> [[TMP4]], i32 1
@@ -74,8 +72,7 @@ define amdgpu_kernel void @load_i32_ptr64_addrspace1(ptr addrspace(1) nocapture 
 ; CHECK-NEXT:    [[X01:%.*]] = extractelement <4 x b32> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X01]] to i32
 ; CHECK-NEXT:    [[X12:%.*]] = shufflevector <4 x b32> [[TMP0]], <4 x b32> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[X12]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP2]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x b32> [[X12]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[X23:%.*]] = extractelement <4 x b32> [[TMP0]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[X23]] to i32
 ; CHECK-NEXT:    ret void
