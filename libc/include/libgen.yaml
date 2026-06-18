@@ -1,5 +1,4 @@
 header: libgen.h
-header_template: libgen.h.def
 standards:
   - posix
 macros: []
