@@ -1599,23 +1599,15 @@ void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
 void AArch64InstPrinter::printSHUHintOp(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned shuhintop = MI->getOperand(OpNum).getImm() - 50;
-  auto SHU = AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(shuhintop);
-  if (SHU)
-    O << SHU->Name;
-  else
-    markup(O, Markup::Immediate) << '#' << formatImm(shuhintop);
+  printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
+                   AArch64SHUHint::lookupSHUHintByEncoding, decodeSHUHint);
 }
 
 void AArch64InstPrinter::printTSBHintOp(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned tsbhintop = MI->getOperand(OpNum).getImm() ^ 16;
-  auto TSB = AArch64TSB::lookupTSBByEncoding(tsbhintop);
-  if (TSB)
-    O << TSB->Name;
-  else
-    markup(O, Markup::Immediate) << '#' << formatImm(tsbhintop);
+  printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
+                   AArch64TSBHint::lookupTSBHintByEncoding, decodeTSBHint);
 }
 
 void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
@@ -2280,5 +2272,5 @@ void AArch64InstPrinter::printPHintOp(const MCInst *MI, unsigned OpNum,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
   printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
-                   AArch64PHint::lookupPHintByEncoding, decodeIdentityHint);
+                   AArch64PHint::lookupPHintByEncoding, decodePHint);
 }

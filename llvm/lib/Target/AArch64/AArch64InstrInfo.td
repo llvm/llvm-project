@@ -1552,13 +1552,13 @@ let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 
 def HINT : HintI<"hint">;
-def : InstAlias<"yield",(HINT 0b001)>;
-def : InstAlias<"wfe",  (HINT 0b010)>;
-def : InstAlias<"wfi",  (HINT 0b011)>;
-def : InstAlias<"sev",  (HINT 0b100)>;
-def : InstAlias<"sevl", (HINT 0b101)>;
-def : InstAlias<"dgh",  (HINT 0b110)>;
-def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
+def : InstAlias<"yield",(HINT 1)>;
+def : InstAlias<"wfe",  (HINT 2)>;
+def : InstAlias<"wfi",  (HINT 3)>;
+def : InstAlias<"sev",  (HINT 4)>;
+def : InstAlias<"sevl", (HINT 5)>;
+def : InstAlias<"dgh",  (HINT 6)>;
+def : InstAlias<"esb",  (HINT 16)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
 
 let CRm = 0b0000, hasSideEffects = 0 in
@@ -1583,6 +1583,8 @@ def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
 def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
+
+def : InstAlias<"tsb $op", (HINT tsbhint_op:$op)>, Requires<[HasTRACEV8_4]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
@@ -1669,7 +1671,6 @@ def GCSPOPM_NoOp : InstAlias<"gcspopm", (GCSPOPM XZR)>, Requires<[HasGCS]>; // R
 
 def GCSB_DSYNC_disable : InstAlias<"gcsb\tdsync", (HINT 19), 0>;
 def GCSB_DSYNC         : InstAlias<"gcsb\tdsync", (HINT 19), 1>, Requires<[HasGCS]>;
-def : InstAlias<"tsb\t$op", (HINT tsbhint_op:$op)>, Requires<[HasTRACEV8_4]>;
 
 def : TokenAlias<"DSYNC", "dsync">;
 

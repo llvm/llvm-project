@@ -60,13 +60,6 @@ namespace llvm {
 }
 
 namespace llvm {
-  namespace AArch64TSB {
-#define GET_TSBsList_IMPL
-#include "AArch64GenSystemOperands.inc"
-  }
-}
-
-namespace llvm {
   namespace AArch64PRFM {
 #define GET_PRFMsList_IMPL
 #include "AArch64GenSystemOperands.inc"
@@ -126,9 +119,16 @@ namespace llvm {
 
 namespace llvm {
 namespace AArch64PHint {
-#define GET_PHintsList_IMPL
+#define GET_PHINT_IMPL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64PHint
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64TSBHint {
+#define GET_TSBHINT_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TSBHint
 } // namespace llvm
 
 namespace llvm {
@@ -143,6 +143,13 @@ namespace AArch64CMHPriorityHint {
 #define GET_CMHPRIORITYHINT_IMPL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64CMHPriorityHint
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64SHUHint {
+#define GET_SHUHINT_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64SHUHint
 } // namespace llvm
 
 namespace llvm {

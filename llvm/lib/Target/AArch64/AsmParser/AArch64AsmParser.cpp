@@ -2597,6 +2597,10 @@ public:
     unsigned operator()(unsigned Val) const { return Val | 32; }
   };
 
+  struct PHintEncoding {
+    unsigned operator()(unsigned Val) const { return Val + 48; }
+  };
+
   template <KindTy Kind, NamedHintOp AArch64Operand::*Member,
             typename Encode = IdentityHintEncoding>
   static std::unique_ptr<AArch64Operand>
@@ -2614,8 +2618,8 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    return CreateNamedHintOperand<k_PHint, &AArch64Operand::PHint>(Val, Str, S,
-                                                                   Ctx);
+    return CreateNamedHintOperand<k_PHint, &AArch64Operand::PHint>(
+        Val, Str, S, Ctx, PHintEncoding{});
   }
 
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
@@ -4338,15 +4342,15 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return TokError("invalid operand for instruction");
 
   StringRef Operand = Tok.getString();
-  auto TSB = AArch64TSB::lookupTSBByName(Operand);
+  bool IsTSB = Mnemonic == "tsb" && Operand == "csync";
   auto DB = AArch64DB::lookupDBByName(Operand);
   // The only valid named option for ISB is 'sy'
   if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy))
     return TokError("'sy' or #imm operand expected");
   // The only valid named option for TSB is 'csync'
-  if (Mnemonic == "tsb" && (!TSB || TSB->Encoding != AArch64TSB::csync))
+  if (Mnemonic == "tsb" && !IsTSB)
     return TokError("'csync' operand expected");
-  if (!DB && !TSB) {
+  if (!DB && !IsTSB) {
     if (Mnemonic == "dsb") {
       // This case is a no match here, but it might be matched by the nXS
       // variant.
@@ -4356,8 +4360,8 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   }
 
   Operands.push_back(AArch64Operand::CreateBarrier(
-      DB ? DB->Encoding : TSB->Encoding, Tok.getString(), getLoc(),
-      getContext(), false /*hasnXSModifier*/));
+      DB ? DB->Encoding : 2, Tok.getString(), getLoc(), getContext(),
+      false /*hasnXSModifier*/));
   Lex(); // Consume the option
 
   return ParseStatus::Success;
@@ -4451,25 +4455,13 @@ AArch64AsmParser::tryParsePHintInstOperand(OperandVector &Operands) {
 }
 
 ParseStatus AArch64AsmParser::tryParseSHUHintOperand(OperandVector &Operands) {
-  return tryParseNamedHintOperand(
-      Operands, AArch64CMHPriorityHint::lookupCMHPriorityHintByName,
-      AArch64Operand::CreateSHUHint);
+  return tryParseNamedHintOperand(Operands, AArch64SHUHint::lookupSHUHintByName,
+                                  AArch64Operand::CreateSHUHint);
 }
 
 ParseStatus AArch64AsmParser::tryParseTSBHintOperand(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("'csync' operand expected");
-
-  auto TSB = AArch64TSB::lookupTSBByName(Tok.getString());
-  if (!TSB || TSB->Encoding != AArch64TSB::csync)
-    return TokError("'csync' operand expected");
-
-  Operands.push_back(AArch64Operand::CreateTSBHint(
-      TSB->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
+  return tryParseNamedHintOperand(Operands, AArch64TSBHint::lookupTSBHintByName,
+                                  AArch64Operand::CreateTSBHint);
 }
 
 /// tryParseNeonVectorRegister - Parse a vector register operand.

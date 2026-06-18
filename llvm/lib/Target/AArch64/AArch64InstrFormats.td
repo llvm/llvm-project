@@ -1870,9 +1870,9 @@ def phint_op : Operand<i32> {
     let ParserMatchClass = PHintInstOperand;
     let PrintMethod = "printPHintOp";
     let MCOperandPredicate = [{
-      if (!MCOp.isImm())
+      if (!MCOp.isImm() || MCOp.getImm() < 48)
         return false;
-      return AArch64PHint::lookupPHintByEncoding(MCOp.getImm()) != nullptr;
+      return AArch64PHint::lookupPHintByEncoding(MCOp.getImm() - 48) != nullptr;
     }];
     let OperandType = "OPERAND_IMMEDIATE";
     let MIOperandInfo = (ops i32imm: $policy);
@@ -1890,7 +1890,8 @@ def tsbhint_op : Operand<i32> {
     let MCOperandPredicate = [{
       if (!MCOp.isImm() || MCOp.getImm() < 16)
         return false;
-      return AArch64TSB::lookupTSBByEncoding(MCOp.getImm() - 16) != nullptr;
+      return AArch64TSBHint::lookupTSBHintByEncoding(MCOp.getImm() - 16) !=
+             nullptr;
     }];
     let OperandType = "OPERAND_IMMEDIATE";
     let MIOperandInfo = (ops i32imm: $policy);
@@ -1908,8 +1909,8 @@ def shuhint_op : Operand<i32> {
     let MCOperandPredicate = [{
       if (!MCOp.isImm() || MCOp.getImm() < 50)
         return false;
-      return AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(
-                 MCOp.getImm() - 50) != nullptr;
+      return AArch64SHUHint::lookupSHUHintByEncoding(MCOp.getImm() - 50) !=
+             nullptr;
     }];
     let OperandType = "OPERAND_IMMEDIATE";
     let MIOperandInfo = (ops i32imm: $priority);
@@ -2012,7 +2013,7 @@ def btihint_op : Operand<i32> {
     // "bti" is an alias to "hint" only for certain values of CRm:Op2 fields.
     if (!MCOp.isImm())
       return false;
-    return AArch64BTIHint::lookupBTIByEncoding(MCOp.getImm() ^ 32) != nullptr;
+    return AArch64BTIHint::isHintSpaceBTI(MCOp.getImm());
   }];
   let OperandType = "OPERAND_IMMEDIATE";
 }

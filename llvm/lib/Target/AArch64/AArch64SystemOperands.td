@@ -338,37 +338,19 @@ def lookupISBByName : SearchIndex {
 def : ISB<"sy", 0xf>;
 
 //===----------------------------------------------------------------------===//
-// TSB (Trace synchronization barrier) instruction options.
+// TSB (Trace synchronization barrier) HINT instruction options.
 //===----------------------------------------------------------------------===//
 
-class TSB<string name, bits<4> encoding> {
+class TSBHint<string name, bits<4> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
   string Name = name;
   bits<4> Encoding;
   let Encoding = encoding;
-
-  code Requires = [{ {AArch64::FeatureTRACEV8_4} }];
 }
 
-def TSBValues : GenericEnum {
-  let FilterClass = "TSB";
-  let NameField = "Name";
-  let ValueField = "Encoding";
-}
-
-def TSBsList : GenericTable {
-  let FilterClass = "TSB";
-  let Fields = ["Name", "Encoding", "Requires"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupTSBByEncoding";
-}
-
-def lookupTSBByName : SearchIndex {
-  let Table = TSBsList;
-  let Key = ["Name"];
-}
-
-def : TSB<"csync", 2>;
+def : TSBHint<"csync", 2>;
 
 //===----------------------------------------------------------------------===//
 // PRFM (prefetch) instruction options.
@@ -828,6 +810,17 @@ class CMHPriorityHint<string name, bits<1> encoding> : SearchableTable {
 }
 
 def : CMHPriorityHint<"ph", 0b1>;
+
+class SHUHint<string name, bits<1> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<1> Encoding;
+  let Encoding = encoding;
+}
+
+def : SHUHint<"ph", 0b1>;
 
 
 //===----------------------------------------------------------------------===//
@@ -2450,34 +2443,17 @@ def : RWSysReg<"ACTLRALIAS_EL1",  0b11, 0b000, 0b0001, 0b0100, 0b101>;
 // v9.6a PCDPHINT instruction options.
 //===----------------------------------------------------------------------===//
 
-class PHint<string name, bits<7> encoding> {
+class PHint<string name, bits<1> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
   string Name = name;
-  bits<7> Encoding;
+  bits<1> Encoding;
   let Encoding = encoding;
-  code Requires = [{ {} }];
 }
 
-def PHintValues : GenericEnum {
-  let FilterClass = "PHint";
-  let NameField = "Name";
-  let ValueField = "Encoding";
-}
-
-def PHintsList : GenericTable {
-  let FilterClass = "PHint";
-  let Fields = ["Name", "Encoding", "Requires"];
-
-  let PrimaryKey = ["Encoding"];
-  let PrimaryKeyName = "lookupPHintByEncoding";
-}
-
-def lookupPHintByName : SearchIndex {
-  let Table = PHintsList;
-  let Key = ["Name"];
-}
-
-def KEEP : PHint<"keep", 0b0110000>;
-def STRM : PHint<"strm", 0b0110001>;
+def : PHint<"keep", 0b0>;
+def : PHint<"strm", 0b1>;
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;

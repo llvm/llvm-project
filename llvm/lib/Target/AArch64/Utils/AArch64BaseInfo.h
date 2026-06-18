@@ -541,15 +541,6 @@ namespace  AArch64ISB {
 #include "AArch64GenSystemOperands.inc"
 }
 
-namespace  AArch64TSB {
-  struct TSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_TSBValues_DECL
-#define GET_TSBsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
@@ -710,24 +701,22 @@ namespace AArch64PSBHint {
 }
 
 namespace AArch64PHint {
-struct PHint {
-  const char *Name;
-  unsigned Encoding;
-  FeatureBitset FeaturesRequired;
-
-  bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
-           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
+struct PHint : SysAlias {
+  using SysAlias::SysAlias;
 };
 
-#define GET_PHintValues_DECL
-#define GET_PHintsList_DECL
+#define GET_PHINT_DECL
 #include "AArch64GenSystemOperands.inc"
-
-const PHint *lookupPHintByName(StringRef);
-const PHint *lookupPHintByEncoding(uint8_t);
 } // namespace AArch64PHint
+
+namespace AArch64TSBHint {
+struct TSBHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+
+#define GET_TSBHINT_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TSBHint
 
 namespace AArch64BTIHint {
   struct BTI : SysAlias {
@@ -736,6 +725,10 @@ namespace AArch64BTIHint {
 #define GET_BTIValues_DECL
 #define GET_BTIsList_DECL
 #include "AArch64GenSystemOperands.inc"
+
+  inline static bool isHintSpaceBTI(int64_t Imm) {
+    return Imm >= 32 && Imm < 64 && lookupBTIByEncoding(Imm ^ 32);
+  }
 }
 
 namespace AArch64CMHPriorityHint {
@@ -745,6 +738,15 @@ struct CMHPriorityHint : SysAlias {
 #define GET_CMHPRIORITYHINT_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64CMHPriorityHint
+
+namespace AArch64SHUHint {
+struct SHUHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+
+#define GET_SHUHINT_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64SHUHint
 
 namespace AArch64TIndexHint {
 struct TIndex : SysAlias {
