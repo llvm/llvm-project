@@ -1551,9 +1551,12 @@ bool WaitcntBrackets::counterOutOfOrder(AMDGPU::InstCounterType T) const {
       return false;
 
     HWEvents Events = PendingEvents & Context->getWaitEvents(T);
-    // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
-    // events
+
+    // GLOBAL_INV completes in-order with other LOAD_CNT events,
+    // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT
+    // events doesn't cause out-of-order completion.
     Events -= HWEvents::GLOBAL_INV_ACCESS;
+
     // Return true only if there are still multiple event types after removing
     // GLOBAL_INV
     return Events.size() > 1;
