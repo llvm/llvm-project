@@ -34,6 +34,7 @@ enum class HighlightingKind {
   Parameter,
   Function,
   Method,
+  Keyword,
   StaticMethod,
   Field,
   StaticField,

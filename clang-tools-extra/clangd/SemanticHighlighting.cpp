@@ -582,6 +582,19 @@ public:
     return true;
   }
 
+  bool VisitImportDecl(const ImportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Keyword);
+    for (const auto ModuleLoc : D->getIdentifierLocs()) {
+      H.addToken(ModuleLoc, HighlightingKind::Namespace)
+          .addModifier(HighlightingModifier::DependentName);
+    }
+    return true;
+  }
+  bool VisitExportDecl(const ExportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Keyword);
+    return true;
+  }
+
   bool VisitTagDecl(TagDecl *D) {
     for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
@@ -1117,6 +1130,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Function";
   case HighlightingKind::Method:
     return OS << "Method";
+  case HighlightingKind::Keyword:
+    return OS << "Keyword";
   case HighlightingKind::StaticMethod:
     return OS << "StaticMethod";
   case HighlightingKind::Field:
@@ -1320,6 +1335,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "function";
   case HighlightingKind::Method:
     return "method";
+  case HighlightingKind::Keyword:
+    return "keyword";
   case HighlightingKind::StaticMethod:
     // FIXME: better method with static modifier?
     return "function";
