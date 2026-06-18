@@ -598,5 +598,55 @@ entry:
   ret void
 }
 
+define void @zext_nxv8i16_to_nxv8i64_deinterleave_single_lane_used(ptr %src, ptr %dst, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: zext_nxv8i16_to_nxv8i64_deinterleave_single_lane_used:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov w8, #2048 // =0x800
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    rdvl x10, #1
+; CHECK-NEXT:  .LBB7_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    subs x8, x8, x9
+; CHECK-NEXT:    add x0, x0, x10
+; CHECK-NEXT:    uunpkhi z2.s, z1.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpkhi z3.d, z2.s
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpkhi z4.d, z1.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z4.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z2.d
+; CHECK-NEXT:    and z1.d, z1.d, #0xffff
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    b.ne .LBB7_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    str z0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc.b.i64 = phi <vscale x 2 x i64> [ splat(i64 0), %entry ], [ %add.b.i64, %loop ]
+  %src.gep = getelementptr inbounds nuw [4 x i16], ptr %src, i64 %iv
+  %bgra = call <vscale x 8 x i16> @llvm.masked.load(ptr %src.gep, <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
+  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave4(<vscale x 8 x i16> %bgra)
+  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+  %b.i64 = zext <vscale x 2 x i16> %b.i16 to <vscale x 2 x i64>
+  %add.b.i64 = add <vscale x 2 x i64> %acc.b.i64, %b.i64
+  %iv.next = add nuw i64 %iv, %stride
+  %ec = icmp eq i64 %iv.next, 2048
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  store <vscale x 2 x i64> %add.b.i64, ptr %dst
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
 attributes #1 = { "target-features"="+sve" vscale_range(1, 8) }
