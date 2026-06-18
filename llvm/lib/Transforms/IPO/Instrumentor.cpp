@@ -906,6 +906,23 @@ static void readValuePack(const Range &R, Value &Pack,
 }
 
 template <unsigned... Opcodes>
+Value *InstructionIO<Opcodes...>::getOpcode(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOpcode());
+}
+
+template <unsigned... Opcodes>
+Value *InstructionIO<Opcodes...>::getTypeSize(Value &V, Type &Ty,
+                                              InstrumentationConfig &IConf,
+                                              InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  auto &DL = I.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
+}
+
+template <unsigned... Opcodes>
 Value *InstructionIO<Opcodes...>::getLeft(Value &V, Type &Ty,
                                           InstrumentationConfig &IConf,
                                           InstrumentorIRBuilderTy &IIRB) {
@@ -1022,22 +1039,9 @@ Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
   return getCI(&Ty, Fn.getName() == "main");
 }
 
-static Value *getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  return getCI(&Ty, I.getOpcode());
-}
-
 static Value *getTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
                         InstrumentorIRBuilderTy &IIRB) {
   return getCI(&Ty, V.getType()->getTypeID());
-}
-
-static Value *getSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                      InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  auto &DL = I.getDataLayout();
-  return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
 }
 
 /// UnreachableIO
@@ -1769,7 +1773,7 @@ void NumericIO::init(InstrumentationConfig &IConf,
                              getTypeId));
   if (Config.has(PassSize))
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "size", "The operation's type size.",
-                             IRTArg::NONE, getSize));
+                             IRTArg::NONE, getTypeSize));
   if (Config.has(PassOpcode))
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode", "The instruction opcode.",
                              IRTArg::NONE, getOpcode));
@@ -1878,7 +1882,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
   if (!IsPRE && Config.has(PassResultSize))
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_size",
                              "Size of the result value.", IRTArg::NONE,
-                             getSize));
+                             getTypeSize));
   if (!IsPRE && Config.has(PassResult))
     IRTArgs.push_back(
         IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",

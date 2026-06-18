@@ -621,6 +621,12 @@ struct InstructionIO : public InstrumentationOpportunity {
     return Instruction::getOpcodeName(OpcodesArray[0]);
   }
 
+  LLVM_ABI static Value *getOpcode(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getTypeSize(Value &V, Type &Ty,
+                                     InstrumentationConfig &IConf,
+                                     InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getLeft(Value &V, Type &Ty,
                                  InstrumentationConfig &IConf,
                                  InstrumentorIRBuilderTy &IIRB);
