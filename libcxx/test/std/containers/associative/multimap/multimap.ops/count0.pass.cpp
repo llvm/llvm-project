@@ -13,7 +13,6 @@
 // class multimap
 
 // size_type count(const key_type& k) const; // constexpr since C++26
-
 //
 //   The member function templates find, count, lower_bound, upper_bound, and
 // equal_range shall not participate in overload resolution unless the

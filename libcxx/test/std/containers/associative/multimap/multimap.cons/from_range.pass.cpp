@@ -10,7 +10,6 @@
 
 // template<container-compatible-range<value_type> R>
 //   multimap(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23 // constexpr since C++26
-
 //
 // template<container-compatible-range<value_type> R>
 //   multimap(from_range_t, R&& rg, const Allocator& a))

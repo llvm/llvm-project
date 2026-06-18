@@ -11,27 +11,22 @@
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator==(const std::multimap<Key, T, Compare, Alloc>& lhs,
 //                 const std::multimap<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
-
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator!=(const std::multimap<Key, T, Compare, Alloc>& lhs,
 //                 const std::multimap<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
-
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator<(const std::multimap<Key, T, Compare, Alloc>& lhs,
 //                const std::multimap<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
-
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator>(const std::multimap<Key, T, Compare, Alloc>& lhs,
 //                const std::multimap<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
-
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator<=(const std::multimap<Key, T, Compare, Alloc>& lhs,
 //                 const std::multimap<Key, T, Compare, Alloc>& rhs); // constexpr since C++26
-
 //
 // template<class Key, class T, class Compare, class Alloc>
 // bool operator>=(const std::multimap<Key, T, Compare, Alloc>& lhs,

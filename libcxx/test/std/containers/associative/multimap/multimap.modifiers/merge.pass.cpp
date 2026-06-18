@@ -14,13 +14,10 @@
 
 // template <class C2>
 //   void merge(map<key_type, value_type, C2, allocator_type>& source); // constexpr since C++26
-
 // template <class C2>
 //   void merge(map<key_type, value_type, C2, allocator_type>&& source); // constexpr since C++26
-
 // template <class C2>
 //   void merge(multimap<key_type, value_type, C2, allocator_type>& source); // constexpr since C++26
-
 // template <class C2>
 //   void merge(multimap<key_type, value_type, C2, allocator_type>&& source); // constexpr since C++26
 

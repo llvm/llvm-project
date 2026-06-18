@@ -11,7 +11,6 @@
 // class multimap
 
 //       iterator upper_bound(const key_type& k); // constexpr since C++26
-
 // const_iterator upper_bound(const key_type& k) const; // constexpr since C++26
 
 #include <map>

@@ -10,7 +10,7 @@
 
 // class multimap
 
-// pair<iterator, iterator>             equal_range(const key_type& k);
+// pair<iterator, iterator>             equal_range(const key_type& k); // constexpr since C++26
 // pair<const_iterator, const_iterator> equal_range(const key_type& k) const; // constexpr since C++26
 
 #include <map>
