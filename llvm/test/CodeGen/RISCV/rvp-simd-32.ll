@@ -983,7 +983,6 @@ define <2 x i16> @test_psll_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i8> @test_psll_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
-;
 ; RV32-LABEL: test_psll_bs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
@@ -1140,7 +1139,6 @@ define <2 x i16> @test_psrl_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i8> @test_psrl_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
-;
 ; RV32-LABEL: test_psrl_bs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
@@ -1210,7 +1208,6 @@ define <2 x i16> @test_psra_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
-;
 ; RV32-LABEL: test_psra_bs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
