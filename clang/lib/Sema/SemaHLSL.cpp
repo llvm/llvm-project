@@ -2804,6 +2804,39 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
   return true;
 }
 
+// Transpose and matrix mul need to read the destination layout.
+// Elementwise builtins reuse the operand layout instead.
+static bool isLayoutAdaptingMatrixBuiltin(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_mul:
+  case Builtin::BI__builtin_hlsl_transpose:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void SemaHLSL::propagateContextualMatrixLayout(Expr *E, QualType DestType) {
+  if (!E || DestType.isNull())
+    return;
+  const auto *DestMat = DestType->getAs<ConstantMatrixType>();
+  if (!DestMat)
+    return;
+  auto *Call = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+  if (!Call)
+    return;
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  if (!Callee || !isLayoutAdaptingMatrixBuiltin(Callee->getBuiltinID()))
+    return;
+  const auto *CallMat = Call->getType()->getAs<ConstantMatrixType>();
+  if (!CallMat || CallMat->getNumRows() != DestMat->getNumRows() ||
+      CallMat->getNumColumns() != DestMat->getNumColumns())
+    return;
+  // Re-type the call with the destination sugar so CodeGen lowers into that
+  // layout, not the TU default.
+  Call->setType(DestType.getUnqualifiedType());
+}
+
 namespace {
 
 /// This class implements HLSL availability diagnostics for default
@@ -4622,7 +4655,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_x:
-  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
+  case Builtin::BI__builtin_hlsl_quad_read_across_y:
+  case Builtin::BI__builtin_hlsl_quad_read_across_diagonal: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -5739,14 +5773,25 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize non-static resources at the global scope.
   if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
     const Type *Ty = VD->getType().getTypePtr();
-    if (Ty->isHLSLResourceRecord())
-      return initGlobalResourceDecl(VD);
-    if (Ty->isHLSLResourceRecordArray())
-      return initGlobalResourceArrayDecl(VD);
+    if (Ty->isHLSLResourceRecord() && initGlobalResourceDecl(VD))
+      return true;
+    if (Ty->isHLSLResourceRecordArray() && initGlobalResourceArrayDecl(VD))
+      return true;
   }
+
+  // User-defined structs/classes do not have constructors.
+  // When declared at a global scope, they are part of the constant buffer
+  // and should not be initialized by the compiler.
+  // When declared at a local scope, they are not initialized.
+  // Also applies to arrays of user-defined structs/classes.
+  const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+  while (Ty->isArrayType())
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl())
+    return !RD->isHLSLBuiltinRecord();
+
   return false;
 }
 
@@ -5838,6 +5883,15 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
     }
   }
   return true;
+}
+
+// Returns true if the given type can have an overload of the given
+// binary operator.
+bool SemaHLSL::canHaveOverloadedBinOp(QualType LHSTy, BinaryOperatorKind Opc) {
+  CXXRecordDecl *RD = LHSTy->getAsCXXRecordDecl();
+  if (!RD)
+    return true;
+  return RD->isHLSLBuiltinRecord() || Opc != BO_Assign;
 }
 
 // Walks though the global variable declaration, collects all resource binding
