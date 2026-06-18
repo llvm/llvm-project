@@ -99,6 +99,24 @@ define dso_local void @test_A_reg_intel(ptr %p) nounwind {
   ret void
 }
 
+define dso_local void @test_P_disp_only_global_base(i64 %idx) nounwind {
+; X64-LABEL: test_P_disp_only_global_base:
+; X64:       # %bb.0:
+; X64-NEXT:    #APP
+; X64-NEXT:    #TEST var
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    #APP
+; X64-EMPTY:
+; X64-NEXT:    #TEST [var]
+; X64-EMPTY:
+; X64-NEXT:    #NO_APP
+; X64-NEXT:    retq
+  %addr = getelementptr i8, ptr @var, i64 %idx
+  tail call void asm sideeffect "#TEST ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i8) %addr)
+  tail call void asm sideeffect inteldialect "#TEST ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i8) %addr)
+  ret void
+}
+
 define dso_local void @test_c() nounwind {
 ; CHECK-LABEL: test_c:
 ; CHECK:       # %bb.0:

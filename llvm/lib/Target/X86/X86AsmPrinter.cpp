@@ -433,6 +433,10 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
   if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
+  // If we really just want to print out displacement.
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only")
+    HasBaseReg = false;
+
   // HasParenPart - True if we will print out the () part of the mem ref.
   bool HasParenPart = IndexReg.getReg() || HasBaseReg;
 
