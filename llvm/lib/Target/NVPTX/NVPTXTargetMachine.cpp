@@ -373,8 +373,7 @@ void NVPTXPassConfig::addIRPasses() {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
   } else {
-    // Required for correct stack lowering, not just an optimization, so run it
-    // even at -O0.
+    // Required for correct stack lowering
     addPass(createNVPTXLowerAllocaPass());
   }
 
