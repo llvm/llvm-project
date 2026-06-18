@@ -28,14 +28,14 @@
 %arr = type [4 x i32]
 %nest = type [2 x [2 x i32]]
 
-@g = global %arr [i32 1, i32 undef, i32 3, i32 4]
+@g = global %arr [i32 1, i32 poison, i32 3, i32 4]
 
 define void @undef_composite(ptr %dst) {
-  store %arr [i32 1, i32 undef, i32 3, i32 4], ptr %dst
+  store %arr [i32 1, i32 poison, i32 3, i32 4], ptr %dst
   ret void
 }
 
 define void @undef_nested_composite(ptr %dst) {
-  store %nest [[2 x i32] [i32 1, i32 undef], [2 x i32] undef], ptr %dst
+  store %nest [[2 x i32] [i32 1, i32 poison], [2 x i32] poison], ptr %dst
   ret void
 }

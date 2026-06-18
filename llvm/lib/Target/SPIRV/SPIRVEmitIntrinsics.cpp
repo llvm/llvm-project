@@ -1641,9 +1641,9 @@ Value *SPIRVEmitIntrinsics::lowerUndefOrPoison(Value *Op, IRBuilder<> &B,
   // Aggregates use an i32-result placeholder with the real type kept in
   // AggrConstTypes and scalar poison uses a type-overloaded one.
   if (Ty->isAggregateType()) {
-    auto *Call = AsPoison
-                     ? B.CreateIntrinsicWithoutFolding(IID, {B.getInt32Ty()}, {})
-                     : B.CreateIntrinsicWithoutFolding(IID, {});
+    auto *Call =
+        AsPoison ? B.CreateIntrinsicWithoutFolding(IID, {B.getInt32Ty()}, {})
+                 : B.CreateIntrinsicWithoutFolding(IID, {});
     AggrConsts[Call] = UV;
     AggrConstTypes[Call] = Ty;
     return Call;
@@ -1654,8 +1654,8 @@ Value *SPIRVEmitIntrinsics::lowerUndefOrPoison(Value *Op, IRBuilder<> &B,
   return nullptr;
 }
 
-// Replace aggregate undef or poison operands and extension-enabled scalar poison
-// operands with placeholder intrinsics. Scalar undef is left as is. See
+// Replace aggregate undef or poison operands and extension-enabled scalar
+// poison operands with placeholder intrinsics. Scalar undef is left as is. See
 // lowerUndefOrPoison.
 void SPIRVEmitIntrinsics::preprocessUndefsAndPoisons(IRBuilder<> &B) {
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
@@ -1759,8 +1759,8 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
                 isa<ConstantPointerNull>(CE->getOperand(0)))
               Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
             // Undef or poison nested in a constant aggregate is not a direct
-            // instruction operand, so preprocessUndefsAndPoisons() misses it. An
-            // unlowered aggregate one would reach IRTranslator as an
+            // instruction operand, so preprocessUndefsAndPoisons() misses it.
+            // An unlowered aggregate one would reach IRTranslator as an
             // untranslatable spv_const_composite operand.
             if (isa<UndefValue>(Op)) {
               PrepareInsert();
