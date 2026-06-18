@@ -27,7 +27,7 @@
 // structured ld4 instead), we would see multiple uunpkhi/lo instructions for
 // the extensions, followed by uzp1/2 instructions for the deinterleave.
 // Instead, we can replace all of those with 4 tbl instructions. The tradeoff,
-// of course, is that we now have 4 mask values to maintain which increases
+// of course, is that we now have 4 mask values to maintain which may increase
 // register pressure.
 //
 // This basic transform could be performed in CodeGenPrepare (as the equivalent
@@ -147,7 +147,7 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   // Check that all extracted values are being extended the same way, and that
   // we have the expected number of extensions.
   if (!all_of(Extends, [DestTy, Opcode](CastInst *CI) {
-        return CI && CI->getDestTy() == DestTy && CI->getOpcode() == Opcode;
+        return !CI || (CI->getDestTy() == DestTy && CI->getOpcode() == Opcode);
       }))
     return;
 
@@ -173,6 +173,9 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
 
     APInt Invalid = APInt::getAllOnes(DstBits);
     for (auto [Idx, Extend] : enumerate(Extends)) {
+      // If not all lanes were extracted, we can have gaps. Skip over them.
+      if (!Extend)
+        continue;
       // Build the mask using stepvectors and casting.
       // We want to select the Idx'th element, and every 4 elements after that.
       // Each element needs to be zero extended; we can do that by providing
