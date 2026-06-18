@@ -20,8 +20,8 @@
 //   store i32 0, ptr %A.generic
 //
 // This gives the alloca a local frame index, which stack lowering addresses
-// through the local frame pointer (%SPL). NVPTXInferAddressSpaces, which runs
-// right after this pass, propagates the local address space into the users and
+// through the local frame pointer (%SPL). When NVPTXInferAddressSpaces runs
+// after this pass, it propagates the local address space into the users and
 // folds the cast away where possible (so the store above becomes st.local.u32).
 //
 //===----------------------------------------------------------------------===//
