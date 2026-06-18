@@ -72,9 +72,9 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
 
   for (AllocaInst *AI : Allocas) {
     // Create an equivalent alloca in the local address space.
-    auto *LocalAlloca = new AllocaInst(
-        AI->getAllocatedType(), ADDRESS_SPACE_LOCAL, AI->getArraySize(),
-        AI->getAlign(), "", AI->getIterator());
+    auto *LocalAlloca = new AllocaInst(AI->getAllocatedType(),
+                                       ADDRESS_SPACE_LOCAL, AI->getArraySize(),
+                                       AI->getAlign(), "", AI->getIterator());
     LocalAlloca->setDebugLoc(AI->getDebugLoc());
     LocalAlloca->copyMetadata(*AI);
     LocalAlloca->setUsedWithInAlloca(AI->isUsedWithInAlloca());
@@ -105,8 +105,8 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
     // replaceAllUsesWith leaves the (already retargeted) lifetime markers and
     // debug records untouched. NVPTXInferAddressSpaces folds the cast into the
     // users that can operate on local memory directly.
-    auto *GenericPtr =
-        new AddrSpaceCastInst(LocalAlloca, AI->getType(), "", AI->getIterator());
+    auto *GenericPtr = new AddrSpaceCastInst(LocalAlloca, AI->getType(), "",
+                                             AI->getIterator());
     GenericPtr->setDebugLoc(AI->getDebugLoc());
     AI->replaceAllUsesWith(GenericPtr);
     LocalAlloca->takeName(AI);
