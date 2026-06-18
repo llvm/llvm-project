@@ -1041,6 +1041,18 @@ bool AMDGPUTargetLowering::isZExtFree(EVT Src, EVT Dest) const {
 bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                                  EVT DestVT) const {
   switch (N->getOpcode()) {
+  case ISD::ABS: {
+    // Narrowing to types smaller than 32 bit is never profitable for uniform
+    // operations. The only native instruction is s_abs for i32, so narrowing to
+    // smaller types requires less efficient expansions.
+    if (!N->isDivergent() && DestVT.getSizeInBits() < 32)
+      return false;
+    // For all other cases, i.e., divergent or types larger than 32 bit, fall
+    // through. They will either profit from narrowing to i32 or will be
+    // expanded to a combination of SUB and SMAX, so follow their profitability
+    // logic.
+    LLVM_FALLTHROUGH;
+  }
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
