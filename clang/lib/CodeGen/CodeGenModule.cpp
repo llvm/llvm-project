@@ -3404,16 +3404,29 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
 
 void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
                                                  llvm::Function *F) {
-  // All functions which are not internal linkage could be indirect targets.
-  // Address taken functions with internal linkage could be indirect targets.
-  if (!F->hasLocalLinkage() ||
-      F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
-                                       /*IgnoreAssumeLikeCalls=*/true,
-                                       /*IgnoreLLVMUsed=*/false)) {
+  // Determine the final linkage of the function.
+  GlobalDecl GD;
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+    GD = GlobalDecl(CD, Ctor_Complete);
+  else if (auto *DD = dyn_cast<CXXDestructorDecl>(FD))
+    GD = GlobalDecl(DD, Dtor_Complete);
+  else
+    GD = GlobalDecl(FD);
+
+  bool IsLocal = llvm::GlobalValue::isLocalLinkage(getFunctionLinkage(GD));
+
+  llvm::Metadata *TypeIdMD = getCallGraphSectionTypeId(FD->getType());
+
+  if (IsLocal) {
+    F->addMetadata(
+        llvm::LLVMContext::MD_callgraph,
+        *llvm::MDTuple::get(
+            getLLVMContext(),
+            {TypeIdMD, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                           llvm::Type::getInt1Ty(getLLVMContext()), true))}));
+  } else {
     F->addMetadata(llvm::LLVMContext::MD_callgraph,
-                   *llvm::MDTuple::get(
-                       getLLVMContext(),
-                       {CreateMetadataIdentifierGeneralized(FD->getType())}));
+                   *llvm::MDTuple::get(getLLVMContext(), {TypeIdMD}));
   }
 }
 
@@ -3447,13 +3460,10 @@ void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
   // Only if needed for call graph section and only for indirect calls that are
   // visible externally.
-  // TODO: Handle local linkage symbols so they are not left out of call graph
-  // reducing precision.
-  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall() ||
-      !isExternallyVisible(QT->getLinkage()))
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
     return;
 
-  llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
+  llvm::Metadata *TypeIdMD = getCallGraphSectionTypeId(QT);
   llvm::MDTuple *TypeTuple = llvm::MDTuple::get(getLLVMContext(), {TypeIdMD});
   llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), {TypeTuple});
   CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
@@ -8520,9 +8530,8 @@ void CodeGenModule::EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
   }
 }
 
-llvm::Metadata *
-CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
-                                            StringRef Suffix) {
+llvm::Metadata *CodeGenModule::CreateMetadataIdentifierImpl(
+    QualType T, MetadataTypeMap &Map, StringRef Suffix, bool ForceString) {
   if (auto *FnType = T->getAs<FunctionProtoType>())
     T = getContext().getFunctionType(
         FnType->getReturnType(), FnType->getParamTypes(),
@@ -8532,7 +8541,7 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
   if (InternalId)
     return InternalId;
 
-  if (isExternallyVisible(T->getLinkage())) {
+  if (ForceString || isExternallyVisible(T->getLinkage())) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
     getCXXABI().getMangleContext().mangleCanonicalTypeName(
@@ -8572,7 +8581,12 @@ CodeGenModule::CreateMetadataIdentifierForVirtualMemPtrType(QualType T) {
 
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
   return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
-                                      ".generalized");
+                                      ".generalized", /*ForceString=*/false);
+}
+
+llvm::Metadata *CodeGenModule::getCallGraphSectionTypeId(QualType T) {
+  return CreateMetadataIdentifierImpl(T, CallGraphSectionMetadataIdMap,
+                                      ".generalized", /*ForceString=*/true);
 }
 
 /// Returns whether this module needs the "all-vtables" type identifier.

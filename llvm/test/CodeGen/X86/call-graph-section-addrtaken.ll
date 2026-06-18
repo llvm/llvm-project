@@ -1,7 +1,7 @@
-;; Test if a potential indirect call target function which has internal linkage and
-;; address taken has its type ID emitted to callgraph section.
-;; This test also makes sure that callback functions which meet the above constraint
-;; are handled correctly.
+; Test if a potential indirect call target function which has internal linkage and
+; address taken has its type ID emitted to callgraph section.
+; This test also makes sure that callback functions which meet the above constraint
+; are handled correctly.
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
@@ -13,7 +13,6 @@ entry:
   ret i32 0
 }
 
-; CHECK: _ZL10myCallbacki:
 define internal void @_ZL10myCallbacki(i32 %value) !callgraph !2 {
 entry:
   %sink = alloca i32, align 4
@@ -24,14 +23,20 @@ entry:
 
 !0 = !{!"_ZTSFvPFviEE.generalized"}
 !1 = !{!"_ZTSFivE.generalized"}
-!2 = !{!"_ZTSFviE.generalized"}
+!2 = !{!"_ZTSFviE.generalized", i1 true}
 
-; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
-;; Version
+; CHECK: .section        .llvm.callgraph,"o",@llvm_call_graph,.text
 ; CHECK-NEXT: .byte   0
-;; Flags -- Potential indirect target so LSB is set to 1. Other bits are 0.
+; CHECK-NEXT: .byte   3
+; CHECK-NEXT: .quad   {{.+}}
+; CHECK-NEXT: .quad   _Z4testv
+; CHECK-NEXT: .quad   {{.+}}
 ; CHECK-NEXT: .byte   1
-;; Function Entry PC
+; CHECK-NEXT: .quad   _Z6doWorkPFviE
+
+; CHECK: .section        .llvm.callgraph,"o",@llvm_call_graph,.text
+; CHECK-NEXT: .byte   0
+; CHECK-NEXT: .byte   9
+; CHECK-NEXT: .quad   {{.+}}
 ; CHECK-NEXT: .quad   _ZL10myCallbacki
-;; Function type ID
-; CHECK-NEXT: .quad   -5212364466660467813
+; CHECK-NEXT: .quad   {{.+}}

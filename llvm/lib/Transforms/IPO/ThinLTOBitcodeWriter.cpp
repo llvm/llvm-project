@@ -175,14 +175,20 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
 
     GO.eraseMetadata(LLVMContext::MD_callgraph);
     for (auto *MD : CGMDs) {
-      if (MD->getNumOperands() == 1) {
+      if (MD->getNumOperands() == 1 || MD->getNumOperands() == 2) {
         auto I = LocalToGlobal.find(MD->getOperand(0));
         if (I == LocalToGlobal.end()) {
           GO.addMetadata(LLVMContext::MD_callgraph, *MD);
           continue;
         }
-        GO.addMetadata(LLVMContext::MD_callgraph,
-                       *MDNode::get(M.getContext(), {I->second}));
+        if (MD->getNumOperands() == 1) {
+          GO.addMetadata(LLVMContext::MD_callgraph,
+                         *MDNode::get(M.getContext(), {I->second}));
+        } else {
+          GO.addMetadata(
+              LLVMContext::MD_callgraph,
+              *MDNode::get(M.getContext(), {I->second, MD->getOperand(1)}));
+        }
       }
     }
   }

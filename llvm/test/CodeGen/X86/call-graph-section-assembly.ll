@@ -35,24 +35,17 @@ entry:
 !4 = !{!5}
 !5 = !{!"_ZTSFPvS_E.generalized"}
 
-; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
-;; Version
+; CHECK: .section	.llvm.callgraph,"o",@llvm_call_graph,.text
 ; CHECK-NEXT: .byte   0
-;; Flags
 ; CHECK-NEXT: .byte   7
-;; Function Entry PC
-; CHECK-NEXT: .quad ball
-;; Function type ID -- set to 0 as no type metadata attached to function.
+; CHECK-NEXT: .quad   5977508082728489289
+; CHECK-NEXT: .quad   ball
 ; CHECK-NEXT: .quad   0
-;; Number of unique direct callees.
-; CHECK-NEXT: .byte	  3
-;; Direct callees.
-; CHECK-NEXT: .quad	direct_foo
-; CHECK-NEXT: .quad	direct_bar
-; CHECK-NEXT: .quad	direct_baz
-;; Number of unique indirect target type IDs.
 ; CHECK-NEXT: .byte   3
-;; Indirect type IDs.
+; CHECK-NEXT: .quad   direct_foo
+; CHECK-NEXT: .quad   direct_bar
+; CHECK-NEXT: .quad   direct_baz
+; CHECK-NEXT: .byte   3
 ; CHECK-NEXT: .quad   4524972987496481828
 ; CHECK-NEXT: .quad   3498816979441845844
 ; CHECK-NEXT: .quad   8646233951371320954

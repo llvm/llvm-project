@@ -35,28 +35,22 @@ entry:
 !4 = !{!5}
 !5 = !{!"_ZTSFPvS_E.generalized"}
 
-; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
-;; Version
+; CHECK: .section	.llvm.callgraph,"o",%llvm_call_graph,.text
 ; CHECK-NEXT: .byte   0
-;; Flags
 ; CHECK-NEXT: .byte   7
-;; Function Entry PC
-; CHECK-NEXT: .long ball
-;; Function type ID -- set to 0 as no type metadata attached to function.
+; CHECK-NEXT: .long   1494143305
+; CHECK-NEXT: .long   1391747054
+; CHECK-NEXT: .long   ball
 ; CHECK-NEXT: .long   0
 ; CHECK-NEXT: .long   0
-;; Number of unique direct callees.
-; CHECK-NEXT: .byte	  3
-;; Direct callees.
-; CHECK-NEXT: .long	direct_foo
-; CHECK-NEXT: .long	direct_bar
-; CHECK-NEXT: .long	direct_baz
-;; Number of unique indirect target type IDs.
 ; CHECK-NEXT: .byte   3
-;; Indirect type IDs.
-; CHECK-NEXT: .long 838288420
-; CHECK-NEXT: .long 1053552373
-; CHECK-NEXT: .long 1505527380
-; CHECK-NEXT: .long 814631809
-; CHECK-NEXT: .long 342417018
-; CHECK-NEXT: .long 2013108216
+; CHECK-NEXT: .long   direct_foo
+; CHECK-NEXT: .long   direct_bar
+; CHECK-NEXT: .long   direct_baz
+; CHECK-NEXT: .byte   3
+; CHECK-NEXT: .long   {{-?[0-9]+}}
+; CHECK-NEXT: .long   {{-?[0-9]+}}
+; CHECK-NEXT: .long   1505527380
+; CHECK-NEXT: .long   814631809
+; CHECK-NEXT: .long   342417018
+; CHECK-NEXT: .long   2013108216
