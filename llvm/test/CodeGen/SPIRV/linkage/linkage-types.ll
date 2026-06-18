@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; SPIRV: OpCapability Linkage
 ; SPIRV: OpEntryPoint Kernel %[[#kern:]] "kern"
@@ -53,7 +54,8 @@
 ; SPIRV-DAG: OpName %[[#g:]] "g"
 ; SPIRV-DAG: OpName %[[#inline_fun:]] "inline_fun"
 
-; SPIRV-DAG: OpDecorate %[[#ae]] LinkageAttributes "ae" Import
+; available_externally is emitted as a definition with Export linkage.
+; SPIRV-DAG: OpDecorate %[[#ae]] LinkageAttributes "ae" Export
 ; SPIRV-DAG: OpDecorate %[[#e]] LinkageAttributes "e" Import
 ; SPIRV-DAG: OpDecorate %[[#f]] LinkageAttributes "f" Export
 ; SPIRV-DAG: OpDecorate %[[#w]] LinkageAttributes "w" Export

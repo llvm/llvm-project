@@ -20,7 +20,7 @@ define internal spir_func i32 @foo() #0 {
   ; Direct load from the pointer index. This requires an OpAccessChain
   %1 = load i32, ptr %array, align 4
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#int_fp]] %[[#array]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]] Aligned 4
+; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]]
 
   ret i32 %1
 ; CHECK: OpReturnValue %[[#val]]
@@ -32,7 +32,7 @@ define internal spir_func i32 @bar() {
   ; Direct load from the pointer index. This requires an OpAccessChain
   %1 = load i32, ptr addrspace(10) @gv
 ; CHECK: %[[#ptr:]] = OpAccessChain %[[#int_pp]] %[[#gv]] %[[#uint_0]]
-; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]] Aligned 4
+; CHECK: %[[#val:]] = OpLoad %[[#uint_ty]] %[[#ptr]]
 
   ret i32 %1
 ; CHECK: OpReturnValue %[[#val]]

@@ -12,6 +12,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
@@ -165,13 +167,16 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
 void DWARFDebugArangeSet::dump(raw_ostream &OS) const {
   int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(HeaderData.Format);
   OS << "Address Range Header: "
-     << format("length = 0x%0*" PRIx64 ", ", OffsetDumpWidth, HeaderData.Length)
+     << formatv("length = 0x{0:x-}, ",
+                fmt_align(HeaderData.Length, AlignStyle::Right, OffsetDumpWidth,
+                          '0'))
      << "format = " << dwarf::FormatString(HeaderData.Format) << ", "
-     << format("version = 0x%4.4x, ", HeaderData.Version)
-     << format("cu_offset = 0x%0*" PRIx64 ", ", OffsetDumpWidth,
-               HeaderData.CuOffset)
-     << format("addr_size = 0x%2.2x, ", HeaderData.AddrSize)
-     << format("seg_size = 0x%2.2x\n", HeaderData.SegSize);
+     << formatv("version = {0:x+4}, ", HeaderData.Version)
+     << formatv("cu_offset = 0x{0:x-}, ",
+                fmt_align(HeaderData.CuOffset, AlignStyle::Right,
+                          OffsetDumpWidth, '0'))
+     << formatv("addr_size = {0:x+2}, ", HeaderData.AddrSize)
+     << formatv("seg_size = {0:x+2}\n", HeaderData.SegSize);
 
   for (const auto &Desc : ArangeDescriptors) {
     Desc.dump(OS, HeaderData.AddrSize);

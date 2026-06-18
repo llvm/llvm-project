@@ -24,11 +24,11 @@ body:             |
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_ADD %1, %0
-    %3:gpr(s64) = G_ZEXT %2(s32)
-    $x0 = COPY %3(s64)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_ADD %1, %0
+    %3:gpr(i64) = G_ZEXT %2(i32)
+    $x0 = COPY %3(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -53,8 +53,8 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s16) = G_IMPLICIT_DEF
-    %3:gpr(s64) = G_ZEXT %0(s16)
-    $x0 = COPY %3(s64)
+    %3:gpr(i64) = G_ZEXT %0(s16)
+    $x0 = COPY %3(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -77,9 +77,9 @@ body:             |
     ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY %zext
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:gpr(s32) = COPY $w0
-    %zext:gpr(s64) = G_ZEXT %copy(s32)
-    $x0 = COPY %zext(s64)
+    %copy:gpr(i32) = COPY $w0
+    %zext:gpr(i64) = G_ZEXT %copy(i32)
+    $x0 = COPY %zext(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -103,11 +103,11 @@ body:             |
     ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY %zext
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:gpr(s32) = COPY $w0
-    %bitcast0:gpr(<4 x s8>) = G_BITCAST %copy(s32)
-    %bitcast1:gpr(s32) = G_BITCAST %bitcast0
-    %zext:gpr(s64) = G_ZEXT %bitcast1(s32)
-    $x0 = COPY %zext(s64)
+    %copy:gpr(i32) = COPY $w0
+    %bitcast0:gpr(<4 x s8>) = G_BITCAST %copy(i32)
+    %bitcast1:gpr(i32) = G_BITCAST %bitcast0
+    %zext:gpr(i64) = G_ZEXT %bitcast1(i32)
+    $x0 = COPY %zext(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -131,10 +131,10 @@ body:             |
     ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY %zext
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x0
-    %trunc:gpr(s32) = G_TRUNC %copy(s64)
-    %zext:gpr(s64) = G_ZEXT %trunc(s32)
-    $x0 = COPY %zext(s64)
+    %copy:gpr(i64) = COPY $x0
+    %trunc:gpr(i32) = G_TRUNC %copy(i64)
+    %zext:gpr(i64) = G_ZEXT %trunc(i32)
+    $x0 = COPY %zext(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -169,18 +169,18 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2
 
-    %copy1:gpr(s32) = COPY $w0
-    %copy2:gpr(s32) = COPY $w1
-    %cond_wide:gpr(s32) = COPY $w2
+    %copy1:gpr(i32) = COPY $w0
+    %copy2:gpr(i32) = COPY $w1
+    %cond_wide:gpr(i32) = COPY $w2
     G_BRCOND %cond_wide, %bb.1
     G_BR %bb.2
 
   bb.1:
 
   bb.2:
-    %phi:gpr(s32) = G_PHI %copy1(s32), %bb.0, %copy2(s32), %bb.1
-    %5:gpr(s64) = G_ZEXT %phi(s32)
-    $x0 = COPY %5(s64)
+    %phi:gpr(i32) = G_PHI %copy1(i32), %bb.0, %copy2(i32), %bb.1
+    %5:gpr(i64) = G_ZEXT %phi(i32)
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -205,10 +205,10 @@ body:             |
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_ADD %1, %0
-    %3:gpr(s32) = COPY %2(s32)
-    %4:gpr(s64) = G_ZEXT %3(s32)
-    $x0 = COPY %4(s64)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_ADD %1, %0
+    %3:gpr(i32) = COPY %2(i32)
+    %4:gpr(i64) = G_ZEXT %3(i32)
+    $x0 = COPY %4(i64)
     RET_ReallyLR implicit $x0

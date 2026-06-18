@@ -49,6 +49,20 @@ struct in_out_result {
 
 #endif // _LIBCPP_STD_VER >= 20
 
+template <class _InIter, class _OutIter>
+struct __in_out_result {
+  _InIter __in_;
+  _OutIter __out_;
+
+#if _LIBCPP_STD_VER >= 20
+  template <class _InIter2, class _OutIter2>
+    requires convertible_to<_InIter, _InIter2> && convertible_to<_OutIter, _OutIter2>
+  constexpr operator ranges::in_out_result<_InIter2, _OutIter2>() && {
+    return {std::move(__in_), std::move(__out_)};
+  }
+#endif
+};
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

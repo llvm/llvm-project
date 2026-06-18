@@ -505,7 +505,7 @@ define <3 x float> @shuf_frem_const_op1(<3 x float> %x) {
 define ptr @gep_vbase_w_s_idx(<2 x ptr> %base, i64 %index) {
 ; CHECK-LABEL: @gep_vbase_w_s_idx(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[BASE:%.*]], i64 1
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr [4 x i8], ptr [[TMP1]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, <2 x ptr> %base, i64 %index
@@ -541,7 +541,7 @@ define ptr @gep_splat_base_w_cv_idx(ptr %base) {
 define ptr @gep_splat_base_w_vidx(ptr %base, <2 x i64> %idxvec) {
 ; CHECK-LABEL: @gep_splat_base_w_vidx(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[IDXVEC:%.*]], i64 1
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr [4 x i8], ptr [[BASE:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -556,7 +556,7 @@ define ptr @gep_splat_base_w_vidx(ptr %base, <2 x i64> %idxvec) {
 
 define ptr @gep_cvbase_w_s_idx(<2 x ptr> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_s_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr @GLOBAL, i64 [[RAW_ADDR:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr [4 x i8], ptr @GLOBAL, i64 [[RAW_ADDR:%.*]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, <2 x ptr> <ptr @GLOBAL, ptr @GLOBAL>, i64 %raw_addr
@@ -586,7 +586,7 @@ define ptr @gep_sbase_w_cv_idx(ptr %base) {
 
 define ptr @gep_sbase_w_splat_idx(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_sbase_w_splat_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr [4 x i8], ptr [[BASE:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %idxvec1 = insertelement <2 x i64> undef, i64 %idx, i32 0
@@ -597,7 +597,7 @@ define ptr @gep_sbase_w_splat_idx(ptr %base, i64 %idx) {
 }
 define ptr @gep_splat_both(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_splat_both(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr [4 x i8], ptr [[BASE:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -613,7 +613,7 @@ define <2 x ptr> @gep_all_lanes_undef(ptr %base, i64 %idx) {;
 ; CHECK-LABEL: @gep_all_lanes_undef(
 ; CHECK-NEXT:    [[BASEVEC:%.*]] = insertelement <2 x ptr> <ptr poison, ptr undef>, ptr [[BASE:%.*]], i64 0
 ; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[IDX:%.*]], i64 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> [[BASEVEC]], <2 x i64> [[IDXVEC]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], <2 x ptr> [[BASEVEC]], <2 x i64> [[IDXVEC]]
 ; CHECK-NEXT:    ret <2 x ptr> [[GEP]]
 ;
   %basevec = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -655,7 +655,7 @@ define ptr @zero_sized_type_extract(<4 x i64> %arg, i64 %arg1) {
 ; CHECK-LABEL: @zero_sized_type_extract(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG:%.*]], i64 0
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i32, ptr @global, i64 [[TMP0]]
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds [4 x i8], ptr @global, i64 [[TMP0]]
 ; CHECK-NEXT:    ret ptr [[T2]]
 ;
 bb:
@@ -1021,12 +1021,12 @@ define float @common_binop_demand_via_extelt_op1(<2 x float> %p, <2 x float> %y)
 
 define float @common_binop_demand_via_extelt_op0_commute(<2 x float> %p, <2 x float> %q) {
 ; CHECK-LABEL: @common_binop_demand_via_extelt_op0_commute(
-; CHECK-NEXT:    [[X:%.*]] = fsub nnan <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = fsub nnan <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = fsub <2 x float> <float 0.000000e+00, float poison>, [[P:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = fsub <2 x float> <float 3.000000e+00, float 2.000000e+00>, [[Q:%.*]]
 ; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_Y_XSHUF:%.*]] = fmul nnan <2 x float> [[Y]], [[XSHUF]]
-; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_Y_XSHUF]], i64 0
-; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_Y_XSHUF]])
+; CHECK-NEXT:    [[B_XY:%.*]] = fmul <2 x float> [[Y]], [[XSHUF]]
+; CHECK-NEXT:    [[B_XY0:%.*]] = extractelement <2 x float> [[B_XY]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[B_XY]])
 ; CHECK-NEXT:    ret float [[B_XY0]]
 ;
   %x = fsub <2 x float> <float 0.0, float 1.0>, %p ; thwart complexity-based canonicalization
@@ -1057,6 +1057,54 @@ define i4 @common_binop_demand_via_extelt_op1_commute(<2 x i4> %p, <2 x i4> %q) 
   %b_xy0 = extractelement <2 x i4> %b_xy, i32 0
   call void @use(<2 x i4> %b_y_xshuf)
   ret i4 %b_xy0
+}
+
+define i4 @common_binop_demand_via_extelt_nuw_nsw_sibling_nsw_extracted(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_nuw_nsw_sibling_nsw_extracted(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x i4> [[X:%.*]], <2 x i4> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SIB:%.*]] = sub nsw <2 x i4> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i4> [[SIB]], i64 0
+; CHECK-NEXT:    call void @use(<2 x i4> [[SIB]])
+; CHECK-NEXT:    ret i4 [[E]]
+;
+  %xshuf = shufflevector <2 x i4> %x, <2 x i4> poison, <2 x i32> zeroinitializer
+  %sib = sub nuw nsw <2 x i4> %xshuf, %y
+  %bo = sub nsw <2 x i4> %x, %y
+  %e = extractelement <2 x i4> %bo, i32 0
+  call void @use(<2 x i4> %sib)
+  ret i4 %e
+}
+
+define float @common_binop_demand_via_extelt_nsz_extracted(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_nsz_extracted(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SIB:%.*]] = fadd <2 x float> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[SIB]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[SIB]])
+; CHECK-NEXT:    ret float [[E]]
+;
+  %xshuf = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> zeroinitializer
+  %sib = fadd <2 x float> %xshuf, %y
+  %bo = fadd nsz <2 x float> %x, %y
+  %e = extractelement <2 x float> %bo, i32 0
+  call void @use_fp(<2 x float> %sib)
+  ret float %e
+}
+
+define float @common_binop_demand_via_extelt_contract_reassoc_sibling_reassoc_extracted(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @common_binop_demand_via_extelt_contract_reassoc_sibling_reassoc_extracted(
+; CHECK-NEXT:    [[XSHUF:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SIB:%.*]] = fmul reassoc <2 x float> [[XSHUF]], [[Y:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[SIB]], i64 0
+; CHECK-NEXT:    call void @use_fp(<2 x float> [[SIB]])
+; CHECK-NEXT:    ret float [[E]]
+;
+  %xshuf = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> zeroinitializer
+  %sib = fmul contract reassoc <2 x float> %xshuf, %y
+  %bo = fmul reassoc <2 x float> %x, %y
+  %e = extractelement <2 x float> %bo, i32 0
+  call void @use_fp(<2 x float> %sib)
+  ret float %e
 }
 
 ; negative test - wrong operands for sub

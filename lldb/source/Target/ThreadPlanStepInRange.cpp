@@ -112,9 +112,8 @@ void ThreadPlanStepInRange::GetDescription(Stream *s,
     printed_line_info = true;
   }
 
-  const char *step_into_target = m_step_into_target.AsCString();
-  if (step_into_target && step_into_target[0] != '\0')
-    s->Printf(" targeting %s", m_step_into_target.AsCString());
+  if (m_step_into_target)
+    s->Format(" targeting {0}", m_step_into_target);
 
   if (!printed_line_info || level == eDescriptionLevelVerbose) {
     s->Printf(" using ranges:");
@@ -182,14 +181,12 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
         // Otherwise check the ShouldStopHere for step out:
         m_sub_plan_sp =
             CheckShouldStopHereAndQueueStepOut(frame_order, m_status);
-        if (log) {
-          if (m_sub_plan_sp)
-            LLDB_LOGF(log,
-                      "ShouldStopHere found plan to step out of this frame.");
-          else
-            LLDB_LOGF(log, "ShouldStopHere no plan to step out of this frame.");
-        }
-      } else if (log) {
+        if (m_sub_plan_sp)
+          LLDB_LOGF(log,
+                    "ShouldStopHere found plan to step out of this frame.");
+        else
+          LLDB_LOGF(log, "ShouldStopHere no plan to step out of this frame.");
+      } else {
         LLDB_LOGF(
             log, "Thought I stepped out, but in fact arrived at a trampoline.");
       }
@@ -223,13 +220,10 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
       m_sub_plan_sp = thread.QueueThreadPlanForStepThrough(
           m_stack_id, false, stop_others, m_status);
 
-    if (log) {
-      if (m_sub_plan_sp)
-        LLDB_LOGF(log, "Found a step through plan: %s",
-                  m_sub_plan_sp->GetName());
-      else
-        LLDB_LOGF(log, "No step through plan found.");
-    }
+    if (m_sub_plan_sp)
+      LLDB_LOGF(log, "Found a step through plan: %s", m_sub_plan_sp->GetName());
+    else
+      LLDB_LOGF(log, "No step through plan found.");
 
     // If not, give the "should_stop" callback a chance to push a plan to get
     // us out of here. But only do that if we actually have stepped in.
@@ -384,8 +378,8 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
           should_stop_here = true;
         } else {
           const char *target_name =
-              step_in_range_plan->m_step_into_target.AsCString();
-          const char *function_name = sc.GetFunctionName().AsCString();
+              step_in_range_plan->m_step_into_target.AsCString(nullptr);
+          const char *function_name = sc.GetFunctionName().AsCString(nullptr);
 
           if (function_name == nullptr)
             should_stop_here = false;
@@ -393,11 +387,11 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
             should_stop_here = false;
         }
         if (log && !should_stop_here)
-          LLDB_LOGF(log,
-                    "Stepping out of frame %s which did not match step into "
-                    "target %s.",
-                    sc.GetFunctionName().AsCString(),
-                    step_in_range_plan->m_step_into_target.AsCString());
+          LLDB_LOG(log,
+                   "Stepping out of frame {0} which did not match step into "
+                   "target {1}.",
+                   sc.GetFunctionName(),
+                   step_in_range_plan->m_step_into_target);
       }
     }
 

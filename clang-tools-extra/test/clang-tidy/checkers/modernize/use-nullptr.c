@@ -3,7 +3,7 @@
 // Note: this test expects no diagnostics, but FileCheck cannot handle that,
 // hence the use of | count 0.
 
-#define NULL 0
+#include <stddef.h>
 void f(void) {
   char *str = NULL; // ok
   (void)str;

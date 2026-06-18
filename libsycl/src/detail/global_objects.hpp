@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of all the global objects of libsycl.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_GLOBAL_OBJECTS
 #define _LIBSYCL_GLOBAL_OBJECTS
@@ -35,6 +40,10 @@ std::vector<detail::OffloadTopology> &getOffloadTopologies();
 ///
 /// \returns std::vector of implementation objects for all platforms.
 std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
+
+// This initializes a function-local variable whose destructor is invoked as
+// the SYCL shared library is first being unloaded.
+void registerStaticVarShutdownHandler();
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

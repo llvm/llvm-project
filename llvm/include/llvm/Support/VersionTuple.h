@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
@@ -214,10 +215,6 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
 
 // Provide DenseMapInfo for version tuples.
 template <> struct DenseMapInfo<VersionTuple> {
-  static inline VersionTuple getEmptyKey() { return VersionTuple(0x7FFFFFFF); }
-  static inline VersionTuple getTombstoneKey() {
-    return VersionTuple(0x7FFFFFFE);
-  }
   static unsigned getHashValue(const VersionTuple &Value) {
     unsigned Result = Value.getMajor();
     if (auto Minor = Value.getMinor())

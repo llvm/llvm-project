@@ -4,29 +4,28 @@
 
 ; Verifies that the both phis are stored correctly in the coroutine frame
 
-; CHECK: %f.Frame = type { ptr, ptr, i32, i32, i1 }
 
 define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[N:%.*]], i32 0, i32 2
 ; CHECK-NEXT:    [[SPEC_SELECT5:%.*]] = select i1 [[N]], i32 1, i32 3
-; CHECK-NEXT:    [[PHI2_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[PHI2_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT5]], ptr [[PHI2_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[PHI1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[PHI1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT]], ptr [[PHI1_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR4]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)

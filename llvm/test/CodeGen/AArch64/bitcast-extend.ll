@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for load_zext_i8_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i16_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i32_v4bf16
-
 define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i16:
 ; CHECK-SD:       // %bb.0:
@@ -17,14 +13,7 @@ define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-GI-LABEL: z_i32_v4i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
@@ -120,14 +109,7 @@ define <4 x i16> @s_i32_v4i16(i32 %x) {
 ; CHECK-GI-LABEL: s_i32_v4i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    sshll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
@@ -339,9 +321,8 @@ define <8 x i8> @load_sext_i32_v8i8(ptr %p) {
 define <16 x i8> @load_zext_v16i8(ptr %p) {
 ; CHECK-SD-LABEL: load_zext_v16i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_zext_v16i8:

@@ -435,6 +435,9 @@ struct SysAlias {
   FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
 };
 
+#define GET_SysAliasRegUse_DECL
+#include "AArch64GenSystemOperands.inc"
+
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
   constexpr SysAliasReg(const char *N, uint16_t E, bool R)
@@ -444,13 +447,27 @@ struct SysAliasReg : SysAlias {
 };
 
 struct SysAliasOptionalReg : SysAlias {
-  bool NeedsReg;
-  bool OptionalReg;
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O)
-      : SysAlias(N, E), NeedsReg(R), OptionalReg(O) {}
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O,
+  SysAliasRegUse RegUse;
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R)
+      : SysAlias(N, E), RegUse(R) {}
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R,
                                 FeatureBitset F)
-      : SysAlias(N, E, F), NeedsReg(R), OptionalReg(O) {}
+      : SysAlias(N, E, F), RegUse(R) {}
+};
+
+struct TLBIPSysAlias : SysAliasOptionalReg {
+  bool AllowWithTLBID;
+
+  constexpr TLBIPSysAlias(const char *N, uint16_t E, SysAliasRegUse R,
+                          FeatureBitset F, bool AllowWithTLBID)
+      : SysAliasOptionalReg(N, E, R, F), AllowWithTLBID(AllowWithTLBID) {}
+
+  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    return SysAliasOptionalReg::haveFeatures(ActiveFeatures) &&
+           (ActiveFeatures[llvm::AArch64::FeatureAll] ||
+            ActiveFeatures[llvm::AArch64::FeatureD128] ||
+            (AllowWithTLBID && ActiveFeatures[llvm::AArch64::FeatureTLBID]));
+  }
 };
 
 struct SysAliasImm : SysAlias {
@@ -856,20 +873,12 @@ struct TLBI : SysAliasOptionalReg {
 }
 
 namespace AArch64TLBIP {
-struct TLBIP : SysAliasOptionalReg {
-  using SysAliasOptionalReg::SysAliasOptionalReg;
+struct TLBIP : TLBIPSysAlias {
+  using TLBIPSysAlias::TLBIPSysAlias;
 };
 #define GET_TLBIPTable_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64TLBIP
-
-namespace AArch64MLBI {
-struct MLBI : SysAliasReg {
-  using SysAliasReg::SysAliasReg;
-};
-#define GET_MLBITable_DECL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64MLBI
 
 namespace AArch64GIC {
 struct GIC : SysAliasReg {

@@ -8,13 +8,16 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;   int temp[16][16];
 ;   int res[16][16];
 ;   for(int i = 0; i < n; i++) {
-;     for(int j = 0; j < m; j++)
-;       res[j][i] = temp[j][i];
+;     if (m > 0)                  // guard: inner loop skipped when m <= 0
+;       for(int j = 0; j < m; j++)
+;         res[j][i] = temp[j][i];
 ;   }
 ; }
 
-;; This loop can be interchanged with -da-disable-delinearization-checks, otherwise it cannot
-;; be interchanged due to dependence.
+;; Not interchanged by default (dependence). Even with
+;; -da-disable-delinearization-checks it must not be: %outer.header runs the
+;; inner loop only when %cmp222 = (m >s 0), and its exit (iv.next != m)
+;; only terminates then, so interchanging it loops forever for m == 0.
 define void @lcssa_08(i32 %n, i32 %m) {;
 ; CHECK-LABEL: define void @lcssa_08(
 ; CHECK-SAME: i32 [[N:%.*]], i32 [[M:%.*]]) {
@@ -59,39 +62,32 @@ define void @lcssa_08(i32 %n, i32 %m) {;
 ; CHECK-DELIN-NEXT:    [[TEMP:%.*]] = alloca [16 x [16 x i32]], align 4
 ; CHECK-DELIN-NEXT:    [[RES:%.*]] = alloca [16 x [16 x i32]], align 4
 ; CHECK-DELIN-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[N]], 0
-; CHECK-DELIN-NEXT:    br i1 [[CMP24]], label %[[INNER_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; CHECK-DELIN:       [[OUTER_PREHEADER:.*]]:
+; CHECK-DELIN-NEXT:    br i1 [[CMP24]], label %[[OUTER_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK-DELIN:       [[OUTER_PREHEADER]]:
+; CHECK-DELIN-NEXT:    [[WIDE_TRIP_COUNT29:%.*]] = zext i32 [[N]] to i64
 ; CHECK-DELIN-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK-DELIN:       [[OUTER_HEADER]]:
 ; CHECK-DELIN-NEXT:    [[INDVARS_IV27:%.*]] = phi i64 [ 0, %[[OUTER_PREHEADER]] ], [ [[INDVARS_IV_NEXT28:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-DELIN-NEXT:    [[CMP222:%.*]] = icmp sgt i32 [[M]], 0
-; CHECK-DELIN-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
-; CHECK-DELIN-NEXT:    br i1 [[CMP222]], label %[[INNER_FOR_BODY_SPLIT1:.*]], label %[[INNER_FOR_BODY_SPLIT:.*]]
+; CHECK-DELIN-NEXT:    br i1 [[CMP222]], label %[[INNER_PREHEADER:.*]], label %[[OUTER_LATCH]]
 ; CHECK-DELIN:       [[INNER_PREHEADER]]:
-; CHECK-DELIN-NEXT:    [[WIDE_TRIP_COUNT29:%.*]] = zext i32 [[N]] to i64
+; CHECK-DELIN-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
 ; CHECK-DELIN-NEXT:    br label %[[INNER_FOR_BODY:.*]]
 ; CHECK-DELIN:       [[INNER_FOR_BODY]]:
-; CHECK-DELIN-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[TMP1:%.*]], %[[INNER_FOR_BODY_SPLIT]] ]
-; CHECK-DELIN-NEXT:    br label %[[OUTER_PREHEADER]]
-; CHECK-DELIN:       [[INNER_FOR_BODY_SPLIT1]]:
+; CHECK-DELIN-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INNER_FOR_BODY]] ]
 ; CHECK-DELIN-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [16 x [16 x i32]], ptr [[TEMP]], i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV27]]
 ; CHECK-DELIN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
 ; CHECK-DELIN-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [16 x [16 x i32]], ptr [[RES]], i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV27]]
 ; CHECK-DELIN-NEXT:    store i32 [[TMP0]], ptr [[ARRAYIDX8]], align 4
-; CHECK-DELIN-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-DELIN-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-DELIN-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-DELIN-NEXT:    br label %[[INNER_CRIT_EDGE:.*]]
-; CHECK-DELIN:       [[INNER_FOR_BODY_SPLIT]]:
-; CHECK-DELIN-NEXT:    [[WIDE_TRIP_COUNT_LCSSA:%.*]] = phi i64 [ [[WIDE_TRIP_COUNT]], %[[OUTER_LATCH]] ], [ [[WIDE_TRIP_COUNT]], %[[OUTER_HEADER]] ]
-; CHECK-DELIN-NEXT:    [[TMP1]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-DELIN-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], [[WIDE_TRIP_COUNT_LCSSA]]
-; CHECK-DELIN-NEXT:    br i1 [[TMP2]], label %[[INNER_FOR_BODY]], label %[[OUTER_CRIT_EDGE:.*]]
+; CHECK-DELIN-NEXT:    br i1 [[EXITCOND]], label %[[INNER_FOR_BODY]], label %[[INNER_CRIT_EDGE:.*]]
 ; CHECK-DELIN:       [[INNER_CRIT_EDGE]]:
 ; CHECK-DELIN-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK-DELIN:       [[OUTER_LATCH]]:
 ; CHECK-DELIN-NEXT:    [[INDVARS_IV_NEXT28]] = add nuw nsw i64 [[INDVARS_IV27]], 1
 ; CHECK-DELIN-NEXT:    [[EXITCOND30:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT28]], [[WIDE_TRIP_COUNT29]]
-; CHECK-DELIN-NEXT:    br i1 [[EXITCOND30]], label %[[OUTER_HEADER]], label %[[INNER_FOR_BODY_SPLIT]]
+; CHECK-DELIN-NEXT:    br i1 [[EXITCOND30]], label %[[OUTER_HEADER]], label %[[OUTER_CRIT_EDGE:.*]]
 ; CHECK-DELIN:       [[OUTER_CRIT_EDGE]]:
 ; CHECK-DELIN-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK-DELIN:       [[FOR_COND_CLEANUP]]:
@@ -156,21 +152,21 @@ define void @test2(i32 %N) {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[BB]] ], [ [[OUTER_IV_NEXT:%.*]], %[[EXIT:.*]] ]
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[BB]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[TMP0:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x [4 x [2 x i16]]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]], i64 0
-; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[TMP0]] = add nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[TMP0]], [[N_EXT]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[INNER]], label %[[EXIT]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i16], ptr @global, i64 [[INNER_IV]], i64 [[OUTER_IV]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i64 [[INNER_IV_NEXT]], [[N_EXT]]
+; CHECK-NEXT:    br i1 [[C_1]], label %[[INNER]], label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i64 [[OUTER_IV]], [[N_EXT]]
-; CHECK-NEXT:    br i1 [[C_2]], label %[[OUTER_HEADER]], label %[[EXIT1:.*]]
-; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    br i1 [[C_2]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DELIN-LABEL: define void @test2(
@@ -189,8 +185,8 @@ define void @test2(i32 %N) {
 ; CHECK-DELIN-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
 ; CHECK-DELIN-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK-DELIN:       [[INNER_SPLIT1]]:
-; CHECK-DELIN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x [4 x [2 x i16]]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]], i64 0
-; CHECK-DELIN-NEXT:    store i16 0, ptr [[TMP8]], align 2
+; CHECK-DELIN-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i16], ptr @global, i64 [[INNER_IV]], i64 [[OUTER_IV]]
+; CHECK-DELIN-NEXT:    store i16 0, ptr [[GEP]], align 2
 ; CHECK-DELIN-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
 ; CHECK-DELIN-NEXT:    [[C_1:%.*]] = icmp ne i64 [[INNER_IV_NEXT]], [[N_EXT]]
 ; CHECK-DELIN-NEXT:    br label %[[OUTER_LATCH]]
@@ -216,7 +212,7 @@ outer.header:                                              ; preds = %bb11, %bb2
 
 inner:                                              ; preds = %bb6, %bb4
   %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
-  %gep = getelementptr inbounds [4 x [4 x [2 x i16]]], ptr @global, i64 0, i64 %inner.iv, i64 %outer.iv, i64 0
+  %gep = getelementptr inbounds [2 x i16], ptr @global, i64 %inner.iv, i64 %outer.iv
   store i16 0, ptr %gep
   %inner.iv.next = add nsw i64 %inner.iv, 1
   %c.1 = icmp ne i64 %inner.iv.next, %N.ext

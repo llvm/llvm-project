@@ -42,4 +42,51 @@ TEST(TargetRegistry, TargetHasArchType) {
   ASSERT_NE(Count, 0);
 }
 
+TEST(TargetRegistry, IsValidFeatureListFormat) {
+  // Valid strings
+
+  // Empty string is a valid feature string
+  EXPECT_TRUE(Target::isValidFeatureListFormat(""));
+
+  EXPECT_TRUE(Target::isValidFeatureListFormat("+some_feature"));
+  EXPECT_TRUE(Target::isValidFeatureListFormat("-some_feature"));
+  EXPECT_TRUE(
+      Target::isValidFeatureListFormat("+feature1,-feature2,+feature3"));
+  EXPECT_TRUE(Target::isValidFeatureListFormat("+123"));
+
+  // Strings with single trailing comma are also valid
+  EXPECT_TRUE(Target::isValidFeatureListFormat("-feature,"));
+  EXPECT_TRUE(
+      Target::isValidFeatureListFormat("-feature1,+feature2,+feature3,"));
+
+  // Invalid strings
+
+  // Feature don't start with '+' or '-'
+  EXPECT_FALSE(Target::isValidFeatureListFormat("invalid_string"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+good,bad"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("bad,+good"));
+
+  // String has spaces
+  EXPECT_FALSE(Target::isValidFeatureListFormat(" "));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(", "));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(" avx"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+avx, -sse"));
+
+  // Redundant commas
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+feature1,,+feature2"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(",+feature"));
+  EXPECT_FALSE(
+      Target::isValidFeatureListFormat("+feature1,,,+feature2,,+feature3"));
+
+  // Feature consists only of '+' or '-'
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("-"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+avx,-"));
+
+  // Only commas
+  EXPECT_FALSE(Target::isValidFeatureListFormat(","));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(",,"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(",,,"));
+}
+
 } // end namespace

@@ -217,10 +217,8 @@ bool llvm::extractBranchWeights(const Instruction &I,
 
 bool llvm::extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
                                 uint64_t &FalseVal) {
-  assert((I.getOpcode() == Instruction::Br ||
-          I.getOpcode() == Instruction::Select) &&
-         "Looking for branch weights on something besides branch, select, or "
-         "switch");
+  assert((isa<CondBrInst, SelectInst>(I)) &&
+         "Looking for branch weights on something besides CondBr or Select");
 
   SmallVector<uint32_t, 2> Weights;
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);

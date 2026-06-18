@@ -2,8 +2,8 @@
 ; Tests to make sure elimination of casts is working correctly
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" | FileCheck %s --check-prefixes=ALL,BE
 ; RUN: opt < %s -passes=instcombine -S -data-layout="e-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" | FileCheck %s --check-prefixes=ALL,LE
-; RUN: opt < %s -passes=instcombine -S -data-layout="E-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,BE
-; RUN: opt < %s -passes=instcombine -S -data-layout="e-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,LE
+; RUN: opt < %s -passes=instcombine -S -data-layout="E-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,BE
+; RUN: opt < %s -passes=instcombine -S -data-layout="e-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,LE
 
 declare void @use_i8(i8)
 declare void @use_i32(i32)
@@ -1090,7 +1090,7 @@ define double @test73(ptr %p, i128 %i) {
 
 define double @test74(ptr %p, i64 %i) {
 ; ALL-LABEL: @test74(
-; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[I:%.*]]
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds [8 x i8], ptr [[P:%.*]], i64 [[I:%.*]]
 ; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
@@ -1438,10 +1438,10 @@ define i32 @test89() {
 
 define <2 x i32> @test90() {
 ; BE-LABEL: @test90(
-; BE-NEXT:    ret <2 x i32> <i32 0, i32 15360>
+; BE-NEXT:    ret <2 x i32> <i32 poison, i32 15360>
 ;
 ; LE-LABEL: @test90(
-; LE-NEXT:    ret <2 x i32> <i32 0, i32 1006632960>
+; LE-NEXT:    ret <2 x i32> <i32 poison, i32 1006632960>
 ;
   %t6 = bitcast <4 x half> <half poison, half poison, half poison, half 0xH3C00> to <2 x i32>
   ret <2 x i32> %t6

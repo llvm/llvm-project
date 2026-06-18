@@ -749,9 +749,9 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   auto deviceAddrVars = targetOp.getHasDeviceAddrVars();
   auto devicePtrVars = targetOp.getIsDevicePtrVars();
   // Create the target data op
-  auto targetDataOp =
-      omp::TargetDataOp::create(rewriter, loc, device, ifExpr, outerMapInfos,
-                                deviceAddrVars, devicePtrVars);
+  auto targetDataOp = omp::TargetDataOp::create(
+      rewriter, loc, device, ifExpr, outerMapInfos,
+      /*map_iterated=*/{}, deviceAddrVars, devicePtrVars);
   auto taregtDataBlock = rewriter.createBlock(&targetDataOp.getRegion());
   mlir::omp::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(taregtDataBlock);
@@ -760,13 +760,17 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDevice(), targetOp.getHasDeviceAddrVars(),
+      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
+      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getDynGroupprivateFallbackAttr(),
+      targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       targetOp.getHostEvalVars(), targetOp.getIfExpr(),
       targetOp.getInReductionVars(), targetOp.getInReductionByrefAttr(),
       targetOp.getInReductionSymsAttr(), targetOp.getIsDevicePtrVars(),
-      innerMapInfos, targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
-      targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
-      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
+      innerMapInfos, targetOp.getMapIterated(), targetOp.getNowaitAttr(),
+      targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
+      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
+      targetOp.getPrivateMapsAttr());
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
   rewriter.replaceOp(targetOp, targetDataOp);
@@ -839,6 +843,7 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
         rewriter.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/Value{},
+        /*varPtrPtrType=*/mlir::TypeAttr{},
         /*members=*/SmallVector<Value>{},
         /*member_index=*/mlir::ArrayAttr{},
         /*bounds=*/ValueRange(),
@@ -1480,13 +1485,16 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDevice(), targetOp.getHasDeviceAddrVars(), preHostEvalVars,
-      targetOp.getIfExpr(), targetOp.getInReductionVars(),
+      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
+      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getDynGroupprivateFallbackAttr(),
+      targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
+      preHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
-      targetOp.getIsDevicePtrVars(), preMapOperands, targetOp.getNowaitAttr(),
-      targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
-      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getIsDevicePtrVars(), preMapOperands, targetOp.getMapIterated(),
+      targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+      targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
@@ -1570,13 +1578,16 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDevice(), targetOp.getHasDeviceAddrVars(),
+      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
+      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getDynGroupprivateFallbackAttr(),
+      targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
       isolatedHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
-      targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getNowaitAttr(),
-      targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
-      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getMapIterated(),
+      targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+      targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
                            isolatedTargetOp.getRegion().begin(), {}, {});
@@ -1650,13 +1661,16 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
       targetOp.getAllocatorVars(), targetOp.getBareAttr(),
       targetOp.getDependKindsAttr(), targetOp.getDependVars(),
-      targetOp.getDevice(), targetOp.getHasDeviceAddrVars(), postHostEvalVars,
-      targetOp.getIfExpr(), targetOp.getInReductionVars(),
+      targetOp.getDependIteratedKindsAttr(), targetOp.getDependIterated(),
+      targetOp.getDevice(), targetOp.getDynGroupprivateAccessGroupAttr(),
+      targetOp.getDynGroupprivateFallbackAttr(),
+      targetOp.getDynGroupprivateSize(), targetOp.getHasDeviceAddrVars(),
+      postHostEvalVars, targetOp.getIfExpr(), targetOp.getInReductionVars(),
       targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
-      targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getNowaitAttr(),
-      targetOp.getPrivateVars(), targetOp.getPrivateSymsAttr(),
-      targetOp.getPrivateNeedsBarrierAttr(), targetOp.getThreadLimitVars(),
-      targetOp.getPrivateMapsAttr());
+      targetOp.getIsDevicePtrVars(), postMapOperands, targetOp.getMapIterated(),
+      targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+      targetOp.getPrivateSymsAttr(), targetOp.getPrivateNeedsBarrierAttr(),
+      targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr());
   // Create the block for postTargetOp
   auto *postTargetBlock = rewriter.createBlock(
       &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});

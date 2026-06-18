@@ -425,6 +425,14 @@ func.func @expand_shape_illegal_output_shape(%arg0: memref<2xf32>) {
 
 // -----
 
+func.func @expand_shape_output_shape_dynamic_dim_mismatch(%arg0: memref<?xf32>) {
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 0, expected 2}}
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [2, 3] : memref<?xf32> into memref<?x?xf32>
+  return
+}
+
+// -----
+
 func.func @collapse_shape_out_of_bounds(%arg0: memref<?x?xf32>) {
   // expected-error @+1 {{op reassociation index 2 is out of bounds}}
   %0 = memref.collapse_shape %arg0 [[0, 1, 2]] : memref<?x?xf32> into memref<?xf32>
@@ -886,12 +894,23 @@ func.func @invalid_memref_cast() {
 
 // -----
 
-// unranked to unranked
+// unranked incompatible element types
 func.func @invalid_memref_cast() {
   %0 = memref.alloc() : memref<2x5xf32, 0>
   %1 = memref.cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0>
-  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32>' are cast incompatible}}
-  %2 = memref.cast %1 : memref<*xf32, 0> to memref<*xf32, 0>
+  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xi32>' are cast incompatible}}
+  %2 = memref.cast %1 : memref<*xf32, 0> to memref<*xi32, 0>
+  return
+}
+
+// -----
+
+// unranked incompatible memory space
+func.func @invalid_memref_cast() {
+  %0 = memref.alloc() : memref<2x5xf32, 0>
+  %1 = memref.cast %0 : memref<2x5xf32, 0> to memref<*xf32, 0>
+  // expected-error@+1 {{operand type 'memref<*xf32>' and result type 'memref<*xf32, 1>' are cast incompatible}}
+  %2 = memref.cast %1 : memref<*xf32, 0> to memref<*xf32, 1>
   return
 }
 
@@ -948,7 +967,7 @@ func.func @bad_alloc_wrong_symbol_count() {
 func.func @load_invalid_memref_indexes() {
   %0 = memref.alloca() : memref<10xi32>
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{incorrect number of indices for load, expected 1 but got 2}}
+  // expected-error@+1 {{invalid number of indices for accessed memref, expected 1 but got 2}}
   %1 = memref.load %0[%c0, %c0] : memref<10xi32>
 }
 
@@ -1018,7 +1037,7 @@ func.func @test_alloc_memref_map_rank_mismatch() {
 // -----
 
 func.func @rank(%0: f32) {
-  // expected-error@+1 {{'memref.rank' op operand #0 must be ranked or unranked memref of any type values}}
+  // expected-error@+1 {{'memref.rank' op operand #0 must be ranked or unranked memref of any non-token type values}}
   "memref.rank"(%0): (f32)->index
   return
 }
@@ -1034,7 +1053,7 @@ func.func @illegal_num_offsets(%arg0 : memref<?x?x?xf32>, %arg1 : index, %arg2 :
 // -----
 
 func.func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f32) {
-  // expected-error@+1 {{expects the number of subscripts to be equal to memref rank}}
+  // expected-error@+1 {{invalid number of indices for accessed memref, expected 2 but got 1}}
   %x = memref.atomic_rmw addf %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
   return
 }
@@ -1153,7 +1172,7 @@ func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
 
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : memref<f32>, %arg1 : index) {
-  memref.dim %arg, %arg1 : memref<f32> // expected-error {{'memref.dim' op operand #0 must be unranked.memref of any type values or non-0-ranked.memref of any type values, but got 'memref<f32>'}}
+  memref.dim %arg, %arg1 : memref<f32> // expected-error {{'memref.dim' op operand #0 must be unranked.memref of any non-token type values or non-0-ranked.memref of any non-token type values, but got 'memref<f32>'}}
   return
 }
 

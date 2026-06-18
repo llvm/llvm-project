@@ -1361,6 +1361,16 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
     indices = arith::AddIOp::create(rewriter, loc, ov, indices);
   }
   // Construct the vector comparison.
+  // When using 32-bit indices, cap `b` at INT32_MAX before casting to prevent
+  // signed overflow for large index values (e.g., 2^51 wrapping to 0 in i32).
+  // Note: for fixed-size vectors, `dim` is a tighter bound (since any b >= dim
+  // already implies all-true), but we use INT32_MAX for uniformity with the
+  // scalable-vector path.
+  if (force32BitVectorIndices) {
+    Value maxBound =
+        arith::ConstantIndexOp::create(rewriter, loc, (1LL << 31) - 1);
+    b = arith::MinSIOp::create(rewriter, loc, b, maxBound);
+  }
   Value bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds =
       vector::BroadcastOp::create(rewriter, loc, indices.getType(), bound);
@@ -1563,10 +1573,6 @@ class DropInnerMostUnitDimsTransferRead
     if (readOp.getTransferRank() == 0)
       return failure();
 
-    // TODO: support mask.
-    if (readOp.getMask())
-      return failure();
-
     auto srcType = dyn_cast<MemRefType>(readOp.getBase().getType());
     if (!srcType)
       return failure();
@@ -1614,12 +1620,22 @@ class DropInnerMostUnitDimsTransferRead
                                   readOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
+
+    // If there is a mask, shape_cast it to drop the same inner unit dims.
+    Value mask = readOp.getMask();
+    if (mask) {
+      auto maskType = cast<VectorType>(mask.getType());
+      auto reducedMaskType = VectorType::get(
+          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
+          maskType.getScalableDims().drop_back(dimsToDrop));
+      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
+                                                        mask);
+    }
+
     Value result = vector::TransferReadOp::create(
         rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        readOp.getPadding(),
-        // TODO: support mask.
-        /*mask=*/Value(), inBoundsAttr);
+        readOp.getPadding(), mask, inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
                                                      result);
     return success();
@@ -1652,10 +1668,6 @@ class DropInnerMostUnitDimsTransferWrite
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (writeOp.getTransferRank() == 0)
-      return failure();
-
-    // TODO: support mask.
-    if (writeOp.getMask())
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(writeOp.getBase().getType());
@@ -1709,11 +1721,22 @@ class DropInnerMostUnitDimsTransferWrite
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, resultTargetVecType, writeOp.getVector());
+
+    // If there is a mask, shape_cast it to drop the same inner unit dims.
+    Value mask = writeOp.getMask();
+    if (mask) {
+      auto maskType = cast<VectorType>(mask.getType());
+      auto reducedMaskType = VectorType::get(
+          maskType.getShape().drop_back(dimsToDrop), maskType.getElementType(),
+          maskType.getScalableDims().drop_back(dimsToDrop));
+      mask = rewriter.createOrFold<vector::ShapeCastOp>(loc, reducedMaskType,
+                                                        mask);
+    }
+
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         writeOp, shapeCast, rankedReducedView,
         writeOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        // TODO: support mask.
-        /*mask=*/Value(), inBoundsAttr);
+        mask, inBoundsAttr);
     return success();
   }
 };

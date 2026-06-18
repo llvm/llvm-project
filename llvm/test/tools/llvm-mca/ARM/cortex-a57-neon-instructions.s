@@ -1265,12 +1265,12 @@
 # CHECK-NEXT:  1      3     0.50                        vorn	q8, q8, q9
 # CHECK-NEXT:  1      3     0.50                        vmvn	d16, d16
 # CHECK-NEXT:  1      3     0.50                        vmvn	q8, q8
-# CHECK-NEXT:  1      3     0.50                  U     vbsl	d18, d17, d16
-# CHECK-NEXT:  1      3     0.50                  U     vbsl	q8, q10, q9
-# CHECK-NEXT:  1      3     0.50                  U     vbit	d18, d17, d16
-# CHECK-NEXT:  1      3     0.50                  U     vbit	q8, q10, q9
-# CHECK-NEXT:  1      3     0.50                  U     vbif	d18, d17, d16
-# CHECK-NEXT:  1      3     0.50                  U     vbif	q8, q10, q9
+# CHECK-NEXT:  1      3     0.50                        vbsl	d18, d17, d16
+# CHECK-NEXT:  1      3     0.50                        vbsl	q8, q10, q9
+# CHECK-NEXT:  1      3     0.50                        vbit	d18, d17, d16
+# CHECK-NEXT:  1      3     0.50                        vbit	q8, q10, q9
+# CHECK-NEXT:  1      3     0.50                        vbif	d18, d17, d16
+# CHECK-NEXT:  1      3     0.50                        vbif	q8, q10, q9
 # CHECK-NEXT:  1      3     0.50                        vceq.i8	d16, d16, d17
 # CHECK-NEXT:  1      3     0.50                        vceq.i16	d16, d16, d17
 # CHECK-NEXT:  1      3     0.50                        vceq.i32	d16, d16, d17
@@ -1821,22 +1821,22 @@
 # CHECK-NEXT:  1      3     0.50                        vext.8	q8, q9, q8, #7
 # CHECK-NEXT:  1      3     0.50                        vext.16	d16, d17, d16, #3
 # CHECK-NEXT:  1      3     0.50                        vext.32	q8, q9, q8, #3
-# CHECK-NEXT:  2      3     1.00                  U     vtrn.8	d17, d16
-# CHECK-NEXT:  2      3     1.00                  U     vtrn.16	d17, d16
-# CHECK-NEXT:  2      3     1.00                  U     vtrn.32	d17, d16
-# CHECK-NEXT:  2      3     1.00                  U     vtrn.8	q9, q8
-# CHECK-NEXT:  2      3     1.00                  U     vtrn.16	q9, q8
-# CHECK-NEXT:  2      3     1.00                  U     vtrn.32	q9, q8
-# CHECK-NEXT:  2      3     1.00                  U     vuzp.8	d17, d16
-# CHECK-NEXT:  2      3     1.00                  U     vuzp.16	d17, d16
-# CHECK-NEXT:  2      6     1.00                  U     vuzp.8	q9, q8
-# CHECK-NEXT:  2      6     1.00                  U     vuzp.16	q9, q8
-# CHECK-NEXT:  2      6     1.00                  U     vuzp.32	q9, q8
-# CHECK-NEXT:  2      3     1.00                  U     vzip.8	d17, d16
-# CHECK-NEXT:  2      3     1.00                  U     vzip.16	d17, d16
-# CHECK-NEXT:  2      6     1.00                  U     vzip.8	q9, q8
-# CHECK-NEXT:  2      6     1.00                  U     vzip.16	q9, q8
-# CHECK-NEXT:  2      6     1.00                  U     vzip.32	q9, q8
+# CHECK-NEXT:  2      3     1.00                        vtrn.8	d17, d16
+# CHECK-NEXT:  2      3     1.00                        vtrn.16	d17, d16
+# CHECK-NEXT:  2      3     1.00                        vtrn.32	d17, d16
+# CHECK-NEXT:  2      3     1.00                        vtrn.8	q9, q8
+# CHECK-NEXT:  2      3     1.00                        vtrn.16	q9, q8
+# CHECK-NEXT:  2      3     1.00                        vtrn.32	q9, q8
+# CHECK-NEXT:  2      3     1.00                        vuzp.8	d17, d16
+# CHECK-NEXT:  2      3     1.00                        vuzp.16	d17, d16
+# CHECK-NEXT:  2      6     1.00                        vuzp.8	q9, q8
+# CHECK-NEXT:  2      6     1.00                        vuzp.16	q9, q8
+# CHECK-NEXT:  2      6     1.00                        vuzp.32	q9, q8
+# CHECK-NEXT:  2      3     1.00                        vzip.8	d17, d16
+# CHECK-NEXT:  2      3     1.00                        vzip.16	d17, d16
+# CHECK-NEXT:  2      6     1.00                        vzip.8	q9, q8
+# CHECK-NEXT:  2      6     1.00                        vzip.16	q9, q8
+# CHECK-NEXT:  2      6     1.00                        vzip.32	q9, q8
 # CHECK-NEXT:  1      3     0.50                        vsub.i8	d16, d17, d16
 # CHECK-NEXT:  1      3     0.50                        vsub.i16	d16, d17, d16
 # CHECK-NEXT:  1      3     0.50                        vsub.i32	d16, d17, d16
