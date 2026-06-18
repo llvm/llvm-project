@@ -702,8 +702,8 @@ def executeScriptInternal(
         else:
             assert len(cmds) > 1, "didn't expect an empty sequence"
             split = len(cmds) // 2
-            return ShUtil.Seq(
-                make_tree(cmds[:split]), "&&", make_tree(cmds[split:]))
+            return ShUtil.Seq(make_tree(cmds[:split]), "&&", make_tree(cmds[split:]))
+
     cmd = make_tree(cmds)
 
     results = []
