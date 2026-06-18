@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file \
 // RUN:   -test-xegpu-coalesce-gather-scatter="analyze-only=true" %s | FileCheck %s
 
-// Analyze-only mode: stamps `xegpu.coalesce_hint` on coalescible ops and
+// Analyze-only mode: stamps the `coalesce_hint` attribute on coalescible ops and
 // leaves the layout unchanged. This test pins the hint attribute contract
 // that the apply API (and downstream propagator integrations) consume.
 
@@ -9,7 +9,7 @@
 // 1-D vector.step, fully coalescible -> hint with factor = 2 stamped.
 // CHECK-LABEL: func.func @load_step_offsets(
 // CHECK: xegpu.load
-// CHECK-SAME: {xegpu.coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}
+// CHECK-SAME: <{coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}>
 // CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 // CHECK-NOT: lane_data
 func.func @load_step_offsets(%ptr: i64) -> vector<32xf32> {
@@ -24,7 +24,7 @@ func.func @load_step_offsets(%ptr: i64) -> vector<32xf32> {
 // 2-D leading-1 dim: hint stamped on the load with factor = 2.
 // CHECK-LABEL: func.func @load_2d_leading_unit(
 // CHECK: xegpu.load
-// CHECK-SAME: {xegpu.coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}
+// CHECK-SAME: <{coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}>
 // CHECK-SAME: : i64, vector<1x32xindex>, vector<1x32xi1> -> vector<1x32xf32>
 // CHECK-NOT: lane_data
 func.func @load_2d_leading_unit(%ptr: i64) -> vector<1x32xf32> {
@@ -74,7 +74,7 @@ func.func @load_broadcast_offsets_no_hint(%ptr: i64) -> vector<32xf32> {
 // op.
 // CHECK-LABEL: func.func @store_step_hint(
 // CHECK: xegpu.store
-// CHECK-SAME: {xegpu.coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}
+// CHECK-SAME: <{coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}>
 // CHECK-SAME: : vector<32xf32>, i64, vector<32xindex>, vector<32xi1>
 // CHECK-NOT: lane_data
 func.func @store_step_hint(%ptr: i64, %v: vector<32xf32>) {
@@ -83,4 +83,18 @@ func.func @store_step_hint(%ptr: i64, %v: vector<32xf32>) {
   xegpu.store %v, %ptr[%offsets], %mask
       : vector<32xf32>, i64, vector<32xindex>, vector<32xi1>
   return
+}
+
+// -----
+// A user-provided coalesce_hint takes precedence: the analysis must not
+// overwrite it, even if its own heuristic would pick a different factor.
+// CHECK-LABEL: func.func @user_hint_preserved(
+// CHECK: xegpu.load
+// CHECK-SAME: <{coalesce_hint = #xegpu.coalesce_hint<factor = 2 : i64>}>
+func.func @user_hint_preserved(%ptr: i64) -> vector<32xf32> {
+  %offsets = vector.step : vector<32xindex>
+  %mask = arith.constant dense<true> : vector<32xi1>
+  %v = xegpu.load %ptr[%offsets], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 2>}>
+      : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+  return %v : vector<32xf32>
 }

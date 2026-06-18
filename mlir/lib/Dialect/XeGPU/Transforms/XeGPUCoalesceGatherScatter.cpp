@@ -1068,6 +1068,13 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
                                 unsigned maxChunkSize) {
   if (!isCandidateForCoalesce(op))
     return;
+  // A user-provided `coalesce_hint` takes precedence: if the op already
+  // carries one (authored by the user, or stamped by an earlier propagation
+  // level), leave it untouched. The analysis is only a fallback that fills in
+  // a hint where the user did not request one. This also makes the analysis
+  // idempotent across the lane and inst-data propagation runs.
+  if (op.getCoalesceHintAttr())
+    return;
   // Do not coalesce accesses tied to a reduction (see isReductionTied);
   // reduction coalescing is added in follow-up PRs.
   if (isReductionTied(op))
@@ -1081,8 +1088,8 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
       decide(lat->getValue(), offsetsTy.getShape(), maxChunkSize, subgroupSize);
   if (d.kind != CoalesceDecision::Kind::Chunked)
     return;
-  auto hint = xegpu::CoalesceHintAttr::get(op.getContext(), d.factor);
-  op->setAttr(xegpu::getCoalesceHintAttrName(), hint);
+  op.setCoalesceHintAttr(
+      xegpu::CoalesceHintAttr::get(op.getContext(), d.factor));
 }
 
 /// Apply a stamped hint on `op`: build a lane_layout/lane_data/inst_data
@@ -1092,8 +1099,7 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
 /// malformed.
 template <typename OpTy>
 static LogicalResult applyHintOnOp(OpTy op) {
-  auto hint = op->template getAttrOfType<xegpu::CoalesceHintAttr>(
-      xegpu::getCoalesceHintAttrName());
+  auto hint = op.getCoalesceHintAttr();
   if (!hint)
     return success(); // no hint: idempotent no-op.
 
@@ -1113,7 +1119,7 @@ static LogicalResult applyHintOnOp(OpTy op) {
   auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
                                     laneLayout, factor);
   op.setLayoutAttr(layout);
-  op->removeAttr(xegpu::getCoalesceHintAttrName());
+  op.removeCoalesceHintAttr();
   return success();
 }
 
@@ -1126,9 +1132,8 @@ static LogicalResult applyHintOnOp(Operation *op) {
     return applyHintOnOp(load);
   if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
     return applyHintOnOp(store);
-  // Hint attached to an unsupported op: silently drop it.
-  if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
-    op->removeAttr(xegpu::getCoalesceHintAttrName());
+  // `coalesce_hint` is an inherent attribute of LoadGatherOp / StoreScatterOp
+  // only, so no other op can carry one.
   return success();
 }
 
@@ -1159,16 +1164,14 @@ void mlir::xegpu::runCoalesceGatherScatterAnalysis(
 }
 
 void mlir::xegpu::coalesceGatherScatter(Operation *root) {
-  root->walk([&](Operation *op) {
-    if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
-      (void)applyHintOnOp(op);
-  });
+  root->walk([&](Operation *op) { (void)applyHintOnOp(op); });
 }
 
 void mlir::xegpu::clearCoalesceGatherScatterHints(Operation *root) {
-  StringRef name = xegpu::getCoalesceHintAttrName();
   root->walk([&](Operation *op) {
-    if (op->hasAttr(name))
-      op->removeAttr(name);
+    if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
+      load.removeCoalesceHintAttr();
+    else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
+      store.removeCoalesceHintAttr();
   });
 }

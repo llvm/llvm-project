@@ -789,3 +789,27 @@ func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
   %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val {layout_b_scale = #layout_b_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
   return
 }
+
+// -----
+func.func @coalesce_hint_not_power_of_two(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{'factor' : 6 must be a power of two}}
+  %val = xegpu.load %src[%offset], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 6>}>
+      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  return
+}
+
+// -----
+func.func @coalesce_hint_factor_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{'factor' : 1 must be >= 2}}
+  %val = xegpu.load %src[%offset], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 1>}>
+      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  return
+}
+
+// -----
+func.func @coalesce_hint_factor_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
+  // expected-error@+1 {{coalesce_hint factor 4 must divide the innermost offsets dim 6}}
+  %val = xegpu.load %src[%offset], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 4>}>
+      : i64, vector<6xindex>, vector<6xi1> -> vector<6xf32>
+  return
+}

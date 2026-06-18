@@ -499,7 +499,7 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
       /*l3_hint=*/xegpu::CachePolicyAttr{},
-      /*layout=*/nullptr);
+      /*layout=*/nullptr, /*coalesce_hint=*/nullptr);
 
   rewriter.replaceOp(readOp, gatherOp.getResult());
   return success();
@@ -534,7 +534,7 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                 /*l1_hint=*/xegpu::CachePolicyAttr{},
                                 /*l2_hint=*/xegpu::CachePolicyAttr{},
                                 /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                /*layout=*/nullptr);
+                                /*layout=*/nullptr, /*coalesce_hint=*/nullptr);
   rewriter.eraseOp(writeOp);
   return success();
 }
@@ -790,7 +790,7 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         /*l1_hint=*/xegpu::CachePolicyAttr{},
         /*l2_hint=*/xegpu::CachePolicyAttr{},
         /*l3_hint=*/xegpu::CachePolicyAttr{},
-        /*layout=*/nullptr);
+        /*layout=*/nullptr, /*coalesce_hint=*/nullptr);
 
     auto selectOp =
         arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
@@ -825,7 +825,7 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
                                   /*l1_hint=*/xegpu::CachePolicyAttr{},
                                   /*l2_hint=*/xegpu::CachePolicyAttr{},
                                   /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                  /*layout=*/nullptr);
+                                  /*layout=*/nullptr, /*coalesce_hint=*/nullptr);
     rewriter.eraseOp(scatterOp);
     return success();
   }
