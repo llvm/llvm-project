@@ -2673,14 +2673,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Value *Masked = Builder.CreateAnd(Shifted, II->getArgOperand(1));
         return replaceInstUsesWith(*II, Masked);
       }
-
-      if (auto *SrcC = dyn_cast<ConstantInt>(II->getArgOperand(0))) {
-        // constant folding.
-        APInt Result =
-            llvm::APIntOps::expandBits(SrcC->getValue(), MaskC->getValue());
-        return replaceInstUsesWith(*II,
-                                   ConstantInt::get(II->getType(), Result));
-      }
     }
     break;
   case Intrinsic::pext:
@@ -2695,14 +2687,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
         Value *Shifted = Builder.CreateLShr(Masked, ShiftAmt);
         return replaceInstUsesWith(*II, Shifted);
-      }
-
-      if (auto *SrcC = dyn_cast<ConstantInt>(II->getArgOperand(0))) {
-        // constant folding.
-        APInt Result =
-            llvm::APIntOps::compressBits(SrcC->getValue(), MaskC->getValue());
-        return replaceInstUsesWith(*II,
-                                   ConstantInt::get(II->getType(), Result));
       }
     }
     break;
