@@ -472,7 +472,6 @@ public:
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerROTR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
