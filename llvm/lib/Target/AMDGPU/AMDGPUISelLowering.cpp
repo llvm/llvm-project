@@ -5476,7 +5476,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue BCSrc = N0.getOperand(0);
     if (BCSrc.getOpcode() == ISD::BUILD_VECTOR) {
       SDValue HighBits = BCSrc.getOperand(BCSrc.getNumOperands() - 1);
-      if (HighBits.getValueType().getSizeInBits() != 32 ||
+      if (VT != MVT::f64 || HighBits.getValueType().getSizeInBits() != 32 ||
           !fnegFoldsIntoOp(HighBits.getNode()))
         return SDValue();
 

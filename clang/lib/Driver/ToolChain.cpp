@@ -520,11 +520,20 @@ SanitizerArgs
 ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs,
                             StringRef BoundArch,
                             Action::OffloadKind DeviceOffloadKind) const {
+  // When -fno-gpu-sanitize is specified for GPU targets, don't emit
+  // diagnostics about unsupported sanitizers for specific GPU arches,
+  // since sanitizers are disabled for the GPU anyway.
+  bool DiagnoseBoundArchErrors =
+      BoundArchSanitizerArgsChecked.insert(BoundArch).second;
+  if (!BoundArch.empty() && getTriple().isGPU() &&
+      !JobArgs.hasFlag(options::OPT_fgpu_sanitize,
+                       options::OPT_fno_gpu_sanitize, true)) {
+    DiagnoseBoundArchErrors = false;
+  }
+
   SanitizerArgs SanArgs(*this, JobArgs,
                         /*DiagnoseErrors=*/!SanitizerArgsChecked,
-                        /*DiagnoseBoundArchErrors=*/
-                        BoundArchSanitizerArgsChecked.insert(BoundArch).second,
-                        BoundArch, DeviceOffloadKind);
+                        DiagnoseBoundArchErrors, BoundArch, DeviceOffloadKind);
 
   SanitizerArgsChecked = true;
   return SanArgs;

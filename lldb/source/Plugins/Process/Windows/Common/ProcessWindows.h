@@ -121,10 +121,6 @@ protected:
                                MemoryRegionInfo &info) override;
 
 private:
-  llvm::Error ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
-                              uint16_t length_lower_word,
-                              llvm::SmallVectorImpl<char> &output);
-
   struct WatchpointInfo {
     uint32_t slot_id;
     lldb::addr_t address;

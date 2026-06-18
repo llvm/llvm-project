@@ -1541,6 +1541,40 @@ let usesCustomInserter = 1, Predicates = [HasS32C1I] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Xtensa ESP32S2 Instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasESP32S2Ops] in {
+  def WR_MASK_GPIO_OUT : RRR_Inst<0x0, 0x06, 0x0, (outs), (ins AR:$s, AR:$t),
+                                 "wr_mask_gpio_out\t$s, $t", []> {
+    let r = 0x2;
+  }
+
+  def SET_BIT_GPIO_OUT : RRR_Inst<0x0, 0x06, 0x0, (outs), (ins select_256:$imm),
+                                 "set_bit_gpio_out\t$imm", []> {
+    bits<8> imm;
+
+    let r = 0x1;
+    let s = imm{7-4};
+    let t = imm{3-0};
+  }
+
+  def CLR_BIT_GPIO_OUT : RRR_Inst<0x0, 0x06, 0x0, (outs), (ins select_256:$imm),
+                                 "clr_bit_gpio_out\t$imm", []> {
+    bits<8> imm;
+
+    let r = 0x0;
+    let s = imm{7-4};
+    let t = imm{3-0};
+  }
+
+  def GET_GPIO_IN : RRR_Inst<0x0, 0x06, 0x0, (outs AR:$t), (ins),
+                            "get_gpio_in\t$t", []> {
+    let r = 0x3;
+    let s = 0x0;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // DSP Instructions
 //===----------------------------------------------------------------------===//
 include "XtensaDSPInstrInfo.td"

@@ -143,7 +143,8 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
-bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
+bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
+                 bool IsReferenceCast);
 
 enum class ShiftDir { Left, Right };
 
@@ -1249,7 +1250,7 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 
   // Diagnose comparisons between fields with different access specifiers,
   // comparisons between bases and bases+fields.
-  if (std::optional<std::pair<Pointer, Pointer>> Split =
+  if (std::optional<std::pair<PtrView, PtrView>> Split =
           Pointer::computeSplitPoint(LHS, RHS)) {
     const FieldDecl *LF = Split->first.getField();
     const FieldDecl *RF = Split->second.getField();
@@ -1835,7 +1836,7 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1852,7 +1853,7 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1871,7 +1872,7 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
                       uint32_t FieldBitWidth) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1896,7 +1897,7 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
                               uint32_t FieldOffset, uint32_t FieldBitWidth) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2092,7 +2093,7 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
                       const Type *TargetType);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -3664,12 +3665,12 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
 
 inline bool StartInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  S.InitializingBlocks.push_back(Ptr.block());
+  S.InitializingPtrs.push_back(Ptr.view());
   return true;
 }
 
 inline bool EndInit(InterpState &S, CodePtr OpPC) {
-  S.InitializingBlocks.pop_back();
+  S.InitializingPtrs.pop_back();
   return true;
 }
 

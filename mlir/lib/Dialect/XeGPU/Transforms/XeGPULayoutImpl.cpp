@@ -206,7 +206,7 @@ static void propagateRegionResultsToYieldOperands(
 
     for (unsigned i = 0; i < count; ++i) {
       xegpu::DistributeLayoutAttr layout;
-      if (successor.isParent()) {
+      if (successor.isOperation()) {
         // For parent successor, get layout from external use points of the
         // parent op's results.
         auto regionResult = regionBranchOp->getResult(i);

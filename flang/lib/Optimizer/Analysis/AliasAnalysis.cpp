@@ -147,11 +147,11 @@ static fir::AliasAnalysis::Source getSourceForACCMappedValue(
 /// Predecessor SSA values that may define a result of \p branch when control
 /// continues in the parent region (same mapping as
 /// `LocalAliasAnalysis::collectUnderlyingAddressValues2` for
-/// `RegionSuccessor::parent()`).
+/// `RegionSuccessor(branch.getOperation())`).
 static void getRegionBranchPredecessorValuesForParentResult(
     mlir::RegionBranchOpInterface branch, mlir::OpResult result,
     llvm::SmallVectorImpl<mlir::Value> &out) {
-  mlir::RegionSuccessor parentSucc = mlir::RegionSuccessor::parent();
+  mlir::RegionSuccessor parentSucc(branch.getOperation());
   mlir::Value inputValue = result;
   unsigned inputIndex = result.getResultNumber();
   mlir::ValueRange inputs = branch.getSuccessorInputs(parentSucc);

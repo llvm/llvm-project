@@ -236,7 +236,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 }
 
 StringRef
-SPIRVExtensionsParser::checkExtensions(const std::vector<std::string> &ExtNames,
+SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
                                        ExtensionSet &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {
     if (Ext == "all") {

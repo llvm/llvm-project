@@ -72,6 +72,7 @@ class HelloWorldTestCase(TestBase):
 
     @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     @skipIfiOSSimulator
+    @skipIfWasm  # attaching requires launching the inferior as a host process
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
         exe = "%s_%d" % (self.testMethodName, os.getpid())
@@ -104,6 +105,7 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     @skipIfiOSSimulator
     @skipIfAsan  # FIXME: Hangs indefinitely.
+    @skipIfWasm  # attaching requires launching the inferior as a host process
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
         exe = "%s_%d" % (self.testMethodName, os.getpid())

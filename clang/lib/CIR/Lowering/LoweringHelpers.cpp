@@ -38,8 +38,11 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
   llvm::SmallVector<mlir::APInt> values;
   values.reserve(totalSize);
 
+  // String bytes are raw values; interpret each as an unsigned byte so a
+  // high-bit char (>= 0x80) does not sign-extend to a value that overflows
+  // the element bit width when constructing the APInt.
   for (const char element : stringAttr)
-    values.emplace_back(bitWidth, element);
+    values.emplace_back(bitWidth, static_cast<unsigned char>(element));
 
   values.insert(values.end(), trailingZeros, mlir::APInt::getZero(bitWidth));
 
@@ -55,16 +58,8 @@ template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
 }
 
 template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
-  assert((mlir::isa<cir::SingleType, cir::DoubleType>(ty)) &&
-         "only float and double supported");
-
-  if (ty.isF32() || mlir::isa<cir::SingleType>(ty))
-    return mlir::APFloat(0.f);
-
-  if (ty.isF64() || mlir::isa<cir::DoubleType>(ty))
-    return mlir::APFloat(0.0);
-
-  llvm_unreachable("NYI");
+  auto fpTy = mlir::cast<cir::FPTypeInterface>(ty);
+  return mlir::APFloat::getZero(fpTy.getFloatSemantics());
 }
 
 /// \param attr the ConstArrayAttr to convert

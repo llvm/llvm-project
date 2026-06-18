@@ -3612,9 +3612,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
         PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
-        DL, CanBeNull, CanBeFreed);
+        DL, CanBeNull, /*CanBeFreed=*/nullptr);
     // We can ignore CanBeFreed here, because inbounds is explicitly allowed to
     // refer to a deallocated object.
     if (!CanBeNull && DerefBytes != 0) {
@@ -5961,6 +5961,10 @@ bool InstCombinerImpl::run() {
         }
 
         Result->insertInto(InstParent, InsertPos);
+
+        // Register newly created assumptions.
+        if (auto *Assume = dyn_cast<AssumeInst>(Result))
+          AC.registerAssumption(Assume);
 
         // Push the new instruction and any users onto the worklist.
         Worklist.pushUsersToWorkList(*Result);

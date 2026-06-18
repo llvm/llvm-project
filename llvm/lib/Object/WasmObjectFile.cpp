@@ -1116,6 +1116,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
+    case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
       if (!isValidDataSymbol(Reloc.Index))
         return badReloc("invalid data relocation");
       Reloc.Addend = readVarint64(Ctx);
@@ -1159,7 +1160,8 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
       Size = 4;
     if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||
         Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I64 ||
-        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I64)
+        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I64 ||
+        Reloc.Type == wasm::R_WASM_MEMORY_ADDR_LOCREL_I64)
       Size = 8;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("invalid relocation offset",

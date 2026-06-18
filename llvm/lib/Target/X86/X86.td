@@ -789,10 +789,6 @@ def TuningUseGLMDivSqrtCosts
     : SubtargetFeature<"use-glm-div-sqrt-costs", "UseGLMDivSqrtCosts", "true",
         "Use Goldmont specific floating point div/sqrt costs">;
 
-def TuningNDDImm
-    : SubtargetFeature<"prefer-ndd-imm", "HasNDDI",
-          "true", "Prefer NDD immediate variant">;
-
 def TuningNDDMem
     : SubtargetFeature<"prefer-ndd-mem", "HasNDDM",
           "true", "Prefer NDD memory addressing">;

@@ -4947,6 +4947,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_MEMCPY:
   case G_MEMMOVE:
   case G_MEMCPY_INLINE:
+  case G_MEMSET_INLINE:
     return lowerMemCpyFamily(MI);
   case G_ZEXT:
   case G_SEXT:
@@ -10041,7 +10042,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerBswap(MachineInstr &MI) {
   // Set i-th high/low byte in Res to i-th low/high byte from Src.
   for (unsigned i = 1; i < SizeInBytes / 2; ++i) {
     // AND with Mask leaves byte i unchanged and sets remaining bytes to 0.
-    APInt APMask(SizeInBytes * 8, 0xFF << (i * 8));
+    APInt APMask = APInt::getBitsSet(SizeInBytes * 8, i * 8, i * 8 + 8);
     auto Mask = MIRBuilder.buildConstant(Ty, APMask);
     auto ShiftAmt = MIRBuilder.buildConstant(Ty, BaseShiftAmt - 16 * i);
     // Low byte shifted left to place of high byte: (Src & Mask) << ShiftAmt.
@@ -11005,7 +11006,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMemCpyFamily(
   const unsigned Opc = MI.getOpcode();
   assert((Opc == TargetOpcode::G_MEMCPY ||
           Opc == TargetOpcode::G_MEMCPY_INLINE ||
-          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET) &&
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET ||
+          Opc == TargetOpcode::G_MEMSET_INLINE) &&
          "Expected memcpy like instruction");
 
   if (KnownLen == 0) {
@@ -11020,7 +11022,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMemCpyFamily(
   if (Opc == TargetOpcode::G_MEMMOVE)
     return lowerMemmove(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
                         MemOps);
-  if (Opc == TargetOpcode::G_MEMSET)
+  if (Opc == TargetOpcode::G_MEMSET || Opc == TargetOpcode::G_MEMSET_INLINE)
     return lowerMemset(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
                        MemOps);
   return UnableToLegalize;

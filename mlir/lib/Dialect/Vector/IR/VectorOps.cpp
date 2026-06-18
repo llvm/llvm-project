@@ -5035,6 +5035,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+/// If `padding` is null, a poison value is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
@@ -5044,46 +5045,45 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
   if (!padding)
     padding = ub::PoisonOp::create(builder, result.location, elemType);
+  // Delegate to the most general builder (see
+  // `mlir/Dialect/Vector/IR/VectorOps.cpp.inc`)
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
-/// 2. Builder that sets padding to zero an empty mask (variant without attrs).
+/// 2. Builder that sets padding to zero and an empty mask (variant without
+/// attrs).
+/// If `padding` is null, a poison value is used.
+/// If `permutationMap` is null, a minor identity map is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            AffineMap permutationMap,
                            std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap = getTransferMinorIdentityMap(
+        llvm::cast<ShapedType>(source.getType()), vectorType);
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, *padding,
+  // Delegate to Builder 1
+  build(builder, result, vectorType, source, indices, padding,
         permutationMapAttr, inBoundsAttr);
 }
 
 /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+/// If `padding` is null, a poison value is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            std::optional<ArrayRef<bool>> inBounds) {
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(source.getType()), vectorType);
-  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : builder.getBoolArrayAttr(
-                                SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        *padding,
-        /*mask=*/Value(), inBoundsAttr);
+  // Delegate to Builder 2
+  build(builder, result, vectorType, source, indices, padding,
+        /*permutationMap=*/AffineMap(), inBounds);
 }
 
 template <typename EmitFun>
@@ -5692,11 +5692,15 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 }
 
 /// 3. Builder with type inference that sets an empty mask (variant without
-/// attrs)
+/// attrs). If `permutationMap` is null, a minor identity map is used.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap =
+        getTransferMinorIdentityMap(llvm::cast<ShapedType>(dest.getType()),
+                                    llvm::cast<VectorType>(vector.getType()));
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr =
       (inBounds && !inBounds.value().empty())
@@ -5712,10 +5716,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             std::optional<ArrayRef<bool>> inBounds) {
-  auto vectorType = llvm::cast<VectorType>(vector.getType());
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(dest.getType()), vectorType);
-  build(builder, result, vector, dest, indices, permutationMap, inBounds);
+  build(builder, result, vector, dest, indices, /*permutationMap=*/AffineMap(),
+        inBounds);
 }
 
 ParseResult TransferWriteOp::parse(OpAsmParser &parser,

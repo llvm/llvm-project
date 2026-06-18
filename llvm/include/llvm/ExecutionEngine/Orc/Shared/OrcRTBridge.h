@@ -90,7 +90,7 @@ struct SimpleExecutorDylibManagerSymbolNames {
 
 /// Default symbol names for the ORC runtime's NativeDylibManager SPS
 /// interface.
-extern const SimpleExecutorDylibManagerSymbolNames
+extern const LLVM_ABI SimpleExecutorDylibManagerSymbolNames
     orc_rt_NativeDylibManagerSPSSymbols;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =

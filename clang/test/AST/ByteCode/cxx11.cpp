@@ -469,8 +469,8 @@ namespace SubobjectCompare {
   constexpr Z z{};
   static_assert(&z.x < &z.y, ""); // both-error {{not an integral constant expression}} \
                                   // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
-  static_assert(&z.x != &z.y, ""); // expected-error {{failed}} FIXME
+  static_assert(&z.x != &z.y, "");
   static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
                                                     // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
-  static_assert((void*)(X*)&z != (void*)(Y*)&z, ""); // expected-error {{failed}} FIXME
+  static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
 }

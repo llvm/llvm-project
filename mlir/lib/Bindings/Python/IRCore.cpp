@@ -5292,6 +5292,15 @@ void populateIRCore(nb::module_ &m) {
 
   // MLIRError exception.
   MLIRError::bind(m);
+
+  // Register an atexit handler to clear the thread-local context stack.
+  // The stack holds nb::object references that prevent Python GC of Contexts.
+  // At interpreter shutdown, thread_local storage outlives Py_Finalize() on
+  // the main thread. When the thread_local vector destructs, its nb::object
+  // members call Py_DECREF through the dead runtime, causing a segfault.
+  // Clearing the stack in atexit releases references while alive.
+  nb::module_::import_("atexit").attr("register")(
+      nb::cpp_function([]() { PyThreadContextEntry::getStack().clear(); }));
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

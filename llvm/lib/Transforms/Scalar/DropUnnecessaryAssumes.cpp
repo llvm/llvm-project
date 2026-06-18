@@ -67,6 +67,10 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   bool Changed = false;
 
+  // Collect assumes created while processing the cache and register them only
+  // after iterating.
+  SmallVector<AssumeInst *> NewAssumes;
+
   for (const WeakVH &Elem : AC.assumptions()) {
     auto *Assume = cast_or_null<AssumeInst>(Elem);
     if (!Assume)
@@ -115,7 +119,7 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
           // Otherwise only drop the dead operand bundles.
           CallBase *NewAssume =
               CallBase::Create(Assume, KeptBundles, Assume->getIterator());
-          AC.registerAssumption(cast<AssumeInst>(NewAssume));
+          NewAssumes.push_back(cast<AssumeInst>(NewAssume));
           Assume->eraseFromParent();
         }
 
@@ -142,6 +146,9 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     RecursivelyDeleteTriviallyDeadInstructions(Cond);
     Changed = true;
   }
+
+  for (AssumeInst *NewAssume : NewAssumes)
+    AC.registerAssumption(NewAssume);
 
   if (Changed) {
     PreservedAnalyses PA;

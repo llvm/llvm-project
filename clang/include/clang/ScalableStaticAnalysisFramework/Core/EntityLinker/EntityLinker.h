@@ -16,6 +16,7 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <memory>
 #include <set>
@@ -32,9 +33,11 @@ class EntityLinker {
 public:
   /// Constructs an EntityLinker to link TU summaries into a LU summary.
   ///
+  /// \param TargetTriple The target triple of the link unit. Every linked TU
+  ///        must report the same triple.
   /// \param LUNamespace The namespace identifying this link unit.
-  explicit EntityLinker(NestedBuildNamespace LUNamespace)
-      : Output(std::move(LUNamespace)) {}
+  EntityLinker(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
+      : Output(std::move(TargetTriple), std::move(LUNamespace)) {}
 
   /// Links a TU summary into a LU summary.
   ///

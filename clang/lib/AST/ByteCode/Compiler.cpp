@@ -823,9 +823,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     return discard(SubExpr);
 
   case CK_Dynamic:
-    // This initially goes through VisitCXXDynamicCastExpr, where we emit
-    // a diagnostic if appropriate.
-    return this->delegate(SubExpr);
+    llvm_unreachable("CXXDynamicCastExpr has its own function");
 
   case CK_LValueBitCast:
     if (!this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/false, E))
@@ -3543,16 +3541,29 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
-
   if (!Ctx.getLangOpts().CPlusPlus20) {
     if (!this->emitInvalidCast(CastKind::Dynamic, /*Fatal=*/false, E))
       return false;
+  }
+
+  if (E->getCastKind() != CK_Dynamic)
     return this->VisitCastExpr(E);
+
+  QualType DestType = E->getType();
+  // "target type must be a reference or pointer type to a defined class"
+  if (DestType->isRecordType()) {
+    assert(E->isGLValue());
+  } else {
+    assert(DestType->isPointerOrReferenceType());
+    assert(DestType->isVoidPointerType() ||
+           DestType->getPointeeType()->isRecordType());
+    DestType = DestType->getPointeeType();
   }
 
   if (!this->visit(E->getSubExpr()))
     return false;
-  if (!this->emitCheckDynamicCast(E))
+  if (!this->emitDynamicCast(DestType.getTypePtr(),
+                             /*IsReferenceCast=*/E->isGLValue(), E))
     return false;
 
   if (DiscardResult)

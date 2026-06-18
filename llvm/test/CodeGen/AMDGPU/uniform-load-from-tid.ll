@@ -11,7 +11,7 @@
 ; OPT-LABEL: @lshr_threadid
 ; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
 ; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
-define amdgpu_kernel void @lshr_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !0 {
+define amdgpu_kernel void @lshr_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %div = lshr i32 %lid, 5
@@ -31,7 +31,7 @@ entry:
 ; OPT-LABEL: @ashr_threadid
 ; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
 ; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
-define amdgpu_kernel void @ashr_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !0 {
+define amdgpu_kernel void @ashr_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %div = ashr i32 %lid, 5
@@ -51,7 +51,7 @@ entry:
 ; OPT-LABEL: @and_threadid
 ; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
 ; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
-define amdgpu_kernel void @and_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !0 {
+define amdgpu_kernel void @and_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %and = and i32 %lid, -32
@@ -85,7 +85,7 @@ entry:
 
 ; OPT-LABEL: @lshr_threadid_2d
 ; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
-define amdgpu_kernel void @lshr_threadid_2d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !1 {
+define amdgpu_kernel void @lshr_threadid_2d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="130,130" !reqd_work_group_size !1 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %div = lshr i32 %lid, 5
@@ -105,7 +105,7 @@ entry:
 ; OPT-LABEL: @lshr_threadid_3d
 ; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
 ; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
-define amdgpu_kernel void @lshr_threadid_3d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !2 {
+define amdgpu_kernel void @lshr_threadid_3d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="128,128" !reqd_work_group_size !2 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %div = lshr i32 %lid, 5
@@ -124,7 +124,7 @@ entry:
 
 ; OPT-LABEL: @high_id_uniform
 ; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %zid.zext, !amdgpu.uniform
-define amdgpu_kernel void @high_id_uniform(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !2 {
+define amdgpu_kernel void @high_id_uniform(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="128,128" !reqd_work_group_size !2 {
 entry:
   %zid = tail call i32 @llvm.amdgcn.workitem.id.z()
   %zid.zext = zext nneg i32 %zid to i64
@@ -143,7 +143,7 @@ entry:
 ; OPT-LABEL: @lshr_threadid_1d_uneven
 ; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
 ; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
-define amdgpu_kernel void @lshr_threadid_1d_uneven(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !3 {
+define amdgpu_kernel void @lshr_threadid_1d_uneven(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="65,65" !reqd_work_group_size !3 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %div = lshr i32 %lid, 5
@@ -160,7 +160,7 @@ entry:
 
 ; OPT-LABEL: @and_threadid_2d
 ; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
-define amdgpu_kernel void @and_threadid_2d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) !reqd_work_group_size !1 {
+define amdgpu_kernel void @and_threadid_2d(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="130,130" !reqd_work_group_size !1 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %and = and i32 %lid, -32

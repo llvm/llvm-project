@@ -35,6 +35,15 @@ func.func @emitc_call_opaque_two_results() {
 // CPP-DECLTOP-NEXT: [[V1]] = 0;
 // CPP-DECLTOP-NEXT: std::tie([[V2]], [[V3]]) = two_results();
 
+func.func @emitc_call_opaque_lvalue_arg() {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  emitc.call_opaque "func_out" (%0) : (!emitc.lvalue<i32>) -> ()
+  return
+}
+// CPP-DEFAULT: void emitc_call_opaque_lvalue_arg() {
+// CPP-DEFAULT-NEXT: int32_t [[V0:[^ ]*]];
+// CPP-DEFAULT-NEXT: func_out([[V0]]);
+
 func.func @emitc_member_call(%arg0 : !emitc.opaque<"MyClass">, %arg1 : !emitc.ptr<!emitc.opaque<"MyClass">> ) {
   %0 = emitc.member_call_opaque %arg0 "method" () : !emitc.opaque<"MyClass">, () -> i32
   %1 = emitc.member_call_opaque %arg1 "ptr_method" () : !emitc.ptr<!emitc.opaque<"MyClass">>, () -> i32
@@ -64,3 +73,12 @@ func.func @emitc_member_call_template_args(%arg0 : !emitc.opaque<"MyClass">) {
 }
 // CPP-DEFAULT: void emitc_member_call_template_args(MyClass [[V0:[^ ]*]]) {
 // CPP-DEFAULT-NEXT: int32_t [[V1:[^ ]*]] = [[V0]].method<int32_t>();
+
+func.func @emitc_member_call_lvalue_arg(%arg0 : !emitc.opaque<"MyClass">) {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  emitc.member_call_opaque %arg0 "method" (%0) : !emitc.opaque<"MyClass">, (!emitc.lvalue<i32>) -> ()
+  return
+}
+// CPP-DEFAULT: void emitc_member_call_lvalue_arg(MyClass [[V0:[^ ]*]]) {
+// CPP-DEFAULT-NEXT: int32_t [[V1:[^ ]*]];
+// CPP-DEFAULT-NEXT: [[V0]].method([[V1]]);

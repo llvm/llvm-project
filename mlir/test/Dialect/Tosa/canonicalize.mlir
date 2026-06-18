@@ -18,6 +18,36 @@ func.func @test_argmax_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
 
 // -----
 
+// CHECK-LABEL: @row_gather_row_count_one_to_gather
+func.func @row_gather_row_count_one_to_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf32> {
+  %row_count = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK-NOT: tosa.row_gather
+  // CHECK: tosa.gather %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<13x26x3xf32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf32>
+  return %0 : tensor<13x26x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @row_gather_row_count_two_no_fold
+func.func @row_gather_row_count_two_no_fold(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: tosa.row_gather %arg0, %arg1, %{{.*}} : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
+  return %0 : tensor<13x52x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @row_gather_non_const_row_count_no_fold
+func.func @row_gather_non_const_row_count_no_fold(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %row_count: tensor<1xi32>) -> tensor<13x?x3xf32> {
+  // CHECK: tosa.row_gather %arg0, %arg1, %arg2 : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x?x3xf32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x?x3xf32>
+  return %0 : tensor<13x?x3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @pad_wh_avg_pool2d_nofold
 func.func @pad_wh_avg_pool2d_nofold(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
   // CHECK: tosa.pad

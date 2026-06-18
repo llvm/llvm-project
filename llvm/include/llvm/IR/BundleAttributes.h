@@ -21,10 +21,10 @@ enum class BundleAttr {
 namespace llvm {
 
 LLVM_ABI StringRef getNameFromBundleAttr(BundleAttr);
-LLVM_ABI BundleAttr getBundleAttrFromString(StringRef);
+LLVM_ABI BundleAttr getBundleAttrFromID(uint32_t);
 
 inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
-  return getBundleAttrFromString(OBU.getTagName());
+  return getBundleAttrFromID(OBU.getTagID());
 }
 
 struct AssumeAlignInfo {
@@ -51,6 +51,12 @@ struct AssumeNonNullInfo {
 
 LLVM_ABI AssumeNonNullInfo getAssumeNonNullInfo(OperandBundleUse);
 
+struct AssumeNoUndefInfo {
+  const Use &Val;
+};
+
+LLVM_ABI AssumeNoUndefInfo getAssumeNoUndefInfo(OperandBundleUse);
+
 struct AssumeSeparateStorageInfo {
   const Use &Ptr1;
   const Use &Ptr2;
@@ -58,6 +64,10 @@ struct AssumeSeparateStorageInfo {
 
 LLVM_ABI
 AssumeSeparateStorageInfo getAssumeSeparateStorageInfo(OperandBundleUse);
+
+LLVM_ABI bool assumeBundleImpliesNonNull(const Value *Val,
+                                         const Function *Context,
+                                         OperandBundleUse OBU);
 
 } // namespace llvm
 

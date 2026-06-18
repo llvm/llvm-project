@@ -220,12 +220,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!StartPtr)
     return false;
   const Loop *L = AR->getLoop();
-  bool CheckForNonNull, CheckForFreed;
+  bool CheckForNonNull;
   Value *StartPtrV = StartPtr->getValue();
   // We can ignore frees, as the fact that an object of a certain size existed
   // at the location *at some point* is sufficient to derive the nowrap fact.
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
-      DL, CheckForNonNull, CheckForFreed);
+      DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
   if (DerefBytes && CheckForNonNull)
     return false;
@@ -240,22 +240,20 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
-  RetainedKnowledge DerefRK;
-  getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
-                       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-                         if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         DerefRK = std::max(DerefRK, RK);
-                         return true;
-                       });
-  if (DerefRK) {
-    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
-    Type *CommonTy =
-        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
-    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
-    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
-    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
-  }
+  getKnowledgeForValue(
+      StartPtrV, Attribute::Dereferenceable, *AC,
+      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+        if (!isValidAssumeForContext(Assume, CtxI, DT))
+          return false;
+        const SCEV *DerefRKSCEV = SE.getSCEV(RK.IRArgValue);
+        Type *CommonTy =
+            SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+        DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+        DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+        DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
+        // Continue with other assumptions.
+        return false;
+      });
 
   if (DerefBytesSCEV->isZero())
     return false;

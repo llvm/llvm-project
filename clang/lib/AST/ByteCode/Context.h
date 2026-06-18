@@ -121,6 +121,7 @@ public:
   }
 
   bool canClassify(QualType T) const {
+    T = T.getCanonicalType();
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
@@ -133,6 +134,10 @@ public:
     if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
         T->isVectorType())
       return false;
+
+    if (const auto *D = T->getAsEnumDecl())
+      return D->isComplete();
+
     return classify(T) != std::nullopt;
   }
   bool canClassify(const Expr *E) const {

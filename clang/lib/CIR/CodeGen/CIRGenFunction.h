@@ -1753,6 +1753,9 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
+
+  LValue emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e);
+  LValue emitCXXConstructLValue(const CXXConstructExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>

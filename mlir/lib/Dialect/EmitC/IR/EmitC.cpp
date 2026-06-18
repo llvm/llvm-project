@@ -263,36 +263,6 @@ LogicalResult AddOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ApplyOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult ApplyOp::verify() {
-  StringRef applicableOperatorStr = getApplicableOperator();
-
-  // Applicable operator must not be empty.
-  if (applicableOperatorStr.empty())
-    return emitOpError("applicable operator must not be empty");
-
-  // Only `*` and `&` are supported.
-  if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
-    return emitOpError("applicable operator is illegal");
-
-  Type operandType = getOperand().getType();
-  Type resultType = getResult().getType();
-  if (applicableOperatorStr == "&") {
-    if (!llvm::isa<emitc::LValueType>(operandType))
-      return emitOpError("operand type must be an lvalue when applying `&`");
-    if (!llvm::isa<emitc::PointerType>(resultType))
-      return emitOpError("result type must be a pointer when applying `&`");
-  } else {
-    if (!llvm::isa<emitc::PointerType>(operandType))
-      return emitOpError("operand type must be a pointer when applying `*`");
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // AssignOp
 //===----------------------------------------------------------------------===//
 
@@ -334,6 +304,19 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
        emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
       (emitc::isIntegerIndexOrOpaqueType(output) ||
        emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
+}
+
+Speculation::Speculatability emitc::CastOp::getSpeculatability() {
+  return getPure() ? Speculation::Speculatable : Speculation::NotSpeculatable;
+}
+
+void emitc::CastOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (getPure())
+    return;
+
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
 }
 
 //===----------------------------------------------------------------------===//
@@ -994,7 +977,7 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -1003,14 +986,14 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
   else
     regions.push_back(RegionSuccessor(elseRegion));
 }
 
 ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange();
 }
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
@@ -1025,7 +1008,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back(RegionSuccessor::parent());
+      regions.emplace_back(RegionSuccessor(getOperation()));
   }
 }
 
@@ -1088,6 +1071,33 @@ LogicalResult emitc::LiteralOp::verify() {
     return emitOpError() << "value must not be empty";
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// MemberOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MemberOp::verify() {
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  bool resultIsWritable = isa<emitc::LValueType, emitc::ArrayType>(resultType);
+
+  // Make sure the operand and return type agree on value/memory semantics:
+  // If the operand is an lvalue it models a memory location and as such its
+  // elements are also memory locations: They require a load operation to use
+  // their value and they can be assigned new values.
+  // If the operand isn't an lvalue it models an aggregate SSA value and as
+  // such its elements are also SSA values: Their value can be used directly
+  // but they cannot be assigned to.
+
+  if (isa<emitc::LValueType>(operandType) && !resultIsWritable)
+    return emitOpError("lvalues must return lvalues or arrays");
+
+  if (!isa<emitc::LValueType>(operandType) && resultIsWritable)
+    return emitOpError("non-lvalues cannot return lvalues or arrays");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // SubOp
 //===----------------------------------------------------------------------===//
@@ -1718,14 +1728,6 @@ LogicalResult FieldOp::verify() {
 //===----------------------------------------------------------------------===//
 // GetFieldOp
 //===----------------------------------------------------------------------===//
-
-LogicalResult GetFieldOp::verify() {
-  auto parentClassOp = getOperation()->getParentOfType<emitc::ClassOp>();
-  if (!parentClassOp.getOperation())
-    return emitOpError(" must be nested within an emitc.class operation");
-
-  return success();
-}
 
 LogicalResult GetFieldOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   mlir::FlatSymbolRefAttr fieldNameAttr = getFieldNameAttr();

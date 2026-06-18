@@ -224,7 +224,8 @@ __cpp_lib_ranges_stride                                 202207L <ranges>
 __cpp_lib_ranges_to_container                           202202L <ranges>
 __cpp_lib_ranges_zip                                    202110L <ranges> <tuple> <utility>
 __cpp_lib_ratio                                         202306L <ratio>
-__cpp_lib_raw_memory_algorithms                         201606L <memory>
+__cpp_lib_raw_memory_algorithms                         202411L <memory>
+                                                        201606L // C++17
 __cpp_lib_rcu                                           202306L <rcu>
 __cpp_lib_reference_from_temporary                      202202L <type_traits>
 __cpp_lib_reference_wrapper                             202403L <functional>
@@ -619,6 +620,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_ranges_concat                        202403L
 # define __cpp_lib_ranges_indices                       202506L
 # define __cpp_lib_ratio                                202306L
+# undef  __cpp_lib_raw_memory_algorithms
+# define __cpp_lib_raw_memory_algorithms                202411L
 // # define __cpp_lib_rcu                                  202306L
 # define __cpp_lib_reference_wrapper                    202403L
 # define __cpp_lib_saturation_arithmetic                202603L

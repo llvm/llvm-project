@@ -775,7 +775,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
   // int32, that might be used as FP Fast Math Mode.
   std::vector<const MachineInstr *> SPIRVFloatTypes;
   // Hashtable to associate immediate values with the constant holding them.
-  std::unordered_map<int, const MachineInstr *> ConstMap;
+  DenseMap<int, const MachineInstr *> ConstMap;
   for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
     // Skip if the instruction is not OpTypeFloat or OpConstant.
     unsigned OpCode = MI->getOpcode();

@@ -1848,12 +1848,6 @@ class RegInputSystemI<bits<4> CRm, bits<3> Op2, string asm,
   let Inst{7-5} = Op2;
 }
 
-class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
-  bits<5> Xt;
-  let Inst{20-5} = 0b0111001110000000;
-  let Inst{4-0} = Xt;
-}
-
 // Hint instructions that take both a CRm and a 3-bit immediate.
 // NOTE: ideally, this would have mayStore = 0, mayLoad = 0, but we cannot
 // model patterns with sufficiently fine granularity
@@ -13095,19 +13089,6 @@ class LRCPC3NEONLdStSingle<bit L, dag oops, dag iops, string asm, string cst>
   let mayLoad = L;
   let mayStore = !not(L);
   let hasSideEffects = 1;
-}
-
-//---
-// Instrumentation Extension (FEAT_ITE)
-//---
-
-let Predicates = [HasITE] in
-def TRCIT : RtSystemI<0b0, (outs), (ins GPR64:$Rt), "trcit", "\t$Rt"> {
-  let Inst{20-19} = 0b01;
-  let Inst{18-16} = 0b011;
-  let Inst{15-12} = 0b0111;
-  let Inst{11-8}  = 0b0010;
-  let Inst{7-5}   = 0b111;
 }
 
 // * RCWCAS family

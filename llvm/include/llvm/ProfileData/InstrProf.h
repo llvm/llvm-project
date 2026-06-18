@@ -152,6 +152,10 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 /// of all function's PGO names.
 inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
 
+inline StringRef getInstrProfNamesVarPostfixVarName() {
+  return "__llvm_prf_nm_postfix";
+}
+
 inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
 /// Return the name of a covarage mapping variable (internal linkage)

@@ -202,8 +202,8 @@ public:
   explicit ObjectHandle(uint64_t Opaque) : Opaque(Opaque) {}
   uint64_t getOpaqueData() const { return Opaque; }
 
-  static ObjectHandle fromFileOffset(FileOffset Offset);
-  static ObjectHandle fromMemory(uintptr_t Ptr);
+  LLVM_ABI static ObjectHandle fromFileOffset(FileOffset Offset);
+  LLVM_ABI static ObjectHandle fromMemory(uintptr_t Ptr);
 
   friend bool operator==(const ObjectHandle &LHS, const ObjectHandle &RHS) {
     return LHS.Opaque == RHS.Opaque;
@@ -298,7 +298,7 @@ public:
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function will fault-in according to the policy.
-  Expected<bool> isMaterialized(ObjectID Ref);
+  LLVM_ABI Expected<bool> isMaterialized(ObjectID Ref);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function does not fault-in.
@@ -351,7 +351,8 @@ public:
   /// loading the data in memory and then writing it to a file, the client could
   /// clone the underlying file directly. The client *must not* write to or
   /// delete the underlying file, the path is provided only for reading/copying.
-  FileBackedData getInternalFileBackedObjectData(ObjectHandle Node) const;
+  LLVM_ABI FileBackedData
+  getInternalFileBackedObjectData(ObjectHandle Node) const;
 
   /// \returns Total size of stored objects.
   ///
@@ -362,9 +363,9 @@ public:
   /// \returns The precentage of space utilization of hard space limits.
   ///
   /// Return value is an integer between 0 and 100 for percentage.
-  unsigned getHardStorageLimitUtilization() const;
+  LLVM_ABI unsigned getHardStorageLimitUtilization() const;
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Hashing function type for validation.
   using HashingFuncT = function_ref<void(
@@ -376,7 +377,7 @@ public:
   /// corruption in stored objects, otherwise just validate the structure of
   /// CAS database.
   /// \param Hasher is the hashing function used for objects inside CAS.
-  Error validate(bool Deep, HashingFuncT Hasher) const;
+  LLVM_ABI Error validate(bool Deep, HashingFuncT Hasher) const;
 
   /// Checks that \p ID exists in the index. It is allowed to not have data
   /// associated with it.

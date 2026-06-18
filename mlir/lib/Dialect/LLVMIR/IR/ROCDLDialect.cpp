@@ -25,6 +25,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -64,6 +65,34 @@ void ROCDLDialect::initialize() {
   allowUnknownOperations();
   addInterfaces<ROCDLInlinerInterface>();
   declarePromisedInterface<gpu::TargetAttrInterface, ROCDLTargetAttr>();
+}
+
+LLVM::ModFlagBehavior
+BufferOOBModeModuleFlagAttr::getModuleFlagBehavior() const {
+  return LLVM::ModFlagBehavior::Max;
+}
+
+StringAttr BufferOOBModeModuleFlagAttr::getModuleFlagKey() const {
+  return StringAttr::get(getContext(),
+                         ROCDLDialect::getModuleFlagKeyBufferOOBModeName());
+}
+
+Attribute BufferOOBModeModuleFlagAttr::getModuleFlagValue() const {
+  return BufferOOBModeAttr::get(getContext(), getValue());
+}
+
+LLVM::ModFlagBehavior
+TBufferOOBModeModuleFlagAttr::getModuleFlagBehavior() const {
+  return LLVM::ModFlagBehavior::Max;
+}
+
+StringAttr TBufferOOBModeModuleFlagAttr::getModuleFlagKey() const {
+  return StringAttr::get(getContext(),
+                         ROCDLDialect::getModuleFlagKeyTBufferOOBModeName());
+}
+
+Attribute TBufferOOBModeModuleFlagAttr::getModuleFlagValue() const {
+  return BufferOOBModeAttr::get(getContext(), getValue());
 }
 
 LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,

@@ -874,7 +874,44 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     break;
   }
 
-  case CK_DerivedToBase:
+  case CK_DerivedToBase: {
+    assert(CGF.getLangOpts().HLSL &&
+           "Derived/Base casts in EmitAggExpr are only supported in HLSL");
+
+    // Create a temporary for the derived record, switch it out with the current
+    // Dest slot, and emit the derived value.
+    QualType DerivedTy = E->getSubExpr()->getType();
+    RawAddress DerivedAddr = CGF.CreateMemTempWithoutCast(DerivedTy);
+    AggValueSlot DerivedTmpSlot = AggValueSlot::forAddr(
+        DerivedAddr, DerivedTy.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+
+    AggValueSlot DestBaseSlot = Dest;
+    Dest = DerivedTmpSlot;
+
+    Visit(E->getSubExpr());
+
+    // Perform derived-to-base address conversion to get the address
+    // of the base record within the derived record. In HLSL this should
+    // always be same as the derived because of single inheritance, but let's
+    // do it properly.
+    Address BaseAddrInDerived = CGF.GetAddressOfBaseClass(
+        DerivedTmpSlot.getAddress(), DerivedTy->castAsCXXRecordDecl(),
+        E->path_begin(), E->path_end(),
+        /*NullCheckValue=*/false, E->getExprLoc());
+
+    AggValueSlot SrcBaseSlot = AggValueSlot::forAddr(
+        BaseAddrInDerived, E->getType().getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+
+    // Copy the base class to the original destination slot and restore it.
+    EmitCopy(E->getType(), DestBaseSlot, SrcBaseSlot);
+    Dest = DestBaseSlot;
+    break;
+  }
+
   case CK_BaseToDerived:
   case CK_UncheckedDerivedToBase: {
     llvm_unreachable("cannot perform hierarchy conversion in EmitAggExpr: "

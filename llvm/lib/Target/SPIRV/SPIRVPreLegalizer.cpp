@@ -893,15 +893,6 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static uint32_t convertFloatToSPIRVWord(float F) {
-  union {
-    float F;
-    uint32_t Spir;
-  } FPMaxError;
-  FPMaxError.F = F;
-  return FPMaxError.Spir;
-}
-
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
@@ -920,8 +911,7 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                 Intrinsic::spv_assign_fpmaxerror_decoration)) {
         ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
             MI.getOperand(2).getMetadata()->getOperand(0));
-        uint32_t OpValue =
-            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+        uint32_t OpValue = OpV->getValueAPF().bitcastToAPInt().getZExtValue();
 
         buildOpDecorate(MI.getOperand(1).getReg(), MIB,
                         SPIRV::Decoration::FPMaxErrorDecorationINTEL,

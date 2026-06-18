@@ -6182,6 +6182,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cbrtf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrtf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf16
+)
+
+add_fp_unittest(
   cbrtbf16_test
   SUITE
     libc-math-smoke-tests

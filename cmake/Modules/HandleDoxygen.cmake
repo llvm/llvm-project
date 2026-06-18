@@ -20,6 +20,11 @@ if (LLVM_ENABLE_DOXYGEN)
   llvm_find_program(dot)
   find_package(Doxygen REQUIRED)
   message(STATUS "Doxygen enabled (${DOXYGEN_VERSION}).")
+  # Create a global aggregate doxygen target for generating llvm and any/all
+  # subprojects doxygen documentation.
+  if (LLVM_BUILD_DOCS)
+    add_custom_target(doxygen ALL)
+  endif()
 
   if (DOXYGEN_FOUND)
     option(LLVM_DOXYGEN_EXTERNAL_SEARCH "Enable doxygen external search." OFF)

@@ -746,8 +746,8 @@ private:
       for (auto It = CandidateList.begin(), NextIt = std::next(It);
            NextIt != CandidateList.end(); It = NextIt, NextIt = std::next(It)) {
 
-        auto FC0 = *It;
-        auto FC1 = *NextIt;
+        const FusionCandidate &FC0 = *It;
+        const FusionCandidate &FC1 = *NextIt;
 
         assert(!LDT.isRemovedLoop(FC0.L) &&
                "Should not have removed loops in CandidateList!");

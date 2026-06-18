@@ -10,6 +10,7 @@
 #include "DXILAttributes.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -72,19 +73,138 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
-  const AttributeMask &AttrMask = getNonDXILAttributeMask();
-  for (auto &F : M) {
-    F.removeFnAttrs(AttrMask);
-    F.removeRetAttrs(AttrMask);
-    for (unsigned ArgNo = 0; ArgNo != F.arg_size(); ++ArgNo)
-      F.removeParamAttrs(ArgNo, AttrMask);
+  {
+    Function *DVDecl = nullptr;
 
-    for (auto &BB : F) {
-      for (auto &I : make_early_inc_range(reverse(BB))) {
-        if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
-          DL->eraseFromParent();
-          continue;
+    // Logically these should be variables in the
+    //  for (BasicBlock &BB : F) loop.
+    // They are defined here and cleared at the start of the loop body to avoid
+    // the cost of deconstruction and reconstruction.
+    DenseMap<DILocalVariable *, std::pair<Instruction *, DbgValueInst *>>
+        DbgValues;
+    DenseMap<std::pair<DILocalVariable *, DIExpression *>,
+             std::pair<Instruction *, DbgValueInst *>>
+        DbgValueFragments;
+    // Likewise, logically, this should be a variable in the
+    // for (Function &F : M) loop.
+    DenseSet<DILocalVariable *> DbgVariablesSeen;
+
+    const AttributeMask &AttrMask = getNonDXILAttributeMask();
+
+    for (Function &F : M) {
+      F.removeFnAttrs(AttrMask);
+      F.removeRetAttrs(AttrMask);
+      for (unsigned ArgNo = 0; ArgNo != F.arg_size(); ++ArgNo)
+        F.removeParamAttrs(ArgNo, AttrMask);
+
+      bool IsEntryBlock = true;
+      DbgVariablesSeen.clear();
+      for (BasicBlock &BB : F) {
+        Instruction *NextNonDebugInst = nullptr;
+        DbgValues.clear();
+        DbgValueFragments.clear();
+        for (Instruction &I : make_early_inc_range(reverse(BB))) {
+          I.eraseMetadataIf([](unsigned KindID, MDNode *) {
+            return KindID == LLVMContext::MD_DIAssignID;
+          });
+          if (!isa<DbgInfoIntrinsic>(I)) {
+            NextNonDebugInst = &I;
+            continue;
+          }
+          if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
+            DL->eraseFromParent();
+            continue;
+          }
+          // Process both llvm.dbg.value and llvm.dbg.assign here. We convert
+          // llvm.dbg.assign to llvm.dbg.value by dropping the last arguments,
+          // and remove redundant llvm.dbg.values.
+          if (auto *DV = dyn_cast<DbgValueInst>(&I)) {
+            // Keep track of the last location where we saw any debug value for
+            // a variable.
+            DILocalVariable *V = DV->getVariable();
+            DIExpression *E = DV->getExpression();
+            // If this is already an llvm.dbg.value instruction that we can
+            // keep, just do that, otherwise convert it.
+            auto *Val = cast<MetadataAsValue>(DV->getArgOperand(0));
+            auto *Var = cast<MetadataAsValue>(DV->getArgOperand(1));
+            auto *Expr = cast<MetadataAsValue>(DV->getArgOperand(2));
+            bool Replace = DV->getIntrinsicID() != Intrinsic::dbg_value;
+            if (!isa<ValueAsMetadata>(Val->getMetadata())) {
+              // This may be a DIArgList which is not supported in LLVM 3.7. If
+              // it is, we cannot record the new value, but we still need to
+              // kill any old value. Do this by poison. We do not know the
+              // correct type to use here and arbitrarily use i1.
+              // This should never be anything other than ValueAsMetadata or
+              // DIArgList, but in manually constructed LLVM IR, it can be.
+              // Handle this gracefully by also replacing it with poison.
+              Val = MetadataAsValue::get(
+                  M.getContext(), ConstantAsMetadata::get(PoisonValue::get(
+                                      Type::getInt1Ty(M.getContext()))));
+              E = DIExpression::get(M.getContext(), {});
+              Expr = MetadataAsValue::get(M.getContext(), E);
+              Replace = true;
+            }
+            std::pair<Instruction *, DbgValueInst *> &DbgValue = DbgValues[V];
+            std::pair<Instruction *, DbgValueInst *> &DbgValueFragment =
+                DbgValueFragments[{V, E}];
+            if (DbgValue.second) {
+              // If there is a later value of the same fragment at the same
+              // location, this value is redundant.
+              if (DbgValueFragment.first == NextNonDebugInst) {
+                DV->eraseFromParent();
+                continue;
+              }
+              // If there is a later identical value of the same fragment at a
+              // later point, and there have been no intervening values of
+              // different possibly overlapping fragments, that later value is
+              // redundant.
+              if (DbgValueFragment.second &&
+                  DbgValueFragment.second == DbgValue.second &&
+                  DbgValueFragment.second->getValue() == DV->getValue()) {
+                DbgValue.second->eraseFromParent();
+              }
+            }
+            DbgValueInst *NewDV;
+            if (Replace) {
+              if (!DVDecl) {
+                DVDecl =
+                    Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
+                AttributeMask AM;
+                for (Attribute A : DVDecl->getAttributes().getFnAttrs())
+                  if (A.isStringAttribute() ||
+                      (A.getKindAsEnum() != Attribute::NoUnwind &&
+                       A.getKindAsEnum() != Attribute::Memory))
+                    AM.addAttribute(A);
+                DVDecl->removeFnAttrs(AM);
+              }
+              NewDV = cast<DbgValueInst>(
+                  CallInst::Create(DVDecl, {Val, Var, Expr}, {}, "",
+                                   std::next(DV->getIterator())));
+              NewDV->setTailCall();
+              NewDV->setDebugLoc(DV->getDebugLoc());
+              DV->eraseFromParent();
+            } else {
+              NewDV = DV;
+            }
+            DbgValue = DbgValueFragment = {NextNonDebugInst, NewDV};
+            continue;
+          }
         }
+        // If this is the entry block, if the first value we see for each debug
+        // value is undef, it is redundant.
+        if (IsEntryBlock) {
+          for (Instruction &I : make_early_inc_range(BB)) {
+            auto *DV = dyn_cast<DbgValueInst>(&I);
+            if (!DV || DbgVariablesSeen.contains(DV->getVariable()))
+              continue;
+            if (isa<UndefValue>(DV->getValue())) {
+              DV->eraseFromParent();
+              continue;
+            }
+            DbgVariablesSeen.insert(DV->getVariable());
+          }
+        }
+        IsEntryBlock = false;
       }
     }
   }
@@ -200,14 +320,23 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
   for (DIGlobalVariableExpression *GVE : DIF.global_variables())
     Res.MDReplace.insert({GVE, GVE->getVariable()});
 
+  for (DIScope *S : DIF.scopes()) {
+    if (auto *CB = dyn_cast<DICommonBlock>(S)) {
+      const Metadata *Scope = CB->getScope();
+      Scope = Res.MDReplace.lookup_or(Scope, Scope);
+      Res.MDReplace.insert({CB, Scope});
+    }
+  }
+
   for (DIType *T : DIF.types()) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {
       DIType *BT = SR->getBaseType();
       if (!BT)
-        BT = DIBasicType::get(
-            SR->getContext(), dwarf::DW_TAG_base_type, SR->getName(),
-            SR->getSizeInBits(), SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
-            SR->getNumExtraInhabitants(), /*DataSizeInBits=*/0, SR->getFlags());
+        BT = DIBasicType::get(SR->getContext(), dwarf::DW_TAG_base_type,
+                              SR->getName(), SR->getSizeInBits(),
+                              SR->getAlignInBits(), dwarf::DW_ATE_unsigned,
+                              SR->getNumExtraInhabitants(),
+                              /*DataSizeInBits=*/0, SR->getFlags());
       Res.MDReplace.insert({T, BT});
     }
   }

@@ -10230,60 +10230,111 @@ TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
 
 TEST(APFloatTest, expf) {
   // exp(+-0) = 1.
-  EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f)).convertToFloat());
-  EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f)).convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f))->convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f))->convertToFloat());
   // exp(+Inf) = +Inf.
   EXPECT_EQ(std::numeric_limits<float>::infinity(),
             llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), false))
-                .convertToFloat());
+                ->convertToFloat());
   // exp(-Inf) = 0.
-  EXPECT_EQ(
-      0.0f,
-      llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true)).convertToFloat());
+  EXPECT_EQ(0.0f, llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true))
+                      ->convertToFloat());
   // exp(NaN) = NaN.
-  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle())).isNaN());
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()))->isNaN());
   // exp(1)
-  EXPECT_EQ(0x1.5bf0a8p1f, llvm::exp(APFloat(1.0f)).convertToFloat());
+  EXPECT_EQ(0x1.5bf0a8p1f, llvm::exp(APFloat(1.0f))->convertToFloat());
   // exp(float max)
   EXPECT_EQ(std::numeric_limits<float>::infinity(),
             llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false))
-                .convertToFloat());
+                ->convertToFloat());
   // exp(min_denormal)
   EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false))
-                      .convertToFloat());
+                      ->convertToFloat());
   // exp(-1)
-  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f)).convertToFloat());
+  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f))->convertToFloat());
   // exp(-90)
-  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f)).convertToFloat());
+  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f))->convertToFloat());
 }
 
 TEST(APFloatTest, exp) {
   // exp(+-0) = 1.
-  EXPECT_EQ(1.0, llvm::exp(APFloat(0.0)).convertToDouble());
-  EXPECT_EQ(1.0, llvm::exp(APFloat(-0.0)).convertToDouble());
+  EXPECT_EQ(1.0, llvm::exp(APFloat(0.0))->convertToDouble());
+  EXPECT_EQ(1.0, llvm::exp(APFloat(-0.0))->convertToDouble());
   // exp(+Inf) = +Inf.
   EXPECT_EQ(std::numeric_limits<double>::infinity(),
             llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), false))
-                .convertToDouble());
+                ->convertToDouble());
   // exp(-Inf) = 0.
   EXPECT_EQ(0.0, llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), true))
-                     .convertToDouble());
+                     ->convertToDouble());
   // exp(NaN) = NaN.
-  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEdouble())).isNaN());
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEdouble()))->isNaN());
   // exp(1)
-  EXPECT_EQ(0x1.5bf0a8b145769p1, llvm::exp(APFloat(1.0)).convertToDouble());
+  EXPECT_EQ(0x1.5bf0a8b145769p1, llvm::exp(APFloat(1.0))->convertToDouble());
   // exp(float max)
   EXPECT_EQ(std::numeric_limits<double>::infinity(),
             llvm::exp(APFloat::getLargest(APFloat::IEEEdouble(), false))
-                .convertToDouble());
+                ->convertToDouble());
   // exp(min_denormal)
   EXPECT_EQ(1.0, llvm::exp(APFloat::getSmallest(APFloat::IEEEdouble(), false))
-                     .convertToDouble());
+                     ->convertToDouble());
   // exp(-1)
-  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0)).convertToDouble());
+  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0))->convertToDouble());
   // exp(-710)
   EXPECT_EQ(0x1.9c017e9459e18p-1025,
-            llvm::exp(APFloat(-710.0)).convertToDouble());
+            llvm::exp(APFloat(-710.0))->convertToDouble());
+}
+
+TEST(APFloatTest, exp_exceptions) {
+  APFloat::opStatus status;
+
+  // exp(0) should be exact (no inexact, no overflow/underflow -> opOK).
+  status = APFloat::opInvalidOp; // initialize to a dummy flag
+  auto res1 = llvm::exp(APFloat(0.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res1.has_value());
+  EXPECT_EQ(APFloat::opOK, status);
+
+  // exp(1) should be inexact (not representing an exact power of 2).
+  status = APFloat::opOK;
+  auto res2 = llvm::exp(APFloat(1.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res2.has_value());
+  EXPECT_EQ(APFloat::opInexact, status);
+
+  // exp(float max) should overflow and be inexact.
+  status = APFloat::opOK;
+  auto res3 = llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res3.has_value());
+  EXPECT_EQ(
+      static_cast<APFloat::opStatus>(APFloat::opOverflow | APFloat::opInexact),
+      status);
+
+  // exp(-90.0f) should underflow and be inexact.
+  status = APFloat::opOK;
+  auto res4 = llvm::exp(APFloat(-90.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res4.has_value());
+  EXPECT_EQ(
+      static_cast<APFloat::opStatus>(APFloat::opUnderflow | APFloat::opInexact),
+      status);
+
+  // exp(NaN) should be quiet and not raise any exceptions.
+  status = APFloat::opInvalidOp;
+  auto res5 = llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res5.has_value());
+  EXPECT_EQ(APFloat::opOK, status);
+
+  // exp(sNaN) should raise an invalid operation exception.
+  status = APFloat::opOK;
+  auto res6 = llvm::exp(APFloat::getSNaN(APFloat::IEEEsingle()),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res6.has_value());
+  EXPECT_EQ(APFloat::opInvalidOp, status);
+
+  // exp with unsupported rounding mode or unsupported semantics should
+  // return std::nullopt.
+  EXPECT_FALSE(llvm::exp(APFloat(1.0f), APFloat::rmTowardPositive).has_value());
+  EXPECT_FALSE(llvm::exp(APFloat::getZero(APFloat::IEEEhalf())).has_value());
 }
 
 } // namespace

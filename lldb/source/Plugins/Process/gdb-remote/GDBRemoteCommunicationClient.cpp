@@ -2425,9 +2425,9 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
     packet.PutCString("qfProcessInfo");
     if (!match_info.MatchAllProcesses()) {
       packet.PutChar(':');
-      const char *name = match_info.GetProcessInfo().GetName();
+      llvm::StringRef name = match_info.GetProcessInfo().GetName();
       bool has_name_match = false;
-      if (name && name[0]) {
+      if (!name.empty()) {
         has_name_match = true;
         NameMatch name_match_type = match_info.GetNameMatchType();
         switch (name_match_type) {
@@ -2457,7 +2457,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
         }
         if (has_name_match) {
           packet.PutCString("name:");
-          packet.PutBytesAsRawHex8(name, ::strlen(name));
+          packet.PutBytesAsRawHex8(name.data(), name.size());
           packet.PutChar(';');
         }
       }

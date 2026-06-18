@@ -33,6 +33,19 @@
 // Not specified by POSIX, added in SVR4
 #define INADDR_LOOPBACK __LLVM_LIBC_CAST(static_cast, in_addr_t, 0x7f000001)
 
+#define IN6ADDR_ANY_INIT                                                       \
+  {                                                                            \
+    {                                                                          \
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }                       \
+    }                                                                          \
+  }
+#define IN6ADDR_LOOPBACK_INIT                                                  \
+  {                                                                            \
+    {                                                                          \
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }                       \
+    }                                                                          \
+  }
+
 // The following macros test for special IPv6 addresses. Each macro is of type
 // int and takes a single argument of type const struct in6_addr *:
 // https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/netinet_in.h.html

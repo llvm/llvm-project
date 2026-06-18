@@ -234,7 +234,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -2212,6 +2212,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   CGPM.addPass(ArgumentPromotionPass());
   CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
   CGPM.addPass(CoroAnnotationElidePass());
+  invokeCGSCCOptimizerLateEPCallbacks(CGPM, Level);
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
   FunctionPassManager FPM;

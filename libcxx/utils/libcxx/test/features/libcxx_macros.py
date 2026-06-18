@@ -34,6 +34,7 @@ macros = {
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
+    "_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE": "libcpp-abi-use-small-deque-block-size",
 }
 for macro, feature in macros.items():
     features.append(

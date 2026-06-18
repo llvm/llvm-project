@@ -450,6 +450,13 @@ extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
   GlobalParser->MoreHelp.push_back(Help);
 }
 
+Option::Option(NumOccurrencesFlag OccurrencesFlag, OptionHidden Hidden)
+    : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
+      HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
+      FullyInitialized(false), Position(0), AdditionalVals(0) {
+  Categories.push_back(&getGeneralCategory());
+}
+
 void Option::addArgument() {
   GlobalParser->addOption(this);
   FullyInitialized = true;

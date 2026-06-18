@@ -334,7 +334,10 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed(ST->hasPackedFP32Ops() ? 64 : 32);
+    return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
+                                  ? 128
+                              : ST->hasPackedFP32Ops() ? 64
+                                                       : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -353,7 +356,10 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
          : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
          : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-                                                       : 1;
+         : (ElemWidth == 64 &&
+            (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
+             ? 2
+             : 1;
 }
 
 bool GCNTTIImpl::preferSLPInstCountCheck() const {
@@ -566,6 +572,9 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     return getFullRateInstrCost() * LT.first * NElts;
   case ISD::ADD:
   case ISD::SUB:
+    if (SLT == MVT::i64 && ST->hasPackedU64Ops())
+      NElts = (NElts + 1) / 2;
+    [[fallthrough]];
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -618,8 +627,11 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
-    if (SLT == MVT::f64)
+    if (SLT == MVT::f64) {
+      if (ST->hasPackedFP64Ops())
+        NElts = (NElts + 1) / 2;
       return LT.first * NElts * get64BitInstrCost(CostKind);
+    }
 
     if (ST->has16BitInsts() && SLT == MVT::f16)
       NElts = (NElts + 1) / 2;
@@ -882,7 +894,9 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasPackedFP32Ops() && SLT == MVT::f32))
+      (ST->hasPackedFP32Ops() && SLT == MVT::f32) ||
+      (ST->hasPackedFP64Ops() && SLT == MVT::f64) ||
+      (ST->hasPackedU64Ops() && SLT == MVT::i64))
     NElts = (NElts + 1) / 2;
 
   // TODO: Get more refined intrinsic costs?
@@ -1026,16 +1040,15 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
-      // Some i8 inserts and extracts are free so we want to reduce the
-      // cost to avoid scalarization. We limit the zero cost cases to avoid
-      // adversely impacting all i8 vectorizing.
-      if (EltSize == 8) {
-        unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
-        if (NumElts >= 4 && isPowerOf2_32(NumElts)) {
-          // Extracts at indices aligned to 32-bit boundaries (0, 4, 8, 12 for
-          // v16i8) are free as they access the low byte of each VGPR. Other
-          // indices require bit manipulation (shifts/byte selects) and cost 1.
-          return Index % 4 == 0 ? 0 : 1;
+      // Extract element sequences of consecutive i8 values that match a
+      // register size are free most likely. It is not possible to know
+      // if this extract is part of a consecutive sequence so this may
+      // apply more generally.
+      if (Opcode == Instruction::ExtractElement && EltSize == 8) {
+        if (auto *FVTy = dyn_cast<FixedVectorType>(ValTy)) {
+          unsigned NumElts = FVTy->getNumElements();
+          if (NumElts >= 4 && isPowerOf2_32(NumElts))
+            return 0;
         }
       }
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,

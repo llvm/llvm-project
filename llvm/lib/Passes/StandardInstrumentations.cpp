@@ -14,6 +14,8 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -40,8 +42,6 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1636,9 +1636,9 @@ public:
       : DisplayElement(Colour), Content(Content) {}
 
   // Iterator to the child nodes.  Required by GraphWriter.
-  using ChildIterator = std::unordered_set<DisplayNode *>::const_iterator;
-  ChildIterator children_begin() const { return Children.cbegin(); }
-  ChildIterator children_end() const { return Children.cend(); }
+  using ChildIterator = SmallPtrSet<DisplayNode *, 0>::const_iterator;
+  ChildIterator children_begin() const { return Children.begin(); }
+  ChildIterator children_end() const { return Children.end(); }
 
   // Iterator for the edges.  Required by GraphWriter.
   using EdgeIterator = std::vector<DisplayEdge *>::const_iterator;
@@ -1674,8 +1674,8 @@ protected:
   std::vector<DisplayEdge> Edges;
 
   std::vector<DisplayEdge *> EdgePtrs;
-  std::unordered_set<DisplayNode *> Children;
-  std::unordered_map<const DisplayNode *, const DisplayEdge *> EdgeMap;
+  SmallPtrSet<DisplayNode *, 0> Children;
+  DenseMap<const DisplayNode *, const DisplayEdge *> EdgeMap;
 
   // Safeguard adding of edges.
   bool AllEdgesCreated = false;

@@ -160,8 +160,8 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
-static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
-                               ArrayRef<unsigned> Indexes,
+static void removeFunctionArgs(const DiagnosticBuilder &Diag,
+                               const CallExpr &Call, ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
   SmallVector<unsigned> Sorted(Indexes);
   llvm::sort(Sorted);
@@ -211,7 +211,7 @@ static bool isResultUsed(const CallExpr &Call,
   return isResultUsed(DynTypedNode::create(Call), Result);
 }
 
-static void insertAccessor(DiagnosticBuilder &Diag, const CallExpr &Call,
+static void insertAccessor(const DiagnosticBuilder &Diag, const CallExpr &Call,
                            StringRef Accessor, const ASTContext &Ctx) {
   const SourceLocation End = Lexer::getLocForEndOfToken(
       Call.getEndLoc(), 0, Ctx.getSourceManager(), Ctx.getLangOpts());

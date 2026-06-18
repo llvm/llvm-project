@@ -75,7 +75,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_acos(__CLC_GENTYPE x) {
 static _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_acos_identity_reduction(
     __CLC_GENTYPE x, __CLC_GENTYPE r, __CLC_GENTYPE u, __CLC_GENTYPE z) {
   __CLC_EP_PAIR s = __clc_ep_sqrt(r);
-  __CLC_GENTYPE zm = __clc_mad(0x1.dd9ad336a0500p+0, 0x1.af154eeb562d6p+0,
+  __CLC_GENTYPE zm = __clc_fma(0x1.dd9ad336a0500p+0, 0x1.af154eeb562d6p+0,
                                -2.0 * __clc_mad(s.hi, u, s.hi));
   __CLC_GENTYPE zp = 2.0 * (s.hi + __clc_mad(s.hi, u, s.lo));
   z = x < 0.0 ? zm : zp;
@@ -114,7 +114,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_acos(__CLC_GENTYPE x) {
                             0x1.8ed60a300c8d2p-7), 0x1.c6fa84b77012bp-7), 0x1.1c6c111dccb70p-6), 0x1.6e89f0a0adacfp-6),
                             0x1.f1c72c668963fp-6), 0x1.6db6db41ce4bdp-5), 0x1.333333336fd5bp-4), 0x1.5555555555380p-3);
 
-  __CLC_GENTYPE z = __clc_mad(0x1.dd9ad336a0500p-1, 0x1.af154eeb562d6p+0,
+  __CLC_GENTYPE z = __clc_fma(0x1.dd9ad336a0500p-1, 0x1.af154eeb562d6p+0,
                               -__clc_mad(x, u, x));
 
 #ifdef __CLC_SCALAR
@@ -156,9 +156,9 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_acos(__CLC_GENTYPE x) {
 
   __CLC_GENTYPE s = __clc_sqrt_fast(r);
   __CLC_GENTYPE ztp = 2.0h * __clc_mad(s, u, s);
-  __CLC_GENTYPE ztn = __clc_mad(0x1.ea8p+0h, 0x1.a3cp+0h, -ztp);
+  __CLC_GENTYPE ztn = __clc_fma(0x1.ea8p+0h, 0x1.a3cp+0h, -ztp);
   __CLC_GENTYPE zt = x < 0.0h ? ztn : ztp;
-  __CLC_GENTYPE z = __clc_mad(0x1.ea8p-1h, 0x1.a3cp+0h, -__clc_mad(x, u, x));
+  __CLC_GENTYPE z = __clc_fma(0x1.ea8p-1h, 0x1.a3cp+0h, -__clc_mad(x, u, x));
   z = ax > 0.5h ? zt : z;
 
   return z;
