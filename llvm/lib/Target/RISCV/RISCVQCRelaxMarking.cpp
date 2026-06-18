@@ -84,7 +84,7 @@ static bool isUImm2(const MachineOperand &MO) {
 }
 
 static bool isGPRC(const MachineOperand &MO) {
-  return MO.isReg() && RISCV::GPRCRegClass.contains(MO.getReg());
+  return RISCV::GPRCRegClass.contains(MO.getReg());
 }
 
 static unsigned getQCMarkedOpcode(const MachineInstr &MI,

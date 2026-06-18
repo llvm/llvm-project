@@ -324,3 +324,314 @@ define zeroext i8 @load_unsigned_byte_optnone() nounwind optnone noinline {
   %1 = load i8, ptr @global, align 1
   ret i8 %1
 }
+
+define void @store_byte(i8 %a) nounwind {
+; NO-C-LABEL: store_byte:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    sb a0, 0(a1), %qc.access(global)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_byte:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    c.sb a0, 0(a1), %qc.access(global)
+; WITH-C-NEXT:    ret
+  store i8 %a, ptr @global, align 1
+  ret void
+}
+
+define void @store_byte_offset(i8 %a) nounwind {
+; NO-C-LABEL: store_byte_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global+1
+; NO-C-NEXT:    sb a0, 0(a1), %qc.access(global+1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_byte_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global+1
+; WITH-C-NEXT:    c.sb a0, 0(a1), %qc.access(global+1)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i8, ptr @global, i32 1
+  store i8 %a, ptr %1, align 1
+  ret void
+}
+
+define void @store_two_byte(i16 %a) nounwind {
+; NO-C-LABEL: store_two_byte:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    srli a2, a0, 8
+; NO-C-NEXT:    sb a0, 0(a1)
+; NO-C-NEXT:    sb a2, 1(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_two_byte:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    srli a2, a0, 8
+; WITH-C-NEXT:    sb a0, 0(a1)
+; WITH-C-NEXT:    sb a2, 1(a1)
+; WITH-C-NEXT:    ret
+  store i16 %a, ptr @global, align 1
+  ret void
+}
+
+define void @store_byte_twice(i8 %a) nounwind {
+; NO-C-LABEL: store_byte_twice:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    sb a0, 0(a1)
+; NO-C-NEXT:    sb a0, 0(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_byte_twice:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    sb a0, 0(a1)
+; WITH-C-NEXT:    sb a0, 0(a1)
+; WITH-C-NEXT:    ret
+  store volatile i8 %a, ptr @global, align 1
+  store volatile i8 %a, ptr @global, align 1
+  ret void
+}
+
+define void @store_byte_twice_offset(i8 %a) nounwind {
+; NO-C-LABEL: store_byte_twice_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global+1
+; NO-C-NEXT:    sb a0, 0(a1)
+; NO-C-NEXT:    sb a0, 0(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_byte_twice_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global+1
+; WITH-C-NEXT:    sb a0, 0(a1)
+; WITH-C-NEXT:    sb a0, 0(a1)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i8, ptr @global, i32 1
+  store volatile i8 %a, ptr %1, align 1
+  store volatile i8 %a, ptr %1, align 1
+  ret void
+}
+
+
+define void @store_halfword(i16 %a) nounwind {
+; NO-C-LABEL: store_halfword:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    sh a0, 0(a1), %qc.access(global)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_halfword:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    c.sh a0, 0(a1), %qc.access(global)
+; WITH-C-NEXT:    ret
+  store i16 %a, ptr @global, align 2
+  ret void
+}
+
+define void @store_halfword_offset(i16 %a) nounwind {
+; NO-C-LABEL: store_halfword_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global+2
+; NO-C-NEXT:    sh a0, 0(a1), %qc.access(global+2)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_halfword_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global+2
+; WITH-C-NEXT:    c.sh a0, 0(a1), %qc.access(global+2)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i8, ptr @global, i32 2
+  store i16 %a, ptr %1, align 2
+  ret void
+}
+
+define void @store_two_halfword(i32 %a) nounwind {
+; NO-C-LABEL: store_two_halfword:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    srli a2, a0, 16
+; NO-C-NEXT:    sh a0, 0(a1)
+; NO-C-NEXT:    sh a2, 2(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_two_halfword:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    srli a2, a0, 16
+; WITH-C-NEXT:    sh a0, 0(a1)
+; WITH-C-NEXT:    sh a2, 2(a1)
+; WITH-C-NEXT:    ret
+  store i32 %a, ptr @global, align 2
+  ret void
+}
+
+define void @store_halfword_twice(i16 %a) nounwind {
+; NO-C-LABEL: store_halfword_twice:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    sh a0, 0(a1)
+; NO-C-NEXT:    sh a0, 0(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_halfword_twice:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    sh a0, 0(a1)
+; WITH-C-NEXT:    sh a0, 0(a1)
+; WITH-C-NEXT:    ret
+  store volatile i16 %a, ptr @global, align 2
+  store volatile i16 %a, ptr @global, align 2
+  ret void
+}
+
+define void @store_halfword_twice_offset(i16 %a) nounwind {
+; NO-C-LABEL: store_halfword_twice_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global+4
+; NO-C-NEXT:    sh a0, 0(a1)
+; NO-C-NEXT:    sh a0, 0(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_halfword_twice_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global+4
+; WITH-C-NEXT:    sh a0, 0(a1)
+; WITH-C-NEXT:    sh a0, 0(a1)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i16, ptr @global, i32 2
+  store volatile i16 %a, ptr %1, align 2
+  store volatile i16 %a, ptr %1, align 2
+  ret void
+}
+
+
+define void @store_word(i32 %a) nounwind {
+; NO-C-LABEL: store_word:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    c.sw a0, 0(a1), %qc.access(global)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_word:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    c.sw a0, 0(a1), %qc.access(global)
+; WITH-C-NEXT:    ret
+  store i32 %a, ptr @global, align 4
+  ret void
+}
+
+define void @store_word_offset(i32 %a) nounwind {
+; NO-C-LABEL: store_word_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global+4
+; NO-C-NEXT:    c.sw a0, 0(a1), %qc.access(global+4)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_word_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global+4
+; WITH-C-NEXT:    c.sw a0, 0(a1), %qc.access(global+4)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i32, ptr @global, i32 1
+  store i32 %a, ptr %1, align 4
+  ret void
+}
+
+define void @store_two_word(i64 %a) nounwind {
+; NO-C-LABEL: store_two_word:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a2, global
+; NO-C-NEXT:    sw a0, 0(a2)
+; NO-C-NEXT:    sw a1, 4(a2)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_two_word:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a2, global
+; WITH-C-NEXT:    sw a0, 0(a2)
+; WITH-C-NEXT:    sw a1, 4(a2)
+; WITH-C-NEXT:    ret
+  store i64 %a, ptr @global, align 4
+  ret void
+}
+
+define void @store_word_twice(i32 %a) nounwind {
+; NO-C-LABEL: store_word_twice:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global
+; NO-C-NEXT:    sw a0, 0(a1)
+; NO-C-NEXT:    sw a0, 0(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_word_twice:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global
+; WITH-C-NEXT:    sw a0, 0(a1)
+; WITH-C-NEXT:    sw a0, 0(a1)
+; WITH-C-NEXT:    ret
+  store volatile i32 %a, ptr @global, align 4
+  store volatile i32 %a, ptr @global, align 4
+  ret void
+}
+
+define void @store_word_twice_offset(i32 %a) nounwind {
+; NO-C-LABEL: store_word_twice_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a1, global+8
+; NO-C-NEXT:    sw a0, 0(a1)
+; NO-C-NEXT:    sw a0, 0(a1)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_word_twice_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a1, global+8
+; WITH-C-NEXT:    sw a0, 0(a1)
+; WITH-C-NEXT:    sw a0, 0(a1)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i32, ptr @global, i32 2
+  store volatile i32 %a, ptr %1, align 4
+  store volatile i32 %a, ptr %1, align 4
+  ret void
+}
+
+define void @store_word_self() nounwind {
+; NO-C-LABEL: store_word_self:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a0, global
+; NO-C-NEXT:    sw a0, 0(a0)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_word_self:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a0, global
+; WITH-C-NEXT:    sw a0, 0(a0)
+; WITH-C-NEXT:    ret
+  store ptr @global, ptr @global, align 4
+  ret void
+}
+
+define void @store_word_self_offset() nounwind {
+; NO-C-LABEL: store_word_self_offset:
+; NO-C:       # %bb.0:
+; NO-C-NEXT:    qc.e.li a0, global
+; NO-C-NEXT:    addi a1, a0, 4
+; NO-C-NEXT:    sw a1, 4(a0)
+; NO-C-NEXT:    ret
+;
+; WITH-C-LABEL: store_word_self_offset:
+; WITH-C:       # %bb.0:
+; WITH-C-NEXT:    qc.e.li a0, global
+; WITH-C-NEXT:    addi a1, a0, 4
+; WITH-C-NEXT:    sw a1, 4(a0)
+; WITH-C-NEXT:    ret
+  %1 = getelementptr i32, ptr @global, i32 1
+  store ptr %1, ptr %1, align 4
+  ret void
+}
