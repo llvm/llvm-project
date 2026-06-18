@@ -393,6 +393,17 @@ New Compiler Flags
   a hostname when generates the hashes. Known issues -- does not remap the
   source file pathes within PCH/PCM files.
 
+- New ``-cl`` option ``/experimental:deterministic`` added to match CL's option.
+  This enables warning emission on usage of non-deterministic macros __DATE__,
+  __TIME__ and __TIMESTAMP__ and provides reproducable COFF's timestamp for
+  the output object files.
+
+- New ``-cl`` option ``/d1nodatetime`` added to match CL's option. This option
+  undefines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to allow
+  reproducable builds. These macros can be redefined from the command line if
+  necessary. ``/d1nodatetime-`` can be used to turn this feature off if
+  necessary to override the common build settings.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -409,6 +420,10 @@ Modified Compiler Flags
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+
+- The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
+  and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
+  "1". The previous functionality remains unchanged.
 
 Removed Compiler Flags
 ----------------------
@@ -701,6 +716,7 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
@@ -723,6 +739,11 @@ Bug Fixes to Attribute Support
 - Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
   section type conflict with a declaration whose name is not a simple identifier,
   such as a lambda's call operator. (#GH192264)
+- Fixed a regression where attributed types (such as those carrying ``_Nonnull``/``_Nullable`` attributes)
+  were not deduplicated, because the attributes' arguments were not taken into
+  account when uniquing them. The duplications could substantially increase the
+  size of precompiled headers and modules (PCH/PCM), and the time spent loading
+  them. (#GH200961)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -784,6 +805,7 @@ Bug Fixes to AST Handling
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
 - Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
+- Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

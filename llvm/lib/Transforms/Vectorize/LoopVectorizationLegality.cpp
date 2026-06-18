@@ -1358,11 +1358,21 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 
 bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+
+  // Without a latch, we cannot properly answer blockNeedsPredication,
+  // return early.
+  if (!Latch) {
+    assert(ORE->allowExtraAnalysis(DEBUG_TYPE) &&
+           !canVectorizeLoopCFG(TheLoop, /*UseVPlanNativePath=*/false) &&
+           "Loop shape should have been rejected by earlier checks");
+    return false;
+  }
+
   // When vectorizing early exits, create predicates for the latch block only.
   // For a single early exit, it must be a direct predecessor of the latch.
   // For multiple early exits, they form a chain where each exiting block
   // dominates all subsequent blocks up to the latch.
-  BasicBlock *Latch = TheLoop->getLoopLatch();
   if (hasUncountableEarlyExit())
     return BB == Latch;
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
@@ -1471,13 +1481,14 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
           auto *CurrI = dyn_cast<Instruction>(CurrV);
           if (!CurrI || !TheLoop->contains(CurrI)) {
+            BasicBlock *LoopPred = TheLoop->getLoopPredecessor();
+            Instruction *CtxI = LoopPred ? LoopPred->getTerminator() : nullptr;
+            assert((CtxI || ORE->allowExtraAnalysis(DEBUG_TYPE)) &&
+                   "Loop with multiple predecessors should have been rejected "
+                   "early.");
             // If operands from outside the loop may be poison then Ptr may also
             // be poison.
-            if (!isGuaranteedNotToBePoison(CurrV, AC,
-                                           TheLoop->getLoopPredecessor()
-                                               ->getTerminator()
-                                               ->getIterator(),
-                                           DT))
+            if (!isGuaranteedNotToBePoison(CurrV, AC, CtxI, DT))
               return false;
             continue;
           }
@@ -1539,8 +1550,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 }
 
 // Helper function to canVectorizeLoopNestCFG.
-bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
-                                                    bool UseVPlanNativePath) {
+bool LoopVectorizationLegality::canVectorizeLoopCFG(
+    Loop *Lp, bool UseVPlanNativePath) const {
   assert((UseVPlanNativePath || Lp->isInnermost()) &&
          "VPlan-native path is not enabled.");
 

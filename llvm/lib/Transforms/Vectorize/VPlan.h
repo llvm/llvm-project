@@ -4285,10 +4285,7 @@ public:
 
   /// Return the cost of this VPScalarIVStepsRecipe.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   VPValue *getStepValue() const { return getOperand(1); }
 
