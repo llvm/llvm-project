@@ -87,7 +87,7 @@ class ObjectProxy;
 ///   long as \a ObjectStore.
 /// - \a readRef() and \a forEachRef() iterate through the references in an
 ///   object. There is no lifetime assumption.
-class ObjectStore {
+class LLVM_ABI ObjectStore {
   friend class ObjectProxy;
   void anchor();
 
@@ -105,6 +105,27 @@ public:
                                     ArrayRef<char> Data) = 0;
   /// Get an ID for \p Ref.
   virtual CASID getID(ObjectRef Ref) const = 0;
+
+  /// Stores the data of a file into ObjectStore.
+  ///
+  /// An underlying implementation could perform optimizations that reduce I/O
+  /// and disk space consumption.
+  ///
+  /// If there are any concurrent modifications to the file, the contents in the
+  /// CAS may be corrupt.
+  ///
+  /// \param FilePath the path of the file data.
+  virtual Expected<ObjectRef> storeFromFile(StringRef Path);
+
+  /// Exports the data of an object to a file path. It does not include any
+  /// references of the object.
+  ///
+  /// An underlying implementation could perform optimizations that reduce I/O
+  /// and disk space consumption.
+  ///
+  /// \param Node the object to read data from.
+  /// \param FilePath the path of the file data.
+  virtual Error exportDataToFile(ObjectHandle Node, StringRef Path) const;
 
   /// Get an existing reference to the object called \p ID.
   ///
@@ -179,8 +200,7 @@ protected:
 
 public:
   /// Helper functions to store object and returns a ObjectProxy.
-  LLVM_ABI_FOR_TEST Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs,
-                                                      StringRef Data);
+  Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
 
   /// Store object from StringRef.
   Expected<ObjectRef> storeFromString(ArrayRef<ObjectRef> Refs,
@@ -206,10 +226,10 @@ public:
   static Error createUnknownObjectError(const CASID &ID);
 
   /// Create ObjectProxy from CASID. If the object doesn't exist, get an error.
-  LLVM_ABI Expected<ObjectProxy> getProxy(const CASID &ID);
+  Expected<ObjectProxy> getProxy(const CASID &ID);
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
-  LLVM_ABI Expected<ObjectProxy> getProxy(ObjectRef Ref);
+  Expected<ObjectProxy> getProxy(ObjectRef Ref);
 
   /// \returns \c std::nullopt if the object is missing from the CAS.
   Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
@@ -293,12 +313,17 @@ public:
     return CAS->forEachRef(H, Callback);
   }
 
-  std::unique_ptr<MemoryBuffer>
+  LLVM_ABI std::unique_ptr<MemoryBuffer>
   getMemoryBuffer(StringRef Name = "",
                   bool RequiresNullTerminator = true) const;
 
   /// Get the content of the node. Valid as long as the CAS is valid.
   StringRef getData() const { return CAS->getDataString(H); }
+
+  /// Exports the data of an object to a file path.
+  Error exportDataToFile(StringRef Path) const {
+    return CAS->exportDataToFile(H, Path);
+  }
 
   friend bool operator==(const ObjectProxy &Proxy, ObjectRef Ref) {
     return Proxy.getRef() == Ref;
@@ -333,7 +358,7 @@ private:
 LLVM_ABI std::unique_ptr<ObjectStore> createInMemoryCAS();
 
 /// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
-bool isOnDiskCASEnabled();
+LLVM_ABI bool isOnDiskCASEnabled();
 
 /// Create a persistent on-disk path at \p Path.
 LLVM_ABI Expected<std::unique_ptr<ObjectStore>>

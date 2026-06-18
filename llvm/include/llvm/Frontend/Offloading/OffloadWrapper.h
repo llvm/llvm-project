@@ -56,18 +56,18 @@ LLVM_ABI llvm::Error wrapHIPBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
                                    bool EmitSurfacesAndTextures = true);
 
 struct SYCLJITOptions {
-  // Target/compiler specific options that are suggested to use to "compile"
-  // program at runtime.
+  // Target/compiler specific options that are passed to the device compiler at
+  // runtime.
   std::string CompileOptions;
-  // Target/compiler specific options that are suggested to use to "link"
-  // program at runtime.
+  // Target/compiler specific options that are passed to the device linker at
+  // runtime.
   std::string LinkOptions;
 };
 
 /// Wraps OffloadBinaries in the given \p Buffers into the module \p M
 /// as global symbols and registers the images with the SYCL Runtime.
 /// \param Options Compiler and linker options to be encoded for the later
-///  use by a runtime for JIT compilation.
+///  use by a runtime for JIT compilation. Not used for AOT.
 LLVM_ABI llvm::Error
 wrapSYCLBinaries(llvm::Module &M, llvm::ArrayRef<char> Buffer,
                  SYCLJITOptions Options = SYCLJITOptions());

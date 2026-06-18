@@ -132,8 +132,7 @@ std::optional<std::string> detectSysroot() {
 
 std::string detectStandardResourceDir() {
   static int StaticForMainAddr; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd",
-                                              (void *)&StaticForMainAddr);
+  return GetResourcesPath("clangd", (void *)&StaticForMainAddr);
 }
 
 // The path passed to argv[0] is important:
@@ -274,6 +273,19 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
       SawInput(Cmd[I]);
     Cmd.resize(DashDashIndex);
   }
+
+  llvm::SmallVector<const char *, 16> UnknownArgs;
+
+  for (auto *UnknownArg : ArgList.filtered(options::OPT_UNKNOWN)) {
+    UnknownArgs.push_back(UnknownArg->getValue());
+    IndicesToDrop.push_back(UnknownArg->getIndex());
+  }
+
+  if (!UnknownArgs.empty()) {
+    log("Warning: detected unsupported options '{0}'",
+        llvm::join(UnknownArgs, ", "));
+  }
+
   llvm::sort(IndicesToDrop);
   for (unsigned Idx : llvm::reverse(IndicesToDrop))
     // +1 to account for the executable name in Cmd[0] that

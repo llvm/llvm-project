@@ -566,7 +566,6 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             *type_, allocateInfo_.sourceExprType.value())) { // F'2023 C950
       context.Warn(common::LanguageFeature::AllocateToOtherLength, name_.source,
           "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
-      return false;
     }
   }
   // Shape related checks

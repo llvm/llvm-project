@@ -33,8 +33,7 @@ define dso_local i32 @main2() #0 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, .Ly$local
-; CHECK-NEXT:    add x8, x8, :lo12:.Ly$local
-; CHECK-NEXT:    ldr w0, [x8]
+; CHECK-NEXT:    ldr w0, [x8, :lo12:.Ly$local]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr @y, align 4

@@ -70,7 +70,7 @@ static cl::opt<int> LanaiLowerConstantMulThreshold(
 
 LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
                                          const LanaiSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Lanai::GPRRegClass);
 
@@ -629,7 +629,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, MVT::i32);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false,
                           /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),

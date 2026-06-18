@@ -304,12 +304,57 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
         BuildMI(*I.getParent(), I, I.getDebugLoc(),
                 TII.get(TargetOpcode::SUBREG_TO_REG))
             .addDef(ExtSrc)
-            .addImm(0)
             .addReg(SrcReg)
             .addImm(getSubRegIndex(SrcRC));
 
         I.getOperand(1).setReg(ExtSrc);
       }
+    }
+
+    // Special case GPR16 -> XMM
+    if (SrcSize == 16 && SrcRegBank.getID() == X86::GPRRegBankID &&
+        (DstRegBank.getID() == X86::VECRRegBankID)) {
+
+      const DebugLoc &DL = I.getDebugLoc();
+
+      // Any extend GPR16 -> GPR32
+      Register ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::SUBREG_TO_REG),
+              ExtReg)
+          .addReg(SrcReg)
+          .addImm(X86::sub_16bit);
+
+      // Copy GR32 -> XMM
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
+          .addReg(ExtReg);
+
+      I.eraseFromParent();
+    }
+
+    // Special case XMM -> GR16
+    if (DstSize == 16 && DstRegBank.getID() == X86::GPRRegBankID &&
+        (SrcRegBank.getID() == X86::VECRRegBankID)) {
+
+      const DebugLoc &DL = I.getDebugLoc();
+
+      // Move XMM to GR32 register.
+      Register Temp32 = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Temp32)
+          .addReg(SrcReg);
+
+      // Extract the lower 16 bits
+      if (Register Dst32 = TRI.getMatchingSuperReg(DstReg, X86::sub_16bit,
+                                                   &X86::GR32RegClass)) {
+        // Optimization for Physical Dst (e.g. AX): Copy to EAX directly.
+        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Dst32)
+            .addReg(Temp32);
+      } else {
+        // Handle if there is no super.
+        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
+            .addReg(Temp32, {}, X86::sub_16bit);
+      }
+
+      I.eraseFromParent();
     }
 
     return true;
@@ -580,7 +625,8 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     }
     break;
   }
-  case TargetOpcode::G_GLOBAL_VALUE: {
+  case TargetOpcode::G_GLOBAL_VALUE:
+  case X86::G_WRAPPER_RIP: {
     auto GV = I.getOperand(1).getGlobal();
     if (GV->isThreadLocal()) {
       return false; // TODO: we don't support TLS yet.
@@ -591,15 +637,12 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     AM.GV = GV;
     AM.GVOpFlags = STI.classifyGlobalReference(GV);
 
-    // TODO: The ABI requires an extra load. not supported yet.
-    if (isGlobalStubReference(AM.GVOpFlags))
-      return false;
-
     // TODO: This reference is relative to the pic base. not supported yet.
     if (isGlobalRelativeToPICBase(AM.GVOpFlags))
       return false;
 
-    if (STI.isPICStyleRIPRel()) {
+    if (STI.isPICStyleRIPRel() || AM.GVOpFlags == X86II::MO_GOTPCREL ||
+        AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX) {
       // Use rip-relative addressing.
       assert(AM.Base.Reg == 0 && AM.IndexReg == 0 &&
              "RIP-relative addresses can't have additional register operands");
@@ -678,9 +721,9 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
     I.removeOperand(0);
     addFullAddress(MIB, AM).addUse(DefReg);
   }
-  bool Constrained = constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   I.addImplicitDefUseOperands(MF);
-  return Constrained;
+  return true;
 }
 
 static unsigned getLeaOP(LLT Ty, const X86Subtarget &STI) {
@@ -717,7 +760,8 @@ bool X86InstructionSelector::selectFrameIndexOrGep(MachineInstr &I,
     MIB.addImm(0).addReg(0);
   }
 
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return true;
 }
 
 bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
@@ -740,7 +784,8 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
   I.removeOperand(1);
   addFullAddress(MIB, AM);
 
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return true;
 }
 
 bool X86InstructionSelector::selectConstant(MachineInstr &I,
@@ -776,8 +821,9 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
     NewOpc = X86::MOV32ri;
     break;
   case 64:
-    // TODO: in case isUInt<32>(Val), X86::MOV32ri can be used
-    if (isInt<32>(Val))
+    if (isUInt<32>(Val))
+      NewOpc = X86::MOV32ri64;
+    else if (isInt<32>(Val))
       NewOpc = X86::MOV64ri32;
     else
       NewOpc = X86::MOV64ri;
@@ -787,7 +833,8 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
   }
 
   I.setDesc(TII.get(NewOpc));
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return true;
 }
 
 // Helper function for selectTruncOrPtrToInt and selectAnyext.
@@ -993,7 +1040,6 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(TargetOpcode::SUBREG_TO_REG))
       .addDef(DstReg)
-      .addImm(0)
       .addReg(SrcReg)
       .addImm(getSubRegIndex(SrcRC));
 
@@ -1226,14 +1272,15 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
         Def->getOpcode() == TargetOpcode::G_UADDO ||
         Def->getOpcode() == TargetOpcode::G_USUBE ||
         Def->getOpcode() == TargetOpcode::G_USUBO) {
-      // carry set by prev ADD/SUB.
-
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::CMP8ri))
-          .addReg(CarryInReg)
-          .addImm(1);
-
+      // The carry-in is a SETB byte (0 or 1) from a chained add/sub.
+      // Materialize EFLAGS.CF from that byte for the following ADC/SBB
+      // by emitting NEG, which sets CF iff its operand is non-zero.
       if (!RBI.constrainGenericRegister(CarryInReg, *CarryRC, MRI))
         return false;
+
+      Register NegDef = MRI.createVirtualRegister(CarryRC);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::NEG8r), NegDef)
+          .addReg(CarryInReg);
 
       Opcode = IsSub ? OpSBB : OpADC;
     } else if (auto val = getIConstantVRegVal(CarryInReg, MRI)) {
@@ -1254,8 +1301,8 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), CarryOutReg)
       .addImm(X86::COND_B);
 
-  if (!constrainSelectedInstRegOperands(Inst, TII, TRI, RBI) ||
-      !RBI.constrainGenericRegister(CarryOutReg, *CarryRC, MRI))
+  constrainSelectedInstRegOperands(Inst, TII, TRI, RBI);
+  if (!RBI.constrainGenericRegister(CarryOutReg, *CarryRC, MRI))
     return false;
 
   I.eraseFromParent();
@@ -1316,7 +1363,8 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
   Index = Index / DstTy.getSizeInBits();
   I.getOperand(2).setImm(Index);
 
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return true;
 }
 
 bool X86InstructionSelector::emitExtractSubreg(Register DstReg, Register SrcReg,
@@ -1352,7 +1400,7 @@ bool X86InstructionSelector::emitExtractSubreg(Register DstReg, Register SrcReg,
   }
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), DstReg)
-      .addReg(SrcReg, 0, SubIdx);
+      .addReg(SrcReg, {}, SubIdx);
 
   return true;
 }
@@ -1388,9 +1436,15 @@ bool X86InstructionSelector::emitInsertSubreg(Register DstReg, Register SrcReg,
     return false;
   }
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY))
-      .addReg(DstReg, RegState::DefineNoRead, SubIdx)
-      .addReg(SrcReg);
+  Register ImpDefReg = MRI.createVirtualRegister(DstRC);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::IMPLICIT_DEF),
+          ImpDefReg);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::INSERT_SUBREG),
+          DstReg)
+      .addReg(ImpDefReg)
+      .addReg(SrcReg)
+      .addImm(SubIdx);
 
   return true;
 }
@@ -1450,7 +1504,8 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 
   I.getOperand(3).setImm(Index);
 
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return true;
 }
 
 bool X86InstructionSelector::selectUnmergeValues(
@@ -1815,7 +1870,7 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
       if (RegTy.getSizeInBits() == 16) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
                 TypeEntry.HighInReg)
-            .addReg(Zero32, 0, X86::sub_16bit);
+            .addReg(Zero32, {}, X86::sub_16bit);
       } else if (RegTy.getSizeInBits() == 32) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
                 TypeEntry.HighInReg)
@@ -1823,7 +1878,6 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
       } else if (RegTy.getSizeInBits() == 64) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(),
                 TII.get(TargetOpcode::SUBREG_TO_REG), TypeEntry.HighInReg)
-            .addImm(0)
             .addReg(Zero32)
             .addImm(X86::sub_32bit);
       }
@@ -1857,7 +1911,7 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
     // Now reference the 8-bit subreg of the result.
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
-        .addReg(ResultSuperReg, 0, X86::sub_8bit);
+        .addReg(ResultSuperReg, {}, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
@@ -1925,7 +1979,8 @@ X86InstructionSelector::selectAddr(MachineOperand &Root) const {
   MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   MachineInstr *Ptr = MRI.getVRegDef(Root.getReg());
   X86AddressMode AM;
-  X86SelectAddress(*Ptr, TM, MRI, STI, AM);
+  if (!X86SelectAddress(*Ptr, TM, MRI, STI, AM))
+    return std::nullopt;
 
   if (AM.IndexReg)
     return std::nullopt;

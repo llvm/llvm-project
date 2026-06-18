@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -126,7 +127,38 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+  bool isOpLegal(const Instruction *I) {
+    if (isa<IntrinsicInst>(I))
+      return true;
+
+    // Any store is a profitable sink (prevents flip-flopping)
+    if (isa<StoreInst>(I))
+      return true;
+
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      if (auto *VT = dyn_cast<FixedVectorType>(BO->getType())) {
+        if (const auto *IT = dyn_cast<IntegerType>(VT->getElementType())) {
+          unsigned EB = IT->getBitWidth();
+          unsigned EC = VT->getNumElements();
+          // Check for SDWA-compatible operation
+          if ((EB == 8 || EB == 16) && ST.hasSDWA() && EC * EB <= 32) {
+            switch (BO->getOpcode()) {
+            case Instruction::Add:
+            case Instruction::Sub:
+            case Instruction::And:
+            case Instruction::Or:
+            case Instruction::Xor:
+              return true;
+            default:
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;
@@ -462,7 +494,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   if (LI.getAlign() < DL.getABITypeAlign(Ty))
     return false;
   // It should be uniform, i.e. a scalar load.
-  return UA.isUniform(&LI);
+  return UA.isUniformAtDef(&LI);
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
@@ -505,8 +537,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
       Offset - Adjust);
 
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
-  NewLd->copyMetadata(LI);
-  NewLd->setMetadata(LLVMContext::MD_range, nullptr);
+  AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
   unsigned ShAmt = Adjust * 8;
   Value *NewVal = IRB.CreateBitCast(

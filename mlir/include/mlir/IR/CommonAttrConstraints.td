@@ -334,8 +334,16 @@ class FloatAttrBase<F attrValType, string descr> :
   let returnType = [{ ::llvm::APFloat }];
 }
 
+def F16Attr : FloatAttrBase<F16, "16-bit float attribute">;
 def F32Attr : FloatAttrBase<F32, "32-bit float attribute">;
 def F64Attr : FloatAttrBase<F64, "64-bit float attribute">;
+
+def BF16Attr : TypedAttrBase<BF16, "FloatAttr",
+              And<[CPred<"::llvm::isa<::mlir::FloatAttr>($_self)">,
+                     CPred<"::llvm::cast<::mlir::FloatAttr>($_self).getType().isBF16()">]>,
+              "16-bit bfloat attribute"> {
+  let returnType = [{ ::llvm::APFloat }];
+}
 
 // An attribute backed by a string type.
 class StringBasedAttr<Pred condition, string descr> : Attr<condition, descr> {

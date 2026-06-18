@@ -1,5 +1,5 @@
 ; Use llc for this test so that we don't abort after the first error.
-; RUN: not llc %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc %s -disable-dxil-remove-unused-resources -o /dev/null 2>&1 | FileCheck %s
 
 ; Check that there is no overlap with unbounded array in different space
 
@@ -29,7 +29,7 @@ entry:
 
   ; Buffer<double> C[] : register(t2, space4);
   %h2 = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @C.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 10, ptr @C.str)
 
   ret void
 }

@@ -57,6 +57,18 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sched_getcpu_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    sched_getcpu_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sched.sched_getcpu
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
   scheduler_test
   SUITE
     libc_sched_unittests
@@ -95,6 +107,23 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  cpu_alloc_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    cpu_alloc_test.cpp
+  DEPENDS
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpufree
+    libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+)
+
+add_libc_unittest(
   cpu_count_test
   SUITE
     libc_sched_unittests
@@ -109,6 +138,9 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

@@ -20,6 +20,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Utility/XcodeSDK.h"
@@ -298,23 +299,15 @@ public:
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
 
-  /// Find functions by lookup info.
+  /// Find functions by a vector of lookup infos.
   ///
   /// If the function is an inlined function, it will have a block,
   /// representing the inlined function, and the function will be the
   /// containing function.  If it is not inlined, then the block will be NULL.
-  ///
-  /// \param[in] lookup_info
-  ///     The lookup info of the function we are looking for.
-  ///
-  /// \param[out] sc_list
-  ///     A symbol context list that gets filled in with all of the
-  ///     matches.
-  void FindFunctions(const LookupInfo &lookup_info,
+  void FindFunctions(llvm::ArrayRef<LookupInfo> lookup_infos,
                      const CompilerDeclContext &parent_decl_ctx,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
-
   /// Find functions by name.
   ///
   /// If the function is an inlined function, it will have a block,
@@ -483,6 +476,8 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
+  ModuleSpecList GetSeparateDebugInfoFiles();
+
   void PreloadSymbols();
 
   void SetSymbolFileFileSpec(const FileSpec &file);
@@ -518,9 +513,6 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream &feedback_stream);
-
   /// Get the number of compile units for this module.
   ///
   /// \return
@@ -531,6 +523,10 @@ public:
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
   ConstString GetObjectName() const;
+
+  std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
+    return m_memory_module_addr;
+  }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -548,6 +544,11 @@ public:
   ///     remains valid as long as the object is around.
   virtual ObjectFile *GetObjectFile();
 
+  /// Like GetObjectFile, but the returned handle holds the Module mutex for
+  /// its lifetime, serializing concurrent access to the ObjectFile against
+  /// other callers using the locked accessors.
+  LockedPtr<ObjectFile> GetObjectFileLocked();
+
   /// Get the unified section list for the module. This is the section list
   /// created by the module's object file and any debug info and symbol files
   /// created by the symbol vendor.
@@ -558,6 +559,10 @@ public:
   /// \return
   ///     Unified module section list.
   virtual SectionList *GetSectionList();
+
+  /// Like GetSectionList, but the returned handle holds the Module mutex for
+  /// its lifetime.
+  LockedPtr<SectionList> GetSectionListLocked();
 
   /// Notify the module that the file addresses for the Sections have been
   /// updated.
@@ -609,11 +614,20 @@ public:
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
                                     Stream *feedback_strm = nullptr);
 
+  /// Like GetSymbolFile, but the returned handle holds the Module mutex for
+  /// its lifetime.
+  LockedPtr<SymbolFile> GetSymbolFileLocked(bool can_create = true,
+                                            Stream *feedback_strm = nullptr);
+
   /// Get the module's symbol table
   ///
   /// If the symbol table has already been loaded, this function returns it.
   /// Otherwise, it will only be loaded when can_create is true.
   Symtab *GetSymtab(bool can_create = true);
+
+  /// Like GetSymtab, but the returned handle holds the Module mutex for its
+  /// lifetime.
+  LockedPtr<Symtab> GetSymtabLocked(bool can_create = true);
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -854,7 +868,7 @@ public:
   ///     /b true if \a orig_spec was successfully located and
   ///     \a new_spec is filled in with an existing file spec,
   ///     \b false otherwise.
-  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec);
 
   /// Remaps a source file given \a path into \a new_path.
   ///
@@ -868,8 +882,13 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path);
   bool RemapSourceFile(const char *, std::string &) const = delete;
+
+  /// Register a directory to be searched for \c compilation-prefix-map.json
+  /// on the first call to RemapSourceFile or FindSourceFile. Duplicate
+  /// directories are silently ignored.
+  void AddPrefixMapSearchDir(FileSpec dir);
 
   /// Update the ArchSpec to a more specific variant.
   bool MergeArchitecture(const ArchSpec &arch_spec);
@@ -917,22 +936,44 @@ public:
   public:
     LookupInfo() = default;
 
-    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
-               lldb::LanguageType language);
+    /// Copies an existing LookupInfo with a different lookup name.
+    LookupInfo(const LookupInfo &lookup_info, ConstString lookup_name);
+
+    /// Creates a vector of lookup infos for function name resolution.
+    ///
+    /// \param[in] name
+    ///     The function name to search for. This can be a simple name like
+    ///     "foo" or a qualified name like "Class::method".
+    ///
+    /// \param[in] name_type_mask
+    ///     A bitmask specifying what types of names to search for
+    ///     (e.g., eFunctionNameTypeFull, eFunctionNameTypeBase,
+    ///     eFunctionNameTypeMethod, eFunctionNameTypeAuto). Multiple types
+    ///     can be combined with bitwise OR.
+    ///
+    /// \param[in] lang_type
+    ///     The language to create lookups for. If eLanguageTypeUnknown is
+    ///     passed, creates one LookupInfo for each language plugin currently
+    ///     available in LLDB. If a specific language is provided, creates only
+    ///     a single LookupInfo for that language.
+    ///
+    /// \param[in] lookup_name_override
+    ///     Manually override the name used for lookup. This parameter is
+    ///     optional. If not provided, it will be set to the value of the name
+    ///     parameter.
+    ///
+    /// \return
+    ///     A vector of LookupInfo objects, one per relevant language.
+    static std::vector<LookupInfo>
+    MakeLookupInfos(ConstString name, lldb::FunctionNameType name_type_mask,
+                    lldb::LanguageType lang_type,
+                    ConstString lookup_name_override = {});
 
     ConstString GetName() const { return m_name; }
 
-    void SetName(ConstString name) { m_name = name; }
-
     ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(ConstString name) { m_lookup_name = name; }
-
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
-
-    void SetNameTypeMask(lldb::FunctionNameType mask) {
-      m_name_type_mask = mask;
-    }
 
     lldb::LanguageType GetLanguageType() const { return m_language; }
 
@@ -959,6 +1000,11 @@ public:
     /// If \b true, then demangled names that match will need to contain
     /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
+
+  private:
+    LookupInfo(ConstString name, ConstString lookup_name,
+               lldb::FunctionNameType name_type_mask,
+               lldb::LanguageType lang_type);
   };
 
   /// Get a unique hash for this module.
@@ -968,23 +1014,27 @@ public:
   /// file, then the hash should include the object name and object offset to
   /// ensure a unique hash. Some examples:
   /// - just a regular object file (mach-o, elf, coff, etc) should create a hash
-  /// - a universal mach-o file that contains to multiple architectures,
+  /// - a universal mach-o file that contains multiple architectures,
   ///   each architecture slice should have a unique hash even though they come
   ///   from the same file
   /// - a .o file inside of a BSD archive. Each .o file will have an object name
   ///   and object offset that should produce a unique hash. The object offset
   ///   is needed as BSD archive files can contain multiple .o files that have
   ///   the same name.
+  ///
+  /// This hash value does not change as the binary is recompiled during
+  /// development.  DataFileCache's CacheSignature() creates a hash based
+  /// on the mod time/UUID to reflect when a binary has been recompiled.
   uint32_t Hash();
 
   /// Get a unique cache key for the current module.
   ///
   /// The cache key must be unique for a file on disk and not change if the file
   /// is updated. This allows cache data to use this key as a prefix and as
-  /// files are modified in disk, we will overwrite the cache files. If one file
-  /// can contain multiple files, like a universal mach-o file or like a BSD
-  /// archive, the cache key must contain enough information to differentiate
-  /// these different files.
+  /// files are modified on disk, we will overwrite the previous cache file. If
+  /// one file can contain multiple files, like a universal mach-o file or like
+  /// BSD archive, the cache key must contain enough information to
+  /// differentiate these different files.
   std::string GetCacheKey();
 
   /// Get the global index file cache.
@@ -1022,13 +1072,16 @@ protected:
   ConstString m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
+  std::optional<lldb::addr_t>
+      m_memory_module_addr; ///< For a Module read from memory,
+                            ///  the address it was read from.
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
-  /// DataBuffer containing the module image, if it was provided at
+  /// DataExtractor containing the module image, if it was provided at
   /// construction time. Otherwise the data will be retrieved by mapping
   /// one of the FileSpec members above.
-  lldb::DataBufferSP m_data_sp;
+  lldb::DataExtractorSP m_extractor_sp;
 
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
@@ -1049,6 +1102,15 @@ protected:
   /// module that doesn't match where the sources currently are.
   PathMappingList m_source_mappings =
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
+
+  /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
+  /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
+  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+
+  /// Search each registered directory upward for compilation-prefix-map.json
+  /// and apply any found mappings to m_source_mappings. Called at most once.
+  /// Must be called with m_mutex held.
+  void LoadPrefixMapsIfNeeded();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and
@@ -1082,8 +1144,6 @@ protected:
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
-
-  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 

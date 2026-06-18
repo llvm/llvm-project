@@ -13,9 +13,9 @@
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -24,50 +24,36 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp>
-struct __has_result_type {
-private:
-  template <class _Up>
-  static false_type __test(...);
-  template <class _Up>
-  static true_type __test(typename _Up::result_type* = 0);
+template <class _Tp, class = void>
+inline const bool __has_result_type_v = false;
 
-public:
-  static const bool value = decltype(__test<_Tp>(0))::value;
-};
+template <class _Tp>
+inline const bool __has_result_type_v<_Tp, __void_t<typename _Tp::result_type*> > = true;
 
 // __weak_result_type
 
 template <class _Tp>
 struct __derives_from_unary_function {
 private:
-  struct __two {
-    char __lx;
-    char __lxx;
-  };
-  static __two __test(...);
+  static void __find_base(...);
   template <class _Ap, class _Rp>
-  static __unary_function<_Ap, _Rp> __test(const volatile __unary_function<_Ap, _Rp>*);
+  static __unary_function<_Ap, _Rp> __find_base(const volatile __unary_function<_Ap, _Rp>*);
 
 public:
-  static const bool value = !is_same<decltype(__test((_Tp*)0)), __two>::value;
-  typedef decltype(__test((_Tp*)0)) type;
+  using type              = decltype(__find_base(static_cast<_Tp*>(nullptr)));
+  static const bool value = !is_same<type, void>::value;
 };
 
 template <class _Tp>
 struct __derives_from_binary_function {
 private:
-  struct __two {
-    char __lx;
-    char __lxx;
-  };
-  static __two __test(...);
+  static void __find_base(...);
   template <class _A1, class _A2, class _Rp>
-  static __binary_function<_A1, _A2, _Rp> __test(const volatile __binary_function<_A1, _A2, _Rp>*);
+  static __binary_function<_A1, _A2, _Rp> __find_base(const volatile __binary_function<_A1, _A2, _Rp>*);
 
 public:
-  static const bool value = !is_same<decltype(__test((_Tp*)0)), __two>::value;
-  typedef decltype(__test((_Tp*)0)) type;
+  using type              = decltype(__find_base(static_cast<_Tp*>(nullptr)));
+  static const bool value = !is_same<type, void>::value;
 };
 
 template <class _Tp, bool = __derives_from_unary_function<_Tp>::value>
@@ -85,7 +71,7 @@ struct __maybe_derive_from_binary_function // bool is true
 template <class _Tp>
 struct __maybe_derive_from_binary_function<_Tp, false> {};
 
-template <class _Tp, bool = __has_result_type<_Tp>::value>
+template <class _Tp, bool = __has_result_type_v<_Tp> >
 struct __weak_result_type_imp // bool is true
     : public __maybe_derive_from_unary_function<_Tp>,
       public __maybe_derive_from_binary_function<_Tp> {

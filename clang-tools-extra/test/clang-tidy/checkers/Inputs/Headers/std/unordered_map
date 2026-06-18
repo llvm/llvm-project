@@ -1,0 +1,126 @@
+#ifndef _UNORDERED_MAP_
+#define _UNORDERED_MAP_
+
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <utility>
+
+namespace std {
+
+template <typename Key, typename T, typename Hash = hash<Key>,
+          typename Pred = equal_to<Key>,
+          typename Allocator = allocator<pair<const Key, T>>>
+class unordered_map {
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = std::pair<const Key, T>;
+
+  class iterator {
+  public:
+    iterator &operator++();
+    iterator operator++(int);
+    bool operator!=(const iterator &other) const;
+    bool operator==(const iterator &other) const;
+    value_type &operator*();
+    value_type *operator->();
+    const value_type &operator*() const;
+    const value_type *operator->() const;
+  };
+  class const_iterator {
+  public:
+    const_iterator() = default;
+    const_iterator(const iterator &) {}
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    bool operator!=(const const_iterator &other) const;
+    bool operator==(const const_iterator &other) const;
+    const value_type &operator*() const;
+    const value_type *operator->() const;
+  };
+
+  unordered_map() = default;
+  unordered_map(initializer_list<value_type>) {}
+
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
+
+  T &operator[](const Key &);
+  T &operator[](Key &&);
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args);
+
+  template <typename... Args>
+  pair<iterator, bool> try_emplace(const Key &key, Args &&...args);
+
+  iterator find(const Key &);
+  const_iterator find(const Key &) const;
+
+  unsigned count(const Key &) const;
+  bool contains(const Key &) const;
+
+  void clear();
+  bool empty() const;
+  size_t size() const;
+};
+
+template <typename Key, typename T, typename Hash = hash<Key>,
+          typename Pred = equal_to<Key>,
+          typename Allocator = allocator<pair<const Key, T>>>
+class unordered_multimap {
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = std::pair<const Key, T>;
+
+  class iterator {
+  public:
+    iterator &operator++();
+    iterator operator++(int);
+    bool operator!=(const iterator &other) const;
+    bool operator==(const iterator &other) const;
+    value_type &operator*();
+    value_type *operator->();
+  };
+  class const_iterator {
+  public:
+    const_iterator() = default;
+    const_iterator(const iterator &) {}
+    const_iterator &operator++();
+    const_iterator operator++(int);
+    bool operator!=(const const_iterator &other) const;
+    bool operator==(const const_iterator &other) const;
+    const value_type &operator*() const;
+    const value_type *operator->() const;
+  };
+
+  unordered_multimap() = default;
+  unordered_multimap(initializer_list<value_type>) {}
+
+  iterator begin();
+  const_iterator begin() const;
+  iterator end();
+  const_iterator end() const;
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args);
+
+  unsigned count(const Key &) const;
+  bool contains(const Key &) const;
+
+  void clear();
+  bool empty() const;
+  size_t size() const;
+};
+
+} // namespace std
+
+#endif // _UNORDERED_MAP_

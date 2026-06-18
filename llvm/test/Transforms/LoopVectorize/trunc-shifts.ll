@@ -9,10 +9,10 @@ define void @test_pr47927_lshr_const_shift_ops(ptr %dst, i32 %f) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[F]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i32 [[F]], 18
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <4 x i32> [[BROADCAST_SPLAT]], splat (i32 18)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT]] to <4 x i8>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -53,10 +53,10 @@ define void @test_shl_const_shift_ops(ptr %dst, i32 %f) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[F]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[F]], 18
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i32> [[BROADCAST_SPLAT]], splat (i32 18)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT]] to <4 x i8>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -97,10 +97,10 @@ define void @test_ashr_const_shift_ops(ptr %dst, i32 %f) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[F]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i32 [[F]], 18
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], splat (i32 18)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT]] to <4 x i8>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

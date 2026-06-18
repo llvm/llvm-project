@@ -432,7 +432,7 @@ end subroutine
 !CHECK:   %[[VAR_X_DECLARE_INNER:.*]] = hlfir.declare %[[CONVERT_INNER]] storage(%[[BLK_THREADPRIVATE_INNER]][0]) {uniq_name = "_QFthreadprivate_with_defaultEx"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine threadprivate_with_default
         integer :: x
-        common /blk/ x 
+        common /blk/ x
         !$omp threadprivate (/blk/)
 
         !$omp parallel do default(private)

@@ -10,7 +10,7 @@
 
 // <flat_map>
 
-// void swap(flat_map& y) noexcept;
+// void swap(flat_map& y) noexcept(see below);
 
 #include <flat_map>
 #include <cassert>
@@ -31,10 +31,10 @@ concept NoExceptMemberSwap = requires(T t1, T t2) {
   { t1.swap(t2) } noexcept;
 };
 
-static_assert(NoExceptMemberSwap<std::flat_map<int, int>>);
+static_assert(NoExceptMemberSwap<std::flat_map<int, int, std::less<int>, std::vector<int>, std::vector<int>>>);
 #ifndef TEST_HAS_NO_EXCEPTIONS
 static_assert(
-    NoExceptMemberSwap<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
+    !NoExceptMemberSwap<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
 #endif
 
 template <class KeyContainer, class ValueContainer>

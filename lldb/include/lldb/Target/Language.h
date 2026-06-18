@@ -24,6 +24,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
 
@@ -165,6 +167,8 @@ public:
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
 
+  static llvm::Expected<lldb::LanguageType>
+  GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
   // return false from callback to stop iterating
   static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
 
@@ -177,8 +181,6 @@ public:
   virtual bool IsTopLevelFunction(Function &function);
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
-
-  virtual const Highlighter *GetHighlighter() const { return nullptr; }
 
   virtual lldb::TypeCategoryImplSP GetFormatters();
 
@@ -468,7 +470,7 @@ public:
     return ConstString();
   }
 
-  virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+  virtual llvm::StringRef GetInstanceName() { return {}; }
 
   /// Given a symbol context list of matches which supposedly represent the
   /// same file and line number in a CU, erases those that should be ignored
@@ -518,5 +520,12 @@ private:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb::LanguageType> {
+  static void format(const lldb::LanguageType &language, llvm::raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // LLDB_TARGET_LANGUAGE_H

@@ -4,7 +4,7 @@
 
 define ptr @f2(i1 %val) presplitcoroutine personality i32 4 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f2, ptr null)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @print(i32 0)
   br i1 %val, label %resume, label %susp
@@ -51,7 +51,7 @@ cleanup.cont:
 ; VERIFY Resume Parts
 
 ; Verify that resume function does not contains both print calls appearing after coro.end
-; CHECK-LABEL: define internal fastcc void @f2.resume
+; CHECK-LABEL: define internal void @f2.resume
 ; CHECK: invoke void @print(i32 1)
 ; CHECK:   to label %CoroEnd unwind label %lpad
 

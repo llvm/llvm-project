@@ -638,7 +638,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfNonsenseSyclStdArg) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg1) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=121"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=121", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -655,7 +655,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg1) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg2) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=1.2.1"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=1.2.1", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -672,7 +672,8 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg2) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg3) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=sycl-1.2.1"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=sycl-1.2.1", "-x",
+                        "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -689,7 +690,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfOddSyclStdArg3) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentHost) {
-  const char *Args[] = {"-fsycl-is-host"};
+  const char *Args[] = {"-fsycl-is-host", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -704,7 +705,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentHost) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentDevice) {
-  const char *Args[] = {"-fsycl-is-device"};
+  const char *Args[] = {"-fsycl-is-device", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -719,7 +720,7 @@ TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresentDevice) {
 }
 
 TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagPresent) {
-  const char *Args[] = {"-fsycl-is-device", "-sycl-std=2017"};
+  const char *Args[] = {"-fsycl-is-device", "-sycl-std=2017", "-x", "c++"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
@@ -738,6 +739,18 @@ TEST_F(CommandLineTest, ConditionalParsingIfHLSLFlagPresent) {
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_EQ(Invocation.getLangOpts().MaxMatrixDimension, 4u);
+  ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+}
+
+TEST_F(CommandLineTest, ConditionalParsingHLSLRowMajor) {
+  const char *Args[] = {"-xhlsl", "-fmatrix-memory-layout=row-major"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+  ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }
@@ -748,6 +761,30 @@ TEST_F(CommandLineTest, ConditionalParsingIfHLSLFlagNotPresent) {
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_EQ(Invocation.getLangOpts().MaxMatrixDimension, 1048575u);
+  ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+}
+
+TEST_F(CommandLineTest, ConditionalParsingClangRowMajor) {
+  const char *Args[] = {"-fenable-matrix", "-fmatrix-memory-layout=row-major"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+}
+
+TEST_F(CommandLineTest, ConditionalParsingIgnoreRowMajorIfMatrixNotEnabled) {
+  const char *Args[] = {"-fmatrix-memory-layout=row-major"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_EQ(Invocation.getLangOpts().getDefaultMatrixMemoryLayout(),
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 }

@@ -1,0 +1,28 @@
+# RUN: not --crash llc -o - -mtriple=x86_64-linux-gnu -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
+
+---
+name:            test_fpextload
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Generic memory instruction must access a pointer
+    %0:_(s64) = G_CONSTANT i64 0
+    %1:_(s32) = G_FPEXTLOAD %0 :: (load (s16))
+
+    ; CHECK: *** Bad machine code: Generic instruction accessing memory must have one mem operand ***
+    %2:_(p0) = G_IMPLICIT_DEF
+    %3:_(s64) = G_FPEXTLOAD %2
+
+    ; CHECK: Bad machine code: Generic extload must have a narrower memory type
+    %4:_(s64) = G_FPEXTLOAD %2 :: (load (s64))
+
+    ; CHECK: Bad machine code: Generic extload must have a narrower memory type
+    %5:_(s64) = G_FPEXTLOAD %2 :: (load (s128))
+
+...

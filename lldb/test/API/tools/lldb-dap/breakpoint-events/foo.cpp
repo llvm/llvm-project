@@ -1,11 +1,11 @@
 #include <stdio.h>
 
 static void unique_function_name() {
-  puts(__PRETTY_FUNCTION__); // foo breakpoint 2
+  puts(__PRETTY_FUNCTION__); // call puts
 }
 
 int foo(int x) {
-  // foo breakpoint 1
+  int value = 100;
   unique_function_name();
   return x + 42;
 }

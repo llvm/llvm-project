@@ -1,0 +1,37 @@
+REQUIRES: x86-registered-target,ld.lld,llvm-ar
+
+# Test that DTLTO works with a mixture of FullLTO and ThinLTO bitcode archive members
+# where there is more than one LTO partition.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-linux-gnu -flto -c one.c two.c
+RUN: %clang --target=x86_64-linux-gnu -flto=thin -c three.c
+
+RUN: llvm-ar rc archive.a one.o two.o three.o
+
+# Build with DTLTO.
+RUN: %clang --target=x86_64-linux-gnu -Werror -flto -fuse-ld=lld -nostdlib \
+RUN:   -Wl,--whole-archive archive.a \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--save-temps,--lto-partitions=2
+
+# Show that the FullLTO modules have been prepared for distribution, this is
+# not optimal but has no functional impact.
+RUN: FileCheck %s --input-file=a.out.resolution.txt
+
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.o.
+CHECK: archive.a(one.o at [[#ONE_OFFSET:]]).1.[[#%X,HEXPID:]].o
+CHECK: archive.a(two.o at [[#TWO_OFFSET:]]).2.[[#%X,HEXPID]].o
+CHECK: archive.a(three.o at [[#THREE_OFFSET:]]).3.[[#%X,HEXPID]].o
+
+#--- one.c
+__attribute__((retain)) void one() {}
+
+#--- two.c
+__attribute__((retain)) void two() {}
+
+#--- three.c
+__attribute__((retain)) void three() {}

@@ -31,9 +31,9 @@ concept NoExceptMemberSwap = requires(T t1, T t2) {
   { t1.swap(t2) } noexcept;
 };
 
-static_assert(NoExceptMemberSwap<std::flat_set<int>>);
+static_assert(NoExceptMemberSwap<std::flat_set<int, std::less<int>, std::vector<int>>>);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-static_assert(NoExceptMemberSwap<std::flat_set<int, std::less<int>, ThrowOnMoveContainer<int>>>);
+static_assert(!NoExceptMemberSwap<std::flat_set<int, std::less<int>, ThrowOnMoveContainer<int>>>);
 #endif
 
 template <class KeyContainer>

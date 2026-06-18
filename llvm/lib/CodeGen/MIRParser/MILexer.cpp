@@ -242,6 +242,11 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
       .Case("negate_ra_sign_state_with_pc",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
+      .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
+      .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
+      .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
+      .Case("llvm_vector_register_mask",
+            MIToken::kw_cfi_llvm_vector_register_mask)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
@@ -266,10 +271,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
             MIToken::kw_inlineasm_br_indirect_target)
+      .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
@@ -281,6 +288,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("heap-alloc-marker", MIToken::kw_heap_alloc_marker)
       .Case("pcsections", MIToken::kw_pcsections)
       .Case("cfi-type", MIToken::kw_cfi_type)
+      .Case("deactivation-symbol", MIToken::kw_deactivation_symbol)
       .Case("bbsections", MIToken::kw_bbsections)
       .Case("bb_id", MIToken::kw_bb_id)
       .Case("unknown-size", MIToken::kw_unknown_size)
@@ -291,6 +299,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
+      .Case("mmra", MIToken::kw_mmra)
       .Default(MIToken::Identifier);
 }
 
@@ -595,6 +604,22 @@ static Cursor maybeLexHexadecimalLiteral(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
+  if (C.peek() != 'f')
+    return std::nullopt;
+  if (C.peek(1) != '0' || (C.peek(2) != 'x' && C.peek(2) != 'X'))
+    return std::nullopt;
+  Cursor Range = C;
+  C.advance(3);
+  while (isxdigit(C.peek()))
+    C.advance();
+  StringRef StrVal = Range.upto(C);
+  if (StrVal.size() <= 3)
+    return std::nullopt;
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -731,6 +756,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
+    return R.remaining();
+  if (Cursor R = maybeLexFloatHexBits(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();

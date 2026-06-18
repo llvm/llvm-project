@@ -19,4 +19,3 @@ entry:
   ret void
 }
 
-declare void @llvm.experimental.stackmap(i64, i32, ...)

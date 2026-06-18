@@ -68,6 +68,18 @@ public:
 
   llvm::Error SetHardwareFlowControl(bool enabled);
 
+  /// Returns whether or not the current terminal supports Unicode rendering.
+  ///
+  /// The value is cached after the first computation.
+  ///
+  /// On POSIX systems, we check if the LANG environment variable contains the
+  /// substring "UTF-8", case insensitive.
+  ///
+  /// On Windows, we always return true since we use the `WriteConsoleW` API
+  /// internally. Note that the default Windows codepage (437) does not support
+  /// all Unicode characters. This function does not check the codepage.
+  static bool SupportsUnicode();
+
 protected:
   struct Data;
 

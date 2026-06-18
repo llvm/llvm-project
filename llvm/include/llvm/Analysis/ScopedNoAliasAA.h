@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class FenceInst;
 class Function;
 class MDNode;
 class MemoryLocation;
@@ -37,14 +38,19 @@ public:
     return false;
   }
 
+  LLVM_ABI static AliasResult alias(const MemoryLocation &LocA,
+                                    const MemoryLocation &LocB);
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
-                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
-                             const Instruction *CtxI);
+                             const MemoryLocation &LocB, AAQueryInfo &,
+                             const Instruction *);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *F,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 
   LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,

@@ -33,6 +33,10 @@ using namespace llvm;
 
 static StringRef knownBundleName(unsigned BundleTagID) {
   switch (BundleTagID) {
+#define ATTR(Name, Str)                                                        \
+  case LLVMContext::OB_##Name:                                                 \
+    return #Str;
+#include "llvm/IR/BundleAttributes.def"
   case LLVMContext::OB_deopt:
     return "deopt";
   case LLVMContext::OB_funclet:
@@ -53,8 +57,8 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "kcfi";
   case LLVMContext::OB_convergencectrl:
     return "convergencectrl";
-  case LLVMContext::OB_align:
-    return "align";
+  case LLVMContext::OB_deactivation_symbol:
+    return "deactivation-symbol";
   default:
     llvm_unreachable("unknown bundle id");
   }
@@ -77,8 +81,8 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     (void)ID;
   }
 
-  for (unsigned BundleTagID = LLVMContext::OB_deopt;
-       BundleTagID <= LLVMContext::OB_LastBundleID; ++BundleTagID) {
+  for (unsigned BundleTagID = 0; BundleTagID <= LLVMContext::OB_LastBundleID;
+       ++BundleTagID) {
     [[maybe_unused]] const auto *Entry =
         pImpl->getOrInsertBundleTag(knownBundleName(BundleTagID));
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");
@@ -266,8 +270,6 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   errs() << getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
   DI.print(DP);
   errs() << "\n";
-  if (DI.getSeverity() == DS_Error)
-    exit(1);
 }
 
 //===----------------------------------------------------------------------===//

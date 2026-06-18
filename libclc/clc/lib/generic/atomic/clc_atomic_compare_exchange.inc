@@ -8,16 +8,16 @@
 
 #ifdef __CLC_SCALAR
 
-#if defined(__SPIR32__) || defined(CLC_NVPTX)
+#if defined(__SPIR32__) || defined(__NVPTX__)
 #if (defined(__CLC_FPSIZE) && __CLC_FPSIZE <= 32) ||                           \
     (defined(__CLC_GENSIZE) && (__CLC_GENSIZE == 32))
 #define __CLC_HAS_ATOMIC
 #endif
-#else // defined(__SPIR32__) || defined(CLC_NVPTX)
+#else // defined(__SPIR32__) || defined(__NVPTX__)
 #if defined(__CLC_FPSIZE) || (__CLC_GENSIZE >= 32)
 #define __CLC_HAS_ATOMIC
 #endif
-#endif // defined(__SPIR32__) || defined(CLC_NVPTX)
+#endif // defined(__SPIR32__) || defined(__NVPTX__)
 
 #ifdef __CLC_HAS_ATOMIC
 
@@ -25,7 +25,7 @@
 
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atomic_compare_exchange(          \
-      volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,         \
+      ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,                  \
       __CLC_GENTYPE Value, int MemoryOrderEqual, int MemoryOrderUnequal,       \
       int MemoryScope) {                                                       \
     __CLC_U_GENTYPE Comp = __CLC_AS_U_GENTYPE(Comparator);                     \
@@ -39,7 +39,7 @@
 
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atomic_compare_exchange(          \
-      volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,         \
+      ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,                  \
       __CLC_GENTYPE Value, int MemoryOrderEqual, int MemoryOrderUnequal,       \
       int MemoryScope) {                                                       \
     __scoped_atomic_compare_exchange_n(Ptr, &Comparator, Value, false,         \

@@ -15,11 +15,10 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
-
-#include <unordered_set>
 
 namespace llvm {
 namespace object {
@@ -130,6 +129,7 @@ public:
   virtual void printGroupSections() {}
   virtual void printHashHistograms() {}
   virtual void printCGProfile() {}
+  virtual void printCallGraphInfo() {}
   // If PrettyPGOAnalysis is true, prints BFI as relative frequency and BPI as
   // percentage. Otherwise raw values are displayed.
   virtual void printBBAddrMaps(bool PrettyPGOAnalysis) {}
@@ -206,7 +206,7 @@ private:
   virtual void printProgramHeaders() {}
   virtual void printSectionMapping() {}
 
-  std::unordered_set<std::string> Warnings;
+  StringSet<> Warnings;
 };
 
 std::unique_ptr<ObjDumper> createCOFFDumper(const object::COFFObjectFile &Obj,

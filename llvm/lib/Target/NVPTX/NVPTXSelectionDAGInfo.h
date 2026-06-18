@@ -36,6 +36,7 @@ enum NodeType : unsigned {
   LoadV2,
   LoadV4,
   LoadV8,
+  MLoad,
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
   StoreV2,

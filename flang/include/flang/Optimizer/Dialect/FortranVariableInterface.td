@@ -114,6 +114,20 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::pointer);
     }
 
+    /// Is this variable a Cray pointer?
+    bool isCrayPointer() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::cray_pointer);
+    }
+
+    /// Is this variable a Cray pointee?
+    bool isCrayPointee() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::cray_pointee);
+    }
+
     /// Is this variable a Fortran allocatable?
     bool isAllocatable() {
       auto attrs = getFortranAttrs();

@@ -47,7 +47,6 @@ define float @fadd_s(float %a, float %b) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 
 define float @fsub_s(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fsub_s:
@@ -80,7 +79,6 @@ define float @fsub_s(float %a, float %b) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fsub.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 
 define float @fmul_s(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fmul_s:
@@ -113,7 +111,6 @@ define float @fmul_s(float %a, float %b) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
 
 define float @fdiv_s(float %a, float %b) nounwind strictfp {
 ; CHECKIF-LABEL: fdiv_s:
@@ -146,7 +143,6 @@ define float @fdiv_s(float %a, float %b) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fdiv.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
 
 define float @fsqrt_s(float %a) nounwind strictfp {
 ; CHECKIF-LABEL: fsqrt_s:
@@ -179,7 +175,6 @@ define float @fsqrt_s(float %a) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 
 define float @fmin_s(float %a, float %b) nounwind strictfp {
 ; RV32IF-LABEL: fmin_s:
@@ -238,7 +233,6 @@ define float @fmin_s(float %a, float %b) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.minnum.f32(float %a, float %b, metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.minnum.f32(float, float, metadata) strictfp
 
 define float @fmax_s(float %a, float %b) nounwind strictfp {
 ; RV32IF-LABEL: fmax_s:
@@ -297,7 +291,6 @@ define float @fmax_s(float %a, float %b) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.maxnum.f32(float %a, float %b, metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.maxnum.f32(float, float, metadata) strictfp
 
 define float @fmadd_s(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fmadd_s:
@@ -330,7 +323,6 @@ define float @fmadd_s(float %a, float %b, float %c) nounwind strictfp {
   %1 = call float @llvm.experimental.constrained.fma.f32(float %a, float %b, float %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
-declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata) strictfp
 
 define float @fmsub_s(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-LABEL: fmsub_s:

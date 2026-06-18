@@ -376,12 +376,12 @@ public:
 #  endif // _LIBCPP_CXX03_LANG
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
-  _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return c.front(); }
-  _LIBCPP_HIDE_FROM_ABI reference back() { return c.back(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference back() const { return c.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference front() const { return c.front(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI reference back() { return c.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference back() const { return c.back(); }
 
   _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v) { c.push_back(__v); }
 #  ifndef _LIBCPP_CXX03_LANG
@@ -664,8 +664,10 @@ public:
 #  endif
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.front(); }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI const_reference top() const {
+    return c.front();
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v);
 #  ifndef _LIBCPP_CXX03_LANG
@@ -968,7 +970,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <concepts>
 #    include <cstdlib>
 #    include <functional>

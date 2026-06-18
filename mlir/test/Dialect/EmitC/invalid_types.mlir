@@ -84,7 +84,7 @@ func.func @illegal_array_with_lvalue_element_type(
 
 // -----
 
-func.func @illegal_integer_type(%arg0: i11, %arg1: i11) -> i11 {
+func.func @illegal_integer_type(%arg0: i11, %arg1: i11) {
     // expected-error @+1 {{'emitc.mul' op operand #0 must be floating-point type supported by EmitC or integer, index or opaque type supported by EmitC, but got 'i11'}}
     %mul = "emitc.mul" (%arg0, %arg1) : (i11, i11) -> i11
     return
