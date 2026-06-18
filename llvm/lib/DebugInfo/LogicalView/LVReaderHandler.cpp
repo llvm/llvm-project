@@ -61,16 +61,13 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
       return std::make_unique<LVCodeViewReader>(Filename, FileFormatName, Pdb,
                                                 W, ExePath);
     }
-    if (std::holds_alternative<IRObjectFile *>(Input)) {
-      IRObjectFile *Ir = std::get<IRObjectFile *>(Input);
-      return std::make_unique<LVIRReader>(Filename, FileFormatName, Ir, W);
-    }
-    if (std::holds_alternative<MemoryBufferRef *>(Input)) {
-      MemoryBufferRef *MemBuf = std::get<MemoryBufferRef *>(Input);
+    if (IRObjectFile **Ir = std::get_if<IRObjectFile *>(&Input))
+      return std::make_unique<LVIRReader>(Filename, FileFormatName, *Ir, W);
+    if (MemoryBufferRef **MemBuf = std::get_if<MemoryBufferRef *>(&Input)) {
       // If the filename extension is '.ll' create an IR reader.
       const StringRef IRFileExt = ".ll";
       if (llvm::sys::path::extension(Filename) == IRFileExt)
-        return std::make_unique<LVIRReader>(Filename, IRFileFormatName, MemBuf,
+        return std::make_unique<LVIRReader>(Filename, IRFileFormatName, *MemBuf,
                                             W);
     }
     return nullptr;

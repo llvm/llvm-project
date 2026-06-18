@@ -13,7 +13,6 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVREADERHANDLER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVREADERHANDLER_H
 
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/Object/Archive.h"
