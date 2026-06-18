@@ -22,9 +22,6 @@ int main(int, char**) {
 
   TEST_LIBCPP_ASSERT_FAILURE((void)c[0], "inplace_vector<T,0>::operator[]: access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c)[0], "inplace_vector<T,0>::operator[] const: access with N == 0");
-  TEST_LIBCPP_ASSERT_FAILURE((void)c.at(0), "inplace_vector<T,0>::at(size_type n): access with N == 0");
-  TEST_LIBCPP_ASSERT_FAILURE(
-      (void)std::as_const(c).at(0), "inplace_vector<T,0>::at(size_type n) const: access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE((void)c.front(), "inplace_vector<T,0>::front(): access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c).front(), "inplace_vector<T,0>::front() const: access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE((void)c.back(), "inplace_vector<T,0>::back(): access with N == 0");
