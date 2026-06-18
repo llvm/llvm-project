@@ -147,6 +147,8 @@ private:
 ErrorOr<char *> copy_or_allocate_cstr(char *dst, cpp::string_view src) {
   if (dst == nullptr) {
     AllocChecker ac;
+    // `dst` is safe to return and let the caller `free()`, since AllocChecker
+    // delegates to malloc, and this value is trivially destructible.
     dst = new (ac) char[src.size() + 1];
     if (!ac)
       return Error(ENOMEM);
