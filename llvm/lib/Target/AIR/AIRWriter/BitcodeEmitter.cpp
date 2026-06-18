@@ -20,6 +20,7 @@
 #include "AIRVersion.h"
 #include "ValueEnumerator.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1070,11 +1071,40 @@ static void fixMMAPointerSuffixMismatch(Module &M, PointeeTypeMap &PTM) {
   }
 }
 
+static bool isAtomicDeviceArg(Argument *Arg) {
+  SmallVector<Value *, 8> Work{Arg};
+  SmallPtrSet<Value *, 8> Seen;
+  while (!Work.empty()) {
+    Value *V = Work.pop_back_val();
+    if (!Seen.insert(V).second)
+      continue;
+    for (User *U : V->users()) {
+      if (auto *CI = dyn_cast<CallInst>(U)) {
+        Function *Callee = CI->getCalledFunction();
+        if (Callee && Callee->getName().starts_with("air.atomic.global.") &&
+            CI->arg_size() > 0 && CI->getArgOperand(0) == V)
+          return true;
+        continue;
+      }
+      if (isa<BitCastInst>(U) || isa<GetElementPtrInst>(U) ||
+          isa<AddrSpaceCastInst>(U))
+        Work.push_back(U);
+    }
+  }
+  return false;
+}
+
 static void fixKernelArgMetadata(Module &M, const PointeeTypeMap &PTM) {
   auto &Ctx = M.getContext();
   auto *AirKernel = M.getNamedMetadata("air.kernel");
   if (!AirKernel)
     return;
+
+  // Canonical metal::_atomic arg metadata pairs with air.version >= (2,9,0) /
+  // MSL 4.1 (macOS 26), the level the Metal compiler accepts the 8-arg
+  // device-atomic form.
+  bool AllowAtomicStruct =
+      AIRVersion::fromTriple(M.getTargetTriple().str()).OSMajor >= 16;
 
   for (unsigned K = 0; K < AirKernel->getNumOperands(); K++) {
     auto *KernelMD = AirKernel->getOperand(K);
@@ -1180,6 +1210,21 @@ static void fixKernelArgMetadata(Module &M, const PointeeTypeMap &PTM) {
         continue; // Unknown type, don't change
       }
 
+      // Device-atomic arg: type as metal::_atomic { i32 } + air.struct_type_info,
+      // matching Apple's front end. The 8-arg cmpxchg PSO-crashes without it.
+      bool IsAtomic = AllowAtomicStruct && Pointee->isIntegerTy(32) &&
+                      isAtomicDeviceArg(Arg);
+      Metadata *StructTypeInfo = nullptr;
+      if (IsAtomic) {
+        TypeName = "metal::_atomic";
+        auto *I32 = Type::getInt32Ty(Ctx);
+        StructTypeInfo = MDNode::get(
+            Ctx, {ValueAsMetadata::get(ConstantInt::get(I32, 0)),
+                  ValueAsMetadata::get(ConstantInt::get(I32, 4)),
+                  ValueAsMetadata::get(ConstantInt::get(I32, 0)),
+                  MDString::get(Ctx, "int"), MDString::get(Ctx, "__s")});
+      }
+
       // Rebuild the metadata node with corrected values
       SmallVector<Metadata *, 16> NewOps;
       for (unsigned I = 0; I < ArgMD->getNumOperands(); I++) {
@@ -1193,8 +1238,17 @@ static void fixKernelArgMetadata(Module &M, const PointeeTypeMap &PTM) {
               I++; // skip original type name
               continue;
             }
+            if (PrevS->getString() == "air.struct_type_info" &&
+                I + 1 < ArgMD->getNumOperands()) {
+              I++;
+              continue;
+            }
             if (PrevS->getString() == "air.arg_type_size" &&
                 I + 1 < ArgMD->getNumOperands()) {
+              if (StructTypeInfo) {
+                NewOps.push_back(MDString::get(Ctx, "air.struct_type_info"));
+                NewOps.push_back(StructTypeInfo);
+              }
               NewOps.push_back(Op);
               NewOps.push_back(ValueAsMetadata::get(
                   ConstantInt::get(Type::getInt32Ty(Ctx), TypeSize)));

@@ -406,12 +406,26 @@ static bool airSystemValues(Module &M) {
   // falling back to macOS 16 when absent. Empirically verified against Apple's
   // `xcrun metal -mmacosx-version-min=N`.
   auto AIRVer = metal::AIRVersion::fromTriple(M.getTargetTriple().str());
+
+  // The canonical 8-arg device-atomic form (metal::_atomic arg) is only
+  // accepted by the Metal compiler at air.version >= (2,9,0) / MSL 4.1. Bump
+  // the version for modules that use it; a stale (2,8,0) stamp PSO-crashes the
+  // compiler service. Other modules keep their target-derived version.
+  unsigned AIRMinor = AIRVer.AIRMinor;
+  unsigned MSLMajor = AIRVer.MSLMajor, MSLMinor = AIRVer.MSLMinor;
+  if (auto *F = M.getFunction("air.atomic.global.cmpxchg.weak.i32"))
+    if (F->getFunctionType()->getNumParams() == 8 && AIRMinor < 9) {
+      AIRMinor = 9;
+      MSLMajor = 4;
+      MSLMinor = 1;
+    }
+
   auto *VerMD = M.getOrInsertNamedMetadata(kNMDVersion);
   if (VerMD->getNumOperands() == 0) {
     VerMD->addOperand(MDNode::get(
         Ctx, {ConstantAsMetadata::get(
                   ConstantInt::get(I32, metal::AIRVersion::AIRMajor)),
-              ConstantAsMetadata::get(ConstantInt::get(I32, AIRVer.AIRMinor)),
+              ConstantAsMetadata::get(ConstantInt::get(I32, AIRMinor)),
               ConstantAsMetadata::get(ConstantInt::get(I32, 0))}));
     Changed = true;
   }
@@ -422,8 +436,8 @@ static bool airSystemValues(Module &M) {
     auto *LangMD = M.getOrInsertNamedMetadata(kNMDLanguageVersion);
     LangMD->addOperand(MDNode::get(
         Ctx, {MDString::get(Ctx, "Metal"),
-              ConstantAsMetadata::get(ConstantInt::get(I32, AIRVer.MSLMajor)),
-              ConstantAsMetadata::get(ConstantInt::get(I32, AIRVer.MSLMinor)),
+              ConstantAsMetadata::get(ConstantInt::get(I32, MSLMajor)),
+              ConstantAsMetadata::get(ConstantInt::get(I32, MSLMinor)),
               ConstantAsMetadata::get(ConstantInt::get(I32, 0))}));
     Changed = true;
   }
