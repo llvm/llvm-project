@@ -128,6 +128,11 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   bool NeedsExplicitConversion = FileIDConverterInfo.getPointer() != nullptr;
   bool IsText = !NeedsExplicitConversion;
 
+  llvm::errs() << "[DEBUG] ContentCache::getBufferOrNone: Opening file '"
+               << ContentsEntry->getName() << "' - "
+               << (IsText ? "TEXT mode (no converter)" : "BINARY mode (converter present)")
+               << "\n";
+
   auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile,
                                            /*RequiresNullTerminator=*/true,
                                            /*MaybeLimit=*/std::nullopt,
@@ -161,11 +166,18 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Convert source from the input charset to UTF-8 if necessary.
   llvm::TextEncodingConverter *Converter = FileIDConverterInfo.getPointer();
   if (Converter) {
+    llvm::errs() << "[DEBUG] SourceManager: Using converter for file '"
+                 << ContentsEntry->getName() << "'\n";
     StringRef OriginalBuf = Buffer->getBuffer();
+    llvm::errs() << "[DEBUG] SourceManager: Original buffer size: "
+                 << OriginalBuf.size() << " bytes\n";
     llvm::SmallString<0> UTF8Buf;
     UTF8Buf.reserve(OriginalBuf.size() + 1);
 
     std::error_code EC = Converter->convert(OriginalBuf, UTF8Buf);
+    llvm::errs() << "[DEBUG] SourceManager: Conversion "
+                 << (EC ? "FAILED" : "succeeded")
+                 << ", UTF8 buffer size: " << UTF8Buf.size() << " bytes\n";
     if (EC) {
       // If conversion fails, emit a warning and fall back to interpreting the
       // file as UTF-8 without conversion.
@@ -600,10 +612,18 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
     return FileID();
   }
   if (!Ccsid->empty()) {
+    llvm::errs() << "[DEBUG] SourceManager::createFileID: File '" << SourceFile.getName()
+                 << "' has encoding tag: '" << *Ccsid << "'\n";
     llvm::ErrorOr<llvm::TextEncodingConverter *> FileTagConverter =
       llvm::TextEncodingConverterCache::getOrCreateConverter(*Ccsid, "UTF-8");
-    if (FileTagConverter)
+    if (FileTagConverter) {
       Converter = *FileTagConverter;
+      llvm::errs() << "[DEBUG] SourceManager::createFileID: Converter obtained for '"
+                   << *Ccsid << "' -> UTF-8\n";
+    } else {
+      llvm::errs() << "[DEBUG] SourceManager::createFileID: Failed to get converter: "
+                   << FileTagConverter.getError().message() << "\n";
+    }
   }
 
   #ifndef NDEBUG
@@ -617,6 +637,11 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   else
     assert(!Converter || IR.IsBufferInvalid || !IR.getBufferIfLoaded());
 #endif
+  
+  if (Converter) {
+    llvm::errs() << "[DEBUG] SourceManager::createFileID: Setting converter for file '"
+                 << SourceFile.getName() << "'\n";
+  }
   IR.FileIDConverterInfo.setPointerAndInt(Converter, true);
 
   // If this is a named pipe, immediately load the buffer to ensure subsequent

@@ -601,6 +601,8 @@ std::error_code FileManager::getStatValue(StringRef Path,
     //
     // Because of this, check to see if the file exists with 'open'.  If the
     // open succeeds, use fstat to get the stat info.
+    llvm::errs() << "[DEBUG] FileManager: Opening file '" << Path << "' in "
+                 << (IsText ? "TEXT" : "BINARY") << " mode\n";
     auto OwnedFile =
         IsText ? FS->openFileForRead(Path) : FS->openFileForReadBinary(Path);
 

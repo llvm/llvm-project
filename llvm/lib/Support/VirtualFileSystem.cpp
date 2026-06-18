@@ -119,6 +119,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
                              bool RequiresNullTerminator, bool IsVolatile,
                              bool IsText) {
+  llvm::errs() << "[DEBUG] FileSystem::getBufferForFile: Opening '" << Name
+               << "' in " << (IsText ? "TEXT" : "BINARY") << " mode\n";
   auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
@@ -348,6 +350,8 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
+  llvm::errs() << "[DEBUG] RealFileSystem::openFileForRead: Opening '"
+               << Name << "' in TEXT mode\n";
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   return openFileForReadWithFlags(Name, sys::fs::OF_Text);
@@ -355,6 +359,8 @@ RealFileSystem::openFileForRead(const Twine &Name) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  llvm::errs() << "[DEBUG] RealFileSystem::openFileForReadBinary: Opening '"
+               << Name << "' in BINARY mode\n";
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   return openFileForReadWithFlags(Name, sys::fs::OF_None);
