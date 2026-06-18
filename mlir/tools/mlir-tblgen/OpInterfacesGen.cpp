@@ -289,6 +289,10 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     os << "  class " << modelClass << " : public Concept {\n  public:\n";
     os << "    using Interface = " << interface.getFullyQualifiedName()
        << ";\n";
+    // The Concept's function-pointer members and these wrapper signatures are
+    // named by the unique name so that overloaded interface methods stay
+    // distinct here; only the forward target (the concrete model call) uses the
+    // shared source name. Do not collapse these to getName().
     os << "    " << modelClass << "() : Concept{";
     llvm::interleaveComma(
         interface.getMethods(), os,
@@ -322,7 +326,9 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     if (method.isStatic())
       os << "static ";
     emitCPPType(method.getReturnType(), os);
-    os << method.getUniqueName() << "(";
+    // External models declare methods by their non-unique source names so that
+    // overloaded methods can be overridden by implementers.
+    os << method.getName() << "(";
     if (!method.isStatic()) {
       emitCPPType(valueType, os);
       os << "tablegen_opaque_val";
@@ -394,8 +400,10 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     else
       os << "return static_cast<const " << valueTemplate << " *>(impl)->";
 
-    // Add the arguments to the call.
-    os << method.getUniqueName() << '(';
+    // Add the arguments to the call. Forward by the (possibly non-unique)
+    // method name so that overloaded interface methods resolve to the right
+    // concrete-model overload.
+    os << method.getName() << '(';
     if (!method.isStatic())
       os << "tablegen_opaque_val" << (method.arg_empty() ? "" : ", ");
     llvm::interleaveComma(
@@ -414,8 +422,9 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     os << "detail::" << interface.getName()
        << "InterfaceTraits::ExternalModel<ConcreteModel, " << valueTemplate
        << ">::";
-
-    os << method.getUniqueName() << "(";
+    // External models expose (possibly overloaded) methods by their original
+    // source names, hiding the internal name mangling from implementers.
+    os << method.getName() << "(";
     if (!method.isStatic()) {
       emitCPPType(valueType, os);
       os << "tablegen_opaque_val";

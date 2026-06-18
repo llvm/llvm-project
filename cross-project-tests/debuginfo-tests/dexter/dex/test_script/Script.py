@@ -20,6 +20,7 @@ from dex.test_script.Nodes import (
     Expect,
     FileLabels,
     Where,
+    Then,
     setup_yaml_parser,
 )
 
@@ -176,7 +177,10 @@ class DexterScript:
                 if result := do(visit_where, key, scope):
                     return result
                 new_scope = scope.add_where(key)
-                if result := self._visit_script(
+                if isinstance(value, Then):
+                    if result := do(visit_then, value, new_scope):
+                        return result
+                elif result := self._visit_script(
                     value, new_scope, visit_where, visit_expect, visit_then
                 ):
                     return result
@@ -191,6 +195,7 @@ class DexterScript:
         self,
         visit_where: Optional[Callable[[Where, Scope], Any]] = None,
         visit_expect: Optional[Callable[[Expect, Any, Scope], Any]] = None,
+        visit_then: Optional[Callable[[Then, Scope], Any]] = None,
     ) -> Any:
         """Visits all nodes in the script in pre-order traversal, calling any non-none provided visitor functions for
         each respective node type. Note that we do not visit expected values independently of their associated expect;
@@ -199,7 +204,7 @@ class DexterScript:
         If any visit function returns a truthy value, traversal will early-exit and this function returns that value;
         otherwise, this function returns None."""
         return self._visit_script(
-            self.script_obj, self.root_scope, visit_where, visit_expect
+            self.script_obj, self.root_scope, visit_where, visit_expect, visit_then
         )
 
     @property
