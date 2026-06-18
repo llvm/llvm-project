@@ -618,9 +618,10 @@ void SemaOpenCL::checkBuiltinReadImage(FunctionDecl *FDecl, CallExpr *Call) {
     return;
 
   uint64_t SamplerValue = EVResult.Val.getInt().getLimitedValue();
-  // Bit layout: |...|FilterMode[5:4]|AddressMode[3:1]|NormalizedCoords[0]|
-  // CLK_FILTER_LINEAR = 0x20 => FilterMode bits = 2
-  if (((SamplerValue & 0x30u) >> 4) == 2)
+  // Must stay in sync with CLK_FILTER_* defines in opencl-c-base.h.
+  constexpr unsigned FilterModeMask = 0x30u;
+  constexpr unsigned FilterModeLinear = 0x20u;
+  if ((SamplerValue & FilterModeMask) == FilterModeLinear)
     Diag(SamplerArg->getExprLoc(), diag::warn_sampler_argument_invalid_filter)
         << Name << SamplerArg->getSourceRange();
 }
