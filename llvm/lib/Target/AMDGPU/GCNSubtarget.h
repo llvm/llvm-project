@@ -1037,6 +1037,10 @@ public:
   bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
     return getGeneration() >= GFX10 || TgSplit;
   }
+
+  bool useDFAforSMS() const override { return false; }
+
+  bool enableWindowScheduler() const override { return false; }
 };
 
 class GCNUserSGPRUsageInfo {
