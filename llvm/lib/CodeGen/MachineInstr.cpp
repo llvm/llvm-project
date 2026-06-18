@@ -2415,10 +2415,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   auto MIB = BuildMI(MF, DL, MCID);
   MIB.addMetadata(Variable).addMetadata(Expr);
   for (const MachineOperand &DebugOp : DebugOps)
-    if (DebugOp.isReg())
-      MIB.addReg(DebugOp.getReg());
-    else
-      MIB.add(DebugOp);
+    MIB.add(DebugOp);
   return MIB;
 }
 
