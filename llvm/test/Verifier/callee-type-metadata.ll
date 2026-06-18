@@ -9,13 +9,13 @@ entry:
   store i8 %x, ptr %x.addr, align 1
   %fptr = load ptr, ptr %func.addr, align 8
   %x_val = load i8, ptr %x.addr, align 1  
-  ; CHECK: The callee_type metadata must be a list of type metadata nodes
+  ; CHECK: The callee_type metadata must be a list of callgraph metadata nodes
   %call = call i32 %fptr(i8 signext %x_val), !callee_type !0
-  ; CHECK: The operand of type metadata for functions must be an MDString
+  ; CHECK: The operand of callgraph metadata for functions must be an MDString
   %call1 = call i32 %fptr(i8 signext %x_val), !callee_type !2
   ; CHECK: Well-formed generalized callgraph metadata must contain exactly one operand
   %call2 = call i32 %fptr(i8 signext %x_val), !callee_type !4
-  ; CHECK: Only generalized type metadata can be part of the callee_type metadata list
+  ; CHECK: Only generalized callgraph metadata can be part of the callee_type metadata list
   %call3 = call i32 %fptr(i8 signext %x_val), !callee_type !6
   ret i32 %call
 }

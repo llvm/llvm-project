@@ -1753,7 +1753,7 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
 }
 
 /// Extracts a generalized numeric type identifier of a Function's type from
-/// type metadata. Returns null if metadata cannot be found.
+/// callgraph metadata. Returns null if metadata cannot be found.
 static ConstantInt *extractNumericCGTypeId(const Function &F) {
   SmallVector<MDNode *, 2> Types;
   F.getMetadata(LLVMContext::MD_callgraph, Types);

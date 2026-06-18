@@ -5655,18 +5655,20 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
         &I);
   for (Metadata *Op : MD->operands()) {
     Check(isa<MDNode>(Op),
-          "The callee_type metadata must be a list of type metadata nodes", Op);
-    auto *TypeMD = cast<MDNode>(Op);
-    Check(TypeMD->getNumOperands() == 1,
+          "The callee_type metadata must be a list of callgraph metadata nodes",
+          Op);
+    auto *CallgraphMD = cast<MDNode>(Op);
+    Check(CallgraphMD->getNumOperands() == 1,
           "Well-formed generalized callgraph metadata must contain exactly one "
           "operand",
           Op);
-    Check(isa<MDString>(TypeMD->getOperand(0)),
-          "The operand of type metadata for functions must be an MDString", Op);
-    Check(cast<MDString>(TypeMD->getOperand(0))
+    Check(isa<MDString>(CallgraphMD->getOperand(0)),
+          "The operand of callgraph metadata for functions must be an MDString",
+          Op);
+    Check(cast<MDString>(CallgraphMD->getOperand(0))
               ->getString()
               .ends_with(".generalized"),
-          "Only generalized type metadata can be part of the callee_type "
+          "Only generalized callgraph metadata can be part of the callee_type "
           "metadata list",
           Op);
   }
