@@ -24,6 +24,27 @@
 // RUN:   -x cuda -fcuda-is-device -target-cpu sm_70 -fsyntax-only -verify %s \
 // RUN:   -include __clang_gpu_device_functions.h
 
+// HIP host compilation.
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -internal-isystem %S/../../lib/Headers \
+// RUN:   -triple x86_64-unknown-unknown -aux-triple amdgcn-amd-amdhsa \
+// RUN:   -aux-target-cpu gfx90a -x hip -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
+//
+// HIP host compilation with a SPIR-V device.
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -internal-isystem %S/../../lib/Headers \
+// RUN:   -triple x86_64-unknown-unknown -aux-triple spirv64-amd-amdhsa \
+// RUN:   -x hip -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
+//
+// CUDA host compilation.
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -internal-isystem %S/../../lib/Headers \
+// RUN:   -triple x86_64-unknown-unknown -aux-triple nvptx64-nvidia-cuda \
+// RUN:   -aux-target-cpu sm_70 -x cuda -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
+
 // expected-no-diagnostics
 
 __global__ void test_kernel(int *p, float *f, double *d, unsigned *u) {

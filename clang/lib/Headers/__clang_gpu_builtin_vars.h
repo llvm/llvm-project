@@ -9,8 +9,7 @@
 #ifndef __CLANG_GPU_BUILTIN_VARS_H__
 #define __CLANG_GPU_BUILTIN_VARS_H__
 
-#if (defined(__HIP__) && defined(__HIP_DEVICE_COMPILE__)) ||                   \
-    (defined(__CUDA__) && defined(__CUDA_ARCH__))
+#if defined(__HIP__) || defined(__CUDA__)
 
 #include <gpuintrin.h>
 
@@ -62,10 +61,11 @@ __GPU_COORD_BUILTIN(__gpu_builtin_gridDim_t, __gpu_num_blocks_x(),
 #pragma pop_macro("__GPU_COORD_BUILTIN")
 #pragma pop_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
 
-extern const __attribute__((device, weak)) __gpu_builtin_threadIdx_t threadIdx;
-extern const __attribute__((device, weak)) __gpu_builtin_blockIdx_t blockIdx;
-extern const __attribute__((device, weak)) __gpu_builtin_blockDim_t blockDim;
-extern const __attribute__((device, weak)) __gpu_builtin_gridDim_t gridDim;
+static inline const
+    __attribute__((device)) __gpu_builtin_threadIdx_t threadIdx{};
+static inline const __attribute__((device)) __gpu_builtin_blockIdx_t blockIdx{};
+static inline const __attribute__((device)) __gpu_builtin_blockDim_t blockDim{};
+static inline const __attribute__((device)) __gpu_builtin_gridDim_t gridDim{};
 
 #endif // device compile
 #endif // __CLANG_GPU_BUILTIN_VARS_H__

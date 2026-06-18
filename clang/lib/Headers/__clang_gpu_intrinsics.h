@@ -9,8 +9,7 @@
 #ifndef __CLANG_GPU_INTRINSICS_H__
 #define __CLANG_GPU_INTRINSICS_H__
 
-#if (defined(__HIP__) && defined(__HIP_DEVICE_COMPILE__)) ||                   \
-    (defined(__CUDA__) && defined(__CUDA_ARCH__))
+#if defined(__HIP__) || defined(__CUDA__)
 
 #ifndef __GPU_DEVICE__
 #error                                                                         \
