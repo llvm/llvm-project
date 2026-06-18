@@ -1790,3 +1790,110 @@ done:
 }
 
 declare i64 @llvm.smax.i64(i64, i64)
+
+;; Test 16: A stride that is itself a sum (s1 + s2).
+;; s1 = smax(s1in, 1), s2 = smax(s2in, 1) (known positive); 3 loads from %p at
+;; offsets {0, s1, s1 + s2}, store to %q.
+;; TODO: Distribute s1 + s2 into s1 and s2 in decomposeStencilOffset
+define void @stencil_merge_summed_stride(ptr %p, ptr %q, i64 %s1in, i64 %s2in, i64 %n) {
+; MERGE-LABEL: 'stencil_merge_summed_stride'
+; MERGE-NEXT:    loop:
+; MERGE-NEXT:      Memory dependences are safe with run-time checks
+; MERGE-NEXT:      Dependences:
+; MERGE-NEXT:      Run-time memory checks:
+; MERGE-NEXT:      Check 0:
+; MERGE-NEXT:        Comparing group GRP0:
+; MERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; MERGE-NEXT:        Against group GRP1:
+; MERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; MERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; MERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; MERGE-NEXT:      Grouped accesses:
+; MERGE-NEXT:        Group GRP0:
+; MERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; MERGE-NEXT:            Member: {%q,+,8}<%loop>
+; MERGE-NEXT:        Group GRP1:
+; MERGE-NEXT:          (Low: ((-1 * (1 smax %s2in))<nsw> + %p) High: (1 + (8 * %n) + (1 smax %s1in) + (1 smax %s2in) + %p))
+; MERGE-NEXT:            Member: {((1 smax %s1in) + (1 smax %s2in) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {((1 smax %s1in) + %p),+,8}<%loop>
+; MERGE-NEXT:            Member: {%p,+,8}<%loop>
+; MERGE-EMPTY:
+; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MERGE-NEXT:      SCEV assumptions:
+; MERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((1 smax %s1in) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      {((1 smax %s1in) + (1 smax %s2in) + %p),+,8}<%loop> Added Flags: <nusw>
+; MERGE-NEXT:      Compare predicate: ((1 smax %s1in) + (1 smax %s2in)) sgt) 0
+; MERGE-EMPTY:
+; MERGE-NEXT:      Expressions re-written:
+;
+; NOMERGE-LABEL: 'stencil_merge_summed_stride'
+; NOMERGE-NEXT:    loop:
+; NOMERGE-NEXT:      Memory dependences are safe with run-time checks
+; NOMERGE-NEXT:      Dependences:
+; NOMERGE-NEXT:      Run-time memory checks:
+; NOMERGE-NEXT:      Check 0:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP1:
+; NOMERGE-NEXT:          %a2 = getelementptr i8, ptr %p2, i64 %idx
+; NOMERGE-NEXT:      Check 1:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP2:
+; NOMERGE-NEXT:          %a1 = getelementptr i8, ptr %p1, i64 %idx
+; NOMERGE-NEXT:      Check 2:
+; NOMERGE-NEXT:        Comparing group GRP0:
+; NOMERGE-NEXT:          %aq = getelementptr i8, ptr %q, i64 %idx
+; NOMERGE-NEXT:        Against group GRP3:
+; NOMERGE-NEXT:          %a0 = getelementptr i8, ptr %p, i64 %idx
+; NOMERGE-NEXT:      Grouped accesses:
+; NOMERGE-NEXT:        Group GRP0:
+; NOMERGE-NEXT:          (Low: %q High: (1 + (8 * %n) + %q))
+; NOMERGE-NEXT:            Member: {%q,+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP1:
+; NOMERGE-NEXT:          (Low: ((1 smax %s1in) + (1 smax %s2in) + %p) High: (1 + (8 * %n) + (1 smax %s1in) + (1 smax %s2in) + %p))
+; NOMERGE-NEXT:            Member: {((1 smax %s1in) + (1 smax %s2in) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP2:
+; NOMERGE-NEXT:          (Low: ((1 smax %s1in) + %p) High: (1 + (8 * %n) + (1 smax %s1in) + %p))
+; NOMERGE-NEXT:            Member: {((1 smax %s1in) + %p),+,8}<%loop>
+; NOMERGE-NEXT:        Group GRP3:
+; NOMERGE-NEXT:          (Low: %p High: (1 + (8 * %n) + %p))
+; NOMERGE-NEXT:            Member: {%p,+,8}<%loop>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; NOMERGE-NEXT:      SCEV assumptions:
+; NOMERGE-NEXT:      {%q,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((1 smax %s1in) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-NEXT:      {((1 smax %s1in) + (1 smax %s2in) + %p),+,8}<%loop> Added Flags: <nusw>
+; NOMERGE-EMPTY:
+; NOMERGE-NEXT:      Expressions re-written:
+;
+entry:
+  %s1 = call i64 @llvm.smax.i64(i64 %s1in, i64 1)
+  %s2 = call i64 @llvm.smax.i64(i64 %s2in, i64 1)
+  %s12 = add i64 %s1, %s2
+  %p1 = getelementptr i8, ptr %p, i64 %s1
+  %p2 = getelementptr i8, ptr %p, i64 %s12
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = mul i64 %iv, 8
+  %a0 = getelementptr i8, ptr %p, i64 %idx
+  load i8, ptr %a0
+  %a1 = getelementptr i8, ptr %p1, i64 %idx
+  load i8, ptr %a1
+  %a2 = getelementptr i8, ptr %p2, i64 %idx
+  load i8, ptr %a2
+  %aq = getelementptr i8, ptr %q, i64 %idx
+  store i8 0, ptr %aq
+  %iv.next = add i64 %iv, 1
+  %c = icmp eq i64 %iv, %n
+  br i1 %c, label %done, label %loop
+
+done:
+  ret void
+}
