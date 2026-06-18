@@ -22,14 +22,14 @@ exit:
   ret void
 }
 
-; CAS strategy narrowed to cmpxchg-pointer-reaching accesses only.
-; The same-buffer load on %p gets volatile; the unrelated buffer %q does not.
+; Spinlock: the lock %p gets volatile; the lock-guarded buffer %q becomes
+; device_coherent (volatile alone does not bypass the AGX per-threadgroup cache).
 
 declare { i32, i1 } @air.atomic.global.cmpxchg.weak.i32(ptr addrspace(1), i32, i32)
 
 ; CHECK-LABEL: define void @kernel_cas
 ; CHECK: load volatile i32, ptr addrspace(1) %p
-; CHECK: load i32, ptr addrspace(1) %q,
+; CHECK: call i32 @air.load.device_coherent.i32.p1i32(ptr addrspace(1) %q)
 ; CHECK: store volatile i32
 define void @kernel_cas(ptr addrspace(1) %p, ptr addrspace(1) %q, i32 %expected, i32 %desired) {
 entry:
