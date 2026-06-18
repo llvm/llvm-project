@@ -136,8 +136,9 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
   // Gather all the inlined-at nodes.
   while (DILocation *IA = CurInlinedAt->getInlinedAt()) {
     // Skip any we've already built nodes for.
-    if (auto *Found = Cache[IA]) {
-      Last = cast<DILocation>(Found);
+    auto It = Cache.find(IA);
+    if (It != Cache.end() && It->second) {
+      Last = cast<DILocation>(It->second);
       break;
     }
 
