@@ -4,7 +4,7 @@
 ; RUN:   FileCheck %s --check-prefix=32BIT
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec \
-; RUN:     -vec-extabi -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:     -vec-extabi -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN:   FileCheck %s --check-prefix=64BIT
 %struct.Test = type { double, double, double, double }
 

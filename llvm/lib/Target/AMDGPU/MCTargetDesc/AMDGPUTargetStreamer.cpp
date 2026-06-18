@@ -31,7 +31,7 @@
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -821,6 +821,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.emitValue(DescSZ, 4);                    // descz
   S.emitInt32(NoteType);                     // type
   S.emitBytes(Name);                         // name
+  S.emitInt8(0);                             // null terminator
   S.emitValueToAlignment(Align(4), 0, 1, 0); // padding 0
   EmitDesc(S);                               // desc
   S.emitValueToAlignment(Align(4), 0, 1, 0); // padding 0

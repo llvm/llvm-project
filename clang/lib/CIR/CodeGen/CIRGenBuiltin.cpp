@@ -1087,14 +1087,33 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    cir::AssumeOp::create(builder, loc, argValue);
+    cir::AssumeOp::create(builder, loc, argValue, cir::AssumeBundleKind::None,
+                          mlir::ValueRange{});
     return RValue::get(nullptr);
   }
 
   case Builtin::BI__builtin_assume_separate_storage: {
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
-    cir::AssumeSepStorageOp::create(builder, loc, value0, value1);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::SeparateStorage,
+                          mlir::ValueRange{value0, value1});
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    mlir::Value ptrValue = emitScalarExpr(e->getArg(0));
+    mlir::Value sizeValue = emitScalarExpr(e->getArg(1));
+    // The `dereferenceable` operand bundle expects a pointer-sized unsigned
+    // integer; widen/narrow as needed.
+    mlir::Type uintPtrTy = convertType(getContext().getUIntPtrType());
+    if (sizeValue.getType() != uintPtrTy)
+      sizeValue = builder.createIntCast(sizeValue, uintPtrTy);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::Dereferenceable,
+                          mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
   }
 
@@ -1152,7 +1171,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIconjf:
   case Builtin::BIconjl: {
     mlir::Value complex = emitComplexExpr(e->getArg(0));
-    mlir::Value conj = builder.createNot(complex);
+    mlir::Value conj = builder.createComplexConj(loc, complex);
     return RValue::getComplex(conj);
   }
 
@@ -1246,6 +1265,27 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     auto result = cir::ExpectOp::create(builder, loc, argValue.getType(),
                                         argValue, expectedValue, probAttr);
     return RValue::get(result);
+  }
+
+  case Builtin::BI__builtin_bswapg: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    // CIR models bool as cir.bool rather than an integer, so peel it off
+    // before the cast below.  Like classic codegen's i1 case, it byte-swaps
+    // to itself.
+    if (mlir::isa<cir::BoolType>(arg.getType()))
+      return RValue::get(arg);
+    auto argTy = mlir::cast<cir::IntType>(arg.getType());
+    // A single bit or a single byte byte-swaps to itself.
+    if (argTy.getWidth() == 1 || argTy.getWidth() == 8)
+      return RValue::get(arg);
+    assert(argTy.getWidth() % 16 == 0 &&
+           "__builtin_bswapg requires a single byte or a multiple of 16 bits");
+    // cir.byte_swap requires an unsigned operand.  Reinterpret a signed
+    // argument as unsigned of the same width; createBuiltinBitOp casts the
+    // swapped result back to the builtin's (possibly signed) return type.
+    if (argTy.isSigned())
+      arg = builder.createIntCast(arg, builder.getUIntNTy(argTy.getWidth()));
+    return RValue::get(createBuiltinBitOp<cir::ByteSwapOp>(*this, e, arg));
   }
 
   case Builtin::BI__builtin_bswap16:
@@ -2070,7 +2110,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
   case Builtin::BI__sync_lock_release_16:
-  case Builtin::BI__sync_synchronize:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__sync_synchronize: {
+    // We assume this is supposed to correspond to a C++0x-style
+    // sequentially-consistent fence (i.e. this is only usable for
+    // synchronization, not device I/O or anything like that). This intrinsic
+    // is really badly designed in the sense that in theory, there isn't
+    // any way to safely use it... but in practice, it mostly works
+    // to use it with non-atomic loads and stores to get acquire/release
+    // semantics.
+    cir::AtomicFenceOp::create(
+        builder, getLoc(e->getSourceRange()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::System));
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
   case Builtin::BI__c11_atomic_is_lock_free:
@@ -2148,10 +2203,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (x.getType() != encompassingCIRTy)
-      x = builder.createCast(cir::CastKind::integral, x, encompassingCIRTy);
-    if (y.getType() != encompassingCIRTy)
-      y = builder.createCast(cir::CastKind::integral, y, encompassingCIRTy);
+    if (x.getType() != encompassingCIRTy) {
+      x = builder.createCast(mlir::isa<cir::BoolType>(x.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             x, encompassingCIRTy);
+    }
+
+    if (y.getType() != encompassingCIRTy) {
+      y = builder.createCast(mlir::isa<cir::BoolType>(y.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             y, encompassingCIRTy);
+    }
 
     // Perform the operation on the extended values.
     mlir::Location loc = getLoc(e->getSourceRange());

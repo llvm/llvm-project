@@ -25,7 +25,7 @@ mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
       .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
 }
 
-mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
   auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
   if (!barg)
     return nullptr;
@@ -33,10 +33,15 @@ mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
   mlir::Block *block = barg.getOwner();
   auto computeReg =
       mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
-  if (!computeReg || block != computeReg.getBody())
+  if (!computeReg)
     return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
 
-  mlir::Value orig = computeReg.getOperand(barg);
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
   if (!orig)
     return nullptr;
   mlir::Operation *def = orig.getDefiningOp();

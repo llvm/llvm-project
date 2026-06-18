@@ -100,7 +100,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
 ; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr align 4 [[TMP13]], <vscale x 4 x i1> [[TMP12]])
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX1]], [[TMP5]]
-; DATA_NO_LANEMASK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
+; DATA_NO_LANEMASK-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_NO_LANEMASK:       middle.block:

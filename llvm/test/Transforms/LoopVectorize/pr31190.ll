@@ -41,7 +41,7 @@ define void @test() {
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
 ; CHECK-NEXT:    [[INC54:%.*]] = phi i32 [ [[INC5:%.*]], %[[FOR_COND1_FOR_INC4_CRIT_EDGE:.*]] ], [ [[C_PROMOTED]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[INC_LCSSA3:%.*]] = phi i32 [ [[INC_LCSSA:%.*]], %[[FOR_COND1_FOR_INC4_CRIT_EDGE]] ], [ [[A_PROMOTED2]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[INC_LCSSA3]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[INC_LCSSA3]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

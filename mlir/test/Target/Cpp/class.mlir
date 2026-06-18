@@ -76,3 +76,48 @@ emitc.class @reflectionClass {
 // CHECK-NEXT:    }
 // CHECK-NEXT:  };
 
+// struct does not emit a public: section.
+emitc.class struct @structClass {
+  emitc.field @x : i32
+  emitc.field @y : i32
+}
+
+// CHECK-LABEL: struct structClass {
+// CHECK-NEXT:    int32_t x;
+// CHECK-NEXT:    int32_t y;
+// CHECK-NEXT:  };
+
+// union does not emit a public: section.
+emitc.class union @unionClass {
+  emitc.field @asInt : i32
+  emitc.field @asFloat : f32
+}
+
+// CHECK-LABEL: union unionClass {
+// CHECK-NEXT:    int32_t asInt;
+// CHECK-NEXT:    float asFloat;
+// CHECK-NEXT:  };
+
+// Test that get_field is supported inside an expression.
+// When translating operations inlined inside emitc.expression,
+// the C++ emitter queries getOperatorPrecedence() and
+// operations without a defined precedence fail translation.
+emitc.class @expressionClass {
+  emitc.field @x : i32
+  emitc.func @test_precedence() -> i32 {
+    %0 = emitc.get_field @x : i32
+    %1 = emitc.expression %0 : (i32) -> i32 {
+      %2 = emitc.add %0, %0 : (i32, i32) -> i32
+      emitc.yield %2 : i32
+    }
+    return %1 : i32
+  }
+}
+
+// CHECK-LABEL: class expressionClass {
+// CHECK-NEXT:   public:
+// CHECK-NEXT:    int32_t x;
+// CHECK-NEXT:    int32_t test_precedence() {
+// CHECK-NEXT:     return x + x;
+// CHECK-NEXT:    }
+// CHECK-NEXT:  };

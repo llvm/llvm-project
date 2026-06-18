@@ -473,8 +473,7 @@ private:
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
-    // `CountersDelta` and `BitmapDelta` are constant zero when using debug info
-    // correlation.
+    // `CountersDelta` is a constant zero when using debug info correlation.
     if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:
@@ -731,7 +730,7 @@ public:
   getMemProfCallerCalleePairs() const;
 
   // Returns non-owned pointer to data access profile data.
-  LLVM_ABI memprof::DataAccessProfData *getDataAccessProfileData() const {
+  memprof::DataAccessProfData *getDataAccessProfileData() const {
     return DataAccessProfileData.get();
   }
 

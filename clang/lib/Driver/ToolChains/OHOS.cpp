@@ -379,8 +379,11 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   CmdArgs.push_back("--enable-new-dtags");
 }
 
-SanitizerMask OHOS::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask
+OHOS::getSupportedSanitizers(StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
