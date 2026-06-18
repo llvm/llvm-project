@@ -69,7 +69,7 @@
 "`P3168R2 <https://wg21.link/P3168R2>`__","Give ``std::optional`` Range Support","2024-06 (St. Louis)","|Complete|","22","`#105430 <https://github.com/llvm/llvm-project/issues/105430>`__",""
 "`P3217R0 <https://wg21.link/P3217R0>`__","Adjoints to 'Enabling list-initialization for algorithms': find_last","2024-06 (St. Louis)","","","`#105431 <https://github.com/llvm/llvm-project/issues/105431>`__",""
 "`P2985R0 <https://wg21.link/P2985R0>`__","A type trait for detecting virtual base classes","2024-06 (St. Louis)","|Complete|","20","`#105432 <https://github.com/llvm/llvm-project/issues/105432>`__",""
-"`P0843R14 <https://wg21.link/P0843R14>`__","``inplace_vector``","2024-06 (St. Louis)","|Partial|","23","`#105433 <https://github.com/llvm/llvm-project/issues/105433>`__","inplace_vector<T,N> where T is not a trivial type cannot be used in a constant expression."
+"`P0843R14 <https://wg21.link/P0843R14>`__","``inplace_vector``","2024-06 (St. Louis)","|Complete|","23","`#105433 <https://github.com/llvm/llvm-project/issues/105433>`__",""
 "`P3235R3 <https://wg21.link/P3235R3>`__","``std::print`` more types faster with less memory","2024-06 (St. Louis)","","","`#105435 <https://github.com/llvm/llvm-project/issues/105435>`__",""
 "`P2968R2 <https://wg21.link/P2968R2>`__","Make ``std::ignore`` a first-class object","2024-06 (St. Louis)","|Complete|","19","`#105436 <https://github.com/llvm/llvm-project/issues/105436>`__",""
 "`P2075R6 <https://wg21.link/P2075R6>`__","Philox as an extension of the C++ RNG engines","2024-06 (St. Louis)","","","`#105437 <https://github.com/llvm/llvm-project/issues/105437>`__",""
