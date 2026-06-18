@@ -9,8 +9,7 @@
 #ifndef __CLANG_GPU_DEVICE_FUNCTIONS_H__
 #define __CLANG_GPU_DEVICE_FUNCTIONS_H__
 
-#if (defined(__HIP__) && defined(__HIP_DEVICE_COMPILE__)) ||                   \
-    (defined(__CUDA__) && defined(__CUDA_ARCH__))
+#if defined(__HIP__) || defined(__CUDA__)
 
 #ifndef __device__
 #define __host__ __attribute__((host))
@@ -275,7 +274,7 @@ __GPU_DEVICE__ int __fns(unsigned int __mask, unsigned int __base,
 //===----------------------------------------------------------------------===//
 
 // Some targets (e.g. NVPTX) expose __syncthreads as a compiler builtin already.
-#if !__has_builtin(__syncthreads)
+#if !defined(__NVPTX__) && !__has_builtin(__syncthreads)
 __GPU_DEVICE__ void __syncthreads(void) { __gpu_sync_threads(); }
 #endif
 
