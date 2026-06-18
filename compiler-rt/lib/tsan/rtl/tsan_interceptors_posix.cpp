@@ -1762,7 +1762,7 @@ TSAN_INTERCEPTOR(int, fstat64, int fd, void *buf) {
 #  define TSAN_MAYBE_INTERCEPT_FSTAT64
 #endif
 
-TSAN_INTERCEPTOR(void, flockfile, void *file) {
+TSAN_INTERCEPTOR(void, flockfile, void* file) {
   SCOPED_TSAN_INTERCEPTOR(flockfile, file);
   MutexPreLock(thr, pc, (uptr)file,
                MutexFlagWriteReentrant | MutexFlagNotStatic);
@@ -1771,16 +1771,17 @@ TSAN_INTERCEPTOR(void, flockfile, void *file) {
                 MutexFlagWriteReentrant | MutexFlagNotStatic);
 }
 
-TSAN_INTERCEPTOR(int, ftrylockfile, void *file) {
+TSAN_INTERCEPTOR(int, ftrylockfile, void* file) {
   SCOPED_TSAN_INTERCEPTOR(ftrylockfile, file);
   int res = REAL(ftrylockfile)(file);
   if (res == 0)
-    MutexPostLock(thr, pc, (uptr)file,
-                  MutexFlagWriteReentrant | MutexFlagNotStatic | MutexFlagTryLock);
+    MutexPostLock(
+        thr, pc, (uptr)file,
+        MutexFlagWriteReentrant | MutexFlagNotStatic | MutexFlagTryLock);
   return res;
 }
 
-TSAN_INTERCEPTOR(void, funlockfile, void *file) {
+TSAN_INTERCEPTOR(void, funlockfile, void* file) {
   SCOPED_TSAN_INTERCEPTOR(funlockfile, file);
   MutexUnlock(thr, pc, (uptr)file);
   REAL(funlockfile)(file);
