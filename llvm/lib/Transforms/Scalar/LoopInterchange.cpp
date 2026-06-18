@@ -721,7 +721,7 @@ struct LoopInterchange {
 
   bool run(LoopNest &LN) {
     SmallVector<SmallVector<Loop *, 8>, 4> LoopLists = collectPerfectNests(LN);
-    if(LoopLists.empty()){
+    if (LoopLists.empty()) {
       LLVM_DEBUG(dbgs() << "No Valid candidates for loop interchange.\n");
       return false;
     }
