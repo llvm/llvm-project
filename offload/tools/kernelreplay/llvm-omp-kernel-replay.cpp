@@ -211,11 +211,14 @@ Error replayKernel() {
   if (TeamsLimits.size() != 2 || ThreadsLimits.size() != 2)
     return createErr("TeamsLimits and ThreadsLimits must have a min and max");
 
-  // If the limits were specified, verify the selected values are valid.
-  if (TeamsLimits[0] > 0 &&
+  // If the limits were specified and the user is overriding the recorded
+  // launch geometry, verify the selected values are within bounds. When no
+  // override is given we replay with the values that have been actually used by
+  // runtime, which may have chosen to clamp or round teams or threads.
+  if (NumTeamsOpt > 0 && TeamsLimits[0] > 0 &&
       (NumTeams < TeamsLimits[0] || NumTeams > TeamsLimits[1]))
     return createErr("number of teams is out of the allowed limits");
-  if (ThreadsLimits[0] > 0 &&
+  if (NumThreadsOpt > 0 && ThreadsLimits[0] > 0 &&
       (NumThreads < ThreadsLimits[0] || NumThreads > ThreadsLimits[1]))
     return createErr("number of threads is out of the allowed limits");
 
