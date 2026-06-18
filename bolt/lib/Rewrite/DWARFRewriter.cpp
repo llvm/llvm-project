@@ -708,7 +708,7 @@ void DWARFRewriter::finalizeMainCUStrOffsets(
       }
       //  split CU were just finalized above when the
       // .debug_str_offsets section was modified;
-      return;
+      continue;
     }
 
     if (Version >= 5)
