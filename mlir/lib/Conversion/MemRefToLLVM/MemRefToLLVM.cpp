@@ -38,11 +38,11 @@ namespace mlir {
 
 using namespace mlir;
 
-// Returns GEP no-wrap flags for a memref load/store.
-// inbounds is always valid when indices are in-bounds per the memref spec.
-// nuw requires every index*stride term to not unsigned-wrap, which holds iff
-// all strides are statically non-negative. Negative strides would make the
-// intermediate mul nuw overflow (e.g., idx * (-1 as u64) wraps for idx > 0).
+/// Returns GEP no-wrap flags for a memref load/store.
+/// inbounds is always valid when indices are in-bounds per the memref spec.
+/// nuw requires every index*stride term to not unsigned-wrap, which holds iff
+/// all strides are statically non-negative. Negative strides would make the
+/// intermediate mul nuw overflow (e.g., idx * (-1 as u64) wraps for idx > 0).
 static LLVM::GEPNoWrapFlags getLoadStoreNoWrapFlags(MemRefType type) {
   auto [strides, offset] = type.getStridesAndOffset();
   LLVM::GEPNoWrapFlags flags = LLVM::GEPNoWrapFlags::inbounds;
