@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -verify %s
 // expected-no-diagnostics
+
+// A wide _BitInt needs a target with a large __BITINT_MAXWIDTH__; pin x86_64 so
+// the test does not depend on the host target (e.g. AArch64 caps it at 128).
 
 // POC scope: the conversion is implemented in the classic constant evaluator
 // (ExprConstant.cpp). The experimental bytecode interpreter

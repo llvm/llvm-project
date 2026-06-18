@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -std=c++20 -fconstexpr-steps=100 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fconstexpr-steps=100 -fsyntax-only -verify %s
 // expected-no-diagnostics
+
+// Pin x86_64 so the wide _BitInt does not depend on the host target's
+// __BITINT_MAXWIDTH__ (e.g. AArch64 caps it at 128).
 
 // The builtin does not spend constexpr steps proportional to the operand width.
 // Parsing the 302-digit decimal of 2^1000 into a 1024-bit _BitInt under a
