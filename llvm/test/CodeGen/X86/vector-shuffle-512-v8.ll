@@ -1860,9 +1860,9 @@ define <4 x i64> @test_v8i64_1257 (<8 x i64> %v) {
 define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 ; ALL-LABEL: test_v8i64_2_5:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [2,5]
-; ALL-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; ALL-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
+; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    ret{{[l|q]}}
   %res = shufflevector <8 x i64> %v, <8 x i64> poison, <2 x i32> <i32 2, i32 5>

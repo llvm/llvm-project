@@ -323,10 +323,12 @@ define i32 @mul_64xi8_zc(<64 x i8> %a, i32 %c) {
 ; AVXVNNI-AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVXVNNI-AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVXVNNI-AVX512-NEXT:    {vex} vpdpbusd %ymm2, %ymm1, %ymm4
+; AVXVNNI-AVX512-NEXT:    vextracti128 $1, %ymm4, %xmm1
 ; AVXVNNI-AVX512-NEXT:    {vex} vpdpbusd %ymm2, %ymm0, %ymm3
-; AVXVNNI-AVX512-NEXT:    vpaddd %ymm4, %ymm3, %ymm0
-; AVXVNNI-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVXVNNI-AVX512-NEXT:    vextracti128 $1, %ymm3, %xmm0
 ; AVXVNNI-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVXVNNI-AVX512-NEXT:    vpaddd %xmm4, %xmm3, %xmm1
+; AVXVNNI-AVX512-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVXVNNI-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVXVNNI-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVXVNNI-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
