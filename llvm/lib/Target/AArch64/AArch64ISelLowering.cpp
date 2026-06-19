@@ -24285,14 +24285,10 @@ static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
                                      SelectionDAG &DAG) {
   SDLoc DL(N);
   unsigned ElementSizeInBits = getPredCounterWhileElementSize(IID);
-  unsigned VectorScale = N->getConstantOperandVal(3);
-  assert(VectorScale == 2 || VectorScale == 4);
-  return DAG.getNode(
-      getPredCounterWhileOpcode(IID), DL,
-      DAG.getVTList(MVT::aarch64svcount, FlagsVT), N->getOperand(1),
-      N->getOperand(2),
-      DAG.getTargetConstant(VectorScale == 2 ? 0 : 1, DL, MVT::i32),
-      DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
+  return DAG.getNode(getPredCounterWhileOpcode(IID), DL,
+                     DAG.getVTList(MVT::aarch64svcount, FlagsVT),
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                     DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,
