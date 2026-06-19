@@ -10,8 +10,8 @@ define void @clmul_fixed() {
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %c1 = call <1 x i64> @llvm.clmul.v1i64(<1 x i64> poison, <1 x i64> poison)
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %c32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> poison, <4 x i32> poison)
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %c2 = call <2 x i32> @llvm.clmul.v2i32(<2 x i32> poison, <2 x i32> poison)
-; NOAES-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %c16 = call <4 x i16> @llvm.clmul.v4i16(<4 x i16> poison, <4 x i16> poison)
-; NOAES-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %c16x8 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> poison, <8 x i16> poison)
+; NOAES-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %c16 = call <4 x i16> @llvm.clmul.v4i16(<4 x i16> poison, <4 x i16> poison)
+; NOAES-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %c16x8 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> poison, <8 x i16> poison)
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AES-LABEL: 'clmul_fixed'
@@ -21,8 +21,8 @@ define void @clmul_fixed() {
 ; AES-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c1 = call <1 x i64> @llvm.clmul.v1i64(<1 x i64> poison, <1 x i64> poison)
 ; AES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %c32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> poison, <4 x i32> poison)
 ; AES-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %c2 = call <2 x i32> @llvm.clmul.v2i32(<2 x i32> poison, <2 x i32> poison)
-; AES-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %c16 = call <4 x i16> @llvm.clmul.v4i16(<4 x i16> poison, <4 x i16> poison)
-; AES-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %c16x8 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> poison, <8 x i16> poison)
+; AES-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %c16 = call <4 x i16> @llvm.clmul.v4i16(<4 x i16> poison, <4 x i16> poison)
+; AES-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %c16x8 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> poison, <8 x i16> poison)
 ; AES-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %c8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> poison, <16 x i8> poison)
