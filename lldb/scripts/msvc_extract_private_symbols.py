@@ -13,7 +13,9 @@ import subprocess
 import sys
 
 
-def extract_symbols(nm_path: str, lib: str, regex: re.Pattern[str], nm_flags: list[str]):
+def extract_symbols(
+    nm_path: str, lib: str, regex: re.Pattern[str], nm_flags: list[str]
+):
     """Extract all of the private lldb symbols from the given path to llvm-nm and
     library to extract from."""
 
@@ -49,17 +51,19 @@ def extract_exports(nm_path: str, lib: str):
     # Matches mangled symbols containing 'lldb_private'.
     regex = re.compile(r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*lldb_private.*)")
     # '-g': Only get the global symbols
-    return extract_symbols(nm_path, lib, regex, ['-g'])
+    return extract_symbols(nm_path, lib, regex, ["-g"])
 
 
 def extract_undef(nm_path: str, lib: str):
     # Matches mangled symbols containing 'lldb_private' or 'llvm'.
     regex_undef = re.compile(r"^0* +U (?P<symbol>[?]+[^?].*(?:lldb_private|llvm).*)")
-    regex_global = re.compile(r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*(?:lldb_private|llvm).*)")
+    regex_global = re.compile(
+        r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*(?:lldb_private|llvm).*)"
+    )
     # '-u': Only get the undefined symbols
-    undef = extract_symbols(nm_path, lib, regex_undef, ['-u'])
+    undef = extract_symbols(nm_path, lib, regex_undef, ["-u"])
     # '-g': Only get the global symbols
-    globals = extract_symbols(nm_path, lib, regex_global, ['-g'])
+    globals = extract_symbols(nm_path, lib, regex_global, ["-g"])
     # If this is a static library, only return symbols undefined in all object
     # files.
     return undef - globals
@@ -105,15 +109,20 @@ def main():
                         break
             if not any([lib.endswith(s) for s in suffixes]):
                 print(
-                    "Unknown extension type for library argument: " + lib, file=sys.stderr
+                    "Unknown extension type for library argument: " + lib,
+                    file=sys.stderr,
                 )
                 exit(1)
             libs.append((lib, is_consuming))
 
     # Extract symbols from the input libraries.
     symbols = set()
-    for (lib, is_consuming) in libs:
-        symbols |= extract_undef(args.nm, lib) if is_consuming else extract_exports(args.nm, lib)
+    for lib, is_consuming in libs:
+        symbols |= (
+            extract_undef(args.nm, lib)
+            if is_consuming
+            else extract_exports(args.nm, lib)
+        )
 
     # Write out the symbols to the output file.
     with open(args.o, "w", newline="") as f:
