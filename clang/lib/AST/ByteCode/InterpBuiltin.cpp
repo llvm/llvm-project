@@ -725,7 +725,9 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
   // Check for raised non-FE_INEXACT exceptions.
   if (Status & (~APFloat::opStatus::opInexact))
     return false;
-  S.Stk.push<Floating>(Floating(*Result));
+  Floating Res = S.allocFloat(Arg.getSemantics());
+  Res.copy(*Result);
+  S.Stk.push<Floating>(Res);
   return true;
 }
 
