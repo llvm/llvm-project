@@ -701,6 +701,18 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
+/// Check whether a target kernel can be promoted to a "no-loop" SPMD kernel,
+/// mirroring Flang's MLIR promotion path.
+static bool canPromoteToNoLoop(const LangOptions &LangOpts,
+                               const OMPExecutableDirective &D) {
+  OpenMPDirectiveKind DKind = D.getDirectiveKind();
+  return (DKind == OMPD_target_teams_distribute_parallel_for ||
+          DKind == OMPD_target_teams_distribute_parallel_for_simd) &&
+         LangOpts.OpenMPTeamSubscription && LangOpts.OpenMPThreadSubscription &&
+         !D.hasClausesOfKind<OMPNumTeamsClause>() &&
+         !D.hasClausesOfKind<OMPReductionClause>();
+}
+
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              StringRef ParentName,
                                              llvm::Function *&OutlinedFn,
@@ -746,9 +758,14 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
-  Attrs.ExecFlags =
-      IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
-             : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+  if (IsSPMD && canPromoteToNoLoop(CGM.getLangOpts(), D))
+    Attrs.ExecFlags =
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  else
+    Attrs.ExecFlags =
+        IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
+               : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
 
   CGBuilderTy &Bld = CGF.Builder;
