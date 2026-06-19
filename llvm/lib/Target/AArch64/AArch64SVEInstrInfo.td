@@ -80,14 +80,14 @@ def SDT_AArch64_PredCounterWhile : SDTypeProfile<2, 4, [
   SDTCisInt<4>, SDTCisInt<5>
 ]>;
 
-def AArch64whilege_pn_flag : SDNode<"AArch64ISD::WHILEGE_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilegt_pn_flag : SDNode<"AArch64ISD::WHILEGT_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilelt_pn_flag : SDNode<"AArch64ISD::WHILELT_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilele_pn_flag : SDNode<"AArch64ISD::WHILELE_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilehs_pn_flag : SDNode<"AArch64ISD::WHILEHS_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilehi_pn_flag : SDNode<"AArch64ISD::WHILEHI_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilelo_pn_flag : SDNode<"AArch64ISD::WHILELO_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
-def AArch64whilels_pn_flag : SDNode<"AArch64ISD::WHILELS_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
+def AArch64whilege_pn_flag : SDNode<"AArch64ISD::WHILEGE_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilegt_pn_flag : SDNode<"AArch64ISD::WHILEGT_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilelt_pn_flag : SDNode<"AArch64ISD::WHILELT_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilele_pn_flag : SDNode<"AArch64ISD::WHILELE_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilehs_pn_flag : SDNode<"AArch64ISD::WHILEHS_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilehi_pn_flag : SDNode<"AArch64ISD::WHILEHI_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilelo_pn_flag : SDNode<"AArch64ISD::WHILELO_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilels_pn_flag : SDNode<"AArch64ISD::WHILELS_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
 
 // Gather loads - node definitions
 //
