@@ -949,6 +949,9 @@ AIX Support
   archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
   between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
   the same library name.
+- Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
+  This directive embeds a copyright or identifying string into the compiled object file. 
+  The string is included in the final executable and loaded into memory at program runtime.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
