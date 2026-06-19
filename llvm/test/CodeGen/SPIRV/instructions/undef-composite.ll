@@ -3,6 +3,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
+; Check that a poison element nested inside a constant aggregate is lowered to
+; an OpUndef placeholder, instead of reaching IRTranslator as an untranslatable
+; spv.const.composite operand and crashing.
+
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#ARR:]] = OpTypeArray %[[#I32]] %[[#]]
 
