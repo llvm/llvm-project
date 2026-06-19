@@ -3088,7 +3088,8 @@ Target::ReadInstructions(const Address &start_addr, uint32_t count,
 
   if (error.Fail())
     return llvm::createStringErrorV(
-        error.AsCString("Target::ReadInstructions failed to read memory at {}"),
+        error.AsCString(
+            "Target::ReadInstructions failed to read memory at {:x}"),
         start_addr.GetLoadAddress(this));
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
