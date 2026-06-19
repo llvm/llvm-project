@@ -49,6 +49,21 @@ void test_marked_members() {
   (void)a; (void)b; (void)c;
 }
 
+void test_arrays() {
+  // An automatic array of a class type whose default-init leaves a scalar
+  // subobject indeterminate is diagnosed via the base element type (paper
+  // section 6).
+  Trivial a[3];                // expected-error {{variable 'a' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  Trivial b[2][3];             // expected-error {{variable 'b' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  int c[5];                    // expected-error {{variable 'c' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  Trivial d[2] = {};
+  Trivial e[2] = {{1}, {2}};
+  [[uninitialized]] Trivial f[3];
+  WithCtor g[3];
+  AllInit h[3];
+  (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; (void)g; (void)h;
+}
+
 void test_suppress() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init, rule: "uninit_decl")]] Trivial a;

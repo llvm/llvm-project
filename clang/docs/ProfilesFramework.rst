@@ -732,11 +732,6 @@ constructor is trusted; static / thread storage duration is excluded
   §6.2). So a type whose only indeterminate scalars are all marked is trusted
   (e.g. ``struct A { int x [[uninitialized]]; }; A a;`` is accepted), while a
   mixed type still fires for its unmarked scalars.
-- Known gap: the aggregate branch guards on ``Var->getType()->isRecordType()``,
-  which does not look through array types, so an automatic array of a class
-  type that leaves scalar subobjects indeterminate (e.g. ``S arr[3];`` for
-  ``struct S { int x; };``) is not diagnosed, even though the scalar form
-  ``S one;`` is.
 
 R3. ``static_runtime_init`` -- pattern 1
 .........................................

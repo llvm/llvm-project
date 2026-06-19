@@ -14729,11 +14729,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         !Var->hasAttr<CXX11UninitializedAttr>() &&
         shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var) &&
         // A definition with no initializer (scalar / pointer / enum, or an
-        // array of them), or a class/aggregate type whose default-init leaves
-        // a scalar subobject indeterminate (its synthesized constructor call
-        // provides an initializer, so the !getInit() test alone misses it).
+        // array of them), or a class/aggregate type -- possibly the element
+        // type of an array -- whose default-init leaves a scalar subobject
+        // indeterminate (its synthesized constructor call provides an
+        // initializer, so the !getInit() test alone misses it).
         (!Var->getInit() ||
-         (Var->getType()->isRecordType() &&
+         (Context.getBaseElementType(Var->getType())->isRecordType() &&
           defaultInitLeavesScalarIndeterminate(
               Var->getType(), /*HonorUninitMarkers=*/true)))) {
       Diag(Var->getLocation(), diag::err_init_uninit_decl)
