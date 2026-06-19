@@ -875,7 +875,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   //
   // The call to the OUTLINED_FUNCTION may not be a normal ABI call (e.g.
   // on RISCV it might be called `jal t0, OUTLINED_FUNCTION_<nn>` putting the
-  // return address in a temporary register instead of $ra).  Tthe unwind
+  // return address in a temporary register instead of $ra).  The unwind
   // instructions in eh_frame/debug_frame are not correct today for an
   // OUTLINED_FUNCTION, even when a normal ABI call is made.
   // Clang does not insert CFI directives in the OUTLINED_FUNCTION so it
