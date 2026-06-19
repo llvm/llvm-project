@@ -218,6 +218,9 @@ public:
   std::error_code close() override;
   void setPath(const Twine &Path) override;
   bool isText() const override { return IsTextMode; }
+  bool realFileTextMismatch(bool RequestedIsText) const override {
+    return IsTextMode != RequestedIsText;
+  }
 };
 
 } // namespace
