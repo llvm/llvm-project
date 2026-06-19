@@ -161,13 +161,12 @@ public:
   VersionedInfo<CXXMethodInfo> lookupCXXMethod(ContextID CtxID,
                                                llvm::StringRef Name);
 
-  /// Look for information regarding the given C++ method with an optional
-  /// parameter selector. Passing std::nullopt uses the name-only key, an empty
-  /// parameter list uses an exact zero-parameter key, and a non-empty list uses
-  /// an exact ordered parameter key.
+  /// Look for information regarding the given C++ method with an exact
+  /// parameter selector. An empty parameter list uses an exact zero-parameter
+  /// key, and a non-empty list uses an exact ordered parameter key.
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                  std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters);
+                  llvm::ArrayRef<llvm::StringRef> Parameters);
 
   /// Look for information regarding the given global variable.
   ///
@@ -187,14 +186,13 @@ public:
   lookupGlobalFunction(llvm::StringRef Name,
                        std::optional<Context> Ctx = std::nullopt);
 
-  /// Look for information regarding the given global function with an optional
-  /// parameter selector. Passing std::nullopt uses the name-only key, an empty
-  /// parameter list uses an exact zero-parameter key, and a non-empty list uses
-  /// an exact ordered parameter key.
-  VersionedInfo<GlobalFunctionInfo> lookupGlobalFunction(
-      llvm::StringRef Name,
-      std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
-      std::optional<Context> Ctx = std::nullopt);
+  /// Look for information regarding the given global function with an exact
+  /// parameter selector. An empty parameter list uses an exact zero-parameter
+  /// key, and a non-empty list uses an exact ordered parameter key.
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunction(llvm::StringRef Name,
+                       llvm::ArrayRef<llvm::StringRef> Parameters,
+                       std::optional<Context> Ctx = std::nullopt);
 
   /// Look for information regarding the given enumerator.
   ///
@@ -240,6 +238,20 @@ public:
   std::optional<ContextID>
   lookupNamespaceID(llvm::StringRef Name,
                     std::optional<ContextID> ParentNamespaceID = std::nullopt);
+
+private:
+  VersionedInfo<CXXMethodInfo> lookupCXXMethodImpl(ContextID CtxID,
+                                                   llvm::StringRef Name);
+  VersionedInfo<CXXMethodInfo>
+  lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
+                      llvm::ArrayRef<llvm::StringRef> Parameters);
+
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx);
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunctionImpl(llvm::StringRef Name,
+                           llvm::ArrayRef<llvm::StringRef> Parameters,
+                           std::optional<Context> Ctx);
 };
 
 } // end namespace api_notes

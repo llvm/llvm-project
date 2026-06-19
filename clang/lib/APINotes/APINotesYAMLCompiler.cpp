@@ -1173,8 +1173,11 @@ public:
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, WhereParameters, MI,
-                          SwiftVersion);
+      if (WhereParameters)
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters, MI,
+                            SwiftVersion);
+      else
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
 
     // Convert nested tags.
@@ -1260,8 +1263,11 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      Writer.addGlobalFunction(Ctx, Function.Name, WhereParameters, GFI,
-                               SwiftVersion);
+      if (WhereParameters)
+        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters, GFI,
+                                 SwiftVersion);
+      else
+        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
     // Write all enumerators.

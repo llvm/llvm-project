@@ -137,24 +137,37 @@ class APINotesWriter::Implementation {
         .first->second;
   }
 
-  FunctionTableKey
-  getFunctionKey(uint32_t ParentContextID, StringRef Name,
-                 std::optional<ArrayRef<StringRef>> Parameters = std::nullopt) {
-    IdentifierID NameID = getIdentifier(Name);
-    if (!Parameters)
-      return FunctionTableKey(ParentContextID, NameID);
-
-    llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
-    ParameterTypeIDs.reserve(Parameters->size());
-    for (StringRef Parameter : *Parameters)
-      ParameterTypeIDs.push_back(getIdentifier(Parameter));
-    return FunctionTableKey(ParentContextID, NameID,
-                            std::move(ParameterTypeIDs));
+  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name) {
+    std::optional<FunctionTableKey> Key =
+        getFunctionKeyImpl(ParentContextID, Name,
+                           [this](StringRef S) -> std::optional<IdentifierID> {
+                             return getIdentifier(S);
+                           });
+    assert(Key && "Writer identifier lookup should not fail");
+    return *Key;
   }
 
-  FunctionTableKey
-  getFunctionKey(std::optional<Context> ParentContext, StringRef Name,
-                 std::optional<ArrayRef<StringRef>> Parameters = std::nullopt) {
+  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name,
+                                  ArrayRef<StringRef> Parameters) {
+    std::optional<FunctionTableKey> Key =
+        getFunctionKeyImpl(ParentContextID, Name, Parameters,
+                           [this](StringRef S) -> std::optional<IdentifierID> {
+                             return getIdentifier(S);
+                           });
+    assert(Key && "Writer identifier lookup should not fail");
+    return *Key;
+  }
+
+  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
+                                  StringRef Name) {
+    uint32_t ParentContextID =
+        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+    return getFunctionKey(ParentContextID, Name);
+  }
+
+  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
+                                  StringRef Name,
+                                  ArrayRef<StringRef> Parameters) {
     uint32_t ParentContextID =
         ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
     return getFunctionKey(ParentContextID, Name, Parameters);
@@ -1607,13 +1620,14 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
 void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                                   const CXXMethodInfo &Info,
                                   VersionTuple SwiftVersion) {
-  addCXXMethod(CtxID, Name, std::nullopt, Info, SwiftVersion);
+  FunctionTableKey Key = Implementation->getFunctionKey(CtxID.Value, Name);
+  Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
 }
 
-void APINotesWriter::addCXXMethod(
-    ContextID CtxID, llvm::StringRef Name,
-    std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
-    const CXXMethodInfo &Info, VersionTuple SwiftVersion) {
+void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                                  llvm::ArrayRef<llvm::StringRef> Parameters,
+                                  const CXXMethodInfo &Info,
+                                  VersionTuple SwiftVersion) {
   FunctionTableKey Key =
       Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
   Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
@@ -1640,13 +1654,14 @@ void APINotesWriter::addGlobalFunction(std::optional<Context> Ctx,
                                        llvm::StringRef Name,
                                        const GlobalFunctionInfo &Info,
                                        VersionTuple SwiftVersion) {
-  addGlobalFunction(Ctx, Name, std::nullopt, Info, SwiftVersion);
+  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name);
+  Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
 }
 
 void APINotesWriter::addGlobalFunction(
     std::optional<Context> Ctx, llvm::StringRef Name,
-    std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
-    const GlobalFunctionInfo &Info, VersionTuple SwiftVersion) {
+    llvm::ArrayRef<llvm::StringRef> Parameters, const GlobalFunctionInfo &Info,
+    VersionTuple SwiftVersion) {
   FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name, Parameters);
   Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
 }
