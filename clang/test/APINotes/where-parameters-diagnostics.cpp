@@ -123,12 +123,14 @@ Tags:
 
 void duplicateGlobal(int);
 void duplicateEmpty();
+void duplicateNormalizedGlobal(int *);
 void allowedGlobal(int);
 void allowedGlobal(double);
 
 struct DiagnosticWidget {
   void duplicateMethod(int);
   void duplicateEmpty();
+  void duplicateNormalizedMethod(int *);
   void allowed(int);
   void allowed(double);
 };
@@ -159,6 +161,17 @@ Functions:
     Parameters: []
   SwiftName: duplicateEmptyB()
 # DUPLICATE: error: multiple API notes entries for global function 'duplicateEmpty' with Where.Parameters []
+- Name: duplicateNormalizedGlobal
+  Where:
+    Parameters:
+    - int *
+  SwiftName: duplicateNormalizedGlobalA(_:)
+- Name: duplicateNormalizedGlobal
+  Where:
+    Parameters:
+    - int*
+  SwiftName: duplicateNormalizedGlobalB(_:)
+# DUPLICATE: error: multiple API notes entries for global function 'duplicateNormalizedGlobal' with Where.Parameters [int*]
 - Name: allowedGlobal
   SwiftPrivate: true
 - Name: allowedGlobal
@@ -194,6 +207,17 @@ Tags:
       Parameters: []
     SwiftName: duplicateEmptyB()
 # DUPLICATE: error: multiple API notes entries for C++ method 'duplicateEmpty' with Where.Parameters []
+  - Name: duplicateNormalizedMethod
+    Where:
+      Parameters:
+      - int *
+    SwiftName: duplicateNormalizedMethodA(_:)
+  - Name: duplicateNormalizedMethod
+    Where:
+      Parameters:
+      - int*
+    SwiftName: duplicateNormalizedMethodB(_:)
+# DUPLICATE: error: multiple API notes entries for C++ method 'duplicateNormalizedMethod' with Where.Parameters [int*]
   - Name: allowed
     SwiftPrivate: true
   - Name: allowed

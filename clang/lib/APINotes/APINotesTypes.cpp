@@ -7,10 +7,124 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace api_notes {
+
+// Conservatively detect spellings where cv-qualification belongs to an
+// indirect/declarator layer rather than the by-value parameter itself.
+static bool
+hasTopLevelIndirectParameterSelectorSpelling(llvm::StringRef Spelling) {
+  unsigned Depth = 0;
+
+  for (char C : Spelling) {
+    switch (C) {
+    case '*':
+    case '&':
+      if (Depth == 0)
+        return true;
+      break;
+
+    case '[':
+    case '(':
+      if (Depth == 0)
+        return true;
+      ++Depth;
+      break;
+
+    case '<':
+      ++Depth;
+      break;
+
+    case '>':
+    case ']':
+    case ')':
+      if (Depth != 0)
+        --Depth;
+      break;
+
+    default:
+      break;
+    }
+  }
+
+  return false;
+}
+
+static bool shouldDropParameterSelectorSpace(char Previous, char Next) {
+  if (Previous == '<' || Previous == ',' || Next == '>' || Next == ',' ||
+      Next == '<')
+    return true;
+
+  if (Next == '*' || Next == '&')
+    return true;
+
+  if (Previous == '&' && Next == '&')
+    return true;
+
+  return false;
+}
+
+static std::string
+collapseParameterSelectorWhitespace(llvm::StringRef Spelling) {
+  llvm::SmallVector<llvm::StringRef, 4> Tokens;
+  llvm::SplitString(Spelling, Tokens);
+  return llvm::join(Tokens, " ");
+}
+
+static llvm::StringRef normalizeUnsignedIntSpelling(llvm::StringRef Spelling) {
+  if (Spelling == "unsigned")
+    return "unsigned int";
+  return Spelling;
+}
+
+static llvm::StringRef stripTopLevelValueConst(llvm::StringRef Spelling) {
+  if (hasTopLevelIndirectParameterSelectorSpelling(Spelling))
+    return Spelling;
+
+  Spelling.consume_front("const ");
+  Spelling.consume_back(" const");
+  return Spelling;
+}
+
+// Remove spaces around selector punctuation while preserving token-separating
+// spaces such as the one in "unsigned int".
+static void removeParameterSelectorPunctuationSpaces(
+    llvm::StringRef Spelling, llvm::SmallVectorImpl<char> &Normalized) {
+  Normalized.clear();
+  for (unsigned I = 0, E = Spelling.size(); I != E; ++I) {
+    char C = Spelling[I];
+    if (C == ' ' && I != 0 && I + 1 != E &&
+        shouldDropParameterSelectorSpace(Spelling[I - 1], Spelling[I + 1]))
+      continue;
+
+    Normalized.push_back(C);
+  }
+}
+
+static std::string stripTopLevelPointerConst(llvm::StringRef Spelling) {
+  if (!Spelling.consume_back("*const") && !Spelling.consume_back("* const"))
+    return Spelling.str();
+
+  std::string WithoutTopLevelConst = Spelling.str();
+  WithoutTopLevelConst += '*';
+  return WithoutTopLevelConst;
+}
+
+std::string normalizeAPINotesParameterSelector(llvm::StringRef Spelling) {
+  std::string Collapsed = collapseParameterSelectorWhitespace(Spelling);
+
+  llvm::StringRef WithoutTopLevelValueConst =
+      normalizeUnsignedIntSpelling(stripTopLevelValueConst(Collapsed));
+
+  llvm::SmallString<32> WithoutPunctuationSpaces;
+  removeParameterSelectorPunctuationSpaces(WithoutTopLevelValueConst,
+                                           WithoutPunctuationSpaces);
+  return stripTopLevelPointerConst(WithoutPunctuationSpaces);
+}
 
 LLVM_DUMP_METHOD void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
   if (Unavailable)
