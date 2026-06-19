@@ -568,6 +568,12 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
   return TTI::PSK_Software;
 }
 
+InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
+  // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
+  // AArch64SchedNeoverseV2.td).
+  return ST->getSchedModel().MispredictPenalty;
+}
+
 static bool isUnpackedVectorVT(EVT VecVT) {
   return VecVT.isScalableVector() &&
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
@@ -633,6 +639,78 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // If the cost isn't valid, we may still be able to scalarize
     if (HistCost.isValid())
       return HistCost;
+    break;
+  }
+  case Intrinsic::clmul: {
+    auto LT = getTypeLegalizationCost(RetTy);
+
+    // PMUL v8i8/v16i8 is always available on AArch64
+    if (ST->hasNEON()) {
+      if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
+        return LT.first;
+
+      // Scalar i8 lowers through scalar/vector moves around PMUL.
+      if (TLI->getValueType(DL, RetTy, true) == MVT::i8) {
+        auto *VecTy =
+            FixedVectorType::get(Type::getInt8Ty(RetTy->getContext()), 8);
+        return 1 +
+               getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                  -1, nullptr, nullptr) *
+                   2 +
+               getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                  -1, nullptr, nullptr);
+      }
+    }
+
+    if (LT.second.SimpleTy == MVT::nxv2i64)
+      if (ST->hasSVEAES() && (ST->isSVEAvailable() || ST->hasSSVE_AES()))
+        return LT.first * 3;
+
+    if (ST->hasSVE2() || ST->hasSME()) {
+      switch (LT.second.SimpleTy) {
+      case MVT::nxv16i8:
+        return LT.first;
+      case MVT::nxv8i16:
+        return LT.first * 6;
+      case MVT::nxv4i32:
+        return LT.first * 3;
+      case MVT::nxv2i64:
+        return LT.first * 8;
+      default:
+        break;
+      }
+    }
+
+    // Avoid +sve giving this cost 2 due to custom lowering: It's very slow
+    if (LT.second.SimpleTy == MVT::nxv2i64)
+      return 192;
+
+    if (ST->hasAES()) {
+      switch (LT.second.SimpleTy) {
+      case MVT::i16:
+      case MVT::i32:
+      case MVT::i64:
+      case MVT::i128: {
+        auto *VecTy =
+            FixedVectorType::get(Type::getInt64Ty(RetTy->getContext()), 1);
+        return LT.first *
+               (1 +
+                getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                   -1, nullptr, nullptr) *
+                    2 +
+                getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                   -1, nullptr, nullptr));
+      }
+      case MVT::v1i64:
+        return LT.first;
+      case MVT::v2i64:
+        return LT.first * 3;
+      case MVT::v2i32:
+        return LT.first * 6;
+      default:
+        break;
+      }
+    }
     break;
   }
   case Intrinsic::umin:

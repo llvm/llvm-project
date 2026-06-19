@@ -37,14 +37,29 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
         .build();
   }
 
-  const Object &RootObject = *RootObjectPtr;
+  if (auto Err = checkSummaryType(*RootObjectPtr, JSONTypeValueTUSummary)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .build();
+  }
 
+  auto ExpectedEncoding = readTUSummaryEncodingFromObject(*RootObjectPtr);
+  if (!ExpectedEncoding) {
+    return ErrorBuilder::wrap(ExpectedEncoding.takeError())
+        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .build();
+  }
+
+  return std::move(*ExpectedEncoding);
+}
+
+llvm::Expected<TUSummaryEncoding>
+JSONFormat::readTUSummaryEncodingFromObject(const Object &RootObject) {
   auto OptTargetTriple = RootObject.getString("target_triple");
   if (!OptTargetTriple) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
                                 "TargetTriple", "target_triple", "string")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
         .build();
   }
 
@@ -52,7 +67,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
     return ErrorBuilder::wrap(std::move(Err))
         .context(ErrorMessages::ReadingFromField, "TargetTriple",
                  "target_triple")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
         .build();
   }
 
@@ -63,7 +77,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
                                 "BuildNamespace", "tu_namespace", "object")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
         .build();
   }
 
@@ -72,7 +85,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
     return ErrorBuilder::wrap(ExpectedTUNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespace",
                  "tu_namespace")
-        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
         .build();
   }
 
@@ -84,7 +96,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -92,7 +103,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -105,7 +115,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "LinkageTable", "linkage_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -122,7 +131,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
                    "linkage_table")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -135,7 +143,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "SummaryData entries", "data", "array")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -145,7 +152,6 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedEncodingSummaryDataMap.takeError())
           .context(ErrorMessages::ReadingFromField, "SummaryData entries",
                    "data")
-          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
           .build();
     }
 
@@ -159,6 +165,8 @@ llvm::Error
 JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
                                    llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject[JSONTypeKey] = JSONTypeValueTUSummary;
 
   RootObject["target_triple"] =
       llvm::Triple::normalize(getTargetTriple(SummaryEncoding).str());
