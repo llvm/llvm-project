@@ -72,6 +72,8 @@ AGENTS.md
 /dhw-extension/
 /install*/
 /tmp/
+# Documentation artifacts
+_toc.yml
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
@@ -94,3 +96,5 @@ pythonenv*
 /clang/utils/analyzer/projects/*/RefScanBuildResults
 # automodapi puts generated documentation files here.
 /lldb/docs/python_api/
+# documentation artifacts
+/_build

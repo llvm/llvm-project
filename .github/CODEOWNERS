@@ -15,6 +15,7 @@
 /amd/comgr/ @lamb-j @chinmaydd
 /amd/device-libs/ @b-sumner @lamb-j
 /amd/hipcc/ @david-salinas @lamb-j
+/amd/docs/ @ROCm/rocm-documentation
 
 /libc/ @llbm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
