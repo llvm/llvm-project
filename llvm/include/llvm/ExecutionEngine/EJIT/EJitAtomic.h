@@ -49,24 +49,16 @@ public:
   EJitAtomic &operator=(const EJitAtomic &) = delete;
 
   /// Acquire load — pairs with storeRelease() to publish dependent writes.
-  T loadAcquire() const {
-    return __atomic_load_n(&value_, __ATOMIC_ACQUIRE);
-  }
+  T loadAcquire() const { return __atomic_load_n(&value_, __ATOMIC_ACQUIRE); }
 
   /// Relaxed load — no ordering, for diagnostics / approximate reads.
-  T loadRelaxed() const {
-    return __atomic_load_n(&value_, __ATOMIC_RELAXED);
-  }
+  T loadRelaxed() const { return __atomic_load_n(&value_, __ATOMIC_RELAXED); }
 
   /// Release store — publishes prior writes to an acquiring reader.
-  void storeRelease(T v) {
-    __atomic_store_n(&value_, v, __ATOMIC_RELEASE);
-  }
+  void storeRelease(T v) { __atomic_store_n(&value_, v, __ATOMIC_RELEASE); }
 
   /// Relaxed store — no ordering.
-  void storeRelaxed(T v) {
-    __atomic_store_n(&value_, v, __ATOMIC_RELAXED);
-  }
+  void storeRelaxed(T v) { __atomic_store_n(&value_, v, __ATOMIC_RELAXED); }
 
   /// Strong compare-exchange. On success the cell becomes \p desired and the
   /// call returns true (acq_rel). On failure \p expected is updated with the
@@ -93,6 +85,7 @@ private:
 // the concrete widths explicit avoids endian/padding surprises on aarch64_be:
 // every atomic field is a single naturally-aligned scalar, never a bitfield.
 //===----------------------------------------------------------------------===//
+using EJitAtomicU8 = EJitAtomic<uint8_t>;
 using EJitAtomicU32 = EJitAtomic<uint32_t>;
 using EJitAtomicU64 = EJitAtomic<uint64_t>;
 using EJitAtomicUPtr = EJitAtomic<uintptr_t>;

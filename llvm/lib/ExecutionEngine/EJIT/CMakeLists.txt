@@ -79,9 +79,14 @@ list(APPEND EJIT_SOURCES
 if(EJIT_SRE_TASKPOOL)
   list(APPEND EJIT_SOURCES
     EJitTaskPool.cpp
-    EJitIpcLock.cpp
     EJitSreQueue.cpp
+    EJitWorker.cpp
   )
+  if(EJIT_FREESTANDING)
+    list(APPEND EJIT_SOURCES EJitSreTask_sre.cpp)
+  else()
+    list(APPEND EJIT_SOURCES EJitSreTask_host.cpp)
+  endif()
 endif()
 
 # Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)

@@ -61,6 +61,7 @@ typedef enum {
   EJIT_ERR_QUEUE_FULL = -7,
   EJIT_ERR_DEDUP_FULL = -8,
   EJIT_ERR_DISABLED = -9,
+  EJIT_ERR_INSTANCE_DISABLED = -10,
   EJIT_PENDING = 1,
 } ejit_status_t;
 
@@ -111,13 +112,26 @@ void ejit_shutdown(void);
 // Symbol registration for bare-metal (no dlsym)
 void ejit_register_symbol(const char *name, void *addr);
 
+// Lifecycle dimType-slot fixup. Resolves \p lifecycleName to its process-global
+// dimType slot (assigning the next free slot on first sight) and writes it to
+// *slotOut, or kEJitInvalidDimType when all 8 lifecycle slots are taken. Called
+// by AOT auto-registration to fill the wrapper's per-lifecycle dimType global.
+void ejit_register_lifecycle(const char *lifecycleName, uint32_t *slotOut);
+
+// Function dense-funcIndex fixup. Resolves \p funcName to its process-global
+// dense funcIndex (assigning the next free index on first sight) and writes it
+// to *slotOut, or kEJitInvalidFuncIndex when the funcIndex capacity is
+// exhausted. Called by AOT auto-registration to fill the wrapper's per-function
+// funcIndex global; a capacity failure is recorded so ejit_init can fail.
+void ejit_register_funcindex(const char *funcName, uint32_t *slotOut);
+
 // Lifecycle
 ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx);
 ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx);
 ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
-                                   uint8_t cellIdx);
+                                  uint8_t cellIdx);
 ejit_status_t ejit_deactivate_array(const char *periodName, void *arrayPtr,
-                                     uint8_t cellIdx);
+                                    uint8_t cellIdx);
 ejit_status_t ejit_activate_all(const char *periodName);
 ejit_status_t ejit_deactivate_all(const char *periodName);
 bool ejit_is_active(const char *periodName, uint8_t cellIdx);
@@ -128,46 +142,42 @@ bool ejit_is_active(const char *periodName, uint8_t cellIdx);
 /// Hot path: single hash lookup; cold path: bitcode parse + JIT compile.
 void *ejit_compile_or_get(uint64_t cacheKey, void **out_pfn);
 
-//===-- SRE taskpool black-box API ----------------------------------------===//
-// Only defined when the runtime is built with EJIT_SRE_TASKPOOL. Declarations
-// are always present (additive, ABI-safe); calling them in a build without the
-// taskpool results in a link error rather than changing existing behavior.
-//
-// ejit_taskpool_sync_compile: compile (funcIndex,cacheKey) on the calling
-//   stack, publishing into the taskpool cache. Returns EJIT_OK on hit/compiled.
-// ejit_taskpool_free_code: logical free of a cache entry (does NOT release SRE
-//   code-pool physical memory) and cancels any in-flight request.
-// ejit_taskpool_poll_one / _poll_budget: consume queued async requests on the
-//   calling (worker) stack. No EJIT thread is ever created.
-// ejit_taskpool_worker_step: alias of poll_one for external scheduler loops.
-// ejit_taskpool_pending_count: best-effort in-flight request count.
-ejit_status_t ejit_taskpool_sync_compile(uint32_t funcIndex, uint64_t cacheKey,
-                                         void **outFn);
-ejit_status_t ejit_taskpool_free_code(uint32_t funcIndex, uint64_t cacheKey);
+typedef struct {
+  uint32_t dimType;
+  uint32_t instanceId;
+} ejit_dim_pair_t;
+
+ejit_status_t ejit_taskpool_compile_or_get(uint32_t funcIndex,
+                                           const ejit_dim_pair_t *dims,
+                                           uint32_t numDims, void **outFn,
+                                           uint32_t *outBucket);
+void ejit_taskpool_set_instance_enabled(uint32_t dimType, uint32_t instanceId,
+                                        uint32_t enabled);
+void ejit_taskpool_release_read(uint32_t bucketIndex);
+unsigned ejit_taskpool_pending_count(void);
+
+#ifdef EJIT_SRE_TASKPOOL_TESTING
 unsigned ejit_taskpool_poll_one(void);
 unsigned ejit_taskpool_poll_budget(unsigned maxItems);
-unsigned ejit_taskpool_worker_step(void);
-unsigned ejit_taskpool_pending_count(void);
+#endif
 
 // SRE taskpool statistics. Separate from ejit_stats_t (which reports the legacy
 // LRU EJitCache); these counters describe the taskpool cache/dedup/queue
-// pipeline used when EJIT_SRE_TASKPOOL is built. Fixed layout (uint64_t/uint32_t
-// only) for stable ABI across the aarch64_be target.
+// pipeline used when EJIT_SRE_TASKPOOL is built. Fixed layout
+// (uint64_t/uint32_t only) for stable ABI across the aarch64_be target.
 typedef struct {
-  uint64_t cacheHits;      ///< compile_or_get calls served from the taskpool cache.
-  uint64_t syncCompiles;   ///< Successful compiles on the caller's stack.
-  uint64_t asyncCompiles;  ///< Successful compiles via a poll worker.
-  uint64_t asyncEnqueues;  ///< Requests pushed onto the async queue.
-  uint64_t alreadyPending; ///< Duplicate submissions coalesced (not recompiled).
-  uint64_t queueFull;      ///< Async enqueues rejected; dedup rolled back.
-  uint64_t dedupFull;      ///< Reservations rejected; dedup bucket full.
-  uint64_t compileFailed;  ///< Compiles that failed / were cancelled / dropped.
-  uint64_t publishFailed;  ///< Compiles whose publish hit a full cache bucket.
-  uint64_t freeCodeCalls;  ///< ejit_taskpool_free_code() invocations.
-  uint32_t readyEntries;   ///< Live Ready cache entries.
-  uint32_t pendingEntries; ///< Live in-flight dedup slots.
-  uint32_t queueApproxSize;///< Approximate async queue depth.
-  uint32_t reserved;       ///< Padding/reserved; always 0.
+  uint64_t cacheHits;       ///< Calls served from the taskpool cache.
+  uint64_t asyncCompiles;   ///< Successful compiles via the worker.
+  uint64_t asyncEnqueues;   ///< Requests pushed onto the async queue.
+  uint64_t alreadyPending;  ///< Duplicate submissions coalesced.
+  uint64_t queueFull;       ///< Enqueues rejected because the queue was full.
+  uint64_t compileFailed;   ///< Compiles that failed, were cancelled or dropped.
+  uint64_t publishFailed;   ///< Results that could not enter the cache.
+  uint64_t instanceDisabled; ///< Per-instance disable fast-path hits.
+  uint32_t readyEntries;     ///< Live ready cache entries.
+  uint32_t pendingEntries;   ///< Live in-flight dedup slots.
+  uint32_t queueApproxSize;  ///< Approximate async queue depth.
+  uint32_t reserved;         ///< Padding/reserved; always 0.
 } ejit_taskpool_stats_t;
 
 ejit_status_t ejit_taskpool_get_stats(ejit_taskpool_stats_t *out);

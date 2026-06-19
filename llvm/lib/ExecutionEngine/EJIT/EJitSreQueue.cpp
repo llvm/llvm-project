@@ -6,17 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  Default (host / mock) backing for EJitQueue: a Vyukov-style bounded
-//  multi-producer/single-consumer ring buffer built only on EJitAtomic. It
-//  uses no std::mutex, std::condition_variable, std::thread, or any other C++
-//  threading facility, and is deterministic to test single-threaded.
+//  Backing for EJitQueue: a Vyukov-style bounded multi-producer/single-consumer
+//  ring buffer built only on EJitAtomic. It uses no std::mutex,
+//  std::condition_variable, std::thread, or any other C++ threading facility,
+//  and is deterministic to test single-threaded.
 //
-//  A real SRE deployment can replace the backing with the platform queue
-//  primitives by building with EJIT_SRE_TASKPOOL_PLATFORM_QUEUE defined; the
-//  SRE QueueCreate/QueueWrite/QueueRead entry points are confined to the
-//  clearly delimited section at the bottom of this file. Those platform symbols
-//  are only declared (never defined, no weak fallback): the platform must
-//  provide them, mirroring EJitSrePlatform.cpp.
+//  Per spec §3.3.2 the SRE platform provides no queue primitive, so this
+//  self-implemented ring is the single backing shared by host and SRE builds.
+//  The taskpool therefore references NO external platform queue symbol.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,31 +39,6 @@ uint32_t roundUpPow2(uint32_t v) {
 
 } // namespace
 
-//===----------------------------------------------------------------------===//
-// SRE platform queue entry points (reserved接入点)
-//
-// These are only referenced when EJIT_SRE_TASKPOOL_PLATFORM_QUEUE is defined.
-// The generic C++ identifiers are asm-labeled to the real SRE symbol names.
-// They are ONLY declared here — never defined and never given weak fallbacks:
-// in static-pack / partial-link scenarios a weak local definition could shadow
-// or collide with the real platform symbol. When this macro is defined the
-// platform must supply strong QueueCreate/QueueWrite/QueueRead. The default
-// host taskpool build does NOT define this macro and uses the ring backing
-// above, so it needs none of these symbols.
-//===----------------------------------------------------------------------===//
-#ifdef EJIT_SRE_TASKPOOL_PLATFORM_QUEUE
-extern "C" void *ejit_sre_queue_create(uint32_t capacity) __asm__("QueueCreate");
-extern "C" int ejit_sre_queue_write(void *q, const void *item,
-                                    uint32_t size) __asm__("QueueWrite");
-extern "C" int ejit_sre_queue_read(void *q, void *item,
-                                   uint32_t size) __asm__("QueueRead");
-
-namespace {
-// Single taskpool queue handle (one queue per process in the SRE deployment).
-void *gPlatformQueue = nullptr;
-} // namespace
-#endif // EJIT_SRE_TASKPOOL_PLATFORM_QUEUE
-
 EJitQueue::EJitQueue(uint32_t capacity) {
   uint32_t cap = roundUpPow2(capacity);
   if (cap > kRingSlots)
@@ -77,17 +49,11 @@ EJitQueue::EJitQueue(uint32_t capacity) {
     buffer_[i].sequence.storeRelaxed(i);
   enqueuePos_.storeRelaxed(0);
   dequeuePos_.storeRelaxed(0);
-#ifdef EJIT_SRE_TASKPOOL_PLATFORM_QUEUE
-  if (!gPlatformQueue)
-    gPlatformQueue = ejit_sre_queue_create(cap);
-#endif
 }
 
+EJitQueue::~EJitQueue() = default;
+
 bool EJitQueue::push(const EJitCompileRequest &req) {
-#ifdef EJIT_SRE_TASKPOOL_PLATFORM_QUEUE
-  return ejit_sre_queue_write(gPlatformQueue, &req,
-                              static_cast<uint32_t>(sizeof(req))) == 0;
-#else
   uint32_t pos = enqueuePos_.loadRelaxed();
   Cell *cell;
   for (;;) {
@@ -109,14 +75,9 @@ bool EJitQueue::push(const EJitCompileRequest &req) {
   cell->data = req;
   cell->sequence.storeRelease(pos + 1);
   return true;
-#endif
 }
 
 bool EJitQueue::pop(EJitCompileRequest &out) {
-#ifdef EJIT_SRE_TASKPOOL_PLATFORM_QUEUE
-  return ejit_sre_queue_read(gPlatformQueue, &out,
-                             static_cast<uint32_t>(sizeof(out))) == 0;
-#else
   uint32_t pos = dequeuePos_.loadRelaxed();
   Cell *cell;
   for (;;) {
@@ -136,7 +97,6 @@ bool EJitQueue::pop(EJitCompileRequest &out) {
   // Release the slot for reuse one full lap ahead.
   cell->sequence.storeRelease(pos + mask_ + 1);
   return true;
-#endif
 }
 
 uint32_t EJitQueue::approximateSize() const {

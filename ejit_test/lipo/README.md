@@ -138,6 +138,11 @@ python3 ejit_test/lipo/lipo.py extract \
 |---|---|---|
 | 链接时 | lipo extract 依赖追踪 | linker map + `nm -u` 计算闭包，只提取引用的 .o |
 | 链接时 | `ld -r --gc-sections` | 以 section 粒度消除未引用代码 |
+
+`gc-merge` 会同时保留同步 wrapper 使用的 `ejit_compile_or_get` 和异步
+wrapper 使用的 `ejit_taskpool_compile_or_get` /
+`ejit_taskpool_release_read`。因此同一份 lipo 产物可以链接默认同步业务
+对象，也可以链接使用 `-mllvm -ejit-wrapper-async` 编译的业务对象。
 | 编译时 | `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` source guard | （可选）`#ifndef` 排除 OS/arch 专属代码路径 |
 | 链接时 | `--exclude` | （可选）排除已知不需要的 pass/format .o |
 

@@ -24,7 +24,6 @@
 #   --sre-code-pool-ptno=<n>  set SRE code pool partition number (default: 8)
 #   --sre-taskpool / --no-sre-taskpool  enable/disable SRE taskpool scheduler (default OFF)
 #   --sre-taskpool-buckets=<n>  taskpool dedup/cache bucket count (default: 32)
-#   --sre-taskpool-bucket-slots=<n>  taskpool slots per bucket (default: 8)
 #   --sre-taskpool-queue-capacity=<n>  taskpool async queue capacity, pow2 (default: 1024)
 #   -h              show help
 #===----------------------------------------------------------------------===#
@@ -105,7 +104,6 @@ do_configure() {
         -DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO} \
         -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL} \
         -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS} \
-        -DEJIT_SRE_TASKPOOL_BUCKET_SLOTS=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS} \
         -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY} \
         "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
         -DLLVM_ENABLE_ZLIB=OFF \
@@ -126,7 +124,6 @@ do_configure() {
         -DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO} \
         -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL} \
         -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS} \
-        -DEJIT_SRE_TASKPOOL_BUCKET_SLOTS=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS} \
         -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY} \
         "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
         -DLLVM_USE_SPLIT_DWARF=ON \
@@ -162,7 +159,6 @@ do_configure() {
       -DLLVM_ENABLE_TERMINFO=OFF
       -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL}
       -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS}
-      -DEJIT_SRE_TASKPOOL_BUCKET_SLOTS=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS}
       -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}
     "
     # shellcheck disable=SC2086
@@ -199,7 +195,6 @@ do_configure() {
       -DLLVM_ENABLE_THREADS=OFF
       -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL}
       -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS}
-      -DEJIT_SRE_TASKPOOL_BUCKET_SLOTS=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS}
       -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}
     "
     # shellcheck disable=SC2086
@@ -268,7 +263,6 @@ EJIT_SRE_CODE_POOL=AUTO
 EJIT_SRE_CODE_POOL_PTNO=8
 EJIT_SRE_TASKPOOL=OFF
 EJIT_SRE_TASKPOOL_BUCKETS=32
-EJIT_SRE_TASKPOOL_BUCKET_SLOTS=8
 EJIT_SRE_TASKPOOL_QUEUE_CAPACITY=1024
 
 if [[ "${1:-}" = "-h" || "${1:-}" = "--help" ]]; then
@@ -293,7 +287,6 @@ while [[ $# -gt 0 ]]; do
     --sre-taskpool) EJIT_SRE_TASKPOOL=ON ;;
     --no-sre-taskpool) EJIT_SRE_TASKPOOL=OFF ;;
     --sre-taskpool-buckets=*) EJIT_SRE_TASKPOOL_BUCKETS="${1#--sre-taskpool-buckets=}" ;;
-    --sre-taskpool-bucket-slots=*) EJIT_SRE_TASKPOOL_BUCKET_SLOTS="${1#--sre-taskpool-bucket-slots=}" ;;
     --sre-taskpool-queue-capacity=*) EJIT_SRE_TASKPOOL_QUEUE_CAPACITY="${1#--sre-taskpool-queue-capacity=}" ;;
     -h|--help)
       sed -n '2,29p' "$0"
@@ -327,7 +320,7 @@ fi
 BUILD_DIR=$(build_dir "$TYPE" "$ARCH" "$VARIANT")
 log "Type=${TYPE}  Arch=${ARCH}  Variant=${VARIANT}  ccache=$($USE_CCACHE && echo on || echo off)"
 log "EJIT: triple=${EJIT_TARGET_TRIPLE:-$(target_triple "$ARCH")}  sre-code-pool=${EJIT_SRE_CODE_POOL}  ptno=${EJIT_SRE_CODE_POOL_PTNO}"
-log "EJIT: sre-taskpool=${EJIT_SRE_TASKPOOL} buckets=${EJIT_SRE_TASKPOOL_BUCKETS} slots=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS} queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}"
+log "EJIT: sre-taskpool=${EJIT_SRE_TASKPOOL} buckets=${EJIT_SRE_TASKPOOL_BUCKETS} queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}"
 log "Build dir: ${BUILD_DIR}"
 
 if $DO_CONFIGURE; then

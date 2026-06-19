@@ -1162,6 +1162,16 @@ typedef struct {
 
 对应 CMake option：`EJIT_SRE_TASKPOOL`、`EJIT_SRE_TASKPOOL_BUCKETS`、`EJIT_SRE_TASKPOOL_QUEUE_CAPACITY`。
 
+异步 wrapper 尚在稳定阶段，PASS3 暂时提供编译期开关：
+
+| Clang 参数 | 生成的 wrapper | 默认 |
+|-----------|---------------|------|
+| 无 | 同步调用 `ejit_compile_or_get` | 是 |
+| `-mllvm -ejit-wrapper-async` | 异步调用 `ejit_taskpool_compile_or_get` | 否 |
+
+两种 wrapper 都使用注册阶段分配的 dense `funcIndex`，不会退回旧的函数名
+hash。异步路径稳定后应删除此临时开关并固定生成 taskpool wrapper。
+
 **`EJitSreTask` 实现选择**:链接时根据构建目标择一,与上述 CMake option 正交:
 
 | 构建目标 | SreTask 实现 | 说明 |
@@ -1246,4 +1256,3 @@ cmake --build build-ejit-sre-taskpool --target check-ejit-taskpool -j8
 - 共享结构使用固定宽度整数与明确对齐。
 - 不使用 bitfield。
 - 不按字节解析整数，不把 native layout 持久化为跨端文件协议。
-

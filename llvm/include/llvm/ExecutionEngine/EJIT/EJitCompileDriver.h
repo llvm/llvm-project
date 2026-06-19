@@ -36,10 +36,8 @@ public:
     size_t codeSize = 0;
   };
 
-  EJitCompileDriver(const Config &config,
-                    EJitCache &cache,
-                    EJitRuntimeState &runtimeState,
-                    EJitModuleLoader &loader,
+  EJitCompileDriver(const Config &config, EJitCache &cache,
+                    EJitRuntimeState &runtimeState, EJitModuleLoader &loader,
                     EJitLogger *logger = nullptr);
 
   ~EJitCompileDriver();
@@ -54,12 +52,27 @@ public:
   /// Cold compile path WITHOUT storing into the LRU EJitCache. Used as the
   /// taskpool's compile callback (the taskpool owns its own fixed cache).
   /// Returns the JIT function pointer or nullptr.
-  void *compileNow(uint64_t cacheKey) {
-    return compileCold(cacheKey, /*storeLru=*/false);
-  }
+  void *compileNow(const EJitCompileRequest &req);
 
   /// The SRE taskpool scheduler (non-null when EJIT_SRE_TASKPOOL is built).
   EJitTaskPool *taskPool() { return taskPool_.get(); }
+
+  /// Start the taskpool's single async worker. Called by EJit ONLY after all
+  /// registration is consumed/frozen and the ORC engine is installed. Returns
+  /// false if the worker could not be started.
+  bool startTaskPoolWorker() { return taskPool_ && taskPool_->startWorker(); }
+
+  /// Whether the taskpool worker is currently running (test/diagnostic).
+  bool isTaskPoolWorkerRunning() const {
+    return taskPool_ && taskPool_->isWorkerRunning();
+  }
+
+  bool hasSyncEngine() const { return syncEngine_ != nullptr; }
+
+  void stopTaskPoolWorker() {
+    if (taskPool_)
+      taskPool_->stopWorker();
+  }
 #endif
 
   EJitCache &getCache() { return cache_; }

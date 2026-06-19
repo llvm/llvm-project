@@ -638,20 +638,20 @@ endif()
 # instead of degenerating to a single funcIndex%32 flag.
 set(EJIT_SRE_TASKPOOL_BUCKETS "32" CACHE STRING
   "EmbeddedJIT SRE taskpool dedup/cache bucket count")
-# Slots per bucket (fixed; bounds collisions per bucket).
-set(EJIT_SRE_TASKPOOL_BUCKET_SLOTS "8" CACHE STRING
-  "EmbeddedJIT SRE taskpool dedup/cache slots per bucket")
 # Async work-queue capacity (rounded up to a power of two).
 set(EJIT_SRE_TASKPOOL_QUEUE_CAPACITY "1024" CACHE STRING
   "EmbeddedJIT SRE taskpool async queue capacity (power of two)")
+# Flat dedup table capacity = max dense funcIndex (spec §3.5 inFlight_[]).
+set(EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX "4096" CACHE STRING
+  "EmbeddedJIT SRE taskpool flat dedup capacity (max dense funcIndex)")
 if(EJIT_SRE_TASKPOOL)
   add_definitions(-DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS})
-  add_definitions(-DEJIT_SRE_TASKPOOL_BUCKET_SLOTS=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS})
   add_definitions(-DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY})
+  add_definitions(-DEJIT_SRE_TASKPOOL_MAX_FUNC_INDEX=${EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX})
   message(STATUS "EmbeddedJIT: SRE taskpool enabled "
                  "(buckets=${EJIT_SRE_TASKPOOL_BUCKETS}, "
-                 "slots=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS}, "
-                 "queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY})")
+                 "queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}, "
+                 "maxFuncIndex=${EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX})")
 endif()
 
 set(LLVM_TARGETS_TO_BUILD "all"

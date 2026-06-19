@@ -1,16 +1,33 @@
-; RUN: opt -passes=ejit-aot-module -S %s | FileCheck %s
+; RUN: opt -ejit-wrapper-async -passes=ejit-aot-module -S %s | FileCheck %s
 
 ; Test: Full AOT pipeline on a comprehensive module.
 
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ejit_auto_register, ptr null }]
 
+; Per-lifecycle dimType globals for the two lifecycles the entry functions use
+; (slice is declared but never referenced by an ejit_period_arr_ind, so it gets
+; no global). The wrapper loads these slots instead of baking constants.
+; CHECK: @__ejit_dimtype_cell = internal global i32 -1
+; CHECK: @__ejit_dimtype_trp = internal global i32 -1
+
+; Per-function dense funcIndex globals (filled at registration).
+; CHECK: @__ejit_funcidx_process_cell = internal global i32 -1
+; CHECK: @__ejit_funcidx_process_static = internal global i32 -1
+
 ; CHECK: define{{.*}}@process_cell
 ; CHECK: jit_entry:
-; CHECK: call ptr @ejit_compile_or_get(i64 {{.*}}, ptr null)
+; CHECK: load i32, ptr @__ejit_funcidx_process_cell
+; CHECK: icmp ne i32 {{.*}}, -1
+; CHECK: br i1 {{.*}}, label %jit_call, label %jit_fallback
+; CHECK: jit_call:
+; CHECK: load i32, ptr @__ejit_dimtype_cell
+; CHECK: load i32, ptr @__ejit_dimtype_trp
+; CHECK: call i32 @ejit_taskpool_compile_or_get(i32 {{.*}}, ptr {{.*}}, i32 2, ptr {{.*}}, ptr {{.*}})
 
 ; CHECK: define{{.*}}@process_static
 ; CHECK: jit_entry:
-; CHECK: call ptr @ejit_compile_or_get(i64 {{.*}}, ptr null)
+; CHECK: load i32, ptr @__ejit_funcidx_process_static
+; CHECK: call i32 @ejit_taskpool_compile_or_get(i32 {{.*}}, ptr {{.*}}, i32 0, ptr {{.*}}, ptr {{.*}})
 
 ; CHECK: define{{.*}}@update_config
 ; CHECK: call void @ejit_deactivate_array
@@ -24,8 +41,15 @@
 ; CHECK: call void @ejit_register_period_array(ptr {{.*}}, ptr {{.*}}, ptr @slice_cfg, i64 4)
 ; CHECK: call void @ejit_register_static_var(ptr {{.*}}, ptr @board_cfg)
 ; CHECK: call void @ejit_register_static_var(ptr {{.*}}, ptr @sys_thresh)
+; CHECK: call void @ejit_register_lifecycle(ptr {{.*}}, ptr @__ejit_dimtype_cell)
+; CHECK: call void @ejit_register_lifecycle(ptr {{.*}}, ptr @__ejit_dimtype_trp)
+; CHECK: call void @ejit_register_funcindex(ptr {{.*}}, ptr @__ejit_funcidx_process_cell)
+; CHECK: call void @ejit_register_funcindex(ptr {{.*}}, ptr @__ejit_funcidx_process_static)
 
-; CHECK-DAG: declare ptr @ejit_compile_or_get(i64, ptr)
+; CHECK-DAG: declare i32 @ejit_taskpool_compile_or_get(i32, ptr, i32, ptr, ptr)
+; CHECK-DAG: declare void @ejit_taskpool_release_read(i32)
+; CHECK-DAG: declare void @ejit_register_lifecycle(ptr, ptr)
+; CHECK-DAG: declare void @ejit_register_funcindex(ptr, ptr)
 
 
 @cell_cfg = global [10 x i32] zeroinitializer, !ejit.metadata !10

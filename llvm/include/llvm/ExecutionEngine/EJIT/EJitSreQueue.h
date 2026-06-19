@@ -8,13 +8,10 @@
 //
 //  Queue abstraction for the EmbeddedJIT SRE taskpool.
 //
-//  The SRE platform provides its own queue primitives (QueueCreate /
-//  QueueWrite / QueueRead). Those calls must not be scattered across the
-//  taskpool business logic, so they are confined behind the EJitQueue type
-//  here. On a host (and by default) EJitQueue is backed by a lock-free bounded
-//  ring buffer (the "mock queue") that needs no mutex and is single-thread
-//  testable. A real deployment can route push()/pop() to the SRE platform
-//  queue by defining EJIT_SRE_TASKPOOL_PLATFORM_QUEUE (see EJitSreQueue.cpp).
+//  Per spec §3.3.2 the SRE platform provides no queue primitive, so EJitQueue
+//  is a self-implemented lock-free bounded MPSC ring buffer (Vyukov style),
+//  shared by host and SRE builds. It needs no mutex, is single-thread testable,
+//  and references no external platform queue symbol.
 //
 //  This header also owns the fixed-layout request record carried by the queue,
 //  EJitCompileRequest. It lives here (the lowest-level taskpool header) so the
@@ -50,17 +47,23 @@ namespace ejit {
 // byte-by-byte). It must NOT be serialized across hosts of differing
 // pointer width.
 //===----------------------------------------------------------------------===//
-struct EJitCompileRequest {
-  uint32_t funcIndex;   ///< Stable function index (high 32 bits of cacheKey).
-  uint32_t version;     ///< SwitchController generation when enqueued.
-  uint64_t cacheKey;    ///< Full specialization key (funcIdx | dims).
-  uintptr_t fallbackPtr; ///< AOT fallback function pointer to return meanwhile.
-  uintptr_t userData;   ///< Opaque caller cookie (unused by the taskpool core).
+struct EJitDimPair {
+  uint32_t dimType;
+  uint32_t instanceId;
 };
 
-// Layout is intentionally tight: 4 + 4 + 8 + sizeof(ptr) + sizeof(ptr).
-static_assert(sizeof(EJitCompileRequest) == 16 + 2 * sizeof(uintptr_t),
-              "EJitCompileRequest must be tightly packed with no padding");
+struct EJitCompileRequest {
+  uint32_t funcIndex;
+  uint32_t numDims;
+  EJitDimPair dims[4];
+  uint32_t versions[4];
+  uintptr_t fallbackPtr;
+};
+
+static_assert(sizeof(EJitCompileRequest) ==
+                  (2 * sizeof(uint32_t) + 4 * sizeof(EJitDimPair) +
+                   4 * sizeof(uint32_t) + sizeof(uintptr_t)),
+              "EJitCompileRequest size must stay stable");
 static_assert(alignof(EJitCompileRequest) <= 8,
               "EJitCompileRequest alignment must stay <= 8 bytes");
 static_assert(sizeof(uintptr_t) == 4 || sizeof(uintptr_t) == 8,
@@ -77,6 +80,7 @@ class EJitQueue {
 public:
   /// \p capacity is rounded up to the next power of two (min 2).
   explicit EJitQueue(uint32_t capacity = EJIT_SRE_TASKPOOL_QUEUE_CAPACITY);
+  ~EJitQueue();
 
   EJitQueue(const EJitQueue &) = delete;
   EJitQueue &operator=(const EJitQueue &) = delete;

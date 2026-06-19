@@ -1,6 +1,9 @@
 //===-- EJitCompileDriver.cpp - Compilation Scheduler ---------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #ifndef EJIT_FREESTANDING
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
@@ -22,31 +25,35 @@ namespace {
 bool taskpoolCompileThunk(void *ctx, const EJitCompileRequest &req,
                           void **outFn) {
   auto *drv = static_cast<EJitCompileDriver *>(ctx);
-  void *fn = drv->compileNow(req.cacheKey);
+  void *fn = drv->compileNow(req);
   *outFn = fn;
   return fn != nullptr;
 }
 } // namespace
 #endif
 
-EJitCompileDriver::EJitCompileDriver(const Config &config,
-                                     EJitCache &cache,
+EJitCompileDriver::EJitCompileDriver(const Config &config, EJitCache &cache,
                                      EJitRuntimeState &runtimeState,
                                      EJitModuleLoader &loader,
                                      EJitLogger *logger)
-    : config_(config), cache_(cache),
-  runtimeState_(runtimeState), loader_(loader)
+    : config_(config), cache_(cache), runtimeState_(runtimeState),
+      loader_(loader)
 #ifndef EJIT_FREESTANDING
-  , logger_(logger)
+      ,
+      logger_(logger)
 #endif
 {
 #ifdef EJIT_SRE_TASKPOOL
-  // Build the unified scheduler and point its compile callback at this driver.
-  taskPool_ = std::make_unique<EJitTaskPool>();
+  // Build the unified scheduler with the worker STOPPED. The worker must not
+  // run until EJit has consumed all registration, completed the funcIndex/
+  // lifecycle fixup, frozen registration, and installed the ORC engine — EJit
+  // calls startTaskPoolWorker() once everything is ready (spec §3.4).
+  taskPool_ = std::make_unique<EJitTaskPool>(EJIT_SRE_TASKPOOL_QUEUE_CAPACITY,
+                                             /*autoStartWorker=*/false);
   taskPool_->setCompiler(&taskpoolCompileThunk, this);
   taskPool_->switchController().setMode(
       config_.compileMode == CompileMode::Async ? EJitCompileMode::Async
-                                                : EJitCompileMode::Sync);
+                                                : EJitCompileMode::Off);
 #endif
 }
 
@@ -62,17 +69,13 @@ void EJitCompileDriver::registerSymbol(const std::string &name, void *addr) {
 }
 
 void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
-#ifdef EJIT_SRE_TASKPOOL
-  // When the taskpool is built, all compile_or_get traffic flows through the
-  // unified scheduler (cache + dedup + sync/async). It owns its own fixed
-  // cache, so the LRU EJitCache hot path below is bypassed in this build.
-  if (taskPool_) {
-    uint32_t funcIndex = static_cast<uint32_t>(cacheKey >> 32);
-    EJitTaskPool::CompileOrGetResult r =
-        taskPool_->compileOrGet(funcIndex, cacheKey, /*fallback=*/nullptr);
-    return r.fnPtr;
-  }
-#endif
+  // Legacy ABI (ejit_compile_or_get): this entry point has no bucket/release
+  // capability, so it must NOT enter the taskpool's read-token cache — doing so
+  // would hand out a JIT pointer whose read token is released before the caller
+  // ever executes it (use-after-free window). The legacy ABI therefore always
+  // uses the LRU EJitCache path below. Only the new AOT wrapper ABI
+  // (ejit_taskpool_compile_or_get) drives the taskpool, where the caller owns
+  // the bucket and calls ejit_taskpool_release_read after using fnPtr.
 
   // ── Hot path: single hash find ───────────────────────────────────────────
   if (void *cached = cache_.getOrNull(cacheKey)) {
@@ -87,31 +90,32 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
   // ── Cold path: decode cacheKey, verify, compile ────────────────────────
   uint32_t funcIdx = static_cast<uint32_t>(cacheKey >> 32);
   uint8_t dims[4] = {
-    static_cast<uint8_t>(cacheKey & 0xFF),
-    static_cast<uint8_t>((cacheKey >> 8) & 0xFF),
-    static_cast<uint8_t>((cacheKey >> 16) & 0xFF),
-    static_cast<uint8_t>((cacheKey >> 24) & 0xFF),
+      static_cast<uint8_t>(cacheKey & 0xFF),
+      static_cast<uint8_t>((cacheKey >> 8) & 0xFF),
+      static_cast<uint8_t>((cacheKey >> 16) & 0xFF),
+      static_cast<uint8_t>((cacheKey >> 24) & 0xFF),
   };
 
   // Resolve funcName from loader
   const std::string &funcName = loader_.getFuncNameByFuncIdx(funcIdx);
   if (funcName.empty()) {
-    EJIT_DIAG("cache MISS key=0x%016lx funcIdx=%u: unknown funcIdx", cacheKey, funcIdx);
+    EJIT_DIAG("cache MISS key=0x%016lx funcIdx=%u: unknown funcIdx", cacheKey,
+              funcIdx);
     return nullptr;
   }
 
-  EJIT_DIAG("cache MISS key=0x%016lx func=%s dims=[%u,%u,%u,%u]",
-           cacheKey, funcName.c_str(), dims[0], dims[1], dims[2], dims[3]);
+  EJIT_DIAG("cache MISS key=0x%016lx func=%s dims=[%u,%u,%u,%u]", cacheKey,
+            funcName.c_str(), dims[0], dims[1], dims[2], dims[3]);
 
   // Get bitcode
   auto bitcodeOrErr = loader_.getBitcodeByFuncIdx(funcIdx);
   if (!bitcodeOrErr) {
-    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: bitcode not found", cacheKey, funcName.c_str());
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: bitcode not found", cacheKey,
+              funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(EJIT_ERR_BITCODE_NOT_FOUND,
-                   "No bitcode for function", funcName,
-                   std::to_string(cacheKey));
+      logger_->log(EJIT_ERR_BITCODE_NOT_FOUND, "No bitcode for function",
+                   funcName, std::to_string(cacheKey));
 #endif
     return nullptr;
   }
@@ -126,12 +130,12 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
   for (unsigned i = 0; i < dimCount; ++i) {
     if (!runtimeState_.isActive(periodNames[i], dims[i])) {
       EJIT_DIAG("compile SKIP key=0x%016lx func=%s: period %s[%u] not active",
-               cacheKey, funcName.c_str(), periodNames[i].c_str(), dims[i]);
+                cacheKey, funcName.c_str(), periodNames[i].c_str(), dims[i]);
 #ifndef EJIT_FREESTANDING
       if (logger_)
         logger_->log(EJIT_ERR_NOT_ACTIVE,
-                     "Time window not active for " + periodNames[i],
-                     funcName, std::to_string(cacheKey));
+                     "Time window not active for " + periodNames[i], funcName,
+                     std::to_string(cacheKey));
 #endif
       return nullptr;
     }
@@ -146,11 +150,11 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
     ctx.dimensions.push_back({periodNames[i], dims[i]});
 
   if (!syncEngine_) {
-    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: no sync engine", cacheKey, funcName.c_str());
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: no sync engine", cacheKey,
+              funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(EJIT_ERR_NOT_ACTIVE,
-                   "Sync engine not initialized", funcName,
+      logger_->log(EJIT_ERR_NOT_ACTIVE, "Sync engine not initialized", funcName,
                    std::to_string(cacheKey));
 #endif
     return nullptr;
@@ -160,12 +164,12 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
 
   if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
     syncEngine_->setActiveContext(nullptr);
-    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: load bitcode module failed", cacheKey, funcName.c_str());
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: load bitcode module failed",
+              cacheKey, funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(EJIT_ERR_COMPILE_FAILED,
-                   "Failed to load bitcode module", funcName,
-                   std::to_string(cacheKey));
+      logger_->log(EJIT_ERR_COMPILE_FAILED, "Failed to load bitcode module",
+                   funcName, std::to_string(cacheKey));
 #else
     consumeError(std::move(Err));
 #endif
@@ -176,7 +180,8 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
   syncEngine_->setActiveContext(nullptr);
 
   if (!addrOrErr) {
-    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: lookup after compile failed", cacheKey, funcName.c_str());
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: lookup after compile failed",
+              cacheKey, funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(EJIT_ERR_COMPILE_FAILED,
@@ -200,6 +205,55 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
     cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
   }
 
-  EJIT_DIAG("compile OK key=0x%016lx func=%s → pfn=%p", cacheKey, funcName.c_str(), funcPtr);
+  EJIT_DIAG("compile OK key=0x%016lx func=%s → pfn=%p", cacheKey,
+            funcName.c_str(), funcPtr);
   return funcPtr;
 }
+
+#ifdef EJIT_SRE_TASKPOOL
+void *EJitCompileDriver::compileNow(const EJitCompileRequest &req) {
+  if (req.numDims > 4)
+    return nullptr;
+
+  // Validate the request: instanceIds must be encodable in the legacy 8-bit
+  // cacheKey slots, and no two dims may share a dimType (a duplicated lifecycle
+  // dimension).
+  SmallVector<uint32_t, 4> seenDimTypes;
+  for (uint32_t i = 0; i < req.numDims; ++i) {
+    if (req.dims[i].instanceId > 255u)
+      return nullptr;
+    if (llvm::is_contained(seenDimTypes, req.dims[i].dimType))
+      return nullptr;
+    seenDimTypes.push_back(req.dims[i].dimType);
+  }
+
+  // meta.dimTypes[i] is the explicit dimType slot the loader read back BY NAME
+  // from the process-global EJitLifecycleRegistry — the SAME slot the wrapper
+  // baked into req.dims via its per-lifecycle global. No
+  // recomputation/guessing.
+  const auto &meta = loader_.getOrCacheFuncMeta(req.funcIndex);
+  uint8_t packedDims[4] = {0, 0, 0, 0};
+  for (unsigned i = 0; i < meta.dimCount && i < 4; ++i) {
+    uint32_t wantedType = meta.dimTypes[i];
+    if (wantedType == kEJitInvalidDimType)
+      return nullptr;
+    bool found = false;
+    for (uint32_t j = 0; j < req.numDims; ++j) {
+      if (req.dims[j].dimType == wantedType) {
+        packedDims[i] = static_cast<uint8_t>(req.dims[j].instanceId);
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+      return nullptr;
+  }
+
+  uint64_t cacheKey = (static_cast<uint64_t>(req.funcIndex) << 32) |
+                      static_cast<uint64_t>(packedDims[0]) |
+                      (static_cast<uint64_t>(packedDims[1]) << 8) |
+                      (static_cast<uint64_t>(packedDims[2]) << 16) |
+                      (static_cast<uint64_t>(packedDims[3]) << 24);
+  return compileCold(cacheKey, /*storeLru=*/false);
+}
+#endif
