@@ -8826,10 +8826,9 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   }
 }
 
-SDValue SITargetLowering::promoteUniformABSToI32(SDValue Op,
-                                                 DAGCombinerInfo &DCI) const {
-  assert(Op.getOpcode() == ISD::ABS);
-
+SDValue
+SITargetLowering::promoteUniformUnaryOpToI32(SDValue Op,
+                                             DAGCombinerInfo &DCI) const {
   EVT OpTy = Op.getValueType();
   auto &DAG = DCI.DAG;
   EVT ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
@@ -8842,9 +8841,9 @@ SDValue SITargetLowering::promoteUniformABSToI32(SDValue Op,
   const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
   Input = DAG.getNode(ExtOp, DL, ExtTy, Input);
 
-  SDValue NewVal = DAG.getNode(ISD::ABS, DL, ExtTy, Input);
+  SDValue NewVal = DAG.getNode(Op.getOpcode(), DL, ExtTy, Input);
 
-  return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
+  return DAG.getNode(ISD::TRUNCATE, DL, OpTy, NewVal);
 }
 
 SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
@@ -18594,7 +18593,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   case ISD::ABS:
-    if (auto Res = promoteUniformABSToI32(SDValue(N, 0), DCI))
+    if (auto Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
   case ISD::ADD:
