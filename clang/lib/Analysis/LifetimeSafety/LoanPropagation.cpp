@@ -212,9 +212,10 @@ public:
     llvm::SmallVector<OriginID> OriginFlowChain;
     std::optional<size_t> BlockID = FactMgr.getBlockID(StartPoint);
     assert(BlockID.has_value());
-    const auto EndBlockIt = llvm::find_if(*POV, [&BlockID](const CFGBlock *Block) {
-      return Block->getBlockID() == BlockID;
-    });
+    const auto EndBlockIt =
+        llvm::find_if(*POV, [&BlockID](const CFGBlock *Block) {
+          return Block->getBlockID() == BlockID;
+        });
 
     OriginID CurrOID = StartOID;
     for (const CFGBlock *B :
