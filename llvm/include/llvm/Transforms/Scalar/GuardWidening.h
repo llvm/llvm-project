@@ -25,9 +25,10 @@ class Loop;
 class Function;
 
 struct GuardWideningPass : public OptionalPassInfoMixin<GuardWideningPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 }
 

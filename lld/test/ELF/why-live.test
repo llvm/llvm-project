@@ -220,6 +220,17 @@ test_eh:
 # PERSONALITY-NEXT: >>> referenced by: a.o:(.eh_frame) (exception handling frame)
 # PERSONALITY-EMPTY:
 
+## Symbols exported into the dynamic symbol table are GC roots.
+.globl test_exported
+.section .test_exported,"ax",@progbits
+test_exported:
+  jmp test_exported
+
+# RUN: ld.lld a.o a.so --gc-sections --export-dynamic --why-live=test_exported | FileCheck %s --check-prefix=EXPORTED
+
+# EXPORTED:      live symbol: a.o:(test_exported) (externally visible symbol)
+# EXPORTED-EMPTY:
+
 #--- b.s
 ## --why-live='*' skips symbol at index 0 and section symbols.
 # RUN: ld.lld b.o --threads=1 --gc-sections --why-live="*" | FileCheck %s --check-prefix=STAR --match-full-lines

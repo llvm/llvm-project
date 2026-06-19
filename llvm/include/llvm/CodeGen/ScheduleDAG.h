@@ -481,9 +481,7 @@ class TargetRegisterInfo;
     /// edge occurs first.
     LLVM_ABI void biasCriticalPath();
 
-    LLVM_ABI bool isClustered() const {
-      return ParentClusterIdx != InvalidClusterId;
-    }
+    bool isClustered() const { return ParentClusterIdx != InvalidClusterId; }
 
     LLVM_ABI void dumpAttributes() const;
 
@@ -747,6 +745,9 @@ class TargetRegisterInfo;
     std::vector<int> Node2Index;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
+    /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
+    /// The keys are SUnit NodeNums.
+    DenseMap<std::pair<int, int>, bool> Reachable;
 
     /// Makes a DFS traversal and mark all nodes affected by the edge insertion.
     /// These nodes will later get new topological indexes by means of the Shift

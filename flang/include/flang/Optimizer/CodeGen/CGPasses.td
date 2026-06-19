@@ -62,6 +62,18 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   ];
 }
 
+def RematerializeFIRBoxOpsPass
+    : Pass<"fir-rematerialize-box-ops", "mlir::func::FuncOp"> {
+  let summary = "Rematerialize FIR box operations before selected uses.";
+  let description = [{
+    Clone selected FIR box operations to preserve region-local descriptor
+    storage when their results are used inside nested regions.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::omp::OpenMPDialect"
+  ];
+}
+
 def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
   let summary = "Rewrite some FIR dialect into target specific forms.";
   let description = [{
@@ -79,6 +91,8 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
+    Option<"forcedTargetABI", "target-abi", "std::string", /*default=*/"",
+           "Override module's target ABI.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of CHARACTER.">,

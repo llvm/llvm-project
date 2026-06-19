@@ -6778,6 +6778,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_begin_declare_variant:
   case OMPD_end_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
+  case OMPD_taskgraph:
+    Diag(StartLoc, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(OMPD_taskgraph);
+    return StmtError();
   case OMPD_unknown:
   default:
     llvm_unreachable("Unknown OpenMP directive");
@@ -8040,7 +8044,7 @@ public:
     VarDecl *V = VD->getPotentiallyDecomposedVarDecl();
     if (V->getType()->isReferenceType()) {
       VarDecl *VD = V->getDefinition();
-      if (VD->hasInit()) {
+      if (VD && VD->hasInit()) {
         Expr *I = VD->getInit();
         DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(I);
         if (!DRE)
@@ -8078,6 +8082,8 @@ class OpenMPIterationSpaceChecker {
   SourceLocation ConditionLoc;
   /// The set of variables declared within the (to be collapsed) loop nest.
   const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls;
+  /// The set of induction variables from outer collapsed loops.
+  llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars;
   /// A source location for referring to loop init later.
   SourceRange InitSrcRange;
   /// A source location for referring to condition later.
@@ -8124,10 +8130,12 @@ public:
   OpenMPIterationSpaceChecker(
       Sema &SemaRef, bool SupportsNonRectangular, DSAStackTy &Stack,
       SourceLocation DefaultLoc,
-      const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopDecls)
+      const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopDecls,
+      llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars)
       : SemaRef(SemaRef), SupportsNonRectangular(SupportsNonRectangular),
         Stack(Stack), DefaultLoc(DefaultLoc), ConditionLoc(DefaultLoc),
-        CollapsedLoopVarDecls(CollapsedLoopDecls) {}
+        CollapsedLoopVarDecls(CollapsedLoopDecls),
+        CollapsedLoopInductionVars(CollapsedLoopInductionVars) {}
   /// Check init-expr for canonical loop form and save loop counter
   /// variable - #Var and its initialization value - #LB.
   bool checkAndSetInit(Stmt *S, bool EmitDiags = true);
@@ -8458,6 +8466,18 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
     }
   }
 
+  // Helper lambda to check if a loop variable is already used in an outer
+  // loop.
+  auto CheckLoopVarReuse = [&](ValueDecl *LoopVar, SourceLocation Loc) -> bool {
+    if (EmitDiags &&
+        CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl())) {
+      SemaRef.Diag(Loc, diag::err_omp_loop_var_reused_in_collapsed_loop)
+          << LoopVar;
+      return true;
+    }
+    return false;
+  };
+
   InitSrcRange = S->getSourceRange();
   if (Expr *E = dyn_cast<Expr>(S))
     S = E->IgnoreParens();
@@ -8466,16 +8486,26 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
       Expr *LHS = BO->getLHS()->IgnoreParens();
       if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
-          if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                  EmitDiags);
-        return setLCDeclAndLB(DRE->getDecl(), DRE, BO->getRHS(), EmitDiags);
+          if (auto *ME =
+                  dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit()))) {
+            ValueDecl *LoopVar = ME->getMemberDecl();
+            if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
+              return true;
+            return setLCDeclAndLB(LoopVar, ME, BO->getRHS(), EmitDiags);
+          }
+        ValueDecl *LoopVar = DRE->getDecl();
+        if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
+          return true;
+        return setLCDeclAndLB(LoopVar, DRE, BO->getRHS(), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
-            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                EmitDiags);
+            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
+          ValueDecl *LoopVar = ME->getMemberDecl();
+          if (CheckLoopVarReuse(LoopVar, LHS->getBeginLoc()))
+            return true;
+          return setLCDeclAndLB(LoopVar, ME, BO->getRHS(), EmitDiags);
+        }
       }
     }
   } else if (auto *DS = dyn_cast<DeclStmt>(S)) {
@@ -8487,6 +8517,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
             SemaRef.Diag(S->getBeginLoc(),
                          diag::ext_omp_loop_not_canonical_init)
                 << S->getSourceRange();
+          if (CheckLoopVarReuse(Var, Var->getLocation()))
+            return true;
           return setLCDeclAndLB(
               Var,
               buildDeclRefExpr(SemaRef, Var,
@@ -8501,16 +8533,26 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
       Expr *LHS = CE->getArg(0);
       if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
-          if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                  EmitDiags);
-        return setLCDeclAndLB(DRE->getDecl(), DRE, CE->getArg(1), EmitDiags);
+          if (auto *ME =
+                  dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit()))) {
+            ValueDecl *LoopVar = ME->getMemberDecl();
+            if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
+              return true;
+            return setLCDeclAndLB(LoopVar, ME, CE->getArg(1), EmitDiags);
+          }
+        ValueDecl *LoopVar = DRE->getDecl();
+        if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
+          return true;
+        return setLCDeclAndLB(LoopVar, DRE, CE->getArg(1), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
-            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                EmitDiags);
+            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
+          ValueDecl *LoopVar = ME->getMemberDecl();
+          if (CheckLoopVarReuse(LoopVar, LHS->getBeginLoc()))
+            return true;
+          return setLCDeclAndLB(LoopVar, ME, CE->getArg(1), EmitDiags);
+        }
       }
     }
   }
@@ -9431,7 +9473,8 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
   DSAStack->loopStart();
   llvm::SmallPtrSet<const Decl *, 1> EmptyDeclSet;
   OpenMPIterationSpaceChecker ISC(SemaRef, /*SupportsNonRectangular=*/true,
-                                  *DSAStack, ForLoc, EmptyDeclSet);
+                                  *DSAStack, ForLoc, EmptyDeclSet,
+                                  EmptyDeclSet);
   if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
     if (ValueDecl *D = ISC.getLoopDecl()) {
       auto *VD = dyn_cast<VarDecl>(D);
@@ -9531,7 +9574,8 @@ static bool checkOpenMPIterationSpace(
     SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA,
     llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
-    const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls) {
+    const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls,
+    llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars) {
   bool SupportsNonRectangular = !isOpenMPLoopTransformationDirective(DKind);
   // OpenMP [2.9.1, Canonical Loop Form]
   //   for (init-expr; test-expr; incr-expr) structured-block
@@ -9572,7 +9616,8 @@ static bool checkOpenMPIterationSpace(
 
   OpenMPIterationSpaceChecker ISC(SemaRef, SupportsNonRectangular, DSA,
                                   For ? For->getForLoc() : CXXFor->getForLoc(),
-                                  CollapsedLoopVarDecls);
+                                  CollapsedLoopVarDecls,
+                                  CollapsedLoopInductionVars);
 
   // Check init.
   Stmt *Init = For ? For->getInit() : CXXFor->getBeginStmt();
@@ -9736,7 +9781,11 @@ static bool checkOpenMPIterationSpace(
         DoacrossC->setLoopData(CurrentNestedLoopCount, CntValue);
     }
   }
-
+  // Record the loop induction variable for nested loop reuse checking.
+  if (CurrentNestedLoopCount < NestedLoopCount && !HasErrors) {
+    if (const ValueDecl *LCDecl = ISC.getLoopDecl())
+      CollapsedLoopInductionVars.insert(LCDecl->getCanonicalDecl());
+  }
   return HasErrors;
 }
 
@@ -9995,6 +10044,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   bool SupportsNonPerfectlyNested = (SemaRef.LangOpts.OpenMP >= 50) &&
                                     !isOpenMPLoopTransformationDirective(DKind);
   llvm::SmallPtrSet<const Decl *, 4> CollapsedLoopVarDecls;
+  llvm::SmallPtrSet<const Decl *, 4> CollapsedLoopInductionVars;
 
   if (CollapseLoopCountExpr) {
     // Found 'collapse' clause - calculate collapse number.
@@ -10043,13 +10093,13 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           SupportsNonPerfectlyNested, NumLoops,
           [DKind, &SemaRef, &DSA, NumLoops, NestedLoopCount,
            CollapseLoopCountExpr, OrderedLoopCountExpr, &VarsWithImplicitDSA,
-           &IterSpaces, &Captures,
-           &CollapsedLoopVarDecls](unsigned Cnt, Stmt *CurStmt) {
+           &IterSpaces, &Captures, &CollapsedLoopVarDecls,
+           &CollapsedLoopInductionVars](unsigned Cnt, Stmt *CurStmt) {
             if (checkOpenMPIterationSpace(
                     DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
                     NumLoops, CollapseLoopCountExpr, OrderedLoopCountExpr,
                     VarsWithImplicitDSA, IterSpaces, Captures,
-                    CollapsedLoopVarDecls))
+                    CollapsedLoopVarDecls, CollapsedLoopInductionVars))
               return true;
             if (Cnt > 0 && Cnt >= NestedLoopCount &&
                 IterSpaces[Cnt].CounterVar) {
@@ -18967,18 +19017,43 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
   if (!isValidInteropVariable(SemaRef, InteropVar, VarLoc, OMPC_init))
     return nullptr;
 
-  // Check prefer_type values.  These foreign-runtime-id values are either
-  // string literals or constant integral expressions.
-  for (const Expr *E : InteropInfo.PreferTypes) {
-    if (E->isValueDependent() || E->isTypeDependent() ||
-        E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
-      continue;
-    if (E->isIntegerConstantExpr(getASTContext()))
-      continue;
-    if (isa<StringLiteral>(E))
-      continue;
-    Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
-    return nullptr;
+  // Check prefer_type values. fr() arguments are either string literals or
+  // constant integral expressions; null Fr is only valid in OMP 6.0.
+  // attr() arguments must be ext-string-literals with the 'ompx_' prefix
+  // (OpenMP 6.0 spec, section 16.1.3).
+  for (const OMPInteropPref &P : InteropInfo.Prefs) {
+    const Expr *E = P.Fr;
+    if (!E) {
+      assert(InteropInfo.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
+    } else if (!E->isValueDependent() && !E->isTypeDependent() &&
+               !E->isInstantiationDependent() &&
+               !E->containsUnexpandedParameterPack()) {
+      if (!E->isIntegerConstantExpr(getASTContext()) &&
+          !isa<StringLiteral>(E)) {
+        Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
+        return nullptr;
+      }
+    }
+    for (const Expr *A : P.Attrs) {
+      if (A->isValueDependent() || A->isTypeDependent() ||
+          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
+        continue;
+      const auto *SL = dyn_cast<StringLiteral>(A);
+      if (!SL) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
+        return nullptr;
+      }
+      if (!SL->getString().starts_with("ompx_")) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
+            << SL->getString();
+        return nullptr;
+      }
+      if (SL->getString().contains(',')) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
+            << SL->getString();
+        return nullptr;
+      }
+    }
   }
 
   return OMPInitClause::Create(getASTContext(), InteropVar, InteropInfo,
@@ -20907,9 +20982,37 @@ static bool actOnOMPReductionKindClause(
           Init = S.ActOnIntegerConstant(ELoc, /*Val=*/0).get();
         break;
       case BO_Mul:
+        // '*' reduction op - initializer is '1'.
+        // For C++ class types (e.g. std::complex) the OpenMP built-in
+        // reduction identifiers are an extension: the standard only defines
+        // identities for arithmetic (and, in Clang, _Complex) types. Without
+        // an explicit initializer the private copy would be value-initialized,
+        // which yields the *additive* identity (e.g. std::complex(0,0)) and is
+        // wrong for multiplication. Initialize from the integer literal '1'
+        // instead and let the converting constructor build the multiplicative
+        // identity (e.g. std::complex(1) == (1,0)).
+        if (Type->isScalarType() || Type->isAnyComplexType()) {
+          Init = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
+        } else if (S.getLangOpts().CPlusPlus && Type->isRecordType()) {
+          // Only use '1' when the type is actually copy-initializable from it.
+          // Otherwise fall back to value-initialization (the previous behavior)
+          // rather than rejecting the reduction, so a class that used to
+          // compile keeps compiling. Such a class keeps its (possibly
+          // incorrect) value-initialized identity, matching the pre-existing
+          // behavior; BO_Add likewise relies on value-initialization for class
+          // types.
+          Expr *One = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
+          InitializedEntity Entity =
+              InitializedEntity::InitializeTemporary(Type);
+          InitializationKind Kind = InitializationKind::CreateCopy(ELoc, ELoc);
+          InitializationSequence Seq(S, Entity, Kind, One);
+          if (Seq)
+            Init = One;
+        }
+        break;
       case BO_LAnd:
         if (Type->isScalarType() || Type->isAnyComplexType()) {
-          // '*' and '&&' reduction ops - initializer is '1'.
+          // '&&' reduction ops - initializer is '1'.
           Init = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
         }
         break;
@@ -24859,13 +24962,18 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetName(
     if (!IndirectE)
       IsIndirect = true;
   }
-  // FIXME: 'local' clause is not yet implemented in CodeGen. For now, it is
-  // treated as 'enter'. For host compilation, 'local' is a no-op.
+  // FIXME: 'local' with 'device_type(nohost)' is not yet fully supported
+  // in codegen. Treat as 'device_type(any)' for now. The variable will
+  // exist on both host and device, but the host copy is unused.
+  auto DT = DTCI.DT;
   if (MT == OMPDeclareTargetDeclAttr::MT_Local &&
-      getLangOpts().OpenMPIsTargetDevice)
-    Diag(Loc, diag::warn_omp_declare_target_local_not_implemented);
+      DT == OMPDeclareTargetDeclAttr::DT_NoHost) {
+    Diag(Loc, diag::warn_omp_declare_target_local_nohost);
+    DT = OMPDeclareTargetDeclAttr::DT_Any;
+  }
+
   auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-      getASTContext(), MT, DTCI.DT, IndirectE, IsIndirect, Level,
+      getASTContext(), MT, DT, IndirectE, IsIndirect, Level,
       SourceRange(Loc, Loc));
   ND->addAttr(A);
   if (ASTMutationListener *ML = getASTContext().getASTMutationListener())

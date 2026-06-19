@@ -892,3 +892,41 @@ struct __attribute__((annotate("abc", &baz, &g0, 2))) Annotate1 {
   // c23-note@-3 {{attribute 'annotate' here}}
   int a;
 };
+
+// This was previously causing an assertion when checking structural
+// equivalence due to the the foward declared enum being invalid.
+struct GH199417_1 { // c17-note {{previous definition is here}}
+  // both-error@+3 {{field has incomplete type 'enum GH199417_E1'}}
+  // both-warning@+2 {{ISO C forbids forward references to 'enum' types}}
+  // both-note@+1 {{forward declaration of 'enum GH199417_E1'}}
+  enum GH199417_E1 e;
+};
+// FIXME: This should be rejected in C23 mode as well; because it is a
+// tag type, the members have to have *the same* type, not merely
+// compatible ones. See GH201647.
+struct GH199417_1 {   // c17-error {{redefinition of 'GH199417_1'}}
+  int e;
+};
+
+struct GH190227_1 { // c17-note {{previous definition is here}}
+  unsigned m;       // c23-note {{field 'm' has type 'unsigned int' here}}
+};
+
+// c23-error@+2 {{type 'struct GH190227_1' has incompatible definitions}}
+// c17-error@+1 {{redefinition of 'GH190227_1'}}
+struct GH190227_1 {
+  // both-error@+3 {{field has incomplete type 'enum GH190227_E1'}}
+  // both-warning@+2 {{ISO C forbids forward references to 'enum' types}}
+  // both-note@+1 {{forward declaration of 'enum GH190227_E1'}}
+ enum GH190227_E1 m;  // c23-note {{field 'm' has type 'enum GH190227_E1' here}}
+};
+
+struct GH199417_2 {   // c17-note {{previous definition is here}}
+  union { int i; } u; // c23-note-re {{field 'u' has type 'union (unnamed at {{.*}})' here}}
+};
+
+// c23-error@+2 {{type 'struct GH199417_2' has incompatible definitions}}
+// c17-error@+1 {{redefinition of 'GH199417_2'}}
+struct GH199417_2 {
+  enum GH199417_E2 { eGH199417 } u; // c23-note {{field 'u' has type 'enum GH199417_E2' here}}
+};

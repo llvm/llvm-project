@@ -24,11 +24,14 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Serialization/JSONFormatTest/JSONFormatTest.cpp
   Serialization/JSONFormatTest/LUSummaryTest.cpp
   Serialization/JSONFormatTest/TUSummaryTest.cpp
+  SourceTransformation/EmitterTest.cpp
+  SourceTransformation/RegistryTest.cpp
   SummaryData/SummaryDataTest.cpp
   SummaryNameTest.cpp
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
   WholeProgramAnalysis/AnalysisDriverTest.cpp
+  WholeProgramAnalysis/UnsafeBufferReachableAnalysisTest.cpp
 
   CLANG_LIBS
   clangAST
@@ -38,8 +41,10 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangSerialization
   clangTooling
+  clangToolingCore
 
   LINK_LIBS
   LLVMTestingSupport
@@ -47,4 +52,5 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   LLVM_COMPONENTS
   FrontendOpenMP
   Support
+  TargetParser
   )

@@ -35,6 +35,7 @@ add_llvm_tool(llvm-objcopy
   ObjcopyOptsTableGen
   InstallNameToolOptsTableGen
   StripOptsTableGen
+  ExtractBundleEntryOptsTableGen
   GENERATE_DRIVER
   )
 

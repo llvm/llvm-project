@@ -399,6 +399,9 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
+  assert((!Sext || !TII->getSubtarget().zeroesHigh16BitsOfDest(
+                       getParentInst()->getOpcode())) &&
+         "Cannot use sign-extension with instruction that zeroes high bits");
   switch (MI.getOpcode()) {
   case AMDGPU::V_CVT_F32_FP8_sdwa:
   case AMDGPU::V_CVT_F32_BF8_sdwa:
@@ -708,18 +711,16 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   }
 
   case AMDGPU::V_LSHRREV_B16_e32:
-  case AMDGPU::V_ASHRREV_I16_e32:
   case AMDGPU::V_LSHLREV_B16_e32:
   case AMDGPU::V_LSHRREV_B16_e64:
   case AMDGPU::V_LSHRREV_B16_opsel_e64:
-  case AMDGPU::V_ASHRREV_I16_e64:
   case AMDGPU::V_LSHLREV_B16_opsel_e64:
   case AMDGPU::V_LSHLREV_B16_e64: {
+    // V_ASHRREV_I16_e32 and V_ASHRREV_I16_e64 are
+    // not included here because they zero-fill the high 16-bits.
+
     // from: v_lshrrev_b16_e32 v1, 8, v0
     // to SDWA src:v0 src_sel:BYTE_1
-
-    // from: v_ashrrev_i16_e32 v1, 8, v0
-    // to SDWA src:v0 src_sel:BYTE_1 sext:1
 
     // from: v_lshlrev_b16_e32 v1, 8, v0
     // to SDWA dst:v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD
@@ -739,11 +740,8 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
         Opcode == AMDGPU::V_LSHLREV_B16_opsel_e64 ||
         Opcode == AMDGPU::V_LSHLREV_B16_e64)
       return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
-    return std::make_unique<SDWASrcOperand>(
-        Src1, Dst, BYTE_1, false, false,
-        Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
-            Opcode != AMDGPU::V_LSHRREV_B16_opsel_e64 &&
-            Opcode != AMDGPU::V_LSHRREV_B16_e64);
+    return std::make_unique<SDWASrcOperand>(Src1, Dst, BYTE_1, false, false,
+                                            false);
     break;
   }
 

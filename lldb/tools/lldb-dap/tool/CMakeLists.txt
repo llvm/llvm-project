@@ -4,10 +4,6 @@ add_public_tablegen_target(LLDBDAPOptionsTableGen)
 
 set(LLDB_DAP_LINK_LIBS lldbDAP liblldb lldbHost)
 
-if(WIN32)
-  list(APPEND LLDB_DAP_LINK_LIBS lldbHostPythonPathSetup)
-endif()
-
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
 

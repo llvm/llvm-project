@@ -1636,7 +1636,7 @@ define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) {
 ; CHECK-NEXT:    br i1 [[CMP_1]], label %[[FOR_HEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_HEADER]]:
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[ZEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 0, [[ZEXT]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4

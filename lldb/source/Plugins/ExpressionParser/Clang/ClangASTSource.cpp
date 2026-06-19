@@ -163,7 +163,7 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
     }
   }
 
-  ConstString const_decl_name(decl_name.c_str());
+  ConstString const_decl_name(decl_name);
 
   const char *uniqued_const_decl_name = const_decl_name.GetCString();
   if (m_active_lookups.find(uniqued_const_decl_name) !=
@@ -334,7 +334,7 @@ clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
   if (!language_runtime)
     return nullptr;
 
-  ConstString class_name(interface_decl->getNameAsString().c_str());
+  ConstString class_name(interface_decl->getNameAsString());
 
   lldb::TypeSP complete_type_sp(
       language_runtime->LookupInCompleteClassCache(class_name));
@@ -499,7 +499,7 @@ void ClangASTSource::FindExternalLexicalDecls(
 void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   assert(m_ast_context);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const auto name = context.m_decl_name.getAsString();
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -581,7 +581,7 @@ void ClangASTSource::FindExternalVisibleDecls(
 
   SymbolContextList sc_list;
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, true))
     return;
 
@@ -643,7 +643,7 @@ void ClangASTSource::FindExternalVisibleDecls(
 void ClangASTSource::FillNamespaceMap(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     const CompilerDeclContext &namespace_decl) {
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, true))
     return;
 
@@ -1077,7 +1077,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
     if (std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
             GetClangModulesDeclVendor()) {
-      ConstString interface_name(interface_decl->getNameAsString().c_str());
+      ConstString interface_name(interface_decl->getNameAsString());
       bool append = false;
       uint32_t max_matches = 1;
       std::vector<CompilerDecl> decls;
@@ -1195,7 +1195,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
   DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(
       parser_iface_decl.GetOrigin(*m_ast_importer_sp));
 
-  ConstString class_name(parser_iface_decl->getNameAsString().c_str());
+  ConstString class_name(parser_iface_decl->getNameAsString());
 
   LLDB_LOG(log,
            "ClangASTSource::FindObjCPropertyAndIvarDecls on "

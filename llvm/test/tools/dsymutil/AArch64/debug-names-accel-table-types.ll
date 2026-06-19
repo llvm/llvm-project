@@ -1,5 +1,6 @@
 ; RUN: %llc_dwarf -debugger-tune=lldb -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: dsymutil %t -o %t.dSYM
+; RUN: dsymutil --linker parallel %t -o %t.parallel.dSYM
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=SAME-NAME %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=DIFFERENT-NAME %s
