@@ -44,7 +44,7 @@ static Value *EmitSystemZIntrinsicWithCC(CodeGenFunction &CGF,
 /// Whereas the llvm 'cmpxchg' instruction has the following syntax:
 /// compxchg *Destination, Comparand, Exchange.
 /// So we need to swap Comparand & Destination and dereference Comparand &
-/// Exchange when invoking CreateAtomicCmpXchng. For this reason we can not use
+/// Exchange when invoking CreateAtomicCmpXchg. For this reason we can not use
 /// the utility function MakeAtomicCmpXchgValue.
 static Value *EmitAtomicCmpXchgForZOSIntrin(CodeGenFunction &CGF,
                                             const CallExpr *E,
@@ -52,8 +52,8 @@ static Value *EmitAtomicCmpXchgForZOSIntrin(CodeGenFunction &CGF,
 
   CharUnits Alignment =
       CGF.getContext().toCharUnitsFromBits(IntType->getScalarSizeInBits());
-  llvm::Value *DestinationPtr = CGF.EmitScalarExpr(E->getArg(1));
   llvm::Value *ComparandPtr = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *DestinationPtr = CGF.EmitScalarExpr(E->getArg(1));
 
   Address DestinationAddr = Address(DestinationPtr, IntType, Alignment);
   Address ComparandAddr = Address(ComparandPtr, IntType, Alignment);
@@ -65,9 +65,7 @@ static Value *EmitAtomicCmpXchgForZOSIntrin(CodeGenFunction &CGF,
     Address ExchangeAddr = Address(ExchangePtr, IntType, Alignment);
     Exchange = CGF.Builder.CreateLoad(ExchangeAddr);
   } else {
-    Exchange =
-        EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)),
-                  E->getArg(2)->getType(), cast<llvm::IntegerType>(IntType));
+    Exchange = CGF.EmitScalarExpr(E->getArg(2));
   }
 
   Value *Result = CGF.Builder.CreateAtomicCmpXchg(
@@ -79,7 +77,7 @@ static Value *EmitAtomicCmpXchgForZOSIntrin(CodeGenFunction &CGF,
   CGF.Builder.CreateStore(CGF.Builder.CreateExtractValue(Result, 0),
                           ComparandAddr);
 
-  // Extract boolean success flag, inverse it and zext it to int.
+  // Extract boolean success flag, invert it and zext it to int.
   llvm::Value *RetVal =
       CGF.Builder.CreateNot(CGF.Builder.CreateExtractValue(Result, 1));
   return CGF.Builder.CreateZExt(RetVal, CGF.ConvertType(E->getType()));
