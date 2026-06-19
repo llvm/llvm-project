@@ -25,6 +25,9 @@ Would be converted into:
   std::add_const_t<T>
   std::make_signed_t<unsigned>
 
+Also suggests converting ``std::remove_cv_t<std::remove_reference_t<...>`` into
+``std::remove_cvref_t<...>`` when targeting C++20 or above.
+
 Options
 -------
 
