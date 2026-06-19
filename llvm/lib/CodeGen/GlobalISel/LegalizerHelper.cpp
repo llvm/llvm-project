@@ -4906,10 +4906,28 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       MI.eraseFromParent();
       return Legalized;
     }
-    // Else -> shuffle
+    // Else -> shuffle(vector, extend(subvector, size(vector)), mask)
     else
     {
-	    return UnableToLegalize;
+	    // Extend subvector to same size as vector
+	    Register ExtendedSubvector = MRI.createGenericVirtualRegister(VectorTy);
+	    MIRBuilder.buildPadVectorWithUndefElements(ExtendedSubvector, Subvector);
+
+	    // Calculate mask required for this shuffle
+	    SmallVector<int> Mask;
+	    for (int i; i < VectorTy.getElementCount().getKnownMinValue(); i++)
+	    {
+		// If this index is within bounds, put subvector's index into mask
+		if (i > insertionPointImm && i < insertionPointImm + SubvectorTy.getElementCount().getKnownMinValue())
+			Mask.push_back(VectorTy.getElementCount().getKnownMinValue() + i - insertionPointImm);
+		else
+			Mask.push_back(i);
+	    }
+
+	    // Build shuffle
+	    MIRBuilder.buildShuffleVector(MI.getOperand(0), Vector, ExtendedSubvector, Mask);
+	    MI.eraseFromParent();
+	    return Legalized;
     }
     // Look up what sdag does**
     // The g opcodes should all be supported by gi
