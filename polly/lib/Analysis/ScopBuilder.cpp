@@ -2843,11 +2843,20 @@ void ScopBuilder::hoistInvariantLoads() {
     return;
 
   isl::union_map Writes = scop->getWrites();
+
+  // Collect the set of all ScopArrayInfo objects that have any write access
+  // anywhere in the scop.
+  DenseSet<const ScopArrayInfo *> WrittenSAIs;
+  for (const ScopStmt &Stmt : *scop)
+    for (const MemoryAccess *MA : Stmt)
+      if (MA->isWrite())
+        WrittenSAIs.insert(MA->getScopArrayInfo());
+
   for (ScopStmt &Stmt : *scop) {
     InvariantAccessesTy InvariantAccesses;
 
     for (MemoryAccess *Access : Stmt) {
-      isl::set NHCtx = getNonHoistableCtx(Access, Writes);
+      isl::set NHCtx = getNonHoistableCtx(Access, Writes, WrittenSAIs);
       if (!NHCtx.is_null())
         InvariantAccesses.push_back({Access, NHCtx});
     }
@@ -2885,10 +2894,11 @@ static bool isAccessRangeTooComplex(isl::set AccessRange) {
   return false;
 }
 
-bool ScopBuilder::hasNonHoistableBasePtrInScop(MemoryAccess *MA,
-                                               isl::union_map Writes) {
+bool ScopBuilder::hasNonHoistableBasePtrInScop(
+    MemoryAccess *MA, isl::union_map Writes,
+    const DenseSet<const ScopArrayInfo *> &WrittenSAIs) {
   if (auto *BasePtrMA = scop->lookupBasePtrAccess(MA)) {
-    return getNonHoistableCtx(BasePtrMA, Writes).is_null();
+    return getNonHoistableCtx(BasePtrMA, Writes, WrittenSAIs).is_null();
   }
 
   Value *BaseAddr = MA->getOriginalBaseAddr();
@@ -2940,8 +2950,9 @@ void ScopBuilder::addUserContext() {
   scop->setContext(newContext);
 }
 
-isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
-                                         isl::union_map Writes) {
+isl::set ScopBuilder::getNonHoistableCtx(
+    MemoryAccess *Access, isl::union_map Writes,
+    const DenseSet<const ScopArrayInfo *> &WrittenSAIs) {
   // TODO: Loads that are not loop carried, hence are in a statement with
   //       zero iterators, are by construction invariant, though we
   //       currently "hoist" them anyway. This is necessary because we allow
@@ -2965,8 +2976,19 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
   // no base pointer origin we check that the base pointer is defined
   // outside the region.
   auto *LI = cast<LoadInst>(Access->getAccessInstruction());
-  if (hasNonHoistableBasePtrInScop(Access, Writes))
+  if (hasNonHoistableBasePtrInScop(Access, Writes, WrittenSAIs))
     return {};
+
+  // Walk the full BasePtrOriginSAI chain. If any ancestor's storage location
+  // is written anywhere in the scop, hoisting the derived load is not safe
+  // since a mid-region write to the ancestor SAI can change the pointer value
+  // that was hoisted to region entry, leaving the derived address stale.
+  for (const ScopArrayInfo *BaseSAI =
+           Access->getScopArrayInfo()->getBasePtrOriginSAI();
+       BaseSAI != nullptr; BaseSAI = BaseSAI->getBasePtrOriginSAI()) {
+    if (WrittenSAIs.count(BaseSAI))
+      return {};
+  }
 
   isl::map AccessRelation = Access->getAccessRelation();
   assert(!AccessRelation.is_empty());
