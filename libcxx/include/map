@@ -1850,8 +1850,8 @@ public:
     insert(__il.begin(), __il.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(initializer_list<value_type> __il, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multimap(initializer_list<value_type> __il, const allocator_type& __a)
       : multimap(__il, key_compare(), __a) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap& operator=(initializer_list<value_type> __il) {
