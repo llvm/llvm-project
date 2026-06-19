@@ -7089,9 +7089,9 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
         Written.insert(F);
 
   for (const FieldDecl *F : Ctor->getParent()->fields()) {
-    // Anonymous aggregate members and bit-fields are conservatively skipped in
-    // this slice; reference and const members already have dedicated
-    // diagnostics when left uninitialized.
+    // Anonymous aggregate members and unnamed bit-fields are skipped; a named
+    // bit-field is checked like any other member. Reference and const members
+    // already have dedicated diagnostics when left uninitialized.
     if (F->isUnnamedBitField() || !F->getDeclName() ||
         F->getType()->isReferenceType() || F->getType().isConstQualified())
       continue;

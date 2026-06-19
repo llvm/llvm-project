@@ -290,14 +290,14 @@ This pattern needs two pieces, both colocated with the dispatcher.
       };
 
    The shared ``dispatchFinalizationProfiles`` dispatcher (used by both
-   patterns 3 and 4) checks ``anyProfileEnforced(Table)``, sets up a
-   ``ProfileSuppressScope(S, RD, /*WalkLexicalParents=*/true)``, iterates the
+   patterns 3 and 4) checks ``anyProfileEnforced(Table)``, iterates the
    table, skips entries whose profile is not enforced, and invokes the
-   callback.  Because the
-   suppress scope is established by the dispatcher, the callback can use
-   the location-based ``shouldEmitProfileViolation`` overload and have
-   ``[[profiles::suppress]]`` on the class or any enclosing lexical
-   ``Decl`` work correctly.
+   callback.  Each callback passes the finalized ``Decl`` (here the
+   ``CXXRecordDecl``) to the decl-aware ``shouldEmitProfileViolation``
+   overload, which walks the declaration and its lexical parents for a
+   matching ``[[profiles::suppress]]``, so suppression on the class or any
+   enclosing lexical ``Decl`` works without the dispatcher establishing a
+   suppress scope.
 
 2. **Emit diagnostics from the callback via**
    ``Sema::shouldEmitProfileViolation``.  Each callback decides where on
@@ -362,11 +362,12 @@ table ``ConstructorFinalizationProfiles`` of the same
 ``FinalizationProfile<Node>`` row (here
 ``FinalizationProfile<CXXConstructorDecl>``), and a callback that emits via
 ``Sema::shouldEmitProfileViolation``.  The same shared
-``dispatchFinalizationProfiles`` dispatcher establishes a
-``ProfileSuppressScope(S, Ctor, /*WalkLexicalParents=*/true)`` around each
-callback, so ``[[profiles::suppress]]`` on the constructor, the class, or an
-enclosing lexical ``Decl`` works.  A callback that should only apply to
-user-written constructors checks ``Ctor->isUserProvided()``.
+``dispatchFinalizationProfiles`` dispatcher invokes each callback, which
+passes the ``CXXConstructorDecl`` to the decl-aware
+``shouldEmitProfileViolation`` overload; that overload walks the declaration
+and its lexical parents, so ``[[profiles::suppress]]`` on the constructor,
+the class, or an enclosing lexical ``Decl`` works.  A callback that should
+only apply to user-written constructors checks ``Ctor->isUserProvided()``.
 
 
 .. _profiles-token-dominion:
@@ -584,9 +585,9 @@ Because dependent classes are filtered out by the dispatcher, the
 diagnostic fires on class template *instantiations* rather than on the
 primary template.  Lambda closures are also skipped.
 ``[[profiles::suppress(test::class_final)]]`` on the class or any
-enclosing lexical ``Decl`` silences the diagnostic via the
-``ProfileSuppressScope(*this, RD, /*WalkLexicalParents=*/true)`` the
-dispatcher establishes around each callback.
+enclosing lexical ``Decl`` silences the diagnostic via the decl-aware
+``shouldEmitProfileViolation`` overload, which walks the class and its
+lexical parents for a matching suppression.
 
 
 The ``test::ctor_final`` Profile
@@ -684,6 +685,11 @@ the table-order priority makes ``test::uninit_read`` fire first.  Use
 ``[[profiles::suppress(test::uninit_read)]]`` to demote it at a use site
 and surface the ``std::init`` diagnostic.
 
+Known deviation: the initialization profile paper exempts ``std::byte`` from
+the uninitialized-read rule, but this slice rides the generic CFG
+uninitialized-variables analysis, which does not special-case ``std::byte``,
+so a read of an uninitialized ``std::byte`` is currently diagnosed.
+
 R2. ``uninit_decl`` -- pattern 1
 .................................
 
@@ -710,6 +716,11 @@ constructor is trusted; static / thread storage duration is excluded
   §6.2). So a type whose only indeterminate scalars are all marked is trusted
   (e.g. ``struct A { int x [[uninitialized]]; }; A a;`` is accepted), while a
   mixed type still fires for its unmarked scalars.
+- Known gap: the aggregate branch guards on ``Var->getType()->isRecordType()``,
+  which does not look through array types, so an automatic array of a class
+  type that leaves scalar subobjects indeterminate (e.g. ``S arr[3];`` for
+  ``struct S { int x; };``) is not diagnosed, even though the scalar form
+  ``S one;`` is.
 
 R3. ``static_runtime_init`` -- pattern 1
 .........................................
@@ -764,7 +775,13 @@ themselves marked ``[[uninitialized]]`` is trusted (the same
   ``note_init_uninit_member_here`` note at the member).
 - Opt-in table: ``ConstructorFinalizationProfiles`` (pattern 4).
 - Reference and const members keep their existing dedicated diagnostics;
-  anonymous-aggregate members and bit-fields are conservatively skipped.
+  anonymous-aggregate members and unnamed bit-fields are skipped (named
+  bit-fields are checked like any other member).
+- Known gaps: base-class subobjects of the constructed class are not checked
+  -- only direct non-static data members -- so a user-provided constructor
+  that leaves a base subobject uninitialized (paper §6.1) is not diagnosed.
+  A const member is skipped here but is treated as indeterminate by
+  ``defaultInitLeavesScalarIndeterminate`` (R2).
 
 R6. ``union_marker`` -- attribute handler
 .........................................
