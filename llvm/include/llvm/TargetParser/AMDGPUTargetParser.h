@@ -72,8 +72,8 @@ enum ArchFeatureKind : uint32_t {
   // WGP mode is supported.
   FEATURE_WGP = 1 << 9,
 
-  // Xnack is available by default
-  FEATURE_XNACK_ALWAYS = 1 << 10
+  // Xnack on/off modes are supported.
+  FEATURE_XNACK_ON_OFF_MODES = 1 << 10
 };
 
 enum FeatureError : uint32_t {
