@@ -30,10 +30,11 @@ using namespace mlir;
 
 namespace {
 
-/// Copy rewrite helpers
+//===----------------------------------------------------------------------===//
+// Copy Rewrite Helpers
+//===----------------------------------------------------------------------===//
 
-/// The copy rewrite stores directly into the reinterpret_cast source, so it
-/// needs concrete base strides instead of layout-map reasoning.
+/// Returns row-major strides for static identity-layout memref type.
 static std::optional<SmallVector<int64_t>> getIdentityStrides(MemRefType type) {
   if (!type.getLayout().isIdentity() || !type.hasStaticShape())
     return std::nullopt;
@@ -47,42 +48,54 @@ static std::optional<SmallVector<int64_t>> getIdentityStrides(MemRefType type) {
   return strides;
 }
 
-/// Non-unit strided memref dimensions are lowered to loops over base memref
-/// dimensions. Static reinterpret_cast strides connect those dimension spaces
-/// in the currently supported cases.
-static std::optional<unsigned>
-findBaseDimForResultStride(MemRefType baseType, ArrayRef<int64_t> baseStrides,
-                           ArrayRef<bool> usedBaseDims, int64_t resultStride,
-                           int64_t resultSize) {
-  std::optional<unsigned> fallback;
-  for (auto [idx, stride] : llvm::enumerate(baseStrides)) {
-    if (usedBaseDims[idx] || stride != resultStride ||
-        baseType.getDimSize(idx) < resultSize)
+/// Finds the source dimension for a static reinterpret_cast result dimension.
+/// Dimensions marked in `usedSourceDims` are skipped. Returns the smallest
+/// source dimension whose size is at least the result dimension size, with the
+/// same stride.
+static std::optional<unsigned> findSourceDimForResultDim(
+    memref::ReinterpretCastOp rc, unsigned resultDim, MemRefType sourceType,
+    ArrayRef<int64_t> sourceStrides, ArrayRef<bool> usedSourceDims) {
+  MemRefType resultType = cast<MemRefType>(rc.getType());
+  assert(resultDim < resultType.getRank() && "result dimension out of range");
+  assert(sourceType.getRank() == static_cast<int64_t>(sourceStrides.size()) &&
+         sourceStrides.size() == usedSourceDims.size() &&
+         "expected same-rank source type, strides, and used-dimension mask");
+  assert(!ShapedType::isDynamic(rc.getStaticStrides()[resultDim]) &&
+         "expected static result stride");
+
+  int64_t resultStride = rc.getStaticStrides()[resultDim];
+  int64_t resultSize = resultType.getDimSize(resultDim);
+  std::optional<unsigned> sourceDim;
+  for (auto [idx, stride] : llvm::enumerate(sourceStrides)) {
+    if (usedSourceDims[idx] || stride != resultStride ||
+        sourceType.getDimSize(idx) < resultSize)
       continue;
 
-    // Prefer an exact shape match. Otherwise, use the first dimension large
-    // enough to contain the copied logical vector.
-    if (baseType.getDimSize(idx) == resultSize)
-      return idx;
-    if (!fallback)
-      fallback = idx;
+    if (!sourceDim ||
+        sourceType.getDimSize(idx) < sourceType.getDimSize(*sourceDim))
+      sourceDim = idx;
   }
-  return fallback;
+  return sourceDim;
 }
 
-/// reinterpret_cast offsets are linear element offsets, while `memref.store`
-/// needs one index per base dimension.
+/// Returns source indices for a static reinterpret_cast offset.
 static std::optional<SmallVector<int64_t>>
-delinearizeStaticOffset(int64_t offset, MemRefType baseType,
-                        ArrayRef<int64_t> baseStrides) {
-  if (offset < 0)
+delinearizeStaticOffset(memref::ReinterpretCastOp rc, MemRefType sourceType,
+                        ArrayRef<int64_t> sourceStrides) {
+  ArrayRef<int64_t> offsets = rc.getStaticOffsets();
+  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
+  // only a single offset. That should be fixed at the op definition level.
+  assert(offsets.size() == 1 && "Expecting single offset");
+  assert(!ShapedType::isDynamic(offsets[0]) && "expected static offset");
+
+  if (offsets[0] < 0)
     return std::nullopt;
 
-  SmallVector<int64_t> indices(baseType.getRank(), 0);
-  int64_t remainder = offset;
-  for (auto [idx, stride] : llvm::enumerate(baseStrides)) {
+  SmallVector<int64_t> indices(sourceType.getRank(), 0);
+  int64_t remainder = offsets[0];
+  for (auto [idx, stride] : llvm::enumerate(sourceStrides)) {
     indices[idx] = remainder / stride;
-    if (indices[idx] >= baseType.getDimSize(idx))
+    if (indices[idx] >= sourceType.getDimSize(idx))
       return std::nullopt;
     remainder %= stride;
   }
@@ -92,14 +105,15 @@ delinearizeStaticOffset(int64_t offset, MemRefType baseType,
   return indices;
 }
 
-/// Dynamic scalar offsets cannot be delinearized statically. They can be used
-/// directly only when the base has a single non-unit dimension to receive them.
+/// Returns the dimension whose static size is not one if it is unique.
 static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
-  if (!type.hasStaticShape() || type.getRank() == 0)
+  assert(type.hasStaticShape() && "expected static shape");
+  ArrayRef<int64_t> shape = type.getShape();
+  if (shape.empty())
     return std::nullopt;
 
   std::optional<unsigned> nonUnitDim;
-  for (auto [idx, dim] : llvm::enumerate(type.getShape())) {
+  for (auto [idx, dim] : llvm::enumerate(shape)) {
     if (dim == 1)
       continue;
     if (nonUnitDim)
@@ -186,12 +200,10 @@ getCopyFromReinterCastInfo(memref::CopyOp op, memref::ReinterpretCastOp rc) {
         resultType.hasStaticShape()))
     return std::nullopt;
 
-  // Map reinterpret_cast strided memref dimensions to source dimensions by
-  // stride.
   std::optional<SmallVector<int64_t>> baseStrides =
       getIdentityStrides(baseType);
-  // TODO: Support non-identity reinterpret_cast source layouts by using the
-  // source layout strides as base strides.
+  // TODO: Support non-identity source layouts by computing source strides from
+  // the layout map.
   if (!baseStrides)
     return std::nullopt;
 
@@ -206,11 +218,11 @@ getCopyFromReinterCastInfo(memref::CopyOp op, memref::ReinterpretCastOp rc) {
     if (ShapedType::isDynamic(rc.getStaticStrides()[resultDim]))
       return std::nullopt;
 
-    // Non-unit strided memref dimensions become loop dimensions in the scalar
-    // rewrite.
-    std::optional<unsigned> baseDim = findBaseDimForResultStride(
-        baseType, *baseStrides, usedBaseDims, rc.getStaticStrides()[resultDim],
-        resultSize);
+    // Each copied result dimension must map by stride to a source dimension
+    // whose static size >= result dimension size.
+    std::optional<unsigned> baseDim =
+        findSourceDimForResultDim(rc, static_cast<unsigned>(resultDim),
+                                  baseType, *baseStrides, usedBaseDims);
     assert(baseDim &&
            "static reinterpret_cast stride must map to an identity base "
            "dimension");
@@ -225,9 +237,9 @@ getCopyFromReinterCastInfo(memref::CopyOp op, memref::ReinterpretCastOp rc) {
   // only a single offset. That should be fixed at the op definition level.
   assert(offsets.size() == 1 && "Expecting single offset");
   if (!ShapedType::isDynamic(offsets[0])) {
-    // Static offsets are converted to base indices.
+    // Static offset must delinearize to in-bounds source indices.
     std::optional<SmallVector<int64_t>> offsetIndices =
-        delinearizeStaticOffset(offsets[0], baseType, *baseStrides);
+        delinearizeStaticOffset(rc, baseType, *baseStrides);
     assert(offsetIndices &&
            "static reinterpret_cast offset must delinearize to in-bounds base "
            "indices");
@@ -250,9 +262,9 @@ getCopyFromReinterCastInfo(memref::CopyOp op, memref::ReinterpretCastOp rc) {
     return std::nullopt;
 
   if (info.loopDims.empty()) {
-    // Scalar-shaped strided memrefs copy one element, so a dynamic linear
-    // offset can be used directly only when the base has exactly one non-unit
-    // dimension.
+    // Dynamic scalar offsets cannot be delinearized statically. They can be
+    // used directly only when the base has a single non-unit dimension to
+    // receive them.
     std::optional<unsigned> nonUnitDim = getSingleNonUnitDim(baseType);
     // TODO: Support scalar dynamic offsets into bases with multiple non-unit
     // dimensions by delinearizing the single accessed element offset at
