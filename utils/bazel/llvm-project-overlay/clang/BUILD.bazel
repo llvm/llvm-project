@@ -1659,6 +1659,7 @@ cc_library(
         ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
+        ":scalable_static_analysis_source_transformation",
         ":serialization",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -2134,6 +2135,7 @@ cc_library(
         ":options",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
+        ":scalable_static_analysis_source_transformation",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2462,6 +2464,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:LTO",
         "//llvm:Object",
         "//llvm:Option",
@@ -2659,6 +2662,7 @@ cc_library(
         ":support",
         ":unified_symbol_resolution",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2693,6 +2697,22 @@ cc_library(
 )
 
 cc_library(
+    name = "scalable_static_analysis_source_transformation",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/SourceTransformation/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/SourceTransformation/**/*.h"]),
+    deps = [
+        ":ast",
+        ":basic",
+        ":scalable_static_analysis_core",
+        ":support",
+        ":tooling_core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "scalable_static_analysis_frontend",
     srcs = glob([
         "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",
@@ -2705,6 +2725,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":sema",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2715,6 +2736,7 @@ cc_binary(
         ":basic",
         ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
@@ -2728,6 +2750,7 @@ cc_binary(
         ":basic",
         ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",

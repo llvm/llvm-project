@@ -258,6 +258,8 @@ multiclass RVVSFTileMoveBuiltinSet<list<list<string>> suffixes_prototypes,
     let RequiredFeatures = !listconcat(RequiredFeatures,
                                        !cond(!eq(type, "x"): ["zvfhmin"],
                                              !eq(type, "y"): ["zvfbfmin"],
+                                             !eq(type, "a"): ["zvfofp8min"],
+                                             !eq(type, "b"): ["zvfofp8min"],
                                              true:           []<string>)),
         SupportOverloading = false,
         HasMasked = false,
@@ -274,7 +276,7 @@ multiclass RVVSFTileMoveVTBuiltinSet<list<string> RequiredFeatures = []> {
     defm NAME :
         RVVSFTileMoveBuiltinSet<[["v", "vz"], ["Uv", "Uvz"]], [-1], type,
                                 RequiredFeatures>;
-  foreach type = ["x", "y", "f", "d"] in
+  foreach type = ["x", "y", "f", "d", "a", "b"] in
     defm NAME :
         RVVSFTileMoveBuiltinSet<[["v", "vz"]], [-1], type, RequiredFeatures>;
 }
@@ -285,7 +287,7 @@ multiclass RVVSFTileMoveTVBuiltinSet<list<string> RequiredFeatures = []> {
       defm NAME :
           RVVSFTileMoveBuiltinSet<[["v", "0zv"], ["Uv", "0zUv"]], [1], type,
                                   RequiredFeatures>;
-    foreach type = ["x", "y", "f", "d"] in
+    foreach type = ["x", "y", "f", "d", "a", "b"] in
       defm NAME :
           RVVSFTileMoveBuiltinSet<[["v", "0zv"]], [1], type, RequiredFeatures>;
   }

@@ -177,8 +177,6 @@ struct llvm::GVNPass::Expression {
 };
 
 template <> struct llvm::DenseMapInfo<GVNPass::Expression> {
-  static inline GVNPass::Expression getEmptyKey() { return ~0U; }
-
   static unsigned getHashValue(const GVNPass::Expression &E) {
     using llvm::hash_value;
 
@@ -1193,8 +1191,8 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     // Introduce a new value select for a load from an eligible pointer select.
     SelectInst *Sel = getSelectValue();
     assert(V1 && V2 && "both value operands of the select must be present");
-    Res =
-        SelectInst::Create(Sel->getCondition(), V1, V2, "", Sel->getIterator());
+    Res = SelectInst::Create(Sel->getCondition(), V1, V2, "",
+                             InsertPt->getIterator());
     // We use the DebugLoc from the original load here, as this instruction
     // materializes the value that would previously have been loaded.
     cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());

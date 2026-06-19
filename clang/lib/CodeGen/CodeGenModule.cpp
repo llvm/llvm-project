@@ -79,6 +79,7 @@
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/KCFIHash.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
 #include <set>
 
@@ -246,6 +247,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::systemz: {
     bool SoftFloat = CodeGenOpts.FloatABI == "soft";
     bool HasVector = !SoftFloat && Target.getABI() == "vector";
+    if (Triple.getOS() == llvm::Triple::ZOS)
+      return createSystemZ_ZOS_TargetCodeGenInfo(CGM, HasVector, SoftFloat);
     return createSystemZTargetCodeGenInfo(CGM, HasVector, SoftFloat);
   }
 
@@ -1590,11 +1593,24 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "import-call-optimization",
                               1);
 
-  // Enable unwind v2 (epilog).
-  if (CodeGenOpts.getWinX64EHUnwindV2() != llvm::WinX64EHUnwindV2Mode::Disabled)
-    getModule().addModuleFlag(
-        llvm::Module::Warning, "winx64-eh-unwindv2",
-        static_cast<unsigned>(CodeGenOpts.getWinX64EHUnwindV2()));
+  // Enable unwind v2/v3.
+  // Set the module flag here based on the user's requested mode (or auto-
+  // promote to V3 when EGPR is enabled module-wide, since V1/V2 cannot encode
+  // R16-R31). The per-function EGPR compatibility check is performed in
+  // EmitGlobalFunctionDefinition so that `__attribute__((target("egpr")))`
+  // and `nounwind` are respected.
+
+  auto UnwindMode = CodeGenOpts.getWinX64EHUnwind();
+  if (UnwindMode == llvm::WinX64EHUnwindMode::Default) {
+    if (T.isOSWindows() && T.isX86_64() &&
+        Context.getTargetInfo().hasFeature("egpr"))
+      UnwindMode = llvm::WinX64EHUnwindMode::V3;
+    else
+      UnwindMode = llvm::WinX64EHUnwindMode::V1;
+  }
+  if (UnwindMode != llvm::WinX64EHUnwindMode::V1)
+    getModule().addModuleFlag(llvm::Module::Warning, "winx64-eh-unwind",
+                              static_cast<unsigned>(UnwindMode));
 
   // Indicate whether this Module was compiled with -fopenmp
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
@@ -2264,6 +2280,7 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
                                         CodeGenModule &CGM) {
   const Decl *D = GD.getDecl();
   return !CGM.getModuleNameHash().empty() && isa<FunctionDecl>(D) &&
+         !D->hasAttr<AsmLabelAttr>() &&
          (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 
@@ -3685,6 +3702,65 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
 }
 
+/// Process copyright pragma and create a weak_odr hidden string global variable
+/// in the __loadtime_comment section, marked with !loadtime_comment metadata.
+/// Only one copyright pragma is allowed per translation unit. Subsequent
+/// pragmas in the same TU are ignored with a warning at the parse level.
+void CodeGenModule::ProcessPragmaCommentCopyright(StringRef Comment,
+                                                  bool isFromASTFile) {
+  assert(getTriple().isOSAIX() &&
+         "pragma comment copyright is supported only when targeting AIX");
+
+  // Interaction with C++20 Modules and PCH:
+  // When a module interface unit containing a copyright pragma is imported,
+  // Clang deserializes the PragmaCommentDecl from the precompiled module file
+  // (.pcm) into the importing TU's AST. isFromASTFile() returns true for such
+  // deserialized declarations. We skip those to ensure only the module
+  // interface TU that originally parsed the pragma emits the copyright metadata
+  // -- not every TU that imports it. This prevents duplicate copyright strings
+  // in the final binary.
+  if (isFromASTFile)
+    return;
+
+  assert(!LoadTimeCommentGlobal &&
+         "Only one copyright pragma allowed per translation unit.");
+
+  // Create a weak_odr hidden global variable containing the copyright string.
+  // Hash the content to generate a stable, unique name across TUs.
+  auto &C = getLLVMContext();
+  uint64_t Hash = xxh3_64bits(Comment);
+  std::string GlobalName =
+      ("__loadtime_comment_str_" + Twine::utohexstr(Hash)).str();
+
+  // Create null-terminated string constant
+  llvm::Constant *StrInit =
+      llvm::ConstantDataArray::getString(C, Comment, /*AddNull=*/true);
+
+  // Create weak_odr linkage so multiple TUs with identical strings merge
+  auto *GV = new llvm::GlobalVariable(getModule(), StrInit->getType(),
+                                      /*isConstant=*/true,
+                                      llvm::GlobalValue::WeakODRLinkage,
+                                      StrInit, GlobalName);
+
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  GV->setAlignment(llvm::Align(1));
+  // Place the copyright string in a dedicated section for better memory layout.
+  // Tradeoff: In full LTO builds, multiple copyright strings may be grouped
+  // into a single csect, preventing individual GC by the linker. However, this
+  // groups copyright strings "out of the way" from other data, which is likely
+  // beneficial for memory layout. ThinLTO is not affected by this grouping.
+  GV->setSection("__loadtime_comment");
+
+  // Mark with loadtime_comment metadata for LowerCommentStringPass
+  GV->setMetadata("loadtime_comment", llvm::MDNode::get(C, {}));
+
+  // Prevent optimizer from removing the Global Var.
+  llvm::appendToCompilerUsed(getModule(), {GV});
+
+  LoadTimeCommentGlobal = GV;
+}
+
 /// Add link options implied by the given module, including modules
 /// it depends on, using a postorder walk.
 static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
@@ -4347,9 +4423,10 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
     const TemplateParamObjectDecl *TPO) {
   StringRef Name = getMangledName(TPO);
   CharUnits Alignment = getNaturalTypeAlignment(TPO->getType());
+  llvm::Type *Type = getTypes().ConvertTypeForMem(TPO->getType());
 
   if (llvm::GlobalVariable *GV = getModule().getNamedGlobal(Name))
-    return ConstantAddress(GV, GV->getValueType(), Alignment);
+    return ConstantAddress(GV, Type, Alignment);
 
   ConstantEmitter Emitter(*this);
   llvm::Constant *Init = Emitter.emitForInitializer(
@@ -4371,7 +4448,7 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
   Emitter.finalize(GV);
 
-    return ConstantAddress(GV, GV->getValueType(), Alignment);
+  return ConstantAddress(GV, Type, Alignment);
 }
 
 ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {
@@ -6925,6 +7002,38 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
+  // EGPR (R16-R31) requires V3 unwind info on Windows x64 because V1/V2 cannot
+  // encode extended register numbers. Check per-function so that `target`
+  // attribute and `nounwind`/no-unwind-table functions are respected.
+  if (getTriple().isOSWindows() && getTriple().isX86_64()) {
+    auto UnwindMode = CodeGenOpts.getWinX64EHUnwind();
+    if (UnwindMode != llvm::WinX64EHUnwindMode::Default &&
+        UnwindMode != llvm::WinX64EHUnwindMode::V3 &&
+        Fn->needsUnwindTableEntry()) {
+      bool HasEGPR = false;
+      if (Fn->hasFnAttribute("target-features")) {
+        StringRef Feats =
+            Fn->getFnAttribute("target-features").getValueAsString();
+        SmallVector<StringRef, 16> Tokens;
+        Feats.split(Tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+        for (StringRef Tok : Tokens) {
+          if (Tok == "+egpr")
+            HasEGPR = true;
+          else if (Tok == "-egpr")
+            HasEGPR = false;
+        }
+      } else {
+        HasEGPR = Context.getTargetInfo().hasFeature("egpr");
+      }
+      if (HasEGPR) {
+        unsigned DiagID = Diags.getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "EGPR target feature requires unwind version 3");
+        Diags.Report(D->getLocation(), DiagID);
+      }
+    }
+  }
+
   auto GetPriority = [this](const auto *Attr) -> int {
     Expr *E = Attr->getPriority();
     if (E) {
@@ -7963,6 +8072,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       break;
     case PCK_Lib:
         AddDependentLib(PCD->getArg());
+      break;
+    case PCK_Copyright:
+      ProcessPragmaCommentCopyright(PCD->getArg(), PCD->isFromASTFile());
       break;
     case PCK_Compiler:
     case PCK_ExeStr:

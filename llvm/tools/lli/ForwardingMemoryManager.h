@@ -112,8 +112,7 @@ public:
       if (!Syms->front())
         return make_error<StringError>("Expected valid address",
                                        inconvertibleErrorCode());
-      return JITSymbol(Syms->front()->getAddress().getValue(),
-                       Syms->front()->getFlags());
+      return JITSymbol(Syms->front()->getValue(), JITSymbolFlags::Exported);
     } else
       return Syms.takeError();
   }

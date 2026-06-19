@@ -16,6 +16,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -227,6 +228,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getMulExpr(Ops[0],
                            SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
     });
+  if (match(V, m_LShr(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt)))) {
+    Type *Ty = V->getScalarType();
+    if (ShiftAmt < SE.getTypeSizeInBits(Ty))
+      return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
+        return SE.getUDivExpr(Ops[0], SE.getPowerOfTwo(Ty, ShiftAmt));
+      });
+  }
   if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
@@ -519,123 +527,11 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
   // would destroy information.
   if (match(&R, m_Intrinsic<Intrinsic::assume>()))
     return Sinking;
-  // TODO: Relax checks in the future, e.g. we could also hoist reads, if their
-  // memory location is not modified in the vector loop.
   if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
     return true;
   // Allocas cannot be hoisted.
   auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
   return RepR && RepR->getOpcode() == Instruction::Alloca;
-}
-
-std::optional<VPValue *>
-vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                                      SmallVectorImpl<VPInstruction *> &GEPs,
-                                      VPBasicBlock *LatchVPBB) {
-  // Given a plain CFG VPlan loop with countable latch exiting block
-  // \p LatchVPBB, we're looking to match the recipes contributing to the
-  // uncountable exit condition comparison (here, vp<%4>) back to either
-  // live-ins or the address nodes for the load used as part of the uncountable
-  // exit comparison so that we can either move them within the loop, or copy
-  // them to the preheader depending on the chosen method for dealing with
-  // stores in uncountable exit loops.
-  //
-  // Currently, the address of the load is restricted to a GEP with 2 operands
-  // and a live-in base address. This constraint may be relaxed later.
-  //
-  // VPlan ' for UF>=1' {
-  // Live-in vp<%0> = VF * UF
-  // Live-in vp<%1> = vector-trip-count
-  // Live-in ir<20> = original trip-count
-  //
-  // ir-bb<entry>:
-  // Successor(s): scalar.ph, vector.ph
-  //
-  // vector.ph:
-  // Successor(s): for.body
-  //
-  // for.body:
-  //   EMIT vp<%2> = phi ir<0>, vp<%index.next>
-  //   EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, for.inc ]
-  //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
-  //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
-  //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
-  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
-  // Successor(s): for.inc
-  //
-  // for.inc:
-  //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
-  //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
-  //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-  //   EMIT vp<%4> = any-of ir<%3>
-  //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
-  //   EMIT vp<%6> = or vp<%4>, vp<%5>
-  //   EMIT branch-on-cond vp<%6>
-  // Successor(s): middle.block, for.body
-  //
-  // middle.block:
-  // Successor(s): ir-bb<exit>, scalar.ph
-  //
-  // ir-bb<exit>:
-  // No successors
-  //
-  // scalar.ph:
-  // }
-
-  // Find the uncountable loop exit condition.
-  VPValue *UncountableCondition = nullptr;
-  if (!match(LatchVPBB->getTerminator(),
-             m_BranchOnCond(m_c_BinaryOr(
-                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue()))))
-    return std::nullopt;
-
-  SmallVector<VPValue *, 4> Worklist;
-  Worklist.push_back(UncountableCondition);
-  while (!Worklist.empty()) {
-    VPValue *V = Worklist.pop_back_val();
-
-    // Any value defined outside the loop does not need to be copied.
-    if (V->isDefinedOutsideLoopRegions())
-      continue;
-
-    // FIXME: Remove the single user restriction; it's here because we're
-    //        starting with the simplest set of loops we can, and multiple
-    //        users means needing to add PHI nodes in the transform.
-    if (V->getNumUsers() > 1)
-      return std::nullopt;
-
-    VPValue *Op1, *Op2;
-    // Walk back through recipes until we find at least one load from memory.
-    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
-      Worklist.push_back(Op1);
-      Worklist.push_back(Op2);
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-    } else if (match(V, m_VPInstruction<Instruction::Load>(m_VPValue(Op1)))) {
-      VPRecipeBase *GepR = Op1->getDefiningRecipe();
-      // Only matching base + single offset term for now.
-      if (GepR->getNumOperands() != 2)
-        return std::nullopt;
-      // Matching a GEP with a loop-invariant base ptr.
-      if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
-                           m_LiveIn(), m_VPValue())))
-        return std::nullopt;
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-      Recipes.push_back(cast<VPInstruction>(GepR));
-      GEPs.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
-                            m_VPValue(Op1)))) {
-      Worklist.push_back(Op1);
-      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-    } else
-      return std::nullopt;
-  }
-
-  // If we couldn't match anything, don't return the condition. It may be
-  // defined outside the loop.
-  if (Recipes.empty() || GEPs.empty())
-    return std::nullopt;
-
-  return UncountableCondition;
 }
 
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
@@ -910,12 +806,13 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   VPlan &Plan = Builder.getPlan();
   BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
   for (Value *V : SE.getSCEVValues(S)) {
-    // Only reuse instructions in the plan's entry block, as instructions in
-    // sibling branches may not dominate the entry block.
+    // Only reuse instructions in the plan's entry block, or, when a
+    // DominatorTree is available, any instruction that dominates it.
+    // Instructions in sibling branches may not dominate the entry block.
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return Plan.getOrAddLiveIn(V);
-    if (I->getParent() != PH)
+    if (!SE.DT.dominates(I->getParent(), PH))
       continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
     if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
@@ -938,22 +835,39 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+  case scAddExpr:
   case scMulExpr: {
-    auto *Mul = cast<SCEVMulExpr>(S);
+    if (S->getType()->isPointerTy())
+      return nullptr;
+    auto *NAry = cast<SCEVNAryExpr>(S);
+    unsigned Opcode =
+        S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
+    // Iterate in reverse so that constants are emitted last.
     SmallVector<VPValue *, 2> Ops;
-    for (const SCEVUse &Op : Mul->operands()) {
+    for (const SCEVUse &Op : reverse(NAry->operands())) {
       VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
       Ops.push_back(OpV);
     }
-    VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
-                                     Mul->hasNoSignedWrap());
+    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
+                                     NAry->hasNoSignedWrap());
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
-                                           WrapFlags, DL);
+      Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
     return Result;
+  }
+  case scUDivExpr: {
+    auto *UDiv = cast<SCEVUDivExpr>(S);
+    VPValue *LHS = tryToExpand(UDiv->getLHS());
+    if (!LHS)
+      return nullptr;
+    VPValue *RHS = tryToExpand(UDiv->getRHS());
+    if (!RHS)
+      return nullptr;
+    return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
+                                VPIRFlags::getDefaultFlags(Instruction::UDiv),
+                                DL);
   }
   default:
     return nullptr;

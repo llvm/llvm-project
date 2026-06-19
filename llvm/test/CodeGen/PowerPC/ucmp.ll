@@ -4,10 +4,8 @@
 define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp_8_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    clrldi 4, 4, 32
-; CHECK-NEXT:    sub 5, 3, 4
 ; CHECK-NEXT:    subc 6, 4, 3
+; CHECK-NEXT:    sub 5, 3, 4
 ; CHECK-NEXT:    subfe 3, 4, 3
 ; CHECK-NEXT:    subfe 3, 3, 5
 ; CHECK-NEXT:    blr
@@ -18,10 +16,8 @@ define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp_8_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    clrldi 4, 4, 32
-; CHECK-NEXT:    sub 5, 3, 4
 ; CHECK-NEXT:    subc 6, 4, 3
+; CHECK-NEXT:    sub 5, 3, 4
 ; CHECK-NEXT:    subfe 3, 4, 3
 ; CHECK-NEXT:    subfe 3, 3, 5
 ; CHECK-NEXT:    blr

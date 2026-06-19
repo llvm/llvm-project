@@ -168,6 +168,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_winsize
+  HDRS
+    struct_winsize.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_winsize
+)
+
+add_proxy_header_library(
   ssize_t
   HDRS
     ssize_t.h
@@ -439,6 +447,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_in6_addr
+  HDRS
+    struct_in6_addr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_in6_addr
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
   in_addr_t
   HDRS
     in_addr_t.h
@@ -480,6 +497,15 @@ add_proxy_header_library(
     struct_sockaddr_in.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr_in
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_sockaddr_in6
+  HDRS
+    struct_sockaddr_in6.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr_in6
     libc.include.netinet_in
 )
 

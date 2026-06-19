@@ -450,6 +450,13 @@ extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
   GlobalParser->MoreHelp.push_back(Help);
 }
 
+Option::Option(NumOccurrencesFlag OccurrencesFlag, OptionHidden Hidden)
+    : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
+      HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
+      FullyInitialized(false), Position(0), AdditionalVals(0) {
+  Categories.push_back(&getGeneralCategory());
+}
+
 void Option::addArgument() {
   GlobalParser->addOption(this);
   FullyInitialized = true;
@@ -2004,7 +2011,8 @@ bool parser<bool>::parse(Option &O, StringRef ArgName, StringRef Arg,
 //
 bool parser<boolOrDefault>::parse(Option &O, StringRef ArgName, StringRef Arg,
                                   boolOrDefault &Value) {
-  return parseBool<boolOrDefault, BOU_TRUE, BOU_FALSE>(O, ArgName, Arg, Value);
+  return parseBool<boolOrDefault, boolOrDefault::BOU_TRUE,
+                   boolOrDefault::BOU_FALSE>(O, ArgName, Arg, Value);
 }
 
 // parser<int> implementation
@@ -2222,6 +2230,14 @@ void generic_parser_base::printGenericOptionDiff(
 
 // printOptionDiff - Specializations for printing basic value types.
 //
+namespace llvm {
+namespace cl {
+static raw_ostream &operator<<(raw_ostream &OS, boolOrDefault V) {
+  return OS << static_cast<int>(V);
+}
+} // namespace cl
+} // namespace llvm
+
 #define PRINT_OPT_DIFF(T)                                                      \
   void parser<T>::printOptionDiff(const Option &O, T V, OptionValue<T> D,      \
                                   size_t GlobalWidth) const {                  \
@@ -2800,6 +2816,9 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
 #endif
 #if __has_feature(undefined_behavior_sanitizer)
       "+ubsan",
+#endif
+#ifdef LLVM_INTEGRATED_CRT_ALLOC
+      "+alloc:" LLVM_INTEGRATED_CRT_ALLOC,
 #endif
   };
   return ArrayRef(Config).drop_front(1);
