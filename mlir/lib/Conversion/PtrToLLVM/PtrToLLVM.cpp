@@ -397,7 +397,7 @@ LogicalResult ConstantOpConversion::matchAndRewrite(
   if (isa<ptr::NullAttr>(value)) {
     rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, resultType);
     return success();
-  } 
+  }
   auto addrAttr = dyn_cast<ptr::AddressAttr>(value);
   // Early-exit if unknown attribute.
   if (!addrAttr) {
@@ -406,7 +406,7 @@ LogicalResult ConstantOpConversion::matchAndRewrite(
                 value.getAbstractAttribute().getName());
   }
   Type intType = rewriter.getIntegerType(addrAttr.getValue().getBitWidth());
-   Value intConst = LLVM::ConstantOp::create(rewriter, op.getLoc(), intType,
+  Value intConst = LLVM::ConstantOp::create(rewriter, op.getLoc(), intType,
                                             addrAttr.getValue());
   rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(op, resultType, intConst);
   return success();
