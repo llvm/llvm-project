@@ -161,7 +161,7 @@ define void @callee_calls_128bit_baseline() {
 define void @caller_calls_128bit_sse3() "target-features"="+sse3" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_calls_128bit_sse3
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    call void @callee_calls_128bit_baseline()
+; CHECK-NEXT:    call void @callee_128bit(<4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_calls_128bit_baseline()
@@ -182,7 +182,7 @@ define void @callee_calls_256bit_baseline() {
 define void @caller_calls_256bit_sse3() "target-features"="+sse3" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_calls_256bit_sse3
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    call void @callee_calls_256bit_baseline()
+; CHECK-NEXT:    call void @callee_256bit(<8 x float> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_calls_256bit_baseline()
@@ -215,7 +215,7 @@ define void @callee_calls_256bit_avx() "target-features"="+avx" {
 define void @caller_calls_256bit_avx2() "target-features"="+avx2" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_calls_256bit_avx2
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    call void @callee_calls_256bit_avx()
+; CHECK-NEXT:    call void @callee_256bit(<8 x float> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_calls_256bit_avx()
@@ -236,7 +236,7 @@ define void @callee_calls_512bit_baseline() {
 define void @caller_calls_512bit_sse3() "target-features"="+sse3" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_sse3
 ; CHECK-SAME: () #[[ATTR3]] {
-; CHECK-NEXT:    call void @callee_calls_512bit_baseline()
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_calls_512bit_baseline()
@@ -269,7 +269,7 @@ define void @callee_calls_512bit_avx512f() "target-features"="+avx512f" {
 define void @caller_calls_512bit_avx512bw() "target-features"="+avx512bw" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_avx512bw
 ; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
-; CHECK-NEXT:    call void @callee_calls_512bit_avx512f()
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_calls_512bit_avx512f()

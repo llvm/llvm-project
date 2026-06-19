@@ -6765,23 +6765,19 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
                                        ArrayRef<Type *> Types) const {
-  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
-    return false;
-
-  // If we get here, we know the target features match. If one function
-  // considers 512-bit vectors legal and the other does not, consider them
-  // incompatible.
   const TargetMachine &TM = getTLI()->getTargetMachine();
+  const TargetLowering *CallerTLI =
+      TM.getSubtargetImpl(*Caller)->getTargetLowering();
+  const TargetLowering *CalleeTLI =
+      TM.getSubtargetImpl(*Callee)->getTargetLowering();
 
-  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
-      TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs())
-    return true;
-
-  // Consider the arguments compatible if they aren't vectors or aggregates.
-  // FIXME: Look at the size of vectors.
-  // FIXME: Look at the element types of aggregates to see if there are vectors.
-  return llvm::none_of(Types,
-      [](Type *T) { return T->isVectorTy() || T->isAggregateType(); });
+  LLVMContext &Ctx = Caller->getContext();
+  CallingConv::ID CC = Callee->getCallingConv();
+  return all_of(Types, [&](Type *Ty) {
+    EVT VT = CallerTLI->getValueType(DL, Ty);
+    return CallerTLI->getRegisterTypeForCallingConv(Ctx, CC, VT) ==
+           CalleeTLI->getRegisterTypeForCallingConv(Ctx, CC, VT);
+  });
 }
 
 X86TTIImpl::TTI::MemCmpExpansionOptions
