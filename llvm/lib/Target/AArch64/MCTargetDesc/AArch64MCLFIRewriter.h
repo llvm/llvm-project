@@ -19,6 +19,8 @@
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
+#include <optional>
+
 namespace llvm {
 class MCContext;
 class MCExpr;
@@ -63,9 +65,9 @@ private:
   const MCExpr *PendingTLSDescCall = nullptr;
 
   /// Rewriter state for implementing the guard-elimination optimization, which
-  /// allows redundant add masks to be skipped.
-  bool ActiveGuard = false;
-  MCRegister ActiveGuardReg;
+  /// allows redundant add masks to be skipped. When it holds a value, x28 is
+  /// known to already hold the guarded value of that register.
+  std::optional<MCRegister> ActiveGuardReg;
 
   // Instruction classification. Returns the reserved register that may be
   // modified, or an invalid register if no reserved register is touched.

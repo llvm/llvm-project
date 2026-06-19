@@ -253,20 +253,20 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
 
 void AArch64MCLFIRewriter::onLabel(const MCSymbol *) {
   // Invalidate guard state since the label is a potential branch target.
-  ActiveGuard = false;
+  ActiveGuardReg = std::nullopt;
 }
 
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
                                     const MCSubtargetInfo &STI) {
   // Invalidate the active guard if this instruction modifies the guarded
   // register, modifies x28 itself, or may affect control flow.
-  if (ActiveGuard) {
+  if (ActiveGuardReg) {
     const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
     if (Desc.mayAffectControlFlow(Inst, *RegInfo) ||
-        mayModifyRegister(Inst, ActiveGuardReg) ||
-        mayModifyRegister(Inst, getWRegFromXReg(ActiveGuardReg)) ||
+        mayModifyRegister(Inst, *ActiveGuardReg) ||
+        mayModifyRegister(Inst, getWRegFromXReg(*ActiveGuardReg)) ||
         mayModifyRegister(Inst, LFIAddrReg))
-      ActiveGuard = false;
+      ActiveGuardReg = std::nullopt;
   }
 
   Out.emitInstruction(Inst, STI);
@@ -277,8 +277,7 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        const MCSubtargetInfo &STI) {
   // If x28 already holds the guarded value of Src, this guard is redundant and
   // can be skipped.
-  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuard &&
-      ActiveGuardReg == Src)
+  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuardReg == Src)
     return;
 
   // add Dest, LFIBaseReg, W(Src), uxtw
@@ -292,10 +291,8 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
   emitInst(Inst, Out, STI);
 
   // Record Src as the new active guard.
-  if (Dest == LFIAddrReg) {
-    ActiveGuard = true;
+  if (Dest == LFIAddrReg)
     ActiveGuardReg = Src;
-  }
 }
 
 void AArch64MCLFIRewriter::emitBranch(unsigned Opcode, MCRegister Target,
@@ -854,7 +851,7 @@ bool AArch64MCLFIRewriter::rewriteInst(const MCInst &Inst, MCStreamer &Out,
                                        const MCSubtargetInfo &STI) {
   // Invalidate guard state if the rewriter was manually disabled.
   if (!Enabled)
-    ActiveGuard = false;
+    ActiveGuardReg = std::nullopt;
 
   // This recursion guard prevents rewrite-recursion when we emit instructions
   // from inside the rewriter (such instructions should not be rewritten).
