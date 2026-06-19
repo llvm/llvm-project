@@ -227,7 +227,18 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
       endif()
     endif()
   endforeach(lib)
+  # The reverse to lldb_libs: Export all symbols required by these libraries.
+  set(lldb_consuming_libs "")
+  get_property(liblldb_consumers GLOBAL PROPERTY LLDB_LIBLLDB_CONSUMERS)
+  foreach(lib ${liblldb_consumers})
+    get_target_property(lib_type ${lib} TYPE)
+    if("${lib_type}" STREQUAL "STATIC_LIBRARY")
+      list(APPEND lldb_consuming_libs ${lib})
+    endif()
+  endforeach()
+
   list(REMOVE_DUPLICATES lldb_libs)
+  list(REMOVE_DUPLICATES lldb_consuming_libs)
 
   # Extract all of the private symbols and produce a single file we can use for
   # the exports.
@@ -237,10 +248,13 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     OUTPUT ${exported_symbol_file}
     COMMAND "${Python3_EXECUTABLE}"
       ${LLDB_SOURCE_DIR}/scripts/msvc_extract_private_symbols.py
-      ${lldb_libs} -o ${exported_symbol_file} --nm=${llvm_nm_exe}
+      --libs ${lldb_libs}
+      --consuming-libs ${lldb_consuming_libs}
+      -o ${exported_symbol_file}
+      --nm=${llvm_nm_exe}
     WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
     DEPENDS ${LLDB_SOURCE_DIR}/scripts/msvc_extract_private_symbols.py
-      ${lldb_libs} ${llvm_nm_target}
+      ${lldb_libs} ${lldb_consuming_libs} ${llvm_nm_target}
     VERBATIM
     COMMENT "Generating liblldb private export list"
   )

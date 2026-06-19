@@ -41,23 +41,32 @@ if (WIN32)
   # Add the library directories to allow Python to use #pragma comment(lib, "python3.lib").
   # FIXME: We should use Python3_SABI_LIBRARY_DIRS here, but this requires CMake 3.26.
   set(PYTHON_SABI_LIBRARY_DIRS ${Python3_LIBRARY_DIRS})
-  set(shared_python_plugin_link_components Support)
 endif()
 
 if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  add_lldb_library(lldbPluginScriptInterpreterPythonObjects OBJECT
+    # Export all undefined symbols in liblldb for us on MSVC.
+    CONSUMES_LIBLLDB
+    ${python_plugin_sources}
+  )
+  # add_lldb_library/llvm_add_library will actually create 
+  # lldbPluginScriptInterpreterPythonObjects as a static library that links to
+  # "obj.{name}". On MSVC, we can't link to the static one, but need to link to
+  # the object library.
+  set(objlib obj.lldbPluginScriptInterpreterPythonObjects)
+  add_python_wrapper(${objlib})
+  target_include_directories(${objlib} PUBLIC ${Python3_INCLUDE_DIRS})
+
   # Shared library loaded at runtime by PluginManager. Private lldb symbols are
   # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
   # Python is dlopen'd at runtime by ScriptInterpreterRuntimeLoader, so the
   # plugin is built with allow-undefined-symbol semantics on POSIX.
   add_lldb_library(lldbPluginScriptInterpreterPython SHARED
-    ${python_plugin_sources}
-    LINK_COMPONENTS
-      ${shared_python_plugin_link_components}
     LINK_LIBS
       liblldb
       ${LLDB_LIBEDIT_LIBS}
+      ${objlib}
   )
-  add_python_wrapper(lldbPluginScriptInterpreterPython)
   if (APPLE)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:-undefined,dynamic_lookup")

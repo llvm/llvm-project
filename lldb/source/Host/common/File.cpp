@@ -93,6 +93,9 @@ Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
       "invalid mode, cannot convert to File::OpenOptions");
 }
 
+int File::kInvalidDescriptor = -1;
+FILE *File::kInvalidStream = nullptr;
+
 Status File::Read(void *buf, size_t &num_bytes) {
   return std::error_code(ENOTSUP, std::system_category());
 }
