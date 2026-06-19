@@ -722,6 +722,58 @@ TEST(DWARFExpression, DW_OP_plus_uconst) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-10),
                                  DW_OP_plus_uconst, 5}),
                        ExpectScalar(static_cast<int32_t>(-5)));
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x000000000000000C
+        # 0x0000000e:
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000008 # DW_ATE_unsigned_char
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000000
+  )";
+
+  DWARFExpressionTester t(yamldata, 0);
+  ASSERT_TRUE(t.GetDwarfUnit());
+
+  uint8_t offs_uchar = 0x0000000e;
+  bool not_signed = false;
+
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const8u, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+              DW_OP_convert, offs_uchar, DW_OP_plus_uconst, 1, DW_OP_const1u, 7,
+              DW_OP_convert, offs_uchar, DW_OP_shr, DW_OP_stack_value}),
+      ExpectScalar(8, 0, not_signed));
 }
 
 TEST(DWARFExpression, DW_OP_and) {
