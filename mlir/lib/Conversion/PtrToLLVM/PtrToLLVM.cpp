@@ -15,8 +15,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/Support/LogicalResult.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -387,25 +389,23 @@ LogicalResult TypeOffsetOpConversion::matchAndRewrite(
 LogicalResult ConstantOpConversion::matchAndRewrite(
     ptr::ConstantOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  mlir::TypedAttr value = op.getValue();
+  TypedAttr value = op.getValue();
   Type resultType = getTypeConverter()->convertType(op.getType());
   if (!resultType)
     return rewriter.notifyMatchFailure(op, "Couldn't convert the result type");
 
-  if (llvm::dyn_cast<ptr::NullAttr>(value)) {
+  if (isa<ptr::NullAttr>(value)) {
     rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, resultType);
-    return llvm::success();
+  } else if (auto addrAttr = dyn_cast<ptr::AddressAttr>(value)) {
+    Type intType = rewriter.getIntegerType(addrAttr.getValue().getBitWidth());
+    Value intConst = LLVM::ConstantOp::create(rewriter, op.getLoc(), intType,
+                                              addrAttr.getValue());
+    rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(op, resultType, intConst);
+  } else {
+    return rewriter.notifyMatchFailure(
+        op, "unsupported value attribute kind: " +
+                value.getAbstractAttribute().getName());
   }
-
-  auto llvmPtrType = cast<LLVM::LLVMPointerType>(resultType);
-  auto addrAttr = cast<ptr::AddressAttr>(value);
-  unsigned addressSpace = llvmPtrType.getAddressSpace();
-  unsigned bitwidth = getTypeConverter()->getPointerBitwidth(addressSpace);
-  Type intType = rewriter.getIntegerType(bitwidth);
-  APInt addr = addrAttr.getValue().zextOrTrunc(bitwidth);
-  Value intConst =
-      LLVM::ConstantOp::create(rewriter, op.getLoc(), intType, addr);
-  rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(op, resultType, intConst);
   return success();
 }
 
