@@ -41,6 +41,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include <optional>
 
 using namespace clang;
@@ -1601,9 +1602,37 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // Create the alloca.  Note that we set the name separately from
       // building the instruction so that it's there even in no-asserts
       // builds.
-      address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
-                                 allocaAlignment, D.getName(),
-                                 /*ArraySize=*/nullptr, &AllocaAddr);
+      //
+      // "VGPR as memory" objects keep their backing registers only once the
+      // optimizing register allocator runs. At -O0 the backend cannot lower
+      // these accesses (e.g. when the address escapes a basic block), so the
+      // request is not honored: fall back to an ordinary (scratch) alloca and
+      // warn, matching the documented behavior.
+      // TODO: Lower addrspace(13) allocas at -O0 too (e.g. by spilling the
+      // backing tuple to scratch) so this fallback can be removed.
+      const auto *VGPRAttr = D.getAttr<AMDGPUVGPRAttr>();
+      const bool UseVGPRMemory =
+          VGPRAttr && CGM.getCodeGenOpts().OptimizationLevel != 0;
+      if (VGPRAttr && !UseVGPRMemory)
+        CGM.getDiags().Report(D.getLocation(),
+                              diag::warn_amdgpu_vgpr_not_guaranteed_at_O0)
+            << VGPRAttr;
+
+      if (UseVGPRMemory) {
+        // Allocate directly in AMDGPUAS::VGPR and keep the pointer in that
+        // address space so that statically indexed accesses lower to vector
+        // register copies instead of scratch memory.
+        auto *AI = new llvm::AllocaInst(allocaTy, llvm::AMDGPUAS::VGPR,
+                                        /*ArraySize=*/nullptr, D.getName(),
+                                        AllocaInsertPt->getIterator());
+        AI->setAlignment(allocaAlignment.getAsAlign());
+        AllocaAddr = RawAddress(AI, allocaTy, allocaAlignment, KnownNonNull);
+        address = AllocaAddr;
+      } else {
+        address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
+                                   allocaAlignment, D.getName(),
+                                   /*ArraySize=*/nullptr, &AllocaAddr);
+      }
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
       // the catch parameter starts in the catchpad instruction, and we can't
@@ -1612,8 +1641,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           D.isExceptionVariable() && getTarget().getCXXABI().isMicrosoft();
 
       // Emit a lifetime intrinsic if meaningful. There's no point in doing this
-      // if we don't have a valid insertion point (?).
-      if (HaveInsertPoint() && !IsMSCatchParam) {
+      // if we don't have a valid insertion point (?). "VGPR as memory" allocas
+      // live in a non-alloca address space, so the standard lifetime markers
+      // (which assume the alloca address space) are skipped for them.
+      if (HaveInsertPoint() && !IsMSCatchParam && !UseVGPRMemory) {
         // If there's a jump into the lifetime of this variable, its lifetime
         // gets broken up into several regions in IR, which requires more work
         // to handle correctly. For now, just omit the intrinsics; this is a

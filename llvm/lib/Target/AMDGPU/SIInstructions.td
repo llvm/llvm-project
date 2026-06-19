@@ -1243,6 +1243,25 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 }
 } // End Spill = 1, VALU = 1, isConvergent = 1
 
+// "VGPR as memory" pseudo accesses: a load/store of a single dword from/to an
+// alloca in the VGPR address space (AMDGPUAS::VGPR), at a constant byte offset
+// within the per-function VGPR file. They are produced during instruction
+// selection and rewritten into register copies by the AMDGPUPrivateObjectVGPRs
+// pass before register allocation.
+let hasSideEffects = 0 in {
+def SI_VGPR_FRAME_LOAD : VPseudoInstSI <(outs VGPR_32:$vdst),
+                                        (ins i32imm:$offset)> {
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def SI_VGPR_FRAME_STORE : VPseudoInstSI <(outs),
+                                         (ins VGPR_32:$vdata, i32imm:$offset)> {
+  let mayLoad = 0;
+  let mayStore = 1;
+}
+} // End hasSideEffects = 0
+
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.

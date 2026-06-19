@@ -29,6 +29,7 @@
 ; GCN-O0-NEXT: amdgpu-lower-module-lds
 ; GCN-O0-NEXT: function
 ; GCN-O0-NEXT:   atomic-expand
+; GCN-O0-NEXT:   amdgpu-vgpr-allocate
 ; GCN-O0-NEXT:   verify
 ; GCN-O0-NEXT:   unreachableblockelim
 ; GCN-O0-NEXT:   ee-instrument<post-inline>
