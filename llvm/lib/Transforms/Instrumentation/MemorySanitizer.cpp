@@ -3333,6 +3333,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Instrument packed bits deposit/expand intrinsics.
+  // All of these intrinsics are Z = I(X, Y)
+  // where the types of all operands and the result match.
+  // The following instrumentation happens to work for all of them:
+  //   Sz = I(Sx, Y) | (sext (Sy != 0))
+  void handlePackedBits(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Type *ShadowTy = getShadowTy(&I);
+
+    // If any bit of the mask operand is poisoned, then the whole thing is.
+    Value *SMask = getShadow(&I, 1);
+    SMask = IRB.CreateSExt(IRB.CreateICmpNE(SMask, getCleanShadow(ShadowTy)),
+                           ShadowTy);
+    // Apply the same intrinsic to the shadow of the first operand.
+    Value *S = IRB.CreateIntrinsic(I.getIntrinsicID(), ShadowTy,
+                                   {getShadow(&I, 0), I.getOperand(1)});
+    setShadow(&I, IRB.CreateOr(SMask, S));
+    setOriginForNaryOp(I);
+  }
+
   /// Instrument llvm.memmove
   ///
   /// At this point we don't know if llvm.memmove will be inlined or not.
@@ -5873,6 +5893,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleFunnelShift(I);
       break;
 
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      handlePackedBits(I);
+      break;
+
     case Intrinsic::is_constant:
       // The result of llvm.is.constant() is always defined.
       setShadow(&I, getCleanShadow(&I));
@@ -6503,10 +6528,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_bmi_bextr_64:
     case Intrinsic::x86_bmi_bzhi_32:
     case Intrinsic::x86_bmi_bzhi_64:
-    case Intrinsic::x86_bmi_pdep_32:
-    case Intrinsic::x86_bmi_pdep_64:
-    case Intrinsic::x86_bmi_pext_32:
-    case Intrinsic::x86_bmi_pext_64:
       handleBmiIntrinsic(I);
       break;
 
