@@ -9319,9 +9319,10 @@ def _SLASH_ZH_SHA1 : CLFlag<"ZH:SHA1">,
   HelpText<"Use SHA1 for file checksums in debug info">,
   Alias<gsrc_hash_EQ>, AliasArgs<["sha1"]>;
 def _SLASH_ZH_SHA_256 : CLFlag<"ZH:SHA_256">,
-                        HelpText<"Use SHA256 for file checksums in debug info">,
-                        Alias<gsrc_hash_EQ>,
-                        AliasArgs<["sha256"]>;
+  HelpText<"Use SHA256 for file checksums in debug info">,
+  Alias<gsrc_hash_EQ>, AliasArgs<["sha256"]>;
+def _SLASH_Zi : CLFlag<"Zi", [CLOption, DXCOption]>, Alias<g_Flag>,
+  HelpText<"Enable debug information">;
 def _SLASH_Zp : CLJoined<"Zp">,
   HelpText<"Set default maximum struct packing alignment">,
   Alias<fpack_struct_EQ>;
@@ -9661,22 +9662,14 @@ def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,
   HelpText<"Output additional root signature object file">;
-def dxc_Zss : DXCFlag<"Zss">,
-              HelpText<"Compute Shader Hash considering source information">;
-def dxc_Zsb : DXCFlag<"Zsb">,
-              HelpText<"Compute Shader Hash considering only output binary">;
 def dxc_Fd
     : DXCJoinedOrSeparate<"Fd">,
       HelpText<"Write debug information to the given file, or automatically "
                "named file in directory when ending in '/'">;
-def dxc_Qembed_debug
-    : DXCFlag<"Qembed_debug">,
-      HelpText<"Embed PDB in shader container (must be used with /Zi)">;
-def dxc_Zi : Option<["/", "-"], "Zi", KIND_FLAG>,
-             Group<dxc_Group>,
-             Alias<g_Flag>,
-             Visibility<[CLOption, DXCOption]>,
-             HelpText<"Enable debug information">;
+def dxc_Zss : DXCFlag<"Zss">,
+              HelpText<"Compute Shader Hash considering source information">;
+def dxc_Zsb : DXCFlag<"Zsb">,
+              HelpText<"Compute Shader Hash considering only output binary">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
@@ -9771,9 +9764,11 @@ def spirv_validator_path_EQ : Joined<["--"], "spirv-val-path=">, Group<dxc_Group
   HelpText<"SPIRV validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
-def dxc_gis
-    : DXCFlag<"Gis">,
-      HelpText<"Enable IEEE strict mode (equivalent to -ffp-model=strict)">;
+def dxc_gis : DXCFlag<"Gis">,
+  HelpText<"Enable IEEE strict mode (equivalent to -ffp-model=strict)">;
+def dxc_Qembed_debug
+    : DXCFlag<"Qembed_debug">,
+      HelpText<"Embed PDB in shader container (must be used with /Zi)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
 def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;
