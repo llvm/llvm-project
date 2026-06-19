@@ -57,6 +57,12 @@ template <> struct Bounds<double> {
 } // namespace exp_internal
 
 template <typename T> LIBC_INLINE int exp_exceptions(T x, int rounding_mode) {
+  static_assert(FE_OVERFLOW != 0);
+  static_assert(FE_UNDERFLOW != 0);
+  static_assert(FE_INEXACT != 0);
+  static_assert(FE_INVALID != 0);
+  static_assert(FE_DIVBYZERO != 0);
+
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
