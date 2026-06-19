@@ -47,7 +47,6 @@ namespace __locale {
 #define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
 #define _LIBCPP_ALL_MASK LC_ALL_MASK
 #define _LIBCPP_LC_ALL LC_ALL
-#define _LIBCPP_NL_CODESET CODESET
 
 using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 #if defined(_LIBCPP_BUILDING_LIBRARY)
@@ -184,7 +183,7 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
-  return ::nl_langinfo_l(_LIBCPP_NL_CODESET, __loc);
+  return ::nl_langinfo_l(CODESET, __loc);
 }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
