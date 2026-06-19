@@ -1,9 +1,9 @@
-// RUN: %clang_analyze_cc1 -xc %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores \
-// RUN:   -verify
-// RUN: %clang_analyze_cc1 -xc++ %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores \
-// RUN:   -verify -w
+// RUN: %clang_analyze_cc1 %s -verify -xc \
+// RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores
+
+// Use -w to suppress the C++ -Wuninitialized warnings on struct and reference.
+// RUN: %clang_analyze_cc1 %s -verify -xc++ -w \
+// RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores
 
 // Self assignment initialization in C code will be treated as nop.
 // We will report the VarDecl only if it was left uninitialized by the time of
@@ -37,20 +37,20 @@ enum T warnenum() {
 }
 
 int warnstruct() {
-  struct S s = s; // no-warnings for C/C++
-                  // In C, same as warnvar.
-                  // In C++, binding is handled in the ctor call and s.x is
-                  // bound to an Undefined.
+  // no-warnings for C/C++:
+  // In C, same as warnvar.
+  // In C++, binding is handled in the ctor call and 's.x' is bound to an Undefined.
+  struct S s = s; // no-warnings
   return s.x; // expected-warning{{Undefined or garbage value returned to caller}}
 }
 
 #ifndef __cplusplus
 int warnunion() {
-  union U u = u; // no-warnings for C/C++
-                 // In C, same as warnvar.
-                 // In C++, binding is handled in the ctor call and u is bound
-                 // to a lazyCompoundVal, which will not trigger an undefined
-                 // usage warning.
+  // no-warnings for C/C++:
+  // In C, same as warnvar.
+  // In C++, binding is handled in the ctor call and 'u' is bound to a
+  // lazyCompoundVal, which will not trigger an undefined usage warning.
+  union U u = u; // no-warnings
   return u.x; // expected-warning{{Undefined or garbage value returned to caller}}
 }
 #endif // not __cplusplus
