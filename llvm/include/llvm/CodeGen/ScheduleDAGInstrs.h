@@ -159,8 +159,6 @@ namespace llvm {
     /// scheduling region is mapped to an SUnit.
     DenseMap<MachineInstr*, SUnit*> MISUnitMap;
 
-    unsigned MemOpsProcessed = 0;
-
     // State internal to DAG building.
     // -------------------------------
 

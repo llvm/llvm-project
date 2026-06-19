@@ -77,18 +77,6 @@ static cl::opt<bool>
     EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
                      cl::desc("Use InstrItineraryData for latency lookup"));
 
-// Note: the two options below might be used in tuning compile time vs
-// output quality. Setting HugeRegion so large that it will never be
-// reached means best-effort, but may be slow.
-
-// When Stores and Loads maps (or NonAliasStores and NonAliasLoads)
-// together hold this many SUs, a reduction of maps will be done.
-static cl::opt<unsigned>
-    HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
-               cl::desc("The limit to use while constructing the DAG "
-                        "prior to scheduling, at which point a trade-off "
-                        "is made to avoid excessive compile time."));
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> SchedPrintCycles(
     "sched-print-cycles", cl::Hidden, cl::init(false),
@@ -719,7 +707,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     AAForDep.emplace(*AA);
 
   BarrierChain = nullptr;
-  MemOpsProcessed = 0;
 
   this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
@@ -898,16 +885,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     if (MI.mayRaiseFPException()) {
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
-
-      if (FPExceptions.size() + 1 >= HugeRegion) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Creating barrier chain and clearing FPExceptions map.\n");
-        BarrierChain = SU;
-        addBarrierChain(FPExceptions);
-      } else {
-        FPExceptions.insert(SU, UnknownValue);
-      }
+      FPExceptions.insert(SU, UnknownValue);
     }
 
     // If it's not a store or a variant load, we're done.
@@ -915,26 +893,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
         !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad()))
       continue;
 
-    MemOpsProcessed++;
-
     // Always add dependecy edge to BarrierChain if present.
-    if (BarrierChain && BarrierChain != SU)
+    if (BarrierChain)
       BarrierChain->addPredBarrier(SU);
-
-    // Reduce maps if they grow huge.
-    if (MemOpsProcessed >= HugeRegion) {
-      LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
-
-      BarrierChain = SU;
-
-      addBarrierChain(Stores);
-      addBarrierChain(Loads);
-      addBarrierChain(NonAliasStores);
-      addBarrierChain(NonAliasLoads);
-
-      MemOpsProcessed = 0;
-      continue;
-    }
 
     // Find the underlying objects for MI. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
