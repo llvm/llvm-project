@@ -11,9 +11,9 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
-#include "clang/Driver/BoundArch.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Types.h"
 #include "llvm/ADT/APFloat.h"

@@ -10,7 +10,7 @@
 #define LLVM_CLANG_DRIVER_ACTION_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Driver/BoundArch.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
