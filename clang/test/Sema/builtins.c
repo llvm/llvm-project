@@ -281,7 +281,7 @@ void test_ei_i42i(_BitInt(42) *ptr, int value) {
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expected-error {{atomic memory operand must have a power-of-two size}}
 
-  __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
+  __atomic_fetch_add(ptr, 1, 0); // expect success: the GNU atomic builtins support _BitInt
 }
 
 void test_ei_i64i(_BitInt(64) *ptr, int value) {
@@ -289,7 +289,7 @@ void test_ei_i64i(_BitInt(64) *ptr, int value) {
   // expected-warning@+1 {{the semantics of this intrinsic changed with GCC version 4.4 - the newer semantics are provided here}}
   __sync_nand_and_fetch(ptr, value); // expect success
 
-  __atomic_fetch_add(ptr, 1, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
+  __atomic_fetch_add(ptr, 1, 0); // expect success
 }
 
 void test_ei_ii42(int *ptr, _BitInt(42) value) {
