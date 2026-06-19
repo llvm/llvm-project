@@ -3857,7 +3857,8 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   bool HasDebug = Args.hasArg(options::OPT_g_Flag);
   bool Qembed_debug = Args.hasArg(options::OPT_dxc_Qembed_debug);
   Arg *Fd = Args.getLastArg(options::OPT_dxc_Fd);
-  if (HasDebug && !Fd && !Qembed_debug) {
+  bool Qstrip_debug = Args.hasArg(options::OPT_dxc_Qstrip_debug);
+  if (HasDebug && !Qstrip_debug && !Fd && !Qembed_debug) {
     D.Diag(diag::warn_drv_dxc_no_output_for_debug);
     Qembed_debug = true;
   }
@@ -3872,6 +3873,10 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   if (Fd) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString("--dx-Fd=" + Twine(Fd->getValue())));
+  }
+  if (Args.hasArg(options::OPT_dxc_Qstrip_debug)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-strip-debug");
   }
 }
 

@@ -19,6 +19,9 @@ using namespace llvm;
 
 cl::opt<bool> EmbedDebug("dx-embed-debug",
                          cl::desc("Embed PDB in shader container"));
+cl::opt<bool>
+    StripDebug("dx-strip-debug",
+               cl::desc("Strip debug information from shader bytecode"));
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
@@ -139,7 +142,7 @@ ArrayRef<MCDXContainerPart> DXContainerObjectWriter::collectParts() {
 bool DXContainerObjectWriter::shouldSkipSection(StringRef SectionName,
                                                 size_t SectionSize) {
   // Do not write ILDB part if we're not embedding it.
-  if (!EmbedDebug && SectionName == "ILDB")
+  if (SectionName == "ILDB" && (!EmbedDebug || StripDebug))
     return true;
   if (SectionName == "SRCI")
     return true;
