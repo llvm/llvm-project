@@ -4,7 +4,6 @@
 ---
 name:            or_and_xor_to_or
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -28,7 +27,6 @@ body:             |
 ---
 name:            or_and_xor_to_or_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -54,7 +52,6 @@ body:             |
 ---
 name:            or_and_xor_to_xor_or
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -80,7 +77,6 @@ body:             |
 ---
 name:            or_and_xor_to_xor_or_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -109,7 +105,6 @@ body:             |
 ---
 name:            and_xor_or_to_and
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -134,7 +129,6 @@ body:             |
 ---
 name:            and_xor_or_to_and_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -160,7 +154,6 @@ body:             |
 ---
 name:            and_xor_or_to_xor_and
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -187,7 +180,6 @@ body:             |
 ---
 name:            and_xor_or_to_xor_and_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -216,7 +208,6 @@ body:             |
 ---
 name:            or_xor_or
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -240,7 +231,6 @@ body:             |
 ---
 name:            or_xor_or_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -264,7 +254,6 @@ body:             |
 ---
 name:            or_xor_and
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -288,7 +277,6 @@ body:             |
 ---
 name:            or_xor_and_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1

@@ -296,6 +296,46 @@ def combine_indexed_load_store : GICombineRule<
          [{ return Helper.matchCombineIndexedLoadStore(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${root}, ${matchinfo}); }])>;
 
+def memcpy_family_matchinfo : GIDefMatchData<"MemCpyFamilyLoweringInfo">;
+def combine_memcpy_inline : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMCPY_INLINE $dst_addr, $src_addr, $size):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memset_inline : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMSET_INLINE $dst_addr, $value, $size):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memcpy : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMCPY $dst_addr, $src_addr, $size, $tailcall):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo},
+                                                   CInfo.EnableOpt ? 0 : 32); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memmove : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMMOVE $dst_addr, $src_addr, $size, $tailcall):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo},
+                                                   CInfo.EnableOpt ? 0 : 32); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def combine_memset : GICombineRule<
+  (defs root:$root, memcpy_family_matchinfo:$matchinfo),
+  (match (G_MEMSET $dst_addr, $value, $size, $tailcall):$root,
+         [{ return Helper.matchCombineMemCpyFamily(*${root}, ${matchinfo},
+                                                   CInfo.EnableOpt ? 0 : 32); }]),
+  (apply [{ Helper.applyCombineMemCpyFamily(*${root}, ${matchinfo}); }])>;
+
+def memcpy_family_combines : GICombineGroup<[combine_memcpy_inline,
+                                             combine_memset_inline,
+                                             combine_memcpy,
+                                             combine_memmove,
+                                             combine_memset]>;
+
 def opt_brcond_by_inverting_cond_matchdata : GIDefMatchData<"MachineInstr *">;
 def opt_brcond_by_inverting_cond : GICombineRule<
   (defs root:$root, opt_brcond_by_inverting_cond_matchdata:$matchinfo),
@@ -2601,7 +2641,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    simplify_neg_minmax, combine_concat_vector,
+    or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,

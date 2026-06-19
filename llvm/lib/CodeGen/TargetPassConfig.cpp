@@ -499,42 +499,42 @@ void TargetPassConfig::setStartStopPasses() {
 CGPassBuilderOption llvm::getCGPassBuilderOption() {
   CGPassBuilderOption Opt;
 
-#define SET_OPTION(Option)                                                     \
+#define SET_OPTION_IF_PRESENT(Option)                                          \
   if (Option.getNumOccurrences())                                              \
     Opt.Option = Option;
 
-  SET_OPTION(EnableFastISelOption)
-  SET_OPTION(EnableGlobalISelAbort)
-  SET_OPTION(EnableGlobalISelOption)
-  SET_OPTION(EnableIPRA)
+  SET_OPTION_IF_PRESENT(EnableGlobalISelAbort)
+  SET_OPTION_IF_PRESENT(EnableIPRA)
+
+#define SET_OPTION(Option) Opt.Option = Option;
+
   SET_OPTION(OptimizeRegAlloc)
+  SET_OPTION(EnableFastISelOption)
+  SET_OPTION(EnableGlobalISelOption)
   SET_OPTION(VerifyMachineCode)
   SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
   SET_OPTION(EnableGCEmptyBlocks)
-
-#define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
-
-  SET_BOOLEAN_OPTION(EarlyLiveIntervals)
-  SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
-  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
-  SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
-  SET_BOOLEAN_OPTION(EnableMachineOutliner)
-  SET_BOOLEAN_OPTION(MISchedPostRA)
-  SET_BOOLEAN_OPTION(DisableLSR)
-  SET_BOOLEAN_OPTION(DisableConstantHoisting)
-  SET_BOOLEAN_OPTION(DisableCGP)
-  SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
-  SET_BOOLEAN_OPTION(DisableSelectOptimize)
-  SET_BOOLEAN_OPTION(PrintISelInput)
-  SET_BOOLEAN_OPTION(PrintRegUsage)
-  SET_BOOLEAN_OPTION(DebugifyAndStripAll)
-  SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
-  SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
-  SET_BOOLEAN_OPTION(DisableCFIFixup)
-  SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
+  SET_OPTION(EarlyLiveIntervals)
+  SET_OPTION(EnableBlockPlacementStats)
+  SET_OPTION(EnableGlobalMergeFunc)
+  SET_OPTION(EnableImplicitNullChecks)
+  SET_OPTION(EnableMachineOutliner)
+  SET_OPTION(MISchedPostRA)
+  SET_OPTION(DisableLSR)
+  SET_OPTION(DisableConstantHoisting)
+  SET_OPTION(DisableCGP)
+  SET_OPTION(DisablePartialLibcallInlining)
+  SET_OPTION(DisableSelectOptimize)
+  SET_OPTION(PrintISelInput)
+  SET_OPTION(PrintRegUsage)
+  SET_OPTION(DebugifyAndStripAll)
+  SET_OPTION(DebugifyCheckAndStripAll)
+  SET_OPTION(DisableRAFSProfileLoader)
+  SET_OPTION(DisableCFIFixup)
+  SET_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
