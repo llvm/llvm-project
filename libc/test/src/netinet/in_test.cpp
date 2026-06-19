@@ -108,8 +108,10 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
   EXPECT_EQ(offsetof(struct ip_mreq, imr_multiaddr), static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct ip_mreq, imr_interface), static_cast<size_t>(4));
 
-  EXPECT_EQ(offsetof(struct ip_mreq_source, imr_multiaddr), static_cast<size_t>(0));
-  EXPECT_EQ(offsetof(struct ip_mreq_source, imr_interface), static_cast<size_t>(4));
+  EXPECT_EQ(offsetof(struct ip_mreq_source, imr_multiaddr),
+            static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct ip_mreq_source, imr_interface),
+            static_cast<size_t>(4));
   EXPECT_EQ(offsetof(struct ip_mreq_source, imr_sourceaddr),
             static_cast<size_t>(8));
 
@@ -117,8 +119,10 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
   EXPECT_EQ(offsetof(struct ip_mreqn, imr_address), static_cast<size_t>(4));
   EXPECT_EQ(offsetof(struct ip_mreqn, imr_ifindex), static_cast<size_t>(8));
 
-  EXPECT_EQ(offsetof(struct ip_msfilter, imsf_multiaddr), static_cast<size_t>(0));
-  EXPECT_EQ(offsetof(struct ip_msfilter, imsf_interface), static_cast<size_t>(4));
+  EXPECT_EQ(offsetof(struct ip_msfilter, imsf_multiaddr),
+            static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct ip_msfilter, imsf_interface),
+            static_cast<size_t>(4));
   EXPECT_EQ(offsetof(struct ip_msfilter, imsf_fmode), static_cast<size_t>(8));
   EXPECT_EQ(offsetof(struct ip_msfilter, imsf_numsrc), static_cast<size_t>(12));
   EXPECT_EQ(offsetof(struct ip_msfilter, imsf_slist), static_cast<size_t>(16));

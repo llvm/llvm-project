@@ -25,7 +25,6 @@ macros:
   - macro_name: INET6_ADDRSTRLEN
     macro_header: inet-address-macros.h
 
-  # Socket level
   - macro_name: SOL_IP
     macro_value: 0
 
