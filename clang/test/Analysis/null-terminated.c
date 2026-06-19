@@ -6,6 +6,7 @@
 #define NULL_TERMINATED __attribute__((annotate("null_terminated")))
 
 void receive(NULL_TERMINATED const int signals[]);
+void receive_after(const int signals[] NULL_TERMINATED);
 
 #ifdef DEFAULT
 void test_static_bad(void) {
@@ -16,6 +17,11 @@ void test_static_bad(void) {
 void test_static_good(void) {
   int sigs[] = {1, 2, 0};
   receive(sigs);
+}
+
+void test_attr_after_param(void) {
+  int sigs[] = {1, 2, 3};
+  receive_after(sigs);  // expected-warning{{array argument is not null-terminated}}
 }
 
 void test_imperative_bad(void) {
