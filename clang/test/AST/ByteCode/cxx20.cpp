@@ -1,6 +1,11 @@
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      -fcxx-exceptions %s
 
+
+int x;
+static_assert(++x, "test"); // both-error {{not an integral constant expression}} \
+                            // both-note {{cannot modify an object that is visible outside that expression}}
+
 void test_alignas_operand() {
   alignas(8) char dummy;
   static_assert(__alignof(dummy) == 8);
