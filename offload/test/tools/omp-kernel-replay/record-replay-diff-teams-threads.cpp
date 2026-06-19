@@ -2,7 +2,7 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: rm -rf %t.testdir
 // RUN: mkdir -p %t.testdir
-// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir LIBOMPTARGET_RECORD_REPORT_FILE=report.txt %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir LIBOMPTARGET_RECORD_REPORT_FILENAME=report.txt %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: awk '/\.json/ {print $1}' %t.testdir/report.txt | tr -d ',' > %t.testdir/json_list.txt
 // RUN: cat %t.testdir/json_list.txt | count 2
 // RUN: ls -1 %t.testdir/*.json | count 2
@@ -18,7 +18,7 @@
 // RUN: %libomptarget-compilexx-generic -mllvm -openmp-ir-builder-use-default-max-threads=0
 // RUN: rm -rf %t.testdir
 // RUN: mkdir -p %t.testdir
-// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir LIBOMPTARGET_RECORD_REPORT_FILE=report.txt %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: env LIBOMPTARGET_RECORD=1 LIBOMPTARGET_RECORD_MEMSIZE=536870912 LIBOMPTARGET_RECORD_DIR=%t.testdir LIBOMPTARGET_RECORD_REPORT_FILENAME=report.txt %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: awk '/\.json/ {print $1}' %t.testdir/report.txt | tr -d ',' > %t.testdir/json_list.txt
 // RUN: cat %t.testdir/json_list.txt | count 2
 // RUN: ls -1 %t.testdir/*.json | count 2
