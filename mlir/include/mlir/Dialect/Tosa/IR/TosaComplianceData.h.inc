@@ -712,7 +712,6 @@ extensionComplianceMap = {
         {{bf16T, bf16T, fp16T}, SpecificationVersion::V_1_1_DRAFT},
         {{fp16T, bf16T, fp32T}, SpecificationVersion::V_1_1_DRAFT},
         {{bf16T, fp16T, fp32T}, SpecificationVersion::V_1_1_DRAFT},
-        {{bf16T, bf16T, fp32T}, SpecificationVersion::V_1_1_DRAFT},
         {{bf16T, fp32T, fp32T}, SpecificationVersion::V_1_1_DRAFT},
         {{fp32T, bf16T, fp32T}, SpecificationVersion::V_1_1_DRAFT},
         {{bf16T, bf16T, fp32T}, SpecificationVersion::V_1_1_DRAFT}}}}},

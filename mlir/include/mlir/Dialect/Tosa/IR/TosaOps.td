@@ -462,8 +462,8 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   let description = [{
     Performs two dimensional matrix multiplications. `A` matrix is of shape
     `N x H x C`. `B` matrix is of shape `D x W x C`. This is effectively a
-    matrix multiply of `A` by the transposed `B` matrix. If the `D` dimension
-    of input `B` is of size 1, the `B` matrix is broadcast.
+    matrix multiply of `A` by the transposed `B` matrix. If the batched 
+    dimension of input `B` is of size 1, the `B` matrix is broadcast.
   }];
 
   let arguments = (ins Tosa_Tensor3D:$a, Tosa_Tensor3D:$b,
