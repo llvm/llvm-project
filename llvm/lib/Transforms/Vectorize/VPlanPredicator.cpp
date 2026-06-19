@@ -299,7 +299,7 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     // If the value is a phi postdominated by VPBB, then look through the inner
     // incoming values instead of propagating the phi.
     if (auto *Phi = dyn_cast<VPPhi>(Common))
-      if (VPPDT.dominates(VPBB, Phi->getParent())) {
+      if (Phi->hasOneUse() && VPPDT.dominates(VPBB, Phi->getParent())) {
         for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
           AddEdge(InVPBB, Phi->getParent(), InV);
           Worklist.insert(InVPBB);

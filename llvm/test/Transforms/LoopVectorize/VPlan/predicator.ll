@@ -1034,3 +1034,79 @@ latch:
 exit:
   ret void
 }
+
+
+; Same as the test above, but shouldn't look thru the phi because it has
+; multiple uses.
+define void @look_thru_phi_multi_use(i1 %c1, i1 %c2, i32 %x, i32 %y, ptr %p) {
+; CHECK-LABEL: VPlan for loop in 'look_thru_phi_multi_use'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:    Successor(s): B
+; CHECK-EMPTY:
+; CHECK-NEXT:    B:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:    Successor(s): A
+; CHECK-EMPTY:
+; CHECK-NEXT:    A:
+; CHECK-NEXT:    Successor(s): D
+; CHECK-EMPTY:
+; CHECK-NEXT:    D:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c1>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi1> = ir<%y>/vp<[[VP4]]> ir<%x>/vp<[[VP6]]>
+; CHECK-NEXT:      EMIT store ir<%phi1>, ir<%gep>, vp<[[VP7]]>
+; CHECK-NEXT:    Successor(s): C
+; CHECK-EMPTY:
+; CHECK-NEXT:    C:
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c1>, ir<%c2>
+; CHECK-NEXT:    Successor(s): latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    latch:
+; CHECK-NEXT:      BLEND ir<%phi> = ir<%phi1>/vp<[[VP7]]> ir<%x>/vp<[[VP8]]>
+; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %latch]
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  br i1 %c1, label %A, label %B
+
+A:
+  br i1 %c2, label %C, label %D
+
+B:
+  br label %D
+
+C:
+  br label %latch
+
+D:
+  %phi1 = phi i32 [%x, %A], [%y, %B]
+  store i32 %phi1, ptr %gep
+  br label %latch
+
+latch:
+  %phi = phi i32 [ %x, %C ], [ %phi1, %D ]
+  store i32 %phi, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
