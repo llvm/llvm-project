@@ -6293,6 +6293,16 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.maskedload.
+  auto [strides, offset] = memType.getStridesAndOffset();
+  for (int64_t stride : strides) {
+    if (ShapedType::isStatic(stride) && stride < 0)
+      return emitOpError("memref strides must be non-negative");
+  }
+
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
     return failure();
@@ -6352,6 +6362,16 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.maskedstore.
+  auto [strides, offset] = memType.getStridesAndOffset();
+  for (int64_t stride : strides) {
+    if (ShapedType::isStatic(stride) && stride < 0)
+      return emitOpError("memref strides must be non-negative");
+  }
 
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))
@@ -6413,6 +6433,15 @@ LogicalResult GatherOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.gather.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType)) {
+    auto [strides, offset] = memRefType.getStridesAndOffset();
+    for (int64_t stride : strides) {
+      if (ShapedType::isStatic(stride) && stride < 0)
+        return emitOpError("memref strides must be non-negative");
+    }
+  }
 
   if (failed(
           verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
@@ -6527,6 +6556,15 @@ LogicalResult ScatterOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.scatter.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType)) {
+    auto [strides, offset] = memRefType.getStridesAndOffset();
+    for (int64_t stride : strides) {
+      if (ShapedType::isStatic(stride) && stride < 0)
+        return emitOpError("memref strides must be non-negative");
+    }
+  }
 
   if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
                                      "valueToStore")))
