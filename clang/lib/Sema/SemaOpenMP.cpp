@@ -4154,22 +4154,22 @@ public:
         // map clauses).
         bool AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
             VD, /*CurrentRegionOnly=*/true, [this](auto StackComponents, auto) {
-          if (SemaRef.LangOpts.OpenMP >= 50)
-            return !StackComponents.empty();
-          // Variable is used if it has been marked as an array, array
-          // section, array shaping or the variable itself.
-          return StackComponents.size() == 1 ||
-                 llvm::all_of(llvm::drop_begin(llvm::reverse(StackComponents)),
-                              [](const auto &MC) {
-                                return MC.getAssociatedDeclaration() ==
-                                           nullptr &&
-                                       (isa<ArraySectionExpr>(
-                                            MC.getAssociatedExpression()) ||
-                                        isa<OMPArrayShapingExpr>(
-                                            MC.getAssociatedExpression()) ||
-                                        isa<ArraySubscriptExpr>(
-                                            MC.getAssociatedExpression()));
-                              });
+              if (SemaRef.LangOpts.OpenMP >= 50)
+                return !StackComponents.empty();
+              // Variable is used if it has been marked as an array, array
+              // section, array shaping or the variable itself.
+              return StackComponents.size() == 1 ||
+                     llvm::all_of(
+                         llvm::drop_begin(llvm::reverse(StackComponents)),
+                         [](const auto &MC) {
+                           return MC.getAssociatedDeclaration() == nullptr &&
+                                  (isa<ArraySectionExpr>(
+                                       MC.getAssociatedExpression()) ||
+                                   isa<OMPArrayShapingExpr>(
+                                       MC.getAssociatedExpression()) ||
+                                   isa<ArraySubscriptExpr>(
+                                       MC.getAssociatedExpression()));
+                         });
             });
 
         // For DecompositionDecls, check if the original variable has been
@@ -22632,7 +22632,8 @@ public:
       auto *DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
       Expr *BindingExpr = BD->getBinding();
 
-      // Check if the binding is a member expression (struct/class decomposition)
+      // Check if the binding is a member expression (struct/class
+      // decomposition).
       if (auto *ME = dyn_cast_or_null<MemberExpr>(BindingExpr)) {
 
         // Get the original variable that the decomposition was initialized from
@@ -22665,15 +22666,15 @@ public:
       }
 
       // Fallback: redirect to DecompositionDecl for non-struct bindings
-      // (arrays, tuples)
+      // (arrays, tuples).
       D = DD;
       DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
-      E = DeclRefExpr::Create(
-          SemaRef.Context, DRE->getQualifierLoc(),
-          DRE->getTemplateKeywordLoc(), DD,
-          /*RefersToEnclosingVariableOrCapture=*/false, NameInfo,
-          D->getType(), DRE->getValueKind(), DRE->getFoundDecl(),
-          /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+      E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
+                              DRE->getTemplateKeywordLoc(), DD,
+                              /*RefersToEnclosingVariableOrCapture=*/false,
+                              NameInfo, D->getType(), DRE->getValueKind(),
+                              DRE->getFoundDecl(),
+                              /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
     }
     // Handle DecompositionDecl directly (implicit captures).
     else if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
