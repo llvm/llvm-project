@@ -5666,11 +5666,11 @@ void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
 
   const bool EnableDropUnprofitableSolution = [&] {
     switch (AllowDropSolutionIfLessProfitable) {
-    case cl::BOU_TRUE:
+    case cl::boolOrDefault::BOU_TRUE:
       return true;
-    case cl::BOU_FALSE:
+    case cl::boolOrDefault::BOU_FALSE:
       return false;
-    case cl::BOU_UNSET:
+    case cl::boolOrDefault::BOU_UNSET:
       return TTI.shouldDropLSRSolutionIfLessProfitable();
     }
     llvm_unreachable("Unhandled cl::boolOrDefault enum");

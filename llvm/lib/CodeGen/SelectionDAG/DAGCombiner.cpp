@@ -12245,12 +12245,18 @@ SDValue DAGCombiner::visitPDEP(SDNode *N) {
   // pdep(x, 0) -> 0
   if (isNullOrNullSplat(N1))
     return DAG.getConstant(0, DL, VT);
+
   // pdep(x, -1) -> x  (all positions selected, bits deposited at identity)
   if (isAllOnesOrAllOnesSplat(N1))
     return N0;
+
   // fold pdep(c1, c2) -> expandBits(c1, c2)
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::PDEP, DL, VT, {N0, N1}))
     return C;
+
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
@@ -27656,18 +27662,18 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     return NarrowLoad;
 
   // Combine an extract of an extract into a single extract_subvector.
-  // ext (ext X, C), 0 --> ext X, C
-  if (ExtIdx == 0 && V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
+  // ext (ext X, C1), C2 --> ext X, C1 + C2
+  if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
     // Both indices must have the same scaling factor and C has to be a
     // multiple of the new result type's known minimum vector length.
+    uint64_t InnerExtIdx = V.getConstantOperandVal(1);
+    uint64_t NewExtIdx = InnerExtIdx + ExtIdx;
     if (V.getValueType().isScalableVector() == NVT.isScalableVector() &&
-        V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
+        NewExtIdx % NVT.getVectorMinNumElements() == 0 &&
         TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
-                                    V.getConstantOperandVal(1)) &&
-        TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, V.getOperand(0),
-                         V.getOperand(1));
-    }
+                                    NewExtIdx) &&
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT))
+      return DAG.getExtractSubvector(DL, NVT, V.getOperand(0), NewExtIdx);
   }
 
   // ty1 extract_vector(ty2 splat(V))) -> ty1 splat(V)

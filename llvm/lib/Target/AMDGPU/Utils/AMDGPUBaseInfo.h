@@ -160,7 +160,7 @@ private:
   TargetIDSetting SramEccSetting;
 
 public:
-  explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
+  explicit AMDGPUTargetID(const MCSubtargetInfo &STI, StringRef FeatureString);
   ~AMDGPUTargetID() = default;
 
   /// \return True if the current xnack setting is not "Unsupported".
@@ -217,7 +217,6 @@ public:
     SramEccSetting = NewSramEccSetting;
   }
 
-  void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
   /// Write string representation to \p OS

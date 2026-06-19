@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir %t
-// RUN: cp -r %S/Inputs/modules-context-hash/* %t
+// RUN: cp -R %S/Inputs/modules-context-hash/* %t
 
 // Check that the scanner reports the same module as distinct dependencies when
 // a single translation unit gets compiled with multiple command-lines that

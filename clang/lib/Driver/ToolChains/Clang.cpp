@@ -9646,7 +9646,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fsanitize_minimal_runtime,
       OPT_fno_sanitize_minimal_runtime,
       OPT_fsanitize_trap_EQ,
-      OPT_fno_sanitize_trap_EQ};
+      OPT_fno_sanitize_trap_EQ,
+      OPT_fslp_vectorize,
+      OPT_fno_slp_vectorize};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ToolChainHasRT = [&](const ToolChain &TC, StringRef Name) {
     return TC.getVFS().exists(
