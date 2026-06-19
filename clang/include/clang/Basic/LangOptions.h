@@ -621,8 +621,8 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
-  /// Name of the execution encoding to convert the internal encoding to.
-  std::string ExecEncoding;
+  /// Name of the literal encoding to convert the internal encoding to.
+  std::string LiteralEncoding;
 
   LangOptions();
 

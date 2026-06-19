@@ -1861,7 +1861,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   const TextEncoding &TE = PP.getTextEncoding();
   llvm::TextEncodingConverter *Converter = nullptr;
   if (isOrdinary())
-    Converter = TE.getConverter(CA_ToExecEncoding);
+    Converter = TE.getConverter(CA_ToLiteralEncoding);
 
   // Unicode escapes representing characters that cannot be correctly
   // represented in a single code unit are disallowed in character literals

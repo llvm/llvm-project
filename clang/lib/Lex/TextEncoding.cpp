@@ -12,8 +12,8 @@
 llvm::TextEncodingConverter *
 TextEncoding::getConverter(ConversionAction Action) const {
   switch (Action) {
-  case CA_ToExecEncoding:
-    return ToExecEncodingConverter;
+  case CA_ToLiteralEncoding:
+    return ToLiteralEncodingConverter;
   default:
     return nullptr;
   }
@@ -25,17 +25,17 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TEC,
   using namespace llvm;
 
   const char *UTF8 = "UTF-8";
-  TEC.ExecEncoding =
-      Opts.ExecEncoding.empty() ? UTF8 : Opts.ExecEncoding.c_str();
+  TEC.LiteralEncoding =
+      Opts.LiteralEncoding.empty() ? UTF8 : Opts.LiteralEncoding.c_str();
 
-  // Create converter between internal and exec encoding specified
+  // Create converter between internal and literal encoding specified
   // in fexec-charset option.
-  if (TEC.ExecEncoding == UTF8)
+  if (TEC.LiteralEncoding == UTF8)
     return std::error_code();
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
-      llvm::TextEncodingConverter::create(UTF8, TEC.ExecEncoding);
+      llvm::TextEncodingConverter::create(UTF8, TEC.LiteralEncoding);
   if (ErrorOrConverter)
-    TEC.ToExecEncodingConverter =
+    TEC.ToLiteralEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
   else
     return ErrorOrConverter.getError();
