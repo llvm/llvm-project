@@ -14,10 +14,7 @@ define void @f(i32 %n, ptr %A) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Inst: store i32 0, ptr %arrayidx, align 4
 ; CHECK-NEXT:  AccessFunction: {(4 * (zext i32 ({0,+,1}<nuw><nsw><%outer.preheader> * %B3) to i64))<nuw><nsw>,+,4}<nuw><nsw><%inner>
-; CHECK-NEXT:  Base offset: %A
-; CHECK-NEXT:  ArrayDecl[UnknownSize][(zext i32 %B3 to i64)] with elements of 4 bytes.
-; CHECK-NEXT:  ArrayRef[0][{(zext i32 ({0,+,1}<nuw><nsw><%outer.preheader> * %B3) to i64),+,1}<nuw><nsw><%inner>]
-; CHECK-NEXT:  Delinearization validation: Succeeded
+; CHECK-NEXT:  failed to delinearize
 ;
 entry:
   br i1 false, label %outer.preheader, label %exit

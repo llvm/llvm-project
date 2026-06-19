@@ -80,8 +80,8 @@ struct SCEVCollectTerms {
       return false;
     }
 
-    // Keep looking.
-    return true;
+    // Keep looking when S is a specific type expression.
+    return isa<SCEVAddExpr, SCEVAddRecExpr>(S);
   }
 
   bool isDone() const { return false; }
@@ -158,8 +158,8 @@ struct SCEVCollectAddRecMultiplies {
       return false;
     }
 
-    // Keep looking.
-    return true;
+    // Keep looking when S is a specific type expression.
+    return isa<SCEVAddExpr, SCEVAddRecExpr>(S);
   }
 
   bool isDone() const { return false; }
@@ -196,12 +196,6 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
 
   SCEVCollectAddRecMultiplies MulCollector(Terms, SE);
   visitAll(Expr, MulCollector);
-
-  // Sign extend all terms to the same type.
-  IntegerType *IndexTy = cast<IntegerType>(Expr->getType());
-  for (const SCEV *&T : Terms)
-    if (T->getType()->getIntegerBitWidth() < IndexTy->getIntegerBitWidth())
-      T = SE.getSignExtendExpr(T, IndexTy);
 }
 
 static bool findArrayDimensionsRec(ScalarEvolution &SE,
