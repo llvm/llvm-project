@@ -1,0 +1,15 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "UnsafeBufferUsageAnalysisResult",
+      "result": {
+        "UnsafeBufferUsageAnalysisResult": [
+          "not-an-object",
+          []
+        ]
+      }
+    }
+  ],
+  "type": "WPASuite"
+}

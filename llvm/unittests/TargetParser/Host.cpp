@@ -178,6 +178,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac5"),
             "ampere1b");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac7"),
+            "ampere1c");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x001"),
             "oryon-1");
@@ -326,6 +329,10 @@ CPU part	: 0x0a1
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
                                               "CPU part        : 0xd01"),
             "tsv110");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
+                                              "CPU part        : 0xd06"),
+            "hip12");
 
   // Verify A64FX.
   const std::string A64FXProcCpuInfo = R"(
@@ -601,6 +608,11 @@ TEST(HostTest, AIXTargetVersionDetect) {
   llvm::Triple ConfiguredTargetTriple(LLVM_DEFAULT_TARGET_TRIPLE);
   if (ConfiguredTargetTriple.getOSMajorVersion())
     GTEST_SKIP(); // The version was configured explicitly; skip.
+
+#ifdef LLVM_TARGET_TRIPLE_ENV
+  if (std::getenv(LLVM_TARGET_TRIPLE_ENV))
+    GTEST_SKIP(); // The target was configured by env; skip.
+#endif
 
   VersionTuple SystemVersion;
   getAIXSystemVersion(SystemVersion);

@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 
 #include <optional>
 #include <sstream>
@@ -17,7 +15,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -171,7 +168,7 @@ public:
 
   template <typename... Args>
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
                      StructuredData::Generic *script_obj, Args... args) {
     using namespace python;
     using Locker = ScriptInterpreterPythonImpl::Locker;
@@ -183,6 +180,8 @@ public:
               .str());
     };
 
+    m_scripted_metadata = scripted_metadata;
+    llvm::StringRef class_name = scripted_metadata.GetClassName();
     bool has_class_name = !class_name.empty();
     bool has_interpreter_dict =
         !(llvm::StringRef(m_interpreter.GetDictionaryName()).empty());
@@ -465,8 +464,7 @@ public:
 
     // Call the static method.
     llvm::Expected<PythonObject> expected_return_object =
-        llvm::make_error<llvm::StringError>("Not initialized.",
-                                            llvm::inconvertibleErrorCode());
+        llvm::createStringError("not initialized");
     std::apply(
         [&method, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
@@ -529,8 +527,7 @@ protected:
     auto transformed_args = TransformArgs(original_args);
 
     llvm::Expected<PythonObject> expected_return_object =
-        llvm::make_error<llvm::StringError>("Not initialized.",
-                                            llvm::inconvertibleErrorCode());
+        llvm::createStringError("not initialized");
     std::apply(
         [&implementor, &method_name, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
@@ -590,6 +587,12 @@ protected:
 
   python::PythonObject Transform(const StructuredDataImpl &arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  template <typename T, typename = std::enable_if_t<
+                            std::is_base_of_v<StructuredData::Object, T>>>
+  python::PythonObject Transform(std::shared_ptr<T> arg) {
+    return Transform(StructuredDataImpl(arg));
   }
 
   python::PythonObject Transform(lldb::ExecutionContextRefSP arg) {
@@ -653,6 +656,10 @@ protected:
   }
 
   python::PythonObject Transform(lldb::DescriptionLevel arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ValueObjectSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
@@ -814,7 +821,21 @@ lldb::StackFrameListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
     python::PythonObject &p, Status &error);
 
+template <>
+lldb::ValueObjectSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::ValueObjectListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error);
+
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H

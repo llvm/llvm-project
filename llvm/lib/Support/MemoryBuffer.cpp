@@ -248,6 +248,8 @@ public:
   }
 
   void dontNeedIfMmap() override { MFR.dontNeed(); }
+  void willNeedIfMmap() override { MFR.willNeed(); }
+  void randomAccessIfMmap() override { MFR.randomAccess(); }
 };
 } // namespace
 

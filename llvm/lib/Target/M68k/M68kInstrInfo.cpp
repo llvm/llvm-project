@@ -94,7 +94,7 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
 
   // Erase any instructions if allowed at the end of the scope.
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
-  auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
+  llvm::scope_exit FinalizeOnReturn([&EraseList] {
     for (auto &Ref : EraseList)
       Ref.get().eraseFromParent();
   });
@@ -450,8 +450,6 @@ bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
   // We need to find the super source register that matches the size of Dst
   unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
   assert(SSrc && "No viable MEGA register available");
-
-  DebugLoc DL = MIB->getDebugLoc();
 
   // If it happens to that super source register is the destination register
   // we do nothing
@@ -841,7 +839,7 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
-                                         Register VReg,
+                                         Register VReg, unsigned SubReg,
                                          MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&

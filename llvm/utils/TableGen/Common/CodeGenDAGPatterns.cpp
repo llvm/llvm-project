@@ -94,15 +94,17 @@ bool TypeSetByHwMode::isValueTypeByHwMode(bool AllowEmpty) const {
   return true;
 }
 
-ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode() const {
+ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
   VVT.PtrAddrSpace = AddrSpace;
 
   for (const auto &I : *this) {
+    if (SkipEmpty && I.second.empty())
+      continue;
     MVT T = I.second.empty() ? MVT::Other : *I.second.begin();
-    VVT.getOrCreateTypeForMode(I.first, T);
+    VVT.insertTypeForMode(I.first, T);
   }
   return VVT;
 }
@@ -1480,10 +1482,9 @@ static unsigned getPatternSize(const TreePatternNode &P,
   // Count children in the count if they are also nodes.
   for (const TreePatternNode &Child : P.children()) {
     if (!Child.isLeaf() && Child.getNumTypes()) {
-      const TypeSetByHwMode &T0 = Child.getExtType(0);
-      // At this point, all variable type sets should be simple, i.e. only
-      // have a default mode.
-      if (T0.getMachineValueType() != MVT::Other) {
+      // FIXME: Can we assume non-simple VTs should be counted?
+      auto VVT = Child.getType(0);
+      if (llvm::any_of(VVT, [](auto &P) { return P.second != MVT::Other; })) {
         Size += getPatternSize(Child, CGP);
         continue;
       }
@@ -1801,7 +1802,7 @@ static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
                                                   const Record *R,
                                                   ArrayRef<SMLoc> Loc) {
   TypeSetByHwMode TypeSet;
-  RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
+  RegClassByHwMode Helper(R, T.getRegBank());
 
   for (auto [ModeID, RegClass] : Helper) {
     ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();
@@ -1850,7 +1851,11 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
   else if (Operand->isSubClassOf("RegisterOperand"))
     RC = Operand->getValueAsDef("RegClass");
 
-  assert(RC && "Unknown operand type");
+  if (!RC) {
+    TP.error("cannot update node type from unknown operand!");
+    return false;
+  }
+
   CodeGenTarget &Tgt = TP.getDAGPatterns().getTargetInfo();
   if (RC->isSubClassOf("RegClassByHwMode"))
     return UpdateNodeType(
@@ -1862,7 +1867,7 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
   for (const TypeSetByHwMode &Type : Types)
-    if (!TP.getInfer().isConcrete(Type, true))
+    if (!Type.isValueTypeByHwMode(/*AllowEmpty=*/true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))
@@ -2071,7 +2076,10 @@ void TreePatternNode::print(raw_ostream &OS) const {
   for (const ScopedName &Name : NamesAsPredicateArg)
     OS << ":$pred:" << Name.getScope() << ":" << Name.getIdentifier();
 }
-void TreePatternNode::dump() const { print(errs()); }
+void TreePatternNode::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
 
 /// isIsomorphicTo - Return true if this node is recursively
 /// isomorphic to the specified node.  For this comparison, the node's
@@ -2367,6 +2375,8 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
   }
 
   if (R->isSubClassOf("RegClassByHwMode")) {
+    if (NotRegisters)
+      return TypeSetByHwMode(); // Unknown.
     const CodeGenTarget &T = CDP.getTargetInfo();
     return getTypeForRegClassByHwMode(T, R, TP.getRecord()->getLoc());
   }
@@ -2585,10 +2595,10 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       // Int inits are always integers. :)
       bool MadeChange = TP.getInfer().EnforceInteger(Types[0]);
 
-      if (!TP.getInfer().isConcrete(Types[0], false))
+      if (!Types[0].isValueTypeByHwMode(/*AllowEmpty=*/false))
         return MadeChange;
 
-      ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
+      ValueTypeByHwMode VVT = Types[0].getValueTypeByHwMode();
       for (auto &P : VVT) {
         MVT VT = P.second;
         // Can only check for types of a known size
@@ -2915,15 +2925,22 @@ TreePattern::TreePattern(const Record *TheRec, const ListInit *RawPat,
                          bool isInput, CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
       Infer(*this) {
-  for (const Init *I : RawPat->getElements())
-    Trees.push_back(ParseTreePattern(I, ""));
+  for (const Init *I : RawPat->getElements()) {
+    TreePatternNodePtr Node = ParseTreePattern(I, "");
+    if (!Node)
+      return;
+    Trees.push_back(Node);
+  }
 }
 
 TreePattern::TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
                          CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
       Infer(*this) {
-  Trees.push_back(ParseTreePattern(Pat, ""));
+  TreePatternNodePtr Node = ParseTreePattern(Pat, "");
+  if (!Node)
+    return;
+  Trees.push_back(Node);
 }
 
 TreePattern::TreePattern(const Record *TheRec, ArrayRef<const Init *> Args,
@@ -3034,12 +3051,17 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     return nullptr;
   }
 
-  auto ParseCastOperand = [this](const DagInit *Dag, StringRef OpName) {
-    if (Dag->getNumArgs() != 1)
+  auto ParseCastOperand = [this](const DagInit *Dag,
+                                 StringRef OpName) -> TreePatternNodePtr {
+    if (Dag->getNumArgs() != 1) {
       error("Type cast only takes one operand!");
+      return nullptr;
+    }
 
-    if (!OpName.empty())
+    if (!OpName.empty()) {
       error("Type cast should not have a name!");
+      return nullptr;
+    }
 
     return ParseTreePattern(Dag->getArg(0), Dag->getArgNameStr(0));
   };
@@ -3048,6 +3070,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // If the operator is a list (of value types), then this must be "type cast"
     // of a leaf node with multiple results.
     TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    if (!New)
+      return nullptr;
 
     size_t NumTypes = New->getNumTypes();
     if (LI->empty() || LI->size() != NumTypes)
@@ -3073,6 +3097,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // If the operator is a ValueType, then this must be "type cast" of a leaf
     // node.
     TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    if (!New)
+      return nullptr;
 
     if (New->getNumTypes() != 1)
       error("ValueType cast can only have one type!");
@@ -3118,8 +3144,13 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
   std::vector<TreePatternNodePtr> Children;
 
   // Parse all the operands.
-  for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i)
-    Children.push_back(ParseTreePattern(Dag->getArg(i), Dag->getArgNameStr(i)));
+  for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
+    TreePatternNodePtr Child =
+        ParseTreePattern(Dag->getArg(i), Dag->getArgNameStr(i));
+    if (!Child)
+      return nullptr;
+    Children.push_back(Child);
+  }
 
   // Get the actual number of results before Operator is converted to an
   // intrinsic node (which is hard-coded to have either zero or one result).
@@ -3313,18 +3344,16 @@ void TreePattern::print(raw_ostream &OS) const {
     OS << "]\n";
 }
 
-void TreePattern::dump() const { print(errs()); }
+void TreePattern::dump() const { print(dbgs()); }
 
 //===----------------------------------------------------------------------===//
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
-                                       PatternRewriterFn PatternRewriter)
+CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
-      LegalPtrVTS(ComputeLegalPtrTypes()),
-      PatternRewriter(std::move(PatternRewriter)) {
+      LegalPtrVTS(ComputeLegalPtrTypes()) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
@@ -3341,7 +3370,8 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
   // Break patterns with parameterized types into a series of patterns,
   // where each one has a fixed type and is predicated on the conditions
   // of the associated HW mode.
-  ExpandHwModeBasedTypes();
+  if (ExpandHwMode)
+    ExpandHwModeBasedTypes();
 
   // Infer instruction flags.  For example, we can detect loads,
   // stores, and side effects in many cases by examining an
@@ -3560,8 +3590,10 @@ static bool HandleUse(TreePattern &I, TreePatternNodePtr Pat,
   const Record *Rec;
   if (Pat->isLeaf()) {
     const DefInit *DI = dyn_cast<DefInit>(Pat->getLeafValue());
-    if (!DI)
+    if (!DI) {
       I.error("Input $" + Pat->getName() + " must be an identifier!");
+      return false;
+    }
     Rec = DI->getDef();
   } else {
     Rec = Pat->getOperator();
@@ -4351,7 +4383,8 @@ static bool ForceArbitraryInstResultType(TreePatternNode &N, TreePattern &TP) {
   // anything.
   TypeInfer &TI = TP.getInfer();
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i) {
-    if (N.getExtType(i).empty() || TI.isConcrete(N.getExtType(i), false))
+    if (N.getExtType(i).empty() ||
+        N.getExtType(i).isValueTypeByHwMode(/*AllowEmpty=*/false))
       continue;
 
     // Otherwise, force its type to an arbitrary choice.
@@ -4452,9 +4485,6 @@ void CodeGenDAGPatterns::ParseOnePattern(
 
   const ListInit *Preds = TheDef->getValueAsListInit("Predicates");
   int Complexity = TheDef->getValueAsInt("AddedComplexity");
-
-  if (PatternRewriter)
-    PatternRewriter(&Pattern);
 
   // A pattern may end up with an "impossible" type, i.e. a situation
   // where all types have been eliminated for some node in this pattern.
@@ -4631,13 +4661,13 @@ static void FindDepVars(TreePatternNode &N, MultipleUseVarSet &DepVars) {
 /// Dump the dependent variable set:
 static void DumpDepVars(MultipleUseVarSet &DepVars) {
   if (DepVars.empty()) {
-    LLVM_DEBUG(errs() << "<empty set>");
+    LLVM_DEBUG(dbgs() << "<empty set>");
   } else {
-    LLVM_DEBUG(errs() << "[ ");
+    LLVM_DEBUG(dbgs() << "[ ");
     for (const auto &DepVar : DepVars) {
-      LLVM_DEBUG(errs() << DepVar.getKey() << " ");
+      LLVM_DEBUG(dbgs() << DepVar.getKey() << " ");
     }
-    LLVM_DEBUG(errs() << "]");
+    LLVM_DEBUG(dbgs() << "]");
   }
 }
 #endif
@@ -4660,11 +4690,11 @@ static void CombineChildVariants(
   do {
 #ifndef NDEBUG
     LLVM_DEBUG(if (!Idxs.empty()) {
-      errs() << Orig->getOperator()->getName() << ": Idxs = [ ";
+      dbgs() << Orig->getOperator()->getName() << ": Idxs = [ ";
       for (unsigned Idx : Idxs) {
-        errs() << Idx << " ";
+        dbgs() << Idx << " ";
       }
-      errs() << "]\n";
+      dbgs() << "]\n";
     });
 #endif
     // Create the variant and add it to the output list.
@@ -4858,7 +4888,7 @@ static void GenerateVariantsOf(TreePatternNodePtr N,
 // GenerateVariants - Generate variants.  For example, commutative patterns can
 // match multiple ways.  Add them to PatternsToMatch as well.
 void CodeGenDAGPatterns::GenerateVariants() {
-  LLVM_DEBUG(errs() << "Generating instruction variants.\n");
+  LLVM_DEBUG(dbgs() << "Generating instruction variants.\n");
 
   // Loop over all of the patterns we've collected, checking to see if we can
   // generate variants of the instruction, through the exploitation of
@@ -4873,9 +4903,9 @@ void CodeGenDAGPatterns::GenerateVariants() {
     MultipleUseVarSet DepVars;
     std::vector<TreePatternNodePtr> Variants;
     FindDepVars(PatternsToMatch[i].getSrcPattern(), DepVars);
-    LLVM_DEBUG(errs() << "Dependent/multiply used variables: ");
+    LLVM_DEBUG(dbgs() << "Dependent/multiply used variables: ");
     LLVM_DEBUG(DumpDepVars(DepVars));
-    LLVM_DEBUG(errs() << "\n");
+    LLVM_DEBUG(dbgs() << "\n");
     GenerateVariantsOf(PatternsToMatch[i].getSrcPatternShared(), Variants,
                        *this, DepVars);
 
@@ -4886,14 +4916,14 @@ void CodeGenDAGPatterns::GenerateVariants() {
     if (Variants.size() == 1) // No additional variants for this pattern.
       continue;
 
-    LLVM_DEBUG(errs() << "FOUND VARIANTS OF: ";
-               PatternsToMatch[i].getSrcPattern().dump(); errs() << "\n");
+    LLVM_DEBUG(dbgs() << "FOUND VARIANTS OF: ";
+               PatternsToMatch[i].getSrcPattern().dump(); dbgs() << "\n");
 
     for (unsigned v = 0, e = Variants.size(); v != e; ++v) {
       TreePatternNodePtr Variant = Variants[v];
 
-      LLVM_DEBUG(errs() << "  VAR#" << v << ": "; Variant->dump();
-                 errs() << "\n");
+      LLVM_DEBUG(dbgs() << "  VAR#" << v << ": "; Variant->dump();
+                 dbgs() << "\n");
 
       // Scan to see if an instruction or explicit pattern already matches this.
       bool AlreadyExists = false;
@@ -4905,7 +4935,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
         // Check to see if this variant already exists.
         if (Variant->isIsomorphicTo(PatternsToMatch[p].getSrcPattern(),
                                     DepVars)) {
-          LLVM_DEBUG(errs() << "  *** ALREADY EXISTS, ignoring variant.\n");
+          LLVM_DEBUG(dbgs() << "  *** ALREADY EXISTS, ignoring variant.\n");
           AlreadyExists = true;
           break;
         }
@@ -4924,7 +4954,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           PatternsToMatch[i].getHwModeFeatures());
     }
 
-    LLVM_DEBUG(errs() << "\n");
+    LLVM_DEBUG(dbgs() << "\n");
   }
 }
 

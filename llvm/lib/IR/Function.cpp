@@ -114,9 +114,9 @@ void Argument::setParent(Function *parent) {
 
 bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
   if (!getType()->isPointerTy()) return false;
-  if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull) &&
-      (AllowUndefOrPoison ||
-       getParent()->hasParamAttribute(getArgNo(), Attribute::NoUndef)))
+  AttributeSet Attrs = getAttributes();
+  if (Attrs.hasAttribute(Attribute::NonNull) &&
+      (AllowUndefOrPoison || Attrs.hasAttribute(Attribute::NoUndef)))
     return true;
   else if (getDereferenceableBytes() > 0 &&
            !NullPointerIsDefined(getParent(),
@@ -130,10 +130,9 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
-bool Argument::hasDeadOnReturnAttr() const {
-  if (!getType()->isPointerTy())
-    return false;
-  return hasAttribute(Attribute::DeadOnReturn);
+DeadOnReturnInfo Argument::getDeadOnReturnInfo() const {
+  assert(getType()->isPointerTy() && "Only pointers have dead_on_return bytes");
+  return getParent()->getDeadOnReturnInfo(getArgNo());
 }
 
 bool Argument::hasByRefAttr() const {
@@ -163,21 +162,21 @@ bool Argument::hasPreallocatedAttr() const {
 
 bool Argument::hasPassPointeeByValueCopyAttr() const {
   if (!getType()->isPointerTy()) return false;
-  AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated);
+  AttributeSet Attrs = getAttributes();
+  return Attrs.hasAttribute(Attribute::ByVal) ||
+         Attrs.hasAttribute(Attribute::InAlloca) ||
+         Attrs.hasAttribute(Attribute::Preallocated);
 }
 
 bool Argument::hasPointeeInMemoryValueAttr() const {
   if (!getType()->isPointerTy())
     return false;
-  AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::StructRet) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::ByRef);
+  AttributeSet Attrs = getAttributes();
+  return Attrs.hasAttribute(Attribute::ByVal) ||
+         Attrs.hasAttribute(Attribute::StructRet) ||
+         Attrs.hasAttribute(Attribute::InAlloca) ||
+         Attrs.hasAttribute(Attribute::Preallocated) ||
+         Attrs.hasAttribute(Attribute::ByRef);
 }
 
 /// For a byval, sret, inalloca, or preallocated parameter, get the in-memory
@@ -200,17 +199,13 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs) {
 }
 
 uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
-  AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttrs(getArgNo());
-  if (Type *MemTy = getMemoryParamAllocType(ParamAttrs))
+  if (Type *MemTy = getMemoryParamAllocType(getAttributes()))
     return DL.getTypeAllocSize(MemTy);
   return 0;
 }
 
 Type *Argument::getPointeeInMemoryValueType() const {
-  AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttrs(getArgNo());
-  return getMemoryParamAllocType(ParamAttrs);
+  return getMemoryParamAllocType(getAttributes());
 }
 
 MaybeAlign Argument::getParamAlign() const {
@@ -307,9 +302,9 @@ bool Argument::hasSExtAttr() const {
 }
 
 bool Argument::onlyReadsMemory() const {
-  AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttr(getArgNo(), Attribute::ReadOnly) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::ReadNone);
+  AttributeSet Attrs = getAttributes();
+  return Attrs.hasAttribute(Attribute::ReadOnly) ||
+         Attrs.hasAttribute(Attribute::ReadNone);
 }
 
 void Argument::addAttrs(AttrBuilder &B) {
@@ -367,8 +362,7 @@ const DataLayout &Function::getDataLayout() const {
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)
-    NumInstrs += std::distance(BB.instructionsWithoutDebug().begin(),
-                               BB.instructionsWithoutDebug().end());
+    NumInstrs += BB.size();
   return NumInstrs;
 }
 
@@ -510,7 +504,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     // Don't set the attributes if the intrinsic signature is invalid. This
     // case will either be auto-upgraded or fail verification.
     SmallVector<Type *> OverloadTys;
-    if (!Intrinsic::getIntrinsicSignature(IntID, Ty, OverloadTys))
+    if (!Intrinsic::isSignatureValid(IntID, Ty, OverloadTys))
       return;
 
     setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));
@@ -804,31 +798,17 @@ void Function::addRangeRetAttr(const ConstantRange &CR) {
 }
 
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
-  if (&FPType == &APFloat::IEEEsingle()) {
-    DenormalMode Mode = getDenormalModeF32Raw();
-    // If the f32 variant of the attribute isn't specified, try to use the
-    // generic one.
-    if (Mode.isValid())
-      return Mode;
-  }
+  Attribute Attr = getFnAttribute(Attribute::DenormalFPEnv);
+  if (!Attr.isValid())
+    return DenormalMode::getDefault();
 
-  return getDenormalModeRaw();
+  DenormalFPEnv FPEnv = Attr.getDenormalFPEnv();
+  return &FPType == &APFloat::IEEEsingle() ? FPEnv.F32Mode : FPEnv.DefaultMode;
 }
 
-DenormalMode Function::getDenormalModeRaw() const {
-  Attribute Attr = getFnAttribute("denormal-fp-math");
-  StringRef Val = Attr.getValueAsString();
-  return parseDenormalFPAttribute(Val);
-}
-
-DenormalMode Function::getDenormalModeF32Raw() const {
-  Attribute Attr = getFnAttribute("denormal-fp-math-f32");
-  if (Attr.isValid()) {
-    StringRef Val = Attr.getValueAsString();
-    return parseDenormalFPAttribute(Val);
-  }
-
-  return DenormalMode::getInvalid();
+DenormalFPEnv Function::getDenormalFPEnv() const {
+  Attribute Attr = getFnAttribute(Attribute::DenormalFPEnv);
+  return Attr.isValid() ? Attr.getDenormalFPEnv() : DenormalFPEnv::getDefault();
 }
 
 const std::string &Function::getGC() const {

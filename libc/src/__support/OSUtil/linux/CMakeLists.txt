@@ -3,6 +3,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+add_subdirectory(syscall_wrappers)
 
 add_object_library(
   linux_util
@@ -16,6 +17,7 @@ add_object_library(
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
     libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_flock
     libc.hdr.types.struct_flock64
@@ -30,6 +32,11 @@ add_header_library(
     auxv.h
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_auxv_macros
+    libc.hdr.sys_mman_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
@@ -37,16 +44,20 @@ add_header_library(
 )
 
 add_header_library(
-  getrandom
+  sysinfo
   HDRS
-    getrandom.h
+    sysinfo.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
-    libc.src.__support.error_or
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.ctype_utils
     libc.src.__support.macros.config
-    libc.hdr.types.ssize_t
-    libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getaffinity
 )
 
 add_header_library(
@@ -71,9 +82,11 @@ add_object_library(
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.futex_word_type
     libc.src.__support.OSUtil.linux.auxv
-    libc.hdr.types.struct_timeval
-    libc.hdr.types.struct_timespec
-    libc.hdr.types.clockid_t
-    libc.hdr.types.time_t
+    libc.hdr.elf_proxy
     libc.hdr.link_macros
+    libc.hdr.sys_auxv_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_timeval
+    libc.hdr.types.time_t
 )

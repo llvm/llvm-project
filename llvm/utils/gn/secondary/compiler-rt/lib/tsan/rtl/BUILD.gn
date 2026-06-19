@@ -46,6 +46,7 @@ target(tsan_target_type, "rtl") {
   cflags = [ "-fPIE" ]
 
   sources = [
+    "tsan_adaptive_delay.cpp",
     "tsan_debugging.cpp",
     "tsan_defs.h",
     "tsan_dense_alloc.h",

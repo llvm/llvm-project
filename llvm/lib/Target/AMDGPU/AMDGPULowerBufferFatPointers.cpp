@@ -635,7 +635,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetInst(
     MemSetInst &MSI) {
   if (MSI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetAsLoop(&MSI);
+  llvm::expandMemSetAsLoop(&MSI,
+                           TM->getTargetTransformInfo(*MSI.getFunction()));
   MSI.eraseFromParent();
   return true;
 }
@@ -644,7 +645,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetPatternInst(
     MemSetPatternInst &MSPI) {
   if (MSPI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetPatternAsLoop(&MSPI);
+  llvm::expandMemSetPatternAsLoop(
+      &MSPI, TM->getTargetTransformInfo(*MSPI.getFunction()));
   MSPI.eraseFromParent();
   return true;
 }
@@ -973,13 +975,13 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
     Type *ElemTy = AT->getElementType();
     if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
         ElemTy->isVectorTy()) {
-      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      TypeSize ElemAllocSize = DL.getTypeAllocSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
-                                 AggByteOff + I * ElemStoreSize.getFixedValue(),
+                                 AggByteOff + I * ElemAllocSize.getFixedValue(),
                                  Result, Name + Twine(I));
         AggIdxs.pop_back();
       }
@@ -1093,14 +1095,14 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     Type *ElemTy = AT->getElementType();
     if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
         ElemTy->isVectorTy()) {
-      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      TypeSize ElemAllocSize = DL.getTypeAllocSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= std::get<0>(visitStoreImpl(
             OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemStoreSize.getFixedValue(), Name + Twine(I)));
+            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1772,6 +1774,18 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
           "buffer resources and should've been expanded away");
       break;
     }
+    case AtomicRMWInst::FMaximumNum: {
+      reportFatalUsageError(
+          "atomic floating point fmaximumnum not supported for "
+          "buffer resources and should've been expanded away");
+      break;
+    }
+    case AtomicRMWInst::FMinimumNum: {
+      reportFatalUsageError(
+          "atomic floating point fminimumnum not supported for "
+          "buffer resources and should've been expanded away");
+      break;
+    }
     case AtomicRMWInst::Nand:
       reportFatalUsageError(
           "atomic nand not supported for buffer resources and "
@@ -1788,7 +1802,7 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
-  auto *Call = IRB.CreateIntrinsic(IID, Ty, Args);
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
   copyMetadata(Call, I);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
@@ -1855,10 +1869,10 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
     Aux |= AMDGPU::CPol::SLC;
   if (AI.isVolatile())
     Aux |= AMDGPU::CPol::VOLATILE;
-  auto *Call =
-      IRB.CreateIntrinsic(Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
-                          {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc,
-                           Off, IRB.getInt32(0), IRB.getInt32(Aux)});
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
+      {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
+       IRB.getInt32(0), IRB.getInt32(Aux)});
   copyMetadata(Call, &AI);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);
@@ -1866,10 +1880,8 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
 
   Value *Res = PoisonValue::get(AI.getType());
   Res = IRB.CreateInsertValue(Res, Call, 0);
-  if (!AI.isWeak()) {
-    Value *Succeeded = IRB.CreateICmpEQ(Call, AI.getCompareOperand());
-    Res = IRB.CreateInsertValue(Res, Succeeded, 1);
-  }
+  Value *Succeeded = IRB.CreateICmpEQ(Call, AI.getCompareOperand());
+  Res = IRB.CreateInsertValue(Res, Succeeded, 1);
   SplitUsers.insert(&AI);
   AI.replaceAllUsesWith(Res);
   return {nullptr, nullptr};
@@ -2207,6 +2219,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::memset_inline:
   case Intrinsic::experimental_memset_pattern:
   case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
     return true;
   }
 }
@@ -2295,7 +2308,8 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     SplitUsers.insert(&I);
     return {NewRsrc, Off};
   }
-  case Intrinsic::amdgcn_load_to_lds: {
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};
@@ -2306,9 +2320,12 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Value *ImmOff = I.getArgOperand(3);
     Value *Aux = I.getArgOperand(4);
     Value *SOffset = IRB.getInt32(0);
-    Instruction *NewLoad = IRB.CreateIntrinsic(
-        Intrinsic::amdgcn_raw_ptr_buffer_load_lds, {},
-        {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
+    Intrinsic::ID NewIntr =
+        IID == Intrinsic::amdgcn_load_to_lds
+            ? Intrinsic::amdgcn_raw_ptr_buffer_load_lds
+            : Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds;
+    Instruction *NewLoad = IRB.CreateIntrinsicWithoutFolding(
+        NewIntr, {}, {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
     copyMetadata(NewLoad, &I);
     SplitUsers.insert(&I);
     I.replaceAllUsesWith(NewLoad);
@@ -2461,11 +2478,14 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
 
   BufferFatPtrToStructTypeMap StructTM(DL);
   BufferFatPtrToIntTypeMap IntTM(DL);
-  for (const GlobalVariable &GV : M.globals()) {
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.getAddressSpace() == AMDGPUAS::BUFFER_FAT_POINTER) {
       // FIXME: Use DiagnosticInfo unsupported but it requires a Function
       Ctx.emitError("global variables with a buffer fat pointer address "
                     "space (7) are not supported");
+      GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
+      GV.eraseFromParent();
+      Changed = true;
       continue;
     }
 
@@ -2475,6 +2495,9 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
       Ctx.emitError("global variables that contain buffer fat pointers "
                     "(address space 7 pointers) are unsupported. Use "
                     "buffer resource pointers (address space 8) instead");
+      GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
+      GV.eraseFromParent();
+      Changed = true;
       continue;
     }
   }

@@ -221,8 +221,7 @@ define i1 @blsmsk_gt_is_false_assume(i32 %x) {
 
 define i32 @blsmsk_add_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_add_eval_assume(
-; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 33
 ;
@@ -261,8 +260,7 @@ define <2 x i32> @blsmsk_add_eval_assume_vec(<2 x i32> %x) {
 
 define i32 @blsmsk_sub_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_sub_eval_assume(
-; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 -31
 ;
@@ -277,8 +275,7 @@ define i32 @blsmsk_sub_eval_assume(i32 %x) {
 
 define i32 @blsmsk_or_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_or_eval_assume(
-; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 33
 ;
@@ -545,8 +542,7 @@ define <2 x i1> @blsi_cmp_eq_diff_bits_vec(<2 x i32> %x) {
 
 define i32 @blsi_xor_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsi_xor_eval_assume(
-; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i32 33
 ;

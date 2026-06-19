@@ -44,6 +44,23 @@ def ShardingPropagation : InterfacePass<"sharding-propagation", "mlir::FunctionO
   ];
 }
 
+def ShardSimplify : Pass<"shard-simplify"> {
+  let summary = "Shard simplify patterns.";
+  let description = [{
+    Applies simplification patterns on the Shard dialect operations.
+    This includes:
+    - All-reduce endomorphism simplification, e.g. transforming
+      `all_reduce_sum(x) + all_reduce_sum(y)` into `all_reduce_sum(x + y)`.
+    - Folding `AllSliceOp(AllReduceOp)` into `ReduceScatterOp` when both ops
+      share the same grid and grid_axes.
+    - Folding static grid shapes into constants.
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "shard::ShardDialect"
+  ];
+}
+
 def Partition : InterfacePass<"shard-partition", "mlir::FunctionOpInterface"> {
   let summary = "Partition a function into SPMD form.";
   let description = [{

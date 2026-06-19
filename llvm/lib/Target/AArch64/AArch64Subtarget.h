@@ -59,7 +59,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;
@@ -88,6 +88,7 @@ protected:
   std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
+  bool EnableSRLTSubregToRegMitigation;
   unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
@@ -128,7 +129,8 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   bool HasMinSize = false);
+                   bool HasMinSize = false,
+                   bool EnableSRLTSubregToRegMitigation = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -157,6 +159,7 @@ public:
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
   bool enableSubRegLiveness() const override { return EnableSubregLiveness; }
+  bool enableSpillageCopyElimination() const override { return true; }
 
   bool enableMachinePipeliner() const override;
   bool useDFAforSMS() const override { return false; }
@@ -261,7 +264,8 @@ public:
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
-           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
+           hasFuseLiterals();
   }
 
   unsigned getEpilogueVectorizationMinVF() const {
@@ -442,6 +446,12 @@ public:
     return 0;
   }
 
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
+  }
+
   bool useSVEForFixedLengthVectors() const {
     if (!isSVEorStreamingSVEAvailable())
       return false;
@@ -466,6 +476,10 @@ public:
   /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
   /// add + cnt instructions.
   bool useScalarIncVL() const;
+
+  bool enableSRLTSubregToRegMitigation() const {
+    return EnableSRLTSubregToRegMitigation;
+  }
 
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod

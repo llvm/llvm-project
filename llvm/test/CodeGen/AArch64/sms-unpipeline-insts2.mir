@@ -60,7 +60,7 @@ body:             |
   bb.1.for.body.preheader:
     %7:gpr32common = SUBWri %5, 1, 0
     %9:gpr64all = IMPLICIT_DEF
-    %8:gpr64 = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
+    %8:gpr64 = SUBREG_TO_REG killed %7, %subreg.sub_32
     %10:gpr64 = SBFMXri killed %8, 0, 31
     %0:gpr64all = COPY %10
     %12:fpr32 = FMOVSi 112

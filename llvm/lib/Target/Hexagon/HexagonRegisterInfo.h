@@ -74,6 +74,16 @@ public:
   const TargetRegisterClass *
   getPointerRegClass(unsigned Kind = 0) const override;
 
+  /// Returns true if the given reserved physical register is live across
+  /// function calls/returns.
+  bool isGlobalReg(MCPhysReg Reg) const;
+
+  /// Returns true if the given reserved physical register Reg is live
+  /// across function calls/returns. This function should not be used for
+  /// non-reserved registers, instead register liveness information should be
+  /// checked
+  bool isFakeReg(MCPhysReg Reg) const;
+
   bool isEHReturnCalleeSaveReg(Register Reg) const;
 };
 

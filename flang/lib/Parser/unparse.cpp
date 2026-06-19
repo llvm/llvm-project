@@ -142,15 +142,21 @@ public:
   void Post(const Star &) { Put('*'); } // R701 &c.
   void Post(const TypeParamValue::Deferred &) { Put(':'); } // R701
   void Unparse(const DeclarationTypeSpec::Type &x) { // R703
-    Word("TYPE("), Walk(x.derived), Put(')');
+    Word("TYPE("), Walk(x.v), Put(')');
   }
   void Unparse(const DeclarationTypeSpec::Class &x) {
-    Word("CLASS("), Walk(x.derived), Put(')');
+    Word("CLASS("), Walk(x.v), Put(')');
   }
   void Post(const DeclarationTypeSpec::ClassStar &) { Word("CLASS(*)"); }
   void Post(const DeclarationTypeSpec::TypeStar &) { Word("TYPE(*)"); }
   void Unparse(const DeclarationTypeSpec::Record &x) {
     Word("RECORD/"), Walk(x.v), Put('/');
+  }
+  void Unparse(const DeclarationTypeSpec::TypeOf &x) {
+    Word("TYPEOF("), Walk(x.v), Put(')');
+  }
+  void Unparse(const DeclarationTypeSpec::ClassOf &x) {
+    Word("CLASSOF("), Walk(x.v), Put(')');
   }
   void Before(const IntrinsicTypeSpec::Real &) { // R704
     Word("REAL");
@@ -198,14 +204,18 @@ public:
     Put(x == Sign::Negative ? '-' : '+');
   }
   void Unparse(const RealLiteralConstant &x) { // R714, R715
-    Put(x.real.source.ToString()), Walk("_", x.kind);
+    const auto &[real, kind]{x.t};
+    Put(real.source.ToString()), Walk("_", kind);
   }
   void Unparse(const ComplexLiteralConstant &x) { // R718 - R720
     Put('('), Walk(x.t, ","), Put(')');
   }
   void Unparse(const CharSelector::LengthAndKind &x) { // R721
-    Put('('), Word("KIND="), Walk(x.kind);
-    Walk(", LEN=", x.length), Put(')');
+    Put('(');
+    Word("KIND=");
+    Walk(std::get<ScalarIntConstantExpr>(x.t));
+    Walk(", LEN=", std::get<std::optional<TypeParamValue>>(x.t));
+    Put(')');
   }
   void Unparse(const LengthSelector &x) { // R722
     common::visit(common::visitors{
@@ -368,13 +378,15 @@ public:
     Word("PRIVATE");
   }
   void Unparse(const TypeBoundProcedureStmt::WithoutInterface &x) { // R749
-    Word("PROCEDURE"), Walk(", ", x.attributes, ", ");
-    Put(" :: "), Walk(x.declarations, ", ");
+    const auto &[attributes, declarations]{x.t};
+    Word("PROCEDURE"), Walk(", ", attributes, ", ");
+    Put(" :: "), Walk(declarations, ", ");
   }
   void Unparse(const TypeBoundProcedureStmt::WithInterface &x) {
-    Word("PROCEDURE("), Walk(x.interfaceName), Put("), ");
-    Walk(x.attributes);
-    Put(" :: "), Walk(x.bindingNames, ", ");
+    const auto &[interfaceName, attributes, bindingNames]{x.t};
+    Word("PROCEDURE("), Walk(interfaceName), Put("), ");
+    Walk(attributes);
+    Put(" :: "), Walk(bindingNames, ", ");
   }
   void Unparse(const TypeBoundProcDecl &x) { // R750
     Walk(std::get<Name>(x.t));
@@ -419,6 +431,20 @@ public:
   void Post(const EndEnumStmt &) { // R763
     Outdent(), Word("END ENUM");
   }
+  void Unparse(const EnumerationTypeStmt &x) { // F2023 R767
+    Word("ENUMERATION TYPE");
+    Walk(", ", std::get<std::optional<AccessSpec>>(x.t));
+    Word(" :: ");
+    Walk(std::get<Name>(x.t));
+    Indent();
+  }
+  void Unparse(const EnumerationEnumeratorStmt &x) { // F2023 R768
+    Word("ENUMERATOR :: "), Walk(x.v, ", ");
+  }
+  void Unparse(const EndEnumerationTypeStmt &x) { // F2023 R769
+    Outdent(), Word("END ENUMERATION TYPE");
+    Walk(" ", x.v);
+  }
   void Unparse(const BOZLiteralConstant &x) { // R764 - R767
     Put(x.v);
   }
@@ -430,11 +456,12 @@ public:
     Put('['), Walk(x.v), Put(']');
   }
   void Unparse(const AcSpec &x) { // R770
-    Walk(x.type, "::"), Walk(x.values, ", ");
+    Walk(std::get<std::optional<TypeSpec>>(x.t), "::");
+    Walk(std::get<std::list<AcValue>>(x.t), ", ");
   }
   template <typename A, typename B> void Unparse(const LoopBounds<A, B> &x) {
-    Walk(x.name), Put('='), Walk(x.lower), Put(','), Walk(x.upper);
-    Walk(",", x.step);
+    Walk(x.Name()), Put('='), Walk(x.Lower()), Put(','), Walk(x.Upper());
+    Walk(",", x.Step());
   }
   void Unparse(const AcImpliedDo &x) { // R774
     Put('('), Walk(std::get<std::list<AcValue>>(x.t), ", ");
@@ -504,6 +531,7 @@ public:
     common::visit(common::visitors{
                       [&](const CoarraySpec &) { Word("CODIMENSION["); },
                       [&](const ArraySpec &) { Word("DIMENSION("); },
+                      [&](const RankClause &) { Word("RANK("); },
                       [](const auto &) {},
                   },
         x.u);
@@ -512,6 +540,7 @@ public:
     common::visit(common::visitors{
                       [&](const CoarraySpec &) { Put(']'); },
                       [&](const ArraySpec &) { Put(')'); },
+                      [&](const RankClause &) { Put(')'); },
                       [](const auto &) {},
                   },
         x.u);
@@ -562,6 +591,10 @@ public:
     common::visit(
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
+            [&](const ExplicitShapeBoundsSpec &y) {
+              llvm_unreachable(
+                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
+            },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
@@ -723,14 +756,15 @@ public:
     }
   }
   void Unparse(const ImportStmt &x) { // R867
+    const auto &[kind, names]{x.t};
     Word("IMPORT");
-    switch (x.kind) {
+    switch (kind) {
     case common::ImportKind::Default:
-      Walk(" :: ", x.names, ", ");
+      Walk(" :: ", names, ", ");
       break;
     case common::ImportKind::Only:
       Put(", "), Word("ONLY: ");
-      Walk(x.names, ", ");
+      Walk(names, ", ");
       break;
     case common::ImportKind::None:
       Word(", NONE");
@@ -757,7 +791,7 @@ public:
   }
   void Unparse(const CommonStmt &x) { // R873
     Word("COMMON ");
-    Walk(x.blocks);
+    Walk(x.v);
   }
   void Unparse(const CommonBlockObject &x) { // R874
     Walk(std::get<Name>(x.t));
@@ -784,23 +818,24 @@ public:
     Walk(x.t, ":");
   }
   void Unparse(const PartRef &x) { // R912
-    Walk(x.name);
-    Walk("(", x.subscripts, ",", ")");
-    Walk(x.imageSelector);
+    const auto &[name, subscripts, imageSelector]{x.t};
+    Walk(name);
+    Walk("(", subscripts, ",", ")");
+    Walk(imageSelector);
   }
   void Unparse(const StructureComponent &x) { // R913
-    Walk(x.base);
-    if (structureComponents_.find(x.component.source) !=
+    Walk(x.Base());
+    if (structureComponents_.find(x.Component().source) !=
         structureComponents_.end()) {
       Put('.');
     } else {
       Put('%');
     }
-    Walk(x.component);
+    Walk(x.Component());
   }
   void Unparse(const ArrayElement &x) { // R917
-    Walk(x.base);
-    Put('('), Walk(x.subscripts, ","), Put(')');
+    Walk(x.Base());
+    Put('('), Walk(x.Subscripts(), ","), Put(')');
   }
   void Unparse(const SubscriptTriplet &x) { // R921
     Walk(std::get<0>(x.t)), Put(':'), Walk(std::get<1>(x.t));
@@ -889,6 +924,17 @@ public:
   void Unparse(const Expr::OR &x) { Walk(x.t, ".OR."); }
   void Unparse(const Expr::EQV &x) { Walk(x.t, ".EQV."); }
   void Unparse(const Expr::NEQV &x) { Walk(x.t, ".NEQV."); }
+  void Unparse(const ConditionalExpr &x) { // F2023 R1002
+    // Note: chained conditionals produce extra parentheses due to recursive
+    // else-expr unparsing; the result is still valid.
+    Put("( ");
+    Walk(std::get<0>(x.t)); // scalar-logical-expr
+    Put(" ? ");
+    Walk(std::get<1>(x.t)); // then-expr
+    Put(" : ");
+    Walk(std::get<2>(x.t)); // else-expr
+    Put(" )");
+  }
   void Unparse(const Expr::ComplexConstructor &x) {
     Put('('), Walk(x.t, ","), Put(')');
   }
@@ -1103,7 +1149,8 @@ public:
         x.u);
   }
   void Unparse(const CaseValueRange::Range &x) { // R1146
-    Walk(x.lower), Put(':'), Walk(x.upper);
+    const auto &[lower, upper]{x.t};
+    Walk(lower), Put(':'), Walk(upper);
   }
   void Unparse(const SelectRankStmt &x) { // R1149
     Walk(std::get<0>(x.t), ": ");
@@ -1326,65 +1373,26 @@ public:
     Walk(", ", std::get<std::list<OutputItem>>(x.t), ", ");
   }
   bool Pre(const IoControlSpec &x) { // R1213
-    return common::visit(common::visitors{
-                             [&](const IoUnit &) {
-                               Word("UNIT=");
-                               return true;
-                             },
-                             [&](const Format &) {
-                               Word("FMT=");
-                               return true;
-                             },
-                             [&](const Name &) {
-                               Word("NML=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::CharExpr &y) {
-                               Walk(y.t, "=");
-                               return false;
-                             },
-                             [&](const IoControlSpec::Asynchronous &) {
-                               Word("ASYNCHRONOUS=");
-                               return true;
-                             },
-                             [&](const EndLabel &) {
-                               Word("END=");
-                               return true;
-                             },
-                             [&](const EorLabel &) {
-                               Word("EOR=");
-                               return true;
-                             },
-                             [&](const ErrLabel &) {
-                               Word("ERR=");
-                               return true;
-                             },
-                             [&](const IdVariable &) {
-                               Word("ID=");
-                               return true;
-                             },
-                             [&](const MsgVariable &) {
-                               Word("IOMSG=");
-                               return true;
-                             },
-                             [&](const StatVariable &) {
-                               Word("IOSTAT=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::Pos &) {
-                               Word("POS=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::Rec &) {
-                               Word("REC=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::Size &) {
-                               Word("SIZE=");
-                               return true;
-                             },
-                         },
+    common::visit(
+        common::visitors{
+            [&](const IoUnit &) { Word("UNIT="); },
+            [&](const Format &) { Word("FMT="); },
+            [&](const Name &) { Word("NML="); },
+            [&](const IoControlSpec::CharExpr &y) { Walk(y.t, "="); },
+            [&](const IoControlSpec::Asynchronous &) { Word("ASYNCHRONOUS="); },
+            [&](const EndLabel &) { Word("END="); },
+            [&](const EorLabel &) { Word("EOR="); },
+            [&](const ErrLabel &) { Word("ERR="); },
+            [&](const IdVariable &) { Word("ID="); },
+            [&](const MsgVariable &) { Word("IOMSG="); },
+            [&](const StatVariable &) { Word("IOSTAT="); },
+            [&](const IoControlSpec::Pos &) { Word("POS="); },
+            [&](const IoControlSpec::Rec &) { Word("REC="); },
+            [&](const IoControlSpec::Size &) { Word("SIZE="); },
+            [&](const ErrorRecovery &) {},
+        },
         x.u);
+    return true;
   }
   void Unparse(const InputImpliedDo &x) { // R1218
     Put('('), Walk(std::get<std::list<InputItem>>(x.t), ", "), Put(", ");
@@ -1514,6 +1522,7 @@ public:
       FMT(G);
       FMT(L);
       FMT(A);
+      FMT(AT);
       FMT(D);
 #undef FMT
     }
@@ -1541,9 +1550,7 @@ public:
       Walk(x.count);
       break;
     case format::ControlEditDesc::Kind::X:
-      if (x.count != 1) {
-        Walk(x.count);
-      }
+      Walk(x.count);
       Word("X");
       break;
     case format::ControlEditDesc::Kind::Slash:
@@ -1576,6 +1583,9 @@ public:
       FMT(RP);
       FMT(DC);
       FMT(DP);
+      FMT(LZ);
+      FMT(LZS);
+      FMT(LZP);
 #undef FMT
     case format::ControlEditDesc::Kind::Dollar:
       Put('$');
@@ -1725,15 +1735,16 @@ public:
     Put('('), Walk(std::get<std::list<ActualArgSpec>>(x.v.t), ", "), Put(')');
   }
   void Unparse(const CallStmt &x) { // R1521
+    const auto &[call, chevrons]{x.t};
     if (asFortran_ && x.typedCall.get()) {
       Put(' ');
       asFortran_->call(out_, *x.typedCall);
       Put('\n');
     } else {
-      const auto &pd{std::get<ProcedureDesignator>(x.call.t)};
+      const auto &pd{std::get<ProcedureDesignator>(call.t)};
       Word("CALL "), Walk(pd);
-      Walk("<<<", x.chevrons, ">>>");
-      const auto &args{std::get<std::list<ActualArgSpec>>(x.call.t)};
+      Walk("<<<", chevrons, ">>>");
+      const auto &args{std::get<std::list<ActualArgSpec>>(call.t)};
       if (args.empty()) {
         if (std::holds_alternative<ProcComponentRef>(pd.u)) {
           Put("()"); // pgf90 crashes on CALL to tbp without parentheses
@@ -1753,6 +1764,27 @@ public:
   void Unparse(const ActualArg::PercentVal &x) {
     Word("%VAL("), Walk(x.v), Put(')');
   }
+  void UnparseConditionalArgBody(const ConditionalArg &x) {
+    Walk(std::get<ScalarLogicalExpr>(x.t));
+    Put(" ? ");
+    Walk(std::get<ConditionalArg::Consequent>(x.t));
+    Put(" : ");
+    Walk(std::get<common::Indirection<ConditionalArgTail>>(x.t));
+  }
+  void Unparse(const ConditionalArg &x) { // F2023 R1526
+    Put("( ");
+    UnparseConditionalArgBody(x);
+    Put(" )");
+  }
+  void Unparse(const ConditionalArgTail &x) {
+    common::visit(
+        common::visitors{
+            [&](const ConditionalArg &y) { UnparseConditionalArgBody(y); },
+            [&](const ConditionalArg::Consequent &y) { Walk(y); },
+        },
+        x.u);
+  }
+  void Post(const ConditionalArgNil &) { Word(".NIL."); } // part of F2023 R1527
   void Before(const AltReturnSpec &) { // R1525
     Put('*');
   }
@@ -1762,6 +1794,7 @@ public:
   void Post(const PrefixSpec::Non_Recursive) { Word("NON_RECURSIVE"); }
   void Post(const PrefixSpec::Pure) { Word("PURE"); }
   void Post(const PrefixSpec::Recursive) { Word("RECURSIVE"); }
+  void Post(const PrefixSpec::Simple) { Word("SIMPLE"); }
   void Unparse(const PrefixSpec::Attributes &x) {
     Word("ATTRIBUTES("), Walk(x.v), Word(")");
   }
@@ -1778,11 +1811,12 @@ public:
     Walk(" ", std::get<std::optional<Suffix>>(x.t)), Indent();
   }
   void Unparse(const Suffix &x) { // R1532
-    if (x.resultName) {
-      Word("RESULT("), Walk(x.resultName), Put(')');
-      Walk(" ", x.binding);
+    const auto &[resultName, binding]{x.t};
+    if (resultName) {
+      Word("RESULT("), Walk(resultName), Put(')');
+      Walk(" ", binding);
     } else {
-      Walk(x.binding);
+      Walk(binding);
     }
   }
   void Unparse(const EndFunctionStmt &x) { // R1533
@@ -1899,6 +1933,14 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
+            [&](const CompilerDirective::InlineAlways &inlineAlways) {
+              Word("!DIR$ INLINEALWAYS");
+              if (inlineAlways.v.has_value()) {
+                Word(" ");
+                Word(inlineAlways.v->ToString());
+              }
+            },
+            [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2076,7 +2118,7 @@ public:
   void Unparse(const OpenACCRoutineConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ROUTINE");
-    Walk("(", std::get<std::optional<Name>>(x.t), ")");
+    Walk("(", std::get<std::list<Name>>(x.t), ",", ")");
     Walk(std::get<AccClauseList>(x.t));
     Put("\n");
     EndOpenACC();
@@ -2184,12 +2226,13 @@ public:
   void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::ExplicitBegin)) {
+      Word("BEGIN ");
+    }
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpBeginLoopDirective &x) {
-    Unparse(static_cast<const OmpBeginDirective &>(x));
   }
   void Unparse(const OmpBeginSectionsDirective &x) {
     Unparse(static_cast<const OmpBeginDirective &>(x));
@@ -2231,6 +2274,12 @@ public:
     using Modifier = OmpDependClause::TaskDep::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpDepinfoModifier &x) {
+    Walk(std::get<OmpDepinfoModifier::Value>(x.t));
+    Put("(");
+    Walk(std::get<OmpObject>(x.t));
+    Put(")");
   }
   void Unparse(const OmpDetachClause &x) { Walk(x.v); }
   void Unparse(const OmpDeviceClause &x) {
@@ -2289,9 +2338,6 @@ public:
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpEndLoopDirective &x) {
-    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpEndSectionsDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
@@ -2614,7 +2660,7 @@ public:
   void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPAssumeConstruct &x) {
+  void Unparse(const OmpAssumeDirective &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPAtomicConstruct &x) {
@@ -2637,35 +2683,35 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPDeclarativeAssumes &x) {
+  void Unparse(const OmpAssumesDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &x) {
+  void Unparse(const OmpDeclareMapperDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareReductionConstruct &x) {
+  void Unparse(const OmpDeclareReductionDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &x) {
+  void Unparse(const OmpDeclareSimdDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareTargetConstruct &x) {
+  void Unparse(const OmpDeclareTargetDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2696,7 +2742,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPGroupprivate &x) {
+  void Unparse(const OmpGroupprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2720,14 +2766,14 @@ public:
   void Unparse(const OpenMPMisplacedEndDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
   }
-  void Unparse(const OpenMPRequiresConstruct &x) {
+  void Unparse(const OmpRequiresDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPSectionConstruct &x) {
+  void Unparse(const OmpSectionDirective &x) {
     if (auto &&dirSpec{
             std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       BeginOpenMP();
@@ -2750,7 +2796,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPThreadprivate &x) {
+  void Unparse(const OmpThreadprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2818,6 +2864,7 @@ public:
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(common, OmpDependenceKind)
+  WALK_NESTED_ENUM(common, OmpDeviceType)
   WALK_NESTED_ENUM(common, OmpMemoryOrderType)
   WALK_NESTED_ENUM(IntentSpec, Intent) // R826
   WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
@@ -2845,8 +2892,6 @@ public:
   WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
   WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
-  WALK_NESTED_ENUM(
-      OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier
@@ -2872,6 +2917,9 @@ public:
     switch (x) {
     case ReductionOperator::Operator::Plus:
       Word("+");
+      break;
+    case ReductionOperator::Operator::Minus:
+      Word("-");
       break;
     case ReductionOperator::Operator::Multiply:
       Word("*");

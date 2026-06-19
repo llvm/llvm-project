@@ -11,7 +11,9 @@
 // https://unicode.org/Public/15.1.0/ucd/
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -21,7 +23,6 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -189,12 +190,12 @@ public:
 
     // Keep track of the start of each node
     // position in the serialized data.
-    std::unordered_map<Node *, int32_t> Offsets;
+    llvm::DenseMap<Node *, int32_t> Offsets;
 
     // Keep track of where to write the index
     // of the first children
     std::vector<ChildrenOffset> ChildrenOffsets;
-    std::unordered_map<Node *, bool> SiblingTracker;
+    llvm::SmallPtrSet<Node *, 16> SiblingTracker;
     std::deque<Node *> AllNodes;
     std::vector<uint8_t> Bytes;
     Bytes.reserve(250'000);
@@ -206,7 +207,7 @@ public:
         const std::unique_ptr<Node> &Child = Children[Index];
         AllNodes.push_back(Child.get());
         if (Index != Children.size() - 1)
-          SiblingTracker[Child.get()] = true;
+          SiblingTracker.insert(Child.get());
       }
     };
     CollectChildren(Root->Children);
@@ -236,7 +237,7 @@ public:
         Bytes.push_back(Low);
       }
 
-      const bool HasSibling = SiblingTracker.count(N) != 0;
+      const bool HasSibling = SiblingTracker.contains(N);
       const bool HasChildren = N->Children.size() != 0;
 
       if (!!N->Value) {
@@ -417,15 +418,15 @@ int main(int argc, char **argv) {
 
   fprintf(Out,
           "namespace llvm { namespace sys { namespace unicode { \n"
-          "extern const char *UnicodeNameToCodepointDict;\n"
-          "extern const uint8_t *UnicodeNameToCodepointIndex;\n"
+          "extern const char *const UnicodeNameToCodepointDict;\n"
+          "extern const uint8_t *const UnicodeNameToCodepointIndex;\n"
           "extern const std::size_t UnicodeNameToCodepointIndexSize;\n"
           "extern const std::size_t UnicodeNameToCodepointLargestNameSize;\n");
 
-  fprintf(Out, "const char* UnicodeNameToCodepointDict = \"%s\";\n",
+  fprintf(Out, "const char *const UnicodeNameToCodepointDict = \"%s\";\n",
           Dict.c_str());
 
-  fprintf(Out, "uint8_t UnicodeNameToCodepointIndex_[%zu] = {\n",
+  fprintf(Out, "const uint8_t UnicodeNameToCodepointIndex_[%zu] = {\n",
           Tree.size() + 1);
 
   for (auto Byte : Tree) {
@@ -433,7 +434,7 @@ int main(int argc, char **argv) {
   }
 
   fprintf(Out, "0};");
-  fprintf(Out, "const uint8_t* UnicodeNameToCodepointIndex = "
+  fprintf(Out, "const uint8_t *const UnicodeNameToCodepointIndex = "
                "UnicodeNameToCodepointIndex_; \n");
   fprintf(Out, "const std::size_t UnicodeNameToCodepointIndexSize = %zu;\n",
           Tree.size() + 1);

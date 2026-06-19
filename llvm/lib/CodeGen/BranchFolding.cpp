@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -72,8 +74,9 @@ STATISTIC(NumTailMerge , "Number of block tails merged");
 STATISTIC(NumHoist     , "Number of times common instructions are hoisted");
 STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 
-static cl::opt<cl::boolOrDefault> FlagEnableTailMerge("enable-tail-merge",
-                              cl::init(cl::BOU_UNSET), cl::Hidden);
+static cl::opt<cl::boolOrDefault>
+    FlagEnableTailMerge("enable-tail-merge",
+                        cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
 
 // Throttle for huge numbers of predecessors (compile speed problems)
 static cl::opt<unsigned>
@@ -138,10 +141,11 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
-  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
-                               MF.getSubtarget().getRegisterInfo()))
-    return PreservedAnalyses::all();
-  return getMachineFunctionPassPreservedAnalyses();
+  if (Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                              MF.getSubtarget().getRegisterInfo()))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  return PreservedAnalyses::all();
 }
 
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -170,11 +174,15 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
     : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
       MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
   switch (FlagEnableTailMerge) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     EnableTailMerge = DefaultEnableTailMerge;
     break;
-  case cl::BOU_TRUE: EnableTailMerge = true; break;
-  case cl::BOU_FALSE: EnableTailMerge = false; break;
+  case cl::boolOrDefault::BOU_TRUE:
+    EnableTailMerge = true;
+    break;
+  case cl::boolOrDefault::BOU_FALSE:
+    EnableTailMerge = false;
+    break;
   }
 }
 
@@ -196,10 +204,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
       MF->eraseAdditionalCallInfo(&MI);
 
   // Remove the block.
-  MF->erase(MBB);
-  EHScopeMembership.erase(MBB);
   if (MLI)
     MLI->removeBlock(MBB);
+  MF->erase(MBB);
+  EHScopeMembership.erase(MBB);
 }
 
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
@@ -1250,7 +1258,8 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
     MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken()) {
+    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken() &&
+        !MBB.isEHPad()) {
       RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;

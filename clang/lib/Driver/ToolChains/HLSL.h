@@ -20,7 +20,9 @@ namespace tools {
 namespace hlsl {
 class LLVM_LIBRARY_VISIBILITY Validator : public Tool {
 public:
-  Validator(const ToolChain &TC) : Tool("hlsl::Validator", "dxv", TC) {}
+  Validator(const ToolChain &TC)
+      : Tool("hlsl::Validator", TC.getTriple().isSPIRV() ? "spirv-val" : "dxv",
+             TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -77,16 +79,30 @@ public:
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
-  bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
+
+  struct ValidationInfo {
+    bool NeedsValidation = false;
+    bool ProducesOutput = false;
+  };
+
+  /// Returns information about whether validation is required and whether the
+  /// validator produces output. When Diagnose is true, emits a warning if the
+  /// required validator executable cannot be found.
+  ValidationInfo getValidationInfo(llvm::opt::DerivedArgList &Args,
+                                   bool Diagnose = true) const;
   bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
   bool requiresObjcopy(llvm::opt::DerivedArgList &Args) const;
 
-  /// If we are targeting DXIL then the last job should output the DXContainer
-  /// to the specified output file with /Fo. Otherwise, we will emit to a
-  /// temporary file for the next job to use.
+  /// Determines whether the given action class is the last job that produces
+  /// an output file. This is used to decide whether to write to the -Fo
+  /// output path or to a temporary file.
   ///
-  /// Returns true if we should output to the final result file.
-  bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
+  /// For example, spirv-val is a pure validator that runs after the compile
+  /// step but doesn't produce output, so the compile step is the last
+  /// output-producing job. For DXIL, dxv validates and signs, producing the
+  /// final output.
+  bool isLastOutputProducingJob(llvm::opt::DerivedArgList &Args,
+                                Action::ActionClass AC) const;
 
   // Set default DWARF version to 4 for DXIL uses version 4.
   unsigned GetDefaultDwarfVersion() const override { return 4; }

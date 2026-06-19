@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float16 asinhf16(float16 x) {
+LIBC_INLINE constexpr float16 asinhf16(float16 x) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr size_t N_EXCEPTS = 8;
@@ -87,11 +87,13 @@ LIBC_INLINE static constexpr float16 asinhf16(float16 x) {
     // when |x| < 0x1.718p-5, asinhf16(x) = x. Adjust by 1 ULP for certain
     // rounding types.
     if (LIBC_UNLIKELY(x_abs < 0x29c6)) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       int rounding = fputil::quick_get_round();
       if ((rounding == FE_UPWARD || rounding == FE_TOWARDZERO) && xf < 0)
         return fputil::cast<float16>(xf + 0x1p-24f);
       if ((rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO) && xf > 0)
         return fputil::cast<float16>(xf - 0x1p-24f);
+#endif
       return fputil::cast<float16>(xf);
     }
 

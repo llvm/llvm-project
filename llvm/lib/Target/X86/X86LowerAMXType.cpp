@@ -505,8 +505,8 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   Value *Stride = Builder.getInt64(64);
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
-  Instruction *TileStore =
-      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
+  Instruction *TileStore = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::x86_tilestored64_internal, Args);
   return TileStore;
 }
 
@@ -813,7 +813,7 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
       // might support const.
       if (isa<Constant>(IncValue)) {
         auto *IncConst = dyn_cast<Constant>(IncValue);
-        if (!isa<UndefValue>(IncValue) && !IncConst->isZeroValue())
+        if (!isa<UndefValue>(IncValue) && !IncConst->isNullValue())
           return false;
         Value *Row = nullptr, *Col = nullptr;
         std::tie(Row, Col) = getShape(OldPN);
@@ -824,11 +824,12 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         // Create tilezero at the end of incoming block.
         auto *Block = OldPN->getIncomingBlock(I);
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
-        Instruction *NewInst = Builder.CreateIntrinsic(
+        Instruction *NewInst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::x86_tilezero_internal, {}, {Row, Col});
         NewInst->moveBefore(Iter);
-        NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                          {IncValue->getType()}, {NewInst});
+        NewInst = Builder.CreateIntrinsicWithoutFolding(
+            Intrinsic::x86_cast_tile_to_vector, {IncValue->getType()},
+            {NewInst});
         NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);
@@ -994,12 +995,9 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
     return false;
   std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(LD);
-  // Stride should be equal to col(measured by bytes)
-  Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   Value *I8Ptr;
 
-  // To save compiling time, we create doninator tree when it is really
-  // needed.
+  // To save compiling time, we create dominator tree when it is really needed.
   if (!DT)
     DT.reset(new DominatorTree(Func));
   if (!DT->dominates(Row, LD) || !DT->dominates(Col, LD)) {
@@ -1015,6 +1013,8 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   } else {
     I8Ptr = Builder.CreateBitCast(LD->getOperand(0), Builder.getPtrTy());
   }
+  // Stride should be equal to col(measured by bytes)
+  Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
   Value *NewInst =
