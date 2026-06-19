@@ -462,7 +462,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLoopModifier>() {
       /*name=*/"loop-modifier",
       /*props=*/
       {
-          {60, {OmpProperty::Optional}},
+          {60, {}},
       },
       /*clauses=*/
       {
