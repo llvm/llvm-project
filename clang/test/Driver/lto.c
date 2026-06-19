@@ -121,7 +121,7 @@
 // RUN: FileCheck --check-prefix=CHECK-NO-SLP < %t %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fslp-vectorize 2> %t
 // RUN: FileCheck --check-prefix=CHECK-SLP < %t %s
-//
+
 // CHECK-NO-SLP: "-plugin-opt=-vectorize-slp=0"
 // CHECK-SLP:    "-plugin-opt=-vectorize-slp=1"
 
