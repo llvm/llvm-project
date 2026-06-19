@@ -49,12 +49,12 @@ Each barrier *object* has the following state:
 * An unsigned non-negative integer *arrive count*: counts the number of *arrive* operations
   already performed on this barrier *object*.
 
-    * The initial value of *arrive count* is zero.
-    * When an operation causes *arrive count* to be equal to *expected count*, the barrier is completed,
-      and the *arrive count* is reset to zero.
+  * The initial value of *arrive count* is zero.
+  * When an operation causes *arrive count* to be equal to *expected count*, the barrier is completed,
+    and the *arrive count* is reset to zero.
 
-Barrier *objects* exist within a *scope* (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
-and each instance of a barrier *object* can only be accessed by threads in the same *scope* instance.
+Barrier *objects* exist within a *scope* instance (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
+and thus can only be accessed by threads in the same *scope* instance.
 
 .. _amdgpu-execution-synchronization-barriers-execution-model-barrier-operations:
 .. rubric::  Barrier Operations
@@ -77,7 +77,7 @@ of one of the following:
 * Barrier *arrive*.
 
   * Increments the *arrive count* of the barrier *object* by one.
-  * If supported, an additional argument to  *arrive* can also update the *expected count* of the
+  * If supported, an additional argument to *arrive* can also update the *expected count* of the
     barrier *object* before the *arrive count* is incremented;
     the new *expected count* cannot be less than or equal to the *arrive count*,
     otherwise the behavior is undefined.
@@ -155,7 +155,7 @@ For every pair of barrier *arrive* ``A`` and barrier *drop* ``D`` performed on a
 
 * ``A`` does not *barrier-participates-in* any barrier *wait*.
 * ``A`` *barrier-participates-in* at least one barrier *wait* ``W``
-  such that  ``W -> D`` in *barrier-executes-before*.
+  such that ``W -> D`` in *barrier-executes-before*.
 
 .. rubric:: *barrier-phase-with*
 
@@ -284,7 +284,7 @@ of a subset of waves of a workgroup, or synchronizing execution across workgroup
 "Named Barriers" Model Extensions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In order to reason about the execution of ``s_barrier`` "named barriers" on GFX12 and up,
+In order to reason about the execution of ``s_barrier`` "named barriers" on GFX12.5 and up,
 we define the following extensions to the
 :ref:`barrier execution model<amdgpu-execution-synchronization-barriers-execution-model>`:
 
@@ -295,10 +295,10 @@ we define the following extensions to the
 .. rubric::  Barrier *Objects*
 
 There is a sub-type of barrier *objects* called *named barrier objects*.
-*Named barrier object* inherit all the properties of barrier *objects* as defined by the barrier execution
+*Named barrier objects* inherit all the properties of barrier *objects* as defined by the barrier execution
 model. They are also subject to additional constraints.
 
-A barrier *object* is a *named barrier object* if and only if explicitly mentionned by the implementation.
+Not all barrier *objects* are *named barrier objects*, and both types can coexist in an implementation.
 
 .. rubric:: Barrier Operations
 
