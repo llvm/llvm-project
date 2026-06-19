@@ -22,6 +22,13 @@ bool isInStlNamespace(const Decl *D);
 
 bool isPointerLikeType(QualType QT);
 
+/// Whether `E` denotes the enclosing object `this`: the `this` expression
+/// itself, `*this`, or a derived-to-base / value-preserving pointer cast of
+/// `this`. A member access through any of these names a field of the same
+/// object, so they must be modeled identically. Parens and implicit casts are
+/// looked through.
+bool isThisExpr(const Expr *E);
+
 /// Returns the most recent declaration of the method to ensure all
 /// lifetime-bound attributes from redeclarations are considered.
 const FunctionDecl *getDeclWithMergedLifetimeBoundAttrs(const FunctionDecl *FD);

@@ -972,8 +972,7 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!MemberCall)
     return;
 
-  if (!isa_and_present<CXXThisExpr>(
-          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
+  if (!isThisExpr(MemberCall->getImplicitObjectArgument()))
     return;
 
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
