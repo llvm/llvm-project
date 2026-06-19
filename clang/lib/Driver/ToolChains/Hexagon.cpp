@@ -336,14 +336,15 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   if (HTC.getTriple().isMusl()) {
-    if (!Args.hasArg(options::OPT_shared, options::OPT_static))
+    if (!Args.hasArg(options::OPT_shared, options::OPT_static, options::OPT_r))
       CmdArgs.push_back("-dynamic-linker=/lib/ld-musl-hexagon.so.1");
 
     if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
-                     options::OPT_nostdlib))
+                     options::OPT_nostdlib, options::OPT_r))
       CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crt1.o"));
     else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib))
+             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                          options::OPT_r))
       CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
 
     if (!HTC.getSelectedMultilibs().empty() &&

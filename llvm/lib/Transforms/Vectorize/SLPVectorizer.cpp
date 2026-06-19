@@ -2242,6 +2242,15 @@ public:
     HasRuntimeCheckableBlockers = V;
   }
 
+  /// Returns true if the last buildTree() kept a may-alias memory dependency
+  /// that is not runtime-checkable (call or a non-simple mem access). Such a
+  /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
+  /// region and would be pure overhead.
+  bool hasNonCheckableMemBlocker() const { return HasNonCheckableMemBlocker; }
+
+  /// Records that a non-runtime-checkable may-alias dependency was kept.
+  void setHasNonCheckableMemBlocker(bool V) { HasNonCheckableMemBlocker = V; }
+
   /// Returns true if the current vectorization attempt may drop
   /// runtime-checkable may-alias dependencies and guard the region with
   /// runtime alias checks.
@@ -2254,6 +2263,7 @@ public:
   /// Resets the runtime alias check data.
   void resetRuntimeAliasCheckState() {
     HasRuntimeCheckableBlockers = false;
+    HasNonCheckableMemBlocker = false;
     RTChecksFinalized = false;
     RTChecks.clear();
     RTOrigBodyOrder.clear();
@@ -2263,6 +2273,13 @@ public:
   /// RTOrigBodyOrder in program order, for the scalar fallback.
   void captureRuntimeCheckBodySnapshot();
 
+  /// Returns true if \p BB satisfies the block-level preconditions for runtime
+  /// alias check versioning (straight-line, outside any loop, duplicable, not a
+  /// scalar fallback, function not optimized for size). These checks do not
+  /// depend on the collected checks, so they can gate the (expensive)
+  /// optimistic retry before any tree is rebuilt.
+  bool canVersionBlockForRuntimeChecks(BasicBlock *BB) const;
+
   /// Returns true if the runtime alias checks can be safely emitted to guard
   /// the vectorized region.
   bool canVersionForRuntimeChecks();
@@ -2271,6 +2288,18 @@ public:
   /// check versioning.
   bool isScalarFallbackBlock(BasicBlock *BB) const {
     return ScalarFallbackBlocks.contains(BB);
+  }
+
+  /// Returns true if an optimistic runtime-checks versioning attempt already
+  /// failed for \p BB, so further retries in the same block can be skipped.
+  bool runtimeChecksFailedForBlock(BasicBlock *BB) const {
+    return FailedRuntimeChecksBlocks.contains(BB);
+  }
+
+  /// Records that an optimistic runtime-checks versioning attempt failed for
+  /// \p BB.
+  void markRuntimeChecksFailedForBlock(BasicBlock *BB) {
+    FailedRuntimeChecksBlocks.insert(BB);
   }
 
   /// Returns the modeled cost of the runtime alias checks collected during the
@@ -2388,6 +2417,7 @@ public:
     ExternalUsesWithNonUsers.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
+    HasNonCheckableMemBlocker = false;
     RTChecksFinalized = false;
     for (auto &Iter : BlocksSchedules) {
       BlockScheduling *BS = Iter.second.get();
@@ -5174,6 +5204,10 @@ private:
   /// Scalar fallback blocks.
   SmallPtrSet<BasicBlock *, 4> ScalarFallbackBlocks;
 
+  /// Blocks for which a runtime-checks versioning attempt was made
+  /// and did not produce a profitable versioning.
+  SmallPtrSet<BasicBlock *, 8> FailedRuntimeChecksBlocks;
+
   /// Returns true if a may-alias dependency between the simple load/store
   /// instructions \p Inst1 and \p Inst2 in block \p BB is already covered by a
   /// runtime alias check emitted for \p BB by a previous versioning.
@@ -5183,6 +5217,10 @@ private:
   /// True, if a may-alias dependency between distinct, range-checkable base
   /// objects is observed (whether or not it was dropped).
   bool HasRuntimeCheckableBlockers = false;
+
+  /// True, if a kept may-alias dependency is not runtime-checkable (call or a
+  /// non-simple memaccess).
+  bool HasNonCheckableMemBlocker = false;
 
   /// Runtime checks are validated and bounded the collected checks.
   bool RTChecksFinalized = false;
@@ -7588,6 +7626,14 @@ static bool isMaskedLoadCompress(
       }
     }
   }
+  // Estimating the compression shuffle cost below can be extremely expensive
+  // for a very wide LoadVecTy, which is split into a large number of vector
+  // registers (see processShuffleMasks). The shuffle cost is always
+  // non-negative, so if the load cost alone already reaches the gather cost the
+  // masked-load-compress cannot be profitable. Bail out before the costly
+  // shuffle cost estimation in that case.
+  if (VectorGEPCost + LoadCost >= GatherCost)
+    return false;
   InstructionCost CompressCost = ::getShuffleCost(
       TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CompressMask, CostKind);
   if (!Order.empty()) {
@@ -21821,7 +21867,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
         (all_of(E->Scalars,
                 [&](Value *V) {
                   return isa<PoisonValue>(V) ||
-                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                         (E->Idx == 0 &&
+                          isa<InsertElementInst, InsertValueInst>(V)) ||
                          E->isCopyableElement(V) ||
                          (!isVectorLikeInstWithConstOps(V) &&
                           isUsedOutsideBlock(V));
@@ -24103,7 +24150,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                                          static_cast<int>(
                                              DL->getTypeAllocSize(ScalarTy))));
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
-        auto *Inst = Builder.CreateIntrinsic(
+        auto *Inst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::experimental_vp_strided_load,
             {StridedLoadTy, PO->getType(), StrideTy},
             {PO, StrideVal,
@@ -24192,7 +24239,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                 StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         if (StridedStoreTy != VecTy)
           VecValue = Builder.CreateBitOrPointerCast(VecValue, StridedStoreTy);
-        auto *Inst = Builder.CreateIntrinsic(
+        auto *Inst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::experimental_vp_strided_store,
             {StridedStoreTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr, StrideVal,
@@ -24569,8 +24616,10 @@ bool BoUpSLP::isRuntimeCheckableAliasPair(Instruction *Inst1,
     return false;
   const Value *Base1 = getUnderlyingObject(Ptr1);
   const Value *Base2 = getUnderlyingObject(Ptr2);
-  // A range check is only meaningful between two distinct, identifiable
-  // objects.
+  // A runtime range check is only meaningful between two distinct, identifiable
+  // objects: two accesses to the same base differ by a compile-time offset, so
+  // they are resolved statically and a base-range check would fold to a
+  // constant predicate rather than a useful runtime guard.
   if (Base1 == Base2 || isa<UndefValue>(Base1) || isa<UndefValue>(Base2))
     return false;
   return true;
@@ -24645,29 +24694,30 @@ bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
   return true;
 }
 
-bool BoUpSLP::canVersionForRuntimeChecks() {
-  if (RTChecks.BasePairs.empty() || !RTChecks.BB)
+bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
+  assert(BB && "Expected a block to version for runtime checks.");
+  if (!BB->getTerminator())
     return false;
-  if (RTChecks.BasePairs.size() > SLPMaxRuntimeAliasChecks)
+  // Versioning duplicates the block body, increasing code size on the guarded
+  // path; do not version when the function is optimized for size (-Os/-Oz).
+  if (F->hasOptSize())
     return false;
-  BasicBlock *BB = RTChecks.BB;
-  // Never version a scalar fallback block: it is the safe, original-order copy
-  // taken when aliasing is detected and must stay scalar.
-  if (ScalarFallbackBlocks.contains(BB))
+  if (!DT || !LI)
+    return false;
+  if (!DT->isReachableFromEntry(BB))
     return false;
   // Versioning duplicates the block body; only straight-line code outside any
   // loop is handled for now, to avoid LoopInfo and region updates.
-  if (!LI || LI->getLoopFor(BB))
+  if (LI->getLoopFor(BB))
     return false;
-  if (!BB->getTerminator())
-    return false;
-  if (!DT)
+  // Never version a scalar fallback block: it is the safe, original-order copy
+  // taken when aliasing is detected and must stay scalar.
+  if (ScalarFallbackBlocks.contains(BB))
     return false;
   // The scalar fallback must be a faithful copy of the original scalar body.
   // Reject blocks that were already partially vectorized earlier in this pass.
   if (blockBodyHasVectorInstructions(BB))
     return false;
-
   // Versioning duplicates the original block body into a scalar fallback.
   // Calls that cannot be duplicated or whose semantics depend on the call being
   // immediately followed by a return cannot be cloned into the diamond.
@@ -24677,6 +24727,19 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
         auto *CB = dyn_cast<CallBase>(&I);
         return CB && (CB->cannotDuplicate() || CB->isConvergent());
       }))
+    return false;
+  return true;
+}
+
+bool BoUpSLP::canVersionForRuntimeChecks() {
+  if (RTChecks.BasePairs.empty() || !RTChecks.BB)
+    return false;
+  if (RTChecks.BasePairs.size() > SLPMaxRuntimeAliasChecks)
+    return false;
+  BasicBlock *BB = RTChecks.BB;
+  // Block-level preconditions (loop/optsize/duplicability/...) are the same
+  // ones used to gate the optimistic retry, so reuse them here.
+  if (!canVersionBlockForRuntimeChecks(BB))
     return false;
 
   // The scalar fallback is a clone of the body. Operands defined inside the
@@ -24744,6 +24807,9 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
     // Byte offset of this access from its base. Require a constant so the bound
     // stays base-plus-constant, and non-negative so the unsigned [Low, High)
     // range below actually covers the access.
+    // TODO: Support variable offsets (e.g. base + %idx) which would need
+    // runtime umin/umax bounds and a proof that the offset range cannot wrap,
+    // plus a richer cost model.
     const auto *Off = dyn_cast<SCEVConstant>(SE->getMinusSCEV(PtrSC, BaseSC));
     if (!Off || Off->getAPInt().isNegative())
       return false;
@@ -24972,6 +25038,8 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       VersionedBlockCheckedPairs[VecBB];
   Covered.insert_range(RTChecks.BasePairs);
   // The scalar fallback must never be vectorized or versioned again.
+  // TODO: check that scalar fallback does not miss vectorization opportunity
+  // without runimte checks.
   ScalarFallbackBlocks.insert(ScalarBB);
 
   // The checks have been emitted; clear so any later vectorizeTree() in the
@@ -26916,17 +26984,9 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       //    check this limit even between two read-only instructions.
       Instruction *DepInst = DepDest->getInst();
       bool MayConflict = SrcMayWrite || DepInst->mayWriteToMemory();
-      bool AddDep = false;
-      if (DistToSrc >= MaxMemDepDistance) {
-        AddDep = true;
-      } else if (MayConflict &&
-                 (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit)) {
-        AddDep = true;
-      } else if (MayConflict && SLP->isAliased(SrcLoc, SrcInst, DepInst)) {
-        AddDep = true;
-      }
-
-      if (AddDep) {
+      if (DistToSrc >= MaxMemDepDistance ||
+          (MayConflict && (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
+                           SLP->isAliased(SrcLoc, SrcInst, DepInst)))) {
         // Try to turn a may-alias dependency between distinct, range-checkable
         // base objects into a runtime alias check. This covers both concrete
         // aliases and the conservative dependencies added once the
@@ -26954,11 +27014,19 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
               IgnoredMemDeps.insert(Key);
               Dropped = true;
             }
-          } else if (!SLP->hasRuntimeCheckableBlockers() &&
-                     SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst)) {
-            // Record only that a runtime check could unblock this region; the
-            // retry will collect the actual checks.
-            SLP->setHasRuntimeCheckableBlockers(true);
+          } else if (!SLP->hasNonCheckableMemBlocker()) {
+            // A dependency on a non-simple access (call, a volatile/atomic, or
+            // anything without a single load/store pointer) cannot be
+            // range-checked, so it is a hard blocker a retry cannot drop. A
+            // simple runtime-checkable may-alias pair could instead be dropped
+            // by a runtime check. Other simple pairs (e.g. same base) are
+            // resolved statically and are not blockers.
+            if (IsNonSimpleSrc || !getLoadStorePointerOperand(DepInst) ||
+                !isSimple(DepInst))
+              SLP->setHasNonCheckableMemBlocker(true);
+            else if (!SLP->hasRuntimeCheckableBlockers() &&
+                     SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst))
+              SLP->setHasRuntimeCheckableBlockers(true);
           }
         }
 
@@ -28302,11 +28370,33 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
                                        unsigned &Size) {
   std::optional<bool> Res = vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size);
+  assert(!R.isTryingRuntimeAliasChecks() &&
+         "Unexpected nested runtime alias check attempt");
   // Retry once with runtime alias checks, but only when the normal attempt
   // could not even schedule the bundle, i.e. it was blocked by
-  // a memory dependency, and that dependency is runtime-checkable.
+  // a memory dependency, and that dependency is runtime-checkable. If the
+  // region also kept a non-checkable blocker, dropping the checkable deps
+  // cannot unblock it.
   if (Res.has_value() || !SLPEnableRuntimeAliasChecks ||
-      R.isTryingRuntimeAliasChecks() || !R.hasRuntimeCheckableBlockers())
+      !R.hasRuntimeCheckableBlockers() || R.hasNonCheckableMemBlocker())
+    return Res;
+  // Only retry when scheduling blocked the chain (a store or its value bundle
+  // could not be scheduled), which dropping may-alias deps can fix. A chain
+  // gathered for structural reasons (e.g. non-consecutive addresses) would
+  // gather again, so the second buildTree() would be pure overhead with no
+  // vectorization benefit.
+  Value *FirstStore = Chain.front();
+  if (!R.isNotScheduled(FirstStore) &&
+      !R.isNotScheduled(cast<StoreInst>(FirstStore)->getValueOperand()))
+    return Res;
+  BasicBlock *BB = cast<Instruction>(FirstStore)->getParent();
+  // If an earlier optimistic attempt already failed for this block, do not
+  // retry for other chains or smaller VFs in the same block.
+  if (R.runtimeChecksFailedForBlock(BB))
+    return Res;
+  // The retry rebuilds the whole tree; also skip it when the chain's block can
+  // never be versioned (e.g. it is inside a loop).
+  if (!R.canVersionBlockForRuntimeChecks(BB))
     return Res;
   R.setTryRuntimeAliasChecks(true);
   unsigned RTSize = Size;
@@ -28317,6 +28407,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     Size = RTSize;
     return RTRes;
   }
+  // The versioning attempt failed for this block, skip the (expensive) retry.
+  R.markRuntimeChecksFailedForBlock(BB);
   return Res;
 }
 
@@ -28402,9 +28494,15 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   // for the runtime alias checks in the cost and make sure the region can
   // actually be versioned. If it cannot, abandon this attempt: the dropped
   // dependencies are unused because the tree is not vectorized.
+  // The full check cost is charged against the vector-path benefit here; the
+  // scalar-path overhead is bounded separately in canVersionForRuntimeChecks()
+  // (a fraction of the scalar body cost).
   if (R.isTryingRuntimeAliasChecks() && R.hasRuntimeAliasChecks()) {
     if (!R.canVersionForRuntimeChecks())
       return false;
+    // TODO: Add probability-weighted model (benefit scaled by the expected
+    // non-alias odds) would be more precise but needs
+    // branch-probability/profile data.
     Cost += R.getRuntimeChecksCost();
   }
 

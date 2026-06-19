@@ -168,6 +168,7 @@ add_llvm_component_library(LLVMSupport
   BuryPointer.cpp
   CachePruning.cpp
   Caching.cpp
+  CHERICapabilityFormat.cpp
   circular_raw_ostream.cpp
   Chrono.cpp
   COM.cpp
