@@ -332,10 +332,10 @@ public:
 #ifdef HAVE_ANDROID_UNSAFE_FRAME_POINTER_CHASE
     // Discard collectStackTrace() frame and allocator function frame.
     constexpr uptr DiscardFrames = 2;
-    uptr Stack[MaxTraceSize + DiscardFrames];
-    uptr Size =
-        android_unsafe_frame_pointer_chase(Stack, MaxTraceSize + DiscardFrames);
-    Size = Min<uptr>(Size, MaxTraceSize + DiscardFrames);
+    uptr Stack[ScudoTraceSize + DiscardFrames];
+    uptr Size = android_unsafe_frame_pointer_chase(Stack, ScudoTraceSize +
+                                                              DiscardFrames);
+    Size = Min<uptr>(Size, ScudoTraceSize + DiscardFrames);
     return Depot->insert(Stack + Min<uptr>(DiscardFrames, Size), Stack + Size);
 #else
     return 0;
@@ -1000,7 +1000,7 @@ public:
       return;
 
     // No more room for any more error reports.
-    if (ReportIndex == NumErrorReports)
+    if (ReportIndex == ScudoNumErrorReports)
       return;
 
     uptr UntaggedFaultAddr = untagPointer(FaultAddr);
@@ -1048,7 +1048,7 @@ public:
       const u32 *TidPtr = reinterpret_cast<const u32 *>(loadTagUnaligned(
           reinterpret_cast<uptr>(&ChunkData[MemTagAllocationTidIndex])));
       Report->allocation_tid = *TidPtr;
-      return ReportIndex == NumErrorReports;
+      return ReportIndex == ScudoNumErrorReports;
     };
 
     if (MinDistance == 0 && CheckOOB(Info.BlockBegin))
@@ -1067,7 +1067,7 @@ public:
       return;
 
     // No more room for any more error reports.
-    if (ReportIndex == NumErrorReports)
+    if (ReportIndex == ScudoNumErrorReports)
       return;
 
     uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
@@ -1142,7 +1142,7 @@ public:
       collectTraceMaybe(RingBuffer->Depot, Report->deallocation_trace,
                         DeallocationTrace);
       Report->deallocation_tid = DeallocationTid;
-      if (ReportIndex == NumErrorReports) {
+      if (ReportIndex == ScudoNumErrorReports) {
         // No more report entries.
         return;
       }
@@ -1173,63 +1173,13 @@ public:
     }
   }
 
-  static const uptr MaxTraceSize = 64;
-
   static void collectTraceMaybe(const StackDepot *Depot,
-                                uintptr_t (&Trace)[MaxTraceSize], u32 Hash) {
+                                uintptr_t (&Trace)[ScudoTraceSize], u32 Hash) {
     uptr RingPos, Size;
     if (!Depot->find(Hash, &RingPos, &Size))
       return;
-    for (unsigned I = 0; I != Size && I != MaxTraceSize; ++I)
+    for (unsigned I = 0; I != Size && I != ScudoTraceSize; ++I)
       Trace[I] = static_cast<uintptr_t>(Depot->at(RingPos + I));
-  }
-
-  static void getErrorInfo(struct scudo_error_info *ErrorInfo,
-                           uintptr_t FaultAddr, const char *DepotPtr,
-                           size_t DepotSize, const char *RegionInfoPtr,
-                           const char *RingBufferPtr, size_t RingBufferSize,
-                           const char *Memory, const char *MemoryTags,
-                           uintptr_t MemoryAddr, size_t MemorySize) {
-    // N.B. we need to support corrupted data in any of the buffers here. We get
-    // this information from an external process (the crashing process) that
-    // should not be able to crash the crash dumper (crash_dump on Android).
-    // See also the get_error_info_fuzzer.
-    *ErrorInfo = {};
-    if (!allocatorSupportsMemoryTagging<AllocatorConfig>() ||
-        MemoryAddr + MemorySize < MemoryAddr)
-      return;
-
-    const StackDepot *Depot = nullptr;
-    if (DepotPtr) {
-      // check for corrupted StackDepot. First we need to check whether we can
-      // read the metadata, then whether the metadata matches the size.
-      if (DepotSize < sizeof(*Depot))
-        return;
-      Depot = reinterpret_cast<const StackDepot *>(DepotPtr);
-      if (!Depot->isValid(DepotSize))
-        return;
-    }
-
-    size_t NextErrorReport = 0;
-
-    // Check for OOB in the current block and the two surrounding blocks. Beyond
-    // that, UAF is more likely.
-    if (extractTag(FaultAddr) != 0)
-      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
-                         RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
-                         MemorySize, 0, 2);
-
-    // Check the ring buffer. For primary allocations this will only find UAF;
-    // for secondary allocations we can find either UAF or OOB.
-    getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
-                           RingBufferPtr, RingBufferSize);
-
-    // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
-    // Beyond that we are likely to hit false positives.
-    if (extractTag(FaultAddr) != 0)
-      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
-                         RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
-                         MemorySize, 2, 16);
   }
 
   uptr getBlockBeginTestOnly(const void *Ptr) {
@@ -1803,169 +1753,6 @@ private:
     storeRingBufferEntry(RB, addFixedTag(untagPointer(Ptr), PrevTag),
                          AllocationTrace, AllocationTid, Size,
                          DeallocationTrace, DeallocationTid);
-  }
-
-  static const size_t NumErrorReports =
-      sizeof(((scudo_error_info *)nullptr)->reports) /
-      sizeof(((scudo_error_info *)nullptr)->reports[0]);
-
-  static void getInlineErrorInfo(struct scudo_error_info *ErrorInfo,
-                                 size_t &NextErrorReport, uintptr_t FaultAddr,
-                                 const StackDepot *Depot,
-                                 const char *RegionInfoPtr, const char *Memory,
-                                 const char *MemoryTags, uintptr_t MemoryAddr,
-                                 size_t MemorySize, size_t MinDistance,
-                                 size_t MaxDistance) {
-    uptr UntaggedFaultAddr = untagPointer(FaultAddr);
-    u8 FaultAddrTag = extractTag(FaultAddr);
-    BlockInfo Info =
-        PrimaryT::findNearestBlock(RegionInfoPtr, UntaggedFaultAddr);
-
-    auto GetGranule = [&](uptr Addr, const char **Data, uint8_t *Tag) -> bool {
-      if (Addr < MemoryAddr || Addr + archMemoryTagGranuleSize() < Addr ||
-          Addr + archMemoryTagGranuleSize() > MemoryAddr + MemorySize)
-        return false;
-      *Data = &Memory[Addr - MemoryAddr];
-      *Tag = static_cast<u8>(
-          MemoryTags[(Addr - MemoryAddr) / archMemoryTagGranuleSize()]);
-      return true;
-    };
-
-    auto ReadBlock = [&](uptr Addr, uptr *ChunkAddr,
-                         Chunk::UnpackedHeader *Header, const u32 **Data,
-                         u8 *Tag) {
-      const char *BlockBegin;
-      u8 BlockBeginTag;
-      if (!GetGranule(Addr, &BlockBegin, &BlockBeginTag))
-        return false;
-      uptr ChunkOffset = getChunkOffsetFromBlock(BlockBegin);
-      *ChunkAddr = Addr + ChunkOffset;
-
-      const char *ChunkBegin;
-      if (!GetGranule(*ChunkAddr, &ChunkBegin, Tag))
-        return false;
-      *Header = *reinterpret_cast<const Chunk::UnpackedHeader *>(
-          ChunkBegin - Chunk::getHeaderSize());
-      *Data = reinterpret_cast<const u32 *>(ChunkBegin);
-
-      // Allocations of size 0 will have stashed the tag in the first byte of
-      // the chunk, see storeEndMarker().
-      if (Header->SizeOrUnusedBytes == 0)
-        *Tag = static_cast<u8>(*ChunkBegin);
-
-      return true;
-    };
-
-    if (NextErrorReport == NumErrorReports)
-      return;
-
-    auto CheckOOB = [&](uptr BlockAddr) {
-      if (BlockAddr < Info.RegionBegin || BlockAddr >= Info.RegionEnd)
-        return false;
-
-      uptr ChunkAddr;
-      Chunk::UnpackedHeader Header;
-      const u32 *Data;
-      uint8_t Tag;
-      if (!ReadBlock(BlockAddr, &ChunkAddr, &Header, &Data, &Tag) ||
-          Header.State != Chunk::State::Allocated || Tag != FaultAddrTag)
-        return false;
-
-      auto *R = &ErrorInfo->reports[NextErrorReport++];
-      R->error_type =
-          UntaggedFaultAddr < ChunkAddr ? BUFFER_UNDERFLOW : BUFFER_OVERFLOW;
-      R->allocation_address = ChunkAddr;
-      R->allocation_size = Header.SizeOrUnusedBytes;
-      if (Depot) {
-        collectTraceMaybe(Depot, R->allocation_trace,
-                          Data[MemTagAllocationTraceIndex]);
-      }
-      R->allocation_tid = Data[MemTagAllocationTidIndex];
-      return NextErrorReport == NumErrorReports;
-    };
-
-    if (MinDistance == 0 && CheckOOB(Info.BlockBegin))
-      return;
-
-    for (size_t I = Max<size_t>(MinDistance, 1); I != MaxDistance; ++I)
-      if (CheckOOB(Info.BlockBegin + I * Info.BlockSize) ||
-          CheckOOB(Info.BlockBegin - I * Info.BlockSize))
-        return;
-  }
-
-  static void getRingBufferErrorInfo(struct scudo_error_info *ErrorInfo,
-                                     size_t &NextErrorReport,
-                                     uintptr_t FaultAddr,
-                                     const StackDepot *Depot,
-                                     const char *RingBufferPtr,
-                                     size_t RingBufferSize) {
-    auto *RingBuffer =
-        reinterpret_cast<const AllocationRingBuffer *>(RingBufferPtr);
-    size_t RingBufferElements = ringBufferElementsFromBytes(RingBufferSize);
-    if (!RingBuffer || RingBufferElements == 0 || !Depot)
-      return;
-    uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
-
-    for (uptr I = Pos - 1; I != Pos - 1 - RingBufferElements &&
-                           NextErrorReport != NumErrorReports;
-         --I) {
-      auto *Entry = getRingBufferEntry(RingBuffer, I % RingBufferElements);
-      uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
-      if (!EntryPtr)
-        continue;
-
-      uptr UntaggedEntryPtr = untagPointer(EntryPtr);
-      uptr EntrySize = atomic_load_relaxed(&Entry->AllocationSize);
-      u32 AllocationTrace = atomic_load_relaxed(&Entry->AllocationTrace);
-      u32 AllocationTid = atomic_load_relaxed(&Entry->AllocationTid);
-      u32 DeallocationTrace = atomic_load_relaxed(&Entry->DeallocationTrace);
-      u32 DeallocationTid = atomic_load_relaxed(&Entry->DeallocationTid);
-
-      if (DeallocationTid) {
-        // For UAF we only consider in-bounds fault addresses because
-        // out-of-bounds UAF is rare and attempting to detect it is very likely
-        // to result in false positives.
-        if (FaultAddr < EntryPtr || FaultAddr >= EntryPtr + EntrySize)
-          continue;
-      } else {
-        // Ring buffer OOB is only possible with secondary allocations. In this
-        // case we are guaranteed a guard region of at least a page on either
-        // side of the allocation (guard page on the right, guard page + tagged
-        // region on the left), so ignore any faults outside of that range.
-        if (FaultAddr < EntryPtr - getPageSizeCached() ||
-            FaultAddr >= EntryPtr + EntrySize + getPageSizeCached())
-          continue;
-
-        // For UAF the ring buffer will contain two entries, one for the
-        // allocation and another for the deallocation. Don't report buffer
-        // overflow/underflow using the allocation entry if we have already
-        // collected a report from the deallocation entry.
-        bool Found = false;
-        for (uptr J = 0; J != NextErrorReport; ++J) {
-          if (ErrorInfo->reports[J].allocation_address == UntaggedEntryPtr) {
-            Found = true;
-            break;
-          }
-        }
-        if (Found)
-          continue;
-      }
-
-      auto *R = &ErrorInfo->reports[NextErrorReport++];
-      if (DeallocationTid)
-        R->error_type = USE_AFTER_FREE;
-      else if (FaultAddr < EntryPtr)
-        R->error_type = BUFFER_UNDERFLOW;
-      else
-        R->error_type = BUFFER_OVERFLOW;
-
-      R->allocation_address = UntaggedEntryPtr;
-      R->allocation_size = EntrySize;
-      collectTraceMaybe(Depot, R->allocation_trace, AllocationTrace);
-      R->allocation_tid = AllocationTid;
-      collectTraceMaybe(Depot, R->deallocation_trace, DeallocationTrace);
-      R->deallocation_tid = DeallocationTid;
-    }
   }
 
   uptr getStats(ScopedString *Str) {
