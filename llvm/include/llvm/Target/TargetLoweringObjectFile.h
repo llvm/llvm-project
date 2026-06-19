@@ -108,13 +108,14 @@ public:
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment) const;
+                                           Align &Alignment,
+                                           const Function *F) const;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment,
+                                           Align &Alignment, const Function *F,
                                            StringRef SectionSuffix) const;
 
   virtual MCSection *
@@ -269,7 +270,7 @@ public:
   /// On targets that use separate function descriptor symbols, return a section
   /// for the descriptor given its symbol. Use only with defined functions.
   virtual MCSection *
-  getSectionForFunctionDescriptor(const Function *F,
+  getSectionForFunctionDescriptor(const GlobalObject *F,
                                   const TargetMachine &TM) const {
     return nullptr;
   }

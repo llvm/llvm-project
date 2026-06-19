@@ -6,7 +6,7 @@ entry:
   %argument.addr = alloca i32, align 4
   %incremented = add i32 %argument, 1
   store i32 %incremented, ptr %argument.addr, align 4
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 

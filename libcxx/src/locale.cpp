@@ -45,6 +45,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 struct __libcpp_unique_locale {
   __libcpp_unique_locale(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {}
@@ -158,11 +159,11 @@ locale::__imp::__imp(size_t refs) : facet(refs), facets_(N), name_("C") {
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   install(&make<codecvt<char16_t, char, mbstate_t> >(1u));
   install(&make<codecvt<char32_t, char, mbstate_t> >(1u));
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
   install(&make<codecvt<char16_t, char8_t, mbstate_t> >(1u));
   install(&make<codecvt<char32_t, char8_t, mbstate_t> >(1u));
 #endif
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
   install(&make<numpunct<char> >(1u));
 #if _LIBCPP_HAS_WIDE_CHARACTERS
   install(&make<numpunct<wchar_t> >(1u));
@@ -228,11 +229,11 @@ locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N),
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
   install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
   install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name_));
   install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
 #endif
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
   install(new numpunct_byname<char>(name_));
 #if _LIBCPP_HAS_WIDE_CHARACTERS
   install(new numpunct_byname<wchar_t>(name_));
@@ -294,11 +295,11 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     install(new codecvt_byname<char16_t, char, mbstate_t>(name));
     install(new codecvt_byname<char32_t, char, mbstate_t>(name));
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
     install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name));
     install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name));
 #endif
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   if (c & locale::monetary) {
     install(new moneypunct_byname<char, false>(name));
@@ -366,11 +367,11 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     install_from<std::codecvt<char16_t, char, mbstate_t> >(one);
     install_from<std::codecvt<char32_t, char, mbstate_t> >(one);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_CHAR8_T
     install_from<std::codecvt<char16_t, char8_t, mbstate_t> >(one);
     install_from<std::codecvt<char32_t, char8_t, mbstate_t> >(one);
 #endif
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
 #if _LIBCPP_HAS_WIDE_CHARACTERS
     install_from<std::codecvt<wchar_t, char, mbstate_t> >(one);
 #endif
@@ -2318,7 +2319,7 @@ static codecvt_base::result utf16be_to_ucs4(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xFC00) == 0xDC00)
       return codecvt_base::error;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2329,7 +2330,7 @@ static codecvt_base::result utf16be_to_ucs4(
     } else {
       if (frm_end - frm_nxt < 4)
         return codecvt_base::partial;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[2] << 8 | frm_nxt[3]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[2] << 8) | frm_nxt[3]);
       if ((c2 & 0xFC00) != 0xDC00)
         return codecvt_base::error;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2354,7 +2355,7 @@ static int utf16be_to_ucs4_length(
       frm_nxt += 2;
   }
   for (size_t nchar32_t = 0; frm_nxt < frm_end - 1 && nchar32_t < mx; ++nchar32_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xFC00) == 0xDC00)
       break;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2364,7 +2365,7 @@ static int utf16be_to_ucs4_length(
     } else {
       if (frm_end - frm_nxt < 4)
         break;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[2] << 8 | frm_nxt[3]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[2] << 8) | frm_nxt[3]);
       if ((c2 & 0xFC00) != 0xDC00)
         break;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2432,7 +2433,7 @@ static codecvt_base::result utf16le_to_ucs4(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xFC00) == 0xDC00)
       return codecvt_base::error;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2443,7 +2444,7 @@ static codecvt_base::result utf16le_to_ucs4(
     } else {
       if (frm_end - frm_nxt < 4)
         return codecvt_base::partial;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[3] << 8 | frm_nxt[2]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[3] << 8) | frm_nxt[2]);
       if ((c2 & 0xFC00) != 0xDC00)
         return codecvt_base::error;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2468,7 +2469,7 @@ static int utf16le_to_ucs4_length(
       frm_nxt += 2;
   }
   for (size_t nchar32_t = 0; frm_nxt < frm_end - 1 && nchar32_t < mx; ++nchar32_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xFC00) == 0xDC00)
       break;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2478,7 +2479,7 @@ static int utf16le_to_ucs4_length(
     } else {
       if (frm_end - frm_nxt < 4)
         break;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[3] << 8 | frm_nxt[2]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[3] << 8) | frm_nxt[2]);
       if ((c2 & 0xFC00) != 0xDC00)
         break;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2535,7 +2536,7 @@ static codecvt_base::result utf16be_to_ucs2(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       return codecvt_base::error;
     *to_nxt = c1;
@@ -2556,7 +2557,7 @@ static int utf16be_to_ucs2_length(
       frm_nxt += 2;
   }
   for (size_t nchar16_t = 0; frm_nxt < frm_end - 1 && nchar16_t < mx; ++nchar16_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       break;
     frm_nxt += 2;
@@ -2609,7 +2610,7 @@ static codecvt_base::result utf16le_to_ucs2(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       return codecvt_base::error;
     *to_nxt = c1;
@@ -2631,7 +2632,7 @@ static int utf16le_to_ucs2_length(
       frm_nxt += 2;
   }
   for (size_t nchar16_t = 0; frm_nxt < frm_end - 1 && nchar16_t < mx; ++nchar16_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       break;
     frm_nxt += 2;
@@ -3936,13 +3937,7 @@ wstring numpunct<wchar_t>::do_falsename() const { return L"false"; }
 
 // numpunct_byname<char>
 
-numpunct_byname<char>::numpunct_byname(const char* nm, size_t refs) : numpunct<char>(refs) { __init(nm); }
-
-numpunct_byname<char>::numpunct_byname(const string& nm, size_t refs) : numpunct<char>(refs) { __init(nm.c_str()); }
-
-numpunct_byname<char>::~numpunct_byname() {}
-
-void numpunct_byname<char>::__init(const char* nm) {
+numpunct_byname<char>::numpunct_byname(const char* nm, size_t refs) : numpunct<char>(refs) {
   typedef numpunct<char> base;
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
@@ -3963,18 +3958,14 @@ void numpunct_byname<char>::__init(const char* nm) {
   }
 }
 
+numpunct_byname<char>::numpunct_byname(const string& nm, size_t refs) : numpunct_byname<char>(nm.c_str(), refs) {}
+
+numpunct_byname<char>::~numpunct_byname() {}
+
 // numpunct_byname<wchar_t>
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs) : numpunct<wchar_t>(refs) { __init(nm); }
-
-numpunct_byname<wchar_t>::numpunct_byname(const string& nm, size_t refs) : numpunct<wchar_t>(refs) {
-  __init(nm.c_str());
-}
-
-numpunct_byname<wchar_t>::~numpunct_byname() {}
-
-void numpunct_byname<wchar_t>::__init(const char* nm) {
+numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs) : numpunct<wchar_t>(refs) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
@@ -3991,6 +3982,10 @@ void numpunct_byname<wchar_t>::__init(const char* nm) {
     // localization for truename and falsename is not available
   }
 }
+
+numpunct_byname<wchar_t>::numpunct_byname(const string& nm, size_t refs) : numpunct_byname<wchar_t>(nm.c_str(), refs) {}
+
+numpunct_byname<wchar_t>::~numpunct_byname() {}
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // num_get helpers
@@ -5657,10 +5652,13 @@ template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_
 template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
     codecvt_byname<char32_t, char, mbstate_t>;
 #if _LIBCPP_HAS_CHAR8_T
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char8_t, mbstate_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char8_t, mbstate_t>;
+template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+    codecvt_byname<char16_t, char8_t, mbstate_t>;
+template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+    codecvt_byname<char32_t, char8_t, mbstate_t>;
 #endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

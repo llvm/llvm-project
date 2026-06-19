@@ -78,6 +78,20 @@ TEST(runToolOnCode, FindsNoTopLevelDeclOnEmptyCode) {
   EXPECT_FALSE(FoundTopLevelDecl);
 }
 
+TEST(runToolOnCode, CudaSyntaxOnly) {
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()), "",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70", "-nocudalib",
+       "-nocudainc"}));
+}
+
+TEST(runToolOnCode, CudaMultipleArchs) {
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()), "",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70,sm_80",
+       "-nocudalib", "-nocudainc"}));
+}
+
 namespace {
 class FindClassDeclXConsumer : public clang::ASTConsumer {
  public:
@@ -445,9 +459,9 @@ TEST_F(CommandLineExtractorTest, AcceptOffloadingCompile) {
 TEST_F(CommandLineExtractorTest, AcceptOffloadingSyntaxOnly) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {
-      "clang",         "-target",   "arm64-apple-macosx11.0.0",
-      "-fsyntax-only", "-x",        "hip",
-      "test.c",        "-nogpulib", "-nogpuinc"};
+      "clang",     "-target",  "arm64-apple-macosx11.0.0", "-fsyntax-only",
+      "-x",        "hip",      "--no-offload-new-driver",  "test.c",
+      "-nogpulib", "-nogpuinc"};
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 

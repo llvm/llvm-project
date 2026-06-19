@@ -26,11 +26,12 @@ t:
 define i32 @select_bbc(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: select_bbc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nds.bbc a0, 16, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    nds.bbc a3, 16, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ret
   %and = and i32 %a, 65536
   %tst = icmp eq i32 %and, 0
@@ -62,11 +63,12 @@ t:
 define i32 @select_bbs(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: select_bbs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nds.bbs a0, 16, .LBB3_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    nds.bbs a3, 16, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ret
   %and = and i32 %a, 65536
   %tst = icmp ne i32 %and, 0
@@ -97,11 +99,12 @@ t:
 define i32 @select_beqc(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: select_beqc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nds.beqc a0, 5, .LBB5_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    nds.beqc a3, 5, .LBB5_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    ret
   %tst = icmp eq i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
@@ -131,11 +134,12 @@ t:
 define i32 @select_bnec(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: select_bnec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nds.bnec a0, 5, .LBB7_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    nds.bnec a3, 5, .LBB7_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    ret
   %tst = icmp ne i32 %a, 5
   %ret = select i1 %tst, i32 %b, i32 %c
@@ -178,8 +182,9 @@ define i32 @bfoz_from_and_lshr_i32(i32 %x) {
 define i64 @bfoz_from_and_lshr_i64(i64 %x) {
 ; CHECK-LABEL: bfoz_from_and_lshr_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nds.bfoz a0, a1, 25, 14
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    nds.bfoz a0, a0, 25, 14
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %x, 46
   %masked = and i64 %shifted, 4095

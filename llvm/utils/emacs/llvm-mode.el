@@ -1,7 +1,9 @@
-;;; llvm-mode.el --- Major mode for the LLVM assembler language.
+;;; llvm-mode.el --- Major mode for the LLVM assembler language -*- lexical-binding: t -*-
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
 ;; Version: 1.0
+;; Homepage: http://llvm.org/
+;; Package-Requires: ((emacs "24.3"))
 
 ;;; Commentary:
 
@@ -23,7 +25,8 @@
    "\\(i[0-9]+\\|"
    (regexp-opt
     '("void" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128"
-      "x86_mmx" "x86_amx" "ptr" "type" "label" "opaque" "token") t)
+      "x86_mmx" "x86_amx" "ptr" "type" "label" "opaque" "token")
+    'symbols)
    "\\)"))
 
 (defvar llvm-font-lock-keywords
@@ -71,7 +74,7 @@
    `(,(regexp-opt
        '(;; Toplevel entities
          "declare" "define" "module" "target" "source_filename" "global" "constant" "const" "alias" "ifunc" "comdat"
-         "attributes" "uselistorder" "uselistorder_bb"
+         "attributes" "uselistorder"
          ;; Linkage types
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
@@ -117,7 +120,7 @@
    ;; Fast-math flags
    `(,(regexp-opt '("nnan" "ninf" "nsz" "arcp" "contract" "afn" "reassoc" "fast") 'symbols) . font-lock-keyword-face)
    ;; Use-list order directives
-   `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
+   `(,(regexp-opt '("uselistorder") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
 (defun llvm-current-defun-name ()

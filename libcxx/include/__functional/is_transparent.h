@@ -21,11 +21,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 14
 
-template <class _Tp, class _Key = void, class = void>
+template <class _Comparator, class = void>
 inline const bool __is_transparent_v = false;
 
-template <class _Tp, class _Key>
-inline const bool __is_transparent_v<_Tp, _Key, __void_t<typename _Tp::is_transparent> > = true;
+template <class _Comparator>
+inline const bool __is_transparent_v<_Comparator, __void_t<typename _Comparator::is_transparent> > = true;
 
 #endif
 

@@ -20,20 +20,8 @@ def get_path_from_clang(args, allow_failure):
         f"--target={config.target_triple}",
         *args,
     ]
-    path = None
-    try:
-        result = subprocess.run(
-            clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
-        path = result.stdout.decode().strip()
-    except subprocess.CalledProcessError as e:
-        msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
-        if allow_failure:
-            lit_config.warning(msg)
-        else:
-            lit_config.fatal(msg)
-    return path, clang_cmd
-
+    path = lit_config.run_command_cached(clang_cmd, allow_failure, text=True)
+    return path.strip(), clang_cmd
 
 def find_compiler_libdir():
     """
@@ -90,6 +78,12 @@ def push_dynamic_library_lookup_path(config, new_path):
     new_ld_library_path = os.path.pathsep.join(
         (new_path, config.environment.get(dynamic_library_lookup_var, ""))
     )
+
+    if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
+        new_ld_library_path = os.path.normpath(new_ld_library_path)
+
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
     if platform.system() == "FreeBSD":
@@ -126,8 +120,6 @@ config.recursiveExpansionLimit = 10
 
 # Setup test format.
 config.test_format = lit.formats.ShTest(execute_external)
-if execute_external:
-    config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
@@ -202,7 +194,10 @@ if test_cc_resource_dir is not None:
     test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
 lit_config.dbg(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
-if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+if (
+    test_cc_resource_dir != local_build_resource_dir
+    and config.test_standalone_build_libs
+):
     if config.compiler_id == "Clang":
         lit_config.dbg(
             f"Overriding test compiler resource dir to use "
@@ -359,6 +354,7 @@ if config.target_os == "NetBSD":
 else:
     config.substitutions.append(("%run_nomprotect", "%run"))
 
+
 # Copied from libcxx's config.py
 def get_lit_conf(name, default=None):
     # Allow overriding on the command line using --param=<name>=<val>
@@ -413,7 +409,7 @@ if emulator:
     lit_config.warning("%device_rm is not implemented")
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
-elif config.target_os == "Darwin" and config.apple_platform != "osx":
+elif config.target_os == "Darwin" and not config.apple_target_is_host:
     # Darwin tests can be targetting macOS, a device or a simulator. All devices
     # are declared as "ios", even for iOS derivatives (tvOS, watchOS). Similarly,
     # all simulators are "iossim". See the table below.
@@ -421,18 +417,25 @@ elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # =========================================================================
     # Target             | Feature set
     # =========================================================================
-    # macOS              | darwin
-    # iOS device         | darwin, ios
-    # iOS simulator      | darwin, ios, iossim
-    # tvOS device        | darwin, ios, tvos
-    # tvOS simulator     | darwin, ios, iossim, tvos, tvossim
-    # watchOS device     | darwin, ios, watchos
-    # watchOS simulator  | darwin, ios, iossim, watchos, watchossim
+    # macOS host         | darwin
+    # macOS device       | darwin, darwin-remote
+    # iOS device         | darwin, darwin-remote, ios
+    # iOS simulator      | darwin, darwin-remote, ios, iossim
+    # tvOS device        | darwin, darwin-remote, ios, tvos
+    # tvOS simulator     | darwin, darwin-remote, ios, iossim, tvos, tvossim
+    # watchOS device     | darwin, darwin-remote, ios, watchos
+    # watchOS simulator  | darwin, darwin-remote, ios, iossim, watchos, watchossim
     # =========================================================================
+
+    # All suites that aren't running on the host get the darwin-remote feature.
+    config.available_features.add("darwin-remote")
+
+    # All non-OSX targets have the ios feature (see the above table)
+    if config.apple_platform != "osx":
+        config.available_features.add("ios")
 
     ios_or_iossim = "iossim" if config.apple_platform.endswith("sim") else "ios"
 
-    config.available_features.add("ios")
     device_id_env = "SANITIZER_" + ios_or_iossim.upper() + "_TEST_DEVICE_IDENTIFIER"
     if ios_or_iossim == "iossim":
         config.available_features.add("iossim")
@@ -577,10 +580,12 @@ if config.target_os == "Darwin":
         # There is no simulator-specific sw_vers/sysctl, so we use the host OS version
         os_detection_prefix = []
 
-    darwin_os_version = subprocess.check_output(
-        os_detection_prefix + ["sw_vers", "-productVersion"], universal_newlines=True
+    darwin_os_version = lit_config.run_command_cached(
+        os_detection_prefix + ["sw_vers", "-productVersion"],
+        universal_newlines=True,
+        text=True,
     )
-    darwin_os_version = tuple(int(x) for x in darwin_os_version.split("."))
+    darwin_os_version = tuple(int(x) for x in darwin_os_version.strip().split("."))
 
     if len(darwin_os_version) == 2:
         darwin_os_version = (darwin_os_version[0], darwin_os_version[1], 0)
@@ -593,17 +598,15 @@ if config.target_os == "Darwin":
     config.darwin_os_version = darwin_os_version
 
     # Detect x86_64h
-    try:
-        output = subprocess.check_output(
-            os_detection_prefix + ["sysctl", "hw.cpusubtype"]
-        )
+    output = lit_config.run_command_cached(
+        os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True
+    )
+    if output:
         output_re = re.match("^hw.cpusubtype: ([0-9]+)$", output)
         if output_re:
             cpu_subtype = int(output_re.group(1))
             if cpu_subtype == 8:  # x86_64h
                 config.available_features.add("x86_64h")
-    except:
-        pass
 
     # 32-bit iOS simulator is deprecated and removed in latest Xcode.
     if config.apple_platform == "iossim":
@@ -940,18 +943,11 @@ if config.target_os == "Darwin":
     if lit.util.which("log"):
         # Querying the log can only done by a privileged user so
         # so check if we can query the log.
-        exit_code = -1
-        with open("/dev/null", "r") as f:
-            # Run a `log show` command the should finish fairly quickly and produce very little output.
-            exit_code = subprocess.call(
-                ["log", "show", "--last", "1m", "--predicate", "1 == 0"],
-                stdout=f,
-                stderr=f,
-            )
-        if exit_code == 0:
+        res = lit_config.run_command_cached(
+            ["log", "show", "--last", "1m", "--predicate", "1 == 0"], allow_failure=True
+        )
+        if res is not None:
             config.available_features.add("darwin_log_cmd")
-        else:
-            lit_config.warning("log command found but cannot queried")
     else:
         lit_config.warning("log command not found. Some tests will be skipped.")
 elif config.android:
@@ -976,6 +972,8 @@ else:
 
 
 def target_page_size():
+    if config.target_arch in ("amdgcn", "nvptx64"):
+        return 4096
     try:
         proc = subprocess.Popen(
             f"{emulator or ''} python3",
@@ -1067,14 +1065,17 @@ if config.has_no_default_config_flag:
     config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
 if config.has_compiler_rt_libatomic:
-  base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"
-                          % config.target_suffix)
-  if sys.platform in ['win32'] and execute_external:
-    # Don't pass dosish path separator to msys bash.exe.
-    base_lib = base_lib.replace('\\', '/')
-  config.substitutions.append(("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}"))
+    base_lib = os.path.join(
+        config.compiler_rt_libdir, "libclang_rt.atomic%s.so" % config.target_suffix
+    )
+    if sys.platform in ["win32"] and execute_external:
+        # Don't pass dosish path separator to msys bash.exe.
+        base_lib = base_lib.replace("\\", "/")
+    config.substitutions.append(
+        ("%libatomic", base_lib + f" -Wl,-rpath,{config.compiler_rt_libdir}")
+    )
 else:
-  config.substitutions.append(("%libatomic", "-latomic"))
+    config.substitutions.append(("%libatomic", "-latomic"))
 
 # Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
 push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)

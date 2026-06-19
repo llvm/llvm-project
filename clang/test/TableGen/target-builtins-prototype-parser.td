@@ -63,6 +63,30 @@ def : Builtin {
   let Spellings = ["__builtin_09"];
 }
 
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_10 {{.*}} /* V2i*0 */
+  let Prototype = "_Vector<2, int address_space<0> *>()";
+  let Spellings = ["__builtin_10"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_11 {{.*}} /* V2i*0 */
+  let Prototype = "_Vector<2, int> address_space<0> *()";
+  let Spellings = ["__builtin_11"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_12 {{.*}} /* UBiUTiUZiUWi */
+  let Prototype = "uint8_t(uint16_t, uint32_t, uint64_t)";
+  let Spellings = ["__builtin_12"];
+}
+
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_13 {{.*}} /* BiTiZiWi */
+  let Prototype = "int8_t(int16_t, int32_t, int64_t)";
+  let Spellings = ["__builtin_13"];
+}
+
 #ifdef ERROR_EXPECTED_LANES
 def : Builtin {
 // ERROR_EXPECTED_LANES: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'

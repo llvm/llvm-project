@@ -2280,8 +2280,7 @@ define void @test33(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-WACC-LABEL: test33:
 ; CHECK-WACC:       # %bb.0: # %entry
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
+; CHECK-WACC-NEXT:    lxvp vsp36, 0(r4)
 ; CHECK-WACC-NEXT:    xvf64ger wacc0, vsp36, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
@@ -2292,8 +2291,7 @@ define void @test33(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-WACC-LABEL: test33:
 ; CHECK-BE-WACC:       # %bb.0: # %entry
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-WACC-NEXT:    lxvp vsp36, 0(r4)
 ; CHECK-BE-WACC-NEXT:    xvf64ger wacc0, vsp36, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
@@ -2352,10 +2350,9 @@ define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    xvf64gerpp wacc0, vsp36, v2
+; CHECK-WACC-NEXT:    xvf64gerpp wacc0, vsp38, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2369,10 +2366,9 @@ define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    xvf64gerpp wacc0, vsp36, v2
+; CHECK-BE-WACC-NEXT:    xvf64gerpp wacc0, vsp38, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2431,10 +2427,9 @@ define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    xvf64gerpn wacc0, vsp36, v2
+; CHECK-WACC-NEXT:    xvf64gerpn wacc0, vsp38, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2448,10 +2443,9 @@ define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    xvf64gerpn wacc0, vsp36, v2
+; CHECK-BE-WACC-NEXT:    xvf64gerpn wacc0, vsp38, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2510,10 +2504,9 @@ define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    xvf64gernp wacc0, vsp36, v2
+; CHECK-WACC-NEXT:    xvf64gernp wacc0, vsp38, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2527,10 +2520,9 @@ define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    xvf64gernp wacc0, vsp36, v2
+; CHECK-BE-WACC-NEXT:    xvf64gernp wacc0, vsp38, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2589,10 +2581,9 @@ define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    xvf64gernn wacc0, vsp36, v2
+; CHECK-WACC-NEXT:    xvf64gernn wacc0, vsp38, v2
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2606,10 +2597,9 @@ define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    xvf64gernn wacc0, vsp36, v2
+; CHECK-BE-WACC-NEXT:    xvf64gernn wacc0, vsp38, v2
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2654,8 +2644,7 @@ define void @test38(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-WACC-LABEL: test38:
 ; CHECK-WACC:       # %bb.0: # %entry
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
+; CHECK-WACC-NEXT:    lxvp vsp36, 0(r4)
 ; CHECK-WACC-NEXT:    pmxvf64ger wacc0, vsp36, v2, 0, 0
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
@@ -2666,8 +2655,7 @@ define void @test38(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-WACC-LABEL: test38:
 ; CHECK-BE-WACC:       # %bb.0: # %entry
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-WACC-NEXT:    lxvp vsp36, 0(r4)
 ; CHECK-BE-WACC-NEXT:    pmxvf64ger wacc0, vsp36, v2, 0, 0
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
@@ -2726,10 +2714,9 @@ define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    pmxvf64gerpp wacc0, vsp36, v2, 0, 0
+; CHECK-WACC-NEXT:    pmxvf64gerpp wacc0, vsp38, v2, 0, 0
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2743,10 +2730,9 @@ define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    pmxvf64gerpp wacc0, vsp36, v2, 0, 0
+; CHECK-BE-WACC-NEXT:    pmxvf64gerpp wacc0, vsp38, v2, 0, 0
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2805,10 +2791,9 @@ define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    pmxvf64gerpn wacc0, vsp36, v2, 0, 0
+; CHECK-WACC-NEXT:    pmxvf64gerpn wacc0, vsp38, v2, 0, 0
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2822,10 +2807,9 @@ define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    pmxvf64gerpn wacc0, vsp36, v2, 0, 0
+; CHECK-BE-WACC-NEXT:    pmxvf64gerpn wacc0, vsp38, v2, 0, 0
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2884,10 +2868,9 @@ define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    pmxvf64gernp wacc0, vsp36, v2, 0, 0
+; CHECK-WACC-NEXT:    pmxvf64gernp wacc0, vsp38, v2, 0, 0
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2901,10 +2884,9 @@ define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    pmxvf64gernp wacc0, vsp36, v2, 0, 0
+; CHECK-BE-WACC-NEXT:    pmxvf64gernp wacc0, vsp38, v2, 0, 0
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
@@ -2963,10 +2945,9 @@ define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-WACC-NEXT:    lxv v1, 32(r3)
 ; CHECK-WACC-NEXT:    lxv v4, 16(r3)
 ; CHECK-WACC-NEXT:    lxv v0, 48(r3)
+; CHECK-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-WACC-NEXT:    lxv v4, 16(r4)
-; CHECK-WACC-NEXT:    lxv v5, 0(r4)
-; CHECK-WACC-NEXT:    pmxvf64gernn wacc0, vsp36, v2, 0, 0
+; CHECK-WACC-NEXT:    pmxvf64gernn wacc0, vsp38, v2, 0, 0
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
@@ -2980,10 +2961,9 @@ define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-WACC-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-WACC-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxvp vsp38, 0(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-WACC-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-WACC-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-WACC-NEXT:    pmxvf64gernn wacc0, vsp36, v2, 0, 0
+; CHECK-BE-WACC-NEXT:    pmxvf64gernn wacc0, vsp38, v2, 0, 0
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)

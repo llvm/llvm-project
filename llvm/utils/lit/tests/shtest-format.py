@@ -1,8 +1,13 @@
 # Check the various features of the ShTest format.
 
+## This is required for the use of %errc_ENOENT.
+# REQUIRES: llvm-config-available
+
 # RUN: rm -f %t.xml
 # RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
-# RUN: FileCheck < %t.out %s
+# RUN: FileCheck -DERROR_MSG=%errc_ENOENT < %t.out %s \
+# RUN:   %if system-aix %{ --check-prefix=AIX,CHECK %} \
+# RUN:   %else  %{ --check-prefix=NON-AIX,CHECK %}
 # RUN: FileCheck --check-prefix=XUNIT < %t.xml %s
 
 # END.
@@ -18,7 +23,11 @@
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
 # CHECK-NOT: --
-# CHECK: cat{{(_64)?(\.exe)?}}: {{(cannot open does-not-exist|.*does-not-exist.*: No such file or directory)}}
+## AIX needs the regex because alternative versions of cat generate different
+## formats of error message. %errc_ENOENT can't be used here because [[...]]
+## inside {{...}} is not supported.
+# AIX: cat{{(_64)?(\.exe)?}}: {{(cannot open does-not-exist|.*does-not-exist.*: No such file or directory)}}
+# NON-AIX: cat{{(_64)?(\.exe)?}}: {{.*does-not-exist.*}}: [[ERROR_MSG]]
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt

@@ -16,11 +16,11 @@
 ; CHECK:     %[[#vec2:]] = OpCompositeInsert %[[#int16_2]] %[[#const2]] %[[#vec1]] 1
 ; CHECK:     %[[#res:]] = OpVectorInsertDynamic %[[#int16_2]] %[[#vec2]] %[[#v:]] %[[#index:]]
 
-define spir_kernel void @test(<2 x i16>* nocapture %out, i16 %v, i32 %index) {
+define spir_kernel void @test(ptr nocapture %out, i16 %v, i32 %index) {
 entry:
   %vec1 = insertelement <2 x i16> undef, i16 4, i32 0
   %vec2 = insertelement <2 x i16> %vec1, i16 8, i32 1
   %res = insertelement <2 x i16> %vec2, i16 %v, i32 %index
-  store <2 x i16> %res, <2 x i16>* %out, align 4
+  store <2 x i16> %res, ptr %out, align 4
   ret void
 }

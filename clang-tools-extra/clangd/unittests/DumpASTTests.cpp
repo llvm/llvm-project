@@ -211,7 +211,7 @@ TEST(DumpASTTests, Arcana) {
   auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "x")), AST.getTokens(),
                       AST.getASTContext());
   EXPECT_THAT(Node.arcana, testing::StartsWith("VarDecl "));
-  EXPECT_THAT(Node.arcana, testing::EndsWith(" 'int'"));
+  EXPECT_THAT(Node.arcana, testing::EndsWith(" 'int' external-linkage"));
   ASSERT_THAT(Node.children, SizeIs(1)) << "Expected one child typeloc";
   EXPECT_THAT(Node.children.front().arcana, testing::StartsWith("QualType "));
 }
@@ -225,6 +225,35 @@ TEST(DumpASTTests, UnbalancedBraces) {
   auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "main")),
                       AST.getTokens(), AST.getASTContext());
   ASSERT_EQ(Node.range, Case.range("func"));
+}
+
+TEST(DumpASTTests, NestedTemplates) {
+  // Test that we don't crash while trying to dump AST of a template function
+  // with nested template names such as Foo<V>::template Bar<W>::Value.
+  const char *Code = R"cpp(
+template <typename T>
+struct TypeA {
+  template <typename U>
+  struct TypeB {
+    static U Value;
+  };
+};
+
+template <typename V, typename W>
+auto func() {
+  return TypeA<V>::template TypeB<W>::Value;
+}
+  )cpp";
+
+  ParsedAST AST = TestTU::withCode(Code).build();
+  const NamedDecl &Func = findDecl(AST, [](const NamedDecl &D) {
+    return isa<FunctionDecl>(D) && D.getNameAsString() == "func";
+  });
+
+  const ASTNode Node =
+      dumpAST(DynTypedNode::create(Func), AST.getTokens(), AST.getASTContext());
+
+  EXPECT_EQ(Node.kind, "Function");
 }
 
 } // namespace

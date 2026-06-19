@@ -17,12 +17,12 @@
 #ifndef LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <llvm/Support/MemoryBuffer.h>
 #include <string>
-#include <vector>
 
 namespace clang {
 
@@ -47,10 +47,9 @@ public:
   std::string FilesType;
   std::string ObjcopyPath;
 
-  // TODO: Convert these to llvm::SmallVector
-  std::vector<std::string> TargetNames;
-  std::vector<std::string> InputFileNames;
-  std::vector<std::string> OutputFileNames;
+  llvm::SmallVector<std::string, 4> TargetNames;
+  llvm::SmallVector<std::string, 4> InputFileNames;
+  llvm::SmallVector<std::string, 4> OutputFileNames;
 };
 
 class OffloadBundler {
