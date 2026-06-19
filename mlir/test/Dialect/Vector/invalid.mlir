@@ -2145,7 +2145,7 @@ func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%va
 
 // -----
 
-func.func @load_negative_stride(%flip: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
+func.func @load_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
   // expected-error @+2 {{'vector.load' op memref strides must be non-negative}}
   %c0 = arith.constant 0 : index
   %v = vector.load %flip[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<8xf32>
