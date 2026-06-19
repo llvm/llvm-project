@@ -21,6 +21,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
@@ -40,6 +41,8 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -79,6 +82,22 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
 
   return &Cmd->getArguments();
 }
+
+// ASTReaderListener that captures the PIC level stored in a PCH file so the
+// interpreter can compare it against its own PIC level.
+class PICLevelReader : public ASTReaderListener {
+  unsigned &PICLevel;
+
+public:
+  PICLevelReader(unsigned &PICLevel) : PICLevel(PICLevel) {}
+
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
+                           bool AllowCompatibleDifferences) override {
+    PICLevel = LangOpts.PICLevel;
+    return false;
+  }
+};
 
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
 CreateCI(const llvm::opt::ArgStringList &Argv) {
@@ -135,6 +154,32 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   Clang->getFrontendOpts().DisableFree = false;
   Clang->getCodeGenOpts().DisableFree = false;
+
+  // clang-repl always compiles position-independent code (it injects -fPIC),
+  // so a PCH that was built with a different PIC level is incompatible: mixing
+  // the two leads to relocations that may be out of range once the JIT maps
+  // code more than 2GB away. PICLevel is a "compatible" language option, so the
+  // ASTReader would otherwise accept the mismatch silently. Reject it up front
+  // here, before any Interpreter/FrontendAction is constructed.
+  StringRef PCHInclude = Clang->getPreprocessorOpts().ImplicitPCHInclude;
+  if (!PCHInclude.empty()) {
+    llvm::IntrusiveRefCntPtr<FileManager> FileMgr(new FileManager(
+        Clang->getFileSystemOpts(), Clang->getVirtualFileSystemPtr()));
+    std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
+    unsigned PCHPICLevel = 0;
+    PICLevelReader Reader(PCHPICLevel);
+    if (!ASTReader::readASTFileControlBlock(
+            PCHInclude, *FileMgr, *ModCache, Clang->getPCHContainerReader(),
+            /*FindModuleFileExtensions=*/false, Reader,
+            /*ValidateDiagnosticOptions=*/false) &&
+        PCHPICLevel != Clang->getLangOpts().PICLevel)
+      return llvm::createStringError(
+          llvm::errc::not_supported,
+          "PCH file '%s' was built with PIC level %u, which is incompatible "
+          "with clang-repl's PIC level %u",
+          PCHInclude.str().c_str(), PCHPICLevel, Clang->getLangOpts().PICLevel);
+  }
+
   return std::move(Clang);
 }
 
@@ -275,6 +320,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (ErrOut)
     return;
+
   CI->ExecuteAction(*Act);
 
   IncrParser =
