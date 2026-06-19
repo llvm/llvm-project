@@ -232,6 +232,18 @@ class TypeAndTypeListTestCase(TestBase):
             frame0.EvaluateExpression("task_head").GetType()
         )
 
+        # Check FindDirectNestedType on dynamic values
+        polymorphic = frame0.FindVariable("polymorphic").GetDynamicValue(
+            lldb.eDynamicDontRunTarget
+        )
+        self.DebugSBValue(polymorphic)
+        polymorphic_type = polymorphic.GetType().GetPointeeType()
+        self.DebugSBType(polymorphic_type)
+        self.assertFalse(polymorphic_type.FindDirectNestedType("Nested", False))
+        nested = polymorphic_type.FindDirectNestedType("Nested", True)
+        self.DebugSBType(nested)
+        self.assertEqual(nested.GetName(), "PolymorphicDerived::Nested")
+
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
         self.DebugSBValue(id)

@@ -256,6 +256,7 @@ public:
                       lldb::DescriptionLevel description_level);
 
   lldb::SBType FindDirectNestedType(const char *name);
+  lldb::SBType FindDirectNestedType(const char *name, bool prefer_dynamic);
 
   lldb::SBType &operator=(const lldb::SBType &rhs);
 

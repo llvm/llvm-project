@@ -725,9 +725,15 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
 SBType SBType::FindDirectNestedType(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
+  return FindDirectNestedType(name, /*prefer_dynamic=*/false);
+}
+
+SBType SBType::FindDirectNestedType(const char *name, bool prefer_dynamic) {
+  LLDB_INSTRUMENT_VA(this, name, prefer_dynamic);
+
   if (!IsValid())
     return SBType();
-  return SBType(m_opaque_sp->FindDirectNestedType(name));
+  return SBType(m_opaque_sp->FindDirectNestedType(name, prefer_dynamic));
 }
 
 SBTypeList::SBTypeList() : m_opaque_up(new TypeListImpl()) {
