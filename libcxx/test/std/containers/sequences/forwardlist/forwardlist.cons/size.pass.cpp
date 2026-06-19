@@ -11,8 +11,6 @@
 // explicit forward_list(size_type n);                 // constexpr since C++26
 // explicit forward_list(size_type n, const Alloc& a); // constexpr since C++26
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <forward_list>
 #include <cassert>
 #include <cstddef>
