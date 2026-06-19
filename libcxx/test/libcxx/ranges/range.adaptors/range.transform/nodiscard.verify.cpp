@@ -8,7 +8,7 @@
 
 // REQUIRES: std-at-least-c++20
 
-// Test the libc++ extension that std::views::transform is marked as [[nodiscard]].
+// Test the libc++ extension that std::ranges::transform_view and std::views::transform are marked as [[nodiscard]].
 
 #include <ranges>
 #include <functional>
