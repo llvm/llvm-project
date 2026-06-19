@@ -4445,8 +4445,8 @@ enum CXErrorCode clang_parseTranslationUnit2FullArgv(
     for (unsigned i = 0; i != num_unsaved_files; ++i) {
       if (i)
         fprintf(stderr, ", ");
-      fprintf(stderr, "('%s', '...', %ld)", unsaved_files[i].Filename,
-              unsaved_files[i].Length);
+      fprintf(stderr, "('%s', '...', %llu)", unsaved_files[i].Filename,
+              (unsigned long long)unsaved_files[i].Length);
     }
     fprintf(stderr, "],\n");
     fprintf(stderr, "  'options' : %d,\n", options);

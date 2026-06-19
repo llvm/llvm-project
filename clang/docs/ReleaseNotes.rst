@@ -531,6 +531,12 @@ clang-format
 
 libclang
 --------
+- The ``Length`` field of ``CXUnsavedFile`` (in ``clang-c/Index.h``) is now a
+  fixed-width ``uint64_t`` instead of ``unsigned long``. This makes the struct
+  layout identical across data models; previously the field was 4 bytes under
+  LLP64 (Windows) and 8 bytes under LP64, which could corrupt the length or
+  crash FFI consumers. This is an intentional ABI change to the C API.
+  (#GH160729)
 
 Code Completion
 ---------------
