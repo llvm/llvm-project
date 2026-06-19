@@ -4223,6 +4223,13 @@ multiclass sve2_int_sadd_long_accum_pairwise<bit U, string asm, SDPatternOperato
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1, nxv8i16, nxv16i8, !cast<Instruction>(NAME # _H)>;
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv8i16, !cast<Instruction>(NAME # _S)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv4i32, !cast<Instruction>(NAME # _D)>;
+
+  def : Pat<(nxv8i16 (add nxv8i16:$Op2, (nxv8i16 (op nxv8i1:$Op1, (nxv8i16 (SVEDup0)), nxv16i8:$Op3)))),
+            (!cast<Instruction>(NAME # _H) $Op1, $Op2, $Op3)>;
+  def : Pat<(nxv4i32 (add nxv4i32:$Op2, (nxv4i32 (op nxv4i1:$Op1, (nxv4i32 (SVEDup0)), nxv8i16:$Op3)))),
+            (!cast<Instruction>(NAME # _S) $Op1, $Op2, $Op3)>;
+  def : Pat<(nxv2i64 (add nxv2i64:$Op2, (nxv2i64 (op nxv2i1:$Op1, (nxv2i64 (SVEDup0)), nxv4i32:$Op3)))),
+            (!cast<Instruction>(NAME # _D) $Op1, $Op2, $Op3)>;
 }
 
 class sve2_int_un_pred_arit<bits<2> sz, bits<2> opc,
