@@ -6241,11 +6241,11 @@ InputInfoList Driver::BuildJobsForActionNoCache(
           /*CreatePrefixForHost=*/true);
       auto CurI = InputInfo(
           UA,
-          GetNamedOutputPath(
-              C, *UA, BaseInput, BoundArch(UI.DependentBoundArch),
-              /*AtTopLevel=*/false,
-              MultipleArchs || UI.DependentOffloadKind == Action::OFK_HIP,
-              OffloadingPrefix),
+          GetNamedOutputPath(C, *UA, BaseInput, UI.DependentBoundArch,
+                             /*AtTopLevel=*/false,
+                             MultipleArchs ||
+                                 UI.DependentOffloadKind == Action::OFK_HIP,
+                             OffloadingPrefix),
           BaseInput);
       // Save the unbundling result.
       UnbundlingResults.push_back(CurI);

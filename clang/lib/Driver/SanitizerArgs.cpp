@@ -418,7 +418,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Figure out the base toolchain's sanitizer support so we can diagnose the
   // diff for a specific BA.
   const SanitizerMask ToolChainSupported =
-      setGroupBits(TC.getSupportedSanitizers(BoundArch(), DeviceOffloadKind));
+      setGroupBits(TC.getSupportedSanitizers({}, DeviceOffloadKind));
 
   const SanitizerMask BoundArchSupported =
       BA ? setGroupBits(TC.getSupportedSanitizers(BA, DeviceOffloadKind))
