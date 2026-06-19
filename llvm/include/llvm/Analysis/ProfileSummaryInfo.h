@@ -102,8 +102,7 @@ public:
 
   /// Returns the profile count for \p CallInst.
   LLVM_ABI std::optional<uint64_t>
-  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI,
-                  bool AllowSynthetic = false) const;
+  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI) const;
   /// Returns true if module \c M has partial-profile sample profile.
   LLVM_ABI bool hasPartialSampleProfile() const;
   /// Returns true if the working set size of the code is considered huge.
