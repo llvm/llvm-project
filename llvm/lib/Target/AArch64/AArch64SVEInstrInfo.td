@@ -75,10 +75,9 @@ def AArch64ld1rq_z : SDNode<"AArch64ISD::LD1RQ_MERGE_ZERO",  SDT_AArch64_LD1Repl
 def AArch64ld1ro_z : SDNode<"AArch64ISD::LD1RO_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
 
 def SDT_AArch64_PredCounterWhile : SDTypeProfile<2, 4, [
-  SDTCisVT<0, aarch64svcount>, SDTCisInt<1>,
+  SDTCisVT<0, aarch64svcount>, SDTCisVT<1, FlagsVT>,
   SDTCisInt<2>, SDTCisInt<3>,
-  SDTCisInt<4>, SDTCisInt<5>,
-  SDTCisVT<1, FlagsVT>
+  SDTCisInt<4>, SDTCisInt<5>
 ]>;
 
 def AArch64whilege_pn_flag : SDNode<"AArch64ISD::WHILEGE_PRED_COUNTER",  SDT_AArch64_PredCounterWhile>;
