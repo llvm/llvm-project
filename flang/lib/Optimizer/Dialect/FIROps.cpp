@@ -6553,7 +6553,7 @@ static mlir::ParseResult parseSpecifierList(
 
   if (regionArgs.size() != regionArgTypes.size())
     return parser.emitError(parser.getNameLoc(), "mismatch in number of " +
-                                                     specifierKeyword.str() +
+                                                     specifierKeyword +
                                                      " arg and types");
 
   if (failed(parser.parseRParen()))

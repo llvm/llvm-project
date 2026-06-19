@@ -1581,8 +1581,7 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   // placeholder so that getSymbol() doesn't crash. In non-relocation mode,
   // this effectively renames the function.
   WriteCtxLock.lock();
-  ChildBF.getSymbols().push_back(
-      Ctx->getOrCreateSymbol("__ICF_" + ChildName.str()));
+  ChildBF.getSymbols().push_back(Ctx->getOrCreateSymbol("__ICF_" + ChildName));
   WriteCtxLock.unlock();
 
   ChildBF.setFolded(&ParentBF);

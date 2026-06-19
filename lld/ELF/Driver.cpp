@@ -2622,7 +2622,7 @@ static void writeDependencyFile(Ctx &ctx) {
   // * $ is escapes as $$.
   auto printFilename = [](raw_fd_ostream &os, StringRef filename) {
     llvm::SmallString<256> nativePath;
-    llvm::sys::path::native(filename.str(), nativePath);
+    llvm::sys::path::native(filename, nativePath);
     llvm::sys::path::remove_dots(nativePath, /*remove_dot_dot=*/true);
     for (unsigned i = 0, e = nativePath.size(); i != e; ++i) {
       if (nativePath[i] == '#') {
