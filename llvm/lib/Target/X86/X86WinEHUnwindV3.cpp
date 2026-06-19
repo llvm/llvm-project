@@ -301,7 +301,7 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
 
     unsigned EpilogsInFragment = 0;
     const EpilogSplitPoint *LastEpilog = nullptr;
-    unsigned LastEpilogIdx = 0;
+    [[maybe_unused]] unsigned LastEpilogIdx = 0;
     for (unsigned Idx = 0; Idx < Info.Epilogs.size(); ++Idx) {
       const EpilogSplitPoint &Epilog = Info.Epilogs[Idx];
       // If adding this epilog would exceed a fragment limit or is too far, end
