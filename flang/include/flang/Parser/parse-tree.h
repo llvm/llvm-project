@@ -4505,9 +4505,7 @@ struct OmpContainsClause {
 struct OmpApplyClause {
   TUPLE_CLASS_BOILERPLATE(OmpApplyClause);
   MODIFIER_BOILERPLATE(OmpLoopModifier);
-  std::tuple<MODIFIERS(),
-      std::list<OmpDirectiveSpecification>>
-      t;
+  std::tuple<MODIFIERS(), std::list<OmpDirectiveSpecification>> t;
 };
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
