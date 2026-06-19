@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_FRONTEND_SSAFOPTIONS_H
-#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_FRONTEND_SSAFOPTIONS_H
+#ifndef LLVM_CLANG_FRONTEND_SSAFOPTIONS_H
+#define LLVM_CLANG_FRONTEND_SSAFOPTIONS_H
 
 #include "llvm/Support/Compiler.h"
 #include <string>
@@ -49,4 +49,4 @@ public:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_FRONTEND_SSAFOPTIONS_H
+#endif // LLVM_CLANG_FRONTEND_SSAFOPTIONS_H
