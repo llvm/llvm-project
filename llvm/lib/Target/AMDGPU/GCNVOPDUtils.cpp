@@ -266,6 +266,8 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 
 /// Collect all load (dependents if \p Forward else dependencies) that connect
 /// to the \p Head SU.
+/// \p Visited should allocate enough bits for the number of SUnits, but its
+/// value can otherwise be uninitialized.
 static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
                          SUnit &Head, bool Forward, bool StopAtLoads) {
   if (Head.isBoundaryNode())
@@ -298,11 +300,17 @@ static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
 
 /// Checks whether fusing SU \p I with SU \p J would force the loads preceding
 /// \p J to complete before loads depending on \p I.
-static bool
-loadsMayOverlap(SUnit &I, const SmallPtrSet<SUnit *, 8> &ILoadSuccs, SUnit &J,
-                BitVector &LoadPredsComputed,
-                SmallVector<SmallPtrSet<SUnit *, 8>> &LoadPredsCache,
-                BitVector &Scratch) {
+///
+/// \p ILoadSuccs should hold all first load successors of \p I (via
+/// collectLoads with StopAtLoads=true). For set bits in \p LoadPredsComputed,
+/// the corresponding set in \p LoadPredsCache should hold all transitive load
+/// dependencies (via collectLoads with StopAtLoads=false). The \p Scratch
+/// bitvector should allocate enough bits for the number of SUnits.
+static bool loadsMayOverlap(
+    [[maybe_unused]] SUnit &I, const SmallPtrSet<SUnit *, 8> &ILoadSuccs,
+    SUnit &J, BitVector &LoadPredsComputed,
+    SmallVector<SmallPtrSet<SUnit *, 8>> &LoadPredsCache, BitVector &Scratch) {
+
   if (ILoadSuccs.empty())
     return false;
 
