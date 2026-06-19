@@ -157,6 +157,9 @@ static Error readMachOHeader(MachOObjectFile *Obj, RecordsSlice &Slice) {
   case MachO::MH_BUNDLE:
     BA.File = FileType::MachO_Bundle;
     break;
+  case MachO::MH_KEXT_BUNDLE:
+    BA.File = FileType::MachO_KextBundle;
+    break;
   }
 
   if (H.flags & MachO::MH_TWOLEVEL)

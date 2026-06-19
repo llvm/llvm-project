@@ -300,6 +300,49 @@ private:
   llvm::SetVector<Symbol *> entries;
 };
 
+class RelocSection : public LinkEditSection {
+public:
+  RelocSection(const char *name);
+  bool isNeeded() const override { return !entries.empty(); }
+  uint64_t getRawSize() const override {
+    return entries.size() * (sizeof(uint32_t) * 2);
+  }
+  void addEntry(const Symbol *sym, const InputSection *isec, uint32_t offset,
+                uint8_t type, bool pcrel, uint8_t length) {
+    entries.emplace_back(sym, isec, offset, type, pcrel, length);
+  }
+  void writeTo(uint8_t *buf) const override;
+
+  virtual bool isExternal() const = 0;
+
+  struct Entry {
+    const Symbol *sym;
+    const InputSection *isec;
+    uint32_t offset;
+    uint8_t type;
+    bool pcrel;
+    uint8_t length;
+
+    Entry(const Symbol *sym, const InputSection *isec, uint32_t offset,
+          uint8_t type, bool pcrel, uint8_t length)
+        : sym(sym), isec(isec), offset(offset), type(type), pcrel(pcrel),
+          length(length) {}
+  };
+  std::vector<Entry> entries;
+};
+
+class ExternalRelocSection final : public RelocSection {
+public:
+  ExternalRelocSection();
+  bool isExternal() const override { return true; }
+};
+
+class LocalRelocSection final : public RelocSection {
+public:
+  LocalRelocSection();
+  bool isExternal() const override { return false; }
+};
+
 class StubHelperSection final : public SyntheticSection {
 public:
   StubHelperSection();
@@ -850,6 +893,8 @@ struct InStruct {
   InitOffsetsSection *initOffsets = nullptr;
   ObjCMethListSection *objcMethList = nullptr;
   ChainedFixupsSection *chainedFixups = nullptr;
+  ExternalRelocSection *extRelocs = nullptr;
+  LocalRelocSection *localRelocs = nullptr;
 
   CStringSection *getOrCreateCStringSection(StringRef name,
                                             bool forceDedupStrings = false) {

@@ -247,6 +247,14 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
+      if (config->outputType == MH_KEXT_BUNDLE && !needsFixup &&
+          needsBinding(referentSym)) {
+        if (target->hasAttr(r.type, RelocAttrBits::BRANCH)) {
+          continue;
+        }
+        if (!referentSym->isInGot())
+          continue;
+      }
       // For dtrace symbols, do not handle them as normal undefined symbols
       if (referentSym->getName().starts_with("___dtrace_")) {
         // Change dtrace call site to pre-defined instructions

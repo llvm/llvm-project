@@ -238,6 +238,9 @@ def dylib : Flag<["-"], "dylib">,
 def bundle : Flag<["-"], "bundle">,
     HelpText<"Produce a bundle">,
     Group<grp_kind>;
+def kext : Flag<["-"], "kext">,
+    HelpText<"Produce a kext bundle">,
+    Group<grp_kind>;
 def r : Flag<["-"], "r">,
     HelpText<"Merge multiple object files into one, retaining relocations">,
     Flags<[HelpHidden]>,
@@ -1423,10 +1426,6 @@ def keep_dwarf_unwind : Flag<["-"], "keep_dwarf_unwind">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def no_keep_dwarf_unwind : Flag<["-"], "no_keep_dwarf_unwind">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def kext : Flag<["-"], "kext">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;

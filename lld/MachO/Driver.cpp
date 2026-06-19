@@ -72,11 +72,14 @@ std::unique_ptr<DependencyTracker> macho::depTracker;
 
 static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
-  Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
+  Arg *outputArg =
+      args.getLastArg(OPT_kext, OPT_bundle, OPT_dylib, OPT_execute);
   if (outputArg == nullptr)
     return MH_EXECUTE;
 
   switch (outputArg->getOption().getID()) {
+  case OPT_kext:
+    return MH_KEXT_BUNDLE;
   case OPT_bundle:
     return MH_BUNDLE;
   case OPT_dylib:
@@ -1269,6 +1272,7 @@ static bool dataConstDefault(const InputArgList &args) {
 
   switch (config->outputType) {
   case MH_EXECUTE:
+  case MH_KEXT_BUNDLE:
     return !(args.hasArg(OPT_no_pie) && supportsNoPie());
   case MH_BUNDLE:
     // FIXME: return false when -final_name ...
@@ -1888,7 +1892,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     pie = true;
   }
 
-  config->isPic = config->outputType == MH_DYLIB ||
+  config->isPic = config->outputType == MH_KEXT_BUNDLE ||
+                  config->outputType == MH_DYLIB ||
                   config->outputType == MH_BUNDLE ||
                   (config->outputType == MH_EXECUTE && pie);
 
