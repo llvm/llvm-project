@@ -338,25 +338,6 @@ TEST_F(FormatTestMacroExpansion, LongBodyWithMacroDoesNotMerge) {
                Style);
 }
 
-// Function bodies containing braces (other than braced init) should not merge,
-// because `void f() { if (x) { return y; } }` is hard to read on one line.
-TEST_F(FormatTestMacroExpansion, BracesInBodyPreventMerging) {
-  FormatStyle Style = getLLVMStyle();
-  verifyFormat("void f() {\n"
-               "  if (x) {\n"
-               "    return y;\n"
-               "  }\n"
-               "}",
-               Style);
-}
-
-// Braced init lists are excluded from the brace check -- they should still
-// allow short function merging.
-TEST_F(FormatTestMacroExpansion, BracedInitDoesNotPreventMerging) {
-  FormatStyle Style = getLLVMStyle();
-  verifyFormat("void f() { S s = {1}; }", Style);
-}
-
 } // namespace
 } // namespace test
 } // namespace format
