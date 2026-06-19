@@ -631,7 +631,53 @@ entry:
   %and = and i32 %shr, 111
   ret i32 %and
 }
-
+define i8 @blsi8_trunc(i32 %x) {
+; X86-LABEL: blsi8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %neg = sub i8 0, %t
+  %and = and i8 %t, %neg
+  ret i8 %and
+}
+define i16 @blsi16_trunc(i32 %x) {
+; X86-LABEL: blsi16_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i16
+  %neg = sub i16 0, %t
+  %and = and i16 %t, %neg
+  ret i16 %and
+}
 define i32 @blsi32(i32 %x)   {
 ; X86-LABEL: blsi32:
 ; X86:       # %bb.0:
@@ -678,10 +724,10 @@ define i32 @blsi32_z(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: blsi32_z:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jne .LBB25_2
+; X86-NEXT:    jne .LBB27_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB25_2:
+; X86-NEXT:  .LBB27_2:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi32_z:
@@ -813,11 +859,11 @@ define i64 @blsi64_z(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    jne .LBB29_2
+; X86-NEXT:    jne .LBB31_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB29_2:
+; X86-NEXT:  .LBB31_2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -971,10 +1017,10 @@ define i32 @blsmsk32_z(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: blsmsk32_z:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jne .LBB34_2
+; X86-NEXT:    jne .LBB36_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB34_2:
+; X86-NEXT:  .LBB36_2:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsmsk32_z:
@@ -1103,11 +1149,11 @@ define i64 @blsmsk64_z(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    xorl %esi, %edx
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    jne .LBB38_2
+; X86-NEXT:    jne .LBB40_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:  .LBB38_2:
+; X86-NEXT:  .LBB40_2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -1260,10 +1306,10 @@ define i32 @blsr32_z(i32 %a, i32 %b) nounwind {
 ; X86-LABEL: blsr32_z:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jne .LBB43_2
+; X86-NEXT:    jne .LBB45_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB43_2:
+; X86-NEXT:  .LBB45_2:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsr32_z:
@@ -1393,11 +1439,11 @@ define i64 @blsr64_z(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    jne .LBB47_2
+; X86-NEXT:    jne .LBB49_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:  .LBB47_2:
+; X86-NEXT:  .LBB49_2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -1604,10 +1650,10 @@ define i32 @blsr32_branch(i32 %x) {
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    jne .LBB53_2
+; X86-NEXT:    jne .LBB55_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    calll bar
-; X86-NEXT:  .LBB53_2:
+; X86-NEXT:  .LBB55_2:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
@@ -1619,10 +1665,10 @@ define i32 @blsr32_branch(i32 %x) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsrl %edi, %ebx
-; X64-NEXT:    jne .LBB53_2
+; X64-NEXT:    jne .LBB55_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    callq bar
-; X64-NEXT:  .LBB53_2:
+; X64-NEXT:  .LBB55_2:
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
@@ -1634,12 +1680,12 @@ define i32 @blsr32_branch(i32 %x) {
 ; EGPR-NEXT:    .cfi_def_cfa_offset 16
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsrl %edi, %ebx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x60,0xf3,0xcf]
-; EGPR-NEXT:    jne .LBB53_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB53_2, kind: FK_PCRel_1
+; EGPR-NEXT:    jne .LBB55_2 # encoding: [0x75,A]
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB55_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
-; EGPR-NEXT:  .LBB53_2:
+; EGPR-NEXT:  .LBB55_2:
 ; EGPR-NEXT:    movl %ebx, %eax # encoding: [0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
 ; EGPR-NEXT:    .cfi_def_cfa_offset 8
@@ -1673,10 +1719,10 @@ define i64 @blsr64_branch(i64 %x) {
 ; X86-NEXT:    andl %ecx, %edi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    orl %edi, %eax
-; X86-NEXT:    jne .LBB54_2
+; X86-NEXT:    jne .LBB56_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    calll bar
-; X86-NEXT:  .LBB54_2:
+; X86-NEXT:  .LBB56_2:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    popl %esi
@@ -1691,10 +1737,10 @@ define i64 @blsr64_branch(i64 %x) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsrq %rdi, %rbx
-; X64-NEXT:    jne .LBB54_2
+; X64-NEXT:    jne .LBB56_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    callq bar
-; X64-NEXT:  .LBB54_2:
+; X64-NEXT:  .LBB56_2:
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
@@ -1706,12 +1752,12 @@ define i64 @blsr64_branch(i64 %x) {
 ; EGPR-NEXT:    .cfi_def_cfa_offset 16
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsrq %rdi, %rbx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe0,0xf3,0xcf]
-; EGPR-NEXT:    jne .LBB54_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB54_2, kind: FK_PCRel_1
+; EGPR-NEXT:    jne .LBB56_2 # encoding: [0x75,A]
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB56_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
-; EGPR-NEXT:  .LBB54_2:
+; EGPR-NEXT:  .LBB56_2:
 ; EGPR-NEXT:    movq %rbx, %rax # encoding: [0x48,0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
 ; EGPR-NEXT:    .cfi_def_cfa_offset 8
@@ -1733,10 +1779,10 @@ define i32 @blsi32_branch(i32 %x) {
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    blsil {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    jne .LBB55_2
+; X86-NEXT:    jne .LBB57_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    calll bar
-; X86-NEXT:  .LBB55_2:
+; X86-NEXT:  .LBB57_2:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
@@ -1748,10 +1794,10 @@ define i32 @blsi32_branch(i32 %x) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsil %edi, %ebx
-; X64-NEXT:    jne .LBB55_2
+; X64-NEXT:    jne .LBB57_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    callq bar
-; X64-NEXT:  .LBB55_2:
+; X64-NEXT:  .LBB57_2:
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
@@ -1763,12 +1809,12 @@ define i32 @blsi32_branch(i32 %x) {
 ; EGPR-NEXT:    .cfi_def_cfa_offset 16
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsil %edi, %ebx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x60,0xf3,0xdf]
-; EGPR-NEXT:    jne .LBB55_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB55_2, kind: FK_PCRel_1
+; EGPR-NEXT:    jne .LBB57_2 # encoding: [0x75,A]
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB57_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
-; EGPR-NEXT:  .LBB55_2:
+; EGPR-NEXT:  .LBB57_2:
 ; EGPR-NEXT:    movl %ebx, %eax # encoding: [0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
 ; EGPR-NEXT:    .cfi_def_cfa_offset 8
@@ -1802,10 +1848,10 @@ define i64 @blsi64_branch(i64 %x) {
 ; X86-NEXT:    andl %eax, %edi
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    jne .LBB56_2
+; X86-NEXT:    jne .LBB58_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    calll bar
-; X86-NEXT:  .LBB56_2:
+; X86-NEXT:  .LBB58_2:
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    popl %esi
@@ -1820,10 +1866,10 @@ define i64 @blsi64_branch(i64 %x) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    .cfi_offset %rbx, -16
 ; X64-NEXT:    blsiq %rdi, %rbx
-; X64-NEXT:    jne .LBB56_2
+; X64-NEXT:    jne .LBB58_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    callq bar
-; X64-NEXT:  .LBB56_2:
+; X64-NEXT:  .LBB58_2:
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
@@ -1835,12 +1881,12 @@ define i64 @blsi64_branch(i64 %x) {
 ; EGPR-NEXT:    .cfi_def_cfa_offset 16
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsiq %rdi, %rbx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe0,0xf3,0xdf]
-; EGPR-NEXT:    jne .LBB56_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB56_2, kind: FK_PCRel_1
+; EGPR-NEXT:    jne .LBB58_2 # encoding: [0x75,A]
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB58_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
-; EGPR-NEXT:  .LBB56_2:
+; EGPR-NEXT:  .LBB58_2:
 ; EGPR-NEXT:    movq %rbx, %rax # encoding: [0x48,0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
 ; EGPR-NEXT:    .cfi_def_cfa_offset 8
@@ -1907,12 +1953,12 @@ define void @pr42118_i64(i64 %x) {
 ; X86-NEXT:    andl %eax, %edx
 ; X86-NEXT:    andl %ecx, %esi
 ; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    jne .LBB58_1
+; X86-NEXT:    jne .LBB60_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    jmp bar # TAILCALL
-; X86-NEXT:  .LBB58_1:
+; X86-NEXT:  .LBB60_1:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
@@ -1950,11 +1996,11 @@ define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    jne .LBB59_1
+; X86-NEXT:    jne .LBB61_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB59_1:
+; X86-NEXT:  .LBB61_1:
 ; X86-NEXT:    blsil %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -1990,15 +2036,15 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    orl %esi, %edi
-; X86-NEXT:    jne .LBB60_1
+; X86-NEXT:    jne .LBB62_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jmp .LBB60_3
-; X86-NEXT:  .LBB60_1:
+; X86-NEXT:    jmp .LBB62_3
+; X86-NEXT:  .LBB62_1:
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    andl %ecx, %eax
-; X86-NEXT:  .LBB60_3:
+; X86-NEXT:  .LBB62_3:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl

@@ -1764,3 +1764,10 @@ def MOVRS64rm_EVEX : I<0x8B, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                    [(set GR64:$dst, (int_x86_movrsdi addr:$src))]>, EVEX, NoCD8, T_MAP4, REX_W;
 }
 }
+// BLSI {32/64-bit operands}. For an i8/i16 value, the lowest
+// set bit is unchanged by any garbage in the upper bits.
+// So Extending it using IMPLICIT_DEF,INSERT_SUBREG and  extract.
+let Predicates = [HasBMI] in {
+def : Pat<(and GR8:$src, (ineg_su GR8:$src)),
+    (EXTRACT_SUBREG (BLSI32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src, sub_8bit)), sub_8bit)>;
+}
