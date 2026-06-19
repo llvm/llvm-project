@@ -196,11 +196,13 @@ class RealFile : public File {
   file_t FD;
   Status S;
   std::string RealName;
+  bool IsTextMode;
 
-  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName)
+  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName,
+           bool IsText)
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
-        RealName(NewRealPathName.str()) {
+        RealName(NewRealPathName.str()), IsTextMode(IsText) {
     assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
   }
 
@@ -215,6 +217,7 @@ public:
                                                    bool IsVolatile) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
+  bool isText() const override { return IsTextMode; }
 };
 
 } // namespace
@@ -322,8 +325,9 @@ private:
         adjustPath(Name, Storage), Flags, &RealName);
     if (!FDOrErr)
       return errorToErrorCode(FDOrErr.takeError());
+    bool IsText = (Flags & sys::fs::OF_Text) != sys::fs::OF_None;
     return std::unique_ptr<File>(
-        new RealFile(*FDOrErr, Name.str(), RealName.str()));
+        new RealFile(*FDOrErr, Name.str(), RealName.str(), IsText));
   }
 
   struct WorkingDirectory {
