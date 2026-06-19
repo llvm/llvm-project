@@ -77,6 +77,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   switch (Ctx->emitDwarfUnwindInfo()) {
   case EmitDwarfUnwindType::Always:
+  case EmitDwarfUnwindType::DwarfOnly:
     OmitDwarfIfHaveCompactUnwind = false;
     break;
   case EmitDwarfUnwindType::NoCompactUnwind:

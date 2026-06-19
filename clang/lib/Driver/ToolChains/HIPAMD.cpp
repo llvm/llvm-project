@@ -294,12 +294,6 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   llvm::opt::DerivedArgList *DAL =
       ROCMToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
 
-  if (!Args.hasArg(options::OPT_flto_partitions_EQ)) {
-    const OptTable &Opts = getDriver().getOpts();
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
-                      "8");
-  }
-
   return DAL;
 }
 
