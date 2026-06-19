@@ -885,11 +885,11 @@ define i32 @non_reduc_store_invariant_addr_not_hoisted(ptr %dst, ptr readonly %s
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !alias.scope [[META39:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, !alias.scope [[META42:![0-9]+]], !noalias [[META39]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP44:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, !alias.scope [[META43:![0-9]+]], !noalias [[META39]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    br [[EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
