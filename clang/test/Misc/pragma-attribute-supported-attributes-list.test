@@ -146,7 +146,6 @@
 // CHECK-NEXT: NoUwtable (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: NonString (SubjectMatchRule_variable, SubjectMatchRule_field)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
-// CHECK-NEXT: NullTerminated (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: OMPAssume (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: OSConsumed (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: OSReturnsNotRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_variable_is_parameter)

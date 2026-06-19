@@ -11,6 +11,9 @@
 // element). For constant-size arrays, the checker scans all elements and
 // considers the array null-terminated if any element is constrained to zero.
 //
+// Parameters are marked as expecting null-terminated buffers using:
+//   __attribute__((annotate("null_terminated")))
+//
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/Attr.h"
@@ -34,6 +37,9 @@ public:
 private:
   const BugType BT{this, "Array not null-terminated", "API"};
 
+  /// Return true if the parameter has annotate("null_terminated").
+  static bool isNullTerminatedParam(const ParmVarDecl *Param);
+
   /// Return true if any element in [0, \param ArraySize) can be zero.
   bool hasAnyZeroElement(ProgramStateRef State, SValBuilder &SVB,
                          QualType EltTy, uint64_t ArraySize,
@@ -44,6 +50,13 @@ private:
                  SVal Idx, const TypedValueRegion *TVR) const;
 };
 } // namespace
+
+bool NullTerminatedChecker::isNullTerminatedParam(const ParmVarDecl *Param) {
+  return llvm::any_of(Param->specific_attrs<AnnotateAttr>(),
+                      [](const AnnotateAttr *Ann) {
+                        return Ann->getAnnotation() == "null_terminated";
+                      });
+}
 
 bool NullTerminatedChecker::canBeZero(ProgramStateRef State, SValBuilder &SVB,
                                       QualType EltTy, SVal Idx,
@@ -99,7 +112,7 @@ void NullTerminatedChecker::checkPreCall(const CallEvent &Call,
   // The call to min handles the case when |NumParams| != |NumArgs|.
   for (unsigned I = 0, N = std::min(NumParams, NumArgs); I < N; ++I) {
     const ParmVarDecl *Param = FD->getParamDecl(I);
-    if (!Param->hasAttr<NullTerminatedAttr>())
+    if (!isNullTerminatedParam(Param))
       continue;
 
     SVal ArgVal = Call.getArgSVal(I);

@@ -292,7 +292,7 @@ def StdVariantChecker : Checker<"StdVariant">,
 def NullTerminatedChecker
     : Checker<"NullTerminated">,
       HelpText<"Check for arrays not null-terminated passed to functions whose "
-               "parameters are marked with the 'null_terminated' attribute">,
+               "parameters are annotated with annotate(\"null_terminated\")">,
       CheckerOptions<[CmdLineOption<
           Integer, "MaxArraySize",
           "Maximum number of array elements to scan for a null terminator. "

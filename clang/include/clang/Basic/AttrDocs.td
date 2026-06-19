@@ -10038,26 +10038,6 @@ silence diagnostics with code like:
   }];
 }
 
-def NullTerminatedDocs : Documentation {
-  let Category = DocCatDecl;
-  let Content = [{
-The ``null_terminated`` attribute can be applied to a function parameter whose
-type is a pointer or array to indicate that the function expects the buffer to
-be null-terminated (with a zero-valued element). This enables the checker
-``alpha.core.NullTerminated`` to detect buffers missing a null terminator passed
-as a parameter marked with this attribute, which may cause undefined behavior.
-
-.. code-block:: c
-
-  void receive(__attribute__((null_terminated)) const int signals[]);
-
-  void caller(void) {
-    int sigs[] = {1, 2, 3}; // Missing null terminator
-    receive(sigs);
-  }
-  }];
-}
-
 def ModularFormatDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

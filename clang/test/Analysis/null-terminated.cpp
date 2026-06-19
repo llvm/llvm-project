@@ -1,6 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.core.NullTerminated -verify %s
 
-void receive(__attribute__((null_terminated)) const int signals[]);
+#define NULL_TERMINATED __attribute__((annotate("null_terminated")))
+
+void receive(NULL_TERMINATED const int signals[]);
 
 void test_constexpr_bad() {
   constexpr int sigs[] = {1, 2, 3};
@@ -17,7 +19,7 @@ void test_constexpr_early_term() {
   receive(sigs);
 }
 
-void receive_ref(__attribute__((null_terminated)) const int (&signals)[3]);
+void receive_ref(NULL_TERMINATED const int (&signals)[3]);
 
 void test_ref_bad() {
   const int sigs[3] = {1, 2, 3};
@@ -45,8 +47,8 @@ void test_inclass_good() {
   receive(s.good);
 }
 
-// Test C++ attribute syntax
-void receive_cpp([[clang::null_terminated]] const int signals[]);
+// Test C++11 attribute syntax
+void receive_cpp([[clang::annotate("null_terminated")]] const int signals[]);
 
 void test_cpp_spelling() {
   int sigs[] = {1, 2, 3};

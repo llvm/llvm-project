@@ -5470,12 +5470,6 @@ def NonString : InheritableAttr {
   let Documentation = [NonStringDocs];
 }
 
-def NullTerminated : InheritableAttr {
-  let Spellings = [Clang<"null_terminated">];
-  let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [NullTerminatedDocs];
-}
-
 def ModularFormat : InheritableAttr {
   let Spellings = [Clang<"modular_format">];
   let Args = [IdentifierArgument<"ModularImplFn">, StringArgument<"ImplName">,
