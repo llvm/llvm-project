@@ -7,7 +7,7 @@
 ;    // when Op0 is not guaranteed non-poison
 ;    def push_freeze_to_prevent_poison_from_propagating ...
 ;
-; Don't push the `freeze` if `freeze(Op0)` is illegal and we've already ; run
+; Don't push the `freeze` if `freeze(Op0)` is illegal and we've already run
 ; the legalizer.
 ;
 ; On AArch64, in the functions below, `freeze`s would be pushed all the way to
