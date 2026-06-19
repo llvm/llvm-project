@@ -77,84 +77,25 @@ module {
   func.func private @foo()
 
   // 2D dynamically-sized array with a single return.
-  func.func @test_2d_dynamic_array(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: !fir.ref<i32> {fir.bindc_name = "n1"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: !fir.ref<i32> {fir.bindc_name = "lb1"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: !fir.ref<i32> {fir.bindc_name = "n2"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: !fir.ref<i32> {fir.bindc_name = "lb2"} loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_2d_dynamic_array"} {
-    %c0 = arith.constant 0 : index
+  func.func @test_2d_dynamic_array(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_2d_dynamic_array"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_2d_dynamic_arrayEn1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %2 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_2d_dynamic_arrayElb1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %3 = fircg.ext_declare %arg3 dummy_scope %0 arg 4 {uniq_name = "_QFtest_2d_dynamic_arrayEn2"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %4 = fircg.ext_declare %arg4 dummy_scope %0 arg 5 {uniq_name = "_QFtest_2d_dynamic_arrayElb2"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %5 = fir.load %1 : !fir.ref<i32>
-    %6 = fir.convert %5 : (i32) -> index
-    %7 = arith.cmpi sgt, %6, %c0 : index
-    %8 = arith.select %7, %6, %c0 : index
-    %9 = fir.load %2 : !fir.ref<i32>
-    %10 = fir.convert %9 : (i32) -> index
-    %11 = fir.load %3 : !fir.ref<i32>
-    %12 = fir.convert %11 : (i32) -> index
-    %13 = arith.cmpi sgt, %12, %c0 : index
-    %14 = arith.select %13, %12, %c0 : index
-    %15 = fir.load %4 : !fir.ref<i32>
-    %16 = fir.convert %15 : (i32) -> index
-    %17 = fircg.ext_declare %arg0(%8, %14) origin %10, %16 dummy_scope %0 arg 1 {uniq_name = "_QFtest_2d_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1, %arg3) origin %arg2, %arg4 dummy_scope %0 arg 1 {uniq_name = "_QFtest_2d_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     return loc(#loc5)
   } loc(#loc1)
 
   // 3D dynamically-sized array with a single return.
-  func.func @test_3d_dynamic_array(%arg0: !fir.ref<!fir.array<?x?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: !fir.ref<i32> {fir.bindc_name = "n1"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: !fir.ref<i32> {fir.bindc_name = "lb1"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: !fir.ref<i32> {fir.bindc_name = "n2"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: !fir.ref<i32> {fir.bindc_name = "lb2"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg5: !fir.ref<i32> {fir.bindc_name = "n3"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg6: !fir.ref<i32> {fir.bindc_name = "lb3"} loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_3d_dynamic_array"} {
-    %c0 = arith.constant 0 : index
+  func.func @test_3d_dynamic_array(%arg0: !fir.ref<!fir.array<?x?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg5: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg6: index loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_3d_dynamic_array"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_3d_dynamic_arrayEn1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %2 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_3d_dynamic_arrayElb1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %3 = fircg.ext_declare %arg3 dummy_scope %0 arg 4 {uniq_name = "_QFtest_3d_dynamic_arrayEn2"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %4 = fircg.ext_declare %arg4 dummy_scope %0 arg 5 {uniq_name = "_QFtest_3d_dynamic_arrayElb2"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %5 = fircg.ext_declare %arg5 dummy_scope %0 arg 6 {uniq_name = "_QFtest_3d_dynamic_arrayEn3"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %6 = fircg.ext_declare %arg6 dummy_scope %0 arg 7 {uniq_name = "_QFtest_3d_dynamic_arrayElb3"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %7 = fir.load %1 : !fir.ref<i32>
-    %8 = fir.convert %7 : (i32) -> index
-    %9 = arith.cmpi sgt, %8, %c0 : index
-    %10 = arith.select %9, %8, %c0 : index
-    %11 = fir.load %2 : !fir.ref<i32>
-    %12 = fir.convert %11 : (i32) -> index
-    %13 = fir.load %3 : !fir.ref<i32>
-    %14 = fir.convert %13 : (i32) -> index
-    %15 = arith.cmpi sgt, %14, %c0 : index
-    %16 = arith.select %15, %14, %c0 : index
-    %17 = fir.load %4 : !fir.ref<i32>
-    %18 = fir.convert %17 : (i32) -> index
-    %19 = fir.load %5 : !fir.ref<i32>
-    %20 = fir.convert %19 : (i32) -> index
-    %21 = arith.cmpi sgt, %20, %c0 : index
-    %22 = arith.select %21, %20, %c0 : index
-    %23 = fir.load %6 : !fir.ref<i32>
-    %24 = fir.convert %23 : (i32) -> index
-    %25 = fircg.ext_declare %arg0(%10, %16, %22) origin %12, %18, %24 dummy_scope %0 arg 1 {uniq_name = "_QFtest_3d_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1, %arg3, %arg5) origin %arg2, %arg4, %arg6 dummy_scope %0 arg 1 {uniq_name = "_QFtest_3d_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     return loc(#loc5)
   } loc(#loc1)
 
   // 2D dynamically-sized array with multiple returns.
-  func.func @test_2d_dynamic_array_multi_ret(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: !fir.ref<i32> {fir.bindc_name = "n1"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: !fir.ref<i32> {fir.bindc_name = "lb1"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: !fir.ref<i32> {fir.bindc_name = "n2"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: !fir.ref<i32> {fir.bindc_name = "lb2"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg5: i1 loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_2d_dynamic_array_multi_ret"} {
-    %c0 = arith.constant 0 : index
+  func.func @test_2d_dynamic_array_multi_ret(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg5: i1 loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_2d_dynamic_array_multi_ret"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_2d_dynamic_array_multi_retEn1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %2 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_2d_dynamic_array_multi_retElb1"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %3 = fircg.ext_declare %arg3 dummy_scope %0 arg 4 {uniq_name = "_QFtest_2d_dynamic_array_multi_retEn2"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %4 = fircg.ext_declare %arg4 dummy_scope %0 arg 5 {uniq_name = "_QFtest_2d_dynamic_array_multi_retElb2"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %5 = fir.load %1 : !fir.ref<i32>
-    %6 = fir.convert %5 : (i32) -> index
-    %7 = arith.cmpi sgt, %6, %c0 : index
-    %8 = arith.select %7, %6, %c0 : index
-    %9 = fir.load %2 : !fir.ref<i32>
-    %10 = fir.convert %9 : (i32) -> index
-    %11 = fir.load %3 : !fir.ref<i32>
-    %12 = fir.convert %11 : (i32) -> index
-    %13 = arith.cmpi sgt, %12, %c0 : index
-    %14 = arith.select %13, %12, %c0 : index
-    %15 = fir.load %4 : !fir.ref<i32>
-    %16 = fir.convert %15 : (i32) -> index
-    %17 = fircg.ext_declare %arg0(%8, %14) origin %10, %16 dummy_scope %0 arg 1 {uniq_name = "_QFtest_2d_dynamic_array_multi_retEarr"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1, %arg3) origin %arg2, %arg4 dummy_scope %0 arg 1 {uniq_name = "_QFtest_2d_dynamic_array_multi_retEarr"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     cf.cond_br %arg5, ^bb1, ^bb2
   ^bb1:

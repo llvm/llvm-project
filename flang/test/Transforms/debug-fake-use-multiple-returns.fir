@@ -91,18 +91,9 @@ module {
   } loc(#loc1)
 
   // Function with a dynamically-sized array and multiple returns.
-  func.func @test_dynamic_array_multi_ret(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg1: !fir.ref<i32> {fir.bindc_name = "n"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg2: !fir.ref<i32> {fir.bindc_name = "lb"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg3: i1 loc("debug-fake-use-multiple-returns.f90":1:1)) attributes {fir.internal_name = "_QPtest_dynamic_array_multi_ret"} {
-    %c0 = arith.constant 0 : index
+  func.func @test_dynamic_array_multi_ret(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg1: index loc("debug-fake-use-multiple-returns.f90":1:1), %arg2: index loc("debug-fake-use-multiple-returns.f90":1:1), %arg3: i1 loc("debug-fake-use-multiple-returns.f90":1:1)) attributes {fir.internal_name = "_QPtest_dynamic_array_multi_ret"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_dynamic_array_multi_retEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %2 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_dynamic_array_multi_retElb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %3 = fir.load %1 : !fir.ref<i32>
-    %4 = fir.convert %3 : (i32) -> index
-    %5 = arith.cmpi sgt, %4, %c0 : index
-    %6 = arith.select %5, %4, %c0 : index
-    %7 = fir.load %2 : !fir.ref<i32>
-    %8 = fir.convert %7 : (i32) -> index
-    %9 = fircg.ext_declare %arg0(%6) origin %8 dummy_scope %0 arg 1 {uniq_name = "_QFtest_dynamic_array_multi_retEarr"} : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1) origin %arg2 dummy_scope %0 arg 1 {uniq_name = "_QFtest_dynamic_array_multi_retEarr"} : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     cf.cond_br %arg3, ^bb1, ^bb2
   ^bb1:

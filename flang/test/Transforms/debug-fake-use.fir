@@ -62,7 +62,6 @@
 #loc5 = loc("debug-fake-use.f90":5:1)
 #loc = loc("debug-fake-use.f90":0:0)
 
-//module attributes {dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i32 = dense<32> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, i8 = dense<8> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.mangling_mode" = "e", "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", fir.target_cpu = "x86-64", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 module {  
   func.func private @foo()
   func.func @test_(%arg0: !fir.ref<i32> {fir.bindc_name = "expected"} loc("debug-fake-use.f90":1:1)) attributes {fir.internal_name = "_QPtest"} {
@@ -80,18 +79,9 @@ module {
     return loc(#loc5)
   } loc(#loc1)
 
-  func.func @test_dynamic_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use.f90":1:1), %arg1: !fir.ref<i32> {fir.bindc_name = "n"} loc("debug-fake-use.f90":1:1), %arg2: !fir.ref<i32> {fir.bindc_name = "lb"} loc("debug-fake-use.f90":1:1)) attributes {fir.internal_name = "_QPtest_dynamic_array"} {
-    %c0 = arith.constant 0 : index
+  func.func @test_dynamic_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use.f90":1:1), %arg1: index loc("debug-fake-use.f90":1:1), %arg2: index loc("debug-fake-use.f90":1:1)) attributes {fir.internal_name = "_QPtest_dynamic_array"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_dynamic_arrayEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
-    %2 = fircg.ext_declare %arg2 dummy_scope %0 arg 3 {uniq_name = "_QFtest_dynamic_arrayElb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc4)
-    %3 = fir.load %1 : !fir.ref<i32>
-    %4 = fir.convert %3 : (i32) -> index
-    %5 = arith.cmpi sgt, %4, %c0 : index
-    %6 = arith.select %5, %4, %c0 : index
-    %7 = fir.load %2 : !fir.ref<i32>
-    %8 = fir.convert %7 : (i32) -> index
-    %9 = fircg.ext_declare %arg0(%6) origin %8 dummy_scope %0 arg 1 {uniq_name = "_QFtest_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1) origin %arg2 dummy_scope %0 arg 1 {uniq_name = "_QFtest_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     return loc(#loc5)
   } loc(#loc1)
