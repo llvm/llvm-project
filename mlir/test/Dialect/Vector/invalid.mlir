@@ -2154,7 +2154,7 @@ func.func @load_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>) -
 
 // -----
 
-func.func @store_negative_stride(%flip: memref<100x100xf32, strided<[-100, 1]>>, %val: vector<4xf32>) {
+func.func @store_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %val: vector<4xf32>) {
   // expected-error @+2 {{'vector.store' op memref strides must be non-negative}}
   %c0 = arith.constant 0 : index
   vector.store %val, %flip[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<4xf32>
