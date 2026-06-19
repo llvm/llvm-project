@@ -959,7 +959,17 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vshlq_n_v:
     return emitCommonNeonShift(cgf.getBuilder(), loc, vTy, ops[0], ops[1],
                                /*shiftLeft=*/true);
-  case NEON::BI__builtin_neon_vshll_n_v:
+  case NEON::BI__builtin_neon_vshll_n_v: {
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    cir::VectorType narrowVecTy =
+        builder.getExtendedOrTruncatedElementVectorType(vTy,
+                                                        /*isExtended=*/false,
+                                                        /*isSigned=*/!usgn);
+    mlir::Value src = builder.createBitcast(ops[0], narrowVecTy);
+    mlir::Value extended = builder.createIntCast(src, vTy);
+    return emitCommonNeonShift(builder, loc, vTy, extended, ops[1],
+                               /*shiftLeft=*/true);
+  }
   case NEON::BI__builtin_neon_vshrn_n_v:
     cgf.cgm.errorNYI(expr->getSourceRange(),
                      std::string("unimplemented AArch64 builtin call: ") +
@@ -1475,22 +1485,6 @@ CIRGenFunction::emitAArch64SMEBuiltinExpr(unsigned builtinID,
 // Some intrinsics are equivalent for codegen.
 static const std::pair<unsigned, unsigned> neonEquivalentIntrinsicMap[] = {
     {
-        NEON::BI__builtin_neon_splat_lane_bf16,
-        NEON::BI__builtin_neon_splat_lane_v,
-    },
-    {
-        NEON::BI__builtin_neon_splat_laneq_bf16,
-        NEON::BI__builtin_neon_splat_laneq_v,
-    },
-    {
-        NEON::BI__builtin_neon_splatq_lane_bf16,
-        NEON::BI__builtin_neon_splatq_lane_v,
-    },
-    {
-        NEON::BI__builtin_neon_splatq_laneq_bf16,
-        NEON::BI__builtin_neon_splatq_laneq_v,
-    },
-    {
         NEON::BI__builtin_neon_vabd_f16,
         NEON::BI__builtin_neon_vabd_v,
     },
@@ -1602,40 +1596,6 @@ static const std::pair<unsigned, unsigned> neonEquivalentIntrinsicMap[] = {
         NEON::BI__builtin_neon_vfmaq_laneq_f16,
         NEON::BI__builtin_neon_vfmaq_laneq_v,
     },
-    {NEON::BI__builtin_neon_vld1_bf16_x2, NEON::BI__builtin_neon_vld1_x2_v},
-    {NEON::BI__builtin_neon_vld1_bf16_x3, NEON::BI__builtin_neon_vld1_x3_v},
-    {NEON::BI__builtin_neon_vld1_bf16_x4, NEON::BI__builtin_neon_vld1_x4_v},
-    {NEON::BI__builtin_neon_vld1_bf16, NEON::BI__builtin_neon_vld1_v},
-    {NEON::BI__builtin_neon_vld1_dup_bf16, NEON::BI__builtin_neon_vld1_dup_v},
-    {NEON::BI__builtin_neon_vld1_lane_bf16, NEON::BI__builtin_neon_vld1_lane_v},
-    {NEON::BI__builtin_neon_vld1q_bf16_x2, NEON::BI__builtin_neon_vld1q_x2_v},
-    {NEON::BI__builtin_neon_vld1q_bf16_x3, NEON::BI__builtin_neon_vld1q_x3_v},
-    {NEON::BI__builtin_neon_vld1q_bf16_x4, NEON::BI__builtin_neon_vld1q_x4_v},
-    {NEON::BI__builtin_neon_vld1q_bf16, NEON::BI__builtin_neon_vld1q_v},
-    {NEON::BI__builtin_neon_vld1q_dup_bf16, NEON::BI__builtin_neon_vld1q_dup_v},
-    {NEON::BI__builtin_neon_vld1q_lane_bf16,
-     NEON::BI__builtin_neon_vld1q_lane_v},
-    {NEON::BI__builtin_neon_vld2_bf16, NEON::BI__builtin_neon_vld2_v},
-    {NEON::BI__builtin_neon_vld2_dup_bf16, NEON::BI__builtin_neon_vld2_dup_v},
-    {NEON::BI__builtin_neon_vld2_lane_bf16, NEON::BI__builtin_neon_vld2_lane_v},
-    {NEON::BI__builtin_neon_vld2q_bf16, NEON::BI__builtin_neon_vld2q_v},
-    {NEON::BI__builtin_neon_vld2q_dup_bf16, NEON::BI__builtin_neon_vld2q_dup_v},
-    {NEON::BI__builtin_neon_vld2q_lane_bf16,
-     NEON::BI__builtin_neon_vld2q_lane_v},
-    {NEON::BI__builtin_neon_vld3_bf16, NEON::BI__builtin_neon_vld3_v},
-    {NEON::BI__builtin_neon_vld3_dup_bf16, NEON::BI__builtin_neon_vld3_dup_v},
-    {NEON::BI__builtin_neon_vld3_lane_bf16, NEON::BI__builtin_neon_vld3_lane_v},
-    {NEON::BI__builtin_neon_vld3q_bf16, NEON::BI__builtin_neon_vld3q_v},
-    {NEON::BI__builtin_neon_vld3q_dup_bf16, NEON::BI__builtin_neon_vld3q_dup_v},
-    {NEON::BI__builtin_neon_vld3q_lane_bf16,
-     NEON::BI__builtin_neon_vld3q_lane_v},
-    {NEON::BI__builtin_neon_vld4_bf16, NEON::BI__builtin_neon_vld4_v},
-    {NEON::BI__builtin_neon_vld4_dup_bf16, NEON::BI__builtin_neon_vld4_dup_v},
-    {NEON::BI__builtin_neon_vld4_lane_bf16, NEON::BI__builtin_neon_vld4_lane_v},
-    {NEON::BI__builtin_neon_vld4q_bf16, NEON::BI__builtin_neon_vld4q_v},
-    {NEON::BI__builtin_neon_vld4q_dup_bf16, NEON::BI__builtin_neon_vld4q_dup_v},
-    {NEON::BI__builtin_neon_vld4q_lane_bf16,
-     NEON::BI__builtin_neon_vld4q_lane_v},
     {
         NEON::BI__builtin_neon_vmax_f16,
         NEON::BI__builtin_neon_vmax_v,
@@ -1812,32 +1772,6 @@ static const std::pair<unsigned, unsigned> neonEquivalentIntrinsicMap[] = {
         NEON::BI__builtin_neon_vsqrtq_f16,
         NEON::BI__builtin_neon_vsqrtq_v,
     },
-    {NEON::BI__builtin_neon_vst1_bf16_x2, NEON::BI__builtin_neon_vst1_x2_v},
-    {NEON::BI__builtin_neon_vst1_bf16_x3, NEON::BI__builtin_neon_vst1_x3_v},
-    {NEON::BI__builtin_neon_vst1_bf16_x4, NEON::BI__builtin_neon_vst1_x4_v},
-    {NEON::BI__builtin_neon_vst1_bf16, NEON::BI__builtin_neon_vst1_v},
-    {NEON::BI__builtin_neon_vst1_lane_bf16, NEON::BI__builtin_neon_vst1_lane_v},
-    {NEON::BI__builtin_neon_vst1q_bf16_x2, NEON::BI__builtin_neon_vst1q_x2_v},
-    {NEON::BI__builtin_neon_vst1q_bf16_x3, NEON::BI__builtin_neon_vst1q_x3_v},
-    {NEON::BI__builtin_neon_vst1q_bf16_x4, NEON::BI__builtin_neon_vst1q_x4_v},
-    {NEON::BI__builtin_neon_vst1q_bf16, NEON::BI__builtin_neon_vst1q_v},
-    {NEON::BI__builtin_neon_vst1q_lane_bf16,
-     NEON::BI__builtin_neon_vst1q_lane_v},
-    {NEON::BI__builtin_neon_vst2_bf16, NEON::BI__builtin_neon_vst2_v},
-    {NEON::BI__builtin_neon_vst2_lane_bf16, NEON::BI__builtin_neon_vst2_lane_v},
-    {NEON::BI__builtin_neon_vst2q_bf16, NEON::BI__builtin_neon_vst2q_v},
-    {NEON::BI__builtin_neon_vst2q_lane_bf16,
-     NEON::BI__builtin_neon_vst2q_lane_v},
-    {NEON::BI__builtin_neon_vst3_bf16, NEON::BI__builtin_neon_vst3_v},
-    {NEON::BI__builtin_neon_vst3_lane_bf16, NEON::BI__builtin_neon_vst3_lane_v},
-    {NEON::BI__builtin_neon_vst3q_bf16, NEON::BI__builtin_neon_vst3q_v},
-    {NEON::BI__builtin_neon_vst3q_lane_bf16,
-     NEON::BI__builtin_neon_vst3q_lane_v},
-    {NEON::BI__builtin_neon_vst4_bf16, NEON::BI__builtin_neon_vst4_v},
-    {NEON::BI__builtin_neon_vst4_lane_bf16, NEON::BI__builtin_neon_vst4_lane_v},
-    {NEON::BI__builtin_neon_vst4q_bf16, NEON::BI__builtin_neon_vst4q_v},
-    {NEON::BI__builtin_neon_vst4q_lane_bf16,
-     NEON::BI__builtin_neon_vst4q_lane_v},
     // The mangling rules cause us to have one ID for each type for
     // vldap1(q)_lane and vstl1(q)_lane, but codegen is equivalent for all of
     // them. Choose an arbitrary one to be handled as tha canonical variation.
