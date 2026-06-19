@@ -1418,8 +1418,38 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   // after promotion is done.
   if ((!isCounterPromotionEnabled() && isAtomic()) ||
       (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
-    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
-                            MaybeAlign(), AtomicOrdering::Monotonic);
+    if (M.getDataLayout().getTypeSizeInBits(Addr->getType()) == 32) {
+      // For 32-bit platforms, perform atomic updates of two counter's halves.
+      unsigned AS = M.getDataLayout().getDefaultGlobalsAddressSpace();
+      auto *Int32Ty = Type::getInt32Ty(M.getContext());
+      auto *CtrLowPtr =
+          Builder.CreateBitCast(Addr, PointerType::get(M.getContext(), AS));
+      auto *CtrHighPtr =
+          Builder.CreateConstInBoundsGEP1_32(Int32Ty, CtrLowPtr, 1);
+      if (M.getDataLayout().isBigEndian())
+        std::swap(CtrLowPtr, CtrHighPtr);
+      Value *IncStep = Inc->getStep();
+      Value *IncStepLow = Builder.CreateTrunc(IncStep, Int32Ty);
+      Value *IncStepHigh = Builder.CreateLShr(IncStep, Builder.getInt64(32));
+      IncStepHigh = Builder.CreateTrunc(IncStepHigh, Int32Ty);
+      Value *OldLowValue =
+          Builder.CreateAtomicRMW(AtomicRMWInst::Add, CtrLowPtr, IncStepLow,
+                                  MaybeAlign(), AtomicOrdering::Monotonic);
+      Value *OverflowAdd = Builder.CreateZExt(
+          Builder.CreateICmpULT(Builder.CreateAdd(OldLowValue, IncStepLow),
+                                OldLowValue),
+          Int32Ty);
+      Value *IncHigh = Builder.CreateAdd(IncStepHigh, OverflowAdd);
+      Value *Cmp = Builder.CreateIsNotNull(IncHigh, "pgocount.ifnonzero");
+      // if (Cmp) update high half.
+      Instruction *ThenBranch = SplitBlockAndInsertIfThen(Cmp, Inc, false);
+      Builder.SetInsertPoint(ThenBranch);
+      Builder.CreateAtomicRMW(AtomicRMWInst::Add, CtrHighPtr, IncHigh,
+                              MaybeAlign(), AtomicOrdering::Monotonic);
+    } else {
+      Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
+                              MaybeAlign(), AtomicOrdering::Monotonic);
+    }
   } else {
     Value *IncStep = Inc->getStep();
     Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
