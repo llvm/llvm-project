@@ -66,8 +66,8 @@ LIBC_INLINE void unstable_sort_impl(void *array, size_t array_len,
 template <typename F>
 LIBC_INLINE void unstable_sort_dispatch(void *array, size_t array_len,
                                         size_t elem_size, F is_less) {
-  constexpr bool use_quick_sort = (LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT);
-  unstable_sort_impl<use_quick_sort>(array, array_len, elem_size, is_less);
+  constexpr bool USE_QUICK_SORT = (LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT);
+  unstable_sort_impl<USE_QUICK_SORT>(array, array_len, elem_size, is_less);
 }
 
 template <typename CmpFn>
