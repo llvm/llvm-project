@@ -86,8 +86,6 @@ template class LLVM_EXPORT_TEMPLATE opt<unsigned>;
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}
-void OptionValue<boolOrDefault>::anchor() {}
-void OptionValue<std::string>::anchor() {}
 void Option::anchor() {}
 void basic_parser_impl::anchor() {}
 void parser<bool>::anchor() {}
