@@ -1706,30 +1706,39 @@ faraway places in the file to tell that the function is local:
     ...
   }
 
-Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Don't Use Braces on Simple Single-Line Bodies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When writing the body of an ``if``, ``else``, or ``for``/``while`` loop
-statement, we aim to reduce unnecessary line noise.
+statement, we aim to reduce unnecessary line noise without hiding control flow.
+Omit braces only when the body is a single simple statement that does not wrap
+onto multiple physical lines.
 
 **Omit braces when:**
 
-*   The body consists of a single **simple** statement.
-*   The single statement is not preceded by a comment.
+*   The body consists of a single simple statement that does not wrap onto
+    multiple physical lines, including any nested control-flow bodies.
+*   The body is not preceded by a comment.
     (Hoist comments above the control statement if you can.)
-*   An ``else`` clause, if present, also meets the above criteria (single
-    simple statement, no associated comments).
+*   Every arm of an ``if``/``else if``/``else`` chain meets the same criteria.
 
 **Use braces in all other cases, including:**
 
 *   Multi-statement bodies
+*   Single-statement bodies that wrap onto multiple physical lines
 *   Single-statement bodies with non-hoistable comments
 *   Complex single-statement bodies (e.g., deep nesting, complex nested
     loops)
+*   Enclosing statement bodies whose nested control-flow statement spans
+    multiple physical lines under these rules
 *   Inconsistent bracing within ``if``/``else if``/``else`` chains (if one
     block requires braces, all must)
 *   ``if`` statements ending with a nested ``if`` lacking an ``else`` (to
     prevent "dangling else")
+
+Apply these rules recursively. If the body is itself a control-flow statement,
+omit braces on the enclosing statement only when that nested statement,
+including its own body, fits on one physical line.
 
 The examples below provide guidelines for these cases:
 
@@ -1769,6 +1778,15 @@ The examples below provide guidelines for these cases:
     handleOtherDecl(D);
   }
 
+  // Use braces for both blocks when one block has a single statement that wraps
+  // across multiple lines.
+  if (isa<FunctionDecl>(D)) {
+    handleFunctionDecl(D);
+  } else {
+    handleDeclWithLongName(D,
+                           /*ShouldLog=*/true);
+  }
+
   // Use braces for the `else if` and `else` block to keep it uniform with the
   // `if` block.
   if (isa<FunctionDecl>(D)) {
@@ -1780,12 +1798,13 @@ The examples below provide guidelines for these cases:
     handleOtherDecl(D);
   }
 
-  // This should also omit braces.  The `for` loop contains only a single
-  // statement, so it shouldn't have braces.  The `if` also only contains a
-  // single simple statement (the `for` loop), so it also should omit braces.
-  if (isa<FunctionDecl>(D))
+  // Use braces for the `if` block because its body is a `for` loop that spans
+  // multiple lines.  The `for` loop may still omit braces because its body is a
+  // single simple statement.
+  if (isa<FunctionDecl>(D)) {
     for (auto *A : D.attrs())
       handleAttr(A);
+  }
 
   // Use braces for a `do-while` loop and its enclosing statement.
   if (Tok->is(tok::l_brace)) {
@@ -1803,12 +1822,13 @@ The examples below provide guidelines for these cases:
     }
   }
 
-  // Use braces on the outer block because there are more than two levels of
-  // nesting.
-  if (isa<FunctionDecl>(D)) {
-    for (auto *A : D.attrs())
-      for (ssize_t i : llvm::seq<ssize_t>(count))
-        handleAttrOnDecl(D, A, i);
+  // Use braces on the outer blocks because their nested control-flow bodies
+  // span multiple lines.
+  for (auto *D : Decls) {
+    if (isa<FunctionDecl>(D)) {
+      if (shouldProcess(D))
+        return true;
+    }
   }
 
   // Use braces on the outer block because of a nested `if`; otherwise, the
