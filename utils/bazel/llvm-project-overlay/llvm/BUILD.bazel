@@ -1687,11 +1687,19 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "patch_LowerCommentStringPass",
+    srcs = ["lib/Transforms/Utils/LowerCommentStringPass.cpp"],
+    outs = ["LowerCommentStringPass_patched.cpp"],
+    cmd = "sed 's|#include \"llvm/Passes/PassBuilder.h\"||g' $< > $@",
+)
+
 cc_library(
     name = "TransformUtils",
-    srcs = glob([
-        "lib/Transforms/Utils/*.cpp",
-    ]),
+    srcs = glob(
+        ["lib/Transforms/Utils/*.cpp"],
+        exclude = ["lib/Transforms/Utils/LowerCommentStringPass.cpp"],
+    ) + ["LowerCommentStringPass_patched.cpp"],
     hdrs = glob(["include/llvm/Transforms/Utils/*.h"]) + [
         "include/llvm/Transforms/Utils.h",
     ],
