@@ -153,10 +153,10 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 
 /// Helper for extra no-alias checks via known-safe recipe and SCEV.
 class SinkStoreInfo {
-  const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes;
+  SmallPtrSet<VPReplicateRecipe *, 4> ExcludeRecipes;
   VPReplicateRecipe &GroupLeader;
-  PredicatedScalarEvolution &PSE;
-  const Loop &L;
+  PredicatedScalarEvolution *PSE = nullptr;
+  const Loop *L = nullptr;
 
   // Return true if \p A and \p B are known to not alias for all VFs in the
   // plan, checked via the distance between the accesses
@@ -165,15 +165,18 @@ class SinkStoreInfo {
         B->getOpcode() != Instruction::Store)
       return false;
 
+    if (!PSE || !L)
+      return A == B;
+
     VPValue *AddrA = A->getOperand(1);
-    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, PSE, &L);
+    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, *PSE, L);
     VPValue *AddrB = B->getOperand(1);
-    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, PSE, &L);
+    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, *PSE, L);
     if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
       return false;
 
     const APInt *Distance;
-    ScalarEvolution &SE = *PSE.getSE();
+    ScalarEvolution &SE = *PSE->getSE();
     if (!match(SE.getMinusSCEV(SCEVA, SCEVB), m_scev_APInt(Distance)))
       return false;
 
@@ -197,18 +200,20 @@ class SinkStoreInfo {
   }
 
 public:
-  SinkStoreInfo(const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes,
+  SinkStoreInfo(ArrayRef<VPReplicateRecipe *> ExcludeRecipes,
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
                 const Loop &L)
-      : ExcludeRecipes(ExcludeRecipes), GroupLeader(GroupLeader), PSE(PSE),
-        L(L) {}
+      : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
+        GroupLeader(GroupLeader), PSE(&PSE), L(&L) {}
+
+  SinkStoreInfo(VPReplicateRecipe &GroupLeader) : GroupLeader(GroupLeader) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
   /// SCEV.
   bool shouldSkip(VPRecipeBase &R) const {
     auto *Store = dyn_cast<VPReplicateRecipe>(&R);
-    return ExcludeRecipes.contains(&R) ||
+    return ExcludeRecipes.contains(Store) ||
            (Store && isNoAliasViaDistance(Store, &GroupLeader));
   }
 };
@@ -2547,15 +2552,26 @@ void VPlanTransforms::cse(VPlan &Plan) {
 }
 
 /// Return true if we do not know how to (mechanically) hoist or sink a
-/// non-memory or memory recipe \p R out of a loop region.
+/// non-memory or memory recipe \p R out of a loop region. When sinking, passing
+/// \p Sinking = true ensures that assumes aren't sunk.
 static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
-                                    VPBasicBlock *LastBB) {
-  if (!isa<VPReplicateRecipe>(R) || !R.mayReadFromMemory())
-    return vputils::cannotHoistOrSinkRecipe(R);
+                                    VPBasicBlock *LastBB,
+                                    bool Sinking = false) {
+  if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
+      match(&R, m_Intrinsic<Intrinsic::assume>()))
+    return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
-  // Check that the load doesn't alias with stores between FirstBB and LastBB.
+  // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
-  return !MemLoc || !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB);
+
+  // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
+  // stores upfront, and constructing a full SinkStoreInfo.
+  auto SinkInfo =
+      Sinking ? std::make_optional(SinkStoreInfo(cast<VPReplicateRecipe>(R)))
+              : std::nullopt;
+
+  return !MemLoc ||
+         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
@@ -2594,7 +2610,9 @@ static void licm(VPlan &Plan) {
       LoopRegion->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (vputils::cannotHoistOrSinkRecipe(R, /*Sinking=*/true))
+      if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
+                                  LoopRegion->getExitingBasicBlock(),
+                                  /*Sinking=*/true))
         continue;
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
@@ -2607,7 +2625,19 @@ static void licm(VPlan &Plan) {
         // non-single-scalar replicates correctly.
         if (!RepR->isSingleScalar())
           continue;
+
+        // The pointer operand of stores must be loop-invariant.
+        if (RepR->getOpcode() == Instruction::Store &&
+            !RepR->getOperand(1)->isDefinedOutsideLoopRegions())
+          continue;
       }
+
+      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      assert((!R.mayWriteToMemory() ||
+              (RepR && RepR->getOpcode() == Instruction::Store &&
+               RepR->getOperand(1)->isDefinedOutsideLoopRegions())) &&
+             "The only recipes that may write to memory are expected to be "
+             "stores with invariant pointer-operand");
 
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
@@ -5229,12 +5259,9 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
 
   // When sinking a group of stores, all members of the group alias each other.
   // Skip them during the alias checks.
-  SmallPtrSet<VPRecipeBase *, 4> StoresToSinkSet(StoresToSink.begin(),
-                                                 StoresToSink.end());
-
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
-  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], PSE, L);
+  SinkStoreInfo SinkInfo(StoresToSink, *StoresToSink[0], PSE, L);
   return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
 }
 
