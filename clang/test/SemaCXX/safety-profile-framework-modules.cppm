@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_fail.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_mismatch.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_repeated.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
-// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/impl_propagation.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/impl_propagation.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_gmf_enforce.cppm -o %t/mod_gmf_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/require_gmf_ok.cpp -fmodule-file=GmfMod=%t/mod_gmf_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_gmf_only_enforce.cppm -o %t/mod_gmf_only_enforce.pcm -verify
@@ -15,9 +15,9 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/part_iface.cppm -o %t/part_iface.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_primary_require_ok.cppm -fmodule-file=PartMod:part=%t/part_iface.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_primary_require_fail.cppm -fmodule-file=PartMod:part=%t/part_iface.pcm -verify
-// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_iface_violation.cppm -verify
-// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_enforce.cppm -verify
-// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_inherit.cppm -fmodule-file=%t/mod_enforced.pcm -Wno-eager-load-cxx-named-modules -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/part_iface_violation.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/part_impl_enforce.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/part_impl_inherit.cppm -fmodule-file=%t/mod_enforced.pcm -Wno-eager-load-cxx-named-modules -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_no_inherit.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_no_local_enforce.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_gmf_only_no_leak.cpp -fmodule-file=GmfOnlyMod=%t/mod_gmf_only_enforce.pcm -verify

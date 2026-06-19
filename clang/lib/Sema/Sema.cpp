@@ -2989,6 +2989,10 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
 bool Sema::isProfileEnforced(StringRef ProfileName) const {
   if (!getLangOpts().Profiles)
     return false;
+  // The built-in test:: profiles only exercise the framework; keep them inert
+  // unless the test suite opts in via -fprofiles-test-profiles.
+  if (!getLangOpts().ProfilesTestProfiles && ProfileName.starts_with("test::"))
+    return false;
   return getProfileEnforcement(ProfileName) != nullptr;
 }
 

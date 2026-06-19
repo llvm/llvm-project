@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 %s -fprofiles -std=c++20 -fsyntax-only -include %s -verify
+// RUN: %clang_cc1 %s -fprofiles -fprofiles-test-profiles -std=c++20 -fsyntax-only -include %s -verify
 
 // Test with pch.
-// RUN: %clang_cc1 %s -fprofiles -std=c++20 -emit-pch -o %t
-// RUN: %clang_cc1 %s -fprofiles -std=c++20 -fsyntax-only -include-pch %t -verify
+// RUN: %clang_cc1 %s -fprofiles -fprofiles-test-profiles -std=c++20 -emit-pch -o %t
+// RUN: %clang_cc1 %s -fprofiles -fprofiles-test-profiles -std=c++20 -fsyntax-only -include-pch %t -verify
 
 #ifndef HEADER
 #define HEADER

@@ -1,7 +1,7 @@
 // All violations share one TU with a leading unrelated error: the early error
 // disables the analysis-based-warnings pass for later functions, so this also
 // verifies that an enforced CFG-uninit profile keeps diagnosing afterwards.
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -std=c++23 -Wno-uninitialized %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -fprofiles-test-profiles -std=c++23 -Wno-uninitialized %s
 // RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++23 -Wno-uninitialized %s
 
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}

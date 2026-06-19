@@ -1701,6 +1701,10 @@ defm profiles : BoolFOption<"profiles",
           "Enable C++ profiles framework (P3589R2)">,
   NegFlag<SetFalse>>,
   ShouldParseIf<cplusplus.KeyPath>;
+def fprofiles_test_profiles : Flag<["-"], "fprofiles-test-profiles">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Enable the C++ profiles framework's built-in test:: profiles (test suite only)">,
+  MarshallingInfoFlag<LangOpts<"ProfilesTestProfiles">>;
 
 defm coro_aligned_allocation : BoolFOption<"coro-aligned-allocation",
   LangOpts<"CoroAlignedAllocation">, DefaultFalse,

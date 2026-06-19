@@ -4,7 +4,7 @@
 // The DEMOTE run additionally enforces test::uninit_read to exercise profile
 // table ordering, which would otherwise change the std::init-only diagnostics.
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,common -fprofiles -std=c++23 -Wno-uninitialized %s
-// RUN: %clang_cc1 -fsyntax-only -verify=demote,common -fprofiles -std=c++23 -Wno-uninitialized -DDEMOTE %s
+// RUN: %clang_cc1 -fsyntax-only -verify=demote,common -fprofiles -fprofiles-test-profiles -std=c++23 -Wno-uninitialized -DDEMOTE %s
 // RUN: %clang_cc1 -fsyntax-only -verify=no-profiles,common -std=c++23 -Wno-uninitialized %s
 
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fprofiles -std=c++20 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fprofiles -fprofiles-test-profiles -std=c++20 %s
 
 // ===================================================================
 // Enforce on empty-declaration at TU scope: OK

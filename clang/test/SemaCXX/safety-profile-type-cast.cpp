@@ -1,5 +1,12 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -fprofiles-test-profiles -std=c++23 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=no-test -fprofiles -std=c++23 %s
+
+// Under -fprofiles without -fprofiles-test-profiles the built-in test:: profiles
+// are inert: the attributes are recognized (no "ignored" warnings) but no rule
+// fires anywhere in this file.
+// no-test-no-diagnostics
+
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}
 [[profiles::enforce(test::type_cast)]];
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -fprofiles-test-profiles -std=c++23 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++23 %s
 
 // no-profiles-warning@+1 {{'profiles::enforce' attribute ignored}}

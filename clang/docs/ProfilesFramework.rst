@@ -59,6 +59,16 @@ The framework's parse-time bookkeeping (``ProfileSuppressScope``, attribute
 custom parsing, etc.) is also no-ops when ``LangOpts.Profiles`` is false, so
 the flag is the single switch that turns the entire feature on or off.
 
+The built-in ``test::`` profiles (see `Built-in Profiles`_) exist only to
+exercise the framework and are additionally gated on the ``-fprofiles-test-profiles``
+flag, which sets ``LangOpts.ProfilesTestProfiles``.  This flag is ``-cc1``-only
+(not exposed by the driver) and is intended solely for running the test suite.
+Under ``-fprofiles`` alone, ``[[profiles::enforce(test::...)]]`` is still
+recognized (it is not ``warn_attribute_ignored``) and its designator is still
+recorded and exported across modules, but ``Sema::isProfileEnforced`` reports
+any ``test::``-prefixed profile as not enforced, so no ``test::`` rule ever
+fires.  Real profiles such as ``std::init`` are unaffected by this flag.
+
 
 Attribute Reference
 ===================
@@ -493,7 +503,10 @@ The following parts of P3589R2 are deliberately not implemented:
 Built-in Profiles
 =================
 
-The tree ships five built-in profiles, all gated on ``-fprofiles``:
+The tree ships five built-in profiles, all gated on ``-fprofiles``.  The four
+``test::`` profiles are additionally gated on the ``-cc1``-only
+``-fprofiles-test-profiles`` flag (see `Driver Flag`_) and are inert under
+``-fprofiles`` alone; ``std::init`` needs only ``-fprofiles``:
 
 - ``test::type_cast`` (test-only) -- pattern-1 example.
 - ``test::uninit_read`` (test-only) -- pattern-2 example riding the existing
@@ -511,7 +524,10 @@ By convention:
 
 - Real test profiles live under the ``test::`` namespace.  Today there are
   four: ``test::type_cast``, ``test::uninit_read``, ``test::class_final``,
-  and ``test::ctor_final``.
+  and ``test::ctor_final``.  Because the ``test::`` prefix is what
+  ``Sema::isProfileEnforced`` keys on to gate them behind
+  ``-fprofiles-test-profiles``, any new test-only profile must also live
+  under ``test::``.
 - The names ``test::other``, ``test::bounds``, ``test::new_profile``, and
   ``test::not_enforced`` are deliberately *not* implemented and appear only
   in negative tests as stand-in "some other profile" names.  Adding a real
