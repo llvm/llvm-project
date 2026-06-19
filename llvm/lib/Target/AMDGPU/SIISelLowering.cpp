@@ -7456,10 +7456,20 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v32bf16);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
 
   SDLoc SL(Op);
-  SDValue OpLo = DAG.getNode(Opc, SL, Lo.getValueType(), Lo, Op->getFlags());
-  SDValue OpHi = DAG.getNode(Opc, SL, Hi.getValueType(), Hi, Op->getFlags());
+
+  // Forward any trailing scalar operands unchanged to both halves.
+  SmallVector<SDValue, 2> LoOps = {Lo};
+  SmallVector<SDValue, 2> HiOps = {Hi};
+  for (const SDValue &TrailingOp : drop_begin(Op->ops())) {
+    LoOps.push_back(TrailingOp);
+    HiOps.push_back(TrailingOp);
+  }
+
+  SDValue OpLo = DAG.getNode(Opc, SL, LoVT, LoOps, Op->getFlags());
+  SDValue OpHi = DAG.getNode(Opc, SL, HiVT, HiOps, Op->getFlags());
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
@@ -7613,6 +7623,12 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCANONICALIZE:
   case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    if (Op.getValueType().isVector() && Op.getValueType() != MVT::v2i16 &&
+        Op.getOperand(0).getValueType().getScalarType() == MVT::f32)
+      return splitUnaryVectorOp(Op, DAG);
+    return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
