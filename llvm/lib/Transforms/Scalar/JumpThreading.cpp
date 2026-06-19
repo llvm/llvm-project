@@ -944,6 +944,15 @@ static bool hasAddressTakenAndUsed(BasicBlock *BB) {
   return !BA->use_empty();
 }
 
+static BasicBlock *splitEdge(BasicBlock *BB, BasicBlock *Succ,
+                             std::vector<DominatorTree::UpdateType> &Updates) {
+  BasicBlock *NewBB = SplitEdge(BB, Succ);
+  Updates.push_back({DominatorTree::Insert, BB, NewBB});
+  Updates.push_back({DominatorTree::Insert, NewBB, Succ});
+  Updates.push_back({DominatorTree::Delete, BB, Succ});
+  return NewBB;
+}
+
 // If the only user of the phi authenticates it, adjust the phi to carry the
 // unsigned pointer by moving the auth operations into the predecessors when
 // safe to do so. This allows InstCombine to remove repeated sign/auth
@@ -956,15 +965,19 @@ static bool hoistPtrAuth(PHINode *PN, DomTreeUpdater *DTU) {
 
   Instruction *ToReplace;
 
-  Instruction *P2I =
-      dyn_cast_or_null<PtrToIntInst>(PN->getUniqueUndroppableUser());
-  auto *II = dyn_cast_or_null<IntrinsicInst>(
-      (P2I ? P2I : PN)->getUniqueUndroppableUser());
+  Instruction *P2I = dyn_cast_or_null<PtrToIntInst>(PN->getUniqueUser());
+  auto *II = dyn_cast_or_null<IntrinsicInst>((P2I ? P2I : PN)->getUniqueUser());
   if (!II || II->getIntrinsicID() != Intrinsic::ptrauth_auth)
     return false;
 
+  // The discriminator value must dominate PN in order for it to be valid to
+  // reference it from the predecessors.
+  if (auto *Disc = dyn_cast<Instruction>(II->getArgOperand(2));
+      Disc && !DTU->getDomTree().dominates(Disc, PN->getParent()))
+    return false;
+
   if (P2I) {
-    auto *I2P = dyn_cast_or_null<IntToPtrInst>(II->getUniqueUndroppableUser());
+    auto *I2P = dyn_cast_or_null<IntToPtrInst>(II->getUniqueUser());
     if (!I2P)
       return false;
     ToReplace = I2P;
@@ -996,9 +1009,11 @@ static bool hoistPtrAuth(PHINode *PN, DomTreeUpdater *DTU) {
   // If the auth is not guaranteed to execute (e.g. because a function called
   // before the auth may terminate the program), we cannot move it to the
   // predecessor.
-  if (std::any_of(II->getParent()->begin(), BasicBlock::iterator(II),
-                  [](Instruction &I) { return !I.willReturn(); }))
+  if (!isGuaranteedToTransferExecutionToSuccessor(II->getParent()->begin(),
+                                                  BasicBlock::iterator(II)))
     return false;
+
+  std::vector<DominatorTree::UpdateType> Updates;
 
   // Because SplitEdge may change the number of successors for the phi, keep
   // trying until we run through the incoming blocks with a unique successor
@@ -1009,7 +1024,7 @@ static bool hoistPtrAuth(PHINode *PN, DomTreeUpdater *DTU) {
     for (int i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
       BasicBlock *Pred = PN->getIncomingBlock(i);
       if (!Pred->getUniqueSuccessor()) {
-        SplitEdge(Pred, PN->getParent(), &DTU->getDomTree());
+        splitEdge(Pred, PN->getParent(), Updates);
         UniqueSuccForEachPred = false;
         break;
       }
@@ -1033,6 +1048,9 @@ static bool hoistPtrAuth(PHINode *PN, DomTreeUpdater *DTU) {
 
   ToReplace->replaceAllUsesWith(PN);
   ToReplace->eraseFromParent();
+  if (II != ToReplace)
+    II->eraseFromParent();
+  DTU->applyUpdates(Updates);
   return true;
 }
 
@@ -2792,11 +2810,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   UncondBrInst *OldPredBranch = dyn_cast<UncondBrInst>(PredBB->getTerminator());
 
   if (!OldPredBranch) {
-    BasicBlock *OldPredBB = PredBB;
-    PredBB = SplitEdge(OldPredBB, BB);
-    Updates.push_back({DominatorTree::Insert, OldPredBB, PredBB});
-    Updates.push_back({DominatorTree::Insert, PredBB, BB});
-    Updates.push_back({DominatorTree::Delete, OldPredBB, BB});
+    PredBB = splitEdge(PredBB, BB, Updates);
     OldPredBranch = cast<UncondBrInst>(PredBB->getTerminator());
   }
 

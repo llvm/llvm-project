@@ -84,7 +84,6 @@ define ptr @test_ptr_hoist(ptr %p1, ptr %p2, i1 %cond) {
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[TMP5]], %[[BB2]] ], [ [[TMP2]], %[[ENTRY_JOIN_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[P2I:%.*]] = ptrtoint ptr [[PHI]] to i64
-; CHECK-NEXT:    [[AUTH:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P2I]], i32 2, i64 1234)
 ; CHECK-NEXT:    ret ptr [[PHI]]
 ;
 entry:
@@ -438,5 +437,34 @@ join:
   %phi = phi i64 [ %p1, %bb1 ], [ %p2, %bb2 ]
   call void @may_not_return()
   %auth = call i64 @llvm.ptrauth.auth(i64 %phi, i32 2, i64 1234)
+  ret i64 %auth
+}
+
+define i64 @test_disc_dominance(i64 %p1, i64 %p2, i1 %cond, i64 %disc_arg) {
+; CHECK-LABEL: define i64 @test_disc_dominance(
+; CHECK-SAME: i64 [[P1:%.*]], i64 [[P2:%.*]], i1 [[COND:%.*]], i64 [[DISC_ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[COND]], label %[[JOIN:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[P2]], %[[BB2]] ], [ [[P1]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[DISC:%.*]] = and i64 [[DISC_ARG]], 255
+; CHECK-NEXT:    [[AUTH:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[PHI]], i32 2, i64 [[DISC]])
+; CHECK-NEXT:    ret i64 [[AUTH]]
+;
+entry:
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  br label %join
+
+bb2:
+  br label %join
+
+join:
+  %phi = phi i64 [ %p1, %bb1 ], [ %p2, %bb2 ]
+  %disc = and i64 %disc_arg, 255
+  %auth = call i64 @llvm.ptrauth.auth(i64 %phi, i32 2, i64 %disc)
   ret i64 %auth
 }
