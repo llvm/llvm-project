@@ -5118,7 +5118,10 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     const TargetInstrInfo *TII = ST->getInstrInfo();
     unsigned SchedClass = TII->get(Inst).getSchedClass();
     const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
-    return (LT.first - 1) * Sched.getReciprocalThroughput(*ST, *SCD) +
+    // We need to convert the number of loads before the last to a float here,
+    // as the reciprocal throughput may be fractional.
+    float NumLoads = (LT.first - 1).getValue();
+    return NumLoads * Sched.getReciprocalThroughput(*ST, *SCD) +
            Sched.computeInstrLatency(*ST, *SCD);
   }
 
