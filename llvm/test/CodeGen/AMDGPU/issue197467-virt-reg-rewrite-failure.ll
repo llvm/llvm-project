@@ -7,26 +7,24 @@ define void @_ZN43LlvmLibcStrftimeTest_TimeFormatFullDateTime3RunEv() {
 ; CHECK-LABEL: _ZN43LlvmLibcStrftimeTest_TimeFormatFullDateTime3RunEv:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0x76c
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0x76c
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_mov_b32 s6, 0x41200000
+; CHECK-NEXT:    s_movk_i32 s7, 0xf6
 ; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:  .LBB0_1: ; %while.body.i.i.i.i384.i.i.i
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_cvt_f32_u32_e32 v0, s4
-; CHECK-NEXT:    s_mul_i32 s5, s4, 0xf6
-; CHECK-NEXT:    v_mul_f32_e32 v1, 0x3dcccccd, v0
-; CHECK-NEXT:    v_trunc_f32_e32 v1, v1
-; CHECK-NEXT:    v_cvt_u32_f32_e32 v2, v1
-; CHECK-NEXT:    v_mad_f32 v0, -v1, s6, v0
-; CHECK-NEXT:    v_cmp_ge_f32_e64 s[8:9], |v0|, s6
-; CHECK-NEXT:    s_cmp_lg_u64 s[8:9], 0
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v2
-; CHECK-NEXT:    s_addc_u32 s7, s7, 0
-; CHECK-NEXT:    s_or_b32 s5, s5, s4
-; CHECK-NEXT:    s_or_b32 s5, s5, 1
-; CHECK-NEXT:    s_and_b32 s4, s7, 0x7ff
-; CHECK-NEXT:    v_mov_b32_e32 v0, s5
-; CHECK-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; CHECK-NEXT:    v_cvt_f32_u32_e32 v1, v0
+; CHECK-NEXT:    v_mul_lo_u32 v2, v0, s7
+; CHECK-NEXT:    v_or_b32_e32 v0, v2, v0
+; CHECK-NEXT:    v_or_b32_e32 v2, 1, v0
+; CHECK-NEXT:    v_mul_f32_e32 v0, 0x3dcccccd, v1
+; CHECK-NEXT:    v_trunc_f32_e32 v0, v0
+; CHECK-NEXT:    v_cvt_u32_f32_e32 v3, v0
+; CHECK-NEXT:    v_mad_f32 v0, -v0, s6, v1
+; CHECK-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v0|, s6
+; CHECK-NEXT:    buffer_store_byte v2, off, s[0:3], 0
+; CHECK-NEXT:    v_addc_co_u32_e64 v0, s[4:5], 0, v3, s[4:5]
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %DummyReturnBlock
