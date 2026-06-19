@@ -17,6 +17,10 @@
 # RUN: wasm-ld --no-stack-first --global-base=1024 --export=foo %t/common1.o %t/weak.o %t/main.o -o %t_weak.wasm
 # RUN: obj2yaml %t_weak.wasm | FileCheck %s --check-prefix=WEAK
 
+# Test 4: Relocatable link preserves common symbols (merged)
+# RUN: wasm-ld -r %t/common1.o %t/common2.o -o %t/common_reloc.o
+# RUN: obj2yaml %t/common_reloc.o | FileCheck %s --check-prefix=RELOC
+
 #--- common1.s
 .comm foo, 4, 2
 .comm bar, 8, 3
@@ -40,9 +44,12 @@ foo:
 .size foo, 4
 
 #--- main.s
+.globaltype __stack_pointer, i32
 .globl _start
 _start:
   .functype _start () -> ()
+  global.get __stack_pointer
+  drop
   i32.const foo
   drop
   i32.const bar
@@ -109,3 +116,17 @@ _start:
 # WEAK-NEXT:         InitExpr:
 # WEAK-NEXT:           Opcode:          I32_CONST
 # WEAK-NEXT:           Value:           1024
+
+# RELOC:          SymbolTable:
+# RELOC-NEXT:       - Index:           0
+# RELOC-NEXT:         Kind:            DATA
+# RELOC-NEXT:         Name:            foo
+# RELOC-NEXT:         Flags:           [ BINDING_COMMON ]
+# RELOC-NEXT:         Size:            8
+# RELOC-NEXT:         Align:           3
+# RELOC-NEXT:       - Index:           1
+# RELOC-NEXT:         Kind:            DATA
+# RELOC-NEXT:         Name:            bar
+# RELOC-NEXT:         Flags:           [ BINDING_COMMON ]
+# RELOC-NEXT:         Size:            8
+# RELOC-NEXT:         Align:           3
