@@ -214,35 +214,7 @@ public:
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
-    std::optional<OriginID> FinalOID;
-    llvm::DenseMap<OriginID, OriginID> VistedOriginIDs;
-
-    const auto OriginFlowChainFilter = [&VistedOriginIDs](OriginID FinalOID) {
-      llvm::SmallVector<OriginID> OriginFlowChain;
-      while (true) {
-        OriginFlowChain.push_back(FinalOID);
-        const auto NextOriginID = VistedOriginIDs.find(FinalOID);
-        if (NextOriginID == VistedOriginIDs.end())
-          break;
-        FinalOID = NextOriginID->second;
-      }
-      return OriginFlowChain;
-    };
-
-    const auto InsertVistedOriginIDs =
-        [&VistedOriginIDs, &FinalOID](llvm::ArrayRef<OriginID> OriginFlowChain,
-                                      OriginID &StartOID) {
-          if (!VistedOriginIDs.empty())
-            VistedOriginIDs.insert({OriginFlowChain[0], StartOID});
-
-          for (size_t i = 0; i < OriginFlowChain.size() - 1; ++i)
-            VistedOriginIDs.insert(
-                {OriginFlowChain[i + 1], OriginFlowChain[i]});
-
-          StartOID = OriginFlowChain.back();
-          FinalOID = StartOID;
-        };
-
+    llvm::SmallVector<OriginID> OriginFlowChain;
     std::optional<size_t> BlockID = FactMgr.getBlockID(StartPoint);
     assert(BlockID.has_value());
     const auto StartIt = llvm::find_if(*POV, [&BlockID](const CFGBlock *Block) {
@@ -252,45 +224,20 @@ public:
     OriginID CurrOID = StartOID;
     for (const CFGBlock *B :
          llvm::reverse(llvm::make_range(POV->begin(), StartIt + 1))) {
-      BuildOriginFlowChainResult BuildResult =
-          buildOriginFlowChain(B, CurrOID, TargetLoan);
-      if (!BuildResult.OriginFlowChain.empty())
-        InsertVistedOriginIDs(BuildResult.OriginFlowChain, CurrOID);
-      if (BuildResult.Complete)
-        return OriginFlowChainFilter(*FinalOID);
+      auto [OFChain, Complete] = buildOriginFlowChain(B, CurrOID, TargetLoan);
+
+      if (!OFChain.empty()) {
+        OriginFlowChain.append(OFChain.begin(), OFChain.end());
+        CurrOID = OFChain.back();
+      }
+
+      if (Complete)
+        return OriginFlowChain;
     }
 
     llvm_unreachable(
         "buildOriginFlowChain should return at BuildResult.Complete");
-  }
-
-  BuildOriginFlowChainResult
-  buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
-                       const LoanID TargetLoan) const {
-    OriginID CurrOID = StartOID;
-    llvm::SmallVector<OriginID> OriginFlowChain;
-
-    for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
-      if (const auto *IF = F->getAs<IssueFact>())
-        if (IF->getLoanID() == TargetLoan) {
-          assert(IF->getOriginID() == CurrOID);
-          return {OriginFlowChain, true};
-        }
-
-      const auto *OFF = F->getAs<OriginFlowFact>();
-      if (!OFF)
-        continue;
-      if (OFF->getDestOriginID() != CurrOID)
-        continue;
-
-      const OriginID SrcOriginID = OFF->getSrcOriginID();
-      if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
-        continue;
-      OriginFlowChain.push_back(SrcOriginID);
-      CurrOID = SrcOriginID;
-    }
-
-    return {OriginFlowChain, false};
+    return OriginFlowChain;
   }
 
   llvm::SmallVector<OriginID>
@@ -325,6 +272,35 @@ private:
     if (auto *Loans = Map->lookup(OID))
       return *Loans;
     return LoanSetFactory.getEmptySet();
+  }
+
+  BuildOriginFlowChainResult
+  buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
+                       const LoanID TargetLoan) const {
+    OriginID CurrOID = StartOID;
+    llvm::SmallVector<OriginID> OriginFlowChain;
+
+    for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
+      if (const auto *IF = F->getAs<IssueFact>())
+        if (IF->getLoanID() == TargetLoan) {
+          assert(IF->getOriginID() == CurrOID);
+          return {OriginFlowChain, true};
+        }
+
+      const auto *OFF = F->getAs<OriginFlowFact>();
+      if (!OFF)
+        continue;
+      if (OFF->getDestOriginID() != CurrOID)
+        continue;
+
+      const OriginID SrcOriginID = OFF->getSrcOriginID();
+      if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
+        continue;
+      OriginFlowChain.push_back(SrcOriginID);
+      CurrOID = SrcOriginID;
+    }
+
+    return {OriginFlowChain, false};
   }
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
