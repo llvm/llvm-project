@@ -3918,8 +3918,28 @@ void RewriteInstance::runBinaryAnalyses() {
   NamedRegionTimer T("runBinaryAnalyses", "run binary analysis passes",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   BinaryFunctionPassManager Manager(*BC);
-  // FIXME: add a pass that warns about which functions do not have CFG,
-  // and therefore, analysis is most likely to be less accurate.
+
+  // Warn about functions for which BOLT could not reconstruct the CFG: binary
+  // analyses are less precise on them and may report both false negatives and
+  // false positives.
+  unsigned NoCFGCount = 0;
+  for (const auto &BFI : BC->getBinaryFunctions()) {
+    const BinaryFunction &BF = BFI.second;
+    // Skip ignored functions: BOLT does not attempt to build a CFG for them
+    // (e.g. pseudo functions such as PLT stubs), so a missing CFG there is
+    // expected rather than a sign of degraded analysis.
+    if (BF.isIgnored() || BF.hasCFG())
+      continue;
+    ++NoCFGCount;
+    if (opts::Verbosity >= 1)
+      BC->errs() << "BOLT-WARNING: no CFG for " << BF
+                 << "; binary analyses may be imprecise\n";
+  }
+  if (NoCFGCount)
+    BC->errs() << "BOLT-WARNING: " << NoCFGCount
+               << " function(s) lack CFG; binary-analysis results may be"
+                  " incomplete. Re-run with -v=1 to list these functions.\n";
+
   using PtrAuthScanner = PAuthGadgetScanner::Analysis;
 
   // Accumulate all enabled analyses.
