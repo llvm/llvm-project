@@ -6993,11 +6993,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                        BuiltinID == Builtin::BI__builtin_zos_va_start));
   }
   case Builtin::BI__builtin_zos_va_copy: {
-    // Lower this manually because later  can't reliably determine the type.
+    // Lower this manually because later can't reliably determine the type.
     Address Dest = EmitZOSVAListRef(E->getArg(0));
     Address Src = EmitZOSVAListRef(E->getArg(1));
-    // Value *SizeVal = llvm::ConstantInt::get(Int64Ty, 2 *
-    // getPointerSize().getQuantity());
     llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
     uint64_t SizeBytes =
         CGM.getDataLayout().getTypeAllocSize(VAListTy).getFixedValue();
