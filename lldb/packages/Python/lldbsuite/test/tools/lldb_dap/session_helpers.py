@@ -480,9 +480,9 @@ class _ConfigureContext:
 
     Orchestrates the full DAP initialization sequence:
     On enter:
-        - Request and respond to the `Initialize` command.
-        - Send launch/attach request.
-        - Wait for InitializedEvent.
+        1. Request and respond to the `Initialize` command.
+        2. Send launch/attach request.
+        3. Wait for InitializedEvent.
 
     In between:
        The test can set breakpoints or perform any check it needs do.
@@ -746,14 +746,24 @@ class DAPTestSession(Session):
 
     def set_function_breakpoints(
         self,
-        function_names: list[str],
+        breakpoints: list[str] | list[FunctionBreakpoint],
         condition: Optional[str] = None,
         hitCondition: Optional[str] = None,
     ):
-        f_breakpoints = [
-            FunctionBreakpoint(name, condition=condition, hitCondition=hitCondition)
-            for name in function_names
-        ]
+        f_breakpoints: list[FunctionBreakpoint] = []
+        for bp in breakpoints:
+            if isinstance(bp, str):
+                func_bp = FunctionBreakpoint(
+                    bp, condition=condition, hitCondition=hitCondition
+                )
+                f_breakpoints.append(func_bp)
+            elif isinstance(bp, FunctionBreakpoint):
+                f_breakpoints.append(bp)
+            else:
+                self.test_case.fail(
+                    "breakpoints must only contain 'str' or 'FunctionBreakpoints'."
+                    f" got '{bp}' of type '{type(bp)}'."
+                )
         response = self.send_request(SetFunctionBreakpointsArgs(f_breakpoints)).result()
         return response
 
@@ -786,11 +796,11 @@ class DAPTestSession(Session):
         )
         response = handle.result_or_error()
         if isinstance(response, SetVariableResponse):
-            invalidated_event = self.wait_for_invalidated(after=last_response)
+            invalidated_event = self.wait_for_invalidated_event(after=last_response)
             invalidated_areas = invalidated_event.body.areas
             self.test_case.assertEqual(["variables"], invalidated_areas)
 
-            memory_event = self.wait_for_memory(after=last_response)
+            memory_event = self.wait_for_memory_event(after=last_response)
             self.test_case.assertEqual(
                 memory_event.body.memoryReference, response.body.memoryReference
             )
@@ -824,7 +834,7 @@ class DAPTestSession(Session):
 
     def resolve_function_breakpoints(
         self,
-        function_names: list[str],
+        breakpoints: list[str] | list[FunctionBreakpoint],
         condition: Optional[str] = None,
         hitCondition: Optional[str] = None,
     ) -> list[int]:
@@ -833,16 +843,14 @@ class DAPTestSession(Session):
         ("1", "2") for each breakpoint that was set.
         """
         last_response = self.last_response()
-        response = self.set_function_breakpoints(
-            function_names, condition, hitCondition
-        )
-        breakpoints = response.body.breakpoints
+        response = self.set_function_breakpoints(breakpoints, condition, hitCondition)
+        resp_bps = response.body.breakpoints
 
-        all_verified = all(bp.verified for bp in breakpoints)
+        all_verified = all(bp.verified for bp in resp_bps)
         if not all_verified:
-            self.wait_until_all_breakpoints_verified(breakpoints, after=last_response)
+            self.wait_until_all_breakpoints_verified(resp_bps, after=last_response)
 
-        return self.breakpoints_to_ids(breakpoints)
+        return self.breakpoints_to_ids(resp_bps)
 
     def set_data_breakpoints(self, breakpoints: list[DataBreakpoint]):
         args = SetDataBreakpointsArgs(breakpoints=breakpoints)
@@ -852,7 +860,7 @@ class DAPTestSession(Session):
         breakpoints = [InstructionBreakpoint(ref) for ref in memory_references]
         return self.send_request(SetInstructionBreakpointsArgs(breakpoints)).result()
 
-    def set_breakpoint_locations(
+    def get_breakpoint_locations(
         self,
         file_path: str,
         line: int,
@@ -949,7 +957,7 @@ class DAPTestSession(Session):
 
             return False
 
-        event = self.wait_for_stopped(
+        event = self.wait_for_stopped_event(
             breakpoint_stop_reasons,
             after=after,
             until=event_hit_id_in_breakpoint_ids,
@@ -1001,7 +1009,7 @@ class DAPTestSession(Session):
         )
         return last_breakpoint_event
 
-    def wait_for_stopped_or_exited(
+    def wait_for_stopped_or_exited_event(
         self,
         *,
         after: Event | Response,
@@ -1016,7 +1024,7 @@ class DAPTestSession(Session):
         )
         return event
 
-    def wait_for_stopped(
+    def wait_for_stopped_event(
         self,
         matching_any: Optional[Sequence[StoppedReason]] = None,
         *,
@@ -1057,7 +1065,7 @@ class DAPTestSession(Session):
 
             return True
 
-        event = self.wait_for_stopped_or_exited(
+        event = self.wait_for_stopped_or_exited_event(
             after=after, until=matches_any_reason_until, timeout_msg=timeout_msg
         )
 
@@ -1065,7 +1073,7 @@ class DAPTestSession(Session):
         self.test_case.assertEqual(event.event, EventName.STOPPED)
         return cast(StoppedEvent, event)
 
-    def wait_for_exited(self, *, after: Event | Response) -> ExitedEvent:
+    def wait_for_exited_event(self, *, after: Event | Response) -> ExitedEvent:
         """
         Wait for a process to exit.
 
@@ -1073,7 +1081,7 @@ class DAPTestSession(Session):
         Raises an error if a StoppedEvent is encountered, as a stopped process
         cannot subsequently exit.
         """
-        event = self.wait_for_stopped_or_exited(after=after)
+        event = self.wait_for_stopped_or_exited_event(after=after)
         self.test_case.assertIsInstance(event, ExitedEvent)
         self.test_case.assertEqual(event.event, "exited", "expected ExitedEvent'")
         return cast(ExitedEvent, event)
@@ -1099,13 +1107,13 @@ class DAPTestSession(Session):
     ):
         return self.wait_for_event(ModuleEvent, after=after, until=until)
 
-    def wait_for_terminated(self, *, after: Event | Response):
+    def wait_for_terminated_event(self, *, after: Event | Response):
         return self.wait_for_event(TerminatedEvent, after=after)
 
-    def wait_for_invalidated(self, *, after: Event | Response):
+    def wait_for_invalidated_event(self, *, after: Event | Response):
         return self.wait_for_event(InvalidatedEvent, after=after)
 
-    def wait_for_memory(self, *, after: Event | Response):
+    def wait_for_memory_event(self, *, after: Event | Response):
         return self.wait_for_event(MemoryEvent, after=after)
 
     def do_continue(self):
@@ -1138,7 +1146,7 @@ class DAPTestSession(Session):
         """Continue execution and wait for stopped event"""
         response = self.do_continue()
         if exp_reason is None:
-            return self.wait_for_stopped(after=response)
+            return self.wait_for_stopped_event(after=response)
 
         return self.verify_stopped(exp_reason, after=response)
 
@@ -1277,7 +1285,9 @@ class DAPTestSession(Session):
             reasons = [reasons]
 
         timeout_msg = f"waiting for 'StoppedEvent' matching reasons: {reasons}"
-        stopped_event = self.wait_for_stopped(after=after, timeout_msg=timeout_msg)
+        stopped_event = self.wait_for_stopped_event(
+            after=after, timeout_msg=timeout_msg
+        )
 
         body = stopped_event.body
         test_case = self.test_case
@@ -1364,7 +1374,7 @@ class DAPTestSession(Session):
         self, *, after: Event | Response | None = None, exitCode: int = 0
     ):
         if after:
-            event = self.wait_for_exited(after=after)
+            event = self.wait_for_exited_event(after=after)
         else:
             event = self.wait_for_earliest_event(ExitedEvent)
 
@@ -1690,7 +1700,7 @@ class DAPTestSession(Session):
 
         # Check we sent invalidated event.
         if response.success and self.initialize_args.supportsInvalidatedEvent:
-            invalidated = self.wait_for_invalidated(after=before_request)
+            invalidated = self.wait_for_invalidated_event(after=before_request)
             self.test_case.assertEqual(invalidated.body.areas, ["all"])
         return response
 
