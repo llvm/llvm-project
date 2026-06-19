@@ -1,14 +1,23 @@
-
-//===-- A template class for testing reentrant qsort functions --*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains a template class for testing reentrant qsort functions.
+///
+//===----------------------------------------------------------------------===//
 
 #include "test/UnitTest/Test.h"
 
+/// Provides shared tests for reentrant qsort variants.
+///
+/// The fixture verifies that a qsort-like implementation correctly handles
+/// sorted data, reverse-sorted data, and comparators that dispatch through a
+/// type-erased context pointer.
 template <typename QsortFnTy, typename SizeTy>
 class QsortReentrantTest : public LIBC_NAMESPACE::testing::Test {
 private:
@@ -19,10 +28,9 @@ private:
     *count = *count + 1;
     if (li == ri)
       return 0;
-    else if (li > ri)
+    if (li > ri)
       return 1;
-    else
-      return -1;
+    return -1;
   }
 
   struct PriorityVal {
@@ -36,13 +44,11 @@ private:
     if (priority_diff != 0) {
       return priority_diff;
     }
-    if (l->size == r->size) {
+    if (l->size == r->size)
       return 0;
-    } else if (l->size > r->size) {
+    if (l->size > r->size)
       return 1;
-    } else {
-      return -1;
-    }
+    return -1;
   }
 
   // The following test is intended to mimic the CPP library pattern of having a
@@ -55,7 +61,7 @@ private:
   template <typename T>
   static int type_erased_comp(const void *l, const void *r,
                               void *erased_func_ptr) {
-    typedef int (*TypedComp)(const T *, const T *);
+    using TypedComp = int (*)(const T *, const T *);
     TypedComp typed_func_ptr = reinterpret_cast<TypedComp>(erased_func_ptr);
     const T *lt = static_cast<const T *>(l);
     const T *rt = static_cast<const T *>(r);
