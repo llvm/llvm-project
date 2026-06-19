@@ -120,7 +120,7 @@ protected:
   /// Options controlling preprocessed output.
   std::shared_ptr<PreprocessorOutputOptions> PreprocessorOutputOpts;
 
-  /// Options controlling the SSAF stage-1 frontend pipeline.
+  /// Options controlling the Scalable Static Analysis Framework (SSAF).
   std::shared_ptr<ssaf::SSAFOptions> SSAFOpts;
 
   /// Dummy tag type whose instance can be passed into the constructor to
