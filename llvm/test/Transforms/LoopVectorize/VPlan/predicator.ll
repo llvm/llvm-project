@@ -956,14 +956,6 @@ exit:
   ret void
 }
 
-;    loop
-;     / \
-;    A   \
-;   / \   B
-;   \  \ /
-;    C  D
-;     \/
-;    latch
 define void @look_thru_phi(i1 %c1, i1 %c2, i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: VPlan for loop in 'look_thru_phi'
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -1003,6 +995,14 @@ define void @look_thru_phi(i1 %c1, i1 %c2, i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ;
+;    loop
+;     / \
+;    A   \
+;   / \   B
+;   \  \ /
+;    C  D
+;     \/
+;    latch
 entry:
   br label %loop
 
