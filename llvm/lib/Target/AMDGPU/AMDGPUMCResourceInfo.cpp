@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
-#include "AMDGPUTargetMachine.h"
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -256,8 +256,14 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
   MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
-  if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
-    addMaxVGPRCandidate(FRI.NumVGPR);
+  CallingConv::ID CC = MF.getFunction().getCallingConv();
+  bool IsChainCC = AMDGPU::isChainCC(CC);
+  bool IsDynamicVGPREnabled =
+      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
+
+  if (!AMDGPU::isEntryFunctionCC(CC)) {
+    if (!IsDynamicVGPREnabled || !IsChainCC)
+      addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
     addMaxNamedBarrierCandidate(FRI.NumNamedBarrier);
@@ -319,8 +325,31 @@ void MCResourceInfo::gatherResourceInfo(
   };
 
   LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << '\n');
-  SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
-  SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+
+  // When DynamicVGPR is enabled, chain functions should not propagate VGPR
+  // counts from other chain callees since each chain function can have its own
+  // VGPR allocation, but should still propagate from non-chain callees.
+  if (IsDynamicVGPREnabled && (IsChainCC || CC == CallingConv::AMDGPU_CS)) {
+    if (FRI.HasNonChainIndirectCall) {
+      // Has indirect calls to non-chain functions. Use max of local count and
+      // module-wide non-chain maximum.
+      MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_NumVGPR, OutContext);
+      Sym->setVariableValue(AMDGPUMCExpr::createMax(
+          {MCConstantExpr::create(FRI.NumVGPR, OutContext),
+           MCSymbolRefExpr::create(MaxVGPRSym, OutContext)},
+          OutContext));
+      SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+    } else {
+      // No indirect calls to non-chain functions. Propagate from direct callees
+      assignResourceInfoExpr(FRI.NumVGPR, RIK_NumVGPR, AMDGPUMCExpr::AGVK_Max,
+                             MF, FRI.Callees, OutContext);
+      assignResourceInfoExpr(FRI.NumAGPR, RIK_NumAGPR, AMDGPUMCExpr::AGVK_Max,
+                             MF, FRI.Callees, OutContext);
+    }
+  } else {
+    SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
+    SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+  }
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
   SetMaxReg(MaxNamedBarrierSym, FRI.NumNamedBarrier, RIK_NumNamedBarrier);
 

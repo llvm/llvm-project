@@ -229,6 +229,12 @@ static cl::opt<bool> EnableSRLTSubregToRegMitigation(
              "super-regs when using Subreg Liveness Tracking"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableSVEShuffleOpt(
+    "aarch64-enable-sve-shuffle-opts",
+    cl::desc("Enable pattern matching of shuffles that could make use of SVE "
+             "instructions like tbl or the bottom/top variants"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -258,7 +264,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
-  initializeAArch64PostLegalizerCombinerPass(PR);
+  initializeAArch64PostLegalizerCombinerLegacyPass(PR);
   initializeAArch64PostSelectOptimizeLegacyPass(PR);
   initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
@@ -281,6 +287,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);
+  initializeSVEShuffleOptsPass(PR);
 }
 
 bool AArch64TargetMachine::isGlobalISelOptNone() const {
@@ -491,10 +498,6 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
         MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
@@ -682,6 +685,13 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
+  // Try to use tbl in place of other shuffling operations if doing so would
+  // reduce the total number of instructions. Shuffle masks for big endian may
+  // be different, so require a little endian target.
+  if (TM->createDataLayout().isLittleEndian() &&
+      getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt)
+    addPass(createSVEShuffleOptsPass());
+
   // Match complex arithmetic patterns
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(createComplexDeinterleavingPass(TM));
@@ -776,7 +786,7 @@ void AArch64PassConfig::addPreRegBankSelect() {
   const bool IsGlobalISelOptNone =
       getAArch64TargetMachine().isGlobalISelOptNone();
   if (!IsGlobalISelOptNone) {
-    addPass(createAArch64PostLegalizerCombiner(IsGlobalISelOptNone));
+    addPass(createAArch64PostLegalizerCombinerLegacy(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }

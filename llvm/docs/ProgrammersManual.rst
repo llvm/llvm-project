@@ -2170,7 +2170,7 @@ copy-construction, which :ref:`SmallSet <dss_smallset>` and :ref:`SmallPtrSet
 llvm/ADT/DenseSet.h
 ^^^^^^^^^^^^^^^^^^^
 
-``DenseSet`` is a simple quadratically probed hash table.  It excels at supporting
+``DenseSet`` is a simple linearly probed hash table.  It excels at supporting
 small values: it uses a single allocation to hold all of the pairs that are
 currently inserted in the set.  ``DenseSet`` is a great way to unique small values
 that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
@@ -2375,7 +2375,7 @@ long, expensive to copy, etc.  ``StringMap`` is a specialized container designed
 cope with these issues.  It supports mapping an arbitrary range of bytes to an
 arbitrary other object.
 
-The ``StringMap`` implementation uses a quadratically-probed hash table, where the
+The ``StringMap`` implementation uses a linear-probed hash table, where the
 buckets store a pointer to the heap allocated entries (and some other stuff).
 The entries in the map must be heap allocated because the strings are variable
 length.  The string data (key) and the element object (value) are stored in the
@@ -2383,7 +2383,7 @@ same allocation with the string data immediately after the element object.
 This container guarantees the "``(char*)(&Value+1)``" points to the key string
 for a value.
 
-The ``StringMap`` is very fast for several reasons: quadratic probing is very cache
+The ``StringMap`` is very fast for several reasons: linear probing is very cache
 efficient for lookups, the hash value of strings in buckets is not recomputed
 when looking up an element, ``StringMap`` rarely has to touch the memory for
 unrelated objects when looking up a value (even when hash collisions happen),
@@ -2396,6 +2396,10 @@ copies a string if a value is inserted into the table.
 
 ``StringMap`` iteration order, however, is not guaranteed to be deterministic, so
 any uses which require that should instead use a ``std::map``.
+
+Like ``DenseMap``, ``StringMap`` iterators are invalidated whenever an insertion
+or erasure occurs.  To erase matching elements in a single pass, use the
+``remove_if`` member instead of erasing while iterating.
 
 .. _dss_indexmap:
 
@@ -2416,7 +2420,7 @@ virtual register ID).
 llvm/ADT/DenseMap.h
 ^^^^^^^^^^^^^^^^^^^
 
-``DenseMap`` is a simple quadratically probed hash table.  It excels at supporting
+``DenseMap`` is a simple linearly probed hash table.  It excels at supporting
 small keys and values: it uses a single allocation to hold all of the pairs
 that are currently inserted in the map.  ``DenseMap`` is a great way to map
 pointers to pointers, or map other small types to each other.

@@ -152,6 +152,10 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 /// of all function's PGO names.
 inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
 
+inline StringRef getInstrProfNamesVarPostfixVarName() {
+  return "__llvm_prf_nm_postfix";
+}
+
 inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
 /// Return the name of a covarage mapping variable (internal linkage)
@@ -1195,7 +1199,7 @@ const HashT HashType = HashT::MD5;
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 
 // This structure defines the file header of the LLVM profile
-// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
+// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.md
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic = IndexedInstrProf::Magic;

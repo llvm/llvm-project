@@ -14,7 +14,7 @@
 // than it really is, and we fail to throw `length_error` from `string::resize()`,
 // which is explicitly instantiated in the built library.
 //
-// UNSUPPORTED: using-built-library-before-llvm-21
+// XFAIL: using-built-library-before-llvm-21
 
 // <string>
 
