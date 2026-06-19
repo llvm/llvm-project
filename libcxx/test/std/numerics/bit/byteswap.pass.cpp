@@ -10,6 +10,7 @@
 
 #include <bit>
 #include <cassert>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -98,7 +99,7 @@ constexpr bool test() {
   test_implementation_defined_size<long long>();
   test_implementation_defined_size<unsigned long long>();
 
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
   // _BitInt(N) where digits + is_signed == sizeof * CHAR_BIT (no padding
   // bits) is accepted; other widths are rejected by the static_assert
   // inside the function body (see byteswap.verify.cpp).
@@ -119,8 +120,12 @@ constexpr bool test() {
   test_num<unsigned _BitInt(64)>(0x0123456789ABCDEFULL, 0xEFCDAB8967452301ULL);
   test_num<signed _BitInt(64)>(0x0123456789ABCDEFLL, static_cast<signed _BitInt(64)>(0xEFCDAB8967452301ULL));
 
-#  if __BITINT_MAXWIDTH__ >= 128
-  // sizeof == 16: __builtin_bswap128 fallback or __builtin_bswapg.
+#  if __BITINT_MAXWIDTH__ >= 128 && (TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128))
+  // sizeof == 16: __builtin_bswap128 fallback or __builtin_bswapg. Targets
+  // without libc++ __int128 (32-bit ARM, MSVC ABI on Windows clang-cl) and an
+  // older compiler that lacks __builtin_bswapg cannot byteswap a 16-byte
+  // value; skip the block. TEST_HAS_NO_INT128 mirrors libc++'s
+  // _LIBCPP_HAS_INT128 (false on _MSC_VER even when __SIZEOF_INT128__ is set).
   unsigned _BitInt(128) v128 =
       (static_cast<unsigned _BitInt(128)>(0x0123456789ABCDEFULL) << 64) |
       static_cast<unsigned _BitInt(128)>(0x13579BDF02468ACEULL);
@@ -131,7 +136,7 @@ constexpr bool test() {
   test_num<signed _BitInt(128)>(static_cast<signed _BitInt(128)>(v128), static_cast<signed _BitInt(128)>(v128_swapped));
 #  endif
 
-#  if __has_builtin(__builtin_bswapg) && __BITINT_MAXWIDTH__ >= 256
+#  if TEST_HAS_BUILTIN(__builtin_bswapg) && __BITINT_MAXWIDTH__ >= 256
   // sizeof > 16: only the __builtin_bswapg path supports widths beyond what
   // __builtin_bswap16/32/64/128 cover.
   unsigned _BitInt(256) v256 =

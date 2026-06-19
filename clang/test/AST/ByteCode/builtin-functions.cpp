@@ -856,6 +856,8 @@ namespace ctz {
   char ctz53[__builtin_ctzg((unsigned __int128)0x10, 42) == 4 ? 1 : -1];
   char ctz54[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1)) == BITSIZE(__int128) - 1 ? 1 : -1];
   char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+
+  static_assert(__builtin_elementwise_ctzg((__int128)42) == 1, "");
 #endif
 #ifndef __AVR__
   int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
@@ -2071,4 +2073,12 @@ namespace SubCb {
     return __builtin_subcb(lhs, rhs, carry, &rhs);
   }
   static_assert(subcb(10, 15, 1) == 250);
+
+  using u8 = unsigned char;
+  constexpr int subcb2() {
+    u8 a = 0, b = 0, c = 0;
+    __builtin_subcb(a, b, c, &c);
+    return 0;
+  }
+  static_assert(subcb2() == 0);
 }

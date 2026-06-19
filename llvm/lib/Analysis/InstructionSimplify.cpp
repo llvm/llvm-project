@@ -2634,6 +2634,16 @@ static Value *extractEquivalentCondition(Value *V, CmpPredicate Pred,
   return nullptr;
 }
 
+static bool isByValArg(const Value *V) {
+  const Argument *A = dyn_cast<Argument>(V);
+  return A && A->hasByValAttr();
+}
+
+static bool isDereferenceableArg(const Value *V) {
+  const Argument *A = dyn_cast<Argument>(V);
+  return A && A->getType()->isPointerTy() && A->getDereferenceableBytes() > 0;
+}
+
 /// Return true if the underlying object (storage) must be disjoint from
 /// storage returned by any noalias return call.
 static bool isAllocDisjoint(const Value *V) {
@@ -2648,9 +2658,12 @@ static bool isAllocDisjoint(const Value *V) {
     return (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
             GV->hasProtectedVisibility() || GV->hasGlobalUnnamedAddr()) &&
            !GV->isThreadLocal();
-  if (const Argument *A = dyn_cast<Argument>(V))
-    return A->hasByValAttr();
-  return false;
+  // Byval arguments point to storage accessible to the caller, which is
+  // disjoint from the allocated storage returned by a noalias pointer.
+  // TODO: possibly extend this to `dereferenceable(N)` arguments once the LLVM
+  // allocator model and its interaction with `noalias` on return values is
+  // clarified.
+  return isByValArg(V);
 }
 
 /// Return true if V1 and V2 are each the base of some distict storage region
@@ -2682,17 +2695,25 @@ static bool haveNonOverlappingStorage(const Value *V1, const Value *V2) {
   //
   // So, we'll assume that two non-empty allocas have different addresses
   // for now.
-  auto isByValArg = [](const Value *V) {
-    const Argument *A = dyn_cast<Argument>(V);
-    return A && A->hasByValAttr();
-  };
+  //
+  // Furthermore, an argument marked with the `dereferenceable(N)` attribute is
+  // guaranteed to point to N loadable bytes. Such a pointer cannot be a
+  // one-past-the-end pointer whose address happens to coincide with the start
+  // of another object (e.g., an alloca), as loading from a one-past-the-end
+  // address would be UB (thus, in contrast with the premise).
 
-  // Byval args are backed by store which does not overlap with each other,
-  // allocas, or globals.
+  // Byval args are backed by storage that does not overlap with allocas,
+  // globals, other byval args, or any dereferenceable argument.
   if (isByValArg(V1))
-    return isa<AllocaInst>(V2) || isa<GlobalVariable>(V2) || isByValArg(V2);
+    return isa<AllocaInst>(V2) || isa<GlobalVariable>(V2) || isByValArg(V2) ||
+           isDereferenceableArg(V2);
   if (isByValArg(V2))
-    return isa<AllocaInst>(V1) || isa<GlobalVariable>(V1) || isByValArg(V1);
+    return isa<AllocaInst>(V1) || isa<GlobalVariable>(V1) || isByValArg(V1) ||
+           isDereferenceableArg(V1);
+
+  if ((isDereferenceableArg(V1) && isa<AllocaInst>(V2)) ||
+      (isDereferenceableArg(V2) && isa<AllocaInst>(V1)))
+    return true;
 
   return isa<AllocaInst>(V1) &&
          (isa<AllocaInst>(V2) || isa<GlobalVariable>(V2));
@@ -2766,23 +2787,21 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (ICmpInst::isEquality(Pred)) {
     // Different non-empty allocations that exist at the same time have
     // different addresses (if the program can tell). If the offsets are
-    // within the bounds of their allocations (and not one-past-the-end!
-    // so we can't use inbounds!), and their allocations aren't the same,
+    // within the bounds of their allocations (and not one-past-the-end,
+    // so inbounds is not sufficient), and their allocations aren't the same,
     // the pointers are not equal.
     if (haveNonOverlappingStorage(LHS, RHS)) {
+      // Size of object V, falling back to `dereferenceable(N)` attribute on an
+      // argument when getObjectSize cannot determine a concrete size.
+      auto GetKnownSize = [&](Value *V, uint64_t &Size) {
+        bool CanBeNull;
+        Size = V->getPointerDereferenceableBytes(DL, CanBeNull,
+                                                 /*CanBeFreed=*/nullptr);
+        return Size != 0 && !CanBeNull;
+      };
+
       uint64_t LHSSize, RHSSize;
-      ObjectSizeOpts Opts;
-      Opts.EvalMode = ObjectSizeOpts::Mode::Min;
-      auto *F = [](Value *V) -> Function * {
-        if (auto *I = dyn_cast<Instruction>(V))
-          return I->getFunction();
-        if (auto *A = dyn_cast<Argument>(V))
-          return A->getParent();
-        return nullptr;
-      }(LHS);
-      Opts.NullIsUnknownSize = F ? NullPointerIsDefined(F) : true;
-      if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) && LHSSize != 0 &&
-          getObjectSize(RHS, RHSSize, DL, TLI, Opts) && RHSSize != 0) {
+      if (GetKnownSize(LHS, LHSSize) && GetKnownSize(RHS, RHSSize)) {
         APInt Dist = LHSOffset - RHSOffset;
         if (Dist.isNonNegative() ? Dist.ult(LHSSize) : (-Dist).ult(RHSSize))
           return ConstantInt::get(getCompareTy(LHS),
@@ -2800,7 +2819,7 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
     getUnderlyingObjects(RHS, RHSUObjs);
 
     // Is the set of underlying objects all noalias calls?
-    auto IsNAC = [](ArrayRef<const Value *> Objects) {
+    auto IsNoAliasCall = [](ArrayRef<const Value *> Objects) {
       return all_of(Objects, isNoAliasCall);
     };
 
@@ -2811,8 +2830,8 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       return all_of(Objects, ::isAllocDisjoint);
     };
 
-    if ((IsNAC(LHSUObjs) && IsAllocDisjoint(RHSUObjs)) ||
-        (IsNAC(RHSUObjs) && IsAllocDisjoint(LHSUObjs)))
+    if ((IsNoAliasCall(LHSUObjs) && IsAllocDisjoint(RHSUObjs)) ||
+        (IsNoAliasCall(RHSUObjs) && IsAllocDisjoint(LHSUObjs)))
       return ConstantInt::get(getCompareTy(LHS),
                               !CmpInst::isTrueWhenEqual(Pred));
 
@@ -4525,6 +4544,27 @@ static Value *simplifyWithOpsReplaced(Value *V,
         }
 
         return ConstantInt::get(I->getType(), 0);
+      }
+
+      if (auto *MMI = dyn_cast<MinMaxIntrinsic>(II)) {
+        const APInt Identity = MMI->getIdentity();
+
+        Value *Result = nullptr;
+        if (match(NewOps[0], m_SpecificInt(Identity)))
+          Result = NewOps[1];
+        else if (match(NewOps[1], m_SpecificInt(Identity)))
+          Result = NewOps[0];
+
+        if (Result) {
+          if (II->hasPoisonGeneratingAnnotations()) {
+            if (!DropFlags)
+              return nullptr;
+
+            DropFlags->push_back(II);
+          }
+
+          return Result;
+        }
       }
     }
 
@@ -6831,7 +6871,8 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::aarch64_sve_eorv:
     // sve_reduce_xor(all, splat(X)) ==> 0
     if (C0 && C0->isAllOnesValue())
-      return ConstantInt::get(ReturnType, 0);
+      if (getSplatValue(Op1))
+        return ConstantInt::get(ReturnType, 0);
     break;
   }
 
@@ -6887,6 +6928,24 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
       return Constant::getNullValue(ReturnType);
+    break;
+  }
+  case Intrinsic::pdep: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
+    break;
+  }
+  case Intrinsic::pext: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
     break;
   }
   case Intrinsic::ptrmask: {
@@ -7219,27 +7278,26 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
-static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
-                                ArrayRef<Value *> Args,
-                                const SimplifyQuery &Q) {
-  // Operand bundles should not be in Args.
-  assert(Call->arg_size() == Args.size());
+Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                               ArrayRef<Value *> Args, FastMathFlags FMF,
+                               const SimplifyQuery &Q, Function *CxtF,
+                               fp::ExceptionBehavior ExBehavior,
+                               RoundingMode Rounding) {
   unsigned NumOperands = Args.size();
-  Function *F = cast<Function>(Callee);
-  Intrinsic::ID IID = F->getIntrinsicID();
-
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
-    return PoisonValue::get(F->getReturnType());
+    return PoisonValue::get(ReturnType);
+
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      Type *RetTy = F->getReturnType();
-      ConstantRange CR = getVScaleRange(Call->getFunction(), 64);
+      if (!CxtF)
+        return nullptr;
+      ConstantRange CR = getVScaleRange(CxtF, 64);
       if (const APInt *C = CR.getSingleElement())
-        return ConstantInt::get(RetTy, C->getZExtValue());
+        return ConstantInt::get(ReturnType, C->getZExtValue());
       return nullptr;
     }
     default:
@@ -7248,12 +7306,10 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
 
   if (NumOperands == 1)
-    return simplifyUnaryIntrinsic(IID, Args[0], Call->getFastMathFlagsOrNone(),
-                                  Q);
+    return simplifyUnaryIntrinsic(IID, Args[0], FMF, Q);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
-                                   Call->getFastMathFlagsOrNone(), Q);
+    return simplifyBinaryIntrinsic(IID, ReturnType, Args[0], Args[1], FMF, Q);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
@@ -7261,8 +7317,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];
     Value *PassthruArg = Args[2];
-    // If the mask is all zeros or undef, the "passthru" argument is the result.
-    if (maskIsAllZeroOrUndef(MaskArg))
+    // If the mask is all zeros or poison, the "passthru" argument is the
+    // result.
+    if (match(MaskArg, m_ZeroOrPoison()))
       return PassthruArg;
     return nullptr;
   }
@@ -7272,7 +7329,7 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     // If both operands are undef, the result is undef.
     if (Q.isUndefValue(Op0) && Q.isUndefValue(Op1))
-      return UndefValue::get(F->getReturnType());
+      return UndefValue::get(ReturnType);
 
     // If shift amount is undef, assume it is zero.
     if (Q.isUndefValue(ShAmtArg))
@@ -7298,34 +7355,25 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     // Rotating zero by anything is zero.
     if (match(Op0, m_Zero()) && match(Op1, m_Zero()))
-      return ConstantInt::getNullValue(F->getReturnType());
+      return ConstantInt::getNullValue(ReturnType);
 
     // Rotating -1 by anything is -1.
     if (match(Op0, m_AllOnes()) && match(Op1, m_AllOnes()))
-      return ConstantInt::getAllOnesValue(F->getReturnType());
+      return ConstantInt::getAllOnesValue(ReturnType);
 
     return nullptr;
   }
-  case Intrinsic::experimental_constrained_fma: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    if (Value *V = simplifyFPOp(Args, {}, Q, *FPI->getExceptionBehavior(),
-                                *FPI->getRoundingMode()))
-      return V;
-    return nullptr;
-  }
+  case Intrinsic::experimental_constrained_fma:
+    return simplifyFPOp(Args, {}, Q, ExBehavior, Rounding);
   case Intrinsic::fma:
-  case Intrinsic::fmuladd: {
-    if (Value *V = simplifyFPOp(Args, {}, Q, fp::ebIgnore,
-                                RoundingMode::NearestTiesToEven))
-      return V;
-    return nullptr;
-  }
+  case Intrinsic::fmuladd:
+    return simplifyFPOp(Args, {}, Q, fp::ebIgnore,
+                        RoundingMode::NearestTiesToEven);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat: {
     Value *Op0 = Args[0];
     Value *Op1 = Args[1];
     Value *Op2 = Args[2];
-    Type *ReturnType = F->getReturnType();
 
     // Canonicalize constant operand as Op1 (ConstantFolding handles the case
     // when both Op0 and Op1 are constant so we do not care about that special
@@ -7354,7 +7402,6 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     Value *Vec = Args[0];
     Value *SubVec = Args[1];
     Value *Idx = Args[2];
-    Type *ReturnType = F->getReturnType();
 
     // (insert_vector Y, (extract_vector X, 0), 0) -> X
     // where: Y is X, or Y is undef
@@ -7371,7 +7418,7 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   case Intrinsic::vector_splice_left:
   case Intrinsic::vector_splice_right: {
     Value *Offset = Args[2];
-    auto *Ty = cast<VectorType>(F->getReturnType());
+    auto *Ty = cast<VectorType>(ReturnType);
     if (Q.isUndefValue(Offset))
       return PoisonValue::get(Ty);
 
@@ -7379,7 +7426,8 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     ConstantRange NumElts(
         APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
     if (Ty->isScalableTy())
-      NumElts = NumElts.multiply(getVScaleRange(Call->getFunction(), BitWidth));
+      NumElts = NumElts.multiply(CxtF ? getVScaleRange(CxtF, BitWidth)
+                                      : ConstantRange::getFull(BitWidth));
 
     // If we know Offset > NumElts, simplify to poison.
     ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
@@ -7392,38 +7440,46 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     return nullptr;
   }
-  case Intrinsic::experimental_constrained_fadd: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFAddInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_fsub: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFSubInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_fmul: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFMulInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_fdiv: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFDivInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
-  case Intrinsic::experimental_constrained_frem: {
-    auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFRemInst(Args[0], Args[1], FPI->getFastMathFlags(), Q,
-                            *FPI->getExceptionBehavior(),
-                            *FPI->getRoundingMode());
-  }
+  case Intrinsic::experimental_constrained_fadd:
+    return simplifyFAddInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+  case Intrinsic::experimental_constrained_fsub:
+    return simplifyFSubInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+  case Intrinsic::experimental_constrained_fmul:
+    return simplifyFMulInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+  case Intrinsic::experimental_constrained_fdiv:
+    return simplifyFDivInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
+  case Intrinsic::experimental_constrained_frem:
+    return simplifyFRemInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
   case Intrinsic::experimental_constrained_ldexp:
     return simplifyLdexp(Args[0], Args[1], Q, true);
+  case Intrinsic::experimental_vp_reverse: {
+    Value *Vec = Args[0];
+    Value *EVL = Args[2];
+
+    Value *X;
+    // vp.reverse(vp.reverse(X)) == X (mask doesn't matter)
+    if (match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                       m_Value(X), m_Value(), m_Specific(EVL))))
+      return X;
+
+    // vp.reverse(splat(X)) -> splat(X) (regardless of mask and EVL)
+    if (isSplatValue(Vec))
+      return Vec;
+    return nullptr;
+  }
+  default:
+    return nullptr;
+  }
+}
+
+static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
+                                const SimplifyQuery &Q) {
+  // Operand bundles should not be in Args.
+  assert(Call->arg_size() == Args.size());
+  Intrinsic::ID IID = Call->getCalledFunction()->getIntrinsicID();
+  Type *ReturnType = Call->getCalledFunction()->getReturnType();
+
+  switch (IID) {
   case Intrinsic::experimental_gc_relocate: {
     GCRelocateInst &GCR = *cast<GCRelocateInst>(Call);
     Value *DerivedPtr = GCR.getDerivedPtr();
@@ -7445,30 +7501,24 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
     }
     return nullptr;
   }
-  case Intrinsic::experimental_vp_reverse: {
-    Value *Vec = Call->getArgOperand(0);
-    Value *EVL = Call->getArgOperand(2);
-
-    Value *X;
-    // vp.reverse(vp.reverse(X)) == X (mask doesn't matter)
-    if (match(Vec, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
-                       m_Value(X), m_Value(), m_Specific(EVL))))
-      return X;
-
-    // vp.reverse(splat(X)) -> splat(X) (regardless of mask and EVL)
-    if (isSplatValue(Vec))
-      return Vec;
-    return nullptr;
+  default: {
+    // Use the default FP environment if none is found.
+    fp::ExceptionBehavior ExBehavior = fp::ebIgnore;
+    RoundingMode Rounding = RoundingMode::NearestTiesToEven;
+    if (auto *Constrained = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
+      ExBehavior = Constrained->getExceptionBehavior().value_or(ExBehavior);
+      Rounding = Constrained->getRoundingMode().value_or(Rounding);
+    }
+    return simplifyIntrinsic(IID, ReturnType, Args,
+                             Call->getFastMathFlagsOrNone(), Q,
+                             Call->getFunction(), ExBehavior, Rounding);
   }
-  default:
-    return nullptr;
   }
 }
 
-static Value *tryConstantFoldCall(CallBase *Call, Value *Callee,
-                                  ArrayRef<Value *> Args,
+static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
-  auto *F = dyn_cast<Function>(Callee);
+  auto *F = Call->getCalledFunction();
   if (!F || !canConstantFoldCallTo(Call, F))
     return nullptr;
 
@@ -7502,12 +7552,12 @@ Value *llvm::simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
   if (isa<UndefValue>(Callee) || isa<ConstantPointerNull>(Callee))
     return PoisonValue::get(Call->getType());
 
-  if (Value *V = tryConstantFoldCall(Call, Callee, Args, Q))
+  if (Value *V = tryConstantFoldCall(Call, Args, Q))
     return V;
 
   auto *F = dyn_cast<Function>(Callee);
   if (F && F->isIntrinsic())
-    if (Value *Ret = simplifyIntrinsic(Call, Callee, Args, Q))
+    if (Value *Ret = ::simplifyIntrinsic(Call, Args, Q))
       return Ret;
 
   return nullptr;
@@ -7516,9 +7566,9 @@ Value *llvm::simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
 Value *llvm::simplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q) {
   assert(isa<ConstrainedFPIntrinsic>(Call));
   SmallVector<Value *, 4> Args(Call->args());
-  if (Value *V = tryConstantFoldCall(Call, Call->getCalledOperand(), Args, Q))
+  if (Value *V = tryConstantFoldCall(Call, Args, Q))
     return V;
-  if (Value *Ret = simplifyIntrinsic(Call, Call->getCalledOperand(), Args, Q))
+  if (Value *Ret = ::simplifyIntrinsic(Call, Args, Q))
     return Ret;
   return nullptr;
 }

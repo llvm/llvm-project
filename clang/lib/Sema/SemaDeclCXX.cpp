@@ -7417,7 +7417,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   checkClassLevelCodeSegAttribute(Record);
 
   bool ClangABICompat4 =
-      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
+      Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver4);
   TargetInfo::CallingConvKind CCK =
       Context.getTargetInfo().getCallingConvKind(ClangABICompat4);
   bool CanPass = canPassInRegisters(*this, Record, CCK);
@@ -10444,8 +10444,8 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
     // Otherwise, if ClangABICompat14 is false, All copy constructors can be
     // trivial, if they are not user-provided, regardless of the qualifiers on
     // the reference type.
-    const bool ClangABICompat14 = Context.getLangOpts().getClangABICompat() <=
-                                  LangOptions::ClangABI::Ver14;
+    const bool ClangABICompat14 =
+        Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver14);
     if (!RT ||
         ((RT->getPointeeType().getCVRQualifiers() != Qualifiers::Const) &&
          ClangABICompat14)) {
@@ -13938,13 +13938,10 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       }
 
       if (!Invalid && OldDecl && !OldDecl->isInvalidDecl()) {
-        // It's ok that we don't pass the declarations corresponding to the
-        // template parameter lists here, because type alias templates cannot be
-        // declared out-of-line.
-        if (TemplateParameterListsAreEqual(
-                /*NewInstFrom=*/nullptr, TemplateParams,
-                /*OldInstFrom=*/nullptr, OldDecl->getTemplateParameters(),
-                /*Complain=*/true, TPL_TemplateMatch))
+        if (TemplateParameterListsAreEqual(TemplateParams,
+                                           OldDecl->getTemplateParameters(),
+                                           /*Complain=*/true,
+                                           TPL_TemplateMatch))
           OldTemplateParams =
               OldDecl->getMostRecentDecl()->getTemplateParameters();
         else

@@ -324,6 +324,10 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
       flow(Dest, Src, /*Kill=*/true);
     return;
   case CK_ArrayToPointerDecay:
+    // va_arg(ap, array_type) is UB and does not provide addressable array
+    // storage to model.
+    if (isa<VAArgExpr>(SubExpr->IgnoreParens()))
+      return;
     assert(Src && "Array expression should have origins as it is GL value");
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
@@ -338,6 +342,20 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     if (Src && Dest && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_LValueToRValueBitCast:
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic: {
+    // `__builtin_bit_cast`/`std::bit_cast` of a pointer, and
+    // wrapping/unwrapping `_Atomic(T*)`, preserve the pointer value, so
+    // propagate the borrow. The operand may be a glvalue, so strip its outer
+    // lvalue level first. A bit-cast that materializes a pointer from a
+    // non-pointer representation has no matching source origin and is
+    // untracked.
+    OriginList *RVSrc = getRValueOrigins(SubExpr, Src);
+    if (RVSrc && Dest->getLength() == RVSrc->getLength())
+      flow(Dest, RVSrc, /*Kill=*/true);
+    return;
+  }
   default:
     return;
   }
@@ -347,6 +365,15 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
   switch (UO->getOpcode()) {
   case UO_AddrOf: {
     const Expr *SubExpr = UO->getSubExpr();
+    // Function addresses do not need lifetime tracking.
+    if (SubExpr->getType()->isFunctionType())
+      return;
+    // Skip address-of on void expressions: GNU C permits them, but void itself
+    // has no origins to track.
+    if (IsCMode && SubExpr->getType()->isVoidType())
+      return;
+    assert(!SubExpr->getType()->isVoidType() &&
+           "Taking address of void is not valid in C++");
     // The origin of an address-of expression (e.g., &x) is the origin of
     // its sub-expression (x). This fact will cause the dataflow analysis
     // to propagate any loans held by the sub-expression's origin to the
@@ -357,6 +384,21 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
   case UO_Deref: {
     const Expr *SubExpr = UO->getSubExpr();
     killAndFlowOrigin(*UO, *SubExpr);
+    return;
+  }
+  case UO_PreInc:
+  case UO_PostInc:
+  case UO_PreDec:
+  case UO_PostDec: {
+    // Inc/dec keeps a pointer in the same allocation, so the result carries the
+    // operand's loans. Peel the operand's storage origin when the *result* is a
+    // prvalue (post-inc/dec, or any form in C) -- the inverse of
+    // getRValueOrigins, which peels when its own argument is a glvalue.
+    if (!UO->getType()->isPointerType())
+      return;
+    OriginList *SubList = getOriginsList(*UO->getSubExpr());
+    flow(getOriginsList(*UO),
+         UO->isGLValue() ? SubList : SubList->peelOuterOrigin(), /*Kill=*/true);
     return;
   }
   default:
@@ -435,7 +477,12 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
-  killAndFlowOrigin(*TargetExpr, *LHSExpr);
+
+  // In C, assignment expressions are not GLValues, so the assignment result has
+  // the assigned value origins, not the LHS storage origin.
+  if (IsCMode)
+    LHSList = getRValueOrigins(LHSExpr, LHSList);
+  flow(getOriginsList(*TargetExpr), LHSList, /*Kill=*/true);
 }
 
 void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
@@ -450,8 +497,21 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
-  if (BO->isCompoundAssignmentOp())
+  if (BO->getOpcode() == BO_Comma) {
+    killAndFlowOrigin(*BO, *BO->getRHS());
     return;
+  }
+  if (BO->isCompoundAssignmentOp()) {
+    // A pointer compound additive assignment (`p += n`) carries the LHS's loans
+    // like inc/dec above; in C the result is a prvalue, so peel its outer
+    // (storage) origin.
+    if (BO->getType()->isPointerType()) {
+      OriginList *LHSList = getOriginsList(*BO->getLHS());
+      flow(getOriginsList(*BO), IsCMode ? LHSList->peelOuterOrigin() : LHSList,
+           /*Kill=*/true);
+    }
+    return;
+  }
   if (BO->getType()->isPointerType() && BO->isAdditiveOp())
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
@@ -460,10 +520,13 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
-void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+void FactsGenerator::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *CO) {
   if (!hasOrigins(CO))
     return;
 
+  // For the GNU binary conditional `a ?: b`, getTrueExpr() is the
+  // OpaqueValueExpr wrapping the common subexpression.
   const Expr *TrueExpr = CO->getTrueExpr();
   const Expr *FalseExpr = CO->getFalseExpr();
 
@@ -478,13 +541,17 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   case 0:
     return;
   case 1: {
-    TBHasEdge = llvm::any_of(**Preds.begin(),
-                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
-                                 const CFGElement &Elt) {
-                               if (auto CS = Elt.getAs<CFGStmt>())
-                                 return CS->getStmt() == ExpectedStmt;
-                               return false;
-                             });
+    // For `a ?: b`, getTrueExpr() is the OpaqueValueExpr; the common
+    // subexpression it wraps is what appears in the predecessor block.
+    const Expr *TrueArm = TrueExpr->IgnoreParenImpCasts();
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(TrueArm))
+      if (const Expr *Src = OVE->getSourceExpr())
+        TrueArm = Src->IgnoreParenImpCasts();
+    TBHasEdge = llvm::any_of(**Preds.begin(), [TrueArm](const CFGElement &Elt) {
+      if (auto CS = Elt.getAs<CFGStmt>())
+        return CS->getStmt() == TrueArm;
+      return false;
+    });
     FBHasEdge = !TBHasEdge;
     break;
   }
@@ -566,8 +633,13 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
     return;
   // For list initialization with a single element, like `View{...}`, the
   // origin of the list itself is the origin of its single element.
-  if (ILE->getNumInits() == 1)
+  if (ILE->getNumInits() == 1) {
+    // A type with origins may be list-initialized from an element with none
+    // (e.g., an int). Only flow if the element carries any.
+    if (!hasOrigins(ILE->getInit(0)))
+      return;
     killAndFlowOrigin(*ILE, *ILE->getInit(0));
+  }
 }
 
 void FactsGenerator::VisitCXXBindTemporaryExpr(
@@ -622,6 +694,10 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
 }
 
 void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
+  // Some C subscripts do not refer to addressable storage with origins, such as
+  // GNU void-pointer subscripts and vector element extraction from rvalues.
+  if (IsCMode && !ASE->isGLValue())
+    return;
   assert(ASE->isGLValue() && "Array subscript should be a GL value");
   OriginList *Dst = getOriginsList(*ASE);
   assert(Dst && "Array subscript should have origins as it is a GL value");
@@ -631,23 +707,23 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
-void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
+bool FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
                                         OriginList *NewList) {
   // Model only the standard single-argument placement new form, where the
   // placement argument corresponds to a void* allocation-function parameter.
   // Other placement forms, such as std::nothrow, are not modeled as providing
   // storage for the returned pointer.
   if (NE->getNumPlacementArgs() != 1)
-    return;
+    return false;
 
   const FunctionDecl *OperatorNew = NE->getOperatorNew();
   if (OperatorNew->getNumParams() <= 1)
-    return;
+    return false;
 
   const auto *Arg =
       OperatorNew->getParamDecl(1)->getType()->getAs<PointerType>();
   if (!Arg || !Arg->isVoidPointerType())
-    return;
+    return false;
 
   // Use the placement argument before the implicit conversion to void*, so
   // inner origins are still available.
@@ -665,15 +741,23 @@ void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
   if (PlacementList)
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         NewList->getOuterOriginID(), PlacementList->getOuterOriginID(), true));
+  return true;
 }
 
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
   const Expr *Init = NE->getInitializer();
 
-  if (NE->getNumPlacementArgs() == 1) {
-    handlePlacementNew(NE, NewList);
-  } else {
+  bool HandledAsPlacementNew = false;
+  if (NE->getNumPlacementArgs() == 1)
+    HandledAsPlacementNew = handlePlacementNew(NE, NewList);
+
+  // Treat ordinary new and replaceable global allocation forms as heap
+  // allocations.
+  const FunctionDecl *OperatorNew = NE->getOperatorNew();
+  if (!HandledAsPlacementNew &&
+      (NE->getNumPlacementArgs() == 0 ||
+       (OperatorNew && OperatorNew->isReplaceableGlobalAllocationFunction()))) {
     const Loan *L = createLoan(FactMgr, NE);
     CurrentBlockFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));

@@ -510,11 +510,12 @@ public:
     return HasGFX90AInsts || HasGFX1250Insts;
   }
 
-  /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
-  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
-
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }
+
+  /// \returns true if the subtarget supports the ds_swizzle rotate and FFT
+  /// swizzle modes (GFX9+).
+  bool hasDsSwizzleRotateMode() const { return getGeneration() >= GFX9; }
 
   bool hasDPPRowShare() const {
     return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10);
@@ -728,9 +729,6 @@ public:
   bool hasINVWBL2WaitCntRequirement() const { return HasGFX1250Insts; }
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return HasGFX1250Insts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return HasGFX1250Insts; }

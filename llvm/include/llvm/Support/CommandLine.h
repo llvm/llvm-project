@@ -334,12 +334,7 @@ public:
 
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
-                  enum OptionHidden Hidden)
-      : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
-        HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
-        FullyInitialized(false), Position(0), AdditionalVals(0) {
-    Categories.push_back(&getGeneralCategory());
-  }
+                  enum OptionHidden Hidden);
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 
@@ -635,7 +630,7 @@ struct OptionValue final
 };
 
 // Other safe-to-copy-by-value common option types.
-enum boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
+enum class boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
 template <>
 struct LLVM_ABI OptionValue<cl::boolOrDefault> final
     : OptionValueCopy<cl::boolOrDefault> {

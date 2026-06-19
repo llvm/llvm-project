@@ -14,6 +14,7 @@ add_object_library(
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.lseek
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.error_or
     libc.src.__support.File.file
     libc.src.errno.errno
@@ -27,6 +28,7 @@ add_object_library(
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.error_or
     libc.src.errno.errno
     libc.src.__support.File.dir

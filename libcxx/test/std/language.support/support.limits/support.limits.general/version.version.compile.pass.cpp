@@ -232,6 +232,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -1162,6 +1166,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -2196,6 +2204,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -3470,6 +3482,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -4960,6 +4976,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -6683,6 +6703,13 @@
 #    error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_map != 202502L
+#    error "__cpp_lib_constexpr_map should have the value 202502L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++26"
 #  endif
@@ -7805,8 +7832,8 @@
 #  ifndef __cpp_lib_raw_memory_algorithms
 #    error "__cpp_lib_raw_memory_algorithms should be defined in c++26"
 #  endif
-#  if __cpp_lib_raw_memory_algorithms != 201606L
-#    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++26"
+#  if __cpp_lib_raw_memory_algorithms != 202411L
+#    error "__cpp_lib_raw_memory_algorithms should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

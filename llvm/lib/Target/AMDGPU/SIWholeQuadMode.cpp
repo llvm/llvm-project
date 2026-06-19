@@ -1231,6 +1231,7 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   StateTransition[MI] = StateExact;
 }
 

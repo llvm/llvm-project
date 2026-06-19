@@ -201,16 +201,6 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
-  static inline SCEVUse getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
-  static inline SCEVUse getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
     return hash_value(U.getOpaqueValue());
   }
@@ -1244,6 +1234,9 @@ public:
 
   /// Test if the given expression is known to be non-zero.
   LLVM_ABI bool isKnownNonZero(const SCEV *S);
+
+  /// Returns true if \p Op is guaranteed to not be poison.
+  LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
@@ -2437,9 +2430,6 @@ private:
   /// Returns true if \p Op is guaranteed not to cause immediate UB.
   bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
-  /// Returns true if \p Op is guaranteed to not be poison.
-  static bool isGuaranteedNotToBePoison(const SCEV *Op);
-
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
   /// SCEV commons expressions across control flow, and you can have cases
@@ -2734,15 +2724,6 @@ private:
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
-  static inline ScalarEvolution::FoldID getEmptyKey() {
-    ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-  static inline ScalarEvolution::FoldID getTombstoneKey() {
-    ScalarEvolution::FoldID ID(1);
-    return ID;
-  }
-
   static unsigned getHashValue(const ScalarEvolution::FoldID &Val) {
     return Val.computeHash();
   }

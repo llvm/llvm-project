@@ -154,6 +154,20 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
         for ([[maybe_unused]] auto Cnt :
              seq<unsigned>(Zero->getElementCount().getFixedValue()))
           Constants.push_back(ZeroElm);
+      } else if (isa<ConstantInt>(COp) && isa<VectorType>(COp->getType())) {
+        auto *Elm = ConstantInt::get(Ctx, cast<ConstantInt>(COp)->getValue());
+        for ([[maybe_unused]] auto Cnt :
+             seq<unsigned>(cast<VectorType>(COp->getType())
+                               ->getElementCount()
+                               .getFixedValue()))
+          Constants.push_back(Elm);
+      } else if (isa<ConstantFP>(COp) && isa<VectorType>(COp->getType())) {
+        auto *Elm = ConstantFP::get(cast<ConstantFP>(COp)->getValue(), Ctx);
+        for ([[maybe_unused]] auto Cnt :
+             seq<unsigned>(cast<VectorType>(COp->getType())
+                               ->getElementCount()
+                               .getFixedValue()))
+          Constants.push_back(Elm);
       } else {
         Constants.push_back(COp);
       }
