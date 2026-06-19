@@ -6625,9 +6625,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         llvm::sys::path::replace_extension(Output, "");
       }
       Output += OffloadingPrefix;
-      if (MultipleArchs && !BA.empty()) {
+      if (MultipleArchs && !BoundArchStr.empty()) {
         Output += "-";
-        Output.append(BA.ArchName);
+        Output.append(BoundArchStr);
       }
       if (UseOutExtension)
         Output += ".out";
@@ -6653,9 +6653,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       End = BaseName.rfind('.');
     SmallString<128> Suffixed(BaseName.substr(0, End));
     Suffixed += OffloadingPrefix;
-    if (MultipleArchs && !BA.empty()) {
+    if (MultipleArchs && !BoundArchStr.empty()) {
       Suffixed += "-";
-      Suffixed.append(BA.ArchName);
+      Suffixed.append(BoundArchStr);
     }
     // When using both -save-temps and -emit-llvm, use a ".tmp.bc" suffix for
     // the unoptimized bitcode so that it does not get overwritten by the ".bc"
