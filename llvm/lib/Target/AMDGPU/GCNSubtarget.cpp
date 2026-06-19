@@ -143,7 +143,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -156,8 +156,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
-
-  TargetID.setTargetIDFromFeaturesString(FS);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
                     << TargetID.getXnackSetting() << '\n');
@@ -177,20 +175,23 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
 }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                           const GCNTargetMachine &TM)
+                           const GCNTargetMachine &TM, bool BufferOOBRelaxed,
+                           bool TBufferOOBRelaxed)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(*this),
+    TargetID(*this, FS),
     InstrItins(getInstrItineraryForCPU(GPU)),
+    BufferOOBRelaxed(BufferOOBRelaxed),
+    TBufferOOBRelaxed(TBufferOOBRelaxed),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
     // Frame index expansion sometimes assumes the low bit of SP is 0
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
                   /*TransAl=*/Align(4)) {
   // clang-format on
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
+  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 
@@ -416,14 +417,13 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(SGPRs, getMaxWavesPerEU(),
-                                                   getGeneration());
+  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(*this, SGPRs);
 }
 
 unsigned
 GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
                                        unsigned DynamicVGPRBlockSize) const {
-  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs,
+  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(*this, NumVGPRs,
                                                        DynamicVGPRBlockSize);
 }
 
@@ -765,6 +765,19 @@ void GCNSubtarget::adjustSchedDependency(
 
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
+
+  // Check for false latency on $tensorcnt / $asynccnt dependencies
+  if (Dep.getReg() == AMDGPU::TENSORcnt || Dep.getReg() == AMDGPU::ASYNCcnt) {
+    unsigned UseOp = UseI->getOpcode();
+    // Do not adjust latency for load->s_wait
+    bool IsBarrierCase =
+        InstrInfo.isLDSDMA(*DefI) &&
+        (UseOp == AMDGPU::S_WAIT_TENSORCNT || UseOp == AMDGPU::S_WAIT_ASYNCCNT);
+    if (!IsBarrierCase) {
+      Dep.setLatency(1);
+      return;
+    }
+  }
 
   if (Register Reg = getRealSchedDependency(*DefI, DefOpIdx, *UseI, UseOpIdx)) {
     Dep.setReg(Reg);

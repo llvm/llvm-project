@@ -435,7 +435,8 @@ functions:
       - type: unsigned accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
   - name: sqrtulk
-    standards: llvm_libc_stdfix_ext
+    standards:
+      - llvm_libc_stdfix_ext
     return_type: unsigned long accum
     arguments:
       - type: unsigned long accum

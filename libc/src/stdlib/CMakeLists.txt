@@ -72,7 +72,9 @@ set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
    (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
    (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
-  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow")
+  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
+      "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
+      "-fdisable-tree-waccess3")
 endif()
 
 add_object_library(
@@ -91,6 +93,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
@@ -397,6 +400,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkstemp
+  SRCS
+    mkstemp.cpp
+  HDRS
+    mkstemp.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   mbtowc
   SRCS
     mbtowc.cpp
@@ -405,6 +425,21 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mblen
+  SRCS
+    mblen.cpp
+  HDRS
+    mblen.h
+  DEPENDS
+    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.libc_errno
@@ -634,6 +669,13 @@ add_entrypoint_object(
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
+add_entrypoint_object(
+  setenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setenv
+)
 
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(

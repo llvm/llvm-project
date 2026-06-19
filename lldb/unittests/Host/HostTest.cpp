@@ -127,7 +127,7 @@ TEST(Host, FindProcesses) {
   ASSERT_TRUE(foundPID);
   llvm::scope_exit clean_up([&] {
     Host::Kill(info.GetProcessID(), SIGKILL);
-    exit_status.get_future().get();
+    exit_status.get_future().wait();
   });
 }
 

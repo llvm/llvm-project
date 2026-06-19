@@ -434,6 +434,15 @@ struct GenericKernelTy {
   virtual Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
                                           uint64_t DynamicMemSize) const = 0;
 
+  /// Get the maximum number of work groups that can be launched cooperatively.
+  virtual Expected<uint32_t>
+  getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
+                              const uint32_t NumThreads[3],
+                              uint32_t DynBlockMemSize) const {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "cooperative launch not supported");
+  }
+
   /// Get the kernel name.
   const char *getName() const { return Name.c_str(); }
 
@@ -517,17 +526,20 @@ private:
               KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
               uint32_t Version) const;
 
-  /// Get the number of threads and blocks for the kernel based on the
-  /// user-defined threads and block clauses.
-  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause[3]) const;
+  /// Get the effective number of threads for the kernel based on the
+  /// user-defined number of threads.
+  uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
+                                  uint32_t UserThreadLimit) const;
 
+  /// Get the effective number of blocks for the kernel based on the
+  /// user-defined number of blocks and the loop trip count.
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-  uint32_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
-                        uint32_t &NumThreads, bool IsNumThreadsFromUser) const;
+  uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
+                                 uint32_t UserNumBlocks, uint64_t LoopTripCount,
+                                 uint32_t &EffectiveNumThreads,
+                                 bool IsNumThreadsFromUser) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
   /// or SPMD mode.
@@ -1042,17 +1054,20 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                     AsyncInfoWrapperTy &AsyncInfo) = 0;
 
   /// Create an event.
-  Error createEvent(void **EventPtrStorage);
-  virtual Error createEventImpl(void **EventPtrStorage) = 0;
+  Error createEvent(void **EventPtrStorage, bool EnableProfiling = false);
+  virtual Error createEventImpl(void **EventPtrStorage,
+                                bool EnableProfiling) = 0;
 
   /// Destroy an event.
-  Error destroyEvent(void *Event);
-  virtual Error destroyEventImpl(void *EventPtr) = 0;
+  Error destroyEvent(void *Event, bool EnableProfiling = false);
+  virtual Error destroyEventImpl(void *EventPtr, bool EnableProfiling) = 0;
 
   /// Start the recording of the event.
-  Error recordEvent(void *Event, __tgt_async_info *AsyncInfo);
+  Error recordEvent(void *Event, __tgt_async_info *AsyncInfo,
+                    bool EnableProfiling = false);
   virtual Error recordEventImpl(void *EventPtr,
-                                AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                                AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                bool EnableProfiling) = 0;
 
   /// Wait for an event to finish. Notice this wait is asynchronous if the
   /// __tgt_async_info is not nullptr.
@@ -1095,7 +1110,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the number of lanes used for the RPC interface.
   virtual uint32_t getRPCNumLanes() const { return getWarpSize(); }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
-  uint32_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
+  /// Get the maximum number of blocks that can be launched. The \p NumThreads
+  /// argument is the per-block thread count the kernel will be launched with.
+  virtual uint32_t getBlockLimit(uint32_t NumThreads) const {
+    return GridValues.GV_Max_Teams;
+  }
   uint32_t getDefaultNumThreads() const {
     return GridValues.GV_Default_WG_Size;
   }
@@ -1233,6 +1252,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
                          bool IsNative, bool SaveOutput, bool EmitReport,
+                         const char *ReportFilename,
                          const char *OutputDirPath) {
     if (RecordReplay)
       return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
@@ -1248,7 +1268,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
     RecordReplay =
         new NativeRecordReplayTy(Status, OutputDirPath ? OutputDirPath : "",
-                                 SaveOutput, EmitReport, *this);
+                                 SaveOutput, EmitReport, ReportFilename, *this);
     return RecordReplay->init(Size, VAddr);
   }
 
@@ -1568,6 +1588,7 @@ public:
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,
                                    bool SaveOutput, bool EmitReport,
+                                   const char *ReportFilename,
                                    const char *OutputDirPath);
 
   /// Loads the associated binary into the plugin and returns a handle to it.

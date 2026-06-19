@@ -23,15 +23,18 @@ using namespace clang;
 using namespace clang::interp;
 
 template <typename T> static constexpr bool needsCtor() {
-  if constexpr (std::is_same_v<T, Integral<8, true>> ||
-                std::is_same_v<T, Integral<8, false>> ||
+  if constexpr (std::is_same_v<T, Char<true>> ||
+                std::is_same_v<T, Char<false>> ||
                 std::is_same_v<T, Integral<16, true>> ||
                 std::is_same_v<T, Integral<16, false>> ||
                 std::is_same_v<T, Integral<32, true>> ||
                 std::is_same_v<T, Integral<32, false>> ||
                 std::is_same_v<T, Integral<64, true>> ||
                 std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, Boolean>)
+                std::is_same_v<T, Integral<64, false>> ||
+                std::is_same_v<T, IntegralAP<false>> ||
+                std::is_same_v<T, IntegralAP<true>> ||
+                std::is_same_v<T, Floating> || std::is_same_v<T, Boolean>)
     return false;
 
   return true;
@@ -243,12 +246,6 @@ static bool needsRecordDtor(const Record *R) {
 
 static BlockCtorFn getCtorPrim(PrimType T) {
   switch (T) {
-  case PT_Float:
-    return ctorTy<PrimConv<PT_Float>::T>;
-  case PT_IntAP:
-    return ctorTy<PrimConv<PT_IntAP>::T>;
-  case PT_IntAPS:
-    return ctorTy<PrimConv<PT_IntAPS>::T>;
   case PT_Ptr:
     return ctorTy<PrimConv<PT_Ptr>::T>;
   case PT_MemberPtr:
@@ -261,12 +258,6 @@ static BlockCtorFn getCtorPrim(PrimType T) {
 
 static BlockDtorFn getDtorPrim(PrimType T) {
   switch (T) {
-  case PT_Float:
-    return dtorTy<PrimConv<PT_Float>::T>;
-  case PT_IntAP:
-    return dtorTy<PrimConv<PT_IntAP>::T>;
-  case PT_IntAPS:
-    return dtorTy<PrimConv<PT_IntAPS>::T>;
   case PT_Ptr:
     return dtorTy<PrimConv<PT_Ptr>::T>;
   case PT_MemberPtr:
@@ -278,7 +269,8 @@ static BlockDtorFn getDtorPrim(PrimType T) {
 }
 
 static BlockCtorFn getCtorArrayPrim(PrimType Type) {
-  TYPE_SWITCH(Type, return ctorArrayTy<T>);
+  TYPE_SWITCH(Type, if constexpr (!needsCtor<T>()) return nullptr;
+              return ctorArrayTy<T>);
   llvm_unreachable("unknown Expr");
 }
 
@@ -301,14 +293,14 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
 }
 
 /// Primitive arrays.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
-                       size_t NumElems, bool IsConst, bool IsTemporary,
-                       bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
-      MDSize(MD.value_or(0)),
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+                       MetadataSize MD, size_t NumElems, bool IsConst,
+                       bool IsTemporary, bool IsMutable, bool IsVolatile)
+    : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)),
+      Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
       AllocSize(align(MDSize) + align(Size) + sizeof(InitMapPtr)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(getCtorArrayPrim(Type)),
+      IsVolatile(IsVolatile), IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)) {
   assert(Source && "Missing source");
   assert(NumElems <= (MaxArrayElemBytes / ElemSize));
@@ -375,8 +367,7 @@ Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
 QualType Descriptor::getType() const {
   if (SourceType)
     return QualType(SourceType, 0);
-  if (const auto *D = asValueDecl())
-    return D->getType();
+
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
     return T->getASTContext().getTypeDeclType(T);
 
@@ -384,10 +375,28 @@ QualType Descriptor::getType() const {
   // we really save. Try to consult the Record first.
   if (isRecord()) {
     const RecordDecl *RD = ElemRecord->getDecl();
-    return RD->getASTContext().getCanonicalTagType(RD);
+    QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
+                                                std::nullopt, RD, false);
+    if (IsConst)
+      return T.withConst();
+    return T;
   }
-  if (const auto *E = asExpr())
+
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return E->getType()->getPointeeType();
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return E->getType()->getPointeeType();
     return E->getType();
+  }
+
+  if (const auto *D = asValueDecl())
+    return D->getType();
+
   llvm_unreachable("Invalid descriptor type");
 }
 
@@ -441,22 +450,6 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
   return getType();
 }
 
-QualType Descriptor::getDataElemType() const {
-  if (const auto *E = asExpr()) {
-    if (isa<CXXNewExpr>(E))
-      return E->getType()->getPointeeType();
-
-    // std::allocator.allocate() call.
-    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
-        ME && ME->getRecordDecl()->getName() == "allocator" &&
-        ME->getMethodDecl()->getName() == "allocate")
-      return E->getType()->getPointeeType();
-    return E->getType();
-  }
-
-  return getType();
-}
-
 SourceLocation Descriptor::getLocation() const {
   if (auto *D = dyn_cast<const Decl *>(Source))
     return D->getLocation();
@@ -493,6 +486,8 @@ bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 unsigned Descriptor::getElemDataSize() const {
   if ((isPrimitive() || isPrimitiveArray()) &&
       isIntegerOrBoolType(getPrimType())) {
+    if (getPrimType() == PT_Bool)
+      return 1;
     FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
   }
   return ElemSize;

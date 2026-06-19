@@ -46,7 +46,7 @@ madd x0, x0, x0, x0
 # CHECK-NEXT: 1.     1     5.0    0.0    0.0       add	x0, x0, x1
 # CHECK-NEXT: 2.     1     6.0    0.0    0.0       add	x0, x0, x1
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       add	x0, x0, x1
-# CHECK-NEXT:        1     4.8    0.3    0.0       <total>
+# CHECK-NEXT:        4     4.8    0.3    0.0       <total>
 
 # CHECK:      [1] Code Region - madd bypass
 
@@ -80,4 +80,4 @@ madd x0, x0, x0, x0
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       madd	x0, x1, x2, x0
 # CHECK-NEXT: 2.     1     3.0    0.0    0.0       madd	x0, x1, x2, x0
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       madd	x0, x0, x0, x0
-# CHECK-NEXT:        1     3.3    0.3    0.0       <total>
+# CHECK-NEXT:        4     3.3    0.3    0.0       <total>

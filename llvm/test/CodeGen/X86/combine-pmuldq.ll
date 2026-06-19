@@ -163,20 +163,20 @@ define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 ;
 ; AVX1-LABEL: combine_zext_pmuludq_256:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm3 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpunpckhdq {{.*#+}} xmm1 = xmm3[2],xmm1[2],xmm3[3],xmm1[3]
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [715827883,715827883]
 ; AVX1-NEXT:    # xmm4 = mem[0,0]
+; AVX1-NEXT:    vpmuludq %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
+; AVX1-NEXT:    vpmuludq %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmuludq %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX1-NEXT:    vpmuludq %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vpmuludq %xmm4, %xmm3, %xmm2
-; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX1-NEXT:    vpmuludq %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_zext_pmuludq_256:
