@@ -1368,12 +1368,12 @@ def and_xor_or_to_and : GICombineRule<
 def and_xor_or_to_xor_and : GICombineRule<
   (defs root:$root),
   (match (G_XOR $not, $y, -1),
-         (G_OR $and, $x, $y),
-         (G_AND $root, $and, $not)),
+         (G_OR $or, $x, $y),
+         (G_AND $root, $or, $not)),
   (apply (G_XOR $xor, $y, -1),
          (G_AND $root, $x, $xor))>;
 
-// fold or (xor x, y), (x and/or y) --> or x, y
+// fold or (xor x, y), (x or y) --> or x, y
 def or_xor_or : GICombineRule<
   (defs root:$root),
   (match (G_XOR $xor, $x, $y),
@@ -1381,6 +1381,7 @@ def or_xor_or : GICombineRule<
          (G_OR $root, $xor, $or)),
   (apply (G_OR $root, $x, $y))>;
 
+// fold or (xor x, y), (x and y) --> or x, y
 def or_xor_and : GICombineRule<
   (defs root:$root),
   (match (G_XOR $xor, $x, $y),
