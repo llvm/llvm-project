@@ -81,19 +81,20 @@ jobs:
         id: vars
         env:
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
+          UPLOAD_MAN_PAGES: ${{ inputs.upload }}
         shell: bash
         run: |
-          trimmed=$(echo ${{ inputs.release-version }} | xargs)
+          trimmed=$(echo $INPUTS_RELEASE_VERSION | xargs)
           if [ -z "$trimmed" ]; then
-            exit "ERROR: Unsupported release version: '${{ inputs.release-version }}'"
+            exit "ERROR: Unsupported release version: '$INPUTS_RELEASE_VERSION'"
             exit 1
           fi
           release_version="$trimmed"
           {
             echo "man-page-release-version=$release_version"
-            echo "man-page-tarball-name=llvm_man_pages-${{ env.release-version }}.tar.xz"
-            echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
-            echo "man-page-upload=${{ inputs.upload }}"
+            echo "man-page-tarball-name=llvm_man_pages-$release_version.tar.xz"
+            echo "man-page-ref=llvmorg-$release_version"
+            echo "man-page-upload=$UPLOAD_MAN_PAGES"
             echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
           } >> "$GITHUB_OUT"
 
@@ -150,6 +151,8 @@ jobs:
       - name: Generate sha256 digest for man page tarball
         id: man-page-digest
         shell: bash
+        env:
+          TARBALL_NAME: ${{ needs.prepare.outputs.man-page-tarball-name }}
         run: |
             if [ "$RUNNER_OS" = "macOS" ]; then
               # Mac runners don't have sha256sum.
@@ -157,7 +160,7 @@ jobs:
             else
               sha256sum="sha256sum"
             fi
-            echo "man-page-digest=$(cat ${{ needs.prepare.outputs.man-page-tarball-name }} | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUT
+            echo "man-page-digest=$(cat "$TARBALL_NAME" | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUT
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
