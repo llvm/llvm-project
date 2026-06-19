@@ -35,6 +35,7 @@ void test_lhs_ptrcheck_deref(AGG *dest) {
 
 // CHECK-LABEL: define {{.*}}@test_lhs_ptrcheck_subscript(
 // CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_lhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local = {0};
   arr[0] = local;
@@ -62,6 +63,7 @@ void test_rhs_ptrcheck_deref(AGG *src) {
 
 // CHECK-LABEL: define {{.*}}@test_rhs_ptrcheck_subscript(
 // CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_rhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local;
   local = arr[0];
@@ -72,6 +74,7 @@ void test_rhs_ptrcheck_subscript(AGG arr[4]) {
 
 // CHECK-LABEL: define {{.*}}@test_init_from_deref(
 // CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_init_from_deref(AGG *src) {
   AGG local = *src;
   (void)local;
@@ -79,6 +82,7 @@ void test_init_from_deref(AGG *src) {
 
 // CHECK-LABEL: define {{.*}}@test_init_from_subscript(
 // CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_init_from_subscript(AGG arr[4]) {
   AGG local = arr[0];
   (void)local;
@@ -133,6 +137,7 @@ extern "C" {
 
 // CXX-LABEL: define {{.*}}@test_cxx_lhs_dot_operator_function_call(
 // CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+// CXX-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_cxx_lhs_dot_operator_function_call(AGG *src) {
   AGG aggValue(void);
   (*src).operator=(aggValue());
@@ -142,6 +147,7 @@ void test_cxx_lhs_dot_operator_function_call(AGG *src) {
 
 // CXX-LABEL: define {{.*}}@test_cxx_rhs_operator_function_call(
 // CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+// CXX-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_cxx_rhs_operator_function_call(AGG *src) {
   AGG local = {0};
   local.operator=(*src);
@@ -149,6 +155,7 @@ void test_cxx_rhs_operator_function_call(AGG *src) {
 
 // CXX-LABEL: define {{.*}}@test_cxx_direct_init(
 // CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+// CXX-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_cxx_direct_init(AGG *src) {
   AGG local(*src);
   (void)local;
@@ -156,6 +163,7 @@ void test_cxx_direct_init(AGG *src) {
 
 // CXX-LABEL: define {{.*}}@test_cxx_brace_init(
 // CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+// CXX-NOT: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_cxx_brace_init(AGG *src) {
   AGG local{*src};
   (void)local;
