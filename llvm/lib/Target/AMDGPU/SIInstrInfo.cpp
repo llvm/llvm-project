@@ -7108,14 +7108,11 @@ static void emitLoadScalarOpsFromVGPRLoop(
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   const auto *BoolXExecRC = TRI->getWaveMaskRegClass();
 
-  // Emit [v_cmpx_eq] and [s_andn2_wrexec] when these instructions are
-  // available.
-  // Otherwise, use the previous pattern of [v_cmp_eq], [s_and_saveexec],
-  // and [s_xor].
-  // TODO: Accurately detect the availability of [s_andn2_wrexec] instruction
-  // in the target. For now, use the same condition as for the detection
-  // [v_cmpx_eq].
-  bool UseNewExecInstructions = ST.hasNoSdstCMPX();
+  // Emit v_cmpx_eq and s_andn2_wrexec when both instructions are
+  // available. Otherwise, use the previous pattern of v_cmp_eq,
+  // s_and_saveexec, and s_xor.
+  bool UseNewExecInstructions =
+      ST.hasNoSdstCMPX() && TII.pseudoToMCOpcode(LMC.AndN2WrExecOpc) != -1;
 
   MachineBasicBlock::iterator I = LoopBB.begin();
   Register CondReg;
