@@ -993,6 +993,29 @@ UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
   return std::nullopt;
 }
 
+static std::optional<SmallVector<std::string, 4>>
+getAPINotesParameterSelector(const Sema &S, const FunctionDecl *FD) {
+  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+  if (!FPT)
+    return std::nullopt;
+
+  SmallVector<std::string, 4> Parameters;
+  Parameters.reserve(FPT->getNumParams());
+  for (QualType ParamType : FPT->param_types())
+    Parameters.push_back(ParamType.getUnqualifiedType().getAsString(
+        S.Context.getPrintingPolicy()));
+  return Parameters;
+}
+
+static SmallVector<StringRef, 4>
+getAPINotesParameterSelectorRefs(ArrayRef<std::string> Strings) {
+  SmallVector<StringRef, 4> Refs;
+  Refs.reserve(Strings.size());
+  for (const std::string &String : Strings)
+    Refs.push_back(String);
+  return Refs;
+}
+
 /// Process API notes that are associated with this declaration, mapping them
 /// to attributes as appropriate.
 void Sema::ProcessAPINotes(Decl *D) {
@@ -1024,10 +1047,21 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Global functions.
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
+        std::optional<SmallVector<std::string, 4>> ParameterStrings =
+            getAPINotesParameterSelector(*this, FD);
+        SmallVector<StringRef, 4> Parameters;
+        if (ParameterStrings)
+          Parameters = getAPINotesParameterSelectorRefs(*ParameterStrings);
         for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
           ProcessVersionedAPINotes(*this, FD, Info);
+
+          if (ParameterStrings) {
+            Info = Reader->lookupGlobalFunction(FD->getName(), Parameters,
+                                                APINotesContext);
+            ProcessVersionedAPINotes(*this, FD, Info);
+          }
         }
       }
 
@@ -1211,6 +1245,11 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (!isa<CXXConstructorDecl>(CXXMethod) &&
           !isa<CXXDestructorDecl>(CXXMethod) &&
           !isa<CXXConversionDecl>(CXXMethod)) {
+        std::optional<SmallVector<std::string, 4>> ParameterStrings =
+            getAPINotesParameterSelector(*this, CXXMethod);
+        SmallVector<StringRef, 4> Parameters;
+        if (ParameterStrings)
+          Parameters = getAPINotesParameterSelectorRefs(*ParameterStrings);
         for (auto Reader : Readers) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             std::string MethodName;
@@ -1223,6 +1262,12 @@ void Sema::ProcessAPINotes(Decl *D) {
 
             auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
+
+            if (ParameterStrings) {
+              Info =
+                  Reader->lookupCXXMethod(Context->id, MethodName, Parameters);
+              ProcessVersionedAPINotes(*this, CXXMethod, Info);
+            }
           }
         }
       }
