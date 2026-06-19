@@ -37,7 +37,7 @@ public:
         noexcept(is_nothrow_default_constructible<allocator_type>::value);
     explicit forward_list(const allocator_type& a);
     explicit forward_list(size_type n);
-    explicit forward_list(size_type n, const allocator_type& a); // C++14
+    explicit forward_list(size_type n, const allocator_type& a);
     forward_list(size_type n, const value_type& v);
     forward_list(size_type n, const value_type& v, const allocator_type& a);
     template <class InputIterator>
@@ -664,9 +664,7 @@ public:
       _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value) {} // = default;
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit forward_list(const allocator_type& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit forward_list(size_type __n);
-#  if _LIBCPP_STD_VER >= 14
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit forward_list(size_type __n, const allocator_type& __a);
-#  endif
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v);
 
   template <__enable_if_t<__is_allocator_v<_Alloc>, int> = 0>
@@ -941,7 +939,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type 
   }
 }
 
-#  if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type __n, const allocator_type& __base_alloc)
     : __base(__base_alloc) {
@@ -952,7 +949,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type 
     }
   }
 }
-#  endif
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type __n, const value_type& __v) {
