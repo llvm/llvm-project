@@ -32,7 +32,7 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
-unsigned tryGetSyntheticApertureNumber(unsigned AS) {
+unsigned getSyntheticApertureNumber(unsigned AS) {
   switch (AS) {
   case AMDGPUAS::BARRIER:
     return SyntheticAperture::BARRIER;

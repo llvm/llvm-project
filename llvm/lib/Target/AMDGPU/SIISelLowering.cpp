@@ -9202,7 +9202,7 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
   unsigned BaseAS = AS;
-  unsigned SANum = AMDGPU::tryGetSyntheticApertureNumber(AS);
+  unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
   if (SANum != AMDGPU::SyntheticAperture::None)
     BaseAS = AMDGPUAS::LOCAL_ADDRESS;
 
