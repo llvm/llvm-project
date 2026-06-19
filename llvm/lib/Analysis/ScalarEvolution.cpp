@@ -8883,10 +8883,11 @@ void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
   // If V has a non-SCEV-able type (e.g. {i64, i1} from a with.overflow
   // intrinsic), its users (e.g. extractvalue) may have stale SCEV
   // expressions referencing loop-internal values.
-  if (!isSCEVable(V->getType()))
+  if (!isSCEVable(V->getType()) && any_of(V->incoming_values(), [](Value *Inc) {
+        return isa<WithOverflowInst>(Inc);
+      }))
     for (User *U : V->users())
       InvalidateValue(U);
-
   // Also perform the normal invalidation.
   forgetValue(V);
 }
