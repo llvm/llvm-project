@@ -7463,10 +7463,9 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   // Forward any trailing scalar operands unchanged to both halves.
   SmallVector<SDValue, 2> LoOps = {Lo};
   SmallVector<SDValue, 2> HiOps = {Hi};
-  for (const SDValue &TrailingOp : drop_begin(Op->ops())) {
-    LoOps.push_back(TrailingOp);
-    HiOps.push_back(TrailingOp);
-  }
+  auto TrailingOps = drop_begin(Op->ops());
+  LoOps.append(TrailingOps.begin(), TrailingOps.end());
+  HiOps.append(TrailingOps.begin(), TrailingOps.end());
 
   SDValue OpLo = DAG.getNode(Opc, SL, LoVT, LoOps, Op->getFlags());
   SDValue OpHi = DAG.getNode(Opc, SL, HiVT, HiOps, Op->getFlags());
