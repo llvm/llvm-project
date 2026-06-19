@@ -15,6 +15,9 @@
 #include "Client/HTTP/HTTPServer.h"
 #include "Client/HTTP/Handlers/StaticHandler.h"
 #include "Utils/JSON.h"
+#include "Utils/Normalization.h"
+
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <cerrno>
 #include <cstring>
@@ -846,6 +849,236 @@ static HTTPResult handleGetRemarksRelational(CoreClient &Client,
   return HTTPResult{200, "application/json", std::move(Body)};
 }
 
+static HTTPResult handleGetSourceFiles(CoreClient &Client,
+                                       StringRef SnapID) {
+  const SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
+  Expected<json::Array> Query = Client.querySnapshot(SnapID, Caps);
+  if (!Query)
+    return makeJSONError(400, Query.takeError());
+
+  StringMap<int64_t> FileCounts;
+  for (const json::Value &UnitValue : *Query) {
+    const json::Object *UnitObj = UnitValue.getAsObject();
+    const json::Array *Results =
+        UnitObj ? UnitObj->getArray("results") : nullptr;
+    if (!Results)
+      continue;
+    for (const json::Value &ResultValue : *Results) {
+      const json::Object *ResultObj = ResultValue.getAsObject();
+      const json::Object *ValueObj =
+          ResultObj ? ResultObj->getObject("value") : nullptr;
+      if (!ValueObj)
+        continue;
+      std::optional<StringRef> Capability =
+          ResultObj->getString("capability");
+      if (!Capability || *Capability != "llvm.remarks.relational")
+        continue;
+      const json::Object *Cols = ValueObj->getObject("columns");
+      const json::Object *Strs = ValueObj->getObject("strings");
+      if (!Cols || !Strs)
+        continue;
+      const json::Array *FileCol = Cols->getArray("file");
+      const json::Array *FileStrs = Strs->getArray("file");
+      if (!FileCol || !FileStrs)
+        continue;
+      for (const json::Value &V : *FileCol) {
+        std::optional<int64_t> Idx = V.getAsInteger();
+        if (!Idx || *Idx < 0 ||
+            *Idx >= static_cast<int64_t>(FileStrs->size()))
+          continue;
+        StringRef FilePath =
+            (*FileStrs)[static_cast<size_t>(*Idx)]
+                .getAsString()
+                .value_or("");
+        if (!FilePath.empty())
+          FileCounts[FilePath] += 1;
+      }
+    }
+  }
+
+  json::Array Files;
+  for (const auto &KV : FileCounts) {
+    Files.push_back(
+        json::Object{{"path", KV.first()}, {"remarks_count", KV.second}});
+  }
+  std::sort(Files.begin(), Files.end(),
+            [](const json::Value &A, const json::Value &B) {
+              const json::Object *OA = A.getAsObject();
+              const json::Object *OB = B.getAsObject();
+              int64_t CA =
+                  OA ? OA->getInteger("remarks_count").value_or(0) : 0;
+              int64_t CB =
+                  OB ? OB->getInteger("remarks_count").value_or(0) : 0;
+              return CA > CB;
+            });
+  return makeJSONSuccess(200, std::move(Files));
+}
+
+static HTTPResult handleGetSource(CoreClient &Client, StringRef SnapID,
+                                  StringRef FilePath) {
+  Expected<SnapshotRecord> Snap =
+      Client.storage().metadata().getSnapshot(SnapID);
+  if (!Snap)
+    return makeJSONError(404, Snap.takeError());
+
+  SmallVector<StringRef, 2> Roots;
+  if (!Snap->SourceRoot.empty())
+    Roots.push_back(Snap->SourceRoot);
+  if (!Snap->BuildRoot.empty())
+    Roots.push_back(Snap->BuildRoot);
+
+  if (Roots.empty())
+    return makeJSONErrorStr(400, "snapshot has no source or build root");
+
+  std::string ResolvedPath;
+  bool Found = false;
+
+  if (sys::path::is_absolute(FilePath)) {
+    Expected<std::string> R = canonicalizePath(FilePath, Roots);
+    if (R) { ResolvedPath = std::move(*R); Found = true; }
+    else {
+      consumeError(R.takeError());
+      SmallString<256> Real;
+      if (!sys::fs::real_path(FilePath, Real)) {
+        ResolvedPath = std::string(Real);
+        Found = true;
+      }
+    }
+  }
+
+  if (!Found) {
+    for (StringRef Root : Roots) {
+      for (StringRef Base : {Root, StringRef(sys::path::parent_path(Root))}) {
+        SmallString<256> Joined(Base);
+        sys::path::append(Joined, FilePath);
+        if (sys::fs::exists(Joined)) {
+          SmallString<256> Real;
+          if (!sys::fs::real_path(Joined, Real)) {
+            ResolvedPath = std::string(Real);
+            Found = true;
+            break;
+          }
+        }
+      }
+      if (Found) break;
+    }
+  }
+
+  if (!Found)
+    return makeJSONErrorStr(404, "source file not found");
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      MemoryBuffer::getFile(ResolvedPath);
+  if (!Buf)
+    return makeJSONErrorStr(404, "source file not found");
+
+  StringRef Content = (*Buf)->getBuffer();
+  json::Object Result;
+  Result["path"] = ResolvedPath;
+  Result["content"] = Content.str();
+  Result["lines"] = static_cast<int64_t>(
+                        std::count(Content.begin(), Content.end(), '\n')) +
+                    1;
+  return makeJSONSuccess(200, std::move(Result));
+}
+
+static HTTPResult handleGetSourceRemarks(CoreClient &Client, StringRef SnapID,
+                                         StringRef FilePath, StringRef FilterPass,
+                                         StringRef FilterName, int64_t FilterType) {
+  if (FilePath.empty())
+    return makeJSONErrorStr(400, "path parameter is required");
+
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
+  const SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
+  SmallVector<UnitRecord, 64> Units =
+      Client.storage().metadata().listUnits(SnapID);
+
+  std::string Body;
+  raw_string_ostream OS(Body);
+  int64_t Count = 0;
+
+  writeSuccessEnvelope(OS, [&](json::OStream &JOS) {
+    JOS.object([&] {
+      JOS.attribute("path", FilePath);
+      JOS.attributeBegin("remarks");
+      JOS.arrayBegin();
+
+      for (const UnitRecord &Unit : Units) {
+        Expected<json::Array> Results = Client.queryUnit(Unit.ID, Caps);
+        if (!Results) { consumeError(Results.takeError()); continue; }
+        for (const json::Value &RV : *Results) {
+          const json::Object *RO = RV.getAsObject();
+          if (!RO) continue;
+          if (RO->getString("capability").value_or("") != "llvm.remarks.relational")
+            continue;
+          const json::Object *VO = RO->getObject("value");
+          if (!VO) continue;
+          const json::Object *Cols = VO->getObject("columns");
+          const json::Object *Strs = VO->getObject("strings");
+          if (!Cols || !Strs) continue;
+          const json::Array *FileCol = Cols->getArray("file");
+          const json::Array *FileStrs = Strs->getArray("file");
+          const json::Array *LineCol = Cols->getArray("line");
+          const json::Array *ColumnCol = Cols->getArray("column");
+          const json::Array *PassCol = Cols->getArray("pass");
+          const json::Array *NameCol = Cols->getArray("name");
+          const json::Array *TypeCol = Cols->getArray("type");
+          const json::Array *HotnessCol = Cols->getArray("hotness");
+          const json::Array *FuncCol = Cols->getArray("function");
+          const json::Array *PassStrs = Strs->getArray("pass");
+          const json::Array *NameStrs = Strs->getArray("name");
+          const json::Array *FuncStrs = Strs->getArray("function");
+          if (!FileCol || !FileStrs || !LineCol || !ColumnCol || !PassCol ||
+              !NameCol || !TypeCol || !HotnessCol || !FuncCol || !PassStrs ||
+              !NameStrs || !FuncStrs)
+            continue;
+
+          int64_t TargetIdx = -1;
+          for (size_t I = 0; I < FileStrs->size(); ++I) {
+            std::optional<StringRef> S = (*FileStrs)[I].getAsString();
+            if (S && *S == FilePath) { TargetIdx = I; break; }
+          }
+          if (TargetIdx < 0) continue;
+
+          for (size_t I = 0; I < FileCol->size(); ++I) {
+            if ((*FileCol)[I].getAsInteger().value_or(-1) != TargetIdx) continue;
+            int64_t PI = (*PassCol)[I].getAsInteger().value_or(-1);
+            int64_t NI = (*NameCol)[I].getAsInteger().value_or(-1);
+            int64_t T = (*TypeCol)[I].getAsInteger().value_or(-1);
+            if (FilterType >= 0 && T != FilterType) continue;
+            StringRef PassStr = PI >= 0 && PI < (int64_t)PassStrs->size()
+                ? (*PassStrs)[PI].getAsString().value_or("") : "";
+            StringRef NameStr = NI >= 0 && NI < (int64_t)NameStrs->size()
+                ? (*NameStrs)[NI].getAsString().value_or("") : "";
+            if (!FilterPass.empty() && !PassStr.contains_insensitive(FilterPass)) continue;
+            if (!FilterName.empty() && !NameStr.contains_insensitive(FilterName)) continue;
+
+            int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
+            JOS.object([&] {
+              JOS.attribute("line", (*LineCol)[I].getAsInteger().value_or(-1));
+              JOS.attribute("column", (*ColumnCol)[I].getAsInteger().value_or(-1));
+              JOS.attribute("type", T);
+              JOS.attribute("pass", PassStr);
+              JOS.attribute("name", NameStr);
+              int64_t H = (*HotnessCol)[I].getAsInteger().value_or(-1);
+              if (H >= 0) JOS.attribute("hotness", H);
+              if (FI >= 0 && FI < (int64_t)FuncStrs->size())
+                JOS.attribute("function", (*FuncStrs)[FI].getAsString().value_or(""));
+            });
+            ++Count;
+          }
+        }
+      }
+
+      JOS.arrayEnd();
+      JOS.attributeEnd();
+      JOS.attribute("count", Count);
+    });
+  });
+  OS.flush();
+  return HTTPResult{200, "application/json", std::move(Body)};
+}
+
 static HTTPResult handleGetQueryUnit(CoreClient &Client, StringRef UnitID,
                                      StringRef Capabilities) {
   SmallVector<std::string, 16> Caps = parseCapabilityList(Capabilities);
@@ -1140,6 +1373,36 @@ Error llvm::advisor::HTTPServer::run() {
             Res = handleGetRemarksRelational(Client, ResolvedSnap, Filter,
                                             Offset, Limit);
           }
+          else if (Segs.size() == 5 && Segs[4] == "files")
+            Res = handleGetSourceFiles(Client, ResolvedSnap);
+        } else if (Path == "/api/v1/source/remarks") {
+          auto PathIt = QueryParams.find("path");
+          auto SnapIt = QueryParams.find("snapshot_id");
+          if (PathIt == QueryParams.end() || SnapIt == QueryParams.end())
+            Res = makeJSONErrorStr(400, "path and snapshot_id required");
+          else {
+            StringRef FPass, FName;
+            int64_t FType = -1;
+            auto PIt = QueryParams.find("pass");
+            if (PIt != QueryParams.end()) FPass = PIt->second;
+            auto NIt = QueryParams.find("name");
+            if (NIt != QueryParams.end()) FName = NIt->second;
+            auto TIt = QueryParams.find("type");
+            if (TIt != QueryParams.end())
+              StringRef(TIt->second).getAsInteger(10, FType);
+            Res = handleGetSourceRemarks(
+                Client, resolveSnapshotHTTP(Client, SnapIt->second),
+                PathIt->second, FPass, FName, FType);
+          }
+        } else if (Path == "/api/v1/source") {
+          auto PathIt = QueryParams.find("path");
+          auto SnapIt = QueryParams.find("snapshot_id");
+          if (PathIt == QueryParams.end() || SnapIt == QueryParams.end())
+            Res = makeJSONErrorStr(400, "path and snapshot_id required");
+          else
+            Res = handleGetSource(
+                Client, resolveSnapshotHTTP(Client, SnapIt->second),
+                PathIt->second);
         } else if (Path == "/api/v1/jobs")
           Res = handleGetJobs(Client);
         else if (IsAPI && Segs.size() == 4 && Segs[2] == "jobs")

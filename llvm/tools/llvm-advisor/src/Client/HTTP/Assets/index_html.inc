@@ -748,6 +748,7 @@ const Icons = {
   remarks: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="10" rx="1.5"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="9.5" x2="11" y2="9.5"/><polyline points="7,13 5,17 10,15 15,17 13,13"/></svg>`,
   heatmap: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7" rx="1" fill="rgba(255,100,100,0.3)"/><rect x="11" y="2" width="7" height="7" rx="1" fill="rgba(255,150,50,0.3)"/><rect x="2" y="11" width="7" height="7" rx="1" fill="rgba(255,200,50,0.3)"/><rect x="11" y="11" width="7" height="7" rx="1" fill="rgba(100,200,100,0.3)"/></svg>`,
   settings: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10,2v3M10,15v3M2,10h3M15,10h3M4.2,4.2l2.1,2.1M13.7,13.7l2.1,2.1M4.2,15.8l2.1-2.1M13.7,6.3l2.1-2.1"/></svg>`,
+  explorer: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2,5 H18 M2,9 H14 M2,13 H16 M2,17 H10"/></svg>`,
   search: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8.5" cy="8.5" r="5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/></svg>`,
   chevronDown: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,8 10,13 15,8"/></svg>`,
   chevronRight: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8,5 13,10 8,15"/></svg>`,
@@ -846,6 +847,17 @@ const API = {
   capabilities: () => API.get('/capabilities'),
   queryUnit: (unitId, caps) => API.get(`/query/unit/${encodeURIComponent(unitId)}/${(caps || []).join(',')}`),
   querySnapshot: (snapshotId, caps) => API.get(`/query/snapshot/${encodeURIComponent(snapshotId)}/${(caps || []).join(',')}`),
+  sourceFiles: (snapshotId) => API.get(`/snapshots/${encodeURIComponent(snapshotId)}/files`),
+  source: (snapshotId, path) => API.get(`/source?path=${encodeURIComponent(path)}&snapshot_id=${encodeURIComponent(snapshotId)}`),
+  sourceRemarks: (snapshotId, path, filters) => {
+    let url = `/source/remarks?path=${encodeURIComponent(path)}&snapshot_id=${encodeURIComponent(snapshotId)}`;
+    if (filters) {
+      if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
+      if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.type != null && filters.type !== '') url += `&type=${filters.type}`;
+    }
+    return API.get(url);
+  },
   insights: (snapId) => API.get(`/snapshots/${snapId}/insights`),
   insight: (snapId, name, baseline) => {
     let url = `/snapshots/${snapId}/insights/${name}`;
@@ -957,7 +969,7 @@ const Keys = {
     if (this._pending === 'g') {
       clearTimeout(this._timeout);
       this._pending = null;
-      const navMap = { o: '/', u: '/units', c: '/compare', t: '/timeline', i: '/insights', r: '/remarks', h: '/heatmap', s: '/settings' };
+      const navMap = { o: '/', u: '/units', c: '/compare', t: '/timeline', i: '/insights', r: '/remarks', h: '/heatmap', e: '/explorer', s: '/settings' };
       if (navMap[e.key]) { e.preventDefault(); Router.navigate(navMap[e.key]); }
       return;
     }
@@ -2083,6 +2095,7 @@ const Shell = {
       { icon: 'insights', label: 'Insights', route: '/insights', shortcut: 'g i' },
       { icon: 'remarks', label: 'Remarks', route: '/remarks', shortcut: 'g r' },
       { icon: 'heatmap', label: 'Heatmap', route: '/heatmap', shortcut: 'g h' },
+      { icon: 'explorer', label: 'Explorer', route: '/explorer', shortcut: 'g e' },
       { icon: 'settings', label: 'Settings', route: '/settings', shortcut: 'g s' },
     ];
 
@@ -2211,6 +2224,7 @@ const CommandPalette = {
     { label: 'Go to Insights', shortcut: 'g i', action: () => Router.navigate('/insights') },
     { label: 'Go to Remarks', shortcut: 'g r', action: () => Router.navigate('/remarks') },
     { label: 'Go to Heatmap', shortcut: 'g h', action: () => Router.navigate('/heatmap') },
+    { label: 'Go to Explorer', shortcut: 'g e', action: () => Router.navigate('/explorer') },
     { label: 'Go to Settings', shortcut: 'g s', action: () => Router.navigate('/settings') },
   ],
 
@@ -4745,7 +4759,16 @@ const RemarksView = {
     viewport.appendChild(spacer);
     const pool = [];
     for (let p = 0; p < POOL_SIZE; p++) {
-      const row = h('div', { class: 'triage-row', style: { height: ROW_H + 'px', display: 'flex' } });
+      const row = h('div', { class: 'triage-row', style: { height: ROW_H + 'px', display: 'flex', cursor: 'pointer' } });
+      row.addEventListener('click', () => {
+        const idx = row._idx;
+        if (idx == null || !columns.file) return;
+        const fi = columns.file[idx];
+        if (fi < 0) return;
+        const file = strings.file?.[fi] || '';
+        const line = columns.line[idx];
+        Router.navigate(`/explorer?path=${encodeURIComponent(file)}&line=${line}`);
+      });
       const cells = COLS.map(col => h('span', { class: `triage-td${col.mono ? ' mono' : ''}${col.align === 'right' ? ' right' : ''}`, style: { ...colStyle(col), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, ''));
       cells.forEach(c => row.appendChild(c));
       spacer.appendChild(row);
@@ -4782,7 +4805,7 @@ const RemarksView = {
         const idx = first + p;
         const { row, cells } = pool[p];
         if (idx >= len) { row.style.display = 'none'; continue; }
-        row.style.display = ''; row.style.top = `${idx * ROW_H}px`;
+        row.style.display = ''; row.style.top = `${idx * ROW_H}px`; row._idx = idx;
         COLS.forEach((col, c) => { const v = getCell(idx, col.id) || '–'; cells[c].textContent = v; cells[c].title = v; });
       }
     };
@@ -5093,6 +5116,202 @@ const HeatmapView = {
   },
 };
 
+/* ============================================================
+   LLVM Advisor — Code Explorer View
+   ============================================================ */
+
+const CodeExplorerView = {
+  _snap: null,
+  _mainEl: null,
+  _filters: { pass: '', name: '', type: '' },
+
+  async render() {
+    const container = h('div', {});
+    container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Code Explorer'));
+    this._snap = State.get('currentSnapshot');
+    if (!this._snap) {
+      container.appendChild(UI.emptyCard('No snapshot selected', 'Select a snapshot from the sidebar to explore source files.'));
+      Shell.renderMain(container);
+      return;
+    }
+
+    container.appendChild(h('div', { class: 'text-muted' }, 'Loading file list...'));
+    Shell.renderMain(container);
+
+    const res = await API.sourceFiles(this._snap.id);
+    if (!res.ok) { container.innerHTML = ''; container.appendChild(UI.errorCard(res.error || 'Failed to load files')); return; }
+    const files = Array.isArray(res.data) ? res.data : [];
+    container.innerHTML = '';
+    if (!files.length) { container.appendChild(UI.emptyCard('No source files', 'No source files with remarks found.')); return; }
+
+    const TYPE_NAMES = ['unknown', 'passed', 'missed', 'analysis', 'fp-commute', 'aliasing', 'failure'];
+    const TYPE_LABELS = { passed: 'Passed', missed: 'Missed', analysis: 'Analysis', failure: 'Failure' };
+
+    const wrap = h('div', { style: { display: 'flex', gap: '12px', height: 'calc(100vh - 140px)' } });
+    const sidebar = h('div', { style: { width: '240px', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '6px' } });
+
+    const fileSearch = h('input', { class: 'triage-input', type: 'search', placeholder: 'search files...', style: { width: '100%', flex: 'none' },
+      onInput: (e) => { const q = e.target.value.toLowerCase(); list.querySelectorAll('.explorer-file').forEach(el => { el.style.display = el.dataset.path.toLowerCase().includes(q) ? '' : 'none'; }); }
+    });
+    sidebar.appendChild(fileSearch);
+
+    const list = h('div', { style: { overflow: 'auto', flex: '1' } });
+    files.forEach(f => {
+      const path = f.path || '';
+      const name = path.split('/').pop() || path;
+      const el = h('div', { class: 'explorer-file', 'data-path': path, style: { padding: '5px 8px', cursor: 'pointer', borderRadius: '4px', fontSize: '12px' },
+        onClick: () => { list.querySelectorAll('.explorer-file').forEach(x => x.style.background = ''); el.style.background = 'var(--bg2)'; this._loadFile(path); }
+      },
+        h('div', { style: { fontWeight: '500' } }, name),
+        h('div', { class: 'text-muted mono', style: { fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, path),
+        h('div', { class: 'text-muted', style: { fontSize: '10px' } }, `${f.remarks_count || 0} remarks`)
+      );
+      list.appendChild(el);
+    });
+    sidebar.appendChild(list);
+
+    const mainCol = h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', overflow: 'hidden' } });
+
+    const filterBar = h('div', { style: { display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap', alignItems: 'center' } });
+    const passInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter pass...', style: { width: '120px' } });
+    const nameInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter remark...', style: { width: '120px' } });
+    const typeChips = h('div', { style: { display: 'flex', gap: '4px' } });
+    ['passed', 'missed', 'analysis', 'failure'].forEach((t, idx) => {
+      const enumVal = [1, 2, 3, 6][idx];
+      const chip = h('button', { class: 'triage-chip triage-chip-' + t, style: { fontSize: '11px' } }, TYPE_LABELS[t]);
+      chip.addEventListener('click', () => {
+        if (this._filters.type === String(enumVal)) { this._filters.type = ''; chip.classList.remove('on'); }
+        else { typeChips.querySelectorAll('.on').forEach(c => c.classList.remove('on')); this._filters.type = String(enumVal); chip.classList.add('on'); }
+        this._reloadRemarks();
+      });
+      typeChips.appendChild(chip);
+    });
+    const remarkCount = h('span', { class: 'text-muted', style: { fontSize: '11px', marginLeft: 'auto' } }, '');
+    filterBar.appendChild(passInput); filterBar.appendChild(nameInput); filterBar.appendChild(typeChips); filterBar.appendChild(remarkCount);
+    mainCol.appendChild(filterBar);
+
+    let debounce = null;
+    const onFilter = () => { this._filters.pass = passInput.value; this._filters.name = nameInput.value; clearTimeout(debounce); debounce = setTimeout(() => this._reloadRemarks(), 300); };
+    passInput.addEventListener('input', onFilter);
+    nameInput.addEventListener('input', onFilter);
+
+    this._mainEl = h('div', { style: { flex: '1', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)' } });
+    this._remarkCount = remarkCount;
+    mainCol.appendChild(this._mainEl);
+
+    wrap.appendChild(sidebar); wrap.appendChild(mainCol);
+    container.appendChild(wrap);
+
+    const params = State.get('routeParams') || {};
+    const initialPath = params.path || (files.length > 0 ? files[0].path : null);
+    this._scrollToLine = params.line ? parseInt(params.line, 10) : 0;
+
+    if (initialPath) {
+      const match = list.querySelector(`.explorer-file[data-path="${CSS.escape(initialPath)}"]`);
+      if (match) match.style.background = 'var(--bg2)';
+      else if (list.querySelector('.explorer-file')) list.querySelector('.explorer-file').style.background = 'var(--bg2)';
+      this._currentPath = initialPath;
+      this._loadFile(initialPath);
+    }
+  },
+
+  async _loadFile(path) {
+    this._currentPath = path;
+    this._mainEl.innerHTML = '';
+    this._mainEl.appendChild(h('div', { class: 'text-muted', style: { padding: '12px' } }, 'Loading...'));
+
+    const [srcRes, remRes] = await Promise.all([
+      API.source(this._snap.id, path),
+      API.sourceRemarks(this._snap.id, path, this._filters),
+    ]);
+
+    this._mainEl.innerHTML = '';
+    if (!srcRes.ok) { this._mainEl.appendChild(h('div', { style: { padding: '12px' } }, 'Source file not found')); return; }
+
+    this._sourceLines = (srcRes.data.content || '').split('\n');
+    this._remarks = (remRes.ok && remRes.data) ? remRes.data.remarks || [] : [];
+    this._remarkCount.textContent = `${this._remarks.length} remarks`;
+    this._renderSource();
+  },
+
+  async _reloadRemarks() {
+    if (!this._currentPath) return;
+    const res = await API.sourceRemarks(this._snap.id, this._currentPath, this._filters);
+    this._remarks = (res.ok && res.data) ? res.data.remarks || [] : [];
+    this._remarkCount.textContent = `${this._remarks.length} remarks`;
+    this._renderSource();
+  },
+
+  _renderSource() {
+    const lines = this._sourceLines || [];
+    const remarks = this._remarks || [];
+    const container = this._mainEl;
+    container.innerHTML = '';
+
+    const remarksByLine = {};
+    for (const r of remarks) {
+      if (r.line < 1) continue;
+      if (!remarksByLine[r.line]) remarksByLine[r.line] = [];
+      remarksByLine[r.line].push(r);
+    }
+
+    const TYPE_COLORS = { 1: 'var(--green)', 2: 'var(--orange)', 3: 'var(--teal)', 6: 'var(--red)' };
+    const TYPE_NAMES = { 1: 'passed', 2: 'missed', 3: 'analysis', 6: 'failure' };
+    const TYPE_BG = { 2: 'rgba(255,179,71,0.08)', 6: 'rgba(255,107,110,0.08)' };
+
+    const header = h('div', { style: { padding: '6px 12px', borderBottom: '1px solid var(--border)', fontSize: '12px', display: 'flex', justifyContent: 'space-between' } },
+      h('span', { class: 'mono', style: { fontWeight: '500' } }, (this._currentPath || '').split('/').pop()),
+      h('span', { class: 'text-muted' }, `${Object.keys(remarksByLine).length} lines with remarks`)
+    );
+    container.appendChild(header);
+
+    const codeWrap = h('div', { style: { fontFamily: 'monospace', fontSize: '13px', lineHeight: '20px' } });
+    lines.forEach((line, i) => {
+      const ln = i + 1;
+      const rems = remarksByLine[ln];
+      const has = rems && rems.length > 0;
+      const color = has ? (TYPE_COLORS[rems[0].type] || 'var(--teal)') : '';
+      const rowStyle = { display: 'flex', padding: '0 8px', minHeight: '20px' };
+      if (has) { rowStyle.background = TYPE_BG[rems[0].type] || 'rgba(123,224,214,0.06)'; rowStyle.cursor = 'pointer'; }
+
+      const badge = has ? h('span', { style: { marginLeft: '8px', fontSize: '10px', padding: '0 4px', borderRadius: '3px', background: color, color: 'var(--bg)', fontWeight: '600' } }, String(rems.length)) : null;
+      const row = h('div', { style: rowStyle },
+        h('span', { style: { width: '44px', textAlign: 'right', paddingRight: '10px', userSelect: 'none', color: has ? color : 'var(--text-muted)', flexShrink: '0' } }, String(ln)),
+        h('span', { style: { flex: '1', whiteSpace: 'pre', overflow: 'hidden' } }, line || ' '),
+        badge
+      );
+
+      if (has) {
+        row.addEventListener('click', () => {
+          const id = `rem-${ln}`;
+          const existing = codeWrap.querySelector(`#${id}`);
+          if (existing) { existing.remove(); return; }
+          const detail = h('div', { id, style: { padding: '4px 12px 4px 56px', background: 'var(--bg2)', borderLeft: '3px solid ' + color, fontSize: '11px' } });
+          rems.forEach(r => {
+            detail.appendChild(h('div', { style: { padding: '2px 0', display: 'flex', gap: '8px', alignItems: 'baseline' } },
+              h('span', { style: { color: TYPE_COLORS[r.type] || 'var(--text-muted)', fontWeight: '600', minWidth: '55px' } }, TYPE_NAMES[r.type] || '?'),
+              h('span', { style: { fontWeight: '500' } }, r.name || ''),
+              h('span', { class: 'text-muted' }, r.pass || ''),
+              r.function ? h('span', { class: 'text-muted' }, `in ${r.function}`) : null,
+              r.hotness != null && r.hotness >= 0 ? h('span', { style: { color: 'var(--orange)', fontSize: '10px' } }, `hot:${r.hotness}`) : null,
+            ));
+          });
+          row.after(detail);
+        });
+      }
+      codeWrap.appendChild(row);
+    });
+    container.appendChild(codeWrap);
+
+    if (this._scrollToLine > 0) {
+      requestAnimationFrame(() => {
+        container.scrollTop = Math.max(0, (this._scrollToLine - 1) * 20 - 100);
+        this._scrollToLine = 0;
+      });
+    }
+  },
+};
+
   </script>
   <script>
     (function() {
@@ -5104,6 +5323,7 @@ const HeatmapView = {
       Router.register('/insights', () => InsightsView.render());
       Router.register('/remarks', () => RemarksView.render());
       Router.register('/heatmap', () => HeatmapView.render());
+      Router.register('/explorer', () => CodeExplorerView.render());
       Router.register('/settings', () => SettingsView.render());
       Shell.init();
       Keys.init();

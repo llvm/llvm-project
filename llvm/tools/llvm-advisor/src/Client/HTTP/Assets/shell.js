@@ -79,6 +79,7 @@ const Shell = {
       { icon: 'insights', label: 'Insights', route: '/insights', shortcut: 'g i' },
       { icon: 'remarks', label: 'Remarks', route: '/remarks', shortcut: 'g r' },
       { icon: 'heatmap', label: 'Heatmap', route: '/heatmap', shortcut: 'g h' },
+      { icon: 'explorer', label: 'Explorer', route: '/explorer', shortcut: 'g e' },
       { icon: 'settings', label: 'Settings', route: '/settings', shortcut: 'g s' },
     ];
 
@@ -207,6 +208,7 @@ const CommandPalette = {
     { label: 'Go to Insights', shortcut: 'g i', action: () => Router.navigate('/insights') },
     { label: 'Go to Remarks', shortcut: 'g r', action: () => Router.navigate('/remarks') },
     { label: 'Go to Heatmap', shortcut: 'g h', action: () => Router.navigate('/heatmap') },
+    { label: 'Go to Explorer', shortcut: 'g e', action: () => Router.navigate('/explorer') },
     { label: 'Go to Settings', shortcut: 'g s', action: () => Router.navigate('/settings') },
   ],
 

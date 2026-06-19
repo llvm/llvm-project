@@ -71,6 +71,7 @@ def main():
       Router.register('/insights', () => InsightsView.render());
       Router.register('/remarks', () => RemarksView.render());
       Router.register('/heatmap', () => HeatmapView.render());
+      Router.register('/explorer', () => CodeExplorerView.render());
       Router.register('/settings', () => SettingsView.render());
       Shell.init();
       Keys.init();

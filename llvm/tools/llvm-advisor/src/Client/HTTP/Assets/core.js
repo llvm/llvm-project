@@ -13,6 +13,7 @@ const Icons = {
   remarks: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="10" rx="1.5"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="9.5" x2="11" y2="9.5"/><polyline points="7,13 5,17 10,15 15,17 13,13"/></svg>`,
   heatmap: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7" rx="1" fill="rgba(255,100,100,0.3)"/><rect x="11" y="2" width="7" height="7" rx="1" fill="rgba(255,150,50,0.3)"/><rect x="2" y="11" width="7" height="7" rx="1" fill="rgba(255,200,50,0.3)"/><rect x="11" y="11" width="7" height="7" rx="1" fill="rgba(100,200,100,0.3)"/></svg>`,
   settings: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10,2v3M10,15v3M2,10h3M15,10h3M4.2,4.2l2.1,2.1M13.7,13.7l2.1,2.1M4.2,15.8l2.1-2.1M13.7,6.3l2.1-2.1"/></svg>`,
+  explorer: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2,5 H18 M2,9 H14 M2,13 H16 M2,17 H10"/></svg>`,
   search: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8.5" cy="8.5" r="5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/></svg>`,
   chevronDown: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,8 10,13 15,8"/></svg>`,
   chevronRight: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8,5 13,10 8,15"/></svg>`,
@@ -111,6 +112,17 @@ const API = {
   capabilities: () => API.get('/capabilities'),
   queryUnit: (unitId, caps) => API.get(`/query/unit/${encodeURIComponent(unitId)}/${(caps || []).join(',')}`),
   querySnapshot: (snapshotId, caps) => API.get(`/query/snapshot/${encodeURIComponent(snapshotId)}/${(caps || []).join(',')}`),
+  sourceFiles: (snapshotId) => API.get(`/snapshots/${encodeURIComponent(snapshotId)}/files`),
+  source: (snapshotId, path) => API.get(`/source?path=${encodeURIComponent(path)}&snapshot_id=${encodeURIComponent(snapshotId)}`),
+  sourceRemarks: (snapshotId, path, filters) => {
+    let url = `/source/remarks?path=${encodeURIComponent(path)}&snapshot_id=${encodeURIComponent(snapshotId)}`;
+    if (filters) {
+      if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
+      if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.type != null && filters.type !== '') url += `&type=${filters.type}`;
+    }
+    return API.get(url);
+  },
   insights: (snapId) => API.get(`/snapshots/${snapId}/insights`),
   insight: (snapId, name, baseline) => {
     let url = `/snapshots/${snapId}/insights/${name}`;
@@ -222,7 +234,7 @@ const Keys = {
     if (this._pending === 'g') {
       clearTimeout(this._timeout);
       this._pending = null;
-      const navMap = { o: '/', u: '/units', c: '/compare', t: '/timeline', i: '/insights', r: '/remarks', h: '/heatmap', s: '/settings' };
+      const navMap = { o: '/', u: '/units', c: '/compare', t: '/timeline', i: '/insights', r: '/remarks', h: '/heatmap', e: '/explorer', s: '/settings' };
       if (navMap[e.key]) { e.preventDefault(); Router.navigate(navMap[e.key]); }
       return;
     }
