@@ -31,6 +31,7 @@
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -2003,9 +2004,25 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     // Convert function kernel attributes to metadata.
     convertFunctionKernelAttributes(function, llvmFunc, *this);
 
-    // Convert function_entry_count attribute to metadata.
-    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
-      llvmFunc->setEntryCount(entryCount.value());
+    // Convert function_entry_count attributes to metadata.
+    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount()) {
+      llvm::Function::ProfileCount profileCount(
+          entryCount.value(), function.getFunctionEntryCountSynthetic()
+                                  ? llvm::Function::PCT_Synthetic
+                                  : llvm::Function::PCT_Real);
+      std::optional<llvm::DenseSet<llvm::GlobalValue::GUID>> importGUIDs;
+      if (DenseI64ArrayAttr imports =
+              function.getFunctionEntryCountImportsAttr()) {
+        importGUIDs.emplace();
+        for (int64_t guid : imports.asArrayRef()) {
+          // The MLIR attribute preserves the unsigned GUID bit pattern in a
+          // signed i64 element.
+          importGUIDs->insert(static_cast<uint64_t>(guid));
+        }
+      }
+      llvmFunc->setEntryCount(profileCount,
+                              importGUIDs ? &*importGUIDs : nullptr);
+    }
 
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
