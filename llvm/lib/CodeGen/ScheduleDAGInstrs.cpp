@@ -137,8 +137,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
         if (PSV->isAliased(&MFI))
           return false;
 
-        bool MayAlias = PSV->mayAlias(&MFI);
-        Objects.emplace_back(PSV, MayAlias);
+        Objects.push_back(PSV);
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
         if (!getUnderlyingObjectsForCodeGen(V, Objs))
@@ -146,7 +145,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
 
         for (Value *V : Objs) {
           assert(isIdentifiedObject(V));
-          Objects.emplace_back(V, true);
+          Objects.push_back(V);
         }
       } else
         return false;
@@ -701,15 +700,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   // not share any common Value.
   Value2SUsMap Stores, Loads(1 /*TrueMemOrderLatency*/);
 
-  // Certain memory accesses are known to not alias any SU in Stores
-  // or Loads, and have therefore their own 'NonAlias'
-  // domain. E.g. spill / reload instructions never alias LLVM I/R
-  // Values. It would be nice to assume that this type of memory
-  // accesses always have a proper memory operand modelling, and are
-  // therefore never unanalyzable, but this is conservatively not
-  // done.
-  Value2SUsMap NonAliasStores, NonAliasLoads(1 /*TrueMemOrderLatency*/);
-
   // Track all instructions that may raise floating-point exceptions.
   // These do not depend on one other (or normal loads or stores), but
   // must not be rescheduled across global barriers.  Note that we don't
@@ -845,8 +835,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(Stores);
       addBarrierChain(Loads);
-      addBarrierChain(NonAliasStores);
-      addBarrierChain(NonAliasLoads);
       addBarrierChain(FPExceptions);
 
       continue;
@@ -880,32 +868,23 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!ObjsFound) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
-        addChainDependencies(SU, NonAliasStores);
         addChainDependencies(SU, Loads);
-        addChainDependencies(SU, NonAliasLoads);
 
         // Map this store to 'UnknownValue'.
         Stores.insert(SU, UnknownValue);
       } else {
         // Add precise dependencies against all previously seen memory
         // accesses mapped to the same Value(s).
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
-
+        for (const ValueType V : Objs) {
           // Add dependencies to previous stores and loads mapped to V.
-          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
-          addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
+          addChainDependencies(SU, Stores, V);
+          addChainDependencies(SU, Loads, V);
         }
         // Update the store map after all chains have been added to avoid adding
         // self-loop edge if multiple underlying objects are present.
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
+        for (const ValueType V : Objs)
+          Stores.insert(SU, V);
 
-          // Map this store to V.
-          (ThisMayAlias ? Stores : NonAliasStores).insert(SU, V);
-        }
         // The store may have dependencies to unanalyzable loads and
         // stores.
         addChainDependencies(SU, Loads, UnknownValue);
@@ -915,20 +894,17 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!ObjsFound) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
-        addChainDependencies(SU, NonAliasStores);
 
+        // Map this load to 'UnknownValue'.
         Loads.insert(SU, UnknownValue);
       } else {
-        for (const UnderlyingObject &UnderlObj : Objs) {
-          ValueType V = UnderlObj.getValue();
-          bool ThisMayAlias = UnderlObj.mayAlias();
-
+        for (const ValueType V : Objs) {
           // Add precise dependencies against all previously seen stores
           // mapping to the same Value(s).
-          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
+          addChainDependencies(SU, Stores, V);
 
           // Map this load to V.
-          (ThisMayAlias ? Loads : NonAliasLoads).insert(SU, V);
+          Loads.insert(SU, V);
         }
         // The load may have dependencies to unanalyzable stores.
         addChainDependencies(SU, Stores, UnknownValue);
