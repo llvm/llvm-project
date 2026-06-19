@@ -4149,30 +4149,45 @@ public:
 
       if (isOpenMPTargetExecutionDirective(DKind) &&
           !Stack->isLoopControlVariable(VD).first) {
-        if (!Stack->checkMappableExprComponentListsForDecl(
-                VD, /*CurrentRegionOnly=*/true,
-                [this](OMPClauseMappableExprCommon::MappableExprComponentListRef
-                           StackComponents,
-                       OpenMPClauseKind) {
-                  if (SemaRef.LangOpts.OpenMP >= 50)
-                    return !StackComponents.empty();
-                  // Variable is used if it has been marked as an array, array
-                  // section, array shaping or the variable itself.
-                  return StackComponents.size() == 1 ||
-                         llvm::all_of(
-                             llvm::drop_begin(llvm::reverse(StackComponents)),
-                             [](const OMPClauseMappableExprCommon::
-                                    MappableComponent &MC) {
-                               return MC.getAssociatedDeclaration() ==
-                                          nullptr &&
-                                      (isa<ArraySectionExpr>(
-                                           MC.getAssociatedExpression()) ||
-                                       isa<OMPArrayShapingExpr>(
-                                           MC.getAssociatedExpression()) ||
-                                       isa<ArraySubscriptExpr>(
-                                           MC.getAssociatedExpression()));
-                             });
-                })) {
+        // Check if VD is already mapped. For DecompositionDecls, also check if
+        // the original variable they decompose has been mapped (via BindingDecl
+        // map clauses).
+        bool AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
+            VD, /*CurrentRegionOnly=*/true, [this](auto StackComponents, auto) {
+          if (SemaRef.LangOpts.OpenMP >= 50)
+            return !StackComponents.empty();
+          // Variable is used if it has been marked as an array, array
+          // section, array shaping or the variable itself.
+          return StackComponents.size() == 1 ||
+                 llvm::all_of(llvm::drop_begin(llvm::reverse(StackComponents)),
+                              [](const auto &MC) {
+                                return MC.getAssociatedDeclaration() ==
+                                           nullptr &&
+                                       (isa<ArraySectionExpr>(
+                                            MC.getAssociatedExpression()) ||
+                                        isa<OMPArrayShapingExpr>(
+                                            MC.getAssociatedExpression()) ||
+                                        isa<ArraySubscriptExpr>(
+                                            MC.getAssociatedExpression()));
+                              });
+            });
+
+        // For DecompositionDecls, check if the original variable has been
+        // mapped.
+        if (!AlreadyMapped && isa<DecompositionDecl>(VD)) {
+          if (const auto *DD = cast<DecompositionDecl>(VD)) {
+            if (const VarDecl *OrigVar = DD->getOriginalVar()) {
+              AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
+                  OrigVar, /*CurrentRegionOnly=*/true,
+                  [this](auto StackComponents, auto) {
+                    if (SemaRef.LangOpts.OpenMP >= 50)
+                      return !StackComponents.empty();
+                    return StackComponents.size() == 1;
+                  });
+            }
+          }
+        }
+        if (!AlreadyMapped) {
           bool IsFirstprivate = false;
           // By default lambdas are captured as firstprivates.
           if (const auto *RD =
@@ -22603,14 +22618,84 @@ class MapBaseChecker final : public StmtVisitor<MapBaseChecker, bool> {
 
 public:
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    if (!isa<VarDecl>(DRE->getDecl())) {
+    ValueDecl *D = DRE->getDecl();
+    Expr *E = DRE;
+
+    // Handle BindingDecls by mapping them as member accesses.
+    // When the user writes:
+    //   auto [a, b] = p;
+    //   #pragma omp target map(tofrom:a) map(to:b)
+    // we transform it to:
+    //   #pragma omp target map(tofrom:p.x) map(to:p.y)
+    // This avoids conflicts when different bindings have different map types.
+    if (auto *BD = dyn_cast<BindingDecl>(D)) {
+      auto *DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
+      Expr *BindingExpr = BD->getBinding();
+
+      // Check if the binding is a member expression (struct/class decomposition)
+      if (auto *ME = dyn_cast_or_null<MemberExpr>(BindingExpr)) {
+
+        // Get the original variable that the decomposition was initialized from
+        if (const VarDecl *OrigVar = DD->getOriginalVar()) {
+
+          // Create a new member expression: OrigVar.field
+          // This transforms map(a) -> map(p.x)
+          DeclarationNameInfo BaseNameInfo(OrigVar->getDeclName(),
+                                           DRE->getLocation());
+          Expr *BaseExpr = DeclRefExpr::Create(
+              SemaRef.Context, DRE->getQualifierLoc(),
+              DRE->getTemplateKeywordLoc(), const_cast<VarDecl *>(OrigVar),
+              /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
+              OrigVar->getType(), DRE->getValueKind(), nullptr,
+              /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+
+          // Create member expression: base.member
+          E = MemberExpr::Create(
+              SemaRef.Context, BaseExpr, /*IsArrow=*/false,
+              ME->getOperatorLoc(), ME->getQualifierLoc(),
+              ME->getTemplateKeywordLoc(), ME->getMemberDecl(),
+              ME->getFoundDecl(), ME->getMemberNameInfo(),
+              /*TemplateArgs=*/nullptr, ME->getType(), ME->getValueKind(),
+              ME->getObjectKind(), ME->isNonOdrUse());
+
+          // Now process this as a member expression, which will properly
+          // handle the field-level mapping
+          return Visit(E);
+        }
+      }
+
+      // Fallback: redirect to DecompositionDecl for non-struct bindings
+      // (arrays, tuples)
+      D = DD;
+      DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
+      E = DeclRefExpr::Create(
+          SemaRef.Context, DRE->getQualifierLoc(),
+          DRE->getTemplateKeywordLoc(), DD,
+          /*RefersToEnclosingVariableOrCapture=*/false, NameInfo,
+          D->getType(), DRE->getValueKind(), DRE->getFoundDecl(),
+          /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+    }
+    // Handle DecompositionDecl directly (implicit captures).
+    else if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
+      if (const VarDecl *OrigVar = DD->getOriginalVar()) {
+        D = const_cast<VarDecl *>(OrigVar);
+        DeclarationNameInfo NameInfo(D->getDeclName(), DRE->getLocation());
+        E = DeclRefExpr::Create(SemaRef.Context, DRE->getQualifierLoc(),
+                                DRE->getTemplateKeywordLoc(), D,
+                                /*RefersToEnclosingVariableOrCapture=*/false,
+                                NameInfo, D->getType(), DRE->getValueKind(),
+                                DRE->getFoundDecl(),
+                                /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+      }
+      // If we can't find the original, keep the DecompositionDecl as-is.
+    } else if (!isa<VarDecl>(D)) {
       emitErrorMsg();
       return false;
     }
     assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
     RelevantExpr = DRE;
     // Record the component.
-    Components.emplace_back(DRE, DRE->getDecl(), IsNonContiguous);
+    Components.emplace_back(E, D, IsNonContiguous);
     return true;
   }
 

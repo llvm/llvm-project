@@ -3764,6 +3764,23 @@ void DecompositionDecl::printName(llvm::raw_ostream &OS,
   OS << ']';
 }
 
+const VarDecl *DecompositionDecl::getOriginalVar() const {
+  const Expr *Init = getInit();
+  if (!Init)
+    return nullptr;
+  const Expr *Stripped = Init->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Stripped))
+    return dyn_cast<VarDecl>(DRE->getDecl());
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(Stripped)) {
+    if (CE->getNumArgs() == 1) {
+      const Expr *Arg = CE->getArg(0)->IgnoreParenImpCasts();
+      if (const auto *ArgDRE = dyn_cast<DeclRefExpr>(Arg))
+        return dyn_cast<VarDecl>(ArgDRE->getDecl());
+    }
+  }
+  return nullptr;
+}
+
 void MSPropertyDecl::anchor() {}
 
 MSPropertyDecl *MSPropertyDecl::Create(ASTContext &C, DeclContext *DC,

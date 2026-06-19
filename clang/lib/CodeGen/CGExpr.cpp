@@ -3610,13 +3610,25 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
       It != LocalDeclMap.end())
     return MakeAddrLValue(It->second, BD->getType());
 
-  auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+  const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+
+  // Check if the original variable (what DD decomposes) has been mapped.
+  // If so, use the original variable instead of DD to avoid capturing DD.
+  const VarDecl *TargetDecl = DD;
+  if (const auto *DecompDecl = dyn_cast<DecompositionDecl>(DD)) {
+    if (const VarDecl *OrigVar = DecompDecl->getOriginalVar()) {
+      auto It = LocalDeclMap.find(OrigVar->getCanonicalDecl());
+      if (It != LocalDeclMap.end())
+        // Original variable is mapped, use it instead.
+        TargetDecl = OrigVar;
+    }
+  }
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
   // Use getNonReferenceType() because we need the actual object type, not the
   // reference type. DeclRefExpr with VK_LValue requires a non-reference type
   // (AST invariant). EmitDeclRefLValue will load any reference for us.
-  QualType DREType = DD->getType().getNonReferenceType();
-  DeclRefExpr DRE(getContext(), DD,
+  QualType DREType = TargetDecl->getType().getNonReferenceType();
+  DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(TargetDecl),
                   /*RefersToEnclosingVariableOrCapture=*/true, DREType,
                   VK_LValue, SourceLocation());
   LValue BaseLVal = EmitDeclRefLValue(&DRE);

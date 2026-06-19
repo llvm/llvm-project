@@ -1223,8 +1223,7 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
-    llvm::SmallVector<std::pair<const BindingDecl *, std::optional<Address>>, 4>
-        BindingChanges;
+    SmallVector<std::pair<const BindingDecl *, Address>, 4> BindingChanges;
 
   public:
     /// Enter a new OpenMP private scope.
@@ -1240,8 +1239,8 @@ public:
       if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
         auto It = CGF.OMPPrivatizedBindings.find(BD);
         BindingChanges.emplace_back(BD, It != CGF.OMPPrivatizedBindings.end()
-                                            ? std::make_optional(It->second)
-                                            : std::nullopt);
+                                            ? It->second
+                                            : Address::invalid());
       }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
@@ -1266,9 +1265,12 @@ public:
       if (PerformCleanup)
         ForceCleanup();
       for (auto &Change : BindingChanges) {
-        if (Change.second.has_value()) {
+        if (Change.second.isValid()) {
           auto It = CGF.OMPPrivatizedBindings.find(Change.first);
-          It->second = CGF.OMPPrivatizedBindings.at(Change.first);
+          if (It != CGF.OMPPrivatizedBindings.end())
+            It->second = Change.second;
+          else
+            CGF.OMPPrivatizedBindings.insert({Change.first, Change.second});
         } else {
           CGF.OMPPrivatizedBindings.erase(Change.first);
         }

@@ -4315,6 +4315,10 @@ public:
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 
+  /// If this decomposition was initialized from a variable (e.g., auto [a,b] = p),
+  /// return that variable. Otherwise return nullptr.
+  const VarDecl *getOriginalVar() const;
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }
 };
