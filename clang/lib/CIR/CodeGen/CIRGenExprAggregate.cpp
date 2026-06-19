@@ -280,13 +280,12 @@ public:
 
       // Just recurse normally if we're ignoring the result or the
       // atomic type doesn't change representation.
-      if (dest.isIgnored() || !cgf.cgm.isPaddedAtomicType(atomicType)) {
+      if (dest.isIgnored() || !cgf.cgm.isPaddedAtomicType(atomicType))
         return Visit(e->getSubExpr());
-      }
 
       cgf.cgm.errorNYI(
           e->getSourceRange(),
-          "AggExprEmitter: AtomicCast not ignored or has padded atomic type");
+          "AggExprEmitter: AtomicCast not ignored and has padded atomic type");
       return;
     }
     case CK_LValueToRValue:
