@@ -221,6 +221,11 @@ static cl::opt<bool>
                         cl::desc("Enable SLP trees to be built from strided "
                                  "store chains."));
 
+static cl::opt<bool> EnableMaskedStores(
+    "slp-enable-masked-stores", cl::init(true), cl::Hidden,
+    cl::desc("Enable vectorization of non-consecutive stores as a single "
+             "masked store, when the target supports masked stores."));
+
 static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
                        cl::desc("Disable tree reordering even if it is "
@@ -4321,6 +4326,8 @@ private:
       Vectorize,         ///< The node is regularly vectorized.
       ScatterVectorize,  ///< Masked scatter/gather node.
       StridedVectorize,  ///< Strided loads (and stores)
+      ExpandVectorize,   ///< Masked stores, the values are expanded into
+                         ///< a wider vector and vectorized with a mask.
       CompressVectorize, ///< (Masked) load with compress.
       NeedToGather,      ///< Gather/buildvector node.
       CombinedVectorize, ///< Vectorized node, combined with its user into more
@@ -4606,6 +4613,9 @@ private:
         break;
       case StridedVectorize:
         dbgs() << "StridedVectorize\n";
+        break;
+      case ExpandVectorize:
+        dbgs() << "ExpandVectorize\n";
         break;
       case CompressVectorize:
         dbgs() << "CompressVectorize\n";
@@ -4915,7 +4925,8 @@ private:
   TreeEntry::EntryState getScalarsVectorizationState(
       const InstructionsState &S, ArrayRef<Value *> VL,
       bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
-      SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo);
+      SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo,
+      SmallVectorImpl<int> &ReuseShuffleIndices);
 
   /// Maps a specific scalar to its tree entry(ies).
   SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarToTreeEntries;
@@ -6663,6 +6674,7 @@ struct llvm::DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
       return "color=red";
     if (Entry->State == TreeEntry::ScatterVectorize ||
         Entry->State == TreeEntry::StridedVectorize ||
+        Entry->State == TreeEntry::ExpandVectorize ||
         Entry->State == TreeEntry::CompressVectorize)
       return "color=blue";
     return "";
@@ -7461,6 +7473,55 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
   return isMaskedLoadCompress(VL, PointerOps, Order, TTI, DL, SE, AC, DT, TLI,
                               AreAllUsersVectorized, IsMasked, InterleaveFactor,
                               CompressMask, LoadVecTy);
+}
+
+/// Checks if the stores \p VL with pointers \p PointerOps can be lowered as a
+/// single masked store. On success \p StoreVecTy is the widened store type and
+/// \p ReuseShuffleIndices is the expand mask that places each stored value at
+/// its element offset from the base (poison in the gaps).
+static bool isMaskedStoreCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, Align CommonAlignment,
+    SmallVectorImpl<int> &ReuseShuffleIndices, FixedVectorType *&StoreVecTy) {
+  Type *ScalarTy = cast<StoreInst>(VL.front())->getValueOperand()->getType();
+  const size_t Sz = VL.size();
+  // Only simple scalar element types are supported.
+  if (Sz < 2 || (!ScalarTy->isIntOrPtrTy() && !ScalarTy->isFloatingPointTy()))
+    return false;
+  Value *Ptr0 = Order.empty() ? PointerOps.front() : PointerOps[Order.front()];
+  Value *PtrN = Order.empty() ? PointerOps.back() : PointerOps[Order.back()];
+  std::optional<int64_t> Diff =
+      getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
+  if (!Diff || *Diff <= 0)
+    return false;
+  // Avoid widened vectors with very large gaps between the stored elements.
+  const unsigned MaxRegSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+          .getFixedValue();
+  const unsigned ScalarBits = DL.getTypeSizeInBits(ScalarTy).getFixedValue();
+  if (ScalarBits == 0 ||
+      static_cast<uint64_t>(*Diff) / Sz >= MaxRegSize / ScalarBits)
+    return false;
+  StoreVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
+  unsigned AS = cast<StoreInst>(VL.front())->getPointerAddressSpace();
+  if (!TTI.isLegalMaskedStore(StoreVecTy, CommonAlignment, AS,
+                              TTI::ConstantMask))
+    return false;
+  // Build the expand mask: store I (in address-sorted order) is placed at its
+  // element offset from the base, other widened lanes are poison.
+  ReuseShuffleIndices.assign(*Diff + 1, PoisonMaskElem);
+  int64_t Prev = -1;
+  for (unsigned I : seq<unsigned>(Sz)) {
+    Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
+    std::optional<int64_t> Off =
+        getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+    if (!Off || *Off <= Prev || *Off > *Diff)
+      return false;
+    ReuseShuffleIndices[*Off] = static_cast<int>(I);
+    Prev = *Off;
+  }
+  return true;
 }
 
 /// Checks if strided loads can be generated out of \p VL loads with pointers \p
@@ -8470,6 +8531,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
   if (TE.State == TreeEntry::SplitVectorize ||
       ((TE.State == TreeEntry::Vectorize ||
         TE.State == TreeEntry::StridedVectorize ||
+        TE.State == TreeEntry::ExpandVectorize ||
         TE.State == TreeEntry::CompressVectorize) &&
        (isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE.getMainOp()) ||
         (TopToBottom && isa<StoreInst, InsertElementInst, InsertValueInst>(
@@ -8974,6 +9036,7 @@ void BoUpSLP::reorderTopToBottom() {
       VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
       if (!(TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::StridedVectorize ||
+            TE->State == TreeEntry::ExpandVectorize ||
             TE->State == TreeEntry::SplitVectorize ||
             TE->State == TreeEntry::CompressVectorize) ||
           !TE->ReuseShuffleIndices.empty())
@@ -9112,7 +9175,8 @@ void BoUpSLP::reorderTopToBottom() {
     for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
       // Just do the reordering for the nodes with the given VF.
       if (TE->Scalars.size() != VF) {
-        if (TE->ReuseShuffleIndices.size() == VF) {
+        if (TE->ReuseShuffleIndices.size() == VF &&
+            TE->State != TreeEntry::ExpandVectorize) {
           assert(TE->State != TreeEntry::SplitVectorize &&
                  "Split vectorized not expected.");
           // Need to reorder the reuses masks of the operands with smaller VF to
@@ -9149,6 +9213,7 @@ void BoUpSLP::reorderTopToBottom() {
            TE->ReuseShuffleIndices.empty()) ||
           ((TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::StridedVectorize ||
+            TE->State == TreeEntry::ExpandVectorize ||
             TE->State == TreeEntry::CompressVectorize) &&
            (isa<ExtractElementInst, ExtractValueInst, LoadInst, StoreInst,
                 InsertElementInst, InsertValueInst>(TE->getMainOp()) ||
@@ -9170,9 +9235,12 @@ void BoUpSLP::reorderTopToBottom() {
                "Expected empty reorder sequence.");
         reorderScalars(TE->Scalars, Mask);
       }
-      if (!TE->ReuseShuffleIndices.empty()) {
+      if (!TE->ReuseShuffleIndices.empty() &&
+          TE->State != TreeEntry::ExpandVectorize) {
         // Apply reversed order to keep the original ordering of the reused
-        // elements to avoid extra reorder indices shuffling.
+        // elements to avoid extra reorder indices shuffling. An ExpandVectorize
+        // store keeps its expand mask fixed and carries the reorder in
+        // ReorderIndices, so it is excluded here.
         OrdersType CurrentOrder;
         reorderOrder(CurrentOrder, MaskOrder);
         SmallVector<int> NewReuses;
@@ -9197,6 +9265,7 @@ void BoUpSLP::buildReorderableOperands(
           return OpData.first == I &&
                  (OpData.second->State == TreeEntry::Vectorize ||
                   OpData.second->State == TreeEntry::StridedVectorize ||
+                  OpData.second->State == TreeEntry::ExpandVectorize ||
                   OpData.second->State == TreeEntry::CompressVectorize ||
                   OpData.second->State == TreeEntry::SplitVectorize);
         }))
@@ -9212,7 +9281,8 @@ void BoUpSLP::buildReorderableOperands(
         continue;
       if (UserTE->getOpcode() == Instruction::Store && I == 1 &&
           (UserTE->State == TreeEntry::Vectorize ||
-           UserTE->State == TreeEntry::StridedVectorize))
+           UserTE->State == TreeEntry::StridedVectorize ||
+           UserTE->State == TreeEntry::ExpandVectorize))
         continue;
       if (UserTE->getOpcode() == Instruction::Load &&
           (UserTE->State == TreeEntry::Vectorize ||
@@ -9258,6 +9328,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (TE->State != TreeEntry::Vectorize &&
         TE->State != TreeEntry::StridedVectorize &&
+        TE->State != TreeEntry::ExpandVectorize &&
         TE->State != TreeEntry::CompressVectorize &&
         TE->State != TreeEntry::SplitVectorize)
       NonVectorized.insert(TE.get());
@@ -9266,6 +9337,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       Queue.push(TE.get());
       if (!(TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::StridedVectorize ||
+            TE->State == TreeEntry::ExpandVectorize ||
             TE->State == TreeEntry::CompressVectorize ||
             TE->State == TreeEntry::SplitVectorize) ||
           !TE->ReuseShuffleIndices.empty())
@@ -9295,6 +9367,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     for (TreeEntry *TE : OrderedOps) {
       if (!(TE->State == TreeEntry::Vectorize ||
             TE->State == TreeEntry::StridedVectorize ||
+            TE->State == TreeEntry::ExpandVectorize ||
             TE->State == TreeEntry::CompressVectorize ||
             TE->State == TreeEntry::SplitVectorize ||
             (TE->isGather() && GathersToOrders.contains(TE))) ||
@@ -9604,6 +9677,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         // Gathers are processed separately.
         if (TE->State != TreeEntry::Vectorize &&
             TE->State != TreeEntry::StridedVectorize &&
+            TE->State != TreeEntry::ExpandVectorize &&
             TE->State != TreeEntry::CompressVectorize &&
             TE->State != TreeEntry::SplitVectorize &&
             (TE->State != TreeEntry::ScatterVectorize ||
@@ -10839,7 +10913,8 @@ static bool allStructUsersAreExtractValueInsts(ArrayRef<Value *> VL) {
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
-    SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo) {
+    SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo,
+    SmallVectorImpl<int> &ReuseShuffleIndices) {
   assert(S.getMainOp() &&
          "Expected instructions with same/alternate opcodes only.");
 
@@ -11195,6 +11270,16 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
           analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
                                          CurrentOrder, *Dist, Ptr0, SPtrInfo))
         return TreeEntry::StridedVectorize;
+      // If the stores are not consecutive but the target supports masked stores
+      // for the widened type, lower them as a masked store.
+      FixedVectorType *StoreVecTy = nullptr;
+      if (EnableMaskedStores &&
+          isMaskedStoreCompress(VL, PointerOps, CurrentOrder, *TTI, *DL, *SE,
+                                CommonAlignment, ReuseShuffleIndices,
+                                StoreVecTy)) {
+        SPtrInfo.Ty = StoreVecTy;
+        return TreeEntry::ExpandVectorize;
+      }
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
@@ -12984,8 +13069,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   OrdersType CurrentOrder;
   SmallVector<Value *> PointerOps;
   StridedPtrInfo SPtrInfo;
+  SmallVector<int> ExpandShuffleMask;
   TreeEntry::EntryState State = getScalarsVectorizationState(
-      S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo);
+      S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo,
+      ExpandShuffleMask);
   if (State == TreeEntry::NeedToGather) {
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
@@ -13269,6 +13356,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                 << "SLP: added a new TreeEntry (non-consecutive LoadInst).\n";
             TE->dump());
         break;
+      case TreeEntry::ExpandVectorize:
       case TreeEntry::CombinedVectorize:
       case TreeEntry::SplitVectorize:
       case TreeEntry::NeedToGather:
@@ -13445,6 +13533,21 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
         LLVM_DEBUG(
             dbgs() << "SLP: added a new TreeEntry (strided StoreInst).\n";
+            TE->dump());
+        TE->setOperands(Operands);
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        return;
+      }
+      if (State == TreeEntry::ExpandVectorize) {
+        assert(ReuseShuffleIndices.empty() &&
+               "Expected no reuse shuffle for an expanded masked store.");
+        TreeEntry *TE =
+            newTreeEntry(VL, TreeEntry::ExpandVectorize, Bundle, S, UserTreeIdx,
+                         ExpandShuffleMask, CurrentOrder);
+        TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
+        LLVM_DEBUG(
+            dbgs()
+                << "SLP: added a new TreeEntry (expanded masked StoreInst).\n";
             TE->dump());
         TE->setOperands(Operands);
         buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
@@ -15320,6 +15423,8 @@ void BoUpSLP::transformNodes() {
       break;
     }
     case Instruction::Store: {
+      if (E.State == TreeEntry::ExpandVectorize)
+        break;
       Type *ScalarTy =
           cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
       auto *VecTy =
@@ -17000,6 +17105,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   assert((E->State == TreeEntry::Vectorize ||
           E->State == TreeEntry::ScatterVectorize ||
           E->State == TreeEntry::StridedVectorize ||
+          E->State == TreeEntry::ExpandVectorize ||
           E->State == TreeEntry::CompressVectorize) &&
          "Unhandled state");
   assert(E->getOpcode() &&
@@ -17099,9 +17205,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto GetGEPCostDiff = [=](ArrayRef<Value *> Ptrs, Value *BasePtr) {
     assert((E->State == TreeEntry::Vectorize ||
             E->State == TreeEntry::StridedVectorize ||
+            E->State == TreeEntry::ExpandVectorize ||
             E->State == TreeEntry::CompressVectorize) &&
-           "Entry state expected to be Vectorize, StridedVectorize or "
-           "MaskedLoadCompressVectorize here.");
+           "Entry state expected to be Vectorize, StridedVectorize, "
+           "ExpandVectorize or CompressVectorize here.");
     InstructionCost ScalarCost = 0;
     InstructionCost VecCost = 0;
     std::tie(ScalarCost, VecCost) =
@@ -17885,6 +17992,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             CostKind);
         break;
       }
+      case TreeEntry::ExpandVectorize:
       case TreeEntry::CombinedVectorize:
       case TreeEntry::SplitVectorize:
       case TreeEntry::NeedToGather:
@@ -17935,7 +18043,31 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           VecStCost +=
               TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedStoreTy,
                                     getCastContextHint(*E), CostKind);
-
+      } else if (E->State == TreeEntry::ExpandVectorize) {
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *MaskedStoreTy = SPtrInfo.Ty;
+        assert(MaskedStoreTy && "Missing StridedPointerInfo for tree entry.");
+        Align CommonAlignment =
+            computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
+        // Masked store: the values are expanded into the widened vector and
+        // stored with a constant mask.
+        VecStCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::masked_store, MaskedStoreTy,
+                                       CommonAlignment,
+                                       BaseSI->getPointerAddressSpace()),
+            CostKind);
+        const TreeEntry *ValOpTE = getOperandEntry(E, 0);
+        if (auto ValBWIt = MinBWs.find(ValOpTE);
+            ValBWIt != MinBWs.end() && ValOpTE->hasState() &&
+            UnaryInstruction::isCast(ValOpTE->getOpcode())) {
+          auto *SrcVecTy = getWidenedType(
+              IntegerType::get(ScalarTy->getContext(), ValBWIt->second.first),
+              VL.size());
+          if (SrcVecTy != VecTy)
+            VecStCost += TTI->getCastInstrCost(
+                ValBWIt->second.second ? Instruction::SExt : Instruction::ZExt,
+                VecTy, SrcVecTy, getCastContextHint(*ValOpTE), CostKind);
+        }
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
@@ -18182,6 +18314,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   if (VectorizableTree.size() == 1 &&
       (VectorizableTree[0]->State == TreeEntry::Vectorize ||
        VectorizableTree[0]->State == TreeEntry::StridedVectorize ||
+       VectorizableTree[0]->State == TreeEntry::ExpandVectorize ||
        VectorizableTree[0]->State == TreeEntry::CompressVectorize ||
        (ForReduction &&
         AreVectorizableGathers(VectorizableTree[0].get(),
@@ -18206,6 +18339,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
       (VectorizableTree[1]->isGather() &&
        VectorizableTree[0]->State != TreeEntry::ScatterVectorize &&
        VectorizableTree[0]->State != TreeEntry::StridedVectorize &&
+       VectorizableTree[0]->State != TreeEntry::ExpandVectorize &&
        VectorizableTree[0]->State != TreeEntry::CompressVectorize))
     return false;
 
@@ -23240,7 +23374,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       ShuffleBuilder.addOrdered(V, {});
     } else if (E->getOpcode() == Instruction::Store &&
                (E->State == TreeEntry::Vectorize ||
-                E->State == TreeEntry::StridedVectorize)) {
+                E->State == TreeEntry::StridedVectorize ||
+                E->State == TreeEntry::ExpandVectorize)) {
       ArrayRef<int> Mask =
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
@@ -24010,9 +24145,29 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Instruction *ST;
       if (E->State == TreeEntry::Vectorize) {
         ST = Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
+      } else if (E->State == TreeEntry::ExpandVectorize) {
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *StridedStoreTy = SPtrInfo.Ty;
+        assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
+        Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
+        ArrayRef<int> ExpandMask = E->ReuseShuffleIndices;
+        unsigned VecNumElts = getNumElements(StridedStoreTy);
+        assert(VecValue->getType() == StridedStoreTy &&
+               "FinalShuffle must expand the value to the masked store type.");
+        assert(ExpandMask.size() == VecNumElts &&
+               "Reuse mask must match the masked store type.");
+        Value *BasePtr =
+            cast<StoreInst>(E->Scalars.front())->getPointerOperand();
+        SmallVector<Constant *> MaskValues(
+            VecNumElts, ConstantInt::getFalse(VecTy->getContext()));
+        for (unsigned I : seq<unsigned>(VecNumElts))
+          if (ExpandMask[I] != PoisonMaskElem)
+            MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
+        ST = Builder.CreateMaskedStore(VecValue, BasePtr, CommonAlignment,
+                                       ConstantVector::get(MaskValues));
       } else {
         assert(E->State == TreeEntry::StridedVectorize &&
-               "Expected either strided or consecutive stores.");
+               "Expected either strided, masked or consecutive stores.");
         bool IsReverseOrder =
             !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
         if (IsReverseOrder) {
@@ -24811,11 +24966,14 @@ Value *BoUpSLP::vectorizeTree(
                  return !UseEntries.empty() &&
                         (E->State == TreeEntry::Vectorize ||
                          E->State == TreeEntry::StridedVectorize ||
+                         E->State == TreeEntry::ExpandVectorize ||
                          E->State == TreeEntry::CompressVectorize) &&
                         any_of(UseEntries, [&, TTI = TTI](TreeEntry *UseEntry) {
                           return (UseEntry->State == TreeEntry::Vectorize ||
                                   UseEntry->State ==
                                       TreeEntry::StridedVectorize ||
+                                  UseEntry->State ==
+                                      TreeEntry::ExpandVectorize ||
                                   UseEntry->State ==
                                       TreeEntry::CompressVectorize) &&
                                  doesInTreeUserNeedToExtract(
@@ -28293,8 +28451,8 @@ private:
 
 bool SLPVectorizerPass::vectorizeStores(
     ArrayRef<StoreInst *> Stores, BoUpSLP &R,
-    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-        &Visited) {
+    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> &Visited,
+    bool AllowMaskedStores) {
   // We may run into multiple chains that merge into a single chain. We mark the
   // stores that we vectorized so that we don't visit the same store twice.
   BoUpSLP::ValueSet VectorizedStores;
@@ -28498,6 +28656,55 @@ bool SLPVectorizerPass::vectorizeStores(
     ExtendContexts(StoreSeq.getStores());
 
   ActuallyVectorizeContexts();
+
+  // When some stores are still not vectorized, try to lower them together as a
+  // single masked store (expand + masked.store).
+  if (!AllowMaskedStores)
+    return Changed;
+
+  SmallVector<Value *> Remaining;
+  for (StoreInst *SI : Stores)
+    if (!R.isDeleted(SI) && !VectorizedStores.contains(SI))
+      Remaining.push_back(SI);
+  if (Remaining.size() < 2)
+    return Changed;
+
+  Type *ValTy = getValueType(Remaining.front());
+  if (any_of(Remaining, [&](Value *V) {
+        return cast<StoreInst>(V)->getValueOperand()->getType() != ValTy;
+      }))
+    return Changed;
+
+  SmallVector<Value *> PointerOps;
+  PointerOps.reserve(Remaining.size());
+  for (Value *V : Remaining)
+    PointerOps.push_back(cast<StoreInst>(V)->getPointerOperand());
+  SmallVector<unsigned> Order;
+  if (!sortPtrAccesses(PointerOps, ValTy, *DL, *SE, Order))
+    return Changed;
+
+  SmallVector<Value *> Sorted(Remaining.size());
+  for (unsigned I : seq<unsigned>(Remaining.size()))
+    Sorted[I] = Remaining[Order.empty() ? I : Order[I]];
+
+  // No need to re-check for consecutive (stride-1) pairs here: the caller
+  // already disables masked stores for the whole base-object group when any
+  // consecutive pair exists, so this subset cannot contain one.
+  if (!Visited
+           .insert({Sorted.front(),
+                    cast<StoreInst>(Sorted.front())->getValueOperand(),
+                    Sorted.back(),
+                    cast<StoreInst>(Sorted.back())->getValueOperand(),
+                    Sorted.size()})
+           .second)
+    return Changed;
+
+  unsigned Size = 0;
+  if (vectorizeStoreChain(Sorted, R, /*Idx=*/0, /*MinVF=*/2, Size)
+          .value_or(false)) {
+    VectorizedStores.insert_range(Sorted);
+    Changed = true;
+  }
   return Changed;
 }
 
@@ -32868,6 +33075,28 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
            V2->getValueOperand()->getValueID();
   };
 
+  // Returns true if any two stores in the group are at consecutive (stride-1)
+  // addresses. Masked stores are disabled for the entire base-object group when
+  // this is true - consecutive vectorization is always preferred.
+  auto HasConsecutiveStores = [&](ArrayRef<StoreInst *> SIs) {
+    if (SIs.size() < 2)
+      return false;
+    Type *Ty = SIs.front()->getValueOperand()->getType();
+    Value *Base = SIs.front()->getPointerOperand();
+    SmallVector<int64_t> Offsets;
+    Offsets.reserve(SIs.size());
+    for (StoreInst *SI : SIs) {
+      if (std::optional<int64_t> Off =
+              getPointersDiff(Ty, Base, Ty, SI->getPointerOperand(), *DL, *SE))
+        Offsets.push_back(*Off);
+    }
+    sort(Offsets);
+    for (size_t I = 1, E = Offsets.size(); I < E; ++I)
+      if (Offsets[I] - Offsets[I - 1] == 1)
+        return true;
+    return false;
+  };
+
   // Attempt to sort and vectorize each of the store-groups.
   DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> Attempted;
   for (auto &Pair : Stores) {
@@ -32880,6 +33109,11 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (!isValidElementType(Pair.second.front()->getValueOperand()->getType()))
       continue;
 
+    // Masked stores are only attempted when no consecutive pair exists in the
+    // full base-object group.
+    const bool AllowMaskedStores =
+        !EnableMaskedStores || !HasConsecutiveStores(Pair.second);
+
     // Reverse stores to do bottom-to-top analysis. This is important if the
     // values are stores to the same addresses several times, in this case need
     // to follow the stores order (reversed to meet the memory dependecies).
@@ -32888,7 +33122,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     Changed |= tryToVectorizeSequence<StoreInst>(
         ReversedStores, StoreSorter, AreCompatibleStores,
         [&](ArrayRef<StoreInst *> Candidates, bool) {
-          return vectorizeStores(Candidates, R, Attempted);
+          return vectorizeStores(Candidates, R, Attempted, AllowMaskedStores);
         },
         /*MaxVFOnly=*/false, R);
   }
