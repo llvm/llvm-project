@@ -36,6 +36,7 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 extern cl::opt<bool> EmbedDebug;
+extern cl::opt<bool> StripDebug;
 extern cl::opt<std::string> PdbDebugPath;
 
 namespace {
@@ -231,9 +232,12 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // Enable EmbedDebug if there is debug info, but it is not being written
-    // to a PDB file.
-    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
+    // If both StripDebug and EmbedDebug are specified, StripDebug is ignored.
+    if (StripDebug && EmbedDebug)
+      StripDebug = false;
+    // Enable EmbedDebug if there is debug info, but it is not being stripped
+    // or written to a PDB file.
+    if (HasDebugInfo && !StripDebug && !EmbedDebug && PdbDebugPath.empty())
       EmbedDebug = true;
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(
