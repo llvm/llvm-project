@@ -1,9 +1,14 @@
-//===-- Implementation header for qsort_s------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation header for qsort_s.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_S_H
@@ -21,4 +26,4 @@ errno_t qsort_s(void *array, rsize_t array_size, rsize_t elem_size,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDLIB_QSORT_H
+#endif // LLVM_LIBC_SRC_STDLIB_QSORT_S_H

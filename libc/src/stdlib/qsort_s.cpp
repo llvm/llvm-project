@@ -1,9 +1,14 @@
-//===-- Implementation of qsort -------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of qsort_s.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/qsort_s.h"
@@ -14,8 +19,6 @@
 #include "src/__support/constraint_handler.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_util.h"
-
-#define ERRNO_T_FAIL 1
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -36,8 +39,8 @@ LLVM_LIBC_FUNCTION(errno_t, qsort_s,
         "compare can be a null pointer";
   }
   if (constraint_violation_msg) {
-    libc_global_constraint_handler(constraint_violation_msg, 0, ERRNO_T_FAIL);
-    return ERRNO_T_FAIL;
+    libc_global_constraint_handler(constraint_violation_msg, 0, 1);
+    return 1;
   }
 
   internal::unstable_sort(array, array_size, elem_size, compare, context);

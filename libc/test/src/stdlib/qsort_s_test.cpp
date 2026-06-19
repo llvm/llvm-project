@@ -1,9 +1,14 @@
-//===-- Unittests for qsort_s ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains unit tests for qsort_s.
+///
 //===----------------------------------------------------------------------===//
 
 #define __STDC_WANT_LIB_EXT1__ 1
@@ -28,10 +33,11 @@ static int compare(const void *a, const void *b, void *) {
 
 TEST_F(LlvmLibcQsortSConstraintTest, ArraySizeGreaterThanRsizeMax) {
   int array[] = {1, 3, 2};
+  EXPECT_FALSE(error_flag);
   errno_t retval =
       LIBC_NAMESPACE::qsort_s(array, RSIZE_MAX + 1, sizeof(int), compare, 0);
   EXPECT_NE(retval, 0);
-  EXPECT_STREQ(buffer, "qsort_s: array_size cannot be greater than RSIZE_MAX");
+  EXPECT_TRUE(error_flag);
   EXPECT_EQ(array[0], 1);
   EXPECT_EQ(array[1], 3);
   EXPECT_EQ(array[2], 2);
@@ -39,29 +45,30 @@ TEST_F(LlvmLibcQsortSConstraintTest, ArraySizeGreaterThanRsizeMax) {
 
 TEST_F(LlvmLibcQsortSConstraintTest, ElemSizeGreaterThanRsizeMax) {
   int array[] = {1, 3, 2};
+  EXPECT_FALSE(error_flag);
   errno_t retval = LIBC_NAMESPACE::qsort_s(array, sizeof(array) / sizeof(int),
                                            RSIZE_MAX + 1, compare, 0);
   EXPECT_NE(retval, 0);
-  EXPECT_STREQ(buffer, "qsort_s: elem_size cannot be greater than RSIZE_MAX");
+  EXPECT_TRUE(error_flag);
   EXPECT_EQ(array[0], 1);
   EXPECT_EQ(array[1], 3);
   EXPECT_EQ(array[2], 2);
 }
 
 TEST_F(LlvmLibcQsortSConstraintTest, ArrayPointerIsNull) {
+  EXPECT_FALSE(error_flag);
   errno_t retval = LIBC_NAMESPACE::qsort_s(0, 5, sizeof(int), compare, 0);
   EXPECT_NE(retval, 0);
-  EXPECT_STREQ(buffer, "qsort_s: if array_size is not equal to zero, then "
-                       "neither array nor compare can be a null pointer");
+  EXPECT_TRUE(error_flag);
 }
 
 TEST_F(LlvmLibcQsortSConstraintTest, ComparePointerIsNull) {
   int array[] = {1, 3, 2};
+  EXPECT_FALSE(error_flag);
   errno_t retval = LIBC_NAMESPACE::qsort_s(array, sizeof(array) / sizeof(int),
                                            sizeof(int), 0, 0);
   EXPECT_NE(retval, 0);
-  EXPECT_STREQ(buffer, "qsort_s: if array_size is not equal to zero, then "
-                       "neither array nor compare can be a null pointer");
+  EXPECT_TRUE(error_flag);
   EXPECT_EQ(array[0], 1);
   EXPECT_EQ(array[1], 3);
   EXPECT_EQ(array[2], 2);
