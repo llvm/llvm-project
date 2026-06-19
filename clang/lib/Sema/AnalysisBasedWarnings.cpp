@@ -1704,6 +1704,11 @@ constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
   AnalysisDeclContext &AC;
+  // When set, only the CFGUninitProfiles diagnostics are emitted; the default
+  // -Wuninitialized reports (self-init and the sorted const-ref/ptr/use paths)
+  // are skipped. The post-error profile pass sets this so it cannot resurrect
+  // ordinary warnings that the first TU error is meant to suppress.
+  bool ProfileOnly;
   typedef SmallVector<UninitUse, 2> UsesVec;
   typedef llvm::PointerIntPair<UsesVec *, 1, bool> MappedType;
   // Prefer using MapVector to DenseMap, so that iteration order will be
@@ -1713,7 +1718,9 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   UsesMap uses;
 
 public:
-  UninitValsDiagReporter(Sema &S, AnalysisDeclContext &AC) : S(S), AC(AC) {}
+  UninitValsDiagReporter(Sema &S, AnalysisDeclContext &AC,
+                         bool ProfileOnly = false)
+      : S(S), AC(AC), ProfileOnly(ProfileOnly) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
 
   MappedType &getUses(const VarDecl *vd) {
@@ -1775,6 +1782,11 @@ private:
         return;
       }
     }
+
+    // The post-error pass runs purely to keep CFG-uninit profiles diagnosing;
+    // it must never fall through to the default -Wuninitialized reports.
+    if (ProfileOnly)
+      return;
 
     // Specially handle the case where we have uses of an uninitialized
     // variable, but the root cause is an idiomatic self-init.  We want
@@ -2779,6 +2791,10 @@ void sema::AnalysisBasedWarnings::clearOverrides() {
   PolicyOverrides.enableThreadSafetyAnalysis = false;
 }
 
+bool sema::AnalysisBasedWarnings::hasEnforcedCFGUninitProfile() const {
+  return S.anyProfileEnforced(CFGUninitProfiles);
+}
+
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
   for (const auto &D : fscope->PossiblyUnreachableDiags)
     S.Diag(D.Loc, D.PD);
@@ -2846,6 +2862,41 @@ void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
       llvm::make_second_range(llvm::make_range(Range.first, Range.second));
   emitPossiblyUnreachableDiags(
       S, AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
+}
+
+// Pattern-2 profiles (the CFGUninitProfiles table) ride the uninitialized-
+// variables analysis, which IssueWarnings otherwise skips once the TU has an
+// uncompilable error. Re-run just that analysis for a single function so an
+// early TU error does not silently disable the profile for every later
+// function. Diagnostics are restricted to the profile via the ProfileOnly
+// reporter, and the CFG build options mirror the non-linearized configuration
+// of the main pass so the analysis sees the same CFG.
+static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
+  AnalysisDeclContext AC(/*Mgr=*/nullptr, D);
+
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddEHEdges = false;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddParameterLifetimes = true;
+  AC.getCFGBuildOptions().AddTemporaryDtors = true;
+  AC.getCFGBuildOptions().AddCXXNewAllocator = false;
+  AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+  AC.getCFGBuildOptions()
+      .setAlwaysAdd(Stmt::BinaryOperatorClass)
+      .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
+      .setAlwaysAdd(Stmt::BlockExprClass)
+      .setAlwaysAdd(Stmt::CStyleCastExprClass)
+      .setAlwaysAdd(Stmt::DeclRefExprClass)
+      .setAlwaysAdd(Stmt::ImplicitCastExprClass)
+      .setAlwaysAdd(Stmt::UnaryOperatorClass);
+
+  if (CFG *cfg = AC.getCFG()) {
+    UninitValsDiagReporter reporter(S, AC, /*ProfileOnly=*/true);
+    UninitVariablesAnalysisStats stats = {};
+    runUninitializedVariablesAnalysis(*cast<DeclContext>(D), *cfg, AC, reporter,
+                                      stats);
+  }
 }
 
 // An AST Visitor that calls a callback function on each callable DEFINITION
@@ -3212,6 +3263,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (S.hasUncompilableErrorOccurred()) {
     // Flush out any possibly unreachable diagnostics.
     flushDiagnostics(S, fscope);
+    // Pattern-2 profiles ride the uninitialized-variables analysis and must see
+    // every function even after an earlier TU error; otherwise the first error
+    // disables them for all later functions. Run only that analysis, only for
+    // an enforced profile, and only on a valid decl (so the CFG is buildable).
+    // Other analyses keep the early-out.
+    if (S.anyProfileEnforced(CFGUninitProfiles) && !D->isInvalidDecl() &&
+        !Diags.hasFatalErrorOccurred())
+      runUninitProfileAnalysisAfterError(S, D);
     return;
   }
 

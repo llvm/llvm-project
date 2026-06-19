@@ -17223,9 +17223,16 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
           getDiagnostics().getSuppressAllDiagnostics()) {
         DiscardCleanupsInEvaluationContext();
       }
-      if (!hasUncompilableErrorOccurred() && !isa<FunctionTemplateDecl>(dcl)) {
-        // Since the body is valid, issue any analysis-based warnings that are
-        // enabled.
+      if (!isa<FunctionTemplateDecl>(dcl) &&
+          (!hasUncompilableErrorOccurred() ||
+           (!dcl->isInvalidDecl() &&
+            AnalysisWarnings.hasEnforcedCFGUninitProfile()))) {
+        // Normally analysis-based warnings only run for a valid body in an
+        // otherwise error-free TU. CFG-based profiles (e.g. std::init's
+        // uninit_read) must keep diagnosing later functions even after an
+        // earlier TU error, so still run the per-function pass for a valid body
+        // when such a profile is enforced; IssueWarnings restricts that
+        // post-error pass to profile diagnostics.
         ActivePolicy = &WP;
       }
 
