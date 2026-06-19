@@ -62,7 +62,7 @@
 #loc5 = loc("debug-fake-use.f90":5:1)
 #loc = loc("debug-fake-use.f90":0:0)
 
-module {  
+module {
   func.func private @foo()
   func.func @test_(%arg0: !fir.ref<i32> {fir.bindc_name = "expected"} loc("debug-fake-use.f90":1:1)) attributes {fir.internal_name = "_QPtest"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
