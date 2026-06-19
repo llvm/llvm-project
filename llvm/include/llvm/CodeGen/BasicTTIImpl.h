@@ -3100,12 +3100,22 @@ public:
       InstructionCost MulCost =
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
 
-      // When the multiplication with holes approach is used, that emits 16
-      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
-      if (BW >= 32 && BW <= 64 &&
-          TLI->isOperationLegalOrCustom(ISD::MUL,
-                                        TLI->getValueType(DL, RetTy))) {
-        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+      // When the multiplication with holes approach is used, it splits the
+      // operands into S phases (the smallest stride with ceil(BW/S) <= 2^S) and
+      // emits S*S MULs, 3*S ANDs, S*(S-1) XORs and S-1 ORs.
+      //
+      // * BW <= 8 uses S = 2
+      // * BW <= 24 uses S = 3
+      // * BW <= 64 uses S = 4
+      // * BW <= 160 uses S = 5
+      // * BW <= 384 uses S = 6
+      unsigned S = 1;
+      while (S < 32 && divideCeil(BW, S) > (1u << S))
+        ++S;
+      if (S * S < BW && TLI->isOperationLegalOrCustom(
+                            ISD::MUL, TLI->getValueType(DL, RetTy))) {
+        return S * S * MulCost + 3 * S * AndCost + S * (S - 1) * XorCost +
+               (S - 1) * OrCost;
       }
 
       InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
