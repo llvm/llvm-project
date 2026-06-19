@@ -17,6 +17,7 @@
 //   e. NonNF (EVEX) -> NF (EVEX)
 //   f. SETZUCCm (EVEX) -> SETCCm (legacy)
 //   g. VPMOV*2M (EVEX) + KMOV -> VMOVMSK/VPMOVMSKB (VEX)
+//   h. VPMOV*2M (EVEX) + masked VMOV* -> VBLENDV* (VEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -221,9 +222,87 @@ static bool isKMovNarrowing(unsigned VPMOVOpc, unsigned KMOVOpc) {
   return KMOVSize < VPMOVBits;
 }
 
-// Try to compress VPMOV*2M + KMOV chain patterns:
-//   vpmov*2m %xmm0, %k0     ->  (erase this)
-//   kmov* %k0, %eax         ->  vmovmskp* %xmm0, %eax
+static unsigned getBlendVOpc(unsigned VPMOVOpc, unsigned UseOpc) {
+  switch (VPMOVOpc) {
+  case X86::VPMOVD2MZ128kr:
+    switch (UseOpc) {
+    case X86::VMOVAPSZ128rrk:
+    case X86::VMOVUPSZ128rrk:
+    case X86::VMOVDQA32Z128rrk:
+    case X86::VMOVDQU32Z128rrk:
+      return X86::VBLENDVPSrrr;
+    default:
+      break;
+    }
+    break;
+
+  case X86::VPMOVD2MZ256kr:
+    switch (UseOpc) {
+    case X86::VMOVAPSZ256rrk:
+    case X86::VMOVUPSZ256rrk:
+    case X86::VMOVDQA32Z256rrk:
+    case X86::VMOVDQU32Z256rrk:
+      return X86::VBLENDVPSYrrr;
+    default:
+      break;
+    }
+    break;
+
+  case X86::VPMOVQ2MZ128kr:
+    switch (UseOpc) {
+    case X86::VMOVAPDZ128rrk:
+    case X86::VMOVUPDZ128rrk:
+    case X86::VMOVDQA64Z128rrk:
+    case X86::VMOVDQU64Z128rrk:
+      return X86::VBLENDVPDrrr;
+    default:
+      break;
+    }
+    break;
+
+  case X86::VPMOVQ2MZ256kr:
+    switch (UseOpc) {
+    case X86::VMOVAPDZ256rrk:
+    case X86::VMOVUPDZ256rrk:
+    case X86::VMOVDQA64Z256rrk:
+    case X86::VMOVDQU64Z256rrk:
+      return X86::VBLENDVPDYrrr;
+    default:
+      break;
+    }
+    break;
+
+  case X86::VPMOVB2MZ128kr:
+    switch (UseOpc) {
+    case X86::VMOVDQU8Z128rrk:
+      return X86::VPBLENDVBrrr;
+    default:
+      break;
+    }
+    break;
+
+  case X86::VPMOVB2MZ256kr:
+    switch (UseOpc) {
+    case X86::VMOVDQU8Z256rrk:
+      return X86::VPBLENDVBYrrr;
+    default:
+      break;
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return 0;
+}
+
+// Try to compress VPMOV*2M chain patterns:
+//   vpmov*2m %xmm0, %k0             ->  (erase this)
+//   kmov* %k0, %eax                 ->  vmovmskp* %xmm0, %eax
+// and:
+//   vpmov*2m %xmm0, %k1             ->  (erase this)
+//   vmov* %xmm1, %xmm2 {%k1}        ->  vblendv* %xmm0, %xmm2, %xmm1, %xmm2
 static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
                                     const X86Subtarget &ST,
                                     SmallVectorImpl<MachineInstr *> &ToErase) {
@@ -268,11 +347,13 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
   }
 
   MachineInstr *KMovMI = nullptr;
+  MachineInstr *BlendMI = nullptr;
+  unsigned BlendOpc = 0;
 
   for (MachineInstr &CurMI : llvm::make_range(
            std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
     if (CurMI.readsRegister(MaskReg, TRI)) {
-      if (KMovMI)
+      if (KMovMI || BlendMI)
         return false; // Fail: Mask has MULTIPLE uses
 
       unsigned UseOpc = CurMI.getOpcode();
@@ -284,23 +365,28 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
         KMovMI = &CurMI;
         // continue scanning to ensure
         // there are no *other* uses of the mask later in the block.
+      } else if (((BlendOpc = getBlendVOpc(Opc, UseOpc))) &&
+                 CurMI.getOperand(2).getReg() == MaskReg &&
+                 !usesExtendedRegister(CurMI) &&
+                 checkPredicate(BlendOpc, &ST)) {
+        BlendMI = &CurMI;
       } else {
         return false;
       }
     }
 
     if (CurMI.modifiesRegister(MaskReg, TRI)) {
-      if (!KMovMI)
+      if (!KMovMI && !BlendMI)
         return false; // Mask clobbered before use
       break;
     }
 
-    if (!KMovMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {
-      return false; // SrcVecReg modified before it could be used by MOVMSK
+    if (!KMovMI && !BlendMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {
+      return false; // SrcVecReg modified before it could be reused
     }
   }
 
-  if (!KMovMI)
+  if (!KMovMI && !BlendMI)
     return false;
 
   // Check if MaskReg is used in any other basic blocks
@@ -309,14 +395,31 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       return false;
 
   // Apply the transformation
-  KMovMI->setDesc(TII->get(MovMskOpc));
-  MachineOperand &NewSrc = KMovMI->getOperand(1);
-  NewSrc.setReg(SrcVecReg);
-  // setReg() keeps the mask operand's kill flag; take the source's kill
-  // state from the VPMOV instead.
-  NewSrc.setIsKill(MI.getOperand(1).isKill());
-  KMovMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+  if (KMovMI) {
+    KMovMI->setDesc(TII->get(MovMskOpc));
+    MachineOperand &NewSrc = KMovMI->getOperand(1);
+    NewSrc.setReg(SrcVecReg);
+    // setReg() keeps the mask operand's kill flag; take the source's kill
+    // state from the VPMOV instead.
+    NewSrc.setIsKill(MI.getOperand(1).isKill());
+    KMovMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+  } else if (BlendMI) {
+    const MachineOperand &Dst = BlendMI->getOperand(0);
+    const MachineOperand &Passthru = BlendMI->getOperand(1);
+    const MachineOperand &Src = BlendMI->getOperand(3);
 
+    // Build a replacement instead of changing BlendMI in place because
+    // VMOV*rrk has a tied passthrough operand and a different operand order
+    // than VBLENDV.
+    auto MIB =
+        BuildMI(MBB, *BlendMI, BlendMI->getDebugLoc(), TII->get(BlendOpc))
+            .addReg(Dst.getReg(), getRegState(Dst))
+            .addReg(Src.getReg(), getRegState(Src))
+            .addReg(Passthru.getReg(), getRegState(Passthru))
+            .addReg(SrcVecReg, getRegState(MI.getOperand(1)));
+    MIB->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+    ToErase.push_back(BlendMI);
+  }
   ToErase.push_back(&MI);
   return true;
 }
