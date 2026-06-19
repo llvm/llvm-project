@@ -642,7 +642,7 @@ public:
 
   /// Return true if the target has the V_CVT_PK_I16_F32/V_CVT_PK_U16_F32
   /// instructions.
-  bool hasPackedConversions() const { return HasGFX11Insts; }
+  bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
   /// Return true if the target's EXP instruction has the COMPR flag, which
   /// affects the meaning of the EN (enable) bits.

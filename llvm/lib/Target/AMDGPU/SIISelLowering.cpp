@@ -691,7 +691,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::v4i16, Custom);
 
     // Legalize vector types for sat conversions to select v_cvt_pk_[iu]16_f32.
-    if (Subtarget->hasPackedConversions())
+    if (Subtarget->hasVCvtPkIU16F32())
       setOperationAction(
           {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
           {MVT::v2i16, MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16},
