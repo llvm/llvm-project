@@ -8,8 +8,6 @@
 
 // REQUIRES: std-at-least-c++29
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23, c++26
-
 // constexpr bool has_error() const noexcept;
 
 #include <cassert>
