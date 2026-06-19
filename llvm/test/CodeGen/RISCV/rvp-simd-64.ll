@@ -3096,10 +3096,9 @@ define <8 x i8> @test_psdiv_mulhsu_b(<8 x i8> %a) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pli.b a2, -119
 ; RV32-NEXT:    pwmulsu.b a4, a1, a2
-; RV32-NEXT:    pncvth.b a1, a4
+; RV32-NEXT:    pnsrai.b a1, a4, 11
 ; RV32-NEXT:    pwmulsu.b a2, a0, a2
-; RV32-NEXT:    pncvth.b a0, a2
-; RV32-NEXT:    psrai.db a0, a0, 3
+; RV32-NEXT:    pnsrai.b a0, a2, 11
 ; RV32-NEXT:    psrli.db a2, a0, 7
 ; RV32-NEXT:    padd.db a0, a0, a2
 ; RV32-NEXT:    ret
@@ -3328,10 +3327,9 @@ define <8 x i8> @test_pudiv_mulhu_b(<8 x i8> %a) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pli.b a2, -85
 ; RV32-NEXT:    pwmulu.b a4, a1, a2
-; RV32-NEXT:    pncvth.b a1, a4
 ; RV32-NEXT:    pwmulu.b a2, a0, a2
-; RV32-NEXT:    pncvth.b a0, a2
-; RV32-NEXT:    psrli.db a0, a0, 1
+; RV32-NEXT:    pnsrli.b a1, a4, 9
+; RV32-NEXT:    pnsrli.b a0, a2, 9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pudiv_mulhu_b:
