@@ -15,7 +15,7 @@
 using namespace lldb_private;
 
 bool WindowsFileAction::Duplicate(HANDLE fh, HANDLE dup_fh) {
-  Clear();
+  *this = WindowsFileAction();
   if (fh != INVALID_HANDLE_VALUE && dup_fh != INVALID_HANDLE_VALUE) {
     m_action = eFileActionDuplicate;
     m_handle = fh;
@@ -38,9 +38,8 @@ bool WindowsFileAction::Open(HANDLE fh, const FileSpec &file_spec, bool read,
       m_arg = O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
     m_file_spec = file_spec;
     return true;
-  } else {
-    Clear();
   }
+  *this = WindowsFileAction();
   return false;
 }
 

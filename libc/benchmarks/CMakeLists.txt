@@ -214,3 +214,24 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
+
+if(LIBC_TYPES_HAS_FLOAT16)
+  add_executable(libc.benchmarks.rsqrtf16.opt_host
+    EXCLUDE_FROM_ALL
+    LibcRsqrtf16GoogleBenchmarkMain.cpp
+  )
+  target_include_directories(libc.benchmarks.rsqrtf16.opt_host
+    PRIVATE
+    ${LIBC_SOURCE_DIR}
+    ${LIBC_INCLUDE_DIR}
+  )
+  target_link_libraries(libc.benchmarks.rsqrtf16.opt_host
+    PRIVATE
+    benchmark_main
+    libc-benchmark
+    libc.src.errno.errno.__internal__
+    libc.src.__support.math.rsqrtf16
+  )
+  llvm_update_compile_flags(libc.benchmarks.rsqrtf16.opt_host)
+ endif()
+ 

@@ -563,6 +563,9 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
 
+        if lldbplatformutil.getArchitecture() == "arm64e":
+            return "simulators do not support arm64e."
+
         # Make sure we recognize the platform.
         mapping = {
             "iphone": "ios",
@@ -670,6 +673,36 @@ def expectedFailureNetBSD(bugnumber=None):
 
 
 def expectedFailureWindows(bugnumber=None):
+    return expectedFailureOS(["windows"], bugnumber)
+
+
+def _usingLLDBServerOnWindows():
+    """Return True if Windows tests should drive lldb-server instead of the
+    in-process Win32 ``windows`` process plugin.
+
+    The choice is controlled by the ``LLDB_USE_LLDB_SERVER`` environment
+    variable: unset/off selects the default in-process plugin, on selects
+    the gdb-remote path through ``lldb-server``.
+    """
+    return os.environ.get("LLDB_USE_LLDB_SERVER", "").lower() in (
+        "on",
+        "yes",
+        "1",
+        "true",
+    )
+
+
+def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+    """Mark a test as xfail on Windows when driving lldb-server."""
+    if not _usingLLDBServerOnWindows():
+        return lambda func: func
+    return expectedFailureOS(["windows"], bugnumber)
+
+
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+    """Mark a test as xfail on Windows when using the in-process plugin."""
+    if _usingLLDBServerOnWindows():
+        return lambda func: func
     return expectedFailureOS(["windows"], bugnumber)
 
 
@@ -913,6 +946,20 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
+def skipIfWindowsAndLLDBServer(func):
+    """Skip tests on Windows when driving lldb-server."""
+    if not _usingLLDBServerOnWindows():
+        return func
+    return skipIfPlatform(["windows"])(func)
+
+
+def skipIfWindowsAndNoLLDBServer(func):
+    """Skip tests on Windows when using the in-process plugin."""
+    if _usingLLDBServerOnWindows():
+        return func
+    return skipIfPlatform(["windows"])(func)
+
+
 def skipIfWindowsAndNonEnglish(func):
     """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
 
@@ -1132,11 +1179,14 @@ def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
     def is_msvc_in_path():
-        result = subprocess.run(
-            ["cl.exe"],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
         if result.returncode != 0:
             return f"Test requires MSVC to be in the Path."
         return None

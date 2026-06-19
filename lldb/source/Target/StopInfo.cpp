@@ -18,7 +18,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -28,6 +27,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 

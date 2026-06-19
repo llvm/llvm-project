@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class BasicBlockMatchingAndInference : public MachineFunctionPass {
+class LLVM_ABI BasicBlockMatchingAndInference : public MachineFunctionPass {
 private:
   using Edge = std::pair<const MachineBasicBlock *, const MachineBasicBlock *>;
   using BlockWeightMap = DenseMap<const MachineBasicBlock *, uint64_t>;

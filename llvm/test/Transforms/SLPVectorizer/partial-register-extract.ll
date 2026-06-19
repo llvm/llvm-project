@@ -8,21 +8,32 @@ define i32 @test(i32 %v, ptr %p) {
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br i1 false, label %[[INC:.*]], label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>, i32 [[V]], i32 13
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <20 x i32> [[TMP0]], i32 [[LD]], i32 16
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <20 x i32> [[TMP1]], <20 x i32> poison, <20 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <20 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <20 x i1> [[TMP3]], <20 x i1> poison, <6 x i32> <i32 16, i32 15, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x i1> [[TMP4]], <6 x i1> <i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false>, <6 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <6 x i1> [[TMP5]], <6 x i64> zeroinitializer, <6 x i64> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v6i64(<6 x i64> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = freeze <20 x i1> [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v20i1(<20 x i1> [[TMP8]])
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0>, i32 [[V]], i32 13
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <16 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i1> [[TMP5]], <16 x i1> [[TMP4]], <4 x i32> <i32 0, i32 31, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> <i1 poison, i1 poison, i1 false, i1 false>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> zeroinitializer, <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[I8_I_I:%.*]] = select i1 false, i64 0, i64 0
+; CHECK-NEXT:    [[I9_I_I:%.*]] = select i1 false, i64 0, i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP8]])
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i64 [[TMP9]], [[I8_I_I]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX1]], [[I9_I_I]]
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <16 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i1> [[TMP10]], <16 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[RDX_OP:%.*]] = select <4 x i1> [[TMP14]], <4 x i1> splat (i1 true), <4 x i1> [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i1> [[RDX_OP]], <4 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i1> [[TMP10]], <16 x i1> [[TMP15]], <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[AND252_US_I_24_I_I:%.*]] = select i1 [[OP_RDX]], i32 0, i32 0
 ; CHECK-NEXT:    br label %[[INC]]
 ; CHECK:       [[INC]]:
 ; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[AND252_US_I_24_I_I]], %[[PH]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[P2:%.*]] = phi i64 [ [[TMP7]], %[[PH]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[P2:%.*]] = phi i64 [ [[OP_RDX2]], %[[PH]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

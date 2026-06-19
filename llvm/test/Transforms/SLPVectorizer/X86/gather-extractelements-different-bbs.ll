@@ -4,24 +4,23 @@
 define i32 @foo(i32 %a) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> <i32 0, i32 poison, i32 0>, i32 [[A:%.*]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <3 x i32> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[LOCAL:%.*]] = sub nsw i32 0, 0
 ; CHECK-NEXT:    br i1 false, label [[BB5:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP5]], <3 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i32> <i32 3, i32 1>, [[TMP2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[LOCAL]], 3
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[OP_RDX2]], 0
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[OP_RDX2]], [[BB1]] ], [ 0, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[OP_RDX3]], [[BB1]] ], [ 0, [[BB2:%.*]] ]
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <3 x i32> [[TMP5]], <i32 8, i32 1, i32 6>
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP6]])
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[LOCAL]], 8
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], 0
 ; CHECK-NEXT:    ret i32 [[OP_RDX1]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[BB4:%.*]]

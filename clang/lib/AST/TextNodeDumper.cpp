@@ -966,11 +966,13 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
       OS << " '" << Name << '\'';
     else
       switch (ND->getKind()) {
-      case Decl::Decomposition: {
-        auto *DD = cast<DecompositionDecl>(ND);
-        OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
+      case Decl::Decomposition:
+        if (auto Bindings = cast<DecompositionDecl>(ND)->bindings();
+            !Bindings.empty())
+          OS << " first_binding '" << Bindings[0]->getDeclName() << '\'';
+        else
+          OS << " no_bindings";
         break;
-      }
       case Decl::Field: {
         auto *FD = cast<FieldDecl>(ND);
         OS << " field_index " << FD->getFieldIndex();

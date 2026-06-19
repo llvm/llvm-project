@@ -106,12 +106,27 @@ entry:
 define void @select_uniform_ugt_7xi8(ptr %ptr, i8 %x) {
 ; CHECK-LABEL: @select_uniform_ugt_7xi8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <7 x i8>, ptr [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <7 x i8> [[TMP0]], splat (i8 -1)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <7 x i8> poison, i8 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <7 x i8> [[TMP2]], <7 x i8> poison, <7 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = select <7 x i1> [[TMP1]], <7 x i8> [[TMP0]], <7 x i8> [[TMP3]]
-; CHECK-NEXT:    store <7 x i8> [[TMP4]], ptr [[PTR]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i8> [[TMP0]], splat (i8 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[TMP0]], <4 x i8> [[TMP3]]
+; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[PTR]], align 2
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i8 4
+; CHECK-NEXT:    [[L_4:%.*]] = load i8, ptr [[GEP_4]], align 1
+; CHECK-NEXT:    [[CMP_4:%.*]] = icmp ugt i8 [[L_4]], -1
+; CHECK-NEXT:    [[S_4:%.*]] = select i1 [[CMP_4]], i8 [[L_4]], i8 [[X]]
+; CHECK-NEXT:    store i8 [[S_4]], ptr [[GEP_4]], align 2
+; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i8 5
+; CHECK-NEXT:    [[L_5:%.*]] = load i8, ptr [[GEP_5]], align 1
+; CHECK-NEXT:    [[CMP_5:%.*]] = icmp ugt i8 [[L_5]], -1
+; CHECK-NEXT:    [[S_5:%.*]] = select i1 [[CMP_5]], i8 [[L_5]], i8 [[X]]
+; CHECK-NEXT:    store i8 [[S_5]], ptr [[GEP_5]], align 2
+; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i8 6
+; CHECK-NEXT:    [[L_6:%.*]] = load i8, ptr [[GEP_6]], align 1
+; CHECK-NEXT:    [[CMP_6:%.*]] = icmp ugt i8 [[L_6]], -1
+; CHECK-NEXT:    [[S_6:%.*]] = select i1 [[CMP_6]], i8 [[L_6]], i8 [[X]]
+; CHECK-NEXT:    store i8 [[S_6]], ptr [[GEP_6]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

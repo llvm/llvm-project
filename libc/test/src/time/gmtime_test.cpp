@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+
+#include "hdr/signal_macros.h"
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/time/gmtime.h"
 #include "src/time/time_constants.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
@@ -18,8 +21,6 @@
 using LlvmLibcGmTime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcGmTime, OutOfRange) {
-  if (sizeof(time_t) < sizeof(int64_t))
-    return;
   time_t seconds =
       1 +
       INT_MAX *
@@ -27,7 +28,7 @@ TEST_F(LlvmLibcGmTime, OutOfRange) {
               LIBC_NAMESPACE::time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
 
   seconds =
       INT_MIN *
@@ -36,7 +37,11 @@ TEST_F(LlvmLibcGmTime, OutOfRange) {
       1;
   tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
+}
+
+TEST_F(LlvmLibcGmTime, NullPtr) {
+  EXPECT_DEATH([] { LIBC_NAMESPACE::gmtime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcGmTime, InvalidSeconds) {
@@ -275,8 +280,6 @@ TEST_F(LlvmLibcGmTime, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcGmTime, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
   time_t seconds = 6311479850;
   struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
