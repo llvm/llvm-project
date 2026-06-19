@@ -927,9 +927,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[P_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P1:%.*]], ptr align 4 [[TMP2]], i64 8, i1 false)
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[P1]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P1]], i32 0, i32 1
 // CHECK:    [[TMP4:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP4]]
 // CHECK:    store i32 [[ADD]], ptr [[SUM:%.*]], align 4
@@ -2120,9 +2120,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP4:%.*]] = load ptr, ptr [[P1_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P12:%.*]], ptr align 4 [[TMP4]], i64 8, i1 false)
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[P12]], i32 0, i32 0
 // CHECK:    [[TMP5:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP2]], i32 0, i32 1
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P12]], i32 0, i32 1
 // CHECK:    [[TMP6:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]]
 // CHECK:    [[X3:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP3]], i32 0, i32 0
@@ -2330,9 +2330,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK:    store i32 [[ADD]], ptr [[I:%.*]], align 4, !llvm.access.group [[ACC_GRP73]]
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[P]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4, !llvm.access.group [[ACC_GRP73]]
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP0]], i32 0, i32 1
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P]], i32 0, i32 1
 // CHECK:    [[TMP4:%.*]] = load i32, ptr [[Y]], align 4, !llvm.access.group [[ACC_GRP73]]
 // CHECK:    [[ADD1:%.*]] = add nsw i32 [[TMP3]], [[TMP4]]
 // CHECK:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP73]]
