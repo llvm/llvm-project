@@ -24,6 +24,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
 #include <limits>
 
 namespace llvm::ubi {
@@ -830,25 +831,21 @@ public:
           switch (Kind) {
           case Attribute::Alignment: {
             // Alignment assumptions should have 2 or 3 arguments.
-            // If there are two integer arguments, use the largest power of 2
-            // that divides them as the alignment.
             APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
+            APInt CheckedAddr = WasOnPtr.address();
             if (OBU.Inputs.size() == 3) {
               APInt Offset = getIntNonPoison(getValue(GetBundleArg(2)));
-              if (!Alignment.isZero() || !Offset.isZero())
-                Alignment = APInt::getOneBitSet(
-                    std::max(Alignment.getBitWidth(), Offset.getBitWidth()),
-                    std::min(Alignment.countr_zero(), Offset.countr_zero()));
+              CheckedAddr -= Offset.sextOrTrunc(CheckedAddr.getBitWidth());
             }
             if (!Alignment.isPowerOf2()) {
-              if (!WasOnPtr.address().isZero())
-                reportImmediateUB() << "Assume on nonzero pointer " << WasOn
-                                    << " with a "
+              if (!CheckedAddr.isZero())
+                reportImmediateUB() << "Assume on pointer " << WasOn
+                                    << " with a nonzero adjusted address and a "
                                        "non-power-of-two alignment "
                                     << Alignment << '.';
               break;
             }
-            if (WasOnPtr.address().countr_zero() < Alignment.logBase2())
+            if (CheckedAddr.countr_zero() < Alignment.logBase2())
               reportImmediateUB()
                   << "The pointer " << WasOn << " violates align(" << Alignment
                   << ") assumption.";
@@ -1148,8 +1145,8 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_insert: {
-      if (Args[2].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[2].isPoison() &&
+             "Verifier should reject poison vector_insert immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
@@ -1157,8 +1154,8 @@ public:
           cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_insert index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
@@ -1177,15 +1174,15 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_extract: {
-      if (Args[1].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[1].isPoison() &&
+             "Verifier should reject poison vector_extract immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_extract index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)

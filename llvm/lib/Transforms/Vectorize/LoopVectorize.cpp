@@ -361,9 +361,17 @@ cl::opt<bool>
                           cl::desc("Verify VPlans after VPlan transforms."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+cl::opt<bool> llvm::VPlanPrintBeforeAll(
+    "vplan-print-before-all", cl::init(false), cl::Hidden,
+    cl::desc("Print VPlans before all VPlan transformations."));
+
 cl::opt<bool> llvm::VPlanPrintAfterAll(
     "vplan-print-after-all", cl::init(false), cl::Hidden,
     cl::desc("Print VPlans after all VPlan transformations."));
+
+cl::list<std::string> llvm::VPlanPrintBeforePasses(
+    "vplan-print-before", cl::Hidden,
+    cl::desc("Print VPlans before specified VPlan transformations (regexp)."));
 
 cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
@@ -412,16 +420,6 @@ static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
-
-/// A helper function that returns true if the given type is irregular. The
-/// type is irregular if its allocated size doesn't equal the store size of an
-/// element of the corresponding vector type.
-static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
-  // Determine if an array of N elements of type Ty is "bitcast compatible"
-  // with a <N x Ty> vector.
-  // This is only true if there is no padding between the array elements.
-  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
-}
 
 /// A version of ScalarEvolution::getSmallConstantTripCount that returns an
 /// ElementCount to include loops whose trip count is a function of vscale.
@@ -1001,11 +999,11 @@ public:
   bool isDivRemScalarWithPredication(InstructionCost ScalarCost,
                                      InstructionCost MaskedCost) const {
     switch (ForceMaskedDivRem) {
-    case cl::BOU_UNSET:
+    case cl::boolOrDefault::BOU_UNSET:
       return ScalarCost < MaskedCost;
-    case cl::BOU_TRUE:
+    case cl::boolOrDefault::BOU_TRUE:
       return false;
-    case cl::BOU_FALSE:
+    case cl::boolOrDefault::BOU_FALSE:
       return true;
     }
     llvm_unreachable("impossible case value");
@@ -7005,8 +7003,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         NewExiting = Substitutions.lookup(OrigExitingVPV);
       }
       NewPhiR->setOperand(1, NewExiting);
-      PhiR->replaceAllUsesWith(
-          Plan->getOrAddLiveIn(PoisonValue::get(PhiR->getScalarType())));
+      PhiR->replaceAllUsesWith(Plan->getPoison(PhiR->getScalarType()));
 
       Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult =
@@ -7482,20 +7479,24 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
   }
 
-  // Create a ResumeForEpilogue for the canonical IV resume as the
-  // first non-phi, to keep it alive for the epilogue.
+  // Create a ResumeForEpilogue for the canonical IV resume and its bypass value
+  // as the first non-phi, to keep them alive for the epilogue.
   VPBuilder ResumeBuilder(MainScalarPH);
-  ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue, ResumePhi);
+  ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
+                             {ResumePhi, ResumePhi->getOperand(1)});
 
   // Create ResumeForEpilogue instructions for the resume phis of the
-  // VPIRPhis in the scalar header of the main plan and return them so they can
-  // be used as resume values when vectorizing the epilogue.
+  // VPIRPhis and their bypass values in the scalar header of the main plan and
+  // return them so they can be used as resume values when vectorizing the
+  // epilogue.
   return to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
         assert(isa<VPIRPhi>(R) &&
                "only VPIRPhis expected in the scalar header");
+        VPValue *MainResumePhi = R.getOperand(0);
+        VPValue *Bypass = MainResumePhi->getDefiningRecipe()->getOperand(1);
         return ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
-                                          R.getOperand(0));
+                                          {MainResumePhi, Bypass});
       }));
 }
 
@@ -7591,9 +7592,9 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
       assert(RdxResult && "expected to find reduction result");
 
-      ResumeV = IRPhiToResumeForEpi
-                    .at(cast<PHINode>(ReductionPhi->getUnderlyingInstr()))
-                    ->getUnderlyingValue();
+      VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
+          cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
+      ResumeV = ResumeForEpi->getUnderlyingValue();
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
@@ -7608,8 +7609,13 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) || IsFindIV) {
         auto *ResumePhi = cast<PHINode>(ResumeV);
-        Value *StartV = ResumePhi->getIncomingValueForBlock(
-            EPI.MainLoopIterationCountCheck);
+        VPValue *BypassOp = ResumeForEpi->getOperand(1);
+        assert((isa<VPIRValue>(BypassOp) ||
+                VPlanPatternMatch::match(
+                    BypassOp,
+                    m_VPInstruction<Instruction::Freeze>(m_VPValue()))) &&
+               "expected live-in or Freeze");
+        Value *StartV = BypassOp->getUnderlyingValue();
         IRBuilder<> Builder(ResumePhi->getParent(),
                             ResumePhi->getParent()->getFirstNonPHIIt());
 

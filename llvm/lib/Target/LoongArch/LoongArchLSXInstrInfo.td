@@ -27,6 +27,8 @@ def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                      SDTCisVT<3, GRLenVT>]>;
+def SDT_LoongArchVHW : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchVSW : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, GRLenVT>]>;
 def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
 def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
@@ -36,6 +38,8 @@ def SDT_LoongArchVFCVT_S_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
                                                   SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchVFCVTLH_D_S : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisFP<0>,
                                                     SDTCisVec<1>, SDTCisFP<1>]>;
+def SDT_LoongArchVFTINTRZ_W_D : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<0>,
+                                                     SDTCisVec<1>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
 
 // Target nodes.
 
@@ -85,8 +89,17 @@ def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
 def loongarch_vbsll : SDNode<"LoongArchISD::VBSLL", SDT_LoongArchV1RUimm>;
 def loongarch_vbsrl : SDNode<"LoongArchISD::VBSRL", SDT_LoongArchV1RUimm>;
 
+// Vector Logicial Left Shift with Widening
+def loongarch_vsllwil : SDNode<"LoongArchISD::VSLLWIL", SDT_LoongArchVSW>;
+def loongarch_vsllwil_u : SDNode<"LoongArchISD::VSLLWIL_U", SDT_LoongArchVSW>;
+
 // Vector Horizontal Addition with Widening
-def loongarch_vhaddw : SDNode<"LoongArchISD::VHADDW", SDT_LoongArchV2R>;
+def loongarch_vhaddw : SDNode<"LoongArchISD::VHADDW", SDT_LoongArchVHW>;
+def loongarch_vhaddw_u : SDNode<"LoongArchISD::VHADDW_U", SDT_LoongArchVHW>;
+
+// Vector Horizontal Subtration with Widening
+def loongarch_vhsubw : SDNode<"LoongArchISD::VHSUBW", SDT_LoongArchVHW>;
+def loongarch_vhsubw_u : SDNode<"LoongArchISD::VHSUBW_U", SDT_LoongArchVHW>;
 
 // Scalar load broadcast to vector
 def loongarch_vldrepl
@@ -106,6 +119,9 @@ def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_
 // Vector rounded shift
 def loongarch_vsrlr: SDNode<"LoongArchISD::VSRLR", SDT_LoongArchV2R>;
 def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
+
+// Vector double-precision convert to 32-bit integer
+def loongarch_vftintrz_w_d: SDNode<"LoongArchISD::VFTINTRZ", SDT_LoongArchVFTINTRZ_W_D>;
 
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
@@ -1439,14 +1455,43 @@ multiclass PatVrVrVr<SDPatternOperator OpNode, string Inst> {
 }
 
 multiclass PatVrVrW<SDPatternOperator OpNode, string Inst> {
-  def : Pat<(OpNode(v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj), (v16i8 LSX128:$vk))),
             (!cast<LAInst>(Inst#"_H_B") LSX128:$vj, LSX128:$vk)>;
-  def : Pat<(OpNode(v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj), (v8i16 LSX128:$vk))),
             (!cast<LAInst>(Inst#"_W_H") LSX128:$vj, LSX128:$vk)>;
-  def : Pat<(OpNode(v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj), (v4i32 LSX128:$vk))),
             (!cast<LAInst>(Inst#"_D_W") LSX128:$vj, LSX128:$vk)>;
-  def : Pat<(OpNode(v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+  def : Pat<(v2i64 (OpNode(v2i64 LSX128:$vj), (v2i64 LSX128:$vk))),
             (!cast<LAInst>(Inst#"_Q_D") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatVrVrWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj), (v16i8 LSX128:$vk))),
+            (!cast<LAInst>(Inst#"_HU_BU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj), (v8i16 LSX128:$vk))),
+            (!cast<LAInst>(Inst#"_WU_HU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj), (v4i32 LSX128:$vk))),
+            (!cast<LAInst>(Inst#"_DU_WU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (OpNode(v2i64 LSX128:$vj), (v2i64 LSX128:$vk))),
+            (!cast<LAInst>(Inst#"_QU_DU") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatVrUimmW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj), uimm3:$imm)),
+            (!cast<LAInst>(Inst#"_H_B") LSX128:$vj, uimm3:$imm)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj), uimm4:$imm)),
+            (!cast<LAInst>(Inst#"_W_H") LSX128:$vj, uimm4:$imm)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj), uimm5:$imm)),
+            (!cast<LAInst>(Inst#"_D_W") LSX128:$vj, uimm5:$imm)>;
+}
+
+multiclass PatVrUimmWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj), uimm3:$imm)),
+            (!cast<LAInst>(Inst#"_HU_BU") LSX128:$vj, uimm3:$imm)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj), uimm4:$imm)),
+            (!cast<LAInst>(Inst#"_WU_HU") LSX128:$vj, uimm4:$imm)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj), uimm5:$imm)),
+            (!cast<LAInst>(Inst#"_DU_WU") LSX128:$vj, uimm5:$imm)>;
 }
 
 multiclass PatShiftVrVr<SDPatternOperator OpNode, string Inst> {
@@ -1731,6 +1776,12 @@ defm : PatVrVr<rotr, "VROTR">;
 defm : PatShiftVrVr<rotr, "VROTR">;
 defm : PatShiftVrSplatUimm<rotr, "VROTRI">;
 
+// VSLLWIL_{H_B/W_H/D_W}
+defm : PatVrUimmW<loongarch_vsllwil, "VSLLWIL">;
+
+// VSLLWIL_{HU_BU/WU_HU/DU_WU}
+defm : PatVrUimmWU<loongarch_vsllwil_u, "VSLLWIL">;
+
 // VCLO_{B/H/W/D}
 def : Pat<(ctlz (vnot v16i8:$vj)), (VCLO_B v16i8:$vj)>;
 def : Pat<(ctlz (vnot v8i16:$vj)), (VCLO_H v8i16:$vj)>;
@@ -1877,6 +1928,15 @@ def : Pat<(bswap (v2i64 LSX128:$vj)),
 
 // VHADDW_{H_B/W_H/D_W/Q_D}
 defm : PatVrVrW<loongarch_vhaddw, "VHADDW">;
+
+// VHADDW_{HU_BU/WU_HU/DU_WU/QU_DU}
+defm : PatVrVrWU<loongarch_vhaddw_u, "VHADDW">;
+
+// VHSUBW_{H_B/W_H/D_W/Q_D}
+defm : PatVrVrW<loongarch_vhsubw, "VHSUBW">;
+
+// VHSUBW_{HU_BU/WU_HU/DU_WU/QU_DU}
+defm : PatVrVrWU<loongarch_vhsubw_u, "VHSUBW">;
 
 // VFADD_{S/D}
 defm : PatVrVrF<fadd, "VFADD">;
@@ -2299,6 +2359,10 @@ def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+
+// VFTINTRZ_W_D
+def : Pat<(v4i32 (loongarch_vftintrz_w_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
+          (VFTINTRZ_W_D LSX128:$vj, LSX128:$vk)>;
 
 // Vector loads floating-point constants
 def : Pat<(f32 f32imm_vldi:$in),

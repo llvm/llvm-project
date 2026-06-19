@@ -203,7 +203,7 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
+LLVM_ABI bool isValidParameterType(uint32_t V);
 
 LLVM_ABI bool isValidRangeType(uint32_t V);
 
@@ -896,11 +896,6 @@ struct SectionHeader {
     sys::swapByteOrder(AlignedSizeInBytes);
     sys::swapByteOrder(Flags);
     sys::swapByteOrder(Type);
-  }
-
-  void updateSize(uint32_t ContentSize) {
-    AlignedSizeInBytes =
-        alignTo(sizeof(*this) + ContentSize, DXCONTAINER_STRUCT_ALIGNMENT);
   }
 };
 

@@ -778,6 +778,14 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
     non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
 
+  // Drop modules the platform considers off-limits to unconstrained symbol
+  // searches.
+  for (size_t i = non_local_images.GetSize(); i > 0; --i) {
+    lldb::ModuleSP module_sp = non_local_images.GetModuleAtIndex(i - 1);
+    if (target->ModuleIsExcludedForUnconstrainedSearches(module_sp))
+      non_local_images.Remove(module_sp);
+  }
+
   LoadAddressResolver resolver(*target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
