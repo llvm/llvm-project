@@ -20,7 +20,7 @@ def ElideReinterpretCastPass : Pass<"memref-elide-reinterpret-cast"> {
     compatible shapes directly. This simplifies conversion to EmitC.
 }];
   let dependentDialects = [
-      "arith::ArithDialect", "memref::MemRefDialect", "scf::SCFDialect"
+      "arith::ArithDialect", "scf::SCFDialect"
   ];
 }
 
