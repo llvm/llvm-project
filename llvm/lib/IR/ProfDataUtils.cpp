@@ -116,8 +116,6 @@ const char *MDProfLabels::BranchWeights = "branch_weights";
 const char *MDProfLabels::ExpectedBranchWeights = "expected";
 const char *MDProfLabels::ValueProfile = "VP";
 const char *MDProfLabels::FunctionEntryCount = "function_entry_count";
-const char *MDProfLabels::SyntheticFunctionEntryCount =
-    "synthetic_function_entry_count";
 const char *MDProfLabels::UnknownBranchWeightsMarker = "unknown";
 const char *llvm::LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
 
@@ -282,15 +280,13 @@ void llvm::setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
   F = F ? F : I.getFunction();
   assert(F && "Either pass a instruction attached to a Function, or explicitly "
               "pass the Function that it will be attached to");
-  if (std::optional<Function::ProfileCount> EC = F->getEntryCount();
-      EC && EC->getCount() > 0)
+  if (std::optional<uint64_t> EC = F->getEntryCount(); EC && *EC > 0)
     setExplicitlyUnknownBranchWeights(I, PassName);
 }
 
 MDNode *llvm::getExplicitlyUnknownBranchWeightsIfProfiled(Function &F,
                                                           StringRef PassName) {
-  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
-      !EC || EC->getCount() == 0)
+  if (std::optional<uint64_t> EC = F.getEntryCount(); !EC || *EC == 0)
     return nullptr;
   MDBuilder MDB(F.getContext());
   return MDNode::get(

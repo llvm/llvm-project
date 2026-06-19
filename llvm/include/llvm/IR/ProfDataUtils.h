@@ -28,7 +28,6 @@ struct MDProfLabels {
   LLVM_ABI static const char *BranchWeights;
   LLVM_ABI static const char *ValueProfile;
   LLVM_ABI static const char *FunctionEntryCount;
-  LLVM_ABI static const char *SyntheticFunctionEntryCount;
   LLVM_ABI static const char *ExpectedBranchWeights;
   LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
