@@ -1028,3 +1028,4 @@ template void safeOperatorAfterMove<std::list<int>>(std::list<int>);
 template void safeOperatorAfterMove<std::list<std::string>>(std::list<std::string>);
 template void safeOperatorAfterMove<std::vector<int>>(std::vector<int>);
 template void safeOperatorAfterMove<std::vector<std::string>>(std::vector<std::string>);
+

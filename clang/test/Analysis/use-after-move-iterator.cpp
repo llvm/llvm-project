@@ -1,8 +1,7 @@
-// RUN: %clang_analyze_cc1 -std=c++17 \
-// RUN: -analyzer-checker=core,cplusplus.Move,alpha.cplusplus.IteratorModeling \
-// RUN: -analyzer-config aggressive-binary-operation-simplification=true \
-// RUN: -analyzer-config c++-container-inlining=false %s \
-// RUN: -verify -analyzer-config display-checker-name=false
+// RUN: %clang_analyze_cc1 -std=c++17 -verify %s \
+// RUN:   -analyzer-checker=core,cplusplus.Move,alpha.cplusplus.IteratorModeling \
+// RUN:   -analyzer-config aggressive-binary-operation-simplification=true \
+// RUN:   -analyzer-config c++-container-inlining=false
 
 #include "Inputs/system-header-simulator-cxx.h"
 
