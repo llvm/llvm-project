@@ -7192,9 +7192,9 @@ static void emitLoadScalarOpsFromVGPRLoop(
             .addReg(VScalarOp);
 
         // Combine the comparison results with AND.
-        if (!CondReg) // First.
+        if (!CondReg) { // First.
           CondReg = NewCondReg;
-        else { // If not the first, we create an AND.
+        } else { // If not the first, we create an AND.
           Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
           BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
               .addReg(CondReg)
@@ -7263,9 +7263,9 @@ static void emitLoadScalarOpsFromVGPRLoop(
               .addReg(VScalarOp, VScalarOpUndef, SubReg);
 
           // Combine the comparison results with AND.
-          if (!CondReg) // First.
+          if (!CondReg) { // First.
             CondReg = NewCondReg;
-          else { // If not the first, we create an AND.
+          } else { // If not the first, we create an AND.
             Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
             BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
                 .addReg(CondReg)
