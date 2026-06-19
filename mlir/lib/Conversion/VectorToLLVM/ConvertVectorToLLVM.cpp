@@ -223,16 +223,27 @@ static void replaceLoadOrStoreOp(vector::MaskedStoreOp storeOp,
       storeOp, adaptor.getValueToStore(), ptr, adaptor.getMask(), align);
 }
 
+/// Returns true if all strides of `memRefTy` are static and non-negative. A
+/// negative (or dynamic, hence unknown-sign) stride would make `mul nuw` on the
+/// index arithmetic wrap, so `nuw` must not be emitted in that case.
+static bool hasNonNegativeStrides(MemRefType memRefTy) {
+  auto [strides, offset] = memRefTy.getStridesAndOffset();
+  return llvm::all_of(strides, [](int64_t stride) {
+    return !ShapedType::isDynamic(stride) && stride >= 0;
+  });
+}
+
 /// Conversion pattern for a vector.load, vector.store, vector.maskedload, and
 /// vector.maskedstore.
 template <class LoadOrStoreOp>
 class VectorLoadStoreConversion : public ConvertOpToLLVMPattern<LoadOrStoreOp> {
 public:
   explicit VectorLoadStoreConversion(const LLVMTypeConverter &typeConv,
-                                     bool useVectorAlign)
+                                     bool useVectorAlign,
+                                     bool enableGEPInboundsNuw)
       : ConvertOpToLLVMPattern<LoadOrStoreOp>(typeConv),
-        useVectorAlignment(useVectorAlign) {}
-  using ConvertOpToLLVMPattern<LoadOrStoreOp>::ConvertOpToLLVMPattern;
+        useVectorAlignment(useVectorAlign),
+        enableGEPInboundsNuw(enableGEPInboundsNuw) {}
 
   LogicalResult
   matchAndRewrite(LoadOrStoreOp loadOrStoreOp,
@@ -256,10 +267,33 @@ public:
                                          "could not resolve alignment");
 
     // Resolve address.
+    // When --enable-gep-inbounds-nuw is set, emit inbounds|nuw on the GEP so
+    // LLVM can apply no-wrap optimizations on the index arithmetic. This
+    // assumes 0 <= idx < dim_size and non-negative strides; the caller is
+    // responsible for ensuring those conditions hold. Masked variants are
+    // designed for near-boundary access and never receive these flags.
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
+    if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
+                  std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
+      // The verifier (verifyLoadStoreMemRefLayout) guarantees that the
+      // trailing (most minor) stride of the memref is 1. Assert to make
+      // the invariant explicit in the lowering code.
+      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      assert((strides.empty() || strides.back() == 1) &&
+             "vector.load/store requires unit trailing memref stride");
+      if (enableGEPInboundsNuw) {
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
+        // `nuw` additionally requires non-negative strides; skip it when the
+        // memref has dynamic or negative strides to avoid emitting poison.
+        if (hasNonNegativeStrides(memRefTy))
+          noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+      }
+    }
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
-    Value dataPtr = this->getStridedElementPtr(
-        rewriter, loc, memRefTy, adaptor.getBase(), adaptor.getIndices());
+    Value dataPtr =
+        this->getStridedElementPtr(rewriter, loc, memRefTy, adaptor.getBase(),
+                                   adaptor.getIndices(), noWrapFlags);
     replaceLoadOrStoreOp(loadOrStoreOp, adaptor, vtype, dataPtr, align,
                          rewriter);
     return success();
@@ -271,6 +305,7 @@ private:
   // of the memref. This flag is intended for use with hardware
   // backends that require alignment of vector operations.
   const bool useVectorAlignment;
+  const bool enableGEPInboundsNuw;
 };
 
 /// Conversion pattern for a vector.gather.
@@ -2218,7 +2253,7 @@ void mlir::vector::populateVectorTransposeToFlatTranspose(
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices,
-    bool useVectorAlignment) {
+    bool useVectorAlignment, bool enableGEPInboundsNuw) {
   // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
@@ -2226,8 +2261,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
   patterns.add<VectorLoadStoreConversion<vector::LoadOp>,
                VectorLoadStoreConversion<vector::MaskedLoadOp>,
                VectorLoadStoreConversion<vector::StoreOp>,
-               VectorLoadStoreConversion<vector::MaskedStoreOp>,
-               VectorGatherOpConversion, VectorScatterOpConversion>(
+               VectorLoadStoreConversion<vector::MaskedStoreOp>>(
+      converter, useVectorAlignment, enableGEPInboundsNuw);
+  patterns.add<VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractOpConversion, VectorFMAOp1DConversion,

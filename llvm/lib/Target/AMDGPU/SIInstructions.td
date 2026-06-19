@@ -338,7 +338,7 @@ def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
 
 let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
 def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 RtzRoundMode))),
-     (EXTRACT_SUBREG (S_CVT_PK_RTZ_F16_F32 $src0, $src0), lo16)>;
+     (f16 (COPY_TO_REGCLASS (S_CVT_PK_RTZ_F16_F32 $src0, $src0), SReg_32))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;

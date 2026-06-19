@@ -3670,7 +3670,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Try to remove redundant alignment assumptions.
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-        if (!Alignment || !Offset || *Offset != 0)
+        if (!Alignment || !Offset)
           break;
 
         // Remove align 1 and non-power-of-two bundles; they don't add any
@@ -3682,7 +3682,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             GEP &&
             GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
           Builder.CreateAlignmentAssumption(
-              getDataLayout(), GEP->getPointerOperand(), *Alignment);
+              getDataLayout(), GEP->getPointerOperand(), *Alignment,
+              *Offset == 0 ? nullptr : Builder.getInt64(*Offset));
           return RemoveBundle();
         }
 
@@ -3695,10 +3696,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
-            Log2_64(*Alignment))
-          continue;
-        return RemoveBundle();
+        auto AlignMask = (*Alignment - 1);
+        if (KnownBits KB = computeKnownBits(Ptr, II);
+            (KB.Zero & AlignMask) == (~*Offset & AlignMask) &&
+            (KB.One & AlignMask) == (*Offset & AlignMask))
+          return RemoveBundle();
+        break;
       }
 
       case BundleAttr::Dereferenceable: {

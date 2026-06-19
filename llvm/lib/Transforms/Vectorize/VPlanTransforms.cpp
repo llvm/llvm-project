@@ -4262,6 +4262,120 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   }
 }
 
+/// Returns the VPValue representing the uncountable exit comparison used by
+/// AnyOf if the recipes it depends on can be traced back to live-ins and
+/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
+/// generating the values for the comparison. The recipes are stored in
+/// \p Recipes.
+static std::optional<VPValue *>
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             VPBasicBlock *LatchVPBB) {
+  // Given a plain CFG VPlan loop with countable latch exiting block
+  // \p LatchVPBB, we're looking to match the recipes contributing to the
+  // uncountable exit condition comparison (here, vp<%4>) back to either
+  // live-ins or the address nodes for the load used as part of the uncountable
+  // exit comparison so that we can either move them within the loop, or copy
+  // them to the preheader depending on the chosen method for dealing with
+  // stores in uncountable exit loops.
+  //
+  // Currently, the address of the load is restricted to a GEP with 2 operands
+  // and a live-in base address. This constraint may be relaxed later.
+  //
+  // VPlan ' for UF>=1' {
+  // Live-in vp<%0> = VF * UF
+  // Live-in vp<%1> = vector-trip-count
+  // Live-in ir<20> = original trip-count
+  //
+  // ir-bb<entry>:
+  // Successor(s): scalar.ph, vector.ph
+  //
+  // vector.ph:
+  // Successor(s): for.body
+  //
+  // for.body:
+  //   EMIT vp<%2> = phi ir<0>, vp<%index.next>
+  //   EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, for.inc ]
+  //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
+  //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
+  //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
+  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
+  // Successor(s): for.inc
+  //
+  // for.inc:
+  //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+  //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
+  //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+  //   EMIT vp<%4> = any-of ir<%3>
+  //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
+  //   EMIT branch-on-two-conds vp<%4>, vp<%5>
+  // Successor(s): middle.block, middle.block, for.body
+  //
+  // middle.block:
+  // Successor(s): ir-bb<exit>, scalar.ph
+  //
+  // ir-bb<exit>:
+  // No successors
+  //
+  // scalar.ph:
+  // }
+
+  // Find the uncountable loop exit condition.
+  VPValue *UncountableCondition = nullptr;
+  if (!match(LatchVPBB->getTerminator(),
+             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                m_VPValue())))
+    return std::nullopt;
+
+  SmallVector<VPValue *, 4> Worklist;
+  Worklist.push_back(UncountableCondition);
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+
+    // Any value defined outside the loop does not need to be copied.
+    if (V->isDefinedOutsideLoopRegions())
+      continue;
+
+    // FIXME: Remove the single user restriction; it's here because we're
+    //        starting with the simplest set of loops we can, and multiple
+    //        users means needing to add PHI nodes in the transform.
+    if (V->getNumUsers() > 1)
+      return std::nullopt;
+
+    VPValue *Op1, *Op2;
+    // Walk back through recipes until we find at least one load from memory.
+    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
+      Worklist.push_back(Op1);
+      Worklist.push_back(Op2);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+    } else if (match(V, m_VPInstruction<Instruction::Load>(m_VPValue(Op1)))) {
+      VPRecipeBase *GepR = Op1->getDefiningRecipe();
+      // Only matching base + single offset term for now.
+      if (GepR->getNumOperands() != 2)
+        return std::nullopt;
+      // Matching a GEP with a loop-invariant base ptr.
+      if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
+                           m_LiveIn(), m_VPValue())))
+        return std::nullopt;
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+      Recipes.push_back(cast<VPInstruction>(GepR));
+    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
+                            m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+    } else
+      return std::nullopt;
+  }
+
+  // If we couldn't match anything, don't return the condition. It may be
+  // defined outside the loop.
+  if (Recipes.empty() || none_of(Recipes, [](VPInstruction *I) {
+        return match(I, m_VPInstruction<Instruction::GetElementPtr>());
+      }))
+    return std::nullopt;
+
+  return UncountableCondition;
+}
+
 struct EarlyExitInfo {
   VPBasicBlock *EarlyExitingVPBB;
   VPIRBasicBlock *EarlyExitVPBB;
@@ -4270,6 +4384,42 @@ struct EarlyExitInfo {
 
 /// Update \p Plan to mask memory operations in the loop based on whether the
 /// early exit is taken or not.
+///
+/// We're currently expecting to find a loop with properties similar to the
+/// following:
+///
+/// for.body:
+///   ir<%indvars.iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
+///   EMIT ir<%arrayidx> = getelementptr inbounds nuw ir<@c>, ir<%indvars.iv>
+///   EMIT-SCALAR ir<%0> = load ir<%arrayidx>
+///   EMIT ir<%cmp1> = icmp sgt ir<%0>, ir<5>
+///   EMIT vp<%1> = masked-cond ir<%cmp1>
+/// Successor(s): if.end
+///
+/// if.end:
+///   EMIT ir<%arrayidx3> = getelementptr inbounds nuw ir<@src>, ir<%indvars.iv>
+///   EMIT-SCALAR ir<%2> = load ir<%arrayidx3>
+///   EMIT ir<%add> = add nsw ir<%2>, ir<42>
+///   EMIT ir<%arrayidx5> = getelementptr inbounds nuw ir<@dst>, ir<%indvars.iv>
+///   EMIT store ir<%add>, ir<%arrayidx5>
+///   EMIT ir<%indvars.iv.next> = add nuw nsw ir<%indvars.iv>, ir<1>
+///   EMIT vp<%3> = any-of ir<%1>
+///   EMIT ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<10000>
+///   EMIT branch-on-two-conds vp<%3>, ir<%exitcond.not>
+/// Successor(s): middle.block, middle.block, for.body
+///
+/// We currently expect LoopVectorizationLegality to ensure that:
+/// * There must also be a counted exit. We will need to support speculative
+///   or first-faulting loads before we can remove this restriction.
+/// * Any stores within the loop must not alias with the load used for the
+///   uncountable exit. We can relax this a bit with runtime aliasing checks.
+/// * Other memory operations in the loop can take place before or after the
+///   uncountable exit, but must also be unconditional. We need to support
+///   combining the conditions in VPlanPredicator.
+/// * The loop must have a single unconditional load contributing to the
+///   uncountable exit comparison, and the other term must be loop-invariant.
+///   Improving upon this requires work in getRecipesForUncountableExit to
+///   handle more complex recipe graphs.
 static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
@@ -4294,24 +4444,29 @@ static bool handleUncountableExitsWithSideEffects(
   // We can abandon a VPlan entirely if we return false here, so we shouldn't
   // crash if some earlier assumptions on scalar IR don't hold for the vplan
   // version of the loop.
-  SmallVector<VPInstruction *, 2> GEPs;
   SmallVector<VPInstruction *, 8> ConditionRecipes;
 
   std::optional<VPValue *> Cond =
-      vputils::getRecipesForUncountableExit(ConditionRecipes, GEPs, LatchVPBB);
+      getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
   if (!Cond)
     return false;
 
   // Find load contributing to condition.
-  VPRecipeBase *CondLoad = nullptr;
-  for (auto *Recipe : ConditionRecipes) {
-    if (match(Recipe, m_VPInstruction<Instruction::Load>(m_VPValue()))) {
-      // TODO: Support more than one load. Needs legality updates too.
-      assert(CondLoad == nullptr && "Too many condition loads");
-      CondLoad = Recipe;
-    }
-  }
-  assert(CondLoad && "Couldn't find load");
+  // At the moment LoopVectorizationLegality only supports a single
+  // early-exit expression with a compare and a single load that must
+  // be unconditional.
+  // TODO: Support more than one load.
+  auto *Load =
+      find_singleton<VPInstruction>(ConditionRecipes, [](auto *I, bool _) {
+        return match(I, m_VPInstruction<Instruction::Load>(m_VPValue()))
+                   ? I
+                   : nullptr;
+      });
+  assert(Load && "Couldn't find exactly one load");
+  // TODO: Support conditional loads for uncountable exits.
+  assert(VPDT.dominates(Load->getParent(), LatchVPBB) &&
+         "Uncountable exit condition load is conditional.");
+  VPInstruction *Ptr = cast<VPInstruction>(Load->getOperand(0));
 
   // Ensure that we are guaranteed to be able to dereference the memory used
   // for determining the uncountable exit for the maximum possible number of
@@ -4321,8 +4476,6 @@ static bool handleUncountableExitsWithSideEffects(
   //       all possible addresses are dereferenceable.
   {
     SmallVector<const SCEVPredicate *, 4> Predicates;
-    VPSingleDefRecipe *Load = cast<VPSingleDefRecipe>(CondLoad);
-    VPValue *Ptr = Load->getOperand(0);
     const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
     const DataLayout &DL = Plan.getDataLayout();
     APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getScalarType()),
@@ -4334,54 +4487,34 @@ static bool handleUncountableExitsWithSideEffects(
       return false;
   }
 
-  // Check GEPs to see if we can link them to a widen IV recipe with a step of
-  // 1; we're only interested in contiguous accesses for the condition load
-  // right now.
-  for (auto *GEP : GEPs) {
-    VPValue *MaybeIV = nullptr;
-    if (!match(GEP, m_VPInstruction<Instruction::GetElementPtr>(
-                        m_LiveIn(), m_VPValue(MaybeIV))))
-      return false;
+  // Check for a single GEP for the condition load to see if we can link it to
+  // a widen IV recipe with a step of 1; we're only interested in contiguous
+  // accesses for the condition load right now.
+  auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
+  if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
+      !match(IV->getStepValue(), m_SpecificInt(1)))
+    return false;
+  if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(m_LiveIn(),
+                                                              m_Specific(IV))))
+    return false;
 
-    auto *WIV = dyn_cast<VPWidenInductionRecipe>(MaybeIV);
-    if (!WIV)
-      return false;
-
-    if (!match(WIV->getStartValue(), m_SpecificInt(0)) ||
-        !match(WIV->getStepValue(), m_SpecificInt(1)))
-      return false;
+  // We want to guarantee that the uncountable exit condition (and the mask
+  // we will generate from it) are available for all operations in the loop
+  // that need to be masked. If the condition recipes are not already the first
+  // recipes in the header after the last phi, move them there.
+  auto InsertIt = HeaderVPBB->getFirstNonPhi();
+  while (InsertIt != HeaderVPBB->end() &&
+         is_contained(ConditionRecipes, &*InsertIt)) {
+    erase(ConditionRecipes, &*InsertIt);
+    InsertIt++;
   }
-
-  // Find an insertion point. Default to the end of the header but override
-  // if we find a memory op that needs masking before the condition load.
-  auto InsertIt = HeaderVPBB->end();
-  VPRecipeBase *CondR = (*Cond)->getDefiningRecipe();
-  bool CondMoveNeeded = CondR->getParent() != HeaderVPBB;
-  for (VPRecipeBase &R : *HeaderVPBB) {
-    if (&R == CondLoad)
-      continue;
-
-    if (R.mayReadOrWriteMemory()) {
-      if (!VPDT.properlyDominates(CondR, &R)) {
-        CondMoveNeeded = true;
-        InsertIt = R.getIterator();
-      }
-      break;
-    }
-  }
-
-  // If another memory operation would take place before the comparison to
-  // determine whether to exit early or the comparison doesn't take place in
-  // the header, move the comparison (and supporting recipes).
-  if (CondMoveNeeded)
-    for (auto *Recipe : reverse(ConditionRecipes))
-      Recipe->moveBefore(*HeaderVPBB, InsertIt);
+  for (auto *Recipe : reverse(ConditionRecipes))
+    Recipe->moveBefore(*HeaderVPBB, InsertIt);
 
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
   VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
-  VPValue *IV = cast<VPSingleDefRecipe>(&HeaderVPBB->front());
   Type *IVScalarTy = IV->getScalarType();
   Type *FirstActiveTy = FirstActive->getScalarType();
   VPValue *ALMMultiplier = Plan.getConstantInt(IVScalarTy, 1);
@@ -4395,7 +4528,7 @@ static bool handleUncountableExitsWithSideEffects(
   // Convert all other memory operations to use the mask.
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
     for (VPRecipeBase &R : *VPBB)
-      if (R.mayReadOrWriteMemory() && &R != CondLoad) {
+      if (R.mayReadOrWriteMemory() && &R != Load) {
         // TODO: Handle conditional memory operations in the loop.
         if (!VPDT.dominates(R.getParent(), LatchVPBB))
           return false;
@@ -4422,6 +4555,11 @@ static bool handleUncountableExitsWithSideEffects(
   if (range_size(Phis) != 1)
     return false;
   VPPhi *ContinueIV = cast<VPPhi>(Phis.begin());
+  // Make sure we're referring to the same IV.
+  assert(
+      match(ContinueIV->getOperand(0),
+            m_VPInstruction<VPInstruction::ExitingIVValue>(m_Specific(IV))) &&
+      "Continuing from different IV");
   ContinueIV->setOperand(0, ExitIV);
   return true;
 }
