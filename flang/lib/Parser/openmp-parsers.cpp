@@ -1189,7 +1189,8 @@ TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
-TYPE_PARSER(construct<OmpApplyClause>(maybe(nonemptyList(Parser<OmpApplyClause::Modifier>{} / ":")),
+TYPE_PARSER(construct<OmpApplyClause>(
+    maybe(nonemptyList(Parser<OmpApplyClause::Modifier>{} / ":")),
     nonemptyList(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
 
 // 2.4 Requires construct [OpenMP 5.0]
