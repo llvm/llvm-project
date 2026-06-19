@@ -2145,15 +2145,6 @@ func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%va
 
 // -----
 
-func.func @load_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
-  // expected-error @+2 {{'vector.load' op memref strides must be non-negative}}
-  %c0 = arith.constant 0 : index
-  %v = vector.load %flip[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<8xf32>
-  return %v : vector<8xf32>
-}
-
-// -----
-
 func.func @store_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %val: vector<4xf32>) {
   // expected-error @+2 {{'vector.store' op memref strides must be non-negative}}
   %c0 = arith.constant 0 : index
@@ -2215,4 +2206,13 @@ func.func @scan_i0(%a: vector<4xi0>, %init: vector<1xi0>) -> (vector<4xi0>, vect
   %0:2 = vector.scan <add>, %a, %init {inclusive = true, reduction_dim = 0 : i64} :
     vector<4xi0>, vector<1xi0>
   return %0#0, %0#1 : vector<4xi0>, vector<1xi0>
+}
+
+// -----
+
+func.func @load_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
+  // expected-error @+2 {{'vector.load' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  %v = vector.load %flip[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<8xf32>
+  return %v : vector<8xf32>
 }
