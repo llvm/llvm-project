@@ -55,7 +55,7 @@ void simple_case() {
   {
     MyObj s;
     p = &s;     // expected-warning {{local variable 's' does not live long enough}}
-  }             // expected-note {{destroyed here}}
+  }             // expected-note {{'s' is destroyed here at the end of its scope}}
   (void)*p;     // expected-note {{later used here}}
 }
 
@@ -1926,7 +1926,7 @@ const std::string& identity(const std::string& in [[clang::lifetimebound]]);
 const S& identity(const S& in [[clang::lifetimebound]]);
 
 void test_temporary() {
-  const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{destroyed here}} \
+  const std::string& x = S().x(); // expected-warning {{temporary object does not live long enough}} expected-note {{temporary object is destroyed here at the end of the full-expression}} \
                                   // expected-note {{result of call to 'x' aliases the storage of temporary object}}
   (void)x; // expected-note {{later used here}}
 

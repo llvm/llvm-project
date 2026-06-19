@@ -8,7 +8,7 @@ namespace SimpleResize {
 void IteratorInvalidAfterResize(int new_size) {
   std::vector<int> v;
   auto it = std::begin(v);  // expected-warning {{local variable 'v' is later invalidated}}
-  v.resize(new_size);       // expected-note {{invalidated here}}
+  v.resize(new_size);       // expected-note {{'v' is invalidated here}}
   *it;                      // expected-note {{later used here}}
 }
 
