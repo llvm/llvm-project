@@ -4,9 +4,9 @@ void acc_cache() {
   // CHECK: cir.func{{.*}} @acc_cache()
 
   int iArr[10];
-  // CHECK-NEXT: %[[IARR:.*]] = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["iArr"]
+  // CHECK-NEXT: %[[IARR:.*]] = cir.alloca "iArr" {{.*}} : !cir.ptr<!cir.array<!s32i x 10>>
   float fArr[10];
-  // CHECK-NEXT: %[[FARR:.*]] = cir.alloca !cir.array<!cir.float x 10>, !cir.ptr<!cir.array<!cir.float x 10>>, ["fArr"]
+  // CHECK-NEXT: %[[FARR:.*]] = cir.alloca "fArr" {{.*}} : !cir.ptr<!cir.array<!cir.float x 10>>
 
 #pragma acc cache(iArr[1], fArr[1:5])
   // This does nothing, as it is not in a loop.

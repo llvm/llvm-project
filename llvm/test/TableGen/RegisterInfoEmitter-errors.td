@@ -4,6 +4,7 @@
 // RUN: not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR3 2>&1 | FileCheck %s --check-prefix=ERROR3
 // RUN: not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR4 2>&1 | FileCheck %s --check-prefix=ERROR4
 // RUN: not llvm-tblgen -gen-register-bank -I %p/../../include %s -DERROR5 2>&1 | FileCheck %s --check-prefix=ERROR5
+// RUN: not llvm-tblgen -gen-register-info -I %p/../../include %s -DERROR6 2>&1 | FileCheck %s --check-prefix=ERROR6
 
 include "llvm/Target/Target.td"
 
@@ -13,7 +14,11 @@ foreach Index = 0-15 in {
   def R#Index : Register <"r"#Index>;
 }
 
-def GPR32 : RegisterClass<"MyTarget", [i32], 32, (sequence "R%u", 0, 15)>;
+def GPR32 : RegisterClass<"MyTarget", [i32], 32, (sequence "R%u", 0, 15)> {
+#ifdef ERROR6
+  let SpillStackID = 256;
+#endif
+}
 
 def sub0 : SubRegIndex<32, 0>;
 def sub1 : SubRegIndex<32, 32>;
@@ -55,3 +60,6 @@ def R0_R1 : RegisterWithSubRegs<"r0_r1", [R0]> {
 // ERROR5: error: No register banks defined
 #endif
 
+#ifdef ERROR6
+// ERROR6: error: SpillStackID out of range [0,255]
+#endif

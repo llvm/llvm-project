@@ -301,25 +301,11 @@ typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24) / 12>> mon
 #endif
 // Duration ==
 
-template <class _LhsDuration, class _RhsDuration>
-struct __duration_eq {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
-    typedef typename common_type<_LhsDuration, _RhsDuration>::type _Ct;
-    return _Ct(__lhs).count() == _Ct(__rhs).count();
-  }
-};
-
-template <class _LhsDuration>
-struct __duration_eq<_LhsDuration, _LhsDuration> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
-    return __lhs.count() == __rhs.count();
-  }
-};
-
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator==(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
-  return __duration_eq<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
+  using _Ct = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type;
+  return _Ct(__lhs).count() == _Ct(__rhs).count();
 }
 
 #if _LIBCPP_STD_VER <= 17
@@ -336,25 +322,11 @@ operator!=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 
 // Duration <
 
-template <class _LhsDuration, class _RhsDuration>
-struct __duration_lt {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
-    typedef typename common_type<_LhsDuration, _RhsDuration>::type _Ct;
-    return _Ct(__lhs).count() < _Ct(__rhs).count();
-  }
-};
-
-template <class _LhsDuration>
-struct __duration_lt<_LhsDuration, _LhsDuration> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
-    return __lhs.count() < __rhs.count();
-  }
-};
-
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator<(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
-  return __duration_lt<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
+  using _Ct = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type;
+  return _Ct(__lhs).count() < _Ct(__rhs).count();
 }
 
 // Duration >

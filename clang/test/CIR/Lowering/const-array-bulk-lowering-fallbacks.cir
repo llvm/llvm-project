@@ -1,0 +1,55 @@
+// RUN: cir-opt %s --cir-to-llvm -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @tz_arr =
+      #cir.const_array<"ab" : !cir.array<!s8i x 2>, trailing_zeros> :
+      !cir.array<!s8i x 8>
+
+  cir.global external target_address_space(1) @as1 = #cir.int<1> : !s32i
+  cir.global external @as_mismatch =
+      #cir.const_array<[#cir.global_view<@as1> : !cir.ptr<!s32i>]> :
+      !cir.array<!cir.ptr<!s32i> x 1>
+
+  cir.global external @matrix = #cir.const_array<[
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>,
+      #cir.const_array<[#cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 2>
+  ]> : !cir.array<!cir.array<!s32i x 2> x 2>
+
+  cir.global "private" constant cir_private dso_local @s0 =
+      #cir.const_array<"x" : !cir.array<!s8i x 1>, trailing_zeros> :
+      !cir.array<!s8i x 2>
+  cir.global "private" constant cir_private dso_local @s1 =
+      #cir.const_array<"y" : !cir.array<!s8i x 1>, trailing_zeros> :
+      !cir.array<!s8i x 2>
+  cir.global external @ptr2d = #cir.const_array<[
+      #cir.const_array<[
+          #cir.global_view<@s0> : !cir.ptr<!s8i>,
+          #cir.global_view<@s1> : !cir.ptr<!s8i>
+      ]> : !cir.array<!cir.ptr<!s8i> x 2>,
+      #cir.const_array<[
+          #cir.global_view<@s0> : !cir.ptr<!s8i>,
+          #cir.global_view<@s1> : !cir.ptr<!s8i>
+      ]> : !cir.array<!cir.ptr<!s8i> x 2>
+  ]> : !cir.array<!cir.array<!cir.ptr<!s8i> x 2> x 2>
+}
+
+// CHECK-LABEL: llvm.mlir.global external @tz_arr(
+// CHECK-SAME:    dense<
+
+// CHECK-LABEL: llvm.mlir.global external @as_mismatch
+// CHECK:       llvm.insertvalue
+
+// CHECK-LABEL: llvm.mlir.global external @matrix(
+// CHECK-SAME:    dense<
+
+// CHECK-LABEL: llvm.mlir.global private constant @s0(
+// CHECK-SAME:    dense<
+
+// CHECK-LABEL: llvm.mlir.global private constant @s1(
+// CHECK-SAME:    dense<
+
+// CHECK-LABEL: llvm.mlir.global external @ptr2d
+// CHECK:       llvm.insertvalue

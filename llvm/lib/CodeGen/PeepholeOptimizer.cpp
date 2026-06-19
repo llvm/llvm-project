@@ -968,8 +968,13 @@ bool PeepholeOptimizer::optimizeCmpInstr(
   if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
     MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
     MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    // No store between LoadMI and FlagProducer that could change the value.
     if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
-        LoadMI->mayLoad() && LocalMIs.count(LoadMI))
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
+        llvm::none_of(
+            make_range(std::next(LoadMI->getIterator()),
+                       FlagProducer->getIterator()),
+            [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
       foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
@@ -1813,14 +1818,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             }
           } else if (MO.isRegMask()) {
             const uint32_t *RegMask = MO.getRegMask();
-            for (auto &RegMI : NAPhysToVirtMIs) {
-              Register Def = RegMI.first;
-              if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
-                LLVM_DEBUG(dbgs()
-                           << "NAPhysCopy: invalidating because of " << *MI);
-                NAPhysToVirtMIs.erase(Def);
-              }
-            }
+            NAPhysToVirtMIs.remove_if([&](const auto &RegMI) {
+              if (!MachineOperand::clobbersPhysReg(RegMask, RegMI.first))
+                return false;
+              LLVM_DEBUG(dbgs()
+                         << "NAPhysCopy: invalidating because of " << *MI);
+              return true;
+            });
           }
         }
       }

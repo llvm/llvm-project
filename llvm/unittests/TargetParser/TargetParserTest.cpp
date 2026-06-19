@@ -1112,6 +1112,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("neoverse-v2", "armv9-a"),
                       AArch64CPUTestParams("neoverse-v3", "armv9.2-a"),
                       AArch64CPUTestParams("neoverse-v3ae", "armv9.2-a"),
+                      AArch64CPUTestParams("armagicpu", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-r82", "armv8-r"),
                       AArch64CPUTestParams("cortex-r82ae", "armv8-r"),
                       AArch64CPUTestParams("cortex-x1", "armv8.2-a"),
@@ -1170,6 +1171,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt83", "armv8-a"),
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
+                      AArch64CPUTestParams("hip12", "armv8.7-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
@@ -1271,7 +1273,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 98;
+static constexpr unsigned NumAArch64CPUArchs = 100;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

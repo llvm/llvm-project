@@ -6,11 +6,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @A = common global [100 x [100 x i32]] zeroinitializer
 
 declare void @foo(i64 %a)
-declare void @bar(i64 %a) readnone
+declare void @bar(i64 %a) nounwind willreturn readnone
 
 ;;--------------------------------------Test case 02------------------------------------
-;; Safe to interchange, because the called function `bar` is marked as readnone,
-;; so it cannot introduce dependences.
+;; Safe to interchange, because the called function `bar` is marked as
+;; nounwind, willreturn, and readnone, so it cannot introduce dependences and
+;; UB.
 ;;
 ;;  for(int i=0;i<100;i++) {
 ;;    for(int j=1;j<100;j++) {
@@ -18,6 +19,9 @@ declare void @bar(i64 %a) readnone
 ;;      A[j][i] = A[j][i]+k;
 ;;    }
 ;; }
+;;
+;; TODO: This test case is redundant because there is a similar test case in
+;; function-attr.ll, and that file tests function attributes more exhaustively.
 ;
 define void @interchange_02(i32 %k) {
 ; CHECK-LABEL: define void @interchange_02(

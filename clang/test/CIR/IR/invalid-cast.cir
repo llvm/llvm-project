@@ -3,7 +3,7 @@
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+!rec_Foo = !cir.struct<"Foo" {!s32i}>
 
 module {
   cir.func no_inline dso_local @_Z7to_boolM3Fooi(%arg0: !cir.data_member<!s32i in !rec_Foo>) -> !s32i {
@@ -16,12 +16,24 @@ module {
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+!rec_Foo = !cir.struct<"Foo" {!s32i}>
 
 module {
   cir.func no_inline dso_local @_Z7to_boolM3Fooi(%arg0: !s32i) -> !cir.bool {
     // expected-error@+1 {{requires !cir.data_member or !cir.method type for source}}
     %0 = cir.cast member_ptr_to_bool %arg0 : !s32i -> !cir.bool
     cir.return %0 : !cir.bool
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+
+module {
+  cir.func @int_to_float(%in: !cir.vector<8 x !s8i>) {
+    // expected-error@+1 {{vector float-to-int and int-to-float casts require source and destination vectors to have the same number of elements}}
+    cir.cast int_to_float %in : !cir.vector<8 x !s8i> -> !cir.vector<2 x !cir.float>
+    cir.return
   }
 }

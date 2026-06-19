@@ -1,0 +1,38 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "BuilderHeaders",
+    hdrs = glob([
+        "*.h",
+        "Runtime/*.h",
+        "Runtime/CUDA/*.h",
+    ]),
+    strip_include_prefix = "/flang/include",
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
+        "//flang/include/flang/Optimizer/Dialect/MIF:MIFHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//mlir:IR",
+        "//mlir:OpenMPDialect",
+    ],
+)

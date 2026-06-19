@@ -23,15 +23,15 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FIXEDABI-NEXT:    s_mov_b64 exec, s[18:19]
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s16, 2
-; FIXEDABI-NEXT:    s_addk_i32 s32, 0x400
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s30, 0
+; FIXEDABI-NEXT:    s_addk_i32 s32, 0x400
+; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_getpc_b64 s[16:17]
 ; FIXEDABI-NEXT:    s_add_u32 s16, s16, requires_all_inputs@rel32@lo+4
 ; FIXEDABI-NEXT:    s_addc_u32 s17, s17, requires_all_inputs@rel32@hi+12
-; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; FIXEDABI-NEXT:    v_readlane_b32 s31, v40, 1
 ; FIXEDABI-NEXT:    v_readlane_b32 s30, v40, 0
+; FIXEDABI-NEXT:    v_readlane_b32 s31, v40, 1
 ; FIXEDABI-NEXT:    s_mov_b32 s32, s33
 ; FIXEDABI-NEXT:    v_readlane_b32 s4, v40, 2
 ; FIXEDABI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -416,5 +416,5 @@ declare i1 @llvm.amdgcn.is.private(ptr)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" nounwind }
 

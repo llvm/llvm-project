@@ -384,6 +384,8 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
 template <typename ListOfBBs, typename DominanceAnalysis>
 static MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
                                    DominanceAnalysis &Dom, bool Strict = true) {
+  if (BBs.begin() == BBs.end())
+    return Strict ? nullptr : &Block;
   MachineBasicBlock *IDom = Dom.findNearestCommonDominator(iterator_range(BBs));
   if (Strict && IDom == &Block)
     return nullptr;

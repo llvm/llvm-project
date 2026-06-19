@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 import os
 
 
-@skipIfWindows
+@skipIfWindowsAndNoLLDBServer
 class TestDelayedBreakpoint(TestBase):
     def test(self):
         self.build()

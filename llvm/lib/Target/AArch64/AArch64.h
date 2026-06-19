@@ -16,18 +16,20 @@
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
 #include <map>
 #include <memory>
-#include <unordered_map>
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
+struct AArch64PostLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerLoweringImplRuleConfig;
 
 namespace llvm {
@@ -105,6 +107,24 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64PostLegalizerCombinerPass
+    : public PassInfoMixin<AArch64PostLegalizerCombinerPass> {
+  std::unique_ptr<AArch64PostLegalizerCombinerImplRuleConfig> RuleConfig;
+  const AArch64TargetMachine *TM;
+
+public:
+  AArch64PostLegalizerCombinerPass(const AArch64TargetMachine *TM);
+  AArch64PostLegalizerCombinerPass(AArch64PostLegalizerCombinerPass &&);
+  ~AArch64PostLegalizerCombinerPass();
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::Legalized);
+  }
+};
+
 class AArch64PostSelectOptimizePass
     : public OptionalPassInfoMixin<AArch64PostSelectOptimizePass> {
 public:
@@ -132,7 +152,7 @@ public:
 
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
-FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
+FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
 FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
@@ -160,7 +180,7 @@ void initializeAArch64CodeLayoutOptPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostCoalescerLegacyPass(PassRegistry &);
-void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
+void initializeAArch64PostLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizeLegacyPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringLegacyPass(PassRegistry &);
 void initializeAArch64PreLegalizerCombinerLegacyPass(PassRegistry &);
@@ -245,6 +265,12 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+// SelectionDAGISelPass is already a NewPM interface.
+class AArch64DAGToDAGISelPass : public SelectionDAGISelPass {
+public:
+  AArch64DAGToDAGISelPass(AArch64TargetMachine &TM);
+};
+
 class AArch64DeadRegisterDefinitionsPass
     : public OptionalPassInfoMixin<AArch64DeadRegisterDefinitionsPass> {
 public:
@@ -276,7 +302,7 @@ public:
 class AArch64SIMDInstrOptPass
     : public OptionalPassInfoMixin<AArch64SIMDInstrOptPass> {
   std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-  std::unordered_map<std::string, bool> InterlEarlyExit;
+  StringMap<bool> InterlEarlyExit;
 
 public:
   PreservedAnalyses run(MachineFunction &MF,

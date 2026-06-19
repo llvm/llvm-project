@@ -122,3 +122,25 @@ for expensive non-foldable constants. However, this can lead to unnecessary
 spills and reloads in an -O0 pipeline, as these virtual registers can have long
 live ranges. This can be mitigated by running a `localizer <https://github.com/llvm/llvm-project/blob/main/llvm/lib/CodeGen/GlobalISel/Localizer.cpp>`_
 after the translator.
+
+.. _irtranslator-byte-type:
+
+Translation of the Byte Type
+----------------------------
+
+The :ref:`byte type <t_byte>` (``bN``) has no distinct GMIR representation and
+is translated as the ``LLT::integer(N)``. This mirrors the
+SelectionDAG behaviour, where ``bN`` maps to the same ``EVT`` as ``iN``.
+
+* ``getLLTForType`` lowers ``ByteType`` to ``LLT::integer(N)``.
+* ``ConstantByte`` is materialised via ``G_CONSTANT`` using the underlying
+  ``APInt``, the same path as ``ConstantInt``.
+* A ``bitcast`` between a byte type and a pointer (the only ptr/non-ptr
+  ``bitcast`` IR permits with byte) is lowered to ``G_INTTOPTR`` or
+  ``G_PTRTOINT`` rather than ``G_BITCAST``, since ``G_BITCAST`` cannot cross
+  the pointer/non-pointer boundary under ``MachineVerifier``.
+
+The mid-end semantics of the byte type (per-bit poison, conditional pointer
+provenance preservation) are not representable in MIR and are not consumed by
+any backend pass; they are lost at the IR-to-MIR boundary.
+

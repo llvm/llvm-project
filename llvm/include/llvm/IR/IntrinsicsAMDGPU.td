@@ -3216,10 +3216,22 @@ def int_amdgcn_wave_id :
 
 def int_amdgcn_s_prefetch_data :
   Intrinsic<[],
-  [llvm_anyptr_ty, // Pointer to a constant/global memory
-   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
-    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
-    "", [SDNPMemOperand]
+    [llvm_anyptr_ty, // Pointer to a constant/global memory
+     llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_s_prefetch_inst :
+  Intrinsic<[],
+    [llvm_anyptr_ty, // Pointer to instruction memory
+     llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
   >;
 
 // llvm.amdgcn.ds.bpermute.fi.b32 <index> <src>
@@ -3230,20 +3242,22 @@ def int_amdgcn_ds_bpermute_fi_b32 :
 
 def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
   Intrinsic<[],
-  [llvm_ptr_ty,    // Pointer
-   llvm_i32_ty],   // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+    [llvm_ptr_ty,  // Pointer
+     llvm_i32_ty], // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
      IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
-    "", [SDNPMemOperand]
+    "",
+    [SDNPMemOperand]
   >;
 
 def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch">,
   Intrinsic<[],
-  [LLVMQualPointerType<1>,    // Pointer
-   llvm_i32_ty],              // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+    [LLVMQualPointerType<1>, // Pointer
+     llvm_i32_ty],           // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
      IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
-    "", [SDNPMemOperand]
+    "",
+    [SDNPMemOperand]
   >;
 
 //===----------------------------------------------------------------------===//
@@ -4040,8 +4054,11 @@ class AMDGPUWmmaIntrinsicModsAll<LLVMType AB, LLVMType CD> :
       LLVMMatchType<1>, // %B
       llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
       LLVMMatchType<0>,               // %C
+      llvm_i1_ty,        // matrix_a_reuse
+      llvm_i1_ty,        // matrix_b_reuse
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+     ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 // D and C are of different types.
@@ -4121,6 +4138,7 @@ class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
+def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;

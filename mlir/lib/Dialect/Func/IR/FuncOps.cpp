@@ -299,7 +299,7 @@ LogicalResult FuncOp::verifyRegions() {
     if (!returnOp)
       continue;
     auto operands =
-        returnOp.getMutableSuccessorOperands(RegionSuccessor::parent());
+        returnOp.getMutableSuccessorOperands(RegionSuccessor(getOperation()));
     if (operands.size() != resultTypes.size())
       return returnOp->emitOpError("has ")
              << operands.size() << " operands, but enclosing function (@"

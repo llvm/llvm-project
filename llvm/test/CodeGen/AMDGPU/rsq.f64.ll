@@ -2,15 +2,15 @@
 
 ; Test amdgpu-codegenprepare implementation of rsq formation
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-IR,SI-SDAG,SI-SDAG-IR %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-IR,SI-GISEL,SI-GISEL-IR %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-IR,SI-GISEL,SI-GISEL-IR %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-IR,VI-SDAG,VI-SDAG-IR %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-IR,VI-GISEL,VI-GISEL-IR %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-IR,VI-GISEL,VI-GISEL-IR %s
 
 ; Test codegen implementation.
 ; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-CG,SI-SDAG,SI-SDAG-CG %s
-; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-CG,SI-GISEL,SI-GISEL-CG %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-CG,SI-GISEL,SI-GISEL-CG %s
 ; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-CG,VI-SDAG,VI-SDAG-CG %s
-; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-CG,VI-GISEL,VI-GISEL-CG %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-CG,VI-GISEL,VI-GISEL-CG %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.readfirstlane(i32)
@@ -45,14 +45,14 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
 ; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v2
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s1
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-IR-NEXT:    s_or_b64 s[4:5], vcc, vcc
+; SI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
 ; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
 ; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
@@ -85,13 +85,13 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
 ; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v2
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s1
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; VI-GISEL-IR-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
@@ -149,15 +149,21 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-GISEL-CG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0x260
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
 ; SI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v10, 0x3ff00000
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 0xffffff80, 0
+; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
@@ -165,25 +171,31 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v8, vcc
-; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[8:9], s[0:1], 1.0, v[0:1], 1.0
-; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v3
-; SI-GISEL-CG-NEXT:    s_xor_b64 vcc, vcc, s[0:1]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
-; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], v[2:3], s2
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], 1.0, s[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v5
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v1
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s3, 0x3ff00000
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s1, s2
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_xor_b32 s2, s3, s2
+; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; SI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], 1.0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -233,10 +245,16 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-GISEL-CG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -246,24 +264,27 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v5, 0x260
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v5
-; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
-; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[6:7], vcc, 1.0, v[0:1], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; VI-GISEL-CG-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
-; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
-; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
+; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v2
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v3
+; VI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], 1.0
+; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], 1.0, s[0:1], 1.0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; VI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], 1.0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -303,21 +324,25 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ;
 ; SI-GISEL-IR-LABEL: s_rsq_f64_fabs:
 ; SI-GISEL-IR:       ; %bb.0:
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e64 v[0:1], |s[0:1]|
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
-; SI-GISEL-IR-NEXT:    s_and_b32 s2, s1, 0x7fffffff
-; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 vcc, |s[0:1]|, v2
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s2
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v0, s0
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e64 v[2:3], |s[0:1]|
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v0, 0x260
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v1, s1
+; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 s[0:1], |s[0:1]|, v0
+; SI-GISEL-IR-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s4, v2
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s5, v3
+; SI-GISEL-IR-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; SI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[4:5], s[2:3]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], s[0:1], -v[2:3]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], v[2:3]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], v[2:3]
 ; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-IR-NEXT:    ; return to shader part epilog
@@ -347,15 +372,19 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    v_rsq_f64_e64 v[0:1], |s[0:1]|
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
-; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 vcc, |s[0:1]|, v2
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; VI-GISEL-IR-NEXT:    s_and_b32 s0, s1, 0x7fffffff
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s0
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
+; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 s[2:3], |s[0:1]|, v2
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s1
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, s0
+; VI-GISEL-IR-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s0, v2
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s1, v3
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; VI-GISEL-IR-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
@@ -410,16 +439,22 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; SI-GISEL-CG:       ; %bb.0:
 ; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
-; SI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 vcc, |s[0:1]|, v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 s[2:3], |s[0:1]|, v[0:1]
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0x260
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], |s[0:1]|, v0
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
 ; SI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v10, 0x3ff00000
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 0xffffff80, 0
+; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
@@ -427,25 +462,31 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v8, vcc
-; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[8:9], s[0:1], 1.0, v[0:1], 1.0
-; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v3
-; SI-GISEL-CG-NEXT:    s_xor_b64 vcc, vcc, s[0:1]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
-; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], v[2:3], s2
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], 1.0, s[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v5
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v1
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s3, 0x3ff00000
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s1, s2
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_xor_b32 s2, s3, s2
+; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; SI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], 1.0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -492,11 +533,17 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; VI-GISEL-CG:       ; %bb.0:
 ; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
-; VI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 vcc, |s[0:1]|, v[0:1]
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 s[2:3], |s[0:1]|, v[0:1]
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], |s[0:1]|, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -506,24 +553,27 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v5, 0x260
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v5
-; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
-; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[6:7], vcc, 1.0, v[0:1], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; VI-GISEL-CG-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
-; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
-; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
+; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v2
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v3
+; VI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], 1.0
+; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], 1.0, s[0:1], 1.0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; VI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], 1.0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -566,14 +616,14 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
 ; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v2
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s1
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-IR-NEXT:    s_or_b64 s[4:5], vcc, vcc
+; SI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
 ; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], -v[0:1]
@@ -606,13 +656,13 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
 ; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v2
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s1
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; VI-GISEL-IR-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
@@ -670,15 +720,21 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-GISEL-CG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0x260
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
 ; SI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v10, 0xbff00000
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 0xffffff80, 0
+; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
@@ -686,25 +742,31 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v8, vcc
-; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], -1.0
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[8:9], s[0:1], -1.0, v[0:1], -1.0
-; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v3
-; SI-GISEL-CG-NEXT:    s_xor_b64 vcc, vcc, s[0:1]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
-; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], -1.0
+; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], v[2:3], s2
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], -1.0
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], -1.0, s[0:1], -1.0
+; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v5
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v1
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s3, 0xbff00000
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s1, s2
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_xor_b32 s2, s3, s2
+; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; SI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], -1.0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -754,10 +816,16 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-GISEL-CG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -767,24 +835,27 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v5, 0x260
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v5
-; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], -1.0
-; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[6:7], vcc, -1.0, v[0:1], -1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; VI-GISEL-CG-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
-; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
-; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], -1.0
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
+; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v2
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v3
+; VI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], -1.0
+; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], -1.0, s[0:1], -1.0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; VI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], -1.0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -824,21 +895,25 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ;
 ; SI-GISEL-IR-LABEL: s_neg_rsq_neg_f64:
 ; SI-GISEL-IR:       ; %bb.0:
-; SI-GISEL-IR-NEXT:    v_rsq_f64_e64 v[0:1], -s[0:1]
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
-; SI-GISEL-IR-NEXT:    s_xor_b32 s2, s1, 0x80000000
-; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 vcc, -s[0:1], v2
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s2
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v0, s0
+; SI-GISEL-IR-NEXT:    v_rsq_f64_e64 v[2:3], -s[0:1]
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v0, 0x260
+; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v1, s1
+; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 s[0:1], -s[0:1], v0
+; SI-GISEL-IR-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s4, v2
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s5, v3
+; SI-GISEL-IR-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; SI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[4:5], s[2:3]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[0:1], s[0:1], -v[2:3]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], -v[0:1]
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], -v[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[0:1], -v[2:3]
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], 0.5
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[0:1], -v[2:3]
 ; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-IR-NEXT:    ; return to shader part epilog
@@ -868,15 +943,19 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; VI-GISEL-IR:       ; %bb.0:
 ; VI-GISEL-IR-NEXT:    v_rsq_f64_e64 v[0:1], -s[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
-; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 vcc, -s[0:1], v2
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; VI-GISEL-IR-NEXT:    s_xor_b32 s0, s1, 0x80000000
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s0
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
+; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e64 s[2:3], -s[0:1], v2
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s1
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, s0
+; VI-GISEL-IR-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s0, v2
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s1, v3
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; VI-GISEL-IR-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
@@ -933,16 +1012,22 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; SI-GISEL-CG:       ; %bb.0:
 ; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
-; SI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 vcc, -s[0:1], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 s[2:3], -s[0:1], v[0:1]
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, 0x260
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], -s[0:1], v0
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
 ; SI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v10, 0xbff00000
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 0xffffff80, 0
+; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
@@ -950,25 +1035,31 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v8, vcc
-; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], -1.0
-; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[8:9], s[0:1], -1.0, v[0:1], -1.0
-; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
-; SI-GISEL-CG-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v3
-; SI-GISEL-CG-NEXT:    s_xor_b64 vcc, vcc, s[0:1]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
-; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], -1.0
+; SI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], v[2:3], s2
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], -1.0
+; SI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], -1.0, s[0:1], -1.0
+; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v5
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v1
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s3, 0xbff00000
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_eq_u32 s1, s2
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; SI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; SI-GISEL-CG-NEXT:    s_xor_b32 s2, s3, s2
+; SI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; SI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; SI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; SI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; SI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], -1.0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -1017,11 +1108,17 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; VI-GISEL-CG:       ; %bb.0:
 ; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-GISEL-CG-NEXT:    v_bfrev_b32_e32 v1, 8
-; VI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 vcc, -s[0:1], v[0:1]
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-GISEL-CG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-GISEL-CG-NEXT:    v_cmp_lt_f64_e64 s[2:3], -s[0:1], v[0:1]
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s3, 1, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s2, 1, 0
+; VI-GISEL-CG-NEXT:    s_lshl_b32 s3, s3, 8
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[0:1], -s[0:1], v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u32 s2, 0
+; VI-GISEL-CG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -1031,24 +1128,27 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v5, 0x260
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v5
-; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], -1.0
-; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[6:7], vcc, -1.0, v[0:1], -1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; VI-GISEL-CG-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
-; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
-; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], -1.0
+; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v4, 0x260
+; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
+; VI-GISEL-CG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v2
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v3
+; VI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[0:1], s[2:3], s[0:1], s[0:1], -1.0
+; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_div_scale_f64 v[4:5], s[2:3], -1.0, s[0:1], -1.0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-GISEL-CG-NEXT:    s_cselect_b64 vcc, exec, 0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[6:7], -v[0:1], v[2:3], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
+; VI-GISEL-CG-NEXT:    v_mul_f64 v[6:7], v[4:5], v[2:3]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[6:7], v[4:5]
+; VI-GISEL-CG-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[6:7]
+; VI-GISEL-CG-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[0:1], -1.0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -5275,14 +5375,14 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) {
 ; SI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
 ; SI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v2
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s1
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; SI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
-; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-IR-NEXT:    s_or_b64 s[4:5], vcc, vcc
+; SI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; SI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; SI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; SI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
 ; SI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
 ; SI-GISEL-IR-NEXT:    v_fma_f64 v[0:1], v[6:7], v[2:3], v[0:1]
@@ -5315,13 +5415,13 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) {
 ; VI-GISEL-IR-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v2, 0x260
 ; VI-GISEL-IR-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v2
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v3, s0
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, s1
-; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v2, v3, v0, vcc
-; VI-GISEL-IR-NEXT:    v_cndmask_b32_e32 v3, v4, v1, vcc
-; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], v[2:3], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v4, 0
+; VI-GISEL-IR-NEXT:    v_mov_b32_e32 v5, 0x3fd80000
+; VI-GISEL-IR-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-GISEL-IR-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-GISEL-IR-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
+; VI-GISEL-IR-NEXT:    v_mul_f64 v[2:3], s[0:1], -v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[0:1], 1.0
 ; VI-GISEL-IR-NEXT:    v_mul_f64 v[6:7], v[2:3], v[0:1]
 ; VI-GISEL-IR-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], 0.5
@@ -5360,22 +5460,22 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) {
 ; SI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v6, 0x260
 ; SI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v6
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v7, s0
+; SI-GISEL-CG-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], 0.5
 ; SI-GISEL-CG-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
-; SI-GISEL-CG-NEXT:    v_mov_b32_e32 v8, s1
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[2:3], v[0:1], 0.5
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[0:1]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[0:1], s[0:1]
 ; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; SI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v1, v8, vcc
-; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
-; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v0
+; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v1
+; SI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; SI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[0:1], s[0:1]
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -s[0:1], v[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -s[0:1], v[0:1], 1.0
+; SI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -5410,7 +5510,7 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v6, 0x260
 ; VI-GISEL-CG-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v6
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v7, s0
+; VI-GISEL-CG-NEXT:    s_cmp_lg_u64 vcc, 0
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[2:3], v[0:1], 0.5
 ; VI-GISEL-CG-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[2:3], v[0:1], 0.5
@@ -5418,14 +5518,14 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) {
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[0:1], s[0:1]
 ; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
-; VI-GISEL-CG-NEXT:    v_mov_b32_e32 v2, s1
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; VI-GISEL-CG-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
-; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s2, v0
+; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s3, v1
+; VI-GISEL-CG-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; VI-GISEL-CG-NEXT:    v_rcp_f64_e32 v[0:1], s[0:1]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -s[0:1], v[0:1], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[2:3], -s[0:1], v[0:1], 1.0
+; VI-GISEL-CG-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-CG-NEXT:    v_readfirstlane_b32 s1, v1
 ; VI-GISEL-CG-NEXT:    ; return to shader part epilog
@@ -5756,42 +5856,68 @@ define amdgpu_ps <2 x i32> @s_rsq_amdgcn_sqrt_f64(double inreg %x) {
 ; SI-GISEL-LABEL: s_rsq_amdgcn_sqrt_f64:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
-; SI-GISEL-NEXT:    v_mov_b32_e32 v10, 0x3ff00000
 ; SI-GISEL-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
-; SI-GISEL-NEXT:    v_div_scale_f64 v[8:9], s[0:1], 1.0, v[0:1], 1.0
+; SI-GISEL-NEXT:    v_div_scale_f64 v[6:7], s[0:1], 1.0, v[0:1], 1.0
+; SI-GISEL-NEXT:    v_readfirstlane_b32 s0, v1
 ; SI-GISEL-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; SI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v10
-; SI-GISEL-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v3
-; SI-GISEL-NEXT:    s_xor_b64 vcc, vcc, s[0:1]
-; SI-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; SI-GISEL-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; SI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; SI-GISEL-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
+; SI-GISEL-NEXT:    v_readfirstlane_b32 s2, v7
+; SI-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; SI-GISEL-NEXT:    s_cmp_eq_u32 s2, 0x3ff00000
+; SI-GISEL-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
+; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
+; SI-GISEL-NEXT:    s_cmp_eq_u32 s0, s1
+; SI-GISEL-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
+; SI-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; SI-GISEL-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
+; SI-GISEL-NEXT:    s_xor_b32 s0, s2, s0
+; SI-GISEL-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
+; SI-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; SI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
+; SI-GISEL-NEXT:    s_cselect_b64 vcc, exec, 0
+; SI-GISEL-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
 ; SI-GISEL-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
-; VI-LABEL: s_rsq_amdgcn_sqrt_f64:
-; VI:       ; %bb.0:
-; VI-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
-; VI-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
-; VI-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; VI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-NEXT:    v_div_scale_f64 v[6:7], vcc, 1.0, v[0:1], 1.0
-; VI-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
-; VI-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; VI-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
-; VI-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
-; VI-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
-; VI-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    v_readfirstlane_b32 s1, v1
-; VI-NEXT:    ; return to shader part epilog
+; VI-SDAG-LABEL: s_rsq_amdgcn_sqrt_f64:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
+; VI-SDAG-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
+; VI-SDAG-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
+; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
+; VI-SDAG-NEXT:    v_div_scale_f64 v[6:7], vcc, 1.0, v[0:1], 1.0
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
+; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
+; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
+; VI-SDAG-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
+; VI-SDAG-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
+; VI-SDAG-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
+; VI-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-SDAG-NEXT:    v_readfirstlane_b32 s1, v1
+; VI-SDAG-NEXT:    ; return to shader part epilog
+;
+; VI-GISEL-LABEL: s_rsq_amdgcn_sqrt_f64:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
+; VI-GISEL-NEXT:    v_div_scale_f64 v[2:3], s[0:1], v[0:1], v[0:1], 1.0
+; VI-GISEL-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
+; VI-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
+; VI-GISEL-NEXT:    v_div_scale_f64 v[6:7], s[0:1], 1.0, v[0:1], 1.0
+; VI-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; VI-GISEL-NEXT:    s_cselect_b64 vcc, exec, 0
+; VI-GISEL-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[4:5], 1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
+; VI-GISEL-NEXT:    v_mul_f64 v[8:9], v[6:7], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[8:9], v[6:7]
+; VI-GISEL-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[8:9]
+; VI-GISEL-NEXT:    v_div_fixup_f64 v[0:1], v[2:3], v[0:1], 1.0
+; VI-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; VI-GISEL-NEXT:    ; return to shader part epilog
   %rsq = call contract double @llvm.amdgcn.sqrt.f64(double %x)
   %result = fdiv contract double 1.0, %rsq
   %cast = bitcast double %result to <2 x i32>

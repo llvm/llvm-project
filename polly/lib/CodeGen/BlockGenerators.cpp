@@ -388,10 +388,7 @@ void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
     if (!isInstructionTriviallyDead(NewInst))
       continue;
 
-    for (auto Pair : BBMap)
-      if (Pair.second == NewInst) {
-        BBMap.erase(Pair.first);
-      }
+    BBMap.remove_if([&](const auto &Pair) { return Pair.second == NewInst; });
 
     NewInst->eraseFromParent();
     I = NewBB->rbegin();

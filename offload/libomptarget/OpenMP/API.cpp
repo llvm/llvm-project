@@ -477,26 +477,23 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
     ODBG(ODT_Interface) << "filling memory on host via memset";
     memset(Ptr, ByteVal, NumBytes); // ignore return value, memset() cannot fail
   } else {
-    // TODO: replace the omp_target_memset() slow path with the fast path.
-    // That will require the ability to execute a kernel from within
-    // libomptarget.so (which we do not have at the moment).
+    OMPT_IF_BUILT(InterfaceRAII TargetMemsetRAII(
+        RegionInterface.getCallbacks<ompt_target_data_memset>(), DeviceNum,
+        nullptr, const_cast<void *>(Ptr), NumBytes,
+        __builtin_return_address(0)));
 
-    // This is a very slow path: create a filled array on the host and upload
-    // it to the GPU device.
-    int InitialDevice = omp_get_initial_device();
-    void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
-    if (Shadow) {
-      (void)memset(Shadow, ByteVal, NumBytes);
-      (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
-                              InitialDevice);
-      (void)omp_target_free(Shadow, InitialDevice);
-    } else {
-      // If the omp_target_alloc has failed, let's just not do anything.
-      // omp_target_memset does not have any good way to fail, so we
-      // simply avoid a catastrophic failure of the process for now.
+    auto DeviceOrErr = PM->getDevice(DeviceNum);
+    if (!DeviceOrErr)
+      FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+    AsyncInfoTy AsyncInfo(*DeviceOrErr);
+    if (auto Error = DeviceOrErr->RTL->getDevice(DeviceOrErr->RTLDeviceID)
+                         .dataFill(Ptr, &ByteVal, 1, NumBytes, AsyncInfo)) {
       ODBG(ODT_Interface)
-          << __func__
-          << " failed to fill memory due to error with omp_target_alloc";
+          << __func__ << " failed to fill memory due to error with dataFill";
+      // If the dataFill failed, let's just not do anything.
+      // omp_target_memset does not have any good way to fail.
+      // Depending on the RTL implementation, the application will
+      // abort anyway.
     }
   }
 

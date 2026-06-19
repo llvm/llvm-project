@@ -35,9 +35,9 @@ define i64 @sink_to_early_exit(i64 %offset) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX4]]
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 16 x i8>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD]], [[WIDE_LOAD5]]
-; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 16 x i1> [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP9]])
+; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]

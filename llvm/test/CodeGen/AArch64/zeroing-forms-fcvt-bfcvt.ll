@@ -386,8 +386,7 @@ define <vscale x 8 x half> @test_svcvt_f16_f32_ptrue_u(double %z0, <vscale x 4 x
 ; CHECK-2p2-NEXT:    fcvt z0.h, p0/z, z1.s
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> poison, <vscale x 4 x i1> %pg, <vscale x 4 x float> %x)
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> poison, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> %x)
   ret <vscale x 8 x half> %0
 }
 
@@ -405,8 +404,7 @@ define <vscale x 8 x half> @test_svcvt_f16_f32_ptrue(double %z0, <vscale x 8 x h
 ; CHECK-2p2-NEXT:    fcvt z0.h, p0/z, z2.s
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> %x, <vscale x 4 x i1> %pg, <vscale x 4 x float> %y)
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> %x, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> %y)
   ret <vscale x 8 x half> %0
 }
 
@@ -423,8 +421,7 @@ define <vscale x 8 x bfloat> @test_svcvt_bf16_f32_ptrue_u(double %z0, <vscale x 
 ; CHECK-2p2-NEXT:    bfcvt z0.h, p0/z, z1.s
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32.v2(<vscale x 8 x bfloat> poison, <vscale x 4 x i1> %pg, <vscale x 4 x float> %x)
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32.v2(<vscale x 8 x bfloat> poison, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> %x)
   ret <vscale x 8 x bfloat> %0
 }
 
@@ -442,8 +439,7 @@ define <vscale x 8 x bfloat> @test_svcvt_bf16_f32_ptrue(double %z0, <vscale x 8 
 ; CHECK-2p2-NEXT:    bfcvt z0.h, p0/z, z2.s
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32.v2(<vscale x 8 x bfloat> %x, <vscale x 4 x i1> %pg, <vscale x 4 x float> %y)
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32.v2(<vscale x 8 x bfloat> %x, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> %y)
   ret <vscale x 8 x bfloat> %0
 }
 
@@ -460,8 +456,7 @@ define <vscale x 8 x half> @test_svcvt_f16_f64_ptrue_u(double %z0, <vscale x 2 x
 ; CHECK-2p2-NEXT:    fcvt z0.h, p0/z, z1.d
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f64(<vscale x 8 x half> poison, <vscale x 2 x i1> %pg, <vscale x 2 x double> %x)
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f64(<vscale x 8 x half> poison, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %x)
   ret <vscale x 8 x half> %0
 }
 
@@ -479,8 +474,7 @@ define <vscale x 8 x half> @test_svcvt_f16_f64_ptrue(double %z0, <vscale x 8 x h
 ; CHECK-2p2-NEXT:    fcvt z0.h, p0/z, z2.d
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f64(<vscale x 8 x half> %x, <vscale x 2 x i1> %pg, <vscale x 2 x double> %y)
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f64(<vscale x 8 x half> %x, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %y)
   ret <vscale x 8 x half> %0
 }
 
@@ -497,8 +491,7 @@ define <vscale x 4 x float> @test_svcvt_f32_f64_ptrue_u(double %z0, <vscale x 2 
 ; CHECK-2p2-NEXT:    fcvt z0.s, p0/z, z1.d
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f64(<vscale x 4 x float> poison, <vscale x 2 x i1> %pg, <vscale x 2 x double> %x)
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f64(<vscale x 4 x float> poison, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %x)
   ret <vscale x 4 x float> %0
 }
 
@@ -516,8 +509,7 @@ define <vscale x 4 x float> @test_svcvt_f32_f64_ptrue(double %z0, <vscale x 4 x 
 ; CHECK-2p2-NEXT:    fcvt z0.s, p0/z, z2.d
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f64(<vscale x 4 x float> %x, <vscale x 2 x i1> %pg, <vscale x 2 x double> %y)
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f64(<vscale x 4 x float> %x, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %y)
   ret <vscale x 4 x float> %0
 }
 
@@ -534,8 +526,7 @@ define <vscale x 4 x float> @test_svcvt_f32_f16_ptrue_u(double %z0, <vscale x 8 
 ; CHECK-2p2-NEXT:    fcvt z0.s, p0/z, z1.h
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f16(<vscale x 4 x float> poison, <vscale x 4 x i1> %pg, <vscale x 8 x half> %x)
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f16(<vscale x 4 x float> poison, <vscale x 4 x i1> splat (i1 true), <vscale x 8 x half> %x)
   ret <vscale x 4 x float> %0
 }
 
@@ -553,8 +544,7 @@ define <vscale x 4 x float> @test_svcvt_f32_f16_ptrue(double %z0, <vscale x 4 x 
 ; CHECK-2p2-NEXT:    fcvt z0.s, p0/z, z2.h
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f16(<vscale x 4 x float> %x, <vscale x 4 x i1> %pg, <vscale x 8 x half> %y)
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvt.f32f16(<vscale x 4 x float> %x, <vscale x 4 x i1> splat (i1 true), <vscale x 8 x half> %y)
   ret <vscale x 4 x float> %0
 }
 
@@ -571,8 +561,7 @@ define <vscale x 2 x double> @test_svcvt_f64_f16_ptrue_u(double %z0, <vscale x 8
 ; CHECK-2p2-NEXT:    fcvt z0.d, p0/z, z1.h
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f16(<vscale x 2 x double> poison, <vscale x 2 x i1> %pg, <vscale x 8 x half> %x)
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f16(<vscale x 2 x double> poison, <vscale x 2 x i1> splat (i1 true), <vscale x 8 x half> %x)
   ret <vscale x 2 x double> %0
 }
 
@@ -590,8 +579,7 @@ define <vscale x 2 x double> @test_svcvt_f64_f16_ptrue(double %z0, <vscale x 2 x
 ; CHECK-2p2-NEXT:    fcvt z0.d, p0/z, z2.h
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f16(<vscale x 2 x double> %x, <vscale x 2 x i1> %pg, <vscale x 8 x half> %y)
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f16(<vscale x 2 x double> %x, <vscale x 2 x i1> splat (i1 true), <vscale x 8 x half> %y)
   ret <vscale x 2 x double> %0
 }
 
@@ -608,8 +596,7 @@ define <vscale x 2 x double> @test_svcvt_f64_f32_ptrue_u(double %z0, <vscale x 4
 ; CHECK-2p2-NEXT:    fcvt z0.d, p0/z, z1.s
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f32(<vscale x 2 x double> poison, <vscale x 2 x i1> %pg, <vscale x 4 x float> %x)
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f32(<vscale x 2 x double> poison, <vscale x 2 x i1> splat (i1 true), <vscale x 4 x float> %x)
   ret <vscale x 2 x double> %0
 }
 
@@ -627,7 +614,6 @@ define <vscale x 2 x double> @test_svcvt_f64_f32_ptrue(double %z0, <vscale x 2 x
 ; CHECK-2p2-NEXT:    fcvt z0.d, p0/z, z2.s
 ; CHECK-2p2-NEXT:    ret
 entry:
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f32(<vscale x 2 x double> %x, <vscale x 2 x i1> %pg, <vscale x 4 x float> %y)
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvt.f64f32(<vscale x 2 x double> %x, <vscale x 2 x i1> splat (i1 true), <vscale x 4 x float> %y)
   ret <vscale x 2 x double> %0
 }

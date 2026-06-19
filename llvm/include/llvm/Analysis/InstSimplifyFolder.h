@@ -121,6 +121,12 @@ public:
   }
 
   Value *
+  FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                     FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifyUnaryIntrinsic(ID, Op, FMF, SQ);
+  }
+
+  Value *
   FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
                       FastMathFlags FMF = FastMathFlags()) const override {
     return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);

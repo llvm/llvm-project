@@ -11,7 +11,6 @@
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"

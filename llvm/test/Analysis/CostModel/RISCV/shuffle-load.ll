@@ -59,6 +59,10 @@ define void @shuffle() {
 ; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 1 for: %sv2f64 = shufflevector <2 x double> %lv2f64, <2 x double> poison, <2 x i32> zeroinitializer
 ; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:2 for: %lv4f64 = load <4 x double>, ptr poison, align 32
 ; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %sv4f64 = shufflevector <4 x double> %lv4f64, <4 x double> poison, <4 x i32> zeroinitializer
+; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 4 for: %lv2fp128 = load <2 x fp128>, ptr poison, align 32
+; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of Invalid for: %sv2fp128 = shufflevector <2 x fp128> %lv2fp128, <2 x fp128> poison, <2 x i32> zeroinitializer
+; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 4 for: %lv2i128 = load <2 x i128>, ptr poison, align 32
+; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of Invalid for: %sv2i128 = shufflevector <2 x i128> %lv2i128, <2 x i128> poison, <2 x i32> zeroinitializer
 ; NO-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-LABEL: 'shuffle'
@@ -106,6 +110,10 @@ define void @shuffle() {
 ; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 0 for: %sv2f64 = shufflevector <2 x double> %lv2f64, <2 x double> poison, <2 x i32> zeroinitializer
 ; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:2 for: %lv4f64 = load <4 x double>, ptr poison, align 32
 ; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 0 for: %sv4f64 = shufflevector <4 x double> %lv4f64, <4 x double> poison, <4 x i32> zeroinitializer
+; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 4 for: %lv2fp128 = load <2 x fp128>, ptr poison, align 32
+; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of Invalid for: %sv2fp128 = shufflevector <2 x fp128> %lv2fp128, <2 x fp128> poison, <2 x i32> zeroinitializer
+; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of 4 for: %lv2i128 = load <2 x i128>, ptr poison, align 32
+; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of Invalid for: %sv2i128 = shufflevector <2 x i128> %lv2i128, <2 x i128> poison, <2 x i32> zeroinitializer
 ; HAS-OPTIMIZED-ZERO-STRIDE-LOAD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %lv2i8 = load <2 x i8>, ptr poison
@@ -158,6 +166,11 @@ define void @shuffle() {
   %sv2f64 = shufflevector <2 x double> %lv2f64, <2 x double> poison, <2 x i32> zeroinitializer
   %lv4f64 = load <4 x double>, ptr poison
   %sv4f64 = shufflevector <4 x double> %lv4f64, <4 x double> poison, <4 x i32> zeroinitializer
+
+  %lv2fp128 = load <2 x fp128>, ptr poison
+  %sv2fp128 = shufflevector <2 x fp128> %lv2fp128, <2 x fp128> poison, <2 x i32> zeroinitializer
+  %lv2i128 = load <2 x i128>, ptr poison
+  %sv2i128 = shufflevector <2 x i128> %lv2i128, <2 x i128> poison, <2 x i32> zeroinitializer
 
   ret void
 }

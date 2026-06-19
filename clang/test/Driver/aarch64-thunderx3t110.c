@@ -4,8 +4,8 @@
 // RUN: %clang --target=aarch64 -mtune=thunderx3t110 -### -c %s 2>&1 | FileCheck -check-prefix=THUNDERX3T110-TUNE %s
 // RUN: %clang --target=aarch64 -mlittle-endian -mtune=thunderx3t110 -### -c %s 2>&1 | FileCheck -check-prefix=THUNDERX3T110-TUNE %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -mtune=thunderx3t110 -### -c %s 2>&1 | FileCheck -check-prefix=THUNDERX3T110-TUNE %s
-// THUNDERX3T110: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "thunderx3t110" "-target-feature" "+v8.3a"
-// THUNDERX3T110-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic"
+// THUNDERX3T110: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "thunderx3t110" "-target-feature" "+v8.3a"
+// THUNDERX3T110-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic"
 
 // RUN: %clang --target=arm64 -mcpu=thunderx3t110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-THUNDERX3T110 %s
 // RUN: %clang --target=arm64 -mlittle-endian -mcpu=thunderx3t110 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-THUNDERX3T110 %s

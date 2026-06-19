@@ -9,6 +9,7 @@
 #include "JSONFormatImpl.h"
 
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <set>
 
@@ -36,14 +37,46 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
         .build();
   }
 
-  const Object &RootObject = *RootObjectPtr;
+  if (auto Err = checkSummaryType(*RootObjectPtr, JSONTypeValueLUSummary)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
+        .build();
+  }
+
+  auto ExpectedEncoding = readLUSummaryEncodingFromObject(*RootObjectPtr);
+  if (!ExpectedEncoding) {
+    return ErrorBuilder::wrap(ExpectedEncoding.takeError())
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
+        .build();
+  }
+
+  return std::move(*ExpectedEncoding);
+}
+
+llvm::Expected<LUSummaryEncoding>
+JSONFormat::readLUSummaryEncodingFromObject(const Object &RootObject) {
+  auto OptTargetTriple = RootObject.getString("target_triple");
+  if (!OptTargetTriple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "TargetTriple", "target_triple", "string")
+        .build();
+  }
+
+  if (auto Err = validateNormalizedTargetTriple(*OptTargetTriple)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromField, "TargetTriple",
+                 "target_triple")
+        .build();
+  }
+
+  llvm::Triple T(*OptTargetTriple);
 
   const Array *LUNamespaceArray = RootObject.getArray("lu_namespace");
   if (!LUNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
                                 "NestedBuildNamespace", "lu_namespace", "array")
-        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
@@ -52,11 +85,10 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
     return ErrorBuilder::wrap(ExpectedLUNamespace.takeError())
         .context(ErrorMessages::ReadingFromField, "NestedBuildNamespace",
                  "lu_namespace")
-        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
         .build();
   }
 
-  LUSummaryEncoding Encoding(std::move(*ExpectedLUNamespace));
+  LUSummaryEncoding Encoding(std::move(T), std::move(*ExpectedLUNamespace));
 
   {
     const Array *IdTableArray = RootObject.getArray("id_table");
@@ -64,7 +96,6 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -72,7 +103,6 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -85,7 +115,6 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "LinkageTable", "linkage_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -102,7 +131,6 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
                    "linkage_table")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -115,7 +143,6 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "SummaryData entries", "data", "array")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -125,7 +152,6 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
       return ErrorBuilder::wrap(ExpectedEncodingSummaryDataMap.takeError())
           .context(ErrorMessages::ReadingFromField, "SummaryData entries",
                    "data")
-          .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
           .build();
     }
 
@@ -139,6 +165,11 @@ llvm::Error
 JSONFormat::writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                    llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject[JSONTypeKey] = JSONTypeValueLUSummary;
+
+  RootObject["target_triple"] =
+      llvm::Triple::normalize(getTargetTriple(SummaryEncoding).str());
 
   RootObject["lu_namespace"] =
       nestedBuildNamespaceToJSON(getLUNamespace(SummaryEncoding));

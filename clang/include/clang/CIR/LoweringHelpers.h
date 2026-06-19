@@ -35,7 +35,8 @@ convertToDenseElementsAttr(cir::ConstArrayAttr attr,
 
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter);
+                    const mlir::TypeConverter *converter,
+                    mlir::ModuleOp moduleOp = {});
 
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val);

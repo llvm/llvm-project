@@ -563,7 +563,7 @@ BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
   SmallVector<TypeRange> returnOperandTypes(llvm::map_range(
       op.getFunctionBody().getOps<RegionBranchTerminatorOpInterface>(),
       [&](RegionBranchTerminatorOpInterface branchOp) {
-        return branchOp.getSuccessorOperands(RegionSuccessor::parent())
+        return branchOp.getSuccessorOperands(RegionSuccessor(op.getOperation()))
             .getTypes();
       }));
   if (!llvm::all_equal(returnOperandTypes))
@@ -955,7 +955,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
   // which condition they are taken, etc.
 
   MutableOperandRange operands =
-      op.getMutableSuccessorOperands(RegionSuccessor::parent());
+      op.getMutableSuccessorOperands(RegionSuccessor(op->getParentOp()));
 
   SmallVector<Value> updatedOwnerships;
   auto result = deallocation_impl::insertDeallocOpForReturnLike(

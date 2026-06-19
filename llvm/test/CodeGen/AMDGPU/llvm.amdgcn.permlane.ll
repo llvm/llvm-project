@@ -8,6 +8,11 @@
 ; RUN: llc -global-isel=0 -amdgpu-load-store-vectorizer=0 -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GFX13,GFX13-SDAG %s
 ; RUN: llc -global-isel=1 -new-reg-bank-select -global-isel-abort=2 -amdgpu-load-store-vectorizer=0 -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GFX13,GFX13-GISEL %s
 
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: error: <unknown>:0:0: in function v_permlane16_b32_vss_i32 void (ptr addrspace(1), i32, i32, i32): intrinsic not supported on subtarget
+
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)
 declare i32 @llvm.amdgcn.workitem.id.x()

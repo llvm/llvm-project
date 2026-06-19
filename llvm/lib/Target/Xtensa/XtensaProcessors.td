@@ -25,3 +25,8 @@ def : Proc<"esp32", [FeatureDensity, FeatureSingleFloat, FeatureLoop, FeatureMAC
 def : Proc<"esp8266", [FeatureDensity, FeatureNSA, FeatureMul16, FeatureMul32, FeatureExtendedL32R, FeatureDebug, FeatureException,
                        FeatureHighPriInterrupts, FeatureHighPriInterruptsLevel3, FeatureInterrupt, FeatureRelocatableVector, FeatureTimers1,
 					   FeatureRegionProtection, FeaturePRID]>;
+
+def : Proc<"esp32s2", [FeatureDensity, FeatureWindowed, FeatureSEXT, FeatureNSA,  FeatureMul16, FeatureMul32, FeatureMul32High, FeatureTHREADPTR,
+                       FeatureDiv32, FeatureDataCache, FeatureDebug, FeatureException, FeatureHighPriInterrupts, FeatureHighPriInterruptsLevel7,
+                       FeatureCoprocessor, FeatureInterrupt, FeatureRelocatableVector,	FeatureTimers3, FeaturePRID, FeatureRegionProtection,
+                       FeatureMiscSR, FeatureMINMAX, FeatureCLAMPS, FeatureESP32S2Ops]>;

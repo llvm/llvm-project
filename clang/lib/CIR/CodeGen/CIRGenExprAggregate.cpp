@@ -627,9 +627,7 @@ public:
     emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
-  void VisitCXXThrowExpr(const CXXThrowExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
-  }
+  void VisitCXXThrowExpr(const CXXThrowExpr *e) { cgf.emitCXXThrowExpr(e); }
   void VisitAtomicExpr(AtomicExpr *e) {
     RValue result = cgf.emitAtomicExpr(e);
     emitFinalDestCopy(e->getType(), result);
@@ -1128,11 +1126,10 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
           AggValueSlot::IsNotAliased,
           cgf.getOverlapForBaseInit(cxxrd, baseRD, false));
       cgf.emitAggExpr(args[curInitIndex++], aggSlot);
-      if (base.getType().isDestructedType()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "push deferred deactivation cleanup");
-        return;
-      }
+
+      if (QualType::DestructionKind dtorKind =
+              base.getType().isDestructedType())
+        cgf.pushDestroyAndDeferDeactivation(dtorKind, address, base.getType());
     }
   }
 

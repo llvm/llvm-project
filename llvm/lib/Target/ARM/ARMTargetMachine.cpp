@@ -237,10 +237,6 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
                                        F.hasMinSize(), DM);
 
@@ -487,7 +483,7 @@ void ARMPassConfig::addPreSched2() {
       addPass(createARMLoadStoreOptLegacyPass());
 
     addPass(new ARMExecutionDomainFix());
-    addPass(createBreakFalseDeps());
+    addPass(createBreakFalseDepsLegacyPass());
   }
 
   // Expand some pseudo instructions into multiple instructions to allow

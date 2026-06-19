@@ -53,6 +53,31 @@ def : VectorExtractSubreg<v16i8, VLGVB>;
 def : VectorExtractSubreg<v8i16, VLGVH>;
 def : VectorExtractSubreg<v4i32, VLGVF>;
 
+// VLGVX extractions always zero extend to 64 bits, so no need for a
+// following zero extend.
+// i8/i16 -> i32.
+class VectorExtractZextSubreg<ValueType VecTy, Instruction insn,
+                              SDPatternOperator operator>
+  : Pat<(i32 (operator (i32 (z_vector_extract (VecTy VR128:$vec),
+                                              shift12only:$index)))),
+        (EXTRACT_SUBREG (insn VR128:$vec, shift12only:$index), subreg_l32)>;
+def : VectorExtractZextSubreg<v16i8, VLGVB, zext8>;
+def : VectorExtractZextSubreg<v8i16, VLGVH, zext16>;
+
+// i8/i16 -> i64.
+class VectorExtractZext<ValueType VecTy, Instruction insn,
+                        SDPatternOperator operator>
+  : Pat<(i64 (operator (anyext (i32 (z_vector_extract (VecTy VR128:$vec),
+                                                      shift12only:$index))))),
+        (insn VR128:$vec, shift12only:$index)>;
+def : VectorExtractZext<v16i8, VLGVB, zext8>;
+def : VectorExtractZext<v8i16, VLGVH, zext16>;
+
+// i32 -> i64.
+def : Pat<(i64 (zext (i32 (z_vector_extract (v4i32 VR128:$vec),
+                                            shift12only:$index)))),
+          (VLGVF VR128:$vec, shift12only:$index)>;
+
 //===----------------------------------------------------------------------===//
 // Immediate instructions
 //===----------------------------------------------------------------------===//

@@ -59,20 +59,20 @@ define half @fminimum_f16(half %a, half %b) nounwind {
 ;
 ; CHECKZFHMIN-LABEL: fminimum_f16:
 ; CHECKZFHMIN:       # %bb.0:
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa1
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKZFHMIN-NEXT:    fmv.s fa3, fa4
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKZFHMIN-NEXT:    fmv.s fa4, fa3
 ; CHECKZFHMIN-NEXT:    bnez a0, .LBB0_2
 ; CHECKZFHMIN-NEXT:  # %bb.1:
-; CHECKZFHMIN-NEXT:    fmv.s fa3, fa5
+; CHECKZFHMIN-NEXT:    fmv.s fa4, fa5
 ; CHECKZFHMIN-NEXT:  .LBB0_2:
-; CHECKZFHMIN-NEXT:    feq.s a0, fa4, fa4
+; CHECKZFHMIN-NEXT:    feq.s a0, fa3, fa3
 ; CHECKZFHMIN-NEXT:    bnez a0, .LBB0_4
 ; CHECKZFHMIN-NEXT:  # %bb.3:
-; CHECKZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKZFHMIN-NEXT:    fmv.s fa5, fa3
 ; CHECKZFHMIN-NEXT:  .LBB0_4:
-; CHECKZFHMIN-NEXT:    fmin.s fa5, fa5, fa3
+; CHECKZFHMIN-NEXT:    fmin.s fa5, fa5, fa4
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKZFHMIN-NEXT:    ret
   %1 = call half @llvm.minimum.f16(half %a, half %b)
@@ -120,20 +120,20 @@ define half @fmaximum_f16(half %a, half %b) nounwind {
 ;
 ; CHECKZFHMIN-LABEL: fmaximum_f16:
 ; CHECKZFHMIN:       # %bb.0:
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa1
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKZFHMIN-NEXT:    fmv.s fa3, fa4
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECKZFHMIN-NEXT:    fmv.s fa4, fa3
 ; CHECKZFHMIN-NEXT:    bnez a0, .LBB1_2
 ; CHECKZFHMIN-NEXT:  # %bb.1:
-; CHECKZFHMIN-NEXT:    fmv.s fa3, fa5
+; CHECKZFHMIN-NEXT:    fmv.s fa4, fa5
 ; CHECKZFHMIN-NEXT:  .LBB1_2:
-; CHECKZFHMIN-NEXT:    feq.s a0, fa4, fa4
+; CHECKZFHMIN-NEXT:    feq.s a0, fa3, fa3
 ; CHECKZFHMIN-NEXT:    bnez a0, .LBB1_4
 ; CHECKZFHMIN-NEXT:  # %bb.3:
-; CHECKZFHMIN-NEXT:    fmv.s fa5, fa4
+; CHECKZFHMIN-NEXT:    fmv.s fa5, fa3
 ; CHECKZFHMIN-NEXT:  .LBB1_4:
-; CHECKZFHMIN-NEXT:    fmax.s fa5, fa5, fa3
+; CHECKZFHMIN-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKZFHMIN-NEXT:    ret
   %1 = call half @llvm.maximum.f16(half %a, half %b)
@@ -271,13 +271,13 @@ define half @fmaximum_nnan_op_f16(half %a, half %b) nounwind {
 ; CHECKZFHMIN:       # %bb.0:
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
-; CHECKZFHMIN-NEXT:    fadd.s fa3, fa4, fa5
-; CHECKZFHMIN-NEXT:    fsub.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fsub.s fa3, fa4, fa5
+; CHECKZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa4, fa3
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa5
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKZFHMIN-NEXT:    fmax.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECKZFHMIN-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKZFHMIN-NEXT:    ret
   %c = fadd nnan half %a, %b

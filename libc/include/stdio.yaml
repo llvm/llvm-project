@@ -51,7 +51,7 @@ functions:
       - type: const char *__restrict
       - type: '...'
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__asprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__asprintf_modular, 2, 3)
   - name: clearerr
     standards:
       - stdc
@@ -304,7 +304,7 @@ functions:
       - type: const char *__restrict
       - type: '...'
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__printf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__printf_modular, 1, 2)
   - name: putc
     standards:
       - stdc
@@ -377,7 +377,7 @@ functions:
       - type: const char *__restrict
       - type: '...'
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__snprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__snprintf_modular, 3, 4)
   - name: sprintf
     standards:
       - stdc
@@ -387,7 +387,7 @@ functions:
       - type: const char *__restrict
       - type: '...'
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__sprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__sprintf_modular, 2, 3)
   - name: sscanf
     standards:
       - stdc
@@ -412,7 +412,7 @@ functions:
       - type: const char *__restrict
       - type: va_list
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__vasprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vasprintf_modular, 2, 0)
   - name: vfprintf
     standards:
       - stdc
@@ -429,7 +429,7 @@ functions:
       - type: const char *__restrict
       - type: va_list
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__vprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vprintf_modular, 1, 0)
   - name: vsnprintf
     standards:
       - stdc
@@ -440,7 +440,7 @@ functions:
       - type: const char *__restrict
       - type: va_list
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__vsnprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vsnprintf_modular, 3, 0)
   - name: vsprintf
     standards:
       - stdc
@@ -450,7 +450,7 @@ functions:
       - type: const char *__restrict
       - type: va_list
     attributes:
-      - _LIBC_MODULAR_FORMAT_PRINTF(__vsprintf_modular)
+      - _LIBC_MODULAR_FORMAT_PRINTF(__vsprintf_modular, 2, 0)
   - name: vsscanf
     standards:
       - stdc

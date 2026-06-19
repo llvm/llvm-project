@@ -57,10 +57,10 @@ struct Kernel32 {
   bool IsConPTYAvailable() { return isAvailable; }
 
 private:
-  HMODULE hModule;
-  CreatePseudoConsole_t CreatePseudoConsole_;
-  ClosePseudoConsole_t ClosePseudoConsole_;
-  bool isAvailable;
+  HMODULE hModule = nullptr;
+  CreatePseudoConsole_t CreatePseudoConsole_ = nullptr;
+  ClosePseudoConsole_t ClosePseudoConsole_ = nullptr;
+  bool isAvailable = false;
 };
 
 static Kernel32 kernel32;
@@ -91,23 +91,15 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
   return llvm::Error::success();
 }
 
-PseudoConsole::~PseudoConsole() {
-  Close();
-  ClosePseudoConsolePipes();
-  CloseAnonymousPipes();
-}
+PseudoConsole::~PseudoConsole() { Reset(); }
 
-llvm::Error PseudoConsole::OpenPseudoConsole() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a PseudoConsole in a different mode than None");
+llvm::Error PseudoConsole::OpenPseudoConsole(uint16_t req_cols,
+                                             uint16_t req_rows) {
+  Reset();
 
   if (!kernel32.IsConPTYAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
-
-  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
-         "ConPTY has already been opened");
-
   // A 4096 bytes buffer should be large enough for the majority of console
   // burst outputs.
   wchar_t pipe_name[MAX_PATH];
@@ -133,13 +125,19 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   // if we can't query the real console.
   int cursorRow = consoleSize.Y;
   int cursorCol = 1;
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-    consoleSize = {
-        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
-        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
-    cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
-    cursorCol = csbi.dwCursorPosition.X + 1;
+  if (req_cols != 0 && req_rows != 0) {
+    consoleSize = {static_cast<SHORT>(req_cols), static_cast<SHORT>(req_rows)};
+    cursorRow = consoleSize.Y;
+    cursorCol = 1;
+  } else {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+      consoleSize = {
+          static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+          static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
+      cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
+      cursorCol = csbi.dwCursorPosition.X + 1;
+    }
   }
   HPCON hPC = INVALID_HANDLE_VALUE;
   HRESULT hr =
@@ -190,6 +188,8 @@ void PseudoConsole::Close() {
   std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
+  if (m_mode == Mode::Pipe && m_conpty_output != INVALID_HANDLE_VALUE)
+    CancelIoEx(m_conpty_output, nullptr);
   m_conpty_handle = INVALID_HANDLE_VALUE;
   SetStopping(false);
   m_cv.notify_all();
@@ -215,9 +215,15 @@ void PseudoConsole::CloseAnonymousPipes() {
   m_pipe_child_stdout = INVALID_HANDLE_VALUE;
 }
 
+void PseudoConsole::Reset() {
+  Close();
+  ClosePseudoConsolePipes();
+  CloseAnonymousPipes();
+  m_mode = Mode::None;
+}
+
 llvm::Error PseudoConsole::OpenAnonymousPipes() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a AnonymousPipes in a different mode than None");
+  Reset();
 
   SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
   HANDLE hStdinRead = INVALID_HANDLE_VALUE;

@@ -3373,6 +3373,34 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test lowering of scalar s64 G_BSWAP.
+TEST_F(AArch64GISelMITest, LowerBSWAPScalarS64) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  DefineLegalizerInfo(A, {});
+
+  auto BSwap = B.buildBSwap(LLT::scalar(64), Copies[0]);
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B, &*LibcallLowering);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*BSwap, 0, LLT()));
+
+  // Per-byte AND masks the lowering loop emits for i = 1, 2, 3:
+  //   0x000000000000FF00 =     65280
+  //   0x0000000000FF0000 =  16711680
+  //   0x00000000FF000000 = 4278190080
+  auto CheckStr = R"(
+  CHECK-DAG: G_CONSTANT i64 65280
+  CHECK-DAG: G_CONSTANT i64 16711680
+  CHECK-DAG: G_CONSTANT i64 4278190080
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 // Test lowering of G_SDIVREM into G_SDIV and G_SREM
 TEST_F(AArch64GISelMITest, LowerSDIVREM) {
   setUp();

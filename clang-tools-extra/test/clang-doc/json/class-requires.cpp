@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
 
 template<typename T>

@@ -59,6 +59,8 @@ body:             |
   ; PEI: bb.0:
   ; PEI-NEXT:   successors: %bb.1(0x80000000)
   ; PEI-NEXT: {{  $}}
+  ; PEI-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; PEI-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; PEI-NEXT:   renamable $sgpr10 = IMPLICIT_DEF
   ; PEI-NEXT:   $vgpr0 = IMPLICIT_DEF
   ; PEI-NEXT:   $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, killed $vgpr0

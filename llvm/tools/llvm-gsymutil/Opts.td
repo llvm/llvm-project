@@ -60,6 +60,10 @@ defm output_version :
   Eq<"output-version",
      "Set the GSYM output version (1 or 2). Default: 1.">;
 def benchmark_reader :
-  FF<"benchmark-reader",
-     "Open a GSYM file and perform a lookup for every function start address to benchmark the reader performance">,
+  Joined<["--"], "benchmark-reader=">,
+  HelpText<"Benchmark reader with start,stride (default: 0,1 = every address)">,
+  Flags<[HelpHidden]>;
+def benchmark_reader_all :
+  Flag<["--"], "benchmark-reader">,
+  HelpText<"Benchmark reader by looking up every address">,
   Flags<[HelpHidden]>;

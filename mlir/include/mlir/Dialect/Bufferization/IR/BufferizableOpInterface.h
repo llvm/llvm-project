@@ -267,11 +267,11 @@ struct BufferizationOptions {
                                    func::FuncOp, const BufferizationOptions &)>;
   /// Tensor -> MemRef type conversion.
   /// Parameters: tensor type, memory space, bufferization options
-  using UnknownTypeConverterFn = std::function<BaseMemRefType(
-      TensorType, Attribute memorySpace, const BufferizationOptions &)>;
+  using UnknownTypeConverterFn = std::function<BufferLikeType(
+      TensorLikeType, Attribute memorySpace, const BufferizationOptions &)>;
   // Produce a MemorySpace attribute from a tensor type
   using DefaultMemorySpaceFn =
-      std::function<std::optional<Attribute>(TensorType t)>;
+      std::function<std::optional<Attribute>(TensorLikeType t)>;
 
   BufferizationOptions();
 
@@ -340,7 +340,7 @@ struct BufferizationOptions {
   ///
   /// By default, if tensor is a (builtin) tensor type, it is converted to a
   /// memref type with a fully dynamic layout map; if tensor is a (generic)
-  /// tensor-like type, it is converted using TensorLikeType::getBufferType().
+  /// tensor-like type, it is converted using unknownTypeConverterFn.
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
   FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
@@ -362,7 +362,7 @@ struct BufferizationOptions {
   // Returning std::nullopt will cause bufferization to fail (useful to indicate
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
-      [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
+      [](TensorLikeType t) -> std::optional<Attribute> { return Attribute(); };
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.
@@ -659,23 +659,6 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   replaceOpWithBufferizedValues(rewriter, op, newOp->getResults());
   return newOp;
 }
-
-/// Return a MemRefType to which the TensorType can be bufferized.
-///
-/// If possible, op bufferization implementations should not use this function
-/// and instead infer precise memref types for tensor results by themselves.
-///
-/// Unless a layout map was specified, `options.unknownTypeConverterFn`
-/// determines what kind of layout map will be used. For best composability
-/// (without copies), the fully dynamic layout map is used by default.
-///
-/// Note: Canonicalization patterns could clean up layout maps and infer more
-/// precise layout maps after bufferization. However, many possible
-/// canonicalizations are currently not implemented.
-BaseMemRefType getMemRefType(TensorType tensorType,
-                             const BufferizationOptions &options,
-                             MemRefLayoutAttrInterface layout = {},
-                             Attribute memorySpace = nullptr);
 
 /// Return a MemRef type with fully dynamic layout. If the given tensor type
 /// is unranked, return an unranked MemRef type.

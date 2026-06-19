@@ -292,26 +292,34 @@ use omp_lib
 ! 2.17.7.4
 ! If atomic-clause is read then memory-order-clause must not be acq_rel or release.
 
+  !WARNING: An ATOMIC READ operation must not have ACQ_REL as the memory order, using ACQUIRE
   !$omp atomic acq_rel read
     i = j
+  !WARNING: An ATOMIC READ operation must not have ACQ_REL as the memory order, using ACQUIRE
   !$omp atomic read acq_rel
     i = j
 
+  !WARNING: An ATOMIC READ operation must not have RELEASE as the memory order, using RELAXED
   !$omp atomic release read
     i = j
+  !WARNING: An ATOMIC READ operation must not have RELEASE as the memory order, using RELAXED
   !$omp atomic read release
     i = j
 
 ! 2.17.7.5
 ! If atomic-clause is write then memory-order-clause must not be acq_rel or acquire.
 
+  !WARNING: An ATOMIC WRITE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic acq_rel write
     i = j
+  !WARNING: An ATOMIC WRITE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic write acq_rel
     i = j
 
+  !WARNING: An ATOMIC WRITE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic acquire write
     i = j
+  !WARNING: An ATOMIC WRITE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic write acquire
     i = j
 
@@ -319,25 +327,31 @@ use omp_lib
 ! 2.17.7.6
 ! If atomic-clause is update or not present then memory-order-clause must not be acq_rel or acquire.
 
+  !WARNING: An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic acq_rel update
   !ERROR: The atomic variable i should appear as an argument in the update operation
     i = j
+  !WARNING: An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic update acq_rel
   !ERROR: The atomic variable i should appear as an argument in the update operation
     i = j
 
+  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic acquire update
   !ERROR: The atomic variable i should appear as an argument in the update operation
     i = j
 
+  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic update acquire
   !ERROR: The atomic variable i should appear as an argument in the update operation
     i = j
 
+  !WARNING: An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE
   !$omp atomic acq_rel
   !ERROR: The atomic variable i should appear as an argument in the update operation
     i = j
 
+  !WARNING: An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED
   !$omp atomic acquire
   !ERROR: The atomic variable i should appear as an argument in the update operation
     i = j

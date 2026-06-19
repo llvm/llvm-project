@@ -1472,17 +1472,23 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  // The args size passed in LaunchParams may have tail padding, which is not
-  // accepted by the CUDA driver.
-  if (ArgsSize > LaunchParams.Size)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "mismatch in kernel arguments");
+  void **KernelParams = nullptr;
+  if (KernelArgs.Flags.IsPtrArgs) {
+    KernelParams = KernelArgs.ArgPtrs;
+  } else {
+    // The args size passed in LaunchParams may have tail padding,
+    // which is not accepted by the CUDA driver.
+    if (ArgsSize > LaunchParams.Size)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "mismatch in kernel arguments");
+  }
 
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
   size_t ConfigArgsSize = ArgsSize;
+  // Valid only for a contiguous buffer passed through LaunchParams.
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
                     reinterpret_cast<void *>(&ConfigArgsSize),
@@ -1514,7 +1520,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, nullptr, Config);
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, KernelParams,
+                                  KernelParams ? nullptr : Config);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())

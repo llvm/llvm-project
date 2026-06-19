@@ -24,6 +24,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
 
@@ -518,5 +520,12 @@ private:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb::LanguageType> {
+  static void format(const lldb::LanguageType &language, llvm::raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // LLDB_TARGET_LANGUAGE_H

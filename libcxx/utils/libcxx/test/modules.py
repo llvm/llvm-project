@@ -7,7 +7,6 @@
 # ===----------------------------------------------------------------------===##
 
 from libcxx.header_information import module_headers
-from libcxx.header_information import header_restrictions
 from dataclasses import dataclass
 
 ### SkipDeclarations
@@ -141,15 +140,7 @@ class module_test_generator:
         # Some headers cannot be included when a libc++ feature is disabled.
         # In that case include the header conditionally. The header __config
         # ensures the libc++ feature macros are available.
-        if header in header_restrictions:
-            include = (
-                f"#include <__config>{nl}"
-                f"#if {header_restrictions[header]}{nl}"
-                f"#  include <{header}>{nl}"
-                f"#endif{nl}"
-            )
-        else:
-            include = f"#include <{header}>{nl}"
+        include = f"#include <{header}>{nl}"
 
         module_files = f'#include \\"{self.module_path}/std/{header}.inc\\"{nl}'
         if is_c_header:

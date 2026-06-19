@@ -100,4 +100,4 @@ v_s_sqrt_f16 s5, s5
 # CHECK-NEXT: 7.     1     0.0    0.0    0.0       v_s_rcp_f16 s5, s2
 # CHECK-NEXT: 8.     1     0.0    0.0    0.0       v_s_rsq_f16 s5, s4
 # CHECK-NEXT: 9.     1     0.0    0.0    0.0       v_s_sqrt_f16 s5, s5
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        10    0.0    0.0    0.0       <total>

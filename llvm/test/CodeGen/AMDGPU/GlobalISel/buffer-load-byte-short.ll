@@ -190,7 +190,7 @@ define amdgpu_ps void @test_buffer_load_i8_waterfall_soffset(<4 x i32> inreg %rs
 ; GFX12-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX12-NEXT:    s_mov_b32 s7, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    v_cmpx_eq_u32_e64 s8, v1
+; GFX12-NEXT:    v_cmpx_eq_u32_e32 s8, v1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_i8 v2, v0, s[0:3], s8 offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr1

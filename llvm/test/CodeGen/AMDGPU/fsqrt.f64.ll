@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=pitcairn < %s | FileCheck -check-prefixes=GFX6,GFX6-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=pitcairn < %s | FileCheck -check-prefixes=GFX6,GFX6-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=pitcairn < %s | FileCheck -check-prefixes=GFX6,GFX6-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 
 define double @v_sqrt_f64(double %x) {
 ; GFX6-SDAG-LABEL: v_sqrt_f64:
@@ -877,10 +877,16 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX6-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX6-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; GFX6-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX6-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX6-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX6-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
+; GFX6-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX6-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX6-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -890,15 +896,14 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v5, 0x260
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; GFX6-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v5
-; GFX6-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, 0x260
+; GFX6-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
+; GFX6-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
 ; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX6-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX6-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-GISEL-LABEL: s_sqrt_f64:
@@ -906,10 +911,16 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX8-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX8-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -919,15 +930,14 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v5, 0x260
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; GFX8-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v5
-; GFX8-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, 0x260
+; GFX8-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v4
+; GFX8-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX8-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
   %result = call double @llvm.sqrt.f64(double %x)
   %cast = bitcast double %result to <2 x i32>
@@ -1002,10 +1012,18 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX6-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX6-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
+; GFX6-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX6-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX6-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX6-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
+; GFX6-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX6-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX6-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; GFX6-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -1015,14 +1033,11 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; GFX6-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
-; GFX6-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX6-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
 ; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX6-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX6-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-GISEL-LABEL: s_sqrt_f64_ninf:
@@ -1030,10 +1045,18 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX8-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX8-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; GFX8-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], 0.5
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[6:7], -v[4:5], v[2:3], 0.5
@@ -1043,14 +1066,11 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[2:3], v[0:1]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[2:3], v[6:7], v[4:5], v[2:3]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, 0xffffff80
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
-; GFX8-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
-; GFX8-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX8-GISEL-NEXT:    v_ldexp_f64 v[2:3], v[2:3], s0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX8-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
   %result = call ninf double @llvm.sqrt.f64(double %x)
   %cast = bitcast double %result to <2 x i32>
@@ -1109,7 +1129,7 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; GFX6-GISEL-NEXT:    v_mov_b32_e32 v6, 0x260
 ; GFX6-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v6
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v7, s0
+; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0.5
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[4:5], -v[2:3], v[0:1], 0.5
@@ -1117,11 +1137,9 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[0:1], s[0:1]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v2, s1
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX6-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX6-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-GISEL-LABEL: s_sqrt_f64_afn:
@@ -1129,7 +1147,7 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v6, 0x260
 ; GFX8-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v6
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v7, s0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0.5
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[4:5], -v[2:3], v[0:1], 0.5
@@ -1137,11 +1155,9 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[0:1], s[0:1]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s1
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX8-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
   %result = call afn double @llvm.sqrt.f64(double %x)
   %cast = bitcast double %result to <2 x i32>
@@ -1196,8 +1212,8 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn_nnan_ninf(double inreg %x) {
 ; GFX6-GISEL-LABEL: s_sqrt_f64_afn_nnan_ninf:
 ; GFX6-GISEL:       ; %bb.0:
 ; GFX6-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
-; GFX6-GISEL-NEXT:    v_cmp_eq_f64_e64 vcc, s[0:1], 0
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v6, s0
+; GFX6-GISEL-NEXT:    v_cmp_eq_f64_e64 s[2:3], s[0:1], 0
+; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0.5
 ; GFX6-GISEL-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[4:5], -v[2:3], v[0:1], 0.5
@@ -1205,18 +1221,16 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn_nnan_ninf(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[0:1], s[0:1]
 ; GFX6-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v2, s1
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
-; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX6-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX6-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-GISEL-LABEL: s_sqrt_f64_afn_nnan_ninf:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
-; GFX8-GISEL-NEXT:    v_cmp_eq_f64_e64 vcc, s[0:1], 0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v6, s0
+; GFX8-GISEL-NEXT:    v_cmp_eq_f64_e64 s[2:3], s[0:1], 0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], 0.5
 ; GFX8-GISEL-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[4:5], -v[2:3], v[0:1], 0.5
@@ -1224,11 +1238,9 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn_nnan_ninf(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[0:1], s[0:1]
 ; GFX8-GISEL-NEXT:    v_fma_f64 v[0:1], v[4:5], v[2:3], v[0:1]
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s1
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
-; GFX8-GISEL-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
+; GFX8-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
   %result = call afn nnan ninf double @llvm.sqrt.f64(double %x)
   %cast = bitcast double %result to <2 x i32>

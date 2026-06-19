@@ -317,7 +317,7 @@ bool isParamGridConstant(const Argument &Arg) {
   return Arg.hasAttribute(NVVMAttr::GridConstant);
 }
 
-MaybeAlign getAlign(const CallInst &I, unsigned Index) {
+MaybeAlign getStackAlign(const CallBase &I, unsigned Index) {
   // First check the alignstack metadata.
   if (MaybeAlign StackAlign =
           I.getAttributes().getAttributes(Index).getStackAlignment())

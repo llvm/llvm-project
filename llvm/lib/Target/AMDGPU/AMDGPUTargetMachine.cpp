@@ -93,6 +93,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -1245,21 +1246,43 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
+enum class OOBFlagValue {
+  Any = 0,
+  Relaxed = 1,
+  Strict = 2,
+};
+
+/// Returns the OOB mode encoded by a module flag.
+/// An absent flag defaults to Any.
+static OOBFlagValue getOOBFlagValue(const Module &M, StringRef FlagName) {
+  const auto *Flag =
+      mdconst::dyn_extract_or_null<ConstantInt>(M.getModuleFlag(FlagName));
+  if (!Flag)
+    return OOBFlagValue::Any;
+  return static_cast<OOBFlagValue>(Flag->getZExtValue());
+}
+
 const TargetSubtargetInfo *
 GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef GPU = getGPUName(F);
   StringRef FS = getFeatureString(F);
 
+  const Module &M = *F.getParent();
+  OOBFlagValue BufOOB = getOOBFlagValue(M, AMDGPUOOBMode::BufferFlag);
+  OOBFlagValue TBufOOB = getOOBFlagValue(M, AMDGPUOOBMode::TBufferFlag);
+  bool BufRelaxed = BufOOB == OOBFlagValue::Relaxed;
+  bool TBufRelaxed = TBufOOB == OOBFlagValue::Relaxed;
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
+  if (BufRelaxed)
+    SubtargetKey.append(",buf-oob=1");
+  if (TBufRelaxed)
+    SubtargetKey.append(",tbuf-oob=1");
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
-    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this);
+    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this, BufRelaxed,
+                                       TBufRelaxed);
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);

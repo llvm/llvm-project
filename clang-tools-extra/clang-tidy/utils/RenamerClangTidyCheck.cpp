@@ -30,28 +30,12 @@ template <>
 struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
-  static NamingCheckId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
-  }
-
-  static NamingCheckId getTombstoneKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-            "TOMBSTONE"};
-  }
-
   static unsigned getHashValue(NamingCheckId Val) {
-    assert(Val != getEmptyKey() && "Cannot hash the empty key!");
-    assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
-
     return DenseMapInfo<clang::SourceLocation>::getHashValue(Val.first) +
            DenseMapInfo<StringRef>::getHashValue(Val.second);
   }
 
   static bool isEqual(const NamingCheckId &LHS, const NamingCheckId &RHS) {
-    if (RHS == getEmptyKey())
-      return LHS == getEmptyKey();
-    if (RHS == getTombstoneKey())
-      return LHS == getTombstoneKey();
     return LHS == RHS;
   }
 };

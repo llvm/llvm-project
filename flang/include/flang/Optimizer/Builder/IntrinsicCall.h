@@ -21,19 +21,18 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
 
-namespace Fortran {
-namespace lower {
-// TODO: remove the usage of AbstractConverter to avoid making IntrinsicCall.cpp
-// depend upon Lower/Evaluate and use a data structure to pass options to
-// IntrinsicLibrary.
-class AbstractConverter;
-} // namespace lower
-} // namespace Fortran
-
 namespace fir {
 
 class StatementContext;
 struct IntrinsicHandlerEntry;
+
+/// Options controlling intrinsic lowering that depend on front-end state.
+struct IntrinsicLoweringOptions {
+  /// Whether multi-image (coarray) features are enabled (e.g. via -fcoarray).
+  bool coarrayEnabled = false;
+  /// Whether to avoid using the native vector element order on PPC targets.
+  bool noPPCNativeVecElemOrder = false;
+};
 
 /// Lower an intrinsic call given the intrinsic \p name, its \p resultType (that
 /// must be std::nullopt if and only if this is a subroutine call), and its
@@ -44,7 +43,7 @@ std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
-                 Fortran::lower::AbstractConverter *converter = nullptr);
+                 IntrinsicLoweringOptions options = {});
 
 /// Same as the entry above except that instead of an intrinsic name it takes an
 /// IntrinsicHandlerEntry obtained by a previous lookup for a handler to lower
@@ -54,7 +53,7 @@ genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                  const IntrinsicHandlerEntry &,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
-                 Fortran::lower::AbstractConverter *converter = nullptr);
+                 IntrinsicLoweringOptions options = {});
 
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
@@ -101,10 +100,9 @@ struct IntrinsicArgumentLoweringRules;
 struct IntrinsicLibrary {
 
   // Constructors.
-  explicit IntrinsicLibrary(
-      fir::FirOpBuilder &builder, mlir::Location loc,
-      Fortran::lower::AbstractConverter *converter = nullptr)
-      : builder{builder}, loc{loc}, converter{converter} {}
+  explicit IntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc,
+                            IntrinsicLoweringOptions options = {})
+      : builder{builder}, loc{loc}, options{options} {}
   IntrinsicLibrary() = delete;
   IntrinsicLibrary(const IntrinsicLibrary &) = delete;
 
@@ -237,6 +235,7 @@ struct IntrinsicLibrary {
   mlir::Value genGetPID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
   void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
+  void genGetarg(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genGetGID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
@@ -248,6 +247,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIany(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIargc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -524,7 +524,7 @@ struct IntrinsicLibrary {
   fir::FirOpBuilder &builder;
   mlir::Location loc;
   bool resultMustBeFreed = false;
-  Fortran::lower::AbstractConverter *converter = nullptr;
+  IntrinsicLoweringOptions options;
 };
 
 struct IntrinsicDummyArgument {

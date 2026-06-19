@@ -1,3 +1,6 @@
+# gdbserver mode is not supported on Apple platforms.
+UNSUPPORTED: system-darwin
+
 RUN: not %lldb-server gdbserver --fd 2>&1 | FileCheck --check-prefixes=FD1,ALL %s
 FD1: error: --fd: missing argument
 

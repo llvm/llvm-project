@@ -25,7 +25,7 @@ class Register;
 class TargetLowering;
 class Value;
 
-class InlineAsmLowering {
+class LLVM_ABI InlineAsmLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();

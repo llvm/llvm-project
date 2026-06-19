@@ -171,6 +171,12 @@ functions:
     return_type: size_t
     arguments:
       - type: const void *
+  - name: mkstemp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: posix_memalign
     standards:
       - posix

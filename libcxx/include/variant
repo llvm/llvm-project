@@ -235,7 +235,6 @@ namespace std {
 #  include <__type_traits/conditional.h>
 #  include <__type_traits/conjunction.h>
 #  include <__type_traits/decay.h>
-#  include <__type_traits/dependent_type.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_array.h>
@@ -292,6 +291,19 @@ public:
   [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
+class _LIBCPP_EXPORTED_FROM_ABI __bad_variant_access_with_msg : public bad_variant_access {
+public:
+  _LIBCPP_HIDE_FROM_ABI explicit __bad_variant_access_with_msg(const char* __msg) _NOEXCEPT : __msg_(__msg) {}
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
+#  else
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const _NOEXCEPT override { return __msg_; }
+#  endif
+
+private:
+  const char* __msg_;
+};
+
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
@@ -309,11 +321,11 @@ struct __farray {
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator[](size_t __n) const noexcept { return __buf_[__n]; }
 };
 
-[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_variant_access() {
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_variant_access(const char* __msg) {
 #    if _LIBCPP_HAS_EXCEPTIONS
-  throw bad_variant_access();
+  throw __bad_variant_access_with_msg(__msg);
 #    else
-  _LIBCPP_VERBOSE_ABORT("bad_variant_access was thrown in -fno-exceptions mode");
+  _LIBCPP_VERBOSE_ABORT("bad_variant_access was thrown in -fno-exceptions mode: %s", __msg);
 #    endif
 }
 
@@ -541,9 +553,12 @@ private:
     return __dispatcher<_Is...>::template __dispatch<_Fp, _Vs...>;
   }
 
+  template <class, class _Tp>
+  using __expander = _Tp;
+
   template <size_t _Ip, class _Fp, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fdiagonal_impl() {
-    return __make_dispatch<_Fp, _Vs...>(index_sequence<((void)__type_identity<_Vs>{}, _Ip)...>{});
+    return __make_dispatch<_Fp, _Vs...>(index_sequence<static_cast<__expander<_Vs, size_t>>(_Ip)...>{});
   }
 
   template <class _Fp, class... _Vs, size_t... _Is>
@@ -1167,8 +1182,7 @@ public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
 
-  template <bool _Dummy                                                                               = true,
-            enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>
+  template <class _FirstType = __first_type, enable_if_t<is_default_constructible_v<_FirstType>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)
       : __impl_(in_place_index<0>) {}
 
@@ -1283,10 +1297,10 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t index() const noexcept { return __impl_.index(); }
 
-  template < bool _Dummy       = true,
-             enable_if_t< __all<(__dependent_type<is_move_constructible<_Types>, _Dummy>::value &&
-                                 __dependent_type<is_swappable<_Types>, _Dummy>::value)...>::value,
-                          int> = 0>
+  template <
+      bool _Dummy      = true,
+      enable_if_t<_And<_And<bool_constant<_Dummy>, is_move_constructible<_Types>, is_swappable<_Types>>...>::value,
+                  int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(variant& __that) noexcept(
       __all<(is_nothrow_move_constructible_v<_Types> && is_nothrow_swappable_v<_Types>)...>::value) {
     __impl_.__swap(__that.__impl_);
@@ -1332,7 +1346,9 @@ template <size_t _Ip, class _Vp>
 _LIBCPP_HIDE_FROM_ABI constexpr auto&& __generic_get(_Vp&& __v) {
   using __variant_detail::__access::__variant;
   if (!std::__holds_alternative<_Ip>(__v)) {
-    std::__throw_bad_variant_access();
+    if (__v.valueless_by_exception())
+      std::__throw_bad_variant_access("std::get: variant is valueless");
+    std::__throw_bad_variant_access("std::get: wrong alternative for variant");
   }
   return __variant::__get_alt<_Ip>(std::forward<_Vp>(__v)).__value;
 }
@@ -1569,7 +1585,7 @@ template <class... _Vs>
 _LIBCPP_HIDE_FROM_ABI constexpr void __throw_if_valueless(_Vs&&... __vs) {
   const bool __valueless = (... || std::__as_variant(__vs).valueless_by_exception());
   if (__valueless) {
-    std::__throw_bad_variant_access();
+    std::__throw_bad_variant_access("std::visit: variant is valueless");
   }
 }
 
@@ -1644,7 +1660,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <cstddef>
 #    include <exception>
 #    include <tuple>

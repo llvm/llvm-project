@@ -7,9 +7,9 @@ define <vscale x 8 x i64> @vwsub_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    li a0, 42
-; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vmslt.vx v0, v24, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, mu
 ; CHECK-NEXT:    vwsub.wv v8, v8, v24, v0.t
 ; CHECK-NEXT:    ret
@@ -25,9 +25,9 @@ define <vscale x 8 x i64> @vwsubu_wv_mask_v8i32(<vscale x 8 x i32> %x, <vscale x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    li a0, 42
-; CHECK-NEXT:    vmslt.vx v0, v8, a0
 ; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vmslt.vx v0, v24, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, mu
 ; CHECK-NEXT:    vwsubu.wv v8, v8, v24, v0.t
 ; CHECK-NEXT:    ret

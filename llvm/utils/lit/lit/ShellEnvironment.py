@@ -16,8 +16,20 @@ kAvoidDevNull = kIsWindows
 kDevNull = "/dev/null"
 
 
-class ShellCommandResult(object):
+class ShellCommandResult:
     """Captures the result of an individual command."""
+
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "command",
+        "stdout",
+        "stderr",
+        "exitCode",
+        "timeoutReached",
+        "outputFiles",
+    )
 
     def __init__(
         self, command, stdout, stderr, exitCode, timeoutReached, outputFiles=[]
@@ -36,13 +48,18 @@ class InternalShellError(Exception):
         self.message = message
 
 
-class ShellEnvironment(object):
+class ShellEnvironment:
 
     """Mutable shell environment containing things like CWD and env vars.
 
     Environment variables are not implemented, but cwd tracking is. In addition,
     we maintain a dir stack for pushd/popd.
     """
+
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = ("cwd", "env", "umask", "dirStack", "ulimit", "normalize_slashes")
 
     def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
         self.cwd = cwd

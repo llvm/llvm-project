@@ -1143,6 +1143,22 @@ func.func @switch_operands(%selector : i32, %operand : i32) {
   spirv.Return
 }
 
+func.func @switch_targets_no_literals(%selector: i32) -> () {
+  // CHECK: spirv.Switch {{%.*}} : i32, [
+  // CHECK-NEXT: default: ^bb1
+  "spirv.Switch"(%selector)[^default, ^target]
+    {case_operand_segments = array<i32: 0>,
+     operandSegmentSizes = array<i32: 1, 0, 0>} : (i32) -> ()
+^default:
+  spirv.Branch ^merge
+
+^target:
+  spirv.Branch ^merge
+
+^merge:
+  spirv.Return
+}
+
 // -----
 
 func.func @switch_float_selector(%selector: f32) -> () {

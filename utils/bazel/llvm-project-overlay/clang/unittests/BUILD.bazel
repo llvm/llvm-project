@@ -623,6 +623,7 @@ cc_test(
         "//clang:basic",
         "//clang:driver",
         "//clang:frontend",
+        "//clang:options",
         "//llvm:FrontendDebug",
         "//llvm:MC",
         "//llvm:Support",

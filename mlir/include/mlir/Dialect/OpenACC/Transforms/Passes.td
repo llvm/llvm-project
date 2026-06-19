@@ -79,7 +79,14 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
            "variables between combined constructs (e.g., 'parallel loop') and "
            "separate constructs (e.g., 'parallel' followed by 'loop'), where "
            "the OpenACC spec requires copy semantics for the former but "
-           "firstprivate would normally apply for the latter.">
+           "firstprivate would normally apply for the latter.">,
+    Option<"ignoreDefaultNone", "ignore-default-none", "bool", "false",
+           "When disabled (default), if the region has a default(none) clause, "
+           "this pass does not generate implicit data attributes. When enabled, "
+           "implicit data is generated even with default(none). This is useful "
+           "when the frontend has robust default(none) verification: user "
+           "variables are already verified, so any remaining live-ins are "
+           "variables that still need mapping handling.">
   ];
 }
 

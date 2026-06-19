@@ -80,6 +80,13 @@ inline constexpr const char *FailedToReadObjectAtField =
 inline constexpr const char *FailedToReadObjectAtIndex =
     "failed to read {0} from index '{1}': expected JSON {2}";
 
+inline constexpr const char *MismatchedSummaryType =
+    "expected '{0}' for field '{1}' but got '{2}'";
+inline constexpr const char *UnknownArtifactType =
+    "unknown value '{0}' for field '{1}': expected '{2}', '{3}', or '{4}'";
+inline constexpr const char *UnknownArtifactEncodingType =
+    "unknown value '{0}' for field '{1}': expected '{2}', or '{3}'";
+
 inline constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
     "failed to deserialize EntitySummary: no FormatInfo registered for '{0}'";
 inline constexpr const char *FailedToSerializeEntitySummaryNoFormatInfo =
@@ -117,6 +124,9 @@ inline constexpr const char *FailedToReadEntityIdObject =
 inline constexpr const char *FailedToPatchEntityIdNotInTable =
     "failed to patch EntityId: '{0}' not found in entity resolution table";
 
+inline constexpr const char *TargetTripleNotNormalized =
+    "target triple '{0}' is not in normalized form (expected '{1}')";
+
 } // namespace ErrorMessages
 
 //----------------------------------------------------------------------------
@@ -125,6 +135,33 @@ inline constexpr const char *FailedToPatchEntityIdNotInTable =
 
 /// An entity ID is encoded as the single-key object {"@": <index>}.
 inline constexpr const char *JSONEntityIdKey = "@";
+
+//----------------------------------------------------------------------------
+// Summary Type JSON Representation
+//----------------------------------------------------------------------------
+
+/// Root-object key naming the summary kind so files are self-describing.
+inline constexpr const char *JSONTypeKey = "type";
+
+/// Value written to \c JSONTypeKey for serialized \c TUSummary files.
+inline constexpr const char *JSONTypeValueTUSummary = "TUSummary";
+
+/// Value written to \c JSONTypeKey for serialized \c LUSummary files.
+inline constexpr const char *JSONTypeValueLUSummary = "LUSummary";
+
+/// Value written to \c JSONTypeKey for serialized \c WPASuite files.
+inline constexpr const char *JSONTypeValueWPASuite = "WPASuite";
+
+/// Reads the \c JSONTypeKey field from the root object and verifies it
+/// equals \p ExpectedType. Returns success or an error with the field
+/// missing/mismatch detail.
+llvm::Error checkSummaryType(const Object &RootObject,
+                             llvm::StringRef ExpectedType);
+
+/// Reads the \c JSONTypeKey field from the root object as a string.
+/// Returns the string on success; on error, the message is suitable for
+/// callers that want to report the missing field themselves.
+llvm::Expected<llvm::StringRef> readSummaryType(const Object &RootObject);
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
@@ -166,6 +203,16 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr);
 
 // Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT);
+
+//----------------------------------------------------------------------------
+// TargetTriple helpers
+//----------------------------------------------------------------------------
+
+/// Validates that \p Triple is a target triple string in normalized form.
+/// Returns success if \p Triple equals \c llvm::Triple::normalize(Triple),
+/// otherwise returns an \c invalid_argument error describing the expected
+/// normalized form.
+llvm::Error validateNormalizedTargetTriple(llvm::StringRef Triple);
 
 } // namespace clang::ssaf
 

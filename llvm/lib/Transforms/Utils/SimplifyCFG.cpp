@@ -3073,13 +3073,16 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
+        // The dereferenceability query here is only required to satisfy the
+        // writable contract, actual dereferenceability is proven by the
+        // presence of an access. As such, we can ignore frees.
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
                 PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
                     .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
-             isDereferenceablePointer(StorePtr, StoreTy,
-                                      LI->getDataLayout()))) {
+             isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
+                                      /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
           return LI;
         }
@@ -4124,6 +4127,7 @@ static bool isVectorOp(Instruction &I) {
 bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
+                                  AssumptionCache *AC,
                                   unsigned BonusInstThreshold) {
   BasicBlock *BB = BI->getParent();
   TargetTransformInfo::TargetCostKind CostKind =
@@ -4191,6 +4195,10 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
   unsigned NumBonusInsts = 0;
   bool SawVectorOp = false;
   const unsigned PredCount = Preds.size();
+  // Speculated instructions will be inserted before the terminator of the
+  // predecessor. Only handle the simple case of one predecessor.
+  const Instruction *CxtI =
+      PredCount == 1 ? Preds[0]->getTerminator() : nullptr;
   for (Instruction &I : *BB) {
     // Don't check the branch condition comparison itself.
     if (&I == Cond)
@@ -4199,7 +4207,7 @@ bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
     if (isa<UncondBrInst, CondBrInst>(I))
       continue;
     // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I))
+    if (!isSafeToSpeculativelyExecute(&I, CxtI, AC))
       return false;
     SawVectorOp |= isVectorOp(I);
 
@@ -4324,6 +4332,8 @@ static bool mergeConditionalStoreToAddress(
 
   // Now check the stores are compatible.
   if (!QStore->isUnordered() || !PStore->isUnordered() ||
+      PStore->getOrdering() != QStore->getOrdering() ||
+      PStore->getSyncScopeID() != QStore->getSyncScopeID() ||
       PStore->getValueOperand()->getType() !=
           QStore->getValueOperand()->getType())
     return false;
@@ -4475,6 +4485,9 @@ static bool mergeConditionalStoreToAddress(
   // stores executes.  And we don't know it's safe to take the alignment from a
   // store that doesn't execute.
   SI->setAlignment(std::min(PStore->getAlign(), QStore->getAlign()));
+
+  if (QStore->isAtomic())
+    SI->setAtomic(QStore->getOrdering(), QStore->getSyncScopeID());
 
   QStore->eraseFromParent();
   PStore->eraseFromParent();
@@ -6775,7 +6788,8 @@ public:
   SwitchReplacement(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-      Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName);
+      Constant *DefaultValue, const DataLayout &DL,
+      const TargetTransformInfo &TTI, const StringRef &FuncName);
 
   /// Build instructions with Builder to retrieve values using Index
   /// and replace the switch.
@@ -6845,7 +6859,8 @@ private:
 SwitchReplacement::SwitchReplacement(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName)
+    Constant *DefaultValue, const DataLayout &DL,
+    const TargetTransformInfo &TTI, const StringRef &FuncName)
     : DefaultValue(DefaultValue) {
   assert(Values.size() && "Can't build lookup table without values!");
   assert(TableSize >= Values.size() && "Can't fit values in table!");
@@ -6965,8 +6980,24 @@ SwitchReplacement::SwitchReplacement(
     return;
   }
 
+  if (auto *IT = dyn_cast<IntegerType>(ValueType)) {
+    ConstantRange Range(IT->getBitWidth(), false);
+    for (Constant *Value : TableContents)
+      if (!isa<UndefValue>(Value))
+        Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
+    // TODO: handle sign extension as well?
+    unsigned NeededBitWidth =
+        std::max(TTI.getMinimumLookupTableEntryBitWidth(),
+                 unsigned(PowerOf2Ceil(Range.getActiveBits())));
+    if (NeededBitWidth < IT->getBitWidth()) {
+      IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
+      for (Constant *&Value : TableContents)
+        Value = ConstantFoldCastInstruction(Instruction::Trunc, Value, DstTy);
+    }
+  }
+
   // Store the table in an array.
-  auto *TableTy = ArrayType::get(ValueType, TableSize);
+  auto *TableTy = ArrayType::get(TableContents[0]->getType(), TableSize);
   Initializer = ConstantArray::get(TableTy, TableContents);
 
   Kind = LookupTableKind;
@@ -7040,7 +7071,11 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
     Value *GEP =
         Builder.CreateInBoundsGEP(ArrayTy, Table, GEPIndices, "switch.gep");
-    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
+    Value *Load =
+        Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
+    if (Load->getType() == ValueType)
+      return Load;
+    return Builder.CreateZExt(Load, ValueType, "switch.ext");
   }
   }
   llvm_unreachable("Unknown helper kind!");
@@ -7088,11 +7123,12 @@ bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
 bool SwitchReplacement::isBitMap() { return Kind == BitMapKind; }
 
-static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
+static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange, bool OptSize) {
   // 40% is the default density for building a jump table in optsize/minsize
-  // mode. See also TargetLoweringBase::isSuitableForJumpTable(), which this
-  // function was based on.
-  const uint64_t MinDensity = 40;
+  // mode, 10% is the default density for jump tables. See also
+  // TargetLoweringBase::isSuitableForJumpTable(), which this function was based
+  // on.
+  const uint64_t MinDensity = OptSize ? 40 : 10;
 
   if (CaseRange >= UINT64_MAX / 100)
     return false; // Avoid multiplication overflows below.
@@ -7100,13 +7136,13 @@ static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   return NumCases * 100 >= CaseRange * MinDensity;
 }
 
-static bool isSwitchDense(ArrayRef<int64_t> Values) {
+static bool isSwitchDense(ArrayRef<int64_t> Values, bool OptSize) {
   uint64_t Diff = (uint64_t)Values.back() - (uint64_t)Values.front();
   uint64_t Range = Diff + 1;
   if (Range < Diff)
     return false; // Overflow.
 
-  return isSwitchDense(Values.size(), Range);
+  return isSwitchDense(Values.size(), Range, OptSize);
 }
 
 /// Determine whether a lookup table should be built for this switch, based on
@@ -7147,7 +7183,8 @@ static bool shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
   if (HasIllegalType)
     return false;
 
-  return isSwitchDense(SI->getNumCases(), TableSize);
+  return isSwitchDense(SI->getNumCases(), TableSize,
+                       SI->getFunction()->hasOptSize());
 }
 
 static bool shouldUseSwitchConditionAsTableIndex(
@@ -7413,7 +7450,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
         AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
-                                  ResultList, DefaultVal, DL, FuncName);
+                                  ResultList, DefaultVal, DL, TTI, FuncName);
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 
@@ -7630,7 +7667,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   llvm::sort(Values);
 
   // If the switch is already dense, there's nothing useful to do here.
-  if (isSwitchDense(Values))
+  if (isSwitchDense(Values, SI->getFunction()->hasOptSize()))
     return false;
 
   // First, transform the values such that they start at zero and ascend.
@@ -7656,7 +7693,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
     for (auto &V : Values)
       V = (int64_t)((uint64_t)V >> Shift);
 
-  if (!isSwitchDense(Values))
+  if (!isSwitchDense(Values, SI->getFunction()->hasOptSize()))
     // Transform didn't create a dense switch.
     return false;
 
@@ -7808,8 +7845,10 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
 
   // isSwichDense requires case values to be sorted.
   llvm::sort(Values);
-  if (!isSwitchDense(Values.size(), llvm::countr_zero(Values.back()) -
-                                        llvm::countr_zero(Values.front()) + 1))
+  if (!isSwitchDense(Values.size(),
+                     llvm::countr_zero(Values.back()) -
+                         llvm::countr_zero(Values.front()) + 1,
+                     SI->getFunction()->hasOptSize()))
     // Transform is unable to generate dense switch.
     return false;
 
@@ -8047,13 +8086,6 @@ struct EqualBBWrapper {
 };
 
 template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
-  static const EqualBBWrapper *getEmptyKey() {
-    return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
-  }
-  static const EqualBBWrapper *getTombstoneKey() {
-    return static_cast<EqualBBWrapper *>(
-        DenseMapInfo<void *>::getTombstoneKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8073,11 +8105,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     return hash_combine(Succ, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
-    auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    auto *TKey = DenseMapInfo<EqualBBWrapper *>::getTombstoneKey();
-    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
-      return LHS == RHS;
-
     BasicBlock *A = LHS->BB;
     BasicBlock *B = RHS->BB;
 
@@ -8653,7 +8680,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
   if (Options.SpeculateBlocks &&
-      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI,
+      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI, Options.AC,
                              Options.BonusInstThreshold))
     return requestResimplify();
 
@@ -8752,10 +8779,14 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use we can handle, avoid hurting compile time with
-    // long uselists
-    auto FindUse = llvm::find_if(I->uses(), [](auto &U) {
+    // Find the first same-block use with a UB-triggering opcode, skipping
+    // cross-block or before-I uses.
+    auto FindUse = llvm::find_if(I->uses(), [I](auto &U) {
       auto *Use = cast<Instruction>(U.getUser());
+      // Only same-block uses after I can witness UB at I's program point.
+      // Self-uses and before-I uses can occur when I is a PHI node.
+      if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+        return false;
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
       default:
@@ -8782,12 +8813,6 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       return false;
     auto &Use = *FindUse;
     auto *User = cast<Instruction>(Use.getUser());
-    // Bail out if User is not in the same BB as I or User == I or User comes
-    // before I in the block. The latter two can be the case if User is a
-    // PHI node.
-    if (User->getParent() != I->getParent() || User == I ||
-        User->comesBefore(I))
-      return false;
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)

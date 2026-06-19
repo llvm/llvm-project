@@ -1,6 +1,9 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-linux -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-LINUX %s
 // CHECK-LINUX: --target=aarch64-unknown-linux
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=x86_64-pc-windows-msvc -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-WINDOWS %s
+// CHECK-WINDOWS: --target=x86_64-pc-windows-msvc
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-fuchsia -fsanitize=hwaddress | FileCheck --check-prefix=CHECK-FUCHSIA %s
 // CHECK-FUCHSIA: --target=aarch64-unknown-fuchsia
 

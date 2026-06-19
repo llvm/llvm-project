@@ -43,10 +43,10 @@ struct C : A, B {
 // CHECK: %struct.I = type { ptr, i32 }
 // CHECK: %struct.J = type { %struct.I, i32 }
 
-// HOST: @0 = private unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")
-// HOST: @1 = private unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4I@@6B@", ptr @_purecall, ptr null, ptr @_purecall] }, comdat($"??_7I@@6B@")
-// HOST: @"??_7J@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
-// HOST: @"??_7I@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
+// HOST: @0 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")
+// HOST: @1 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4I@@6B@", ptr @_purecall, ptr null, ptr @_purecall] }, comdat($"??_7I@@6B@")
+// HOST: @"??_7J@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
+// HOST: @"??_7I@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
 
 // DEV: @_ZTV1J = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN1J1gEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @_ZN1J1hEv to ptr addrspace(1))] }, comdat, align 8
 // DEV: @_ZTV1I = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1))] }, comdat, align 8

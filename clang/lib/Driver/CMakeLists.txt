@@ -115,6 +115,7 @@ add_clang_library(clangDriver
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangSerialization
   clangLex
   clangOptions

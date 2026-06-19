@@ -673,12 +673,24 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
   Type *Ty = LI->getType();
-  Constant *DummyVal = Constant::getNullValue(Ty);
 
-  Value *Pair = Builder.CreateAtomicCmpXchg(
+  // cmpxchg supports only integer and pointer operands. If the load type is
+  // FP or vector, run the cmpxchg on the same-sized integer and bitcast the
+  // result back; mirrors createCmpXchgInstFun.
+  bool NeedBitcast = Ty->isFloatingPointTy() || Ty->isVectorTy();
+  Type *CmpXchgTy = Ty;
+  if (NeedBitcast)
+    CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
+  Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
+
+  AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
-      AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
+      AtomicCmpXchgInst::getStrongestFailureOrdering(Order),
+      LI->getSyncScopeID());
+  Pair->setVolatile(LI->isVolatile());
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
+  if (NeedBitcast)
+    Loaded = Builder.CreateBitCast(Loaded, Ty);
 
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();
@@ -727,7 +739,8 @@ void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
                                    : Ordering;
   AtomicRMWInst *AI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Xchg, SI->getPointerOperand(), SI->getValueOperand(),
-      SI->getAlign(), RMWOrdering);
+      SI->getAlign(), RMWOrdering, SI->getSyncScopeID());
+  AI->setVolatile(SI->isVolatile());
   SI->eraseFromParent();
 
   // Now we have an appropriate swap instruction, lower it as usual.
@@ -1142,6 +1155,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
 
+  NewAI->setVolatile(AI->isVolatile());
   copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
@@ -1699,6 +1713,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  if (RMWI->isVolatile())
+    return false;
   // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)

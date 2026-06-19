@@ -238,6 +238,7 @@
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/OnDiskHashTable.h"
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -343,6 +344,30 @@ private:
 /// The reader supports two file formats: text and binary. The text format
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
+
+/// NameTableIterator is a lightweight, self-contained input iterator designed
+/// to stream FunctionId symbols from an eagerly populated contiguous buffer
+/// of FunctionId objects.
+class NameTableIterator
+    : public llvm::iterator_facade_base<
+          NameTableIterator, std::input_iterator_tag, FunctionId,
+          std::ptrdiff_t, const FunctionId *, FunctionId> {
+  const FunctionId *Ptr = nullptr;
+
+public:
+  NameTableIterator() = default;
+  NameTableIterator(const FunctionId *P) : Ptr(P) {}
+
+  bool operator==(const NameTableIterator &RHS) const { return Ptr == RHS.Ptr; }
+
+  NameTableIterator &operator++() {
+    ++Ptr;
+    return *this;
+  }
+
+  FunctionId operator*() const { return *Ptr; }
+};
+
 class SampleProfileReader {
 public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -496,7 +521,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual std::vector<FunctionId> *getNameTable() { return nullptr; }
+  virtual llvm::iterator_range<NameTableIterator> getNameTable() const {
+    return {NameTableIterator(), NameTableIterator()};
+  }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
@@ -517,7 +544,7 @@ public:
   void setModule(const Module *Mod) { M = Mod; }
 
   void setFuncNameToProfNameMap(
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId> &FPMap) {
+      const HashKeyMap<DenseMap, FunctionId, FunctionId> &FPMap) {
     FuncNameToProfNameMap = &FPMap;
   }
 
@@ -560,12 +587,12 @@ protected:
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
-  const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-      *FuncNameToProfNameMap = nullptr;
+  const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap =
+      nullptr;
 
   // A map from a function's context hash to its meta data section range, used
   // for on-demand read function profile metadata.
-  std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
+  DenseMap<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
   std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
@@ -650,8 +677,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  std::vector<FunctionId> *getNameTable() override {
-    return &NameTable;
+  llvm::iterator_range<NameTableIterator> getNameTable() const override {
+    return {NameTableIterator(NameTable.data()),
+            NameTableIterator(NameTable.data() + NameTable.size())};
   }
 
 protected:
@@ -754,6 +782,48 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+};
+
+/// Trait class for reading the on-disk function offset hash table mapping
+/// function name GUIDs to their offsets in the SecLBRProfile section.
+class FuncOffsetHashTableInfo {
+public:
+  using key_type = uint64_t;
+  using key_type_ref = uint64_t;
+  using data_type = uint32_t; // Offset
+  using data_type_ref = uint32_t;
+  using hash_value_type = uint32_t;
+  using offset_type = uint32_t;
+  using internal_key_type = uint64_t;
+  using external_key_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref Key) {
+    return static_cast<hash_value_type>(Key);
+  }
+
+  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
+    return LHS == RHS;
+  }
+
+  static key_type GetInternalKey(key_type_ref Key) { return Key; }
+  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    // Implicit lengths: do NOT read or advance pointer D.
+    return {sizeof(key_type), sizeof(data_type)};
+  }
+
+  static key_type ReadKey(const unsigned char *D, offset_type Len) {
+    assert(Len == sizeof(key_type) && "Key length mismatch");
+    return support::endian::read64le(D);
+  }
+
+  static data_type ReadData(key_type_ref K, const unsigned char *D,
+                            offset_type Len) {
+    assert(Len == sizeof(data_type) && "Data length mismatch");
+    return support::endian::read32le(D);
+  }
 };
 
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines

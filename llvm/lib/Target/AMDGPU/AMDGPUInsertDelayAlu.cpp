@@ -76,7 +76,7 @@ public:
     // WMMA XDL ops are treated the same as TRANS.
     if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI))
+    if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
@@ -240,22 +240,13 @@ public:
     // Advance the delay info for each regunit, erasing any that are no longer
     // useful.
     void advance(DelayType Type, unsigned Cycles) {
-      iterator Next;
-      for (auto I = begin(), E = end(); I != E; I = Next) {
-        Next = std::next(I);
-        if (I->second.advance(Type, Cycles))
-          erase(I);
-      }
+      remove_if([&](auto &P) { return P.second.advance(Type, Cycles); });
     }
 
     void advanceByVALUNum(unsigned VALUNum) {
-      iterator Next;
-      for (auto I = begin(), E = end(); I != E; I = Next) {
-        Next = std::next(I);
-        if (I->second.VALUNum >= VALUNum && I->second.VALUCycles > 0) {
-          erase(I);
-        }
-      }
+      remove_if([&](auto &P) {
+        return P.second.VALUNum >= VALUNum && P.second.VALUCycles > 0;
+      });
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -419,7 +410,7 @@ public:
           }
         }
 
-        if (SII->isVALU(MI.getOpcode())) {
+        if (SII->isVALU(MI.getOpcode(), /*AllowLDSDMA=*/true)) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {

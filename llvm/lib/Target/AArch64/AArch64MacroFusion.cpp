@@ -117,19 +117,42 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
+// True unless the pair provably writes different physical registers. Pre-RA
+// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
+// reg).
+static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
+                                 const MachineInstr &SecondMI) {
+  Register DestFirst = FirstMI.getOperand(0).getReg();
+  Register DestSecond = SecondMI.getOperand(0).getReg();
+  if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
+    return true;
+  return DestFirst == DestSecond;
+}
+
 /// AES crypto encoding or decoding.
 static bool isAESPair(const MachineInstr *FirstMI,
                       const MachineInstr &SecondMI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
-  switch (SecondMI.getOpcode()) {
+  unsigned SecondOpcode = SecondMI.getOpcode();
+  switch (SecondOpcode) {
   // AES encode.
   case AArch64::AESMCrr:
   case AArch64::AESMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESErr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESErr)
+      return false;
+    return SecondOpcode == AArch64::AESMCrrTied ||
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
-    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESDrr;
+    if (FirstMI == nullptr)
+      return true;
+    if (FirstMI->getOpcode() != AArch64::AESDrr)
+      return false;
+    return SecondOpcode == AArch64::AESIMCrrTied ||
+           mayHaveWAWDependency(*FirstMI, SecondMI);
   }
 
   return false;

@@ -484,6 +484,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -565,6 +566,9 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
     )
   endif()
 endif()

@@ -246,11 +246,16 @@ LLVM_ABI bool ConvertUTF8toWide(llvm::StringRef Source, std::wstring &Result);
 LLVM_ABI bool ConvertUTF8toWide(const char *Source, std::wstring &Result);
 
 /**
-* Converts a std::wstring to a UTF-8 encoded std::string.
-* \return true on success.
-*/
-LLVM_ABI bool convertWideToUTF8(const std::wstring &Source,
-                                std::string &Result);
+ * Converts an ArrayRef<wchar_t> to a UTF-8 encoded std::string.
+ * \return true on success.
+ */
+LLVM_ABI bool convertWideToUTF8(ArrayRef<wchar_t> Source, std::string &Result);
+
+/**
+ * Converts a wide C-string to a UTF-8 encoded std::string.
+ * \return true on success.
+ */
+LLVM_ABI bool convertWideToUTF8(const wchar_t *Source, std::string &Result);
 
 /**
  * Convert an Unicode code point to UTF8 sequence.

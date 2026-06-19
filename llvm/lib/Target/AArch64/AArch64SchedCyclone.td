@@ -274,7 +274,12 @@ def : WriteRes<WriteLDHi, []> {
 }
 
 // STP is a vector op and store, except for QQ, which is just two stores.
-def : SchedAlias<WriteSTP, WriteVSTShuffle>;
+def CyWriteSTP : SchedWriteRes<[CyUnitV, CyUnitLS]> {
+  let Latency = 6;
+  let NumMicroOps = 2;
+}
+
+def : SchedAlias<WriteSTP, CyWriteSTP>;
 def : InstRW<[WriteST, WriteST], (instrs STPQi)>;
 
 //---

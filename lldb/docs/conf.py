@@ -71,7 +71,7 @@ except ImportError:
 # Automatic anchors for markdown titles
 myst_heading_anchors = 6
 myst_heading_slug_func = "llvm_slug.make_slug"
-myst_enable_extensions = ["fieldlist"]
+myst_enable_extensions = ["fieldlist", "colon_fence", "deflist"]
 
 autodoc_default_options = {"special-members": True}
 

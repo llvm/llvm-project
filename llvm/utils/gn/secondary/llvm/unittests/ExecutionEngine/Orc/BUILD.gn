@@ -18,6 +18,7 @@ unittest("OrcJITTests") {
     "CallSPSViaEPCTest.cpp",
     "CallableTraitsHelperTest.cpp",
     "CoreAPIsTest.cpp",
+    "EPCGenericDylibManagerTest.cpp",
     "EPCGenericJITLinkMemoryManagerTest.cpp",
     "EPCGenericMemoryAccessTest.cpp",
     "ExecutionSessionWrapperFunctionCallsTest.cpp",

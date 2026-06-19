@@ -12,13 +12,13 @@
 #      CHECK: Command Output ([[OUT]]):
 # CHECK-NEXT: --
 #      CHECK: export
-#      CHECK: LLVM_PROFILE_FILE=per-test-coverage0.profraw
+#      CHECK: LLVM_PROFILE_FILE=per-test-coverage.py-%p-%m0.profraw
 #      CHECK: per-test-coverage.py
 #      CHECK: {{RUN}}: at line 2
 #      CHECK: export
-#      CHECK: LLVM_PROFILE_FILE=per-test-coverage1.profraw
+#      CHECK: LLVM_PROFILE_FILE=per-test-coverage.py-%p-%m1.profraw
 #      CHECK: per-test-coverage.py
 #      CHECK: {{RUN}}: at line 3
 #      CHECK: export
-#      CHECK: LLVM_PROFILE_FILE=per-test-coverage2.profraw
+#      CHECK: LLVM_PROFILE_FILE=per-test-coverage.py-%p-%m2.profraw
 #      CHECK: per-test-coverage.py

@@ -16,7 +16,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <sys/syscall.h> // SYS_poll, SYS_ppoll
+#include <sys/syscall.h> // SYS_poll, SYS_ppoll, SYS_ppoll_time64
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -34,12 +34,17 @@ LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
   } else {
     tsp = nullptr;
   }
-#if defined(SYS_ppoll)
-  ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
-#elif defined(SYS_ppoll_time64)
+#if defined(SYS_ppoll_time64)
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll_time64, fds, nfds, tsp,
                                           nullptr, 0);
+#elif defined(SYS_ppoll)
+  static_assert(
+      sizeof(timespec::tv_nsec) == sizeof(long),
+      "This legacy syscall fallback is only safe on platforms where tv_nsec "
+      "matches the register size (long). It is unsafe on 32-bit platforms "
+      "with 64-bit tv_nsec.");
+  ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
 #else
 #error "poll, ppoll, ppoll_time64 syscalls not available."
 #endif // defined(SYS_ppoll) || defined(SYS_ppoll_time64)

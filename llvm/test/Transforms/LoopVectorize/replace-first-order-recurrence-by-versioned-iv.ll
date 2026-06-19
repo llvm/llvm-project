@@ -159,8 +159,8 @@ for.end:
   ret void
 }
 
-define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_pointer_use(ptr %y, ptr %x, i32 %n) {
-; CHECK-LABEL: define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_pointer_use(
+define i64 @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_pointer_use(ptr %y, ptr %x, i32 %n) {
+; CHECK-LABEL: define i64 @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_pointer_use(
 ; CHECK-SAME: ptr [[Y:%.*]], ptr [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
@@ -196,6 +196,7 @@ define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_po
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -215,7 +216,8 @@ define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_po
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[PHI64_LCSSA:%.*]] = phi i64 [ [[PHI64]], %[[FOR_BODY]] ], [ [[IND_ESCAPE]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[PHI64_LCSSA]]
 ;
 entry:
   br label %for.body
@@ -234,7 +236,7 @@ for.body:
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:
-  ret void
+  ret i64 %phi64
 }
 
 define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_pointer_use(ptr %y, ptr %x, i64 %n) {

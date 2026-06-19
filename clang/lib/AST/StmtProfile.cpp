@@ -40,6 +40,9 @@ namespace {
 
     void VisitStmt(const Stmt *S);
 
+    /// Fold a scalar value into the profile
+    void VisitInteger(uint64_t Value) { ID.AddInteger(Value); }
+
     void VisitStmtNoChildren(const Stmt *S) {
       HandleStmtClass(S->getStmtClass());
     }
@@ -329,7 +332,7 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isVolatile());
   ID.AddBoolean(S->isSimple());
-  VisitExpr(S->getAsmStringExpr());
+  Visit(S->getAsmStringExpr());
   ID.AddInteger(S->getNumOutputs());
   for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     ID.AddString(S->getOutputName(I));
@@ -342,7 +345,7 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   }
   ID.AddInteger(S->getNumClobbers());
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
-    VisitExpr(S->getClobberExpr(I));
+    Visit(S->getClobberExpr(I));
   ID.AddInteger(S->getNumLabels());
   for (auto *L : S->labels())
     VisitDecl(L->getLabel());
@@ -658,7 +661,18 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
-  VisitOMPClauseList(C);
+  // Enumerate per pref-spec so the {fr, attr} grouping is part of the profile.
+  Profiler->VisitStmt(C->getInteropVar());
+  Profiler->VisitInteger(C->hasPreferAttrs() ? 1 : 0);
+  Profiler->VisitInteger(C->varlist_size() - 1);
+  for (OMPInitClause::PrefView P : C->prefs()) {
+    Profiler->VisitInteger(P.Fr ? 1 : 0);
+    if (P.Fr)
+      Profiler->VisitStmt(P.Fr);
+    Profiler->VisitInteger(P.Attrs.size());
+    for (const Expr *A : P.Attrs)
+      Profiler->VisitStmt(A);
+  }
 }
 
 void OMPClauseProfiler::VisitOMPUseClause(const OMPUseClause *C) {

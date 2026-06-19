@@ -856,6 +856,8 @@ namespace ctz {
   char ctz53[__builtin_ctzg((unsigned __int128)0x10, 42) == 4 ? 1 : -1];
   char ctz54[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1)) == BITSIZE(__int128) - 1 ? 1 : -1];
   char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+
+  static_assert(__builtin_elementwise_ctzg((__int128)42) == 1, "");
 #endif
 #ifndef __AVR__
   int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
@@ -1383,6 +1385,23 @@ namespace ElementwisePopcount {
 #if __INT_WIDTH__ == 32
   static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
 #endif
+}
+
+namespace ElementwiseClmul {
+  static_assert(__builtin_elementwise_clmul(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_clmul(1U, 1U) == 1U);
+  static_assert(__builtin_elementwise_clmul(3U, 3U) == 5U);
+  static_assert(__builtin_elementwise_clmul(0xBU, 0xDU) == 0x7FU);
+  static_assert(__builtin_elementwise_clmul(0xFU, 0xFU) == 0x55U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_clmul((unsigned _BitInt(31))3,
+                                            (unsigned _BitInt(31))3) ==
+                (unsigned _BitInt(31))5);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_clmul(
+                    (vector4uint){0U, 1U, 3U, 7U},
+                    (vector4uint){0U, 1U, 3U, 7U})) == 27U);
 }
 
 namespace BuiltinMemcpy {
@@ -2047,4 +2066,19 @@ namespace WcslenInvalidArg {
                                                               // both-note {{cast that performs the conversions of a reinterpret_cast}}
   static_assert(__builtin_wcslen(L"x") == 1);
 
+}
+
+namespace SubCb {
+  constexpr unsigned char subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+    return __builtin_subcb(lhs, rhs, carry, &rhs);
+  }
+  static_assert(subcb(10, 15, 1) == 250);
+
+  using u8 = unsigned char;
+  constexpr int subcb2() {
+    u8 a = 0, b = 0, c = 0;
+    __builtin_subcb(a, b, c, &c);
+    return 0;
+  }
+  static_assert(subcb2() == 0);
 }

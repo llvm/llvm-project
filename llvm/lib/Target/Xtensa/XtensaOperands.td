@@ -175,6 +175,13 @@ def imm7_22: Immediate<i32, [{ return Imm >= 7 && Imm <= 22; }], "Imm7_22_AsmOpe
   let DecoderMethod = "decodeImm7_22Operand";
 }
 
+// select_256 predicate - Immediate in the range [0,255]
+def Select_256_AsmOperand: ImmAsmOperand<"Select_256">;
+def select_256: Immediate<i32, [{ return Imm >= 0 && Imm <= 255; }], "Select_256_AsmOperand"> {
+  let EncoderMethod = "getSelect_256OpValue";
+  let DecoderMethod = "decodeSelect_256Operand";
+}
+
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//

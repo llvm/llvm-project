@@ -55,7 +55,7 @@ char *get_ptr_to_element() { return ptrToElement; }
 // CIR: cir.global {{.*}} @ptrToElement = #cir.global_view<@gSMulti, [0, 4, 1]> : !cir.ptr<
 
 // CIR: cir.func {{.*}} @_Z15use_as_constantv()
-// CIR:   %[[PTR_TO_S:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["ptrToS", init, const]
+// CIR:   %[[PTR_TO_S:.*]] = cir.alloca "ptrToS" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   %[[GLOBAL_PTR:.*]] = cir.const #cir.global_view<@_ZL2gS> : !cir.ptr<!rec_S>
 // CIR:   cir.store{{.*}} %[[GLOBAL_PTR]], %[[PTR_TO_S]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 

@@ -1269,3 +1269,79 @@ loop:
 exit:
   ret void
 }
+
+; FIXME: Currently flags from first member are preserved incorrectly.
+define void @flag_mismatch_disjoint(ptr noalias %dst, ptr noalias %src) {
+; VF2-LABEL: define void @flag_mismatch_disjoint(
+; VF2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = or <2 x i64> [[WIDE_LOAD]], splat (i64 1)
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
+; VF2-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP3]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
+;
+; VF4-LABEL: define void @flag_mismatch_disjoint(
+; VF4-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[TMP2:%.*]] = or disjoint <4 x i64> [[STRIDED_VEC]], splat (i64 1)
+; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP4:%.*]] = or <4 x i64> [[STRIDED_VEC1]], splat (i64 1)
+; VF4-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP5]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.2 = shl nsw i64 %iv, 1
+  %p0 = getelementptr inbounds i64, ptr %src, i64 %mul.2
+  %l0 = load i64, ptr %p0, align 8
+  %a0 = or disjoint i64 %l0, 1
+  %d0 = getelementptr inbounds i64, ptr %dst, i64 %mul.2
+  store i64 %a0, ptr %d0, align 8
+  %idx.1 = or disjoint i64 %mul.2, 1
+  %p1 = getelementptr inbounds i64, ptr %src, i64 %idx.1
+  %l1 = load i64, ptr %p1, align 8
+  %a1 = or i64 %l1, 1
+  %d1 = getelementptr inbounds i64, ptr %dst, i64 %idx.1
+  store i64 %a1, ptr %d1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

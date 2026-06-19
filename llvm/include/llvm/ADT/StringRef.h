@@ -951,25 +951,9 @@ inline uint64_t xxh3_64bits(StringRef data) {
 
 // Provide DenseMapInfo for StringRefs.
 template <> struct DenseMapInfo<StringRef, void> {
-  static inline StringRef getEmptyKey() {
-    return StringRef(reinterpret_cast<const char *>(~static_cast<uintptr_t>(0)),
-                     0);
-  }
-
-  static inline StringRef getTombstoneKey() {
-    return StringRef(reinterpret_cast<const char *>(~static_cast<uintptr_t>(1)),
-                     0);
-  }
-
   LLVM_ABI static unsigned getHashValue(StringRef Val);
 
-  static bool isEqual(StringRef LHS, StringRef RHS) {
-    if (RHS.data() == getEmptyKey().data())
-      return LHS.data() == getEmptyKey().data();
-    if (RHS.data() == getTombstoneKey().data())
-      return LHS.data() == getTombstoneKey().data();
-    return LHS == RHS;
-  }
+  static bool isEqual(StringRef LHS, StringRef RHS) { return LHS == RHS; }
 };
 
 } // end namespace llvm

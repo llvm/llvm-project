@@ -30,7 +30,7 @@ ArrayDtor arrDtor[16];
 // CIR:   %[[CONST16:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[CONST16]] : (!cir.ptr<!rec_ArrayDtor>, !u64i) -> !cir.ptr<!rec_ArrayDtor>
-// CIR:   %[[CUR_ADDR:.*]] = cir.alloca !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, ["__array_idx"]
+// CIR:   %[[CUR_ADDR:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:   cir.store %[[END]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:   cir.do {
 // CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
@@ -102,10 +102,10 @@ ArrayDtor arrDtor[16];
 
 // Common init function for all globals with default priority
 
-// CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
+// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 
-// LLVM: define void @_GLOBAL__sub_I_[[FILENAME:.*]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]()
 // LLVM:   call void @__cxx_global_var_init()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() {{.*}} section ".text.startup" {

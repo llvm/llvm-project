@@ -21,8 +21,8 @@ class ModuleDebugInfoPrinterPass
   raw_ostream &OS;
 
 public:
-  explicit ModuleDebugInfoPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI explicit ModuleDebugInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 } // end namespace llvm
 

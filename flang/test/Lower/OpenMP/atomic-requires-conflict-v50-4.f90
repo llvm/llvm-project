@@ -1,7 +1,7 @@
 !RUN: bbc %openmp_flags -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
 !RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
 
-!CHECK: omp.atomic.capture memory_order(relaxed)
+!CHECK: omp.atomic.capture memory_order(acquire)
 
 subroutine f06(x, v)
   integer :: x, v

@@ -20,6 +20,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -39,7 +41,8 @@ protected:
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
-      : TUSum(BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
+      : TUSum(llvm::Triple("arm64-apple-macosx"),
+              BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         Builder(TUSum) {}
 
   bool setUpTest(StringRef Code) {
@@ -569,5 +572,145 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
 
   EXPECT_EQ(Sum, nullptr);
 }
+
+TEST_F(UnsafeBufferUsageTest, UnaryPlusSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int *p) {
+      (+p)[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, PredefinedExprSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      __func__[100];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, IntegerLiteralCastSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      ((int *)0)[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXNewArraySubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      (new int[10])[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXNullPtrSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      ((int*)nullptr)[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXThisSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct S {
+      void foo() {
+        this[5];
+      }
+    };
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, ExprWithCleanupsSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct Guard { ~Guard(); };
+    int *getPtr(Guard);
+    void foo() {
+      getPtr(Guard{})[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"getPtr", 1U, true}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, MaterializeTemporaryExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    struct S { int *get(); };
+    void foo(int *p) {
+      S{}.get()[5];
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"get", 1U, true}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    using IntPtr = int*;
+
+    void foo(int *q) {
+      int p = IntPtr()[5]; // no EPL created for CXXScalarValueInitExpr
+      q[5];
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"q", 1U}}));
+}
+
+// Robustness test: unsupported constructs will not cause crash
+#ifndef NDEBUG
+TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
+  // GNU statement expressions are not supported, but should not crash and
+  // should log a warning.
+  llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
+
+  llvm::setCurrentDebugType("ssaf-analyses");
+  testing::internal::CaptureStderr();
+
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int i) {
+      ({ int *p = 0; p; })[i];
+    }
+  )cpp"));
+
+  // The only unsafe pointer is unsupported, so no summary should be produced.
+  ASSERT_FALSE(getEntitySummary("foo"));
+  // Verify the warning was logged
+  EXPECT_TRUE(
+      StringRef(testing::internal::GetCapturedStderr())
+          .contains("attempt to translate StmtExpr to EntityPointerLevels"));
+}
+#endif
 
 } // namespace

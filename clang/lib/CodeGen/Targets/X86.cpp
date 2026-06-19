@@ -1329,8 +1329,8 @@ class X86_64ABIInfo : public ABIInfo {
   /// classify it as INTEGER (for compatibility with older clang compilers).
   bool classifyIntegerMMXAsSSE() const {
     // Clang <= 3.8 did not do this.
-    if (getContext().getLangOpts().getClangABICompat() <=
-        LangOptions::ClangABI::Ver3_8)
+    if (getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver3_8))
       return false;
 
     const llvm::Triple &Triple = getTarget().getTriple();
@@ -1342,8 +1342,8 @@ class X86_64ABIInfo : public ABIInfo {
   // GCC classifies vectors of __int128 as memory.
   bool passInt128VectorsInMem() const {
     // Clang <= 9.0 did not do this.
-    if (getContext().getLangOpts().getClangABICompat() <=
-        LangOptions::ClangABI::Ver9)
+    if (getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver9))
       return false;
 
     const llvm::Triple &T = getTarget().getTriple();
@@ -1352,8 +1352,8 @@ class X86_64ABIInfo : public ABIInfo {
 
   bool returnCXXRecordGreaterThan128InMem() const {
     // Clang <= 20.0 did not do this, and PlayStation does not do this.
-    if (getContext().getLangOpts().getClangABICompat() <=
-            LangOptions::ClangABI::Ver20 ||
+    if (getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver20) ||
         getTarget().getTriple().isPS())
       return false;
 
@@ -2100,8 +2100,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
     // Classify the fields one at a time, merging the results.
     unsigned idx = 0;
-    bool UseClang11Compat = getContext().getLangOpts().getClangABICompat() <=
-                                LangOptions::ClangABI::Ver11 ||
+    bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
+                                LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 

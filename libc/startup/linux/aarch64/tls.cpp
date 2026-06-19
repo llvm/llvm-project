@@ -8,6 +8,7 @@
 
 #include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
@@ -65,7 +66,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
   if (size == 0)
     return;
-  syscall_impl<long>(SYS_munmap, addr, size);
+  linux_syscalls::munmap(reinterpret_cast<void *>(addr), size);
 }
 
 bool set_thread_ptr(uintptr_t val) {

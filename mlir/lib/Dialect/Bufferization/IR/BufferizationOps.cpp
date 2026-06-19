@@ -240,7 +240,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+  } else if (auto ms = options.defaultMemorySpaceFn(
+                 cast<TensorLikeType>(getType()))) {
     memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");

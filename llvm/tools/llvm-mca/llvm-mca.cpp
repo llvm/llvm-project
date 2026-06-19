@@ -38,6 +38,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -374,7 +375,7 @@ int main(int argc, char **argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
+  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions, &MCScheduleOptions});
 
   // Parse flags and initialize target options.
   cl::ParseCommandLineOptions(argc, argv,

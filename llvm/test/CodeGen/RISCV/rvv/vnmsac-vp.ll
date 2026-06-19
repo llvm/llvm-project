@@ -2027,8 +2027,8 @@ define <vscale x 8 x i64> @vnmsac_vx_nxv8i64_ta(<vscale x 8 x i64> %a, i64 %b, <
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV32-NEXT:    vlse64.v v24, (a0), zero

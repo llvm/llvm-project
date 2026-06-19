@@ -17,6 +17,7 @@
 #include <__concepts/copyable.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
+#include <__concepts/referenceable.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/concepts.h>
@@ -28,7 +29,6 @@
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_pointer.h>
-#include <__type_traits/is_referenceable.h>
 #include <__utility/declval.h>
 #include <variant>
 

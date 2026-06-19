@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -95,5 +99,7 @@ LIBC_INLINE float16 hypotf16(float16 x, float16 y) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H

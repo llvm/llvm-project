@@ -184,25 +184,137 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Check that generic IndexedAccessOpInterface users are supported.
+
+// CHECK-LABEL: @test_atomic_rmw(
+// CHECK-SAME: %[[BASE:[^:]*]]: memref{{[^,]*}},
+// CHECK-SAME: %[[VALUE:[^:]*]]: f32,
+// CHECK-SAME: %[[DYN_OFFSET:.*]]: index)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 1] [1, 1] [1, 1] : memref<8x8xf32> to memref<1x1xf32, strided<[8, 1], offset: ?>>
+// CHECK: %[[RES:.*]] = memref.atomic_rmw addf %[[VALUE]], %[[SUBVIEW]][%[[C0]], %[[C0]]] : (f32, memref<1x1xf32, strided<[8, 1], offset: ?>>) -> f32
+// CHECK: return %[[RES]] : f32
+func.func @test_atomic_rmw(%base : memref<8x8xf32>, %value : f32,
+    %offset : index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %res = memref.atomic_rmw addf %value, %base[%offset, %c1] : (f32, memref<8x8xf32>) -> f32
+  return %res : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.memref.extract_address_computations
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Check that zero-result IndexedAccessOpInterface users are supported.
+
+// CHECK-LABEL: @test_prefetch(
+// CHECK-SAME: %[[BASE:[^:]*]]: memref{{[^,]*}},
+// CHECK-SAME: %[[DYN_OFFSET:.*]]: index)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 1] [1, 1] [1, 1] : memref<8x8xf32> to memref<1x1xf32, strided<[8, 1], offset: ?>>
+// CHECK: memref.prefetch %[[SUBVIEW]][%[[C0]], %[[C0]]], read, locality<3>, data : memref<1x1xf32, strided<[8, 1], offset: ?>>
+func.func @test_prefetch(%base : memref<8x8xf32>, %offset : index) {
+  %c1 = arith.constant 1 : index
+  memref.prefetch %base[%offset, %c1], read, locality<3>, data
+      : memref<8x8xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.memref.extract_address_computations
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Do not rewrite indexed access ops that do not guarantee in-bounds indices.
+
+// CHECK-LABEL: @negative_vector_load_without_inbounds(
+// CHECK-SAME: %[[BASE:[^:]*]]: memref<{{[^,]*}}>,
+// CHECK-SAME: %[[DYN_OFFSET:.*]]: index)
+// CHECK-NOT: memref.subview
+// CHECK: %[[LOADED_VAL:.*]] = vector.load %[[BASE]][%[[DYN_OFFSET]], %{{.*}}] : memref<?x?xf32>, vector<4xf32>
+// CHECK: return %[[LOADED_VAL]] : vector<4xf32>
+func.func @negative_vector_load_without_inbounds(%base : memref<?x?xf32>,
+    %offset : index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %loaded_val = vector.load %base[%offset, %c0] : memref<?x?xf32>, vector<4xf32>
+  return %loaded_val : vector<4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.memref.extract_address_computations
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Rewrite static accessed shapes against dynamic source dimensions using the
+// minimum of the remaining dimension size and the accessed shape size.
+
+// CHECK-DAG: #[[$MIN_496_MAP:.*]] = affine_map<()[s0] -> (s0, 496)>
+// CHECK-LABEL: @test_gpu_subgroup_mma_dynamic_source_shape(
+// CHECK-SAME: %[[BASE:[^:]*]]: memref<?x?xf16>,
+// CHECK-SAME: %[[DYN_OFFSET:.*]]: index)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: {{.*}}, {{.*}}, %[[SIZES:.*]]:2, {{.*}} = memref.extract_strided_metadata %[[BASE]]
+// CHECK-DAG: %[[DYN_SIZE:.*]] = affine.min #[[$MIN_496_MAP]]()[%[[SIZES]]#1]
+// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 0] [1, %[[DYN_SIZE]]] [1, 1] : memref<?x?xf16> to memref<1x?xf16, strided<[?, 1], offset: ?>>
+// CHECK: gpu.subgroup_mma_load_matrix %[[SUBVIEW]][%[[C0]], %[[C0]]] {leadDimension = 32 : index} : memref<1x?xf16, strided<[?, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "AOp">
+func.func @test_gpu_subgroup_mma_dynamic_source_shape(
+    %base : memref<?x?xf16>, %offset : index)
+    -> !gpu.mma_matrix<16x16xf16, "AOp"> {
+  %c0 = arith.constant 0 : index
+  %matrix = gpu.subgroup_mma_load_matrix %base[%offset, %c0]
+      {leadDimension = 32 : index}
+      : memref<?x?xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
+  return %matrix : !gpu.mma_matrix<16x16xf16, "AOp">
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.memref.extract_address_computations
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // Simple test: check that we extract the address computation of a ldmatrix into
 // a dedicated subview.
 // The resulting ldmatrix will loaded from with subview and have only indices set
 // to zero.
-// Also the sizes of the view are adjusted to `original size - offset`.
+// The trailing subview dimensions are sized from getAccessedShape().
 
-// CHECK-DAG: #[[$FOUR_MINUS_OFF_MAP:.*]] = affine_map<()[s0] -> (-s0 + 4)>
-// CHECK-DAG: #[[$THIRTY_TWO_MINUS_OFF_MAP:.*]] = affine_map<()[s0] -> (-s0 + 32)>
 // CHECK-LABEL: @test_ldmatrix(
 // CHECK-SAME: %[[BASE:[^:]*]]: memref<{{[^,]*}}, 3>,
 // CHECK-SAME: %[[DYN_OFFSET0:[^:]*]]: index,
 // CHECK-SAME: %[[DYN_OFFSET1:[^:]*]]: index,
 // CHECK-SAME: %[[DYN_OFFSET2:[^:]*]]: index)
-// CHECK-DAG: %[[DYN_SIZE0:.*]] = affine.apply #[[$FOUR_MINUS_OFF_MAP]]()[%[[DYN_OFFSET0]]]
-// CHECK-DAG: %[[DYN_SIZE1:.*]] = affine.apply #[[$THIRTY_TWO_MINUS_OFF_MAP]]()[%[[DYN_OFFSET1]]]
-// CHECK-DAG: %[[DYN_SIZE2:.*]] = affine.apply #[[$THIRTY_TWO_MINUS_OFF_MAP]]()[%[[DYN_OFFSET2]]]
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [%[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]]] [1, 1, 1] : memref<4x32x32xf16, 3> to memref<?x?x?xf16, strided<[1024, 32, 1], offset: ?>, 3>
-// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<?x?x?xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
+// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [1, 1, 8] [1, 1, 1] : memref<4x32x32xf16, 3> to memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3>
+// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_ldmatrix(%base : memref<4x32x32xf16, 3>,
     %offset0 : index, %offset1: index, %offset2: index)
@@ -226,23 +338,22 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Same as test_ldmatrix but with fully dynamic memref.
+// Same as test_ldmatrix but with fully dynamic memref. The accessed shape is
+// capped by the maximal in-bounds size for the dynamic source dimension.
 
-// CHECK-DAG: #[[$A_MINUS_B_MAP:.*]] = affine_map<()[s0, s1] -> (s0 - s1)>
-// CHECK-LABEL: @test_ldmatrix(
+// CHECK-DAG: #[[$MIN_8_MAP:.*]] = affine_map<()[s0, s1] -> (s0 - s1, 8)>
+// CHECK-LABEL: @test_dynamic_ldmatrix(
 // CHECK-SAME: %[[BASE:[^:]*]]: memref<{{[^,]*}}, 3>,
 // CHECK-SAME: %[[DYN_OFFSET0:[^:]*]]: index,
 // CHECK-SAME: %[[DYN_OFFSET1:[^:]*]]: index,
 // CHECK-SAME: %[[DYN_OFFSET2:[^:]*]]: index)
-// CHECK-DAG: {{.*}}, {{.*}}, %[[DYN_SIZES:.*]]:3, {{.*}} = memref.extract_strided_metadata %[[BASE]]
-// CHECK-DAG: %[[DYN_SIZE0:.*]] = affine.apply #[[$A_MINUS_B_MAP]]()[%[[DYN_SIZES]]#0, %[[DYN_OFFSET0]]]
-// CHECK-DAG: %[[DYN_SIZE1:.*]] = affine.apply #[[$A_MINUS_B_MAP]]()[%[[DYN_SIZES]]#1, %[[DYN_OFFSET1]]]
-// CHECK-DAG: %[[DYN_SIZE2:.*]] = affine.apply #[[$A_MINUS_B_MAP]]()[%[[DYN_SIZES]]#2, %[[DYN_OFFSET2]]]
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [%[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]]] [1, 1, 1] : memref<?x?x?xf16, 3> to memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>, 3>
-// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<?x?x?xf16, strided<[?, ?, 1], offset: ?>, 3> -> vector<4x2xf16>
+// CHECK-DAG: {{.*}}, {{.*}}, %[[SIZES:.*]]:3, {{.*}} = memref.extract_strided_metadata %[[BASE]]
+// CHECK-DAG: %[[DYN_SIZE:.*]] = affine.min #[[$MIN_8_MAP]]()[%[[SIZES]]#2, %[[DYN_OFFSET2]]]
+// CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [1, 1, %[[DYN_SIZE]]] [1, 1, 1] : memref<?x?x?xf16, 3> to memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3>
+// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3> -> vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
-func.func @test_ldmatrix(%base : memref<?x?x?xf16, 3>,
+func.func @test_dynamic_ldmatrix(%base : memref<?x?x?xf16, 3>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %loaded_val = nvgpu.ldmatrix
@@ -440,4 +551,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-

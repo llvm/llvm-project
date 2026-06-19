@@ -101,9 +101,9 @@ class MachineBlockHashInfoResult {
   DenseMap<const MachineBasicBlock *, uint64_t> MBBHashInfo;
 
 public:
-  MachineBlockHashInfoResult();
-  explicit MachineBlockHashInfoResult(const MachineFunction &MBB);
-  uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
+  LLVM_ABI MachineBlockHashInfoResult();
+  LLVM_ABI explicit MachineBlockHashInfoResult(const MachineFunction &MBB);
+  LLVM_ABI uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
 };
 
 class MachineBlockHashInfoAnalysis
@@ -113,7 +113,8 @@ class MachineBlockHashInfoAnalysis
 
 public:
   using Result = MachineBlockHashInfoResult;
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Printer pass for the \c MachineBlockHashInfoAnalysis results.
@@ -123,12 +124,12 @@ class MachineBlockHashInfoPrinterPass
 
 public:
   explicit MachineBlockHashInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Legacy MachineFunctionPass for MachineBlockHashInfo.
-class MachineBlockHashInfo : public MachineFunctionPass {
+class LLVM_ABI MachineBlockHashInfo : public MachineFunctionPass {
   MachineBlockHashInfoResult Result;
 
 public:

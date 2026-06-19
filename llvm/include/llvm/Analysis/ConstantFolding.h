@@ -169,6 +169,9 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     const TargetLibraryInfo *TLI = nullptr,
                                     bool AllowNonDeterministic = true);
 
+LLVM_ABI Constant *ConstantFoldUnaryIntrinsic(Intrinsic::ID ID, Constant *Op,
+                                              Type *Ty);
+
 LLVM_ABI Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                                Constant *RHS, Type *Ty);
 

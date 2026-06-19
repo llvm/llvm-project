@@ -95,7 +95,7 @@ for.cond.cleanup:
 }
 
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride2'
-; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2 at %0, ir<%arrayidx>
+; CHECK: Cost of 2 for VF vscale x 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 define void @gather_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body

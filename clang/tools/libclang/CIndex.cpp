@@ -2467,6 +2467,8 @@ void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseEnqueue::VisitOMPInitClause(const OMPInitClause *C) {
   VisitOMPClauseList(C);
+  for (const Expr *A : C->attrs())
+    Visitor->AddStmt(A);
 }
 
 void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {
@@ -9327,6 +9329,8 @@ CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
 }
 
 static const RawComment *getCursorRawComment(CXCursor C) {
+  if (!clang_isDeclaration(C.kind) && C.kind != CXCursor_MacroDefinition)
+    return nullptr;
   ASTContext &Context = getCursorContext(C);
   if (clang_isDeclaration(C.kind))
     return Context.getRawCommentForAnyRedecl(getCursorDecl(C));

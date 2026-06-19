@@ -13,6 +13,8 @@ else()
 endif()
 target_link_libraries(LLVMOffload PRIVATE ${llvm_libs})
 
+target_link_libraries(LLVMOffload PRIVATE PluginCommon)
+
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
     target_link_libraries(LLVMOffload PRIVATE omptarget.rtl.${plugin})
 endforeach()
@@ -26,6 +28,7 @@ target_include_directories(LLVMOffload PUBLIC
                             ${CMAKE_CURRENT_BINARY_DIR}/../include
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
+                            PRIVATE
                             ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
                             ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
                             )
@@ -42,7 +45,23 @@ set_target_properties(LLVMOffload PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       INSTALL_RPATH "$ORIGIN"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-install(TARGETS LLVMOffload LIBRARY COMPONENT offload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+if(UNIX AND NOT APPLE)
+  set_target_properties(LLVMOffload PROPERTIES
+                        SOVERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}"
+                        VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
+endif()
+install(TARGETS LLVMOffload
+  COMPONENT offload
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}"
+  ARCHIVE DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+
+if(MSVC)
+  install(FILES "$<TARGET_PDB_FILE:LLVMOffload>"
+    CONFIGURATIONS Debug RelWithDebInfo
+    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    OPTIONAL)
+endif()
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload COMPONENT offload)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadPrint.hpp DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload COMPONENT offload)

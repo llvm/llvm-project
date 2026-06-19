@@ -63,12 +63,12 @@ public:
 
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
-                                   SourceLocation FreeLoc) {}
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    const Expr *MovedExpr) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
@@ -141,6 +141,8 @@ public:
   virtual void reportMisplacedLifetimebound(WarningScope Scope,
                                             const ParmVarDecl *PVDDef,
                                             const ParmVarDecl *PVDDecl) {}
+
+  virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,

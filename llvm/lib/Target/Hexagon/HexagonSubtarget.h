@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/Alignment.h"
+#include <bitset>
 #include <memory>
 #include <string>
 #include <vector>
@@ -63,7 +64,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool HasPreV65 = false;
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
-  bool ReservedR19 = false;
+  std::bitset<Hexagon::NUM_TARGET_REGS> UserReservedRegister;
   bool NoreturnStackElim = false;
 
 public:
@@ -286,7 +287,10 @@ public:
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
 
   bool hasMemNoShuf() const { return HasMemNoShuf; }
-  bool hasReservedR19() const { return ReservedR19; }
+  bool isRegisterReservedByUser(Register i) const override {
+    assert(i.id() < Hexagon::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i.id()];
+  }
   bool usePredicatedCalls() const;
 
   bool noreturnStackElim() const { return NoreturnStackElim; }

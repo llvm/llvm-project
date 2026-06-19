@@ -407,9 +407,12 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
-set(HOST_LINK_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   get_darwin_linker_version(HOST_LINK_VERSION)
+  set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
+endif()
+if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
@@ -488,6 +491,9 @@ option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
+
+option(CLANG_USE_EXPERIMENTAL_CONST_INTERP
+  "Use the new experimental constant interpreter for compile-time evaluation." OFF)
 
 if (DEFINED CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
@@ -585,8 +591,9 @@ if( CLANG_INCLUDE_TESTS )
   if(CLANG_BUILT_STANDALONE)
     umbrella_lit_testsuite_end(check-all)
   endif()
-  add_subdirectory(utils/perf-training)
 endif()
+
+add_subdirectory(utils/perf-training)
 
 option(CLANG_INCLUDE_DOCS "Generate build targets for the Clang docs."
   ${LLVM_INCLUDE_DOCS})

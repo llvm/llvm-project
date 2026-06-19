@@ -126,5 +126,7 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<PointerFlowJSONFormatInfo>
     RegisterPointerFlowJSONFormatInfo(
         "PointerFlow", "JSON Format info for PointerFlowEntitySummary");
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int PointerFlowSSAFJSONFormatAnchorSource = 0;
+volatile int PointerFlowJSONFormatAnchorSource = 0;
+} // namespace clang::ssaf

@@ -2043,6 +2043,24 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
+// Packed SIMD extensions
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+class RVPBinaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Averaging Addition and Subtraction.
+  def int_riscv_paadd : RVPBinaryIntrinsic;
+  def int_riscv_paaddu : RVPBinaryIntrinsic;
+  def int_riscv_pasub : RVPBinaryIntrinsic;
+  def int_riscv_pasubu : RVPBinaryIntrinsic;
+
+  // Packed Absolute Value and Absolute Difference
+  def int_riscv_pabd  : RVPBinaryIntrinsic;
+  def int_riscv_pabdu : RVPBinaryIntrinsic;
+} // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
 // Zvfofp8min - OFP8 conversion extension

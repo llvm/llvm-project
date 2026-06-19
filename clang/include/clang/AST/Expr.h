@@ -619,6 +619,10 @@ public:
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
     bool HasUndefinedBehavior = false;
 
+    /// Whether any diagnostic has been emitted. This is set regardless of
+    /// whether @ref #Diag is set or not.
+    bool DiagEmitted = false;
+
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
     /// expression).
@@ -735,9 +739,8 @@ public:
   /// initializer of the given declaration. Returns true if the initializer
   /// can be folded to a constant, and produces any relevant notes. In C++11,
   /// notes will be produced if the expression is not a constant expression.
-  bool EvaluateAsInitializer(APValue &Result, const ASTContext &Ctx,
-                             const VarDecl *VD,
-                             SmallVectorImpl<PartialDiagnosticAt> &Notes,
+  bool EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
+                             EvalResult &Result,
                              bool IsConstantInitializer) const;
 
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
@@ -7547,6 +7550,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
   return DB;
 }
+
+/// Walk @p E through parens, implicit casts, unary &/*, array subscripts and
+/// comma operators to find the head of a struct-field access -- typically a
+/// MemberExpr, or an LValueToRValue ImplicitCastExpr over a pointer-typed
+/// field. Returns nullptr for shapes we don't handle (multiple subscripts,
+/// non-comma binary ops, or '&fam' on an array lvalue which designates the
+/// array-as-a-whole rather than an element pointer).
+///
+/// If @p OutArrayIndex / @p OutArrayElementTy are non-null, they receive the
+/// index expression and base array type for forms like '&p->fam[idx]'.
+///
+/// Shared by CGBuiltin's __builtin_*_object_size lowering and the AST
+/// constant evaluator so they recognize the same 'counted_by' access shapes.
+const Expr *findStructFieldAccess(const Expr *E,
+                                  const Expr **OutArrayIndex = nullptr,
+                                  QualType *OutArrayElementTy = nullptr);
 
 } // end namespace clang
 

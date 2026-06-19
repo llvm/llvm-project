@@ -1373,9 +1373,9 @@ define <vscale x 8 x i64> @vwaddu_wx_nxv8i64_nxv8i8(<vscale x 8 x i64> %va, i8 %
 define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb, ptr %p) {
 ; CHECK-LABEL: i1_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 42
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    li a1, 42
 ; CHECK-NEXT:    sh a1, 0(a0)
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 1 x i1> %va to <vscale x 1 x i64>
@@ -1490,8 +1490,8 @@ define <vscale x 8 x i64> @vwadd_vx_splat_zext(<vscale x 8 x i32> %va, i32 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
@@ -1550,8 +1550,8 @@ define <vscale x 8 x i64> @vwadd_wx_splat_zext(<vscale x 8 x i64> %va, i32 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero

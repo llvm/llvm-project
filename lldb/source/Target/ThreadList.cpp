@@ -482,8 +482,10 @@ void ThreadList::RefreshStateAfterStop() {
       "a thread.");
 
   collection::iterator pos, end = m_threads.end();
-  for (pos = m_threads.begin(); pos != end; ++pos)
+  for (pos = m_threads.begin(); pos != end; ++pos) {
+    (*pos)->SetState(eStateStopped);
     (*pos)->RefreshStateAfterStop();
+  }
 }
 
 void ThreadList::DiscardThreadPlans() {

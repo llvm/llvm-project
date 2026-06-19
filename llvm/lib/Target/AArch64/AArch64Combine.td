@@ -60,8 +60,17 @@ def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
 def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
+def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+def simplify_uaddo : GICombineRule<
+  (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
+  (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
+         [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
+                               ${matchinfo}); }])>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      select_zero_true,
                                       combine_shuffle_vector,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
@@ -72,7 +81,8 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_zext,
                                       push_sub_through_sext,
                                       push_add_through_sext,
-                                      push_mul_through_sext]> {
+                                      push_mul_through_sext,
+                                      simplify_uaddo]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -375,7 +385,8 @@ def AArch64PostLegalizerCombiner
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
-                        select_combines, fold_merge_to_zext, merge_combines,
+                        select_combines, select_zero_true, select_zero_false, select_not,
+                        fold_merge_to_zext, merge_combines,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,

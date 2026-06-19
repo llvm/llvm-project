@@ -933,7 +933,7 @@ define <32 x i32> @jumbled_indices32(<64 x i16> %a0, <64 x i16> %b0) {
 ; This would require the combine to recreate the concat_vectors.
 define <4 x i32> @pmaddwd_128(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <4 x i32> @pmaddwd_128(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <8 x i16>, ptr [[APTR]], align 16
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i16>, ptr [[BPTR]], align 16
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -967,7 +967,7 @@ define <4 x i32> @pmaddwd_128(ptr %Aptr, ptr %Bptr) {
 
 define <8 x i32> @pmaddwd_256(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <8 x i32> @pmaddwd_256(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <16 x i16>, ptr [[APTR]], align 32
 ; CHECK-NEXT:    [[B:%.*]] = load <16 x i16>, ptr [[BPTR]], align 32
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <16 x i16> [[A]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -1001,7 +1001,7 @@ define <8 x i32> @pmaddwd_256(ptr %Aptr, ptr %Bptr) {
 
 define <16 x i32> @pmaddwd_512(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <16 x i32> @pmaddwd_512(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <32 x i16>, ptr [[APTR]], align 64
 ; CHECK-NEXT:    [[B:%.*]] = load <32 x i16>, ptr [[BPTR]], align 64
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <32 x i16> [[A]], <32 x i16> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -1035,7 +1035,7 @@ define <16 x i32> @pmaddwd_512(ptr %Aptr, ptr %Bptr) {
 
 define <32 x i32> @pmaddwd_1024(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <32 x i32> @pmaddwd_1024(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <64 x i16>, ptr [[APTR]], align 128
 ; CHECK-NEXT:    [[B:%.*]] = load <64 x i16>, ptr [[BPTR]], align 128
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <64 x i16> [[A]], <64 x i16> poison, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
@@ -1069,7 +1069,7 @@ define <32 x i32> @pmaddwd_1024(ptr %Aptr, ptr %Bptr) {
 
 define <4 x i32> @pmaddwd_commuted_mul(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <4 x i32> @pmaddwd_commuted_mul(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <8 x i16>, ptr [[APTR]], align 16
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i16>, ptr [[BPTR]], align 16
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -1103,7 +1103,7 @@ define <4 x i32> @pmaddwd_commuted_mul(ptr %Aptr, ptr %Bptr) {
 
 define <4 x i32> @pmaddwd_swapped_indices(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <4 x i32> @pmaddwd_swapped_indices(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <8 x i16>, ptr [[APTR]], align 16
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i16>, ptr [[BPTR]], align 16
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
@@ -1138,7 +1138,7 @@ define <4 x i32> @pmaddwd_swapped_indices(ptr %Aptr, ptr %Bptr) {
 ; Negative test where indices aren't paired properly
 define <4 x i32> @pmaddwd_bad_indices(ptr %Aptr, ptr %Bptr) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <4 x i32> @pmaddwd_bad_indices(
-; CHECK-SAME: ptr readonly captures(none) [[APTR:%.*]], ptr readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[APTR:%.*]], ptr nofree readonly captures(none) [[BPTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = load <8 x i16>, ptr [[APTR]], align 16
 ; CHECK-NEXT:    [[B:%.*]] = load <8 x i16>, ptr [[BPTR]], align 16
 ; CHECK-NEXT:    [[A_EVEN:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
@@ -1174,7 +1174,7 @@ define <4 x i32> @pmaddwd_bad_indices(ptr %Aptr, ptr %Bptr) {
 ; SelectionDAGBuilder should tag the joining add as a vector reduction. We need to recognize that both sides can use pmaddwd
 define i32 @madd_double_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; CHECK-LABEL: define i32 @madd_double_reduction(
-; CHECK-SAME: ptr readonly captures(none) [[ARG:%.*]], ptr readonly captures(none) [[ARG1:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[ARG:%.*]], ptr nofree readonly captures(none) [[ARG1:%.*]], ptr nofree readonly captures(none) [[ARG2:%.*]], ptr nofree readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = load <8 x i16>, ptr [[ARG]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i16>, ptr [[ARG1]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i16> [[TMP]] to <8 x i32>
@@ -1212,7 +1212,7 @@ define i32 @madd_double_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 
 define i32 @madd_quad_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg5, ptr %arg6, ptr %arg7) {
 ; CHECK-LABEL: define i32 @madd_quad_reduction(
-; CHECK-SAME: ptr readonly captures(none) [[ARG:%.*]], ptr readonly captures(none) [[ARG1:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[ARG3:%.*]], ptr readonly captures(none) [[ARG4:%.*]], ptr readonly captures(none) [[ARG5:%.*]], ptr readonly captures(none) [[ARG6:%.*]], ptr readonly captures(none) [[ARG7:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[ARG:%.*]], ptr nofree readonly captures(none) [[ARG1:%.*]], ptr nofree readonly captures(none) [[ARG2:%.*]], ptr nofree readonly captures(none) [[ARG3:%.*]], ptr nofree readonly captures(none) [[ARG4:%.*]], ptr nofree readonly captures(none) [[ARG5:%.*]], ptr nofree readonly captures(none) [[ARG6:%.*]], ptr nofree readonly captures(none) [[ARG7:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = load <8 x i16>, ptr [[ARG]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i16>, ptr [[ARG1]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i16> [[TMP]] to <8 x i32>
@@ -1277,7 +1277,7 @@ define i32 @madd_quad_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %
 
 define i64 @sum_and_sum_of_squares(ptr %a, i32 %n) {
 ; CHECK-LABEL: define i64 @sum_and_sum_of_squares(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[A:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1346,7 +1346,7 @@ middle.block:
 
 define i32 @sum_of_square_differences(ptr %a, ptr %b, i32 %n) {
 ; CHECK-LABEL: define i32 @sum_of_square_differences(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[A:%.*]], ptr nofree readonly captures(none) [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1406,7 +1406,7 @@ middle.block:
 
 define <4 x i32> @input_size_mismatch(<16 x i16> %x, ptr %p) {
 ; CHECK-LABEL: define range(i32 -2147418112, -2147483647) <4 x i32> @input_size_mismatch(
-; CHECK-SAME: <16 x i16> [[X:%.*]], ptr readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: <16 x i16> [[X:%.*]], ptr nofree readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P]], align 32
 ; CHECK-NEXT:    [[X0:%.*]] = shufflevector <16 x i16> [[X]], <16 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[X1:%.*]] = shufflevector <16 x i16> [[X]], <16 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -1498,7 +1498,7 @@ define <4 x i32> @output_size_mismatch_high_subvector(<16 x i16> %x, <16 x i16> 
 
 define i32 @add_used_by_loop_phi(ptr %a, ptr %b, i64 %offset_a, i64 %offset_b, i64 %k) {
 ; CHECK-LABEL: define i32 @add_used_by_loop_phi(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], i64 [[OFFSET_A:%.*]], i64 [[OFFSET_B:%.*]], i64 [[K:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[A:%.*]], ptr nofree readonly captures(none) [[B:%.*]], i64 [[OFFSET_A:%.*]], i64 [[OFFSET_B:%.*]], i64 [[K:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SCEVGEP_A:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_A]]
 ; CHECK-NEXT:    [[SCEVGEP_B:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_B]]

@@ -68,6 +68,7 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
   // CHECK: scf.for
   // CHECK-NOT: scf.for
   // CHECK-NOT: scf.parallel
+  // CHECK: acc.collapse_count = 2 : i64
   acc.parallel dataOperands(%dev : memref<1xi32>) {
     acc.loop control(%i : index, %j : index) = (%lb0, %lb1 : index, index) to (%ub0, %ub1 : index, index) step (%c1, %c1 : index, index) {
       %vi = arith.index_cast %i : index to i32
@@ -172,5 +173,34 @@ func.func @device_routine_vector_with_loop(%buf: memref<8xi32>) attributes {acc.
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
   } attributes {independent = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
+  return
+}
+
+// -----
+
+// Auto loop with gang: lowered to scf.for with predetermined par_dims.
+// CHECK-LABEL: func.func @parallel_loop_auto_gang
+func.func @parallel_loop_auto_gang(%buf: memref<1xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %c100_i32 = arith.constant 100 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK-NOT: acc.parallel
+  // CHECK: acc.kernel_environment
+  // CHECK: acc.par_width {{.*}} {par_dim = #acc.par_dim<block_x>}
+  // CHECK: acc.compute_region launch(
+  // CHECK: scf.for
+  // CHECK-NOT: scf.parallel
+  // CHECK: acc.par_dims = #acc<par_dims[block_x]>
+  acc.parallel num_gangs({%c10_i32 : i32}) dataOperands(%dev : memref<1xi32>) {
+    acc.loop gang control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+      memref.store %arg0, %dev[%c0] : memref<1xi32>
+      acc.yield
+    } attributes {auto_ = [#acc.device_type<none>]}
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
   return
 }

@@ -137,7 +137,7 @@ void CallConvLoweringPass::runOnOperation() {
   }
 
   DataLayout dl(moduleOp);
-  CIRABIRewriteContext rewriteCtx(moduleOp);
+  CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   SymbolTable symbolTable(moduleOp);
 
   // Classify every cir.func up front.  No IR mutation happens here, so

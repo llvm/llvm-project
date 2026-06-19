@@ -169,7 +169,8 @@ define <4 x i64> @test_mul_52bit_ymm(<4 x i64> %a, <4 x i64> %b) {
 ; NOVLX-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; NOVLX-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [524287,524287,524287,524287]
 ; NOVLX-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; NOVLX-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
+; NOVLX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; NOVLX-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0
 ; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; NOVLX-NEXT:    retq
 ;
@@ -187,7 +188,8 @@ define <4 x i64> @test_mul_52bit_ymm(<4 x i64> %a, <4 x i64> %b) {
 ; GENERIC-NOVLX-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; GENERIC-NOVLX-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [524287,524287,524287,524287]
 ; GENERIC-NOVLX-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; GENERIC-NOVLX-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
+; GENERIC-NOVLX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; GENERIC-NOVLX-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0
 ; GENERIC-NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; GENERIC-NOVLX-NEXT:    retq
 
