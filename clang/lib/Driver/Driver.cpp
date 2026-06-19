@@ -6371,7 +6371,7 @@ static bool HasPreprocessOutput(const Action &JA) {
 
 const char *Driver::CreateTempFile(Compilation &C, StringRef Prefix,
                                    StringRef Suffix, bool MultipleArchs,
-                                   BoundArch BA,
+                                   StringRef BoundArchStr,
                                    bool NeedUniqueDirectory) const {
   SmallString<128> TmpName;
   Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_dir);
@@ -6391,14 +6391,14 @@ const char *Driver::CreateTempFile(Compilation &C, StringRef Prefix,
       return "";
     }
   } else {
-    if (MultipleArchs && !BA.empty()) {
+    if (MultipleArchs && !BoundArchStr.empty()) {
       if (NeedUniqueDirectory) {
         TmpName = GetTemporaryDirectory(Prefix);
-        llvm::sys::path::append(TmpName, Twine(Prefix) + "-" + BA.ArchName +
+        llvm::sys::path::append(TmpName, Twine(Prefix) + "-" + BoundArchStr +
                                              "." + Suffix);
       } else {
-        TmpName =
-            GetTemporaryPath((Twine(Prefix) + "-" + BA.ArchName).str(), Suffix);
+        TmpName = GetTemporaryPath((Twine(Prefix) + "-" + BoundArchStr).str(),
+                                   Suffix);
       }
 
     } else {
@@ -6450,7 +6450,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         (JA.getOffloadingDeviceKind() == Action::OFK_None ||
          JA.getOffloadingDeviceKind() == Action::OFK_Host) &&
         Triple.isOSDarwin();
-    return CreateTempFile(C, Prefix, Suffix, MultipleArchs, BA,
+    return CreateTempFile(C, Prefix, Suffix, MultipleArchs, BoundArchStr,
                           NeedUniqueDirectory);
   };
 

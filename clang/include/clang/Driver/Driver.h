@@ -678,7 +678,8 @@ public:
   ///        subdiretory with random name under the temporary directory, and
   ///        the temp file itself has name $Prefix-$BA.$Suffix.
   const char *CreateTempFile(Compilation &C, StringRef Prefix, StringRef Suffix,
-                             bool MultipleArchs = false, BoundArch BA = {},
+                             bool MultipleArchs = false,
+                             StringRef BoundArchStr = {},
                              bool NeedUniqueDirectory = false) const;
 
   /// GetNamedOutputPath - Return the name to use for the output of
