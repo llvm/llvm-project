@@ -215,7 +215,7 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8_undef_hi_mask(ptr %base, <vscal
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, ptr %base, <vscale x 16 x i8> %indices
   %mask.false.hi = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> splat (i1 false), <vscale x 4 x i1> %mask, i64 0)
-  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr> %ptrs, i32 1, <vscale x 16 x i1> %mask.false.hi, <vscale x 16 x i8> poison)
+  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr> align 1 %ptrs, <vscale x 16 x i1> %mask.false.hi, <vscale x 16 x i8> poison)
   ret <vscale x 16 x i8> %data
 }
 
@@ -270,17 +270,3 @@ define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x ptr> %ptrs, <vsca
 }
 
 attributes #0 = { nounwind "target-features"="+sve,+bf16" }
-
-declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
-declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
-declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
-declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
-declare <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr>, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
-declare <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x ptr>, i32, <vscale x 32 x i1>, <vscale x 32 x i32>)
-
-declare <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
-declare <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
-declare <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
-declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
-declare <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x float>)
-declare <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x double>)
