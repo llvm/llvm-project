@@ -6197,7 +6197,7 @@ LogicalResult vector::LoadOp::verify() {
   // Negative strides are not supported on vector.load.
   auto [strides, offset] = memRefTy.getStridesAndOffset();
   for (int64_t stride : strides) {
-    if (!ShapedType::isDynamic(stride) && stride < 0)
+    if (ShapedType::isStatic(stride) && stride < 0)
       return emitOpError("memref strides must be non-negative");
   }
 
@@ -6250,7 +6250,7 @@ LogicalResult vector::StoreOp::verify() {
   // Negative strides are not supported on vector.store.
   auto [strides, offset] = memRefTy.getStridesAndOffset();
   for (int64_t stride : strides) {
-    if (!ShapedType::isDynamic(stride) && stride < 0)
+    if (ShapedType::isStatic(stride) && stride < 0)
       return emitOpError("memref strides must be non-negative");
   }
 
