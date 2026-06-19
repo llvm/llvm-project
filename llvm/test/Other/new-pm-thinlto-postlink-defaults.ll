@@ -206,6 +206,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: RelLookupTableConverterPass
 ; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
+; CHECK-POSTLINK-O-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 

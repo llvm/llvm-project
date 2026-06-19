@@ -691,9 +691,20 @@ def executeScriptInternal(
                 f"shell parser error on {dbg}: {command.lstrip()}\n"
             ) from None
 
-    cmd = cmds[0]
-    for c in cmds[1:]:
-        cmd = ShUtil.Seq(cmd, "&&", c)
+    # Link all of `cmds` into a single command, consisting of the original
+    # commands chained together with &&. To avoid RecursionError in large tests
+    # (e.g. with 1000 RUN: lines), we do this by subdividing the list in half
+    # each time, so that we make a balanced tree structure with depth
+    # proportional to only the log of the list length.
+    def make_tree(cmds):
+        if len(cmds) == 1:
+            return cmds[0]
+        else:
+            assert len(cmds) > 1, "didn't expect an empty sequence"
+            split = len(cmds) // 2
+            return ShUtil.Seq(make_tree(cmds[:split]), "&&", make_tree(cmds[split:]))
+
+    cmd = make_tree(cmds)
 
     results = []
     timeoutInfo = None

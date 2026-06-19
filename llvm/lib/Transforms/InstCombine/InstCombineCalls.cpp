@@ -2660,6 +2660,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+  case Intrinsic::pdep: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateShl(Input, ShiftAmt);
+        Value *Masked = Builder.CreateAnd(Shifted, II->getArgOperand(1));
+        return replaceInstUsesWith(*II, Masked);
+      }
+    }
+    break;
+  }
+  case Intrinsic::pext: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *Masked = Builder.CreateAnd(Input, II->getArgOperand(1));
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateLShr(Masked, ShiftAmt);
+        return replaceInstUsesWith(*II, Shifted);
+      }
+    }
+    break;
+  }
   case Intrinsic::ptrmask: {
     unsigned BitWidth = DL.getPointerTypeSizeInBits(II->getType());
     KnownBits Known(BitWidth);

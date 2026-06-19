@@ -19,6 +19,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
@@ -35,6 +36,19 @@ char ObjCLanguageRuntime::ID = 0;
 
 // Destructor
 ObjCLanguageRuntime::~ObjCLanguageRuntime() = default;
+
+bool ObjCLanguageRuntime::IsSupportedForArchitecture(const ArchSpec &arch) {
+  // These are the only object file formats clang can emit Objective-C
+  // metadata for; it aborts on any other.
+  switch (arch.GetTriple().getObjectFormat()) {
+  case llvm::Triple::MachO:
+  case llvm::Triple::ELF:
+  case llvm::Triple::COFF:
+    return true;
+  default:
+    return false;
+  }
+}
 
 ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_impl_cache(), m_impl_str_cache(),

@@ -515,7 +515,7 @@ define amdgpu_ps float @bitop3_bxort_or_t_and_not_t(i32 %a, i32 %b, i32 %c) {
 ; GISEL-LABEL: bitop3_bxort_or_t_and_not_t:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_and_b32_e32 v3, v2, v0
-; GISEL-NEXT:    v_bitop3_b32 v0, v1, v2, v0 bitop3:0xf8
+; GISEL-NEXT:    v_bitop3_b32 v0, v1, v2, v0 bitop3:0x78
 ; GISEL-NEXT:    v_bfi_b32 v0, v3, 0, v0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;

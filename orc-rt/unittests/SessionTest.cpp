@@ -117,7 +117,7 @@ private:
 
 class MockControllerAccess : public Session::ControllerAccess {
 public:
-  using OnConnectFn = move_only_function<void(BootstrapInfo &BI)>;
+  using OnConnectFn = move_only_function<Error(BootstrapInfo &BI)>;
 
   MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
 
@@ -126,8 +126,12 @@ public:
   }
 
   void connect(BootstrapInfo BI) override {
-    if (OnConnect)
-      OnConnect(BI);
+    if (OnConnect) {
+      if (auto Err = OnConnect(BI)) {
+        reportError(std::move(Err));
+        notifyDisconnected();
+      }
+    }
   }
 
   void disconnect() override {
@@ -786,6 +790,23 @@ TEST(ControllerAccessTest, CallFromController) {
   EXPECT_EQ(Result, 42);
 }
 
+TEST(ControllerAccessTest, FailConnect) {
+  // Simulate failure to connect.
+  bool GotError = false;
+  std::string ErrMsg = "failed to connect";
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            [&](Error Err) {
+              GotError = true;
+              EXPECT_EQ(toString(std::move(Err)), ErrMsg);
+            });
+  BootstrapInfo BI(S);
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  CA->setOnConnect(
+      [&](BootstrapInfo &BI) { return make_error<StringError>(ErrMsg); });
+  S.attach(std::move(CA), std::move(BI));
+  ASSERT_TRUE(GotError);
+}
+
 TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
@@ -809,6 +830,7 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
     EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
     EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
     OnConnectRan = true;
+    return Error::success();
   });
   S.attach(CA, std::move(BI));
 

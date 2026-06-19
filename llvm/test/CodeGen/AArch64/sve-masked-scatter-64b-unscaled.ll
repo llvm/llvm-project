@@ -93,6 +93,68 @@ define void @masked_scatter_nxv2f64_unscaled_64bit_offsets(<vscale x 2 x double>
   ret void
 }
 
+define void @masked_scatter_nxv1i8_unscaled_64bit_offsets(<vscale x 16 x i8> %data.wide, ptr %base, <vscale x 2 x i64> %wide.offsets, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_scatter_nxv1i8_unscaled_64bit_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    st1b { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    ret
+  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 1 x i64> %offsets
+  %data = call <vscale x 1 x i8> @llvm.vector.extract.nxv1i8.nxv16i8(<vscale x 16 x i8> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i8(<vscale x 1 x i8> %data, <vscale x 1 x ptr> align 1 %ptrs, <vscale x 1 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_nxv1i16_unscaled_64bit_offsets(<vscale x 8 x i16> %data.wide, ptr %base, <vscale x 2 x i64> %wide.offsets, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_scatter_nxv1i16_unscaled_64bit_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    ret
+  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 1 x i64> %offsets
+  %data = call <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv8i16(<vscale x 8 x i16> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i16(<vscale x 1 x i16> %data, <vscale x 1 x ptr> align 2 %ptrs, <vscale x 1 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_nxv1i32_unscaled_64bit_offsets(<vscale x 4 x i32> %data.wide, ptr %base, <vscale x 2 x i64> %wide.offsets, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_scatter_nxv1i32_unscaled_64bit_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    ret
+  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 1 x i64> %offsets
+  %data = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i32(<vscale x 1 x i32> %data, <vscale x 1 x ptr> align 4 %ptrs, <vscale x 1 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_nxv1i64_unscaled_64bit_offsets(<vscale x 2 x i64> %data.wide, ptr %base, <vscale x 2 x i64> %wide.offsets, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_scatter_nxv1i64_unscaled_64bit_offsets:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, z1.d]
+; CHECK-NEXT:    ret
+  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 1 x i64> %offsets
+  %data = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64> %data, <vscale x 1 x ptr> align 8 %ptrs, <vscale x 1 x i1> %mask)
+  ret void
+}
+
 declare void @llvm.masked.scatter.nxv2f16(<vscale x 2 x half>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv4f16(<vscale x 4 x half>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)

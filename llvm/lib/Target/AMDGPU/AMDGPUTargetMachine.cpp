@@ -1648,7 +1648,8 @@ bool GCNPassConfig::addPreISel() {
 
   // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
   // with -new-reg-bank-select and without any of the fallback options.
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
       !isGlobalISelAbortEnabled() || !NewRegBankSelect)
     addPass(createLCSSAPass());
 
@@ -2412,7 +2413,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // control flow modifications.
   addFunctionPass(AMDGPURewriteUndefForPHIPass(), PMW);
 
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
       !isGlobalISelAbortEnabled() || !NewRegBankSelect)
     addFunctionPass(LCSSAPass(), PMW);
 
