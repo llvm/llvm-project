@@ -32,7 +32,6 @@
 #include "AIRNormalizeAllocas.h"
 #include "AIRPrepare.h"
 #include "AIRScalarBufferPacking.h"
-#include "AIRScalarizeShuffleOperands.h"
 #include "AIRScalarStoreGuard.h"
 #include "AIRSplitI64Shuffle.h"
 #include "AIRSubtarget.h"
@@ -86,7 +85,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRLowerAtomicRMWLegacyPass(*PR);
   initializeAIRSplitI64ShuffleLegacyPass(*PR);
   initializeAIRScalarStoreGuardLegacyPass(*PR);
-  initializeAIRScalarizeShuffleOperandsLegacyPass(*PR);
   initializeAIRTGGlobalCoalesceLegacyPass(*PR);
   initializeAIRTGBarrierInsertLegacyPass(*PR);
   initializeAIRDeviceLoadsVolatileLegacyPass(*PR);
@@ -146,16 +144,6 @@ public:
     // no-op on single-output kernels (needs >=2 device-output buffers writing
     // the same per-thread offset). See AIRCrossBufferStoreSeparate.cpp.
     addPass(createAIRCrossBufferStoreSeparateLegacyPass());
-    // The Apple AGX GPU JIT miscompiles cross-lane `air.simd_shuffle*` when the
-    // shuffle's scalar operand is sourced via `extractelement` from a vector
-    // SSA value (a vector register): the permute reads the wrong physical lane
-    // for some SIMD threads, corrupting cross-lane reductions. Apple's own
-    // `metal` frontend never feeds vector-extracted values into shuffles. The
-    // SLP vectorizer (O1+) creates exactly this pattern in reduce/scan kernels,
-    // so scalarize the vector chains entangled with shuffle operands back to
-    // scalars before AIR emission. GEMM's pure load/store vectors are
-    // untouched.
-    // addPass(createAIRScalarizeShuffleOperandsLegacyPass()); // disabled for now
     addPass(createAIRInlineNonKernelLegacyPass());
     addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());

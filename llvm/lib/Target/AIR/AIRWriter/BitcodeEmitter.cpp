@@ -692,29 +692,6 @@ static void lowerVectorPointerToInt(Module &M) {
   }
 }
 
-// The vector-condition SELECT form (VSELECT) is rejected by the AGX JIT (see
-// the SelectInst emission in FunctionWriter). The mid-end vectorizers produce
-// vector-condition selects on `where`/`clamp`; scalarize each into a per-lane
-// extract/select/insert chain that re-vectorizes the result.
-[[maybe_unused]] static void scalarizeVectorSelects(Module &M) {
-  auto Sels = collectInsts<SelectInst>(M, [](SelectInst *Sel) {
-    return Sel->getCondition()->getType()->isVectorTy();
-  });
-  for (auto *Sel : Sels) {
-    IRBuilder<> B(Sel);
-    auto *VT = cast<FixedVectorType>(Sel->getType());
-    Value *Res = UndefValue::get(VT);
-    for (unsigned L = 0; L < VT->getNumElements(); ++L) {
-      Value *C = B.CreateExtractElement(Sel->getCondition(), B.getInt64(L));
-      Value *T = B.CreateExtractElement(Sel->getTrueValue(), B.getInt64(L));
-      Value *F = B.CreateExtractElement(Sel->getFalseValue(), B.getInt64(L));
-      Res = B.CreateInsertElement(Res, B.CreateSelect(C, T, F), B.getInt64(L));
-    }
-    Sel->replaceAllUsesWith(Res);
-    Sel->eraseFromParent();
-  }
-}
-
 // The mid-end emits >64-bit integer arithmetic for overflow-free closed
 // forms (e.g. SCEV's `trunc((zext(a) * zext(b)) >> 1)` triangular sums as
 // i65). The AGX JIT cannot legalize any iN > 64; expand such chains into
@@ -1588,7 +1565,6 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     scalarizeBoolVectorCasts(M);
     lowerCmpIntrinsics(M);
     lowerVectorPointerToInt(M);
-    // scalarizeVectorSelects(M); // disabled for now
     lowerVectorSelects(M);
     removeRedundantBitcasts(M, PTM);
     // --- Stage B: GEP source-type normalization ---

@@ -86,16 +86,8 @@ ModulePass *createAIRDeviceLoadsVolatileLegacyPass();
 /// Initializer for the AIR scalar-store-guard pass.
 void initializeAIRScalarStoreGuardLegacyPass(PassRegistry &);
 
-/// Initializer for the AIR scalarize-shuffle-operands pass.
-void initializeAIRScalarizeShuffleOperandsLegacyPass(PassRegistry &);
-
 /// Pass to guard scalar device stores with a `tid.x == 0` check.
 ModulePass *createAIRScalarStoreGuardLegacyPass();
-
-/// Pass to scalarize vector data-flow feeding `air.simd_shuffle*` operands,
-/// working around an AGX JIT miscompile of cross-lane shuffles whose operand
-/// lives in a vector register.
-ModulePass *createAIRScalarizeShuffleOperandsLegacyPass();
 
 /// Initializer for the AIR threadgroup-global coalesce pass.
 void initializeAIRTGGlobalCoalesceLegacyPass(PassRegistry &);
