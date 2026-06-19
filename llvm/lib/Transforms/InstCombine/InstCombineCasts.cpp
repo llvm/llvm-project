@@ -2026,6 +2026,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                     DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
   }
 
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(Sext))
+    return Folded;
+
   return nullptr;
 }
 

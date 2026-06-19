@@ -5331,5 +5331,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return CallInst::Create(Scmp, {CmpLHS, ConstantInt::get(SI.getType(), 0)});
   }
 
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(SI))
+    return Folded;
+
   return nullptr;
 }

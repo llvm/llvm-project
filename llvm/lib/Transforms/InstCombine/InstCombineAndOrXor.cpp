@@ -2813,6 +2813,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *CastedAnd = foldCastedBitwiseLogic(I))
     return CastedAnd;
 
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(I))
+    return Folded;
+
   if (Instruction *Sel = foldBinopOfSextBoolToSelect(I))
     return Sel;
 
@@ -4669,6 +4672,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
+
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(I))
+    return Folded;
 
   return nullptr;
 }
