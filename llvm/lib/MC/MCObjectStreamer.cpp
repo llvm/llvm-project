@@ -615,7 +615,7 @@ void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           bool PrologueEnd, bool IsStmt,
                                           StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   // Emit a label at the current position and record it in the CodeViewContext.

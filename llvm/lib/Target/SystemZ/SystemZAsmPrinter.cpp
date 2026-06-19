@@ -1627,9 +1627,9 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
     assert(FPRSaveAreaOffset < 0x10000000 && "Offset out of range");
     FPRSaveAreaOffset &= 0x0FFFFFFF; // Lose top 4 bits.
     OutStreamer->AddComment(
-        Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)).str());
+        Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)));
     OutStreamer->AddComment(
-        Twine("  Bit 4-31: Offset ").concat(utostr(FPRSaveAreaOffset)).str());
+        Twine("  Bit 4-31: Offset ").concat(utostr(FPRSaveAreaOffset)));
     OutStreamer->emitInt32(FPRSaveAreaOffset |
                            (Info.FrameReg << 28)); // Offset to FPR save area
                                                    // with register to add
@@ -1647,9 +1647,9 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
     VRSaveAreaOffset &= 0x0FFFFFFF; // Lose top 4 bits.
     OutStreamer->AddComment("VR Save Area Locator");
     OutStreamer->AddComment(
-        Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)).str());
+        Twine("  Bit 0-3: Register R").concat(utostr(Info.FrameReg)));
     OutStreamer->AddComment(
-        Twine("  Bit 4-31: Offset ").concat(utostr(VRSaveAreaOffset)).str());
+        Twine("  Bit 4-31: Offset ").concat(utostr(VRSaveAreaOffset)));
     OutStreamer->emitInt32(VRSaveAreaOffset | (Info.FrameReg << 28));
   }
 
@@ -1758,10 +1758,9 @@ void SystemZAsmPrinter::calculatePPA1() {
   // Save the calculated values.
   if (MF->getFunction().hasName())
     Info.Name = MF->getFunction().getName();
-  Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N).str(), true);
-  Info.EPMarker =
-      OutContext.createTempSymbol(Twine("EPM_").concat(N).str(), true);
-  Info.FnEnd = OutContext.createTempSymbol(Twine(N).concat("end_").str());
+  Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N), true);
+  Info.EPMarker = OutContext.createTempSymbol(Twine("EPM_").concat(N), true);
+  Info.FnEnd = OutContext.createTempSymbol(Twine(N).concat("end_"));
   Info.PersonalityRoutine = PersonalityRoutine;
   Info.GCCEH = GCCEH;
   Info.OffsetFPR = OffsetFPR;

@@ -247,6 +247,12 @@ Error L0AsyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
   return Plugin::success();
 }
 
+Error L0AsyncQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
+  return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                       "Host function callbacks are not yet implemented for "
+                       "out-of-order async queues");
+}
+
 Error L0AsyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
                                      size_t PatternSize, size_t Size) {
   auto EventOrErr = Device.getEvent();
@@ -306,6 +312,13 @@ L0AsyncOrderedQueueTy::getLaunchKernelEvents() {
                             : std::make_tuple(1, &WaitEvents.back());
 }
 
+Error L0AsyncOrderedQueueTy::hostCallImpl(void (*Callback)(void *),
+                                          void *UserData) {
+  return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                       "Host function callbacks are not yet implemented for "
+                       "ordered async queues");
+}
+
 // L0InorderQueueTy implementation.
 Error L0InorderQueueTy::synchronizeImpl() { return CmdList->hostSynchronize(); }
 
@@ -323,6 +336,10 @@ Error L0InorderQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
   return dispatchLaunchKernel(Kernel, KEnv);
 }
 
+Error L0InorderQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
+  return CmdList->appendHostFunction(Callback, UserData);
+}
+
 // L0SyncQueueTy implementation.
 Error L0SyncQueueTy::memoryCopyImpl(void *Dst, const void *Src, size_t Size) {
   if (auto Err = L0InorderQueueTy::memoryCopyImpl(Dst, Src, Size))
@@ -333,6 +350,12 @@ Error L0SyncQueueTy::memoryCopyImpl(void *Dst, const void *Src, size_t Size) {
 Error L0SyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                       L0LaunchEnvTy &KEnv) {
   if (auto Err = L0InorderQueueTy::launchKernelImpl(Kernel, KEnv))
+    return Err;
+  return CmdList->hostSynchronize();
+}
+
+Error L0SyncQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
+  if (auto Err = L0InorderQueueTy::hostCallImpl(Callback, UserData))
     return Err;
   return CmdList->hostSynchronize();
 }

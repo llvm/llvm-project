@@ -135,7 +135,7 @@ def AffineForOp : Affine_Op<"for",
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
       "getLoopUpperBounds", "getYieldedValuesMutable",
-      "replaceWithAdditionalYields"]>,
+      "replaceWithAdditionalYields", "getStaticTripCount"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";

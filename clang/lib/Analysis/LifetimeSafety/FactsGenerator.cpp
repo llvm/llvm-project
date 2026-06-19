@@ -342,6 +342,20 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     if (Src && Dest && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_LValueToRValueBitCast:
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic: {
+    // `__builtin_bit_cast`/`std::bit_cast` of a pointer, and
+    // wrapping/unwrapping `_Atomic(T*)`, preserve the pointer value, so
+    // propagate the borrow. The operand may be a glvalue, so strip its outer
+    // lvalue level first. A bit-cast that materializes a pointer from a
+    // non-pointer representation has no matching source origin and is
+    // untracked.
+    OriginList *RVSrc = getRValueOrigins(SubExpr, Src);
+    if (RVSrc && Dest->getLength() == RVSrc->getLength())
+      flow(Dest, RVSrc, /*Kill=*/true);
+    return;
+  }
   default:
     return;
   }
@@ -370,6 +384,21 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
   case UO_Deref: {
     const Expr *SubExpr = UO->getSubExpr();
     killAndFlowOrigin(*UO, *SubExpr);
+    return;
+  }
+  case UO_PreInc:
+  case UO_PostInc:
+  case UO_PreDec:
+  case UO_PostDec: {
+    // Inc/dec keeps a pointer in the same allocation, so the result carries the
+    // operand's loans. Peel the operand's storage origin when the *result* is a
+    // prvalue (post-inc/dec, or any form in C) -- the inverse of
+    // getRValueOrigins, which peels when its own argument is a glvalue.
+    if (!UO->getType()->isPointerType())
+      return;
+    OriginList *SubList = getOriginsList(*UO->getSubExpr());
+    flow(getOriginsList(*UO),
+         UO->isGLValue() ? SubList : SubList->peelOuterOrigin(), /*Kill=*/true);
     return;
   }
   default:
@@ -472,8 +501,17 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     killAndFlowOrigin(*BO, *BO->getRHS());
     return;
   }
-  if (BO->isCompoundAssignmentOp())
+  if (BO->isCompoundAssignmentOp()) {
+    // A pointer compound additive assignment (`p += n`) carries the LHS's loans
+    // like inc/dec above; in C the result is a prvalue, so peel its outer
+    // (storage) origin.
+    if (BO->getType()->isPointerType()) {
+      OriginList *LHSList = getOriginsList(*BO->getLHS());
+      flow(getOriginsList(*BO), IsCMode ? LHSList->peelOuterOrigin() : LHSList,
+           /*Kill=*/true);
+    }
     return;
+  }
   if (BO->getType()->isPointerType() && BO->isAdditiveOp())
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());

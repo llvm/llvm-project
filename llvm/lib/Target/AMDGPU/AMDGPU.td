@@ -207,6 +207,13 @@ def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "Hardware supports XNACK"
 >;
 
+defm XNACKOnOffModes : AMDGPUSubtargetFeature<"xnack-on-off-modes",
+  "Target supports XNACK on/off modes",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0,
+  [FeatureSupportsXNACK]
+>;
+
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
 // XNACK. The current default kernel driver setting is:
 // - graphics ring: XNACK disabled
@@ -217,7 +224,8 @@ def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
 def FeatureXNACK : SubtargetFeature<"xnack",
   "EnableXNACK",
   "true",
-  "Enable XNACK support"
+  "Enable XNACK support",
+  [FeatureSupportsXNACK]
 >;
 
 def FeatureTgSplit : SubtargetFeature<"tgsplit",
@@ -1109,6 +1117,11 @@ defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   /*GenPredicate=*/0
 >;
 
+defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
+  "Hazards when WMMA co-executes with other WMMA/VALU instruction",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -1504,7 +1517,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
-   FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
+   FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureXNACKOnOffModes,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
    FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureVMemToLDSLoad,
@@ -1684,7 +1697,7 @@ def FeatureISAVersion8_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion8_0_Common.Features,
     [FeatureFastFMAF32,
      FeatureHalfRate64Ops,
-     FeatureSupportsXNACK])>;
+     FeatureXNACKOnOffModes])>;
 
 def FeatureISAVersion8_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion8_0_Common.Features,
@@ -1701,7 +1714,7 @@ def FeatureISAVersion8_0_5 : FeatureSet<
 def FeatureISAVersion8_1_0 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount16,
-   FeatureSupportsXNACK,
+   FeatureXNACKOnOffModes,
    FeatureImageStoreD16Bug,
    FeatureImageGather4D16Bug]>;
 
@@ -1896,7 +1909,7 @@ def FeatureISAVersion10_1_Common : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLDSMisalignedBug,
-     FeatureSupportsXNACK,
+     FeatureXNACKOnOffModes,
      // gfx101x bugs
      FeatureVcmpxPermlaneHazard,
      FeatureVMEMtoScalarWriteHazard,
@@ -2202,7 +2215,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureSupportsXNACK,
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
@@ -2231,7 +2243,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
-   FeatureTransCoexecutionHazard])>;
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2256,7 +2269,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureUseAddPC64Inst,
-   FeatureTransCoexecutionHazard])>;
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2267,8 +2281,10 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   [FeatureAddressableLocalMemorySize327680,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
+   FeatureSupportsXNACK,
    FeatureGFX125xLowestRateWMMA,
-   FeatureTransCoexecutionHazard])>;
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2332,8 +2348,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureSmemPrefetchInsts,
-   FeatureTransCoexecutionHazard
+   FeatureSmemPrefetchInsts
 ]>;
 
 //===----------------------------------------------------------------------===//

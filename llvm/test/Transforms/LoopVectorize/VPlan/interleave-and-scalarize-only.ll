@@ -308,13 +308,14 @@ define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP12]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 10
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP11]], ptr %dst, align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP12]], label %middle.block, label %vector.body
 
 entry:
   br label %loop

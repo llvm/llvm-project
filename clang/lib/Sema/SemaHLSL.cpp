@@ -1024,7 +1024,9 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       FD->setInvalidDecl();
     }
     if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
-      if (Ver < VersionTuple(6, 6)) {
+      if (TargetInfo.getTriple().isSPIRV()) {
+        Diag(WS->getLocation(), diag::warn_hlsl_wavesize_unsupported_spirv);
+      } else if (Ver < VersionTuple(6, 6)) {
         Diag(WS->getLocation(), diag::err_hlsl_attribute_in_wrong_shader_model)
             << WS << "6.6";
         FD->setInvalidDecl();

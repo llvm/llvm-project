@@ -1391,55 +1391,17 @@ multiclass PdepPext<string m, X86TypeInfo t, SDPatternOperator node,
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
-  defm PDEP32 : PdepPext<"pdep", Xi32, X86pdep>, XD, VEX;
-  defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep>, XD, REX_W, VEX;
-  defm PEXT32 : PdepPext<"pext", Xi32, X86pext>, XS, VEX;
-  defm PEXT64 : PdepPext<"pext", Xi64, X86pext>, XS, REX_W, VEX;
+  defm PDEP32 : PdepPext<"pdep", Xi32, pdep>, XD, VEX;
+  defm PDEP64 : PdepPext<"pdep", Xi64, pdep>, XD, REX_W, VEX;
+  defm PEXT32 : PdepPext<"pext", Xi32, pext>, XS, VEX;
+  defm PEXT64 : PdepPext<"pext", Xi64, pext>, XS, REX_W, VEX;
 }
 
 let Predicates = [HasBMI2, HasEGPR] in {
-  defm PDEP32 : PdepPext<"pdep", Xi32, X86pdep, "_EVEX">, XD, EVEX;
-  defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep, "_EVEX">, XD, REX_W, EVEX;
-  defm PEXT32 : PdepPext<"pext", Xi32, X86pext, "_EVEX">, XS, EVEX;
-  defm PEXT64 : PdepPext<"pext", Xi64, X86pext, "_EVEX">, XS, REX_W, EVEX;
-}
-
-let Predicates = [HasBMI2, NoEGPR] in {
-  def : Pat<(i32 (pext GR32:$src, GR32:$mask)),
-            (PEXT32rr GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pext GR32:$src, (loadi32 addr:$mask))),
-            (PEXT32rm GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, GR64:$mask)),
-            (PEXT64rr GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, (loadi64 addr:$mask))),
-            (PEXT64rm GR64:$src, i64mem:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, GR32:$mask)),
-            (PDEP32rr GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, (loadi32 addr:$mask))),
-            (PDEP32rm GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, GR64:$mask)),
-            (PDEP64rr GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, (loadi64 addr:$mask))),
-            (PDEP64rm GR64:$src, i64mem:$mask)>;
-}
-
-let Predicates = [HasBMI2, HasEGPR] in {
-  def : Pat<(i32 (pext GR32:$src, GR32:$mask)),
-            (PEXT32rr_EVEX GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pext GR32:$src, (loadi32 addr:$mask))),
-            (PEXT32rm_EVEX GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, GR64:$mask)),
-            (PEXT64rr_EVEX GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, (loadi64 addr:$mask))),
-            (PEXT64rm_EVEX GR64:$src, i64mem:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, GR32:$mask)),
-            (PDEP32rr_EVEX GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, (loadi32 addr:$mask))),
-            (PDEP32rm_EVEX GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, GR64:$mask)),
-            (PDEP64rr_EVEX GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, (loadi64 addr:$mask))),
-            (PDEP64rm_EVEX GR64:$src, i64mem:$mask)>;
+  defm PDEP32 : PdepPext<"pdep", Xi32, pdep, "_EVEX">, XD, EVEX;
+  defm PDEP64 : PdepPext<"pdep", Xi64, pdep, "_EVEX">, XD, REX_W, EVEX;
+  defm PEXT32 : PdepPext<"pext", Xi32, pext, "_EVEX">, XS, EVEX;
+  defm PEXT64 : PdepPext<"pext", Xi64, pext, "_EVEX">, XS, REX_W, EVEX;
 }
 
 //===----------------------------------------------------------------------===//
