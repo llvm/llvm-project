@@ -769,7 +769,8 @@ LOCAL_LABEL(sub_bigshift):
   // yh was a negative number and we arithmetically shifted it right, the value
   // we add to xh is 0xFFFFFFFF rather than 0, as if we'd sign-extended that
   // negative number to 64 bits.
-  adcs    xh, xh, #-1
+  // Which is the same as sbc with 0
+  sbcs    xh, xh, #0
 
   // As in the small-shift case above, if this has left a positive value in
   // xh:xl, it means the exponent hasn't changed, so we can go to the easy
