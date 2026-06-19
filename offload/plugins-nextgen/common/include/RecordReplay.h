@@ -165,7 +165,8 @@ protected:
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, StringRef ReportFilename, GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename,
+                 GenericDeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
         ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
@@ -264,8 +265,8 @@ private:
 /// The native kernel record replay support.
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
-                       bool SaveOutput, bool EmitReport, StringRef ReportFilename,
-                       GenericDeviceTy &Device)
+                       bool SaveOutput, bool EmitReport,
+                       StringRef ReportFilename, GenericDeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
                        ReportFilename, Device) {}
 

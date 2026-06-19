@@ -1252,7 +1252,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
                          bool IsNative, bool SaveOutput, bool EmitReport,
-                         const char *ReportFilename, const char *OutputDirPath) {
+                         const char *ReportFilename,
+                         const char *OutputDirPath) {
     if (RecordReplay)
       return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
                            "RR already initialized");

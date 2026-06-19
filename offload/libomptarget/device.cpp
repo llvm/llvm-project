@@ -95,7 +95,8 @@ llvm::Error DeviceTy::init() {
     Int32Envar OMPX_RecordDevice("LIBOMPTARGET_RECORD_DEVICE", 0);
     StringEnvar OMPX_RecordOutputDir("LIBOMPTARGET_RECORD_DIR", "");
     BoolEnvar OMPX_EmitRecordReport("LIBOMPTARGET_RECORD_REPORT", false);
-    StringEnvar OMPX_RecordReportFilename("LIBOMPTARGET_RECORD_REPORT_FILENAME", "");
+    StringEnvar OMPX_RecordReportFilename("LIBOMPTARGET_RECORD_REPORT_FILENAME",
+                                          "");
     if (OMPX_RecordDevice != RTLDeviceID)
       return llvm::Error::success();
 
