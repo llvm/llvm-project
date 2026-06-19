@@ -564,7 +564,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   if (auto EC = TextEncoding::setConvertersFromOptions(PP->getTextEncoding(),
                                                        getLangOpts()))
     PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config)
-        << PP->getTextEncoding().getExecEncoding();
+        << PP->getTextEncoding().getLiteralEncoding();
 }
 
 // ASTContext

@@ -13,18 +13,18 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TextEncoding.h"
 
-enum ConversionAction { CA_NoConversion, CA_ToExecEncoding };
+enum ConversionAction { CA_NoConversion, CA_ToLiteralEncoding };
 
 class TextEncoding {
-  llvm::StringRef ExecEncoding;
-  llvm::TextEncodingConverter *ToExecEncodingConverter = nullptr;
+  llvm::StringRef LiteralEncoding;
+  llvm::TextEncodingConverter *ToLiteralEncodingConverter = nullptr;
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
   static std::error_code
   setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts);
 
-  llvm::StringRef getExecEncoding() { return ExecEncoding; }
+  llvm::StringRef getLiteralEncoding() { return LiteralEncoding; }
 };
 
 #endif
