@@ -5042,7 +5042,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
 
   // Late parse field attributes if necessary.
-  ParseLexedAttributeList(LateFieldAttrs, nullptr, false, false);
+  ParseLexedAttributeList(LateFieldAttrs, /*D=*/nullptr, /*EnterScope=*/false,
+                          /*OnDefinition=*/false);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
 }
