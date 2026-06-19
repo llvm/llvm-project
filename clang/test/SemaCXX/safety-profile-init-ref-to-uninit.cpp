@@ -103,6 +103,18 @@ void test_call_arguments() {
   [[profiles::suppress(std::init)]] { take_ptr(&g_uninit); } // OK: suppressed
 }
 
+struct Inner { int m; };
+
+// Member access through a [[ref_to_uninit]] pointer denotes uninitialized
+// storage. Arrow access (a->m, object *a) and explicit deref ((*a).m) must
+// behave identically.
+void test_member_through_pointer(Inner *ptr [[ref_to_uninit]]) {
+  int *q1 = &ptr->m;                   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *q2 = &(*ptr).m;                 // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *q3 [[ref_to_uninit]] = &ptr->m; // OK
+  (void)q1; (void)q2; (void)q3;
+}
+
 struct WithFields {
   int *p1 [[ref_to_uninit]] = &g_uninit; // OK
   int *p2 [[ref_to_uninit]] = &g_init;   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}

@@ -14977,8 +14977,11 @@ static bool glvalueDenotesUninitStorage(const Expr *E) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
     return DeclDenotesUninit(DRE->getDecl());
   if (const auto *ME = dyn_cast<MemberExpr>(E))
+    // a->m reaches m through the pointer a (object *a); a.m through the
+    // glvalue a.
     return DeclDenotesUninit(ME->getMemberDecl()) ||
-           glvalueDenotesUninitStorage(ME->getBase());
+           (ME->isArrow() ? pointerRefersToUninitStorage(ME->getBase())
+                          : glvalueDenotesUninitStorage(ME->getBase()));
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     return pointerRefersToUninitStorage(ASE->getBase());
 
