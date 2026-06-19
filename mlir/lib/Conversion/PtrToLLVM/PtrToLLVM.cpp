@@ -406,7 +406,7 @@ LogicalResult ConstantOpConversion::matchAndRewrite(
   Value intConst =
       LLVM::ConstantOp::create(rewriter, op.getLoc(), intType, addr);
   rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(op, resultType, intConst);
-  return llvm::success();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
