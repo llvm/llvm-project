@@ -2420,7 +2420,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(unsigned AS,
                                                  MachineRegisterInfo &MRI,
                                                  MachineIRBuilder &B) const {
   unsigned BaseAS = AS;
-  unsigned SANum = AMDGPU::tryGetSyntheticApertureNumber(AS);
+  unsigned SANum = AMDGPU::getSyntheticApertureNumber(AS);
   if (SANum != AMDGPU::SyntheticAperture::None)
     BaseAS = AMDGPUAS::LOCAL_ADDRESS;
 
