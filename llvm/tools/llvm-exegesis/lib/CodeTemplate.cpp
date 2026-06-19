@@ -25,7 +25,13 @@ CodeTemplate CodeTemplate::clone() const {
 }
 
 InstructionTemplate::InstructionTemplate(const Instruction *Instr)
-    : Instr(Instr), VariableValues(Instr->Variables.size()) {}
+    : Instr(Instr), VariableValues(Instr->Variables.size()),
+      AliasConstraintForVariables(Instr->Variables.size()) {
+  for (unsigned VarIdx = 0; VarIdx < Instr->Variables.size(); ++VarIdx) {
+    AliasConstraintForVariables[VarIdx].resize(Instr->Variables.size());
+  }
+}
+
 
 InstructionTemplate::InstructionTemplate(InstructionTemplate &&) = default;
 
