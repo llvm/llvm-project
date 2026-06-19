@@ -6975,12 +6975,13 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
   bool UnionMember =
       isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
   if ((UnionVar || UnionMember) &&
-      S.shouldEmitProfileViolation("std::init", "union_marker", AL.getLoc())) {
+      S.shouldEmitProfileViolation("std::init", "union_marker", AL.getLoc()))
+    // Diagnose the banned placement but retain the marker (fall through to
+    // addAttr) so uninit_decl / ctor_uninit_member treat the entity as
+    // acknowledged and do not re-diagnose it with a second, contradictory
+    // error.
     S.Diag(AL.getLoc(), diag::err_init_union_marker)
         << "std::init" << (UnionMember ? 1 : 0);
-    AL.setInvalid();
-    return;
-  }
 
   D->addAttr(::new (S.Context) CXX11UninitializedAttr(S.Context, AL));
 }

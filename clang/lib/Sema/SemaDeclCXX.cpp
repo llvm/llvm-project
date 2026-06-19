@@ -7081,6 +7081,12 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
   if (!Ctor->isUserProvided())
     return;
 
+  // A union's members are mutually exclusive; a constructor initializes at most
+  // one, so the "every member" rule does not apply (paper §6.5). Whether the
+  // active member is set is a constructor-body flow question, deferred.
+  if (Ctor->getParent()->isUnion())
+    return;
+
   // Members given a written member-initializer by this constructor.
   llvm::SmallPtrSet<const FieldDecl *, 8> Written;
   for (const CXXCtorInitializer *Init : Ctor->inits())

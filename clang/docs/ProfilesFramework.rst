@@ -727,9 +727,9 @@ constructor is trusted; static / thread storage duration is excluded
   are value-initialized).
 - The aggregate case uses ``Sema::defaultInitLeavesScalarIndeterminate``
   with ``HonorUninitMarkers=true``, which recurses through bases and members,
-  trusts user-provided default constructors, excludes unions, and skips data
-  members marked ``[[uninitialized]]`` (acknowledged uninitialized, paper
-  §6.2). So a type whose only indeterminate scalars are all marked is trusted
+  trusts user-provided default constructors, and skips data members marked
+  ``[[uninitialized]]`` (acknowledged uninitialized, paper §6.2). So a type
+  whose only indeterminate scalars are all marked is trusted
   (e.g. ``struct A { int x [[uninitialized]]; }; A a;`` is accepted), while a
   mixed type still fires for its unmarked scalars.
 
@@ -788,6 +788,10 @@ themselves marked ``[[uninitialized]]`` is trusted (the same
 - Reference and const members keep their existing dedicated diagnostics;
   anonymous-aggregate members and unnamed bit-fields are skipped (named
   bit-fields are checked like any other member).
+- A union's own constructor is exempt from this rule -- its members are
+  mutually exclusive, so a constructor initializes at most one (paper §6.5;
+  see R6). A union *data member* of a non-union class is still checked, and
+  must be initialized via the member-initializer list.
 - Known gaps: base-class subobjects of the constructed class are not checked
   -- only direct non-static data members -- so a user-provided constructor
   that leaves a base subobject uninitialized (paper §6.1) is not diagnosed.
@@ -807,6 +811,16 @@ assignment when compiled without the profile.
   structured-binding rejections, which are unconditional, this is gated on
   enforcement -- a union may legitimately carry the marker without the
   profile.
+- The banned marker is retained on the declaration after it is diagnosed, so
+  the ``uninit_decl`` / ``ctor_uninit_member`` rules treat the entity as
+  acknowledged and do not emit a second, contradictory diagnostic.
+
+An *unmarked* union left uninitialized is itself the error (paper §6.5):
+``Sema::defaultInitLeavesScalarIndeterminate`` reports a union as indeterminate
+unless it has no members, a user-provided default constructor, or a default
+member initializer.  A uninitialized union variable is therefore diagnosed by
+``uninit_decl`` (with the union-specific ``err_init_uninit_union``) and an
+uninitialized union data member by ``ctor_uninit_member``.
 
 R7. ``ref_to_uninit`` -- pattern 1
 ..................................

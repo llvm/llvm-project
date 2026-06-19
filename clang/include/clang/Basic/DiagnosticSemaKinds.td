@@ -14148,6 +14148,8 @@ def err_init_uninit_read : ProfileRuleError<
 def err_init_uninit_decl : ProfileRuleError<
   "variable %1 must be initialized or marked '[[uninitialized]]' under "
   "profile '%0'">;
+def err_init_uninit_union : ProfileRuleError<
+  "variable %1 of union type must be initialized under profile '%0'">;
 def err_init_static_runtime_init : ProfileRuleError<
   "non-local variable %1 requires constant initialization under "
   "profile '%0'">;

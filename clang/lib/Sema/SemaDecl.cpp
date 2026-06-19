@@ -14737,7 +14737,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
          (Context.getBaseElementType(Var->getType())->isRecordType() &&
           defaultInitLeavesScalarIndeterminate(
               Var->getType(), /*HonorUninitMarkers=*/true)))) {
-      Diag(Var->getLocation(), diag::err_init_uninit_decl)
+      // A union variable cannot carry [[uninitialized]] (union_marker bans it),
+      // so it must be initialized; use a message that does not suggest the
+      // marker as a remedy.
+      bool IsUnion = Context.getBaseElementType(Var->getType())->isUnionType();
+      Diag(Var->getLocation(),
+           IsUnion ? diag::err_init_uninit_union : diag::err_init_uninit_decl)
           << Profile << Var->getDeclName();
     }
 
@@ -14858,10 +14863,20 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
   if (!RD)
     // Scalars, pointers, and enums are left indeterminate by default-init.
     return T->isScalarType();
-  // A union is handled by the union_marker rule, not here; its members are
-  // mutually exclusive so the member walk below does not apply.
-  if (RD->isUnion() || RD->isInvalidDecl())
+  if (RD->isInvalidDecl())
     return false;
+  // A union's members are mutually exclusive, so the per-member walk below does
+  // not apply. Default-initialization leaves it without an initialized member
+  // (paper §6.5) unless it has no members, has a user-provided default
+  // constructor (trusted), or a default member initializer initializes one.
+  if (RD->isUnion()) {
+    if (RD->field_empty() || RD->hasUserProvidedDefaultConstructor())
+      return false;
+    for (const FieldDecl *F : RD->fields())
+      if (F->hasInClassInitializer())
+        return false;
+    return true;
+  }
   // Break cycles from ill-formed self-containing types (e.g. struct S { S x; }).
   if (!Visited.insert(RD->getCanonicalDecl()).second)
     return false;
