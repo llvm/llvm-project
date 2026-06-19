@@ -30433,25 +30433,8 @@ public:
     // Emit ordered reduction for the vectorized window.
     Builder.SetCurrentDebugLocation(
         cast<Instruction>(ReductionRoot)->getDebugLoc());
-    if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy); SLPReVec && VecTy) {
-      unsigned DestTyNumElements = getNumElements(VecTy);
-      unsigned VF = getNumElements(SuccessRoot->getType()) / DestTyNumElements;
-      for (auto I : seq<unsigned>(VF)) {
-        unsigned Position = I * DestTyNumElements;
-        Value *SubVec = createExtractVector(Builder, SuccessRoot,
-                                            DestTyNumElements, Position);
-        if (!VectorizedTree)
-          VectorizedTree = SubVec;
-        else
-          VectorizedTree = createOp(Builder, RdxKind, VectorizedTree, SubVec,
-                                    "op.rdx", ReductionOps);
-      }
-    } else if (VectorizedTree) {
-      VectorizedTree =
-          emitReduction(SuccessRoot, Builder, TTI, DestTy, VectorizedTree);
-    } else {
-      VectorizedTree = emitReduction(SuccessRoot, Builder, TTI, DestTy);
-    }
+    VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, 1, false,
+                                    DestTy, false, VectorizedTree);
 
     // Fold trailing scalars [SuccessStart+SuccessWidth, N).
     for (Value *RdxVal :
@@ -30494,13 +30477,16 @@ private:
   /// scale \p Scale and signedness \p IsSigned.
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
                         Value *Vec, unsigned Scale, bool IsSigned, Type *DestTy,
-                        bool ReducedInTree) {
+                        bool ReducedInTree, Value *Start = nullptr) {
     Value *Rdx;
     if (ReducedInTree) {
       Rdx = Vec;
-    } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
+    } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy);
+               VecTy && SLPReVec) {
       unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
+      assert(getNumElements(Vec->getType()) % DestTyNumElements == 0 &&
+             "Vec element count must be a multiple of DestTy element count");
       // e.g. Consider vector reduce add.
       // Initial reduction is
       // clang-format off
@@ -30530,7 +30516,7 @@ private:
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
       }
     } else {
-      Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
+      Rdx = emitReduction(Vec, Builder, &TTI, DestTy, Start);
     }
     if (Rdx->getType() != DestTy)
       Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
