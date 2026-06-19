@@ -57,10 +57,9 @@ static cl::opt<unsigned> TemporalReuseThreshold(
              "accessed in a loop so that the elements are classified to have "
              "temporal reuse"));
 
-/// Decompose the loop nest rooted at \p Root into disjoint linear chains of
-/// loops. A chain is built from a leaf by including a parent only while that
-/// parent has exactly one sub-loop. A loop that forks the nest or encloses a
-/// fork is not in any chain.
+/// Collect the maximal single-child chain above each leaf. A chain is built
+/// from a leaf by including a parent only while that parent has exactly one
+/// sub-loop. A loop that forks the nest or encloses fork is not in any chain.
 static SmallVector<LoopVectorTy, 4> collectLinearChains(Loop &Root) {
   SmallVector<LoopVectorTy, 4> Chains;
 
@@ -72,8 +71,7 @@ static SmallVector<LoopVectorTy, 4> collectLinearChains(Loop &Root) {
     LoopVectorTy Chain;
     Chain.push_back(L);
     for (Loop *P = L->getParentLoop();
-         P != nullptr && Root.contains(P) && P->getSubLoops().size() == 1;
-         P = P->getParentLoop())
+         P != nullptr && P->getSubLoops().size() == 1; P = P->getParentLoop())
       Chain.push_back(P);
 
     // The chain was built inner->outer; reverse to outer->inner.
@@ -542,8 +540,8 @@ bool IndexedReference::isAliased(const IndexedReference &Other,
 // CacheCost implementation
 //
 raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
-  for (const auto &Chain : CC.ChainCosts)
-    for (const auto &LC : Chain) {
+  for (const CacheCost::LoopCacheCostsTy &Chain : CC.ChainCosts)
+    for (const CacheCost::LoopCacheCostTy &LC : Chain) {
       const Loop *L = LC.first;
       OS << "Loop '" << L->getName() << "' has cost = " << LC.second << "\n";
     }
