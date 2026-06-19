@@ -582,14 +582,14 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
 
 std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
-                                                 const BlockNode &Node,
-                                                 bool AllowSynthetic) const {
-  return getProfileCountFromFreq(F, getBlockFreq(Node), AllowSynthetic);
+                                                 const BlockNode &Node) const {
+  return getProfileCountFromFreq(F, getBlockFreq(Node));
 }
 
-std::optional<uint64_t> BlockFrequencyInfoImplBase::getProfileCountFromFreq(
-    const Function &F, BlockFrequency Freq, bool AllowSynthetic) const {
-  auto EntryCount = F.getEntryCount(AllowSynthetic);
+std::optional<uint64_t>
+BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
+                                                    BlockFrequency Freq) const {
+  auto EntryCount = F.getEntryCount();
   if (!EntryCount)
     return std::nullopt;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
