@@ -5,10 +5,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
-// CIR-DAG: !rec_Param2 = !cir.record<struct "Param2" incomplete>
-// CIR-DAG: !rec_Ret1 = !cir.record<struct "Ret1" incomplete>
-// CIR-DAG: !rec_S1 = !cir.record<struct "S1" {!cir.vptr}>
-// CIR-DAG: !rec_S2 = !cir.record<struct "S2" {!cir.vptr}>
+// CIR-DAG: !rec_Param2 = !cir.struct<"Param2" incomplete>
+// CIR-DAG: !rec_Ret1 = !cir.struct<"Ret1" incomplete>
+// CIR-DAG: !rec_S1 = !cir.struct<"S1" {!cir.vptr}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" {!cir.vptr}>
 // LLVMCIR-DAG: %struct.Ret1 = type {}
 // LLVMCIR-DAG: %struct.Param2 = type {}
 

@@ -330,8 +330,10 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
     DotAddress += Func->estimateColdSize();
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
   }
   return DotAddress;
 }
@@ -367,6 +369,11 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
   auto runColdLayout = [&]() {
+    // Mirror the extra hugify alignment inserted by final section allocation
+    // after the last non-cold section. Account for it before assigning cold
+    // fragment addresses so range checks see the hot-to-cold gap.
+    if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
+      DotAddress = alignTo(DotAddress, opts::AlignText);
     DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
     ColdLayoutDone = true;
     if (opts::HotFunctionsAtEnd)
@@ -394,8 +401,10 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     else
       DotAddress += Func->estimateHotSize();
 
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
     ++CurrentIndex;
   }
 

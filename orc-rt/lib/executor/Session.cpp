@@ -53,10 +53,16 @@ Session::Session(ExecutorProcessInfo EPI,
                  std::unique_ptr<TaskDispatcher> Dispatcher,
                  ErrorReporterFn ReportError)
     : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
-      ReportError(std::move(ReportError)), Notifiers(addNotificationService()) {
-}
+      ReportError(std::move(ReportError)),
+      Notifiers(createService<NotificationService>()) {}
 
-Session::~Session() { waitForShutdown(); }
+Session::~Session() {
+  shutdown();
+  std::unique_lock<std::mutex> Lock(M);
+  CV.wait(Lock, [&]() {
+    return CurrentState == State::Shutdown && TargetState == State::None;
+  });
+}
 
 void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
   assert(CA && "attach called with null CA object");
@@ -77,7 +83,7 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    assert(TargetState >= State::Attached);
+    assert(TargetState >= State::Attached || CurrentState >= State::Detached);
 
     // There are three possibilities that we have to deal with here:
     // 1. Connection succeeded and we're done.
@@ -87,8 +93,8 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     //
     // 2. Connect failed.
     //
-    //    In this case connect must have called handleDisconnect, which should
-    //    have initiated the detach. We just need to bail out.
+    //    In this case connect must have called notifyDisconnected, which
+    //    should have initiated the detach. We just need to bail out.
     //
     // 3. Connection succeeded but a detach or shutdown was requested
     //    concurrently. In this case we need to start the detach process.
@@ -102,7 +108,7 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     }
 
     // The target state is Detached or higher. Check the current state. If it's
-    // also Detached or higher then handleDisconnect must already have been
+    // also Detached or higher then notifyDisconnected must already have been
     // called (in turn calling proceedToDetach, which updated the current
     // state). In this case we're in option (2) and we just need to bail out.
     if (CurrentState >= State::Detached)
@@ -184,7 +190,7 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
       break;
     case State::Detached:
       Lock.unlock();
-      waitForManagedCodeCallsThenShutdown();
+      waitForManagedCodeTasksThenShutdown();
       return;
     default:
       assert(false && "Illegal state");
@@ -193,14 +199,6 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
   }
 
   TmpCA->disconnect();
-}
-
-void Session::waitForShutdown() {
-  std::promise<void> P;
-  auto F = P.get_future();
-  addOnShutdown([P = std::move(P)]() mutable { P.set_value(); });
-  shutdown();
-  F.get();
 }
 
 void Session::addOnDetach(OnDetachFn OnDetach) {
@@ -229,13 +227,6 @@ void Session::addOnShutdown(OnShutdownFn OnShutdown) {
   }
   // We've already shutdown. Run in-place.
   OnShutdown();
-}
-
-Session::NotificationService &Session::addNotificationService() {
-  auto NS = std::make_unique<NotificationService>();
-  auto &TmpNS = *NS;
-  Services.push_back(std::move(NS));
-  return TmpNS;
 }
 
 void Session::appendService(std::unique_ptr<Service> Srv) {
@@ -326,12 +317,12 @@ void Session::completeDetach() {
     assert(TargetState == State::Shutdown);
   }
 
-  waitForManagedCodeCallsThenShutdown();
+  waitForManagedCodeTasksThenShutdown();
 }
 
-void Session::waitForManagedCodeCallsThenShutdown() {
-  ManagedCodeCallsGroup->addOnComplete([this]() { proceedToShutdown(); });
-  ManagedCodeCallsGroup->close();
+void Session::waitForManagedCodeTasksThenShutdown() {
+  ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
+  ManagedCodeTaskGroup->close();
 }
 
 void Session::proceedToShutdown() {
@@ -361,10 +352,13 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 void Session::completeShutdown() {
   Dispatcher->shutdown();
 
-  std::unique_lock<std::mutex> Lock(M);
-  assert(CurrentState == State::Shutdown);
-  assert(TargetState == State::Shutdown);
-  TargetState = State::None;
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(CurrentState == State::Shutdown);
+    assert(TargetState == State::Shutdown);
+    TargetState = State::None;
+  }
+  CV.notify_all();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

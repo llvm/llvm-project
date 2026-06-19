@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -22,17 +20,6 @@
 
 using namespace mlir;
 using namespace mlir::xegpu;
-
-static bool isSharedMemory(const MemRefType &memrefTy) {
-  Attribute attr = memrefTy.getMemorySpace();
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
-    return intAttr.getInt() == 3;
-  if (auto memrefSpace = llvm::dyn_cast<MemorySpaceAttr>(attr))
-    return memrefSpace.getValue() == MemorySpace::SLM;
-  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
-    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
-  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
-}
 
 template <typename T>
 static std::string makeString(T array, bool breakline = false) {
@@ -72,53 +59,6 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
   auto kind = attr.getValue();
   return kind == CachePolicy::CACHED || kind == CachePolicy::UNCACHED ||
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
-}
-
-static LogicalResult
-isValidGatherScatterParams(Type maskTy, VectorType valueTy,
-                           TensorDescType tdescTy,
-                           function_ref<InFlightDiagnostic()> emitError) {
-
-  if (!tdescTy.isScattered())
-    return emitError() << "Expects a scattered TensorDesc.";
-
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
-  if (!valueTy) {
-    if (chunkSize > 1)
-      return emitError() << "Expecting chunk size == 1 for scalar result";
-    if (dyn_cast<VectorType>(maskTy))
-      return emitError() << "Expecting a vector type result.";
-    return success();
-  }
-
-  auto maskShape = getShapeOf(maskTy);
-  auto valueShape = getShapeOf(valueTy);
-  auto tdescShape = getShapeOf(tdescTy);
-
-  if (valueTy.getElementType() != tdescTy.getElementType())
-    return emitError()
-           << "Value should have the same element type as TensorDesc.";
-
-  llvm::SmallVector<int64_t> expectedMaskShape(tdescShape);
-  if (chunkSize > 1)
-    expectedMaskShape.pop_back();
-  if (expectedMaskShape != maskShape)
-    return emitError()
-           << "Mask should match TensorDesc except the chunk size dim.";
-
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
-    if (tdescTy.getLayoutAttr())
-      return emitError() << "TensorDesc doesn't need LayoutAttr for SIMT code";
-    return success();
-  }
-
-  if (tdescShape != valueShape)
-    return emitError() << "Value shape " << makeString(valueShape)
-                       << " is neither a valid distribution for SIMT nor "
-                          "consistent with the tensor descriptor for SIMD "
-                       << tdescTy;
-  return success();
 }
 
 static LogicalResult
@@ -186,9 +126,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() < 2)
-    return emitError() << "mem_desc must be 2D or greater.";
-
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
@@ -218,23 +155,21 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       }
     }
   }
-  if (dataShape.size() == 2) {
+
+  if (layout && !layout.isDistributable(
+                    SmallVector<int64_t>(dataShape.begin(), dataShape.end())))
+    return emitError() << "Value shape is not distributable with the layout";
+
+  if (dataShape.size() == mdescShape.size()) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
-  } else {
-    // if the subgroup_block_io attribute is set,  mdescTy must have block
-    // attribute
-    if (subgroup_block_io && !blockShape.size())
-      return emitError() << "mem_desc must have block attribute when "
-                            "subgroup_block_io is set.";
-    // if the subgroup_block_io attribute is set, the memdesc should be row
-    // major
-    if (subgroup_block_io && mdescTy.isColMajor())
-      return emitError() << "mem_desc should be row major when "
-                            "subgroup_block_io is set.";
   }
-
+  // if the subgroup_block_io attribute is set, mdescTy must have block
+  // attribute
+  if (subgroup_block_io && !blockShape.size())
+    return emitError() << "mem_desc must have block attribute when "
+                          "subgroup_block_io is set.";
   return success();
 }
 
@@ -247,10 +182,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   [[maybe_unused]] auto ty = source.getType();
   assert(ty.hasStaticShape() && "expecting a memref with static shape");
 
-  build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
+  build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        DenseI64ArrayAttr({}) /* const offsets */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
         DenseI64ArrayAttr({}) /* empty const strides*/);
 }
@@ -289,72 +222,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
     }
   }
 
-  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
-        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
-        staticStridesAttr);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<MemRefType> source,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-
-  build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
-        ValueRange({}) /* empty dynamic strides */,
-        builder.getDenseI64ArrayAttr(staticOffsets) /* const offsets */,
-        {} /* empty const shape*/, {} /* empty const strides*/);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
-                           llvm::ArrayRef<OpFoldResult> offsets,
-                           llvm::ArrayRef<OpFoldResult> shape,
-                           llvm::ArrayRef<OpFoldResult> strides) {
-  assert(!shape.empty() && !offsets.empty() && !strides.empty() &&
-         shape.size() == strides.size() && shape.size() == offsets.size());
-
-  Type srcTy = source.getType();
-  assert((isa<IntegerType, MemRefType>(srcTy)) &&
-         "Source has to be either int or memref.");
-
-  llvm::SmallVector<Value> dynamicOffsets;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
-
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
-  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
-
-  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
-    auto memrefShape = memrefTy.getShape();
-    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
-
-    // if shape and strides are from Memref, we don't need attributes for them
-    // to keep the IR print clean (only do so for full-static case, otherwise
-    // printer would fail trying to print empty array-attr).
-    if (staticShape == memrefShape && staticStrides == memrefStrides &&
-        dynamicShape.empty() && dynamicStrides.empty()) {
-      staticShapeAttr = DenseI64ArrayAttr();
-      staticStridesAttr = DenseI64ArrayAttr();
-    }
-  }
-
-  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
-        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
+  build(builder, state, tdesc, source, dynamicShape, dynamicStrides,
+        staticShapeAttr, staticStridesAttr);
 }
 
 LogicalResult CreateNdDescOp::verify() {
@@ -373,9 +242,6 @@ LogicalResult CreateNdDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  if (size_t offsetRank = getMixedOffsets().size())
-    invalidRank |= (offsetRank != rank);
-
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
   if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
@@ -390,83 +256,24 @@ LogicalResult CreateNdDescOp::verify() {
 
   if (invalidRank)
     return emitOpError(
-        "Expecting the rank of shape, strides, offsets, and source (if source "
+        "Expecting the rank of shape, strides, and source (if source "
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)
-    return emitOpError(
-        "Expecting the TensorDesc rank is not greater than the "
-        "ranks of shape, strides, offsets or the memref source.");
+    return emitOpError("Expecting the TensorDesc rank is not greater than the "
+                       "ranks of shape, strides or the memref source.");
 
   if (invalidElemTy)
     return emitOpError("TensorDesc should have the same element "
                        "type with the source if it is a memref.\n");
 
-  if (getType().isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
   return success();
 }
 
-static ParseResult parseOptionalDynamicIndexList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-
-  SmallVector<int64_t, 4> integerVals;
-  auto parseIntegerOrValue = [&]() {
-    OpAsmParser::UnresolvedOperand operand;
-    auto res = parser.parseOptionalOperand(operand);
-
-    if (res.has_value() && succeeded(res.value())) {
-      values.push_back(operand);
-      integerVals.push_back(ShapedType::kDynamic);
-      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
-        return failure();
-    } else {
-      int64_t integer;
-      if (failed(parser.parseInteger(integer)))
-        return failure();
-      integerVals.push_back(integer);
-    }
-    return success();
-  };
-
-  // If the optional values are given there must be left bracket
-  if (parser.parseOptionalLSquare().succeeded()) {
-    if (parser.parseCommaSeparatedList(parseIntegerOrValue) ||
-        parser.parseRSquare())
-      return parser.emitError(parser.getNameLoc())
-             << "expected a list of SSA values or integers";
-    integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
-    return success();
-  }
-
-  return success();
-}
-
-static void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                                          OperandRange values,
-                                          DenseI64ArrayAttr integers) {
-  if (!integers || integers.empty())
-    return;
-  printDynamicIndexList(printer, op, values, integers,
-                        /*scalableFlags=*/{}, {}, AsmParser::Delimiter::Square);
-}
 //===----------------------------------------------------------------------===//
 // XeGPU_PrefetchNdOp
 //===----------------------------------------------------------------------===//
-
-void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
-                         Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
-                         xegpu::CachePolicyAttr l2_hint,
-                         xegpu::CachePolicyAttr l3_hint) {
-
-  return build(builder, state, tensorDesc, ValueRange(), DenseI64ArrayAttr(),
-               l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
-}
 
 void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
                          Value tensorDesc, ArrayRef<OpFoldResult> offsets,
@@ -486,8 +293,6 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
 
 LogicalResult PrefetchNdOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (tdescTy.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -500,9 +305,15 @@ LogicalResult PrefetchNdOp::verify() {
 
   int64_t tDescRank = tdescTy.getRank();
   int64_t offsetSize = getMixedOffsets().size();
-  if (offsetSize != 0 && offsetSize != tDescRank)
+  if (offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
+
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(tdescTy)))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
 
   return success();
 }
@@ -510,18 +321,6 @@ LogicalResult PrefetchNdOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadNdOp
 //===----------------------------------------------------------------------===//
-
-void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
-                     Value tensorDesc, UnitAttr packed,
-                     DenseI64ArrayAttr transpose,
-                     xegpu::CachePolicyAttr l1_hint,
-                     xegpu::CachePolicyAttr l2_hint,
-                     xegpu::CachePolicyAttr l3_hint) {
-
-  return build(builder, state, retType, tensorDesc, ValueRange(),
-               DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint,
-               l3_hint, /*anchor_layout=*/nullptr);
-}
 
 void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
                      Value tensorDesc, ArrayRef<OpFoldResult> offsets,
@@ -544,12 +343,6 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
 LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
-
-  if (tdescTy.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
-  if (tdescTy.getRank() > 2)
-    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
@@ -613,20 +406,35 @@ LogicalResult LoadNdOp::verify() {
     }
   }
 
+  // Handle array_length. Two result shape conventions are accepted:
+  //   * 3D shape: leading array_length dimension prepended, e.g. descriptor
+  //     16x16 with array_length=2 -> [2, 16, 16].
+  //   * Stacked 2D shape: array blocks stacked along the non-FCD (first)
+  //     dimension, e.g. descriptor 16x16 with array_length=2 -> [32, 16].
   auto array_len = tdescTy.getArrayLength();
-  if (array_len > 1)
-    tdescShape.insert(tdescShape.begin(), array_len);
+  SmallVector<int64_t> stacked2DShape(tdescShape);
+  SmallVector<int64_t> threeDShape(tdescShape);
+  if (array_len > 1 && !tdescShape.empty()) {
+    stacked2DShape[0] *= array_len;
+    threeDShape.insert(threeDShape.begin(), array_len);
+  }
 
-  if (tdescShape != valueShape)
+  if (valueShape != stacked2DShape && valueShape != threeDShape)
     return emitOpError() << "Result shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
 
   int64_t tDescRank = tdescTy.getRank();
   int64_t offsetSize = getMixedOffsets().size();
-  if (offsetSize != 0 && offsetSize != tDescRank)
+  if (offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
+
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(tdescTy)))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
+  }
 
   return success();
 }
@@ -634,16 +442,6 @@ LogicalResult LoadNdOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreNdOp
 //===----------------------------------------------------------------------===//
-
-void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
-                      Value tensorDesc, xegpu::CachePolicyAttr l1_hint,
-                      xegpu::CachePolicyAttr l2_hint,
-                      xegpu::CachePolicyAttr l3_hint) {
-
-  return build(builder, state, value, tensorDesc, ValueRange(),
-               DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint,
-               /*anchor_layout=*/nullptr);
-}
 
 void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
                       Value tensorDesc, ArrayRef<OpFoldResult> offsets,
@@ -664,12 +462,6 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
 LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
-
-  if (dstTy.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
-  if (dstTy.getRank() > 2)
-    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valTy)
     return emitOpError("Expecting a VectorType result.\n");
@@ -717,77 +509,15 @@ LogicalResult StoreNdOp::verify() {
 
   int64_t tDescRank = dstTy.getRank();
   int64_t offsetSize = getMixedOffsets().size();
-  if (offsetSize != 0 && offsetSize != tDescRank)
+  if (offsetSize != tDescRank)
     return emitOpError(
         "Mismatched ranks between offsets and tensor descriptor");
 
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_UpdateNDOffsetOp
-//===----------------------------------------------------------------------===//
-LogicalResult UpdateNdOffsetOp::verify() {
-  auto ty = getTensorDescType();
-  if (ty.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
-  // number of offsets specified must match the rank of the tensor descriptor
-  if (ty.getRank() != (int64_t)getNumOffsets()) {
-    return emitOpError("Invalid number of offsets.");
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(tdescShape))
+      return emitOpError(
+          "TensorDesc shape is not distributable with the layout");
   }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_CreateDescOp
-//===----------------------------------------------------------------------===//
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<OpFoldResult> offsets) {
-  auto loc = source.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get(size, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, TensorDesc, source, offset);
-}
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, TensorDesc, source, ofrs);
-}
-
-LogicalResult CreateDescOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  // Memory space of created TensorDesc should match with the source.
-  // Both source and TensorDesc are considered for global memory by default,
-  // if the memory scope attr is not specified. If source is an integer,
-  // it is considered as ptr to global memory.
-  auto srcMemorySpace = getSourceMemorySpace();
-  auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
-  if (srcMemorySpace != tdescMemorySpace)
-    return emitOpError("Memory space mismatch.")
-           << " Source: " << srcMemorySpace
-           << ", TensorDesc: " << tdescMemorySpace;
-
-  // check total size
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
-  SmallVector<int64_t> shape(getOffsetsType().getShape());
-  if (chunkSize != 1)
-    shape.push_back(chunkSize);
-
-  auto tdescShape = getShapeOf(tdescTy);
-  if (shape != tdescShape)
-    return emitOpError("Incorrect TensorDesc shape. ")
-           << "Expected is " << makeString(shape) << "\n";
 
   return success();
 }
@@ -796,17 +526,6 @@ LogicalResult CreateDescOp::verify() {
 // XeGPU_PrefetchOp
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (!tdescTy && !getOffsets())
-    return emitOpError("Expects offsets.");
-
-  if (tdescTy && getOffsets())
-    return emitOpError("offsets not allowed.");
-
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.");
-
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -823,33 +542,23 @@ LogicalResult PrefetchOp::verify() {
   if (getOffsetAlignByteAttr() && !srcTy.isInteger())
     return emitOpError("offset_align_byte only allowed with integer source.");
 
-  return success();
-}
+  if (auto layout = getAnchorLayout()) {
+    // get the offset operand and its shape
+    auto offsetsTy = getOffsets().getType();
+    if (llvm::isa<VectorType>(offsetsTy) &&
+        !layout.isDistributable(getShapeOf(offsetsTy)))
+      return emitOpError("offset shape is not distributable with the layout");
+  }
 
-void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
-                       xegpu::CachePolicyAttr l1_hint,
-                       xegpu::CachePolicyAttr l2_hint,
-                       xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint,
-        IntegerAttr{}, /*anchor_layout=*/nullptr);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadGatherOp
 //===----------------------------------------------------------------------===//
 LogicalResult LoadGatherOp::verify() {
-  auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (!tdescTy && !getOffsets())
-    return emitOpError("Expects offsets.");
-
-  if (tdescTy && getOffsets())
-    return emitOpError("offsets not allowed.");
-
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -860,9 +569,6 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  if (tdescTy)
-    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                      [&]() { return emitOpError(); });
   auto srcTy = getSourceType();
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(srcTy);
@@ -870,18 +576,14 @@ LogicalResult LoadGatherOp::verify() {
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(valueTy)))
+      return emitOpError("Value shape is not distributable with the layout");
+  }
+
   auto offsetsTy = getOffsets().getType();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
-}
-
-void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
-                         Type valueType, Value source, Value mask,
-                         xegpu::CachePolicyAttr l1_hint,
-                         xegpu::CachePolicyAttr l2_hint,
-                         xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, valueType, source, Value(), mask, IntegerAttr(),
-        l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
@@ -921,18 +623,8 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
 // XeGPU_StoreScatterOp
 //===----------------------------------------------------------------------===//
 LogicalResult StoreScatterOp::verify() {
-  auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (!tdescTy && !getOffsets())
-    return emitOpError("Expects offsets.");
-
-  if (tdescTy && getOffsets())
-    return emitOpError("offsets not allowed.");
-
-  if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -943,10 +635,6 @@ LogicalResult StoreScatterOp::verify() {
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  if (tdescTy)
-    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                      [&]() { return emitOpError(); });
-
   auto destTy = getDestType();
   uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
   auto memTy = dyn_cast<MemRefType>(destTy);
@@ -954,18 +642,14 @@ LogicalResult StoreScatterOp::verify() {
   if (memTy && (getElementType() != memTy.getElementType()))
     return emitError() << "Value should have the same element type as MemRef.";
 
+  if (auto layout = getAnchorLayout()) {
+    if (!layout.isDistributable(getShapeOf(valueTy)))
+      return emitOpError("Value shape is not distributable with the layout");
+  }
+
   auto offsetsTy = getOffsets().getType();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
-}
-
-void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
-                           Value value, Value dest, Value mask,
-                           xegpu::CachePolicyAttr l1_hint,
-                           xegpu::CachePolicyAttr l2_hint,
-                           xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, value, dest, Value(), mask, IntegerAttr(), l1_hint,
-        l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
@@ -1003,41 +687,101 @@ void StoreScatterOp::build(
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_UpdateOffsetOp
+// DPAS Common Verification Helpers
 //===----------------------------------------------------------------------===//
-void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                           mlir::Value tensorDesc,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  auto tdescTy = mlir::dyn_cast<TensorDescType>(tensorDesc.getType());
-  assert(tdescTy && "Expecting the source is a TensorDescType value.");
-  auto loc = tensorDesc.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get({size}, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, tdescTy, tensorDesc, offset);
+
+// Helper to verify layout distributability for a value
+static LogicalResult
+verifyLayoutDistributable(Operation *op,
+                          std::optional<DistributeLayoutAttr> layout,
+                          ArrayRef<int64_t> shape, StringRef operandName) {
+  if (layout && !layout->isDistributable(
+                    SmallVector<int64_t>(shape.begin(), shape.end())))
+    return op->emitOpError(operandName)
+           << " shape is not distributable with the layout";
+  return success();
 }
 
-void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                           Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, tensorDesc, ofrs);
+// Helper to verify M, N, K dimensions match between A, B, and result matrices
+static LogicalResult verifyDpasDimensions(Operation *op,
+                                          ArrayRef<int64_t> aShape,
+                                          ArrayRef<int64_t> bShape,
+                                          ArrayRef<int64_t> resShape) {
+
+  auto aRank = aShape.size();
+  auto bRank = bShape.size();
+  auto resRank = resShape.size();
+  if (aRank == 1 && bRank == 1 && resRank == 1)
+    return success();
+
+  // A must be at least 2D, B must be 2D or 3D (innermost dims), result at
+  // least 2D.
+  if (aRank < 2)
+    return op->emitOpError("A operand must be at least a 2D vector.");
+  if (bRank < 2)
+    return op->emitOpError("B operand must be at least a 2D vector.");
+  if (resRank < 2)
+    return op->emitOpError("Result must be at least a 2D vector.");
+
+  // FIXME: B may have one extra trailing dim for VNNI packing
+  // (B[batch..., K/vnni, N, vnni]). We plan to drop VNNI packing support, so
+  // rather than properly verifying the packed dimensions, we simply accept
+  // the packed form here and skip the detailed verification. This branch
+  // should be removed once VNNI packing support is dropped.
+  if (bRank == aRank + 1)
+    return success();
+
+  // All operands have the same rank. They share the same batch dimensions,
+  // with the last two dims being the core matmul dims: A[batch..., M, K],
+  // B[batch..., K, N], result[batch..., M, N].
+  if (aRank != bRank || aRank != resRank)
+    return op->emitOpError("Rank mismatch among A, B, and result.");
+
+  int64_t batchRank = aRank - 2;
+
+  // Verify batch dimensions match.
+  for (int64_t i = 0; i < batchRank; ++i) {
+    if (aShape[i] != resShape[i])
+      return op->emitOpError("Batch dimension mismatch at dim ")
+             << i << ": A has " << aShape[i] << " but result has "
+             << resShape[i] << ".";
+    if (aShape[i] != bShape[i])
+      return op->emitOpError("Batch dimension mismatch at dim ")
+             << i << ": A has " << aShape[i] << " but B has " << bShape[i]
+             << ".";
+  }
+
+  // Core matmul dimensions (last two dims of each operand).
+  int64_t aM = aShape[batchRank];
+  int64_t aK = aShape[batchRank + 1];
+  int64_t bK = bShape[batchRank];
+  int64_t bN = bShape[batchRank + 1];
+  int64_t resM = resShape[batchRank];
+  int64_t resN = resShape[batchRank + 1];
+
+  // Verify K dimension match between A and B
+  if (bK != aK)
+    return op->emitOpError("K-dimension mismatch: A has K=")
+           << aK << " but B has K=" << bK << ".";
+
+  // Verify M dimension match between A and result
+  if (aM != resM)
+    return op->emitOpError("M-dimension mismatch: A has M=")
+           << aM << " but result has M=" << resM << ".";
+
+  // Verify N dimension match between B and result
+  if (bN != resN)
+    return op->emitOpError("N-dimension mismatch: B has N=")
+           << bN << " but result has N=" << resN << ".";
+
+  return success();
 }
 
-LogicalResult UpdateOffsetOp::verify() {
-  auto tdescTy = getTensorDescType();
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
-  SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
-  if (tdescTy.getChunkSizeAsInt() > 1)
-    expectedOffsetShape.pop_back();
-
-  if (expectedOffsetShape != offsetShape)
-    return emitOpError(
-        "Offsets should match TensorDesc except the chunk size dim.");
-
+// Helper to verify accumulator matches result type
+static LogicalResult verifyDpasAccumulator(Operation *op, Type accType,
+                                           Type resultType) {
+  if (accType != resultType)
+    return op->emitOpError("Accumulator type must match result type.");
   return success();
 }
 
@@ -1045,42 +789,25 @@ LogicalResult UpdateOffsetOp::verify() {
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//
 LogicalResult DpasOp::verify() {
-  int64_t lhsRank = getLhsType().getRank();
-  int64_t rhsRank = getRhsType().getRank();
-  int64_t resRank = getResultType().getRank();
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
   auto resShape = getResultType().getShape();
 
-  if (getAcc() && getAcc().getType() != getResultType())
-    return emitOpError("Expecting the acc type to be the same as result.");
+  // Verify layout distributability
+  if (failed(
+          verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutA(), lhsShape, "A")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutB(), rhsShape, "B")))
+    return failure();
 
-  // SIMT code: the size of the B operand has to be a multiple of 32 bits.
-  // It skips the semantic check since lack of architecture information.
-  // Users need to ensure the correctness.
-  if (lhsRank == 1 && rhsRank == 1 && resRank == 1) {
-    auto numElems = getRhsType().getNumElements();
-    auto elemTy = getRhsType().getElementType();
-    auto factor = 32 / elemTy.getIntOrFloatBitWidth();
-    if (numElems % factor != 0)
-      return emitOpError("Expecting B operand to be a multiple of 32 bits.");
-    return success();
-  }
+  // Verify accumulator if present
+  if (getAcc() &&
+      failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
+    return failure();
 
-  // SIMD code
-  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
-    return emitOpError(
-        "expecting lhs and result to be a 2D vector, and rhs to be either "
-        "2D or 3D (packed) vector.");
-  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-  if (bK != lhsShape[1])
-    return emitOpError("K-dimension mismatch.");
-  if (lhsShape[0] != resShape[0])
-    return emitOpError("M-dimension mismatch.");
-  if (rhsShape[1] != resShape[1])
-    return emitOpError("N-dimension mismatch.");
-
-  return success();
+  return verifyDpasDimensions(*this, lhsShape, rhsShape, resShape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1103,12 +830,12 @@ LogicalResult ConvertLayoutOp::verify() {
 
   Type srcType = getSource().getType();
   if (llvm::isa<VectorType>(srcType)) {
-    auto shape = llvm::cast<VectorType>(srcType).getShape();
-    if (!XeGPUDialect::isEvenlyDistributable(shape, srcLayout))
+    SmallVector<int64_t> shape(llvm::cast<VectorType>(srcType).getShape());
+    if (!srcLayout.isDistributable(shape))
       return emitOpError(
           "invalid input layout, data cannot be evenly distributed.");
 
-    if (!XeGPUDialect::isEvenlyDistributable(shape, resLayout))
+    if (!resLayout.isDistributable(shape))
       return emitOpError(
           "invalid target layout, data cannot be evenly distributed.");
   }
@@ -1186,8 +913,100 @@ LogicalResult TruncfOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DpasMxOp::verify() {
-  if (getAcc() && getAcc().getType() != getResultType())
-    return emitOpError("Expecting the acc type to be the same as result.");
+  auto aShape = getAType().getShape();
+  auto bShape = getBType().getShape();
+  auto resShape = getResultType().getShape();
+
+  // Verify layout distributability for A, B, and result
+  if (failed(
+          verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutA(), aShape, "A")))
+    return failure();
+  if (failed(verifyLayoutDistributable(*this, getLayoutB(), bShape, "B")))
+    return failure();
+
+  // Verify accumulator if present
+  if (getAcc() &&
+      failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
+    return failure();
+
+  // Verify M, N, K dimensions
+  if (failed(verifyDpasDimensions(*this, aShape, bShape, resShape)))
+    return failure();
+
+  // Determine batch rank from A operand.
+  int64_t aBatchRank = aShape.size() - 2;
+
+  // Validate scale_a if present
+  if (getScaleA()) {
+    auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
+    // Only validate if scale is a vector (scalars are always valid)
+    if (scaleAVecType && scaleAVecType.getRank() > 1) {
+      auto scaleAShape = scaleAVecType.getShape();
+
+      if (scaleAVecType.getRank() < 2)
+        return emitOpError("Scale A must be at least a 2D vector when not a "
+                           "scalar.");
+
+      // Verify layout distributability for scale_a
+      if (failed(verifyLayoutDistributable(*this, getLayoutAScale(),
+                                           scaleAShape, "ScaleA")))
+        return failure();
+
+      // Validate M dimension: scale_a's M must match A's M (last-1 dim)
+      if (scaleAShape[scaleAShape.size() - 2] != aShape[aBatchRank])
+        return emitOpError("Scale A M dimension [")
+               << scaleAShape[scaleAShape.size() - 2]
+               << "] must match A M dimension [" << aShape[aBatchRank] << "].";
+    }
+  }
+
+  // Validate scale_b if present
+  if (getScaleB()) {
+    auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
+    // Only validate if scale is a vector (scalars are always valid)
+    if (scaleBVecType && scaleBVecType.getRank() > 1) {
+      auto scaleBShape = scaleBVecType.getShape();
+
+      if (scaleBVecType.getRank() < 2)
+        return emitOpError("Scale B must be at least a 2D vector when not a "
+                           "scalar.");
+
+      // Verify layout distributability for scale_b
+      if (failed(verifyLayoutDistributable(*this, getLayoutBScale(),
+                                           scaleBShape, "ScaleB")))
+        return failure();
+
+      // Validate N dimension: scale_b's N (last dim) must match B's N (last
+      // dim)
+      if (scaleBShape.back() != bShape.back())
+        return emitOpError("Scale B N dimension [")
+               << scaleBShape.back() << "] must match B N dimension ["
+               << bShape.back() << "].";
+    }
+  }
+
+  // Validate scale K dimension compatibility if both scales are present and
+  // vectors
+  if (getScaleA() && getScaleB()) {
+    auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
+    auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
+
+    if (scaleAVecType && scaleBVecType && scaleAVecType.getRank() > 1 &&
+        scaleBVecType.getRank() > 1) {
+      auto scaleAShape = scaleAVecType.getShape();
+      auto scaleBShape = scaleBVecType.getShape();
+
+      // Validate scale K dimension compatibility: scale_a's last dim must
+      // match scale_b's second-to-last dim
+      if (scaleAShape.back() != scaleBShape[scaleBShape.size() - 2])
+        return emitOpError("Scale K dimension mismatch: scale_a has K=")
+               << scaleAShape.back()
+               << " but scale_b has K=" << scaleBShape[scaleBShape.size() - 2]
+               << ".";
+    }
+  }
 
   return success();
 }

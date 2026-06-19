@@ -48,3 +48,8 @@ Options
 
    When `true`, count class member initializers in constructors as statements.
    Default is `true`.
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not count statements, branches, nesting
+   levels, or variable declarations inside macros. Default is `false`.

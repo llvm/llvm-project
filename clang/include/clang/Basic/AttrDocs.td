@@ -158,7 +158,7 @@ On MachO platforms, this attribute also does not control the order of initializa
 across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
-other language modes. Currently, this attribute is not implemented on z/OS.
+other language modes.
   }];
 }
 
@@ -297,8 +297,14 @@ def NoEscapeDocs : Documentation {
 the compiler that the pointer cannot escape: that is, no reference to the object
 the pointer points to that is derived from the parameter value will survive
 after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actually escape. Calling ``free()`` on such
-a parameter does not constitute an escape.
+annotated with ``noescape`` do not actually escape. The optimizer may make
+assumptions based on the fact that it knows that a call to the function does
+not escape a certain parameter, so incorrectly annotating a parameter with
+``noescape`` leads to undefined behavior. The callee is also not allowed to
+deallocate memory through a ``noescape`` parameter: the optimizer does not make
+assumptions based on this information at the moment, but may do so in the
+future. Some cases of invalid uses of ``noescape`` can be found with
+:ref:`-Wlifetime-safety-noescape <Wlifetime-safety-noescape>`.
 
 For example:
 
@@ -312,6 +318,23 @@ For example:
 
   void escapingFunc(__attribute__((noescape)) int *p) {
     gp = p; // Not OK.
+  }
+
+  void freeingFunc(__attribute__((noescape)) int *p) {
+    free(p); // Not OK.
+  }
+
+Since ``noescape`` is a parameter attribute and not a type attribute, it only
+applies to the outermost pointer level, regardless of where in the parameter
+declaration you place it:
+
+.. code-block:: c
+
+  int **gp;
+
+  void nestingEscapes(__attribute__((noescape)) int **p) {
+    gp = p; // Not OK.
+    *gp = *p; // OK, p does not escape.
   }
 
 Additionally, when the parameter is a `block pointer
@@ -332,6 +355,70 @@ applies to copies of the block. For example:
     g1 = Block_copy(block); // Not OK either.
   }
 
+The function *is* allowed to leak information about the memory address of the
+pointer, but not any provenance of the allocation:
+
+.. code-block:: c
+
+  bool isNull(__attribute__((noescape)) void *p) {
+    return !p; // OK.
+  }
+
+  uintptr_t gi;
+
+  void escapingAddress(__attribute__((noescape)) int *p) {
+    // OK *if and only if* gi is never casted back to a pointer.
+    gi = (uintptr_t)p;
+  }
+
+  bool usingEscapedAddress(int *p) {
+    return (uintptr_t)p > gi; // OK.
+  }
+
+  bool usingEscapedPointer(int *p) {
+    return p > (int*)gi; // Not OK.
+  }
+
+  int *gp;
+
+  void escapingEndFunc(__attribute__((noescape)) int *p, size_t len) {
+    gp = p + len; // Not OK.
+  }
+
+  }];
+}
+
+def WarnUnusedDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``warn_unused`` attribute can be placed on the declaration of a structure or union type.
+When the ``-Wunused-variable`` diagnostic is enabled, local variables of types which have a non-trivial constructor or destructor are considered "used" by virtue of the constructor or destructor invocations involved.
+Those constructor or destructor invocations are not considered a use if the type is declared with the ``warn_unused`` attribute.
+The variable is considered used if it is named outside of its declaration.
+
+This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor but act as a value type rather than an RAII type.
+
+.. code-block:: c++
+
+  struct [[gnu::warn_unused]] S {
+    S();
+    ~S();
+  };
+
+  struct T {
+    T();
+    ~T();
+   };
+
+   int func() {
+     S s1; // -Wunused-variable warning
+     S s2; // No -Wunused-variable warning because of the member access expression below
+     S s3; // No -Wunused-variable warning because of the sizeof operand below
+     T t;  // No -Wunused-variable warning
+
+     s2.~S();
+     return sizeof(s3);
+   }
   }];
 }
 
@@ -1639,20 +1726,33 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 ``malloc`` are treated like they used the standard ``malloc()``, and can be
 safely deallocated with the standard ``free()``.
 
-* Use ``ownership_returns`` to mark a function as an allocating function. Takes
-  1 parameter to denote the allocation type.
+* Use ``ownership_returns`` to mark a function as an allocating function.
+  It takes 1 or 2 arguments.
+  The first argument is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation. This is mandatory.
+  The second argument is optional.
+  It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
+  The referenced parameter must have some integral type.
+  This attribute may appear at most once per declaration.
+  If this argument is not set, then tooling, such as the Clang Static Analyzer,
+  won't be able to reason about the size of the allocation, thus check potential out-of-bounds accesses.
+  However, such tooling could still warn if the wrong deallocation function
+  was used for the ``ownership_returns`` attributed resource.
+  If forward declarations have this attribute, those must have the same arguments.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
-  parameters: the allocation type, and the index of the parameter that is being
+  arguments: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
 * Use ``ownership_holds`` to mark that a function takes over the ownership of a
   piece of memory and will free it at some unspecified point in the future. Like
-  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  ``ownership_takes``, this takes 2 arguments: the allocation type, and the
   index of the parameter whose ownership will be taken over (counting from 1).
 
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
-leak reports (concerning the specified argument); the difference between them
+leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 
@@ -1660,12 +1760,15 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
 
-  // Denotes that my_free will deallocate its parameter using free().
+  // 'sz' (parameter 1) is the allocation size.
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
+
+  // Denotes that my_free will deallocate its argument using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
-  // Denotes that my_hold will take over the ownership of its parameter that was
+  // Denotes that my_hold will take over the ownership of its argument that was
   // allocated via malloc().
   void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
 
@@ -2184,6 +2287,7 @@ attributes are ignored. Supported platforms are:
 ``visionOS``
 ``visionOSApplicationExtension``
 ``driverkit``
+``anyAppleOS``
 ``swift``
 ``android``
 ``fuchsia``
@@ -2207,6 +2311,7 @@ Some platforms have alias names:
 ``maccatalyst_app_extension``
 ``visionos``
 ``visionos_app_extension``
+``anyappleos``
 ``shadermodel``
 
 Supported environment names for the ShaderModel platform:
@@ -2226,6 +2331,13 @@ Supported environment names for the ShaderModel platform:
 ``mesh``
 ``amplification``
 ``library``
+
+The special platform ``anyAppleOS`` (alias: ``anyappleos``) is a shorthand that
+applies the availability attribute to all Apple Darwin platforms. An explicit
+platform-specific availability attribute takes precedence over an ``anyAppleOS``
+attribute for that platform. Versions specified with ``anyAppleOS`` must be at
+least 26.0, which is the first OS release where all supported Apple platforms
+share a unified version number.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -2930,8 +3042,35 @@ def BTFTypeTagDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
 Clang supports the ``__attribute__((btf_type_tag("ARGUMENT")))`` attribute for
-all targets. It only has effect when ``-g`` is specified on the command line and
-is currently silently ignored when not applied to a pointer type (note: this
+all targets. It only has effect when ``-g`` is specified on the command line.
+
+The attribute can be applied to a pointer type, in which case the tag is
+associated with the pointee type, e.g.:
+
+.. code-block:: c
+
+  int __attribute__((btf_type_tag("tag"))) *p;
+
+It can also be applied to the underlying type of a typedef, in which case the
+tag follows the typedef down to its base type, e.g.:
+
+.. code-block:: c
+
+  typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+
+The following is the corresponding btf:
+
+.. code-block::
+
+  ...
+  [2] TYPE_TAG 'tag' type_id=4
+  [3] TYPEDEF 'foo_t' type_id=2
+  [4] STRUCT 'foo' size=4 vlen=1
+      'c' type_id=5 bits_offset=0
+  [5] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+  ...
+
+The attribute is currently silently ignored in any other position (note: this
 scenario may be diagnosed in the future).
 
 The ``ARGUMENT`` string will be preserved in IR and emitted to DWARF for the
@@ -3409,6 +3548,10 @@ create machine code that meets the request.
 def AMDGPUNumSGPRNumVGPRDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
+.. warning::
+  These attributes are deprecated. Use the ``amdgpu_waves_per_eu`` attribute to
+  control SGPR and VGPR usage instead.
+
 Clang supports the ``__attribute__((amdgpu_num_sgpr(<num_sgpr>)))`` and
 ``__attribute__((amdgpu_num_vgpr(<num_vgpr>)))`` attributes for the AMDGPU
 target. These attributes may be attached to a kernel function definition and are
@@ -7814,7 +7957,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,
@@ -9228,6 +9371,23 @@ This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
+def HLSLMatrixLayoutDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
+  let Content = [{
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
+
+* ``row_major``: Matrices are stored in memory row-by-row.
+* ``column_major``: Matrices are stored in memory column-by-column (default).
+
+Example:
+.. code-block:: hlsl
+
+  row_major float2x2 myMatrix;
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
@@ -9898,7 +10058,7 @@ the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
 code and data needed to support the aspect of the implementation to be brought
 into the link to satisfy weak references in the modular implemenation function.
 If the compiler does not understand an aspect, it must summarily consider any
-call to require that aspect. 
+call to require that aspect.
 
 For example, say ``printf`` is annotated with
 ``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
@@ -9914,7 +10074,53 @@ excepting that the aspects may be in any order.
 
 The following aspects are currently supported:
 
-- ``float``: The call has a floating point argument
+- ``fixed``: The call has a C ISO 18037 fixed-point argument.
+- ``float``: The call has a floating-point argument.
+  }];
+}
+
+def OverflowBehaviorDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``overflow_behavior`` attribute provides fine-grained, type-level control
+over how arithmetic operations on an integer type behave on overflow. It may be
+applied to a ``typedef``, to a variable or data member, or to an integer type
+directly, and accepts one of two behaviors as its argument:
+
+* ``wrap``: arithmetic on the attributed type wraps on overflow, using two's
+  complement semantics. This is equivalent to ``-fwrapv`` but scoped to the
+  attributed type, and works for both signed and unsigned types. UBSan's
+  ``signed-integer-overflow``, ``unsigned-integer-overflow``,
+  ``implicit-signed-integer-truncation``, and
+  ``implicit-unsigned-integer-truncation`` checks are suppressed for the type.
+
+* ``trap``: arithmetic on the attributed type is checked for overflow, enabling
+  overflow checks for the type even when ``-fwrapv`` is in effect globally.
+
+.. code-block:: c++
+
+  typedef unsigned int __attribute__((overflow_behavior(trap))) non_wrapping_uint;
+
+  non_wrapping_uint add_one(non_wrapping_uint a) {
+    return a + 1; // Overflow is checked for this operation.
+  }
+
+  int mul_alot(int n) {
+    int __attribute__((overflow_behavior(wrap))) a = n;
+    return a * 1337; // Overflow is not checked and is well-defined.
+  }
+
+The keyword spellings ``__ob_wrap`` and ``__ob_trap`` are equivalent to
+``overflow_behavior(wrap)`` and ``overflow_behavior(trap)`` respectively.
+
+The attribute wholly overrides global flags (``-ftrapv``, ``-fwrapv``,
+sanitizers, and Sanitizer Special Case Lists) for the attributed type. It can
+only be applied to integer types.
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``. For full details on promotion and
+conversion rules, pointer semantics, diagnostics, and interaction with
+sanitizers, see :doc:`OverflowBehaviorTypes`.
   }];
 }
 
@@ -9954,5 +10160,67 @@ exception and what cleanup actions to perform. It effectively colors the
 language-agnostic unwinding mechanism with language-specific semantics, enabling
 different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
+  }];
+}
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above defaults to '0' when elided.
+The attribute is also supported with blocks and in Objective-C.
+
+.. code-block:: c
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
+  }
   }];
 }

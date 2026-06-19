@@ -1441,12 +1441,16 @@ void OpEmitter::genPropertiesSupport() {
       {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
-      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+            return emitError() << "for `{0}`: ";
+          })))
         return ::mlir::failure();
 )decl";
   const char *attrGetDefaultFmt = R"decl(;
       if (attr) {{
-        if (::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+        if (::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+              return emitError() << "for `{0}`: ";
+            })))
           return ::mlir::failure();
       } else {{
         prop.{0} = {1};
@@ -4150,6 +4154,19 @@ void OpEmitter::genTraits() {
       opClass.addTrait(opTrait->getFullyQualifiedTraitName());
     }
   }
+
+  // Auto-derive the builtin token producer/consumer traits whenever the op
+  // statically declares a Token operand or result.
+  constexpr llvm::StringLiteral kTokenCppType = "::mlir::TokenType";
+  auto hasStaticTokenType = [&](auto &&values) {
+    return llvm::any_of(values, [&](const tblgen::NamedTypeConstraint &v) {
+      return v.constraint.getCppType() == kTokenCppType;
+    });
+  };
+  if (hasStaticTokenType(op.getOperands()))
+    opClass.addTrait("::mlir::OpTrait::TokenConsumerTrait");
+  if (hasStaticTokenType(op.getResults()))
+    opClass.addTrait("::mlir::OpTrait::TokenProducerTrait");
 }
 
 void OpEmitter::genOpNameGetter() {

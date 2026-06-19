@@ -338,8 +338,15 @@ template <> struct MappingTraits<Class> {
 } // namespace llvm
 
 namespace {
+typedef std::vector<StringRef> WhereParamsSeq;
+
+struct FunctionWhere {
+  std::optional<WhereParamsSeq> Parameters;
+};
+
 struct Function {
   StringRef Name;
+  std::optional<FunctionWhere> Where;
   ParamsSeq Params;
   NullabilitySeq Nullability;
   std::optional<NullabilityKind> NullabilityOfRet;
@@ -351,6 +358,7 @@ struct Function {
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
   SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
+  bool UnsafeBufferUsage = false;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -360,9 +368,16 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 
 namespace llvm {
 namespace yaml {
+template <> struct MappingTraits<FunctionWhere> {
+  static void mapping(IO &IO, FunctionWhere &W) {
+    IO.mapOptional("Parameters", W.Parameters);
+  }
+};
+
 template <> struct MappingTraits<Function> {
   static void mapping(IO &IO, Function &F) {
     IO.mapRequired("Name", F.Name);
+    IO.mapOptional("Where", F.Where);
     IO.mapOptional("Parameters", F.Params);
     IO.mapOptional("Nullability", F.Nullability);
     IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, std::nullopt);
@@ -376,6 +391,7 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
     IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
+    IO.mapOptional("UnsafeBufferUsage", F.UnsafeBufferUsage, false);
   }
 };
 } // namespace yaml
@@ -1046,6 +1062,7 @@ public:
     FI.ResultType = std::string(Function.ResultType);
     FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
+    FI.UnsafeBufferUsage = Function.UnsafeBufferUsage;
   }
 
   void convertTagContext(std::optional<Context> ParentContext, const Tag &T,
@@ -1134,6 +1151,11 @@ public:
     }
 
     for (const auto &CXXMethod : T.Methods) {
+      if (CXXMethod.Where) {
+        emitError("'Where' is not supported by binary API notes yet");
+        continue;
+      }
+
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
       Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
@@ -1207,6 +1229,11 @@ public:
     // Write all global functions.
     llvm::StringSet<> KnownFunctions;
     for (const auto &Function : TLItems.Functions) {
+      if (Function.Where) {
+        emitError("'Where' is not supported by binary API notes yet");
+        continue;
+      }
+
       // Check for duplicate global functions.
       if (!KnownFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +

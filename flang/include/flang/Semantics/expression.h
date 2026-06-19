@@ -169,6 +169,7 @@ public:
   MaybeExpr Analyze(const parser::DataStmtValue &);
   MaybeExpr Analyze(const parser::AllocateObject &);
   MaybeExpr Analyze(const parser::PointerObject &);
+  MaybeExpr Analyze(const parser::ConditionalExpr &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -468,6 +469,9 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
 
 void NoteUsedSymbols(
     SemanticsContext &, const SomeExpr &, bool isDefinition = false);
+
+bool CheckMisparsedArrayElement(
+    SemanticsContext &, const parser::FunctionReference &);
 
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.

@@ -1033,9 +1033,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   // If we are checking function types, emit a function type signature as
-  // prologue data.
+  // prologue data. Kernel functions have strict alignment requirements and
+  // cannot be call indirectly so we do not instrument them.
   if (FD && SanOpts.has(SanitizerKind::Function) &&
-      !FD->getType()->isCFIUncheckedCalleeFunctionType()) {
+      !FD->getType()->isCFIUncheckedCalleeFunctionType() &&
+      llvm::isCallableCC(Fn->getCallingConv())) {
     if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
       llvm::LLVMContext &Ctx = Fn->getContext();
       llvm::MDBuilder MDB(Ctx);

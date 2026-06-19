@@ -22,7 +22,9 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <memory>
 #include <optional>
@@ -86,25 +88,33 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object);
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
+bool IsComplexPart(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+const Symbol *GetHostSymbol(const Symbol &sym);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -118,6 +128,37 @@ std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
 
 std::optional<bool> GetLogicalValue(const SomeExpr &expr);
+std::optional<int64_t> GetIntValueFromExpr(
+    const parser::Expr &parserExpr, SemanticsContext *semaCtx = nullptr);
+
+template <typename T>
+std::optional<int64_t> GetIntValueFromExpr(
+    const T &wrappedExpr, SemanticsContext *semaCtx = nullptr) {
+  if (auto *parserExpr{parser::Unwrap<parser::Expr>(wrappedExpr)}) {
+    return GetIntValueFromExpr(*parserExpr, semaCtx);
+  }
+  return std::nullopt;
+}
+
+// There are several clauses that take an optional, compile-time
+// constant bool argument. Those clauses are stored as std::optional, e.g.
+// OmpClause::ReverseOffload -> std::optional<OmpReverseOffloadClause>.
+// Retrieve the logical value if present.
+template <typename ClauseTy>
+std::optional<bool> GetLogicalArgument(
+    const std::optional<ClauseTy> &maybeClause, SemanticsContext &semaCtx) {
+  if (maybeClause) {
+    // Scalar<Logical<Constant<common::Indirection<Expr>>>>
+    auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
+      if (auto v{GetLogicalValue(*maybeExpr)}) {
+        return *v;
+      }
+    }
+  }
+  return std::nullopt;
+}
 
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
@@ -131,8 +172,33 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
+enum struct ListItemKind : uint32_t {
+  Depend,
+  DirectiveName,
+  DirectiveSpecification,
+  Extended,
+  IntegerExpression,
+  Interop,
+  Locator,
+  Operation,
+  Parameter,
+  ProcedureArgument,
+  Variable,
+};
+
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version);
+
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
+
+inline bool IsDoConcurrentLegal(unsigned version) {
+  // DO CONCURRENT is allowed (as an alternative to a Canonical Loop Nest)
+  // in OpenMP 6.0+.
+  return version >= 60;
+}
 
 struct LoopControl {
   LoopControl(LoopControl &&x) = default;
@@ -140,7 +206,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  const Symbol *iv{nullptr};
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
@@ -188,40 +254,60 @@ template <typename T> struct WithReason {
 
 WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version);
+    unsigned version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
-    unsigned version);
+    unsigned version, SemanticsContext *semaCtx = nullptr);
 WithReason<int64_t> GetHeightWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
-// Return the depth of the affected nests:
-//   {affected-depth, reason, must-be-perfect-nest}.
+/// Return the depth of the affected nest(s):
+///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version);
-// Return the range of the affected nests in the sequence:
-//   {first, count, reason}.
-// If the range is "the whole sequence", the return value will be {1, -1, ...}.
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
+/// Return the depth of the generated nest(s):
+///   {generated-depth, is-perfect-nest}
+std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
+/// Return the range of the affected nests in the sequence:
+///   {first, count}.
+/// If the range is "the whole sequence", the return value will be {1, -1}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 /// Return the depth in which all loops must be rectangular.
 WithReason<int64_t> GetRectangularNestDepthWithReason(
-    const parser::OmpDirectiveSpecification &spec, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
-// Count the required loop count from range. If count == -1, return -1,
-// indicating all loops in the sequence.
-std::optional<int64_t> GetRequiredCount(
+/// Calculate the minimum length of a sequence that contains the specified
+/// range. If the range's count is -1, return -1 indicating all loops in the
+/// sequence.
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
-std::optional<int64_t> GetRequiredCount(
+std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range);
+
+/// Collect the set of DO loops present in the source code that are directly
+/// affected by the given loop construct. This does not include any DO loops
+/// that are affected by any construct nested in `x`.
+/// Returns std::nullopt if `x` or code nested in `x` was malformed in a
+/// way that prevented the function from returning an accurate result.
+std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
+    const parser::OpenMPLoopConstruct &x, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
-      bool allowAllLoops = false);
+      bool allowAllLoops = false, SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
-  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false)
-      : version_(version), allowAllLoops_(allowAllLoops) {
+  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false,
+      SemanticsContext *semaCtx = nullptr)
+      : version_(version), allowAllLoops_(allowAllLoops), semaCtx_(semaCtx) {
     entry_ = std::make_unique<Construct>(range, nullptr);
     createChildrenFromRange(entry_->location);
     precalculate();
@@ -246,6 +332,10 @@ struct LoopSequence {
   WithReason<bool> isWellFormedSequence() const;
   WithReason<bool> isWellFormedNest() const;
 
+  /// Return the first DO CONCURRENT loop contained in this sequence.
+  /// If there are no such loops, return nullptr.
+  const LoopSequence *getNestedDoConcurrent() const;
+
   std::vector<LoopControl> getLoopControls() const;
   // Check if this loop's bounds are invariant in each of the `outer`
   // constructs.
@@ -255,8 +345,8 @@ struct LoopSequence {
 private:
   using Construct = ExecutionPartIterator::Construct;
 
-  LoopSequence(
-      std::unique_ptr<Construct> entry, unsigned version, bool allowAllLoops);
+  LoopSequence(std::unique_ptr<Construct> entry, unsigned version,
+      bool allowAllLoops, SemanticsContext *semaCtx = nullptr);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   void createChildrenFromRange(const R &range) {
@@ -308,7 +398,39 @@ private:
   bool allowAllLoops_;
   std::unique_ptr<Construct> entry_;
   std::vector<LoopSequence> children_;
+  SemanticsContext *semaCtx_{nullptr};
 };
+
+// ---------------------------------------------------------------------------
+// Trait-matching helpers shared between metadirective lowering and
+// declare-variant semantic recording.
+// ---------------------------------------------------------------------------
+
+/// Map a parsed trait-set name to the corresponding LLVM OMP TraitSet enum.
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name);
+
+/// Map a parsed trait-selector name (plus its containing set) to the
+/// corresponding LLVM OMP TraitSelector enum.
+llvm::omp::TraitSelector MapTraitSelector(
+    const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set);
+
+/// Try to constant-fold a user condition expression to a boolean.
+std::optional<bool> EvaluateUserCondition(
+    SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr);
+
+/// Extract the optional score value from trait properties.
+llvm::APInt *GetTraitScore(
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage);
+
+/// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
+/// Non-name properties (clause, extension) are silently skipped; the caller is
+/// responsible for diagnosing them before invoking this function.
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+    llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr);
+
 } // namespace omp
 } // namespace Fortran::semantics
 

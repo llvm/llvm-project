@@ -244,6 +244,12 @@ void TransferFunctions::Visit(Stmt *S) {
   }
 
   // Mark all children expressions live.
+  // The "normal" case will be handled by iterating over 'S->children()' but
+  // before that we need this big 'switch' to handle the statement kinds where
+  // 'S->children()' isn't the exactly equal to the set of child expressions
+  // that we want to keep alive. (In some cases we need to skip some of the
+  // children, in other cases there are unusual child expressions that do not
+  // appear in 'S->children()'.)
 
   switch (S->getStmtClass()) {
     default:
@@ -276,6 +282,15 @@ void TransferFunctions::Visit(Stmt *S) {
              VA != nullptr; VA = FindVA(VA->getElementType())) {
           AddLiveExpr(val.liveExprs, LV.ESetFact, VA->getSizeExpr());
         }
+      }
+      break;
+    }
+    case Stmt::AttributedStmtClass: {
+      // In an attributed statement, include the assumptions of the
+      // [[assume(...)]] attributes as being live.
+      AttributedStmt *AS = cast<AttributedStmt>(S);
+      for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(AS->getAttrs())) {
+        AddLiveExpr(val.liveExprs, LV.ESetFact, Attr->getAssumption());
       }
       break;
     }
@@ -355,9 +370,7 @@ void TransferFunctions::Visit(Stmt *S) {
     }
   }
 
-  // HACK + FIXME: What is this? One could only guess that this is an attempt to
-  // fish for live values, for example, arguments from a call expression.
-  // Maybe we could take inspiration from UninitializedVariable analysis?
+  // Mark all child expressions live -- "normal" case.
   for (Stmt *Child : S->children()) {
     if (const auto *E = dyn_cast_or_null<Expr>(Child))
       AddLiveExpr(val.liveExprs, LV.ESetFact, E);

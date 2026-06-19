@@ -44,6 +44,21 @@ public:
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override;
+
+  llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override;
+
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &E,
+                                    llvm::StringRef Path) override;
+
+  llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override;
+
+  llvm::Error writeWPASuite(const WPASuite &Suite,
+                            llvm::StringRef Path) override;
+
   /// Lists what analyses implement this particular serialisation format.
   void forEachRegisteredAnalysis(
       llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>
@@ -60,15 +75,11 @@ public:
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
   std::map<SummaryName, FormatInfo> FormatInfos;
-
-  static char ID;
 };
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::MockSerializationFormat::FormatInfo>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(
+    llvm::Registry<clang::ssaf::MockSerializationFormat::FormatInfo>)
 
 #endif // LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_REGISTRIES_MOCKSERIALIZATIONFORMAT_H

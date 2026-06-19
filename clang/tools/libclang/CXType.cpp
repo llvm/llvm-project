@@ -122,6 +122,7 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(Attributed);
     TKCASE(BTFTagAttributed);
     TKCASE(Atomic);
+    TKCASE(PredefinedSugar);
     default:
       return CXType_Unexposed;
   }
@@ -651,6 +652,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(BTFTagAttributed);
     TKIND(HLSLAttributedResource);
     TKIND(HLSLInlineSpirv);
+    TKIND(PredefinedSugar);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"

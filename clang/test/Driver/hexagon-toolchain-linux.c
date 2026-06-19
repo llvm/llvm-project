@@ -180,3 +180,68 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-PIE-RELOCATABLE %s
 // CHECK-PIE-RELOCATABLE-NOT:  "-pie"
+
+// -----------------------------------------------------------------------------
+// Relocatable (-r) links: no CRT start files, no dynamic linker
+// Partial links must not include crt1.o/crti.o — they define _start which
+// would conflict when the relocatable output is later linked into an executable.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -r %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RELOC %s
+// CHECK-RELOC-NOT: "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
+// CHECK-RELOC-NOT: "{{.*}}crt1.o"
+// CHECK-RELOC-NOT: "{{.*}}crti.o"
+
+// Verify that a normal (non-relocatable) link still gets the CRT files.
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RELOC-NORMAL %s
+// CHECK-RELOC-NORMAL: "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
+// CHECK-RELOC-NORMAL: "{{.*}}crt1.o"
+
+// -----------------------------------------------------------------------------
+// Sanitizer library paths: -fsanitize=memory
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=memory \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-MSAN %s
+// CHECK-MSAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}msan"
+// CHECK-MSAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// Sanitizer library paths: -fsanitize=address
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=address \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-ASAN %s
+// CHECK-ASAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}asan"
+// CHECK-ASAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// No sanitizer: no msan/asan library paths
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
+// -----------------------------------------------------------------------------
+// ThinLTO passes LTO options to the linker
+// -----------------------------------------------------------------------------
+// RUN: touch %t.o
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -flto=thin -fenable-matrix \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO %s
+// CHECK-LTO: "-plugin-opt=thinlto"
+// CHECK-LTO: "-plugin-opt=-enable-matrix"

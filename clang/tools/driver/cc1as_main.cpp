@@ -389,6 +389,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
         llvm::StringSwitch<EmitDwarfUnwindType>(A->getValue())
             .Case("always", EmitDwarfUnwindType::Always)
             .Case("no-compact-unwind", EmitDwarfUnwindType::NoCompactUnwind)
+            .Case("dwarf-only", EmitDwarfUnwindType::DwarfOnly)
             .Case("default", EmitDwarfUnwindType::Default);
   }
 
@@ -506,8 +507,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
            << Opts.CPU << FS.empty() << FS;
   }
 
-  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), STI.get(), &SrcMgr,
-                &MCOptions);
+  MCContext Ctx(Triple(Opts.Triple), *MAI, *MRI, *STI, &SrcMgr);
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {
@@ -626,9 +626,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, Ctx, *Str, *MAI));
 
-  // FIXME: init MCTargetOptions from sanitizer flags here.
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
+      TheTarget->createMCAsmParser(*STI, *Parser, *MCII));
   if (!TAP)
     Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 

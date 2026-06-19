@@ -925,35 +925,73 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
   return nullptr;
 }
 
+/// Extracts an immediate operand from \p Ops and replaces the operand with
+/// zero. If \p PreferScalable is true and \p Ops contains both a scalable and
+/// non-scalable offsets, the scalable offset will be extracted.
+static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
+                                         ScalarEvolution &SE,
+                                         bool PreferScalable) {
+  const APInt *C;
+  SCEVUse *Op = nullptr;
+  Immediate Result = Immediate::getZero();
+
+  // Ops are sorted by their SCEVType (the order of SCEVTypes enum). So, for an
+  // AddExpr the possible order of operands is:
+  // Constant < VScale < Truncate < ZeroExtend < SignExtend < MulExpr < ...
+
+  // This means fixed-size immediates will always appear on the LHS:
+  SCEVUse &S = Ops.front();
+  if (match(S, m_scev_APInt(C)) && !C->isZero() &&
+      C->getSignificantBits() <= 64) {
+    Op = &S;
+    Result = Immediate::getFixed(C->getSExtValue());
+  }
+
+  // But scalable immediates, which are MulExpr(Vscale, Constant), can appear
+  // later in the operand list:
+  if (EnableVScaleImmediates && (Result.isZero() || PreferScalable)) {
+    for (SCEVUse &S : Ops) {
+      // We know anything past scMulExpr will not be a vscale immediate.
+      if (S->getSCEVType() > scMulExpr)
+        break;
+      if (match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
+        Op = &S;
+        Result = Immediate::getScalable(C->getSExtValue());
+        break;
+      }
+    }
+  }
+
+  if (Result.isNonZero()) {
+    SCEVUse &S = *Op;
+    S = SE.getConstant(S->getType(), 0);
+  }
+
+  return Result;
+}
+
 /// If S involves the addition of a constant integer value, return that integer
 /// value, and mutate S to point to a new SCEV with that value excluded.
-static Immediate ExtractImmediate(SCEVUse &S, ScalarEvolution &SE) {
-  const APInt *C;
-  if (match(S, m_scev_APInt(C))) {
-    if (C->getSignificantBits() <= 64) {
-      S = SE.getConstant(S->getType(), 0);
-      return Immediate::getFixed(C->getSExtValue());
-    }
-  } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
+static Immediate ExtractImmediate(SCEVUse &S, ScalarEvolution &SE,
+                                  bool PreferScalable = false) {
+  if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     SmallVector<SCEVUse, 8> NewOps(Add->operands());
-    Immediate Result = ExtractImmediate(NewOps.front(), SE);
+    Immediate Result = ExtractImmediateOperand(NewOps, SE, PreferScalable);
+    if (Result.isZero())
+      Result = ExtractImmediate(NewOps.front(), SE, PreferScalable);
     if (Result.isNonZero())
       S = SE.getAddExpr(NewOps);
     return Result;
   } else if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     SmallVector<SCEVUse, 8> NewOps(AR->operands());
-    Immediate Result = ExtractImmediate(NewOps.front(), SE);
+    Immediate Result = ExtractImmediate(NewOps.front(), SE, PreferScalable);
     if (Result.isNonZero())
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                            SCEV::FlagAnyWrap);
     return Result;
-  } else if (EnableVScaleImmediates &&
-             match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
-    S = SE.getConstant(S->getType(), 0);
-    return Immediate::getScalable(C->getSExtValue());
   }
-  return Immediate::getZero();
+  return ExtractImmediateOperand({S}, SE, PreferScalable);
 }
 
 /// If S involves the addition of a GlobalValue address, return that symbol, and
@@ -1366,23 +1404,31 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup = nullptr);
 
-static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
-  if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
+static unsigned getSetupCost(const SCEV *Reg, unsigned Depth,
+                             const TargetTransformInfo &TTI) {
+  if (isa<SCEVUnknown>(Reg))
     return 1;
+  if (const auto *C = dyn_cast<SCEVConstant>(Reg)) {
+    if (TTI.getIntImmCost(C->getAPInt(), C->getType(),
+                          TargetTransformInfo::TCK_RecipThroughput) ==
+        TargetTransformInfo::TCC_Free)
+      return 0;
+    return 1;
+  }
   if (Depth == 0)
     return 0;
   if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
-    return getSetupCost(S->getStart(), Depth - 1);
+    return getSetupCost(S->getStart(), Depth - 1, TTI);
   if (auto S = dyn_cast<SCEVIntegralCastExpr>(Reg))
-    return getSetupCost(S->getOperand(), Depth - 1);
+    return getSetupCost(S->getOperand(), Depth - 1, TTI);
   if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
     return std::accumulate(S->operands().begin(), S->operands().end(), 0,
                            [&](unsigned i, const SCEV *Reg) {
-                             return i + getSetupCost(Reg, Depth - 1);
+                             return i + getSetupCost(Reg, Depth - 1, TTI);
                            });
   if (auto S = dyn_cast<SCEVUDivExpr>(Reg))
-    return getSetupCost(S->getLHS(), Depth - 1) +
-           getSetupCost(S->getRHS(), Depth - 1);
+    return getSetupCost(S->getLHS(), Depth - 1, TTI) +
+           getSetupCost(S->getRHS(), Depth - 1, TTI);
   return 0;
 }
 
@@ -1452,7 +1498,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
   // Rough heuristic; favor registers which don't require extra setup
   // instructions in the preheader.
-  C.SetupCost += getSetupCost(Reg, SetupCostDepthLimit);
+  C.SetupCost += getSetupCost(Reg, SetupCostDepthLimit, *TTI);
   // Ensure we don't, even with the recusion limit, produce invalid costs.
   C.SetupCost = std::min<unsigned>(C.SetupCost, 1 << 16);
 
@@ -2249,6 +2295,7 @@ class LSRInstance {
   void NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
   void NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
   void NarrowSearchSpaceByFilterPostInc();
+  void NarrowSearchSpaceByMergingUsesOutsideLoop();
   void NarrowSearchSpaceByDeletingCostlyFormulas();
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
@@ -2809,7 +2856,8 @@ std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
                                                  MemAccessTy AccessTy) {
   const SCEV *Copy = Expr;
   SCEVUse ExprUse = Expr;
-  Immediate Offset = ExtractImmediate(ExprUse, SE);
+  Immediate Offset = ExtractImmediate(
+      ExprUse, SE, AccessTy.MemTy && AccessTy.MemTy->isScalableTy());
   Expr = ExprUse;
 
   // Basic uses can't accept any offset, for example.
@@ -4179,7 +4227,10 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   for (Immediate Offset : Worklist)
     GenerateOffset(G, Offset);
 
-  Immediate Imm = ExtractImmediate(G, SE);
+  // TODO: It likely makes sense to extract the immediate corresponding to the
+  // access type (i.e., set PreferScalable to AccessTy.MemTy &&
+  // AccessTy.MemTy->isScalableTy()).
+  Immediate Imm = ExtractImmediate(G, SE, /*PreferScalable=*/false);
   if (G->isZero() || Imm.isZero() ||
       !Base.BaseOffset.isCompatibleImmediate(Imm))
     return;
@@ -4510,6 +4561,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
   SmallVector<const SCEV *, 8> Sequence;
   for (const SCEV *Use : RegUses) {
     SCEVUse Reg = Use; // Make a copy for ExtractImmediate to modify.
+    // TODO: Extract both scalable and fixed immediates (if present)?
     Immediate Imm = ExtractImmediate(Reg, SE);
     auto Pair = Map.try_emplace(Reg);
     if (Pair.second)
@@ -5169,6 +5221,77 @@ void LSRInstance::NarrowSearchSpaceByFilterPostInc() {
   LLVM_DEBUG(dbgs() << "After pre-selection:\n"; print_uses(dbgs()));
 }
 
+void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+    return;
+
+  LLVM_DEBUG(
+      dbgs() << "The search space is too complex.\n"
+                "Narrowing the search space by merging uses with fixups "
+                "entirely outside the loop with uses inside the loop.\n");
+
+  for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
+    LSRUse &LU = Uses[LUIdx];
+    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "  Trying to eliminate use "; LU.print(dbgs());
+               dbgs() << '\n');
+
+    // Find a compatible LSRUse inside the loop that we could merge LU with
+    LSRUse *LUToMergeWith = nullptr;
+    const Formula &ThisF = LU.Formulae[0];
+    for (LSRUse &OtherLU : Uses) {
+      // Only merge with uses inside the loop
+      if (OtherLU.AllFixupsOutsideLoop)
+        continue;
+      // Can't merge with ICmpZero uses as they're handled specially when
+      // expanding
+      if (OtherLU.Kind == LSRUse::ICmpZero)
+        continue;
+      // Can't merge with uses without any formulae
+      if (OtherLU.Formulae.empty())
+        continue;
+      // Can't merge if LU's offsets aren't legal for all of OtherLU's formulae
+      if (any_of(OtherLU.Formulae, [&](const Formula &F) {
+            return !isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, OtherLU.Kind,
+                               OtherLU.AccessTy, F);
+          }))
+        continue;
+      // We can merge with uses that have the same initial formula. We allow
+      // merging of uses with different Kind and AccessTy which means that the
+      // cost may end up being inaccurate, but it's also what we would have
+      // gotten if we'd ignored uses outside the loop entirely.
+      const Formula &OtherF = OtherLU.Formulae[0];
+      if (ThisF.BaseRegs == OtherF.BaseRegs &&
+          ThisF.ScaledReg == OtherF.ScaledReg &&
+          ThisF.BaseGV == OtherF.BaseGV && ThisF.Scale == OtherF.Scale &&
+          ThisF.UnfoldedOffset == OtherF.UnfoldedOffset &&
+          ThisF.BaseOffset == OtherF.BaseOffset) {
+        LUToMergeWith = &OtherLU;
+        break;
+      }
+    }
+    if (!LUToMergeWith)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "   Merging with "; LUToMergeWith->print(dbgs());
+               dbgs() << '\n');
+
+    // Copy fixups
+    for (LSRFixup &Fixup : LU.Fixups) {
+      LUToMergeWith->pushFixup(Fixup);
+    }
+
+    // Delete the old use.
+    DeleteUse(LU, LUIdx);
+    --LUIdx;
+    --NumUses;
+  }
+
+  LLVM_DEBUG(dbgs() << "After pre-selection:\n"; print_uses(dbgs()));
+}
+
 /// The function delete formulas with high registers number expectation.
 /// Assuming we don't know the value of each formula (already delete
 /// all inefficient), generate probability of not selecting for each
@@ -5419,6 +5542,7 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
   if (FilterSameScaledReg)
     NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
   NarrowSearchSpaceByFilterPostInc();
+  NarrowSearchSpaceByMergingUsesOutsideLoop();
   if (LSRExpNarrow)
     NarrowSearchSpaceByDeletingCostlyFormulas();
   else
@@ -5700,6 +5824,10 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
+  // For ICmpZero with pointer-typed operands, keep the comparison in the
+  // integer domain to avoid generating inttoptr casts.
+  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())
+    OpTy = SE.getEffectiveSCEVType(OpTy);
   // This will be the type that we'll initially expand to.
   Type *Ty = F.getType();
   if (!Ty)
@@ -6008,8 +6136,11 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     Value *FullV = Expand(LU, LF, F, LF.UserInst->getIterator(), DeadInsts);
 
     // If this is reuse-by-noop-cast, insert the noop cast.
+    // For ICmpZero with pointer operands, Expand() already set both operands
+    // in integer domain, so no cast is needed here.
     Type *OpTy = LF.OperandValToReplace->getType();
-    if (FullV->getType() != OpTy) {
+    if (FullV->getType() != OpTy &&
+        !(LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())) {
       Instruction *Cast =
           CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
                            FullV, OpTy, "tmp", LF.UserInst->getIterator());

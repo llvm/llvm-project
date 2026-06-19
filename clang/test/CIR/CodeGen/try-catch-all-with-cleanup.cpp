@@ -24,7 +24,7 @@ void test_catch_all_with_cleanup() {
 
 // CIR-LABEL: cir.func {{.*}} @_Z27test_catch_all_with_cleanupv()
 // CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:     cir.try {
 // CIR:       cir.call @_ZN1SC1Ev(%[[S]])
 // CIR:       cir.cleanup.scope {
@@ -49,7 +49,7 @@ void test_catch_all_with_cleanup() {
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z27test_catch_all_with_cleanupv()
 //
-// CIR-FLAT:         %[[S:.*]] = cir.alloca !rec_S
+// CIR-FLAT:         %[[S:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_S>
 //
 // Ctor may throw; unwinds directly to the dispatch (no cleanup needed yet).
 // CIR-FLAT:         cir.try_call @_ZN1SC1Ev(%[[S]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]
@@ -148,8 +148,8 @@ void test_catch_all_and_specific_with_cleanup() {
 
 // CIR-LABEL: cir.func {{.*}} @_Z40test_catch_all_and_specific_with_cleanupv()
 // CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
-// CIR:     %[[E:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
+// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
+// CIR:     %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!s32i>
 // CIR:     cir.try {
 // CIR:       cir.call @_ZN1SC1Ev(%[[S]])
 // CIR:       cir.cleanup.scope {
@@ -161,10 +161,9 @@ void test_catch_all_and_specific_with_cleanup() {
 // CIR:       }
 // CIR:       cir.yield
 // CIR:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%{{.*}}: !cir.eh_token {{.*}}) {
-// CIR:       %{{.*}}, %[[EXN:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CIR:       %{{.*}}, %[[EXN:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR:       cir.cleanup.scope {
-// CIR:         cir.load{{.*}} %[[EXN]] : !cir.ptr<!s32i>, !s32i
-// CIR:         cir.store{{.*}} %{{.*}}, %[[E]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.init_catch_param scalar %[[EXN]] to %[[E]] : !cir.ptr<!void>, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       } cleanup all {
 // CIR:         cir.end_catch %{{.*}} : !cir.catch_token
@@ -185,8 +184,7 @@ void test_catch_all_and_specific_with_cleanup() {
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z40test_catch_all_and_specific_with_cleanupv()
 //
-// CIR-FLAT:         %[[S:.*]] = cir.alloca !rec_S
-// CIR-FLAT:         %[[E:.*]] = cir.alloca !s32i
+// CIR-FLAT:         %[[S:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_S>
 //
 // Ctor may throw; unwinds directly to the dispatch (no cleanup needed yet).
 // CIR-FLAT:         cir.try_call @_ZN1SC1Ev(%[[S]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]
@@ -226,9 +224,8 @@ void test_catch_all_and_specific_with_cleanup() {
 //
 // Catch (int): bind e, end_catch, merge to return.
 // CIR-FLAT:       ^[[CATCH_INT]](%{{.*}}: !cir.eh_token):
-// CIR-FLAT:         %{{.*}}, %[[EXN_PTR:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
-// CIR-FLAT:         cir.load{{.*}} %[[EXN_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-FLAT:         cir.store{{.*}} %{{.*}}, %[[E]] : !s32i, !cir.ptr<!s32i>
+// CIR-FLAT:         %{{.*}}, %[[EXN_PTR:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR-FLAT:         cir.init_catch_param scalar %[[EXN_PTR]] to %{{.*}} : !cir.ptr<!void>, !cir.ptr<!s32i>
 // CIR-FLAT:         cir.end_catch %{{.*}} : !cir.catch_token
 // CIR-FLAT:         cir.br ^{{.*}}
 //
@@ -248,7 +245,6 @@ void test_catch_all_and_specific_with_cleanup() {
 // LLVM-LABEL: define {{.*}} void @_Z40test_catch_all_and_specific_with_cleanupv()
 // LLVM-SAME:    personality ptr @__gxx_personality_v0
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[E:.*]] = alloca i32
 // LLVM:         invoke void @_ZN1SC1Ev({{.*}}%[[S]])
 // LLVM:                 to label %[[AFTER_CTOR:.*]] unwind label %[[CTOR_LP:.*]]
 // LLVM:       [[AFTER_CTOR]]:
@@ -269,8 +265,6 @@ void test_catch_all_and_specific_with_cleanup() {
 // LLVM:         icmp eq i32 {{.*}}, {{.*}}
 // LLVM:       {{.*}}:
 // LLVM:         call ptr @__cxa_begin_catch
-// LLVM:         load i32, ptr {{.*}}
-// LLVM:         store i32 {{.*}}, ptr %[[E]]
 // LLVM:         call void @__cxa_end_catch()
 // LLVM:       {{.*}}:
 // LLVM:         call ptr @__cxa_begin_catch

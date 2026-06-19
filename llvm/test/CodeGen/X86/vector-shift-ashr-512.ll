@@ -527,6 +527,27 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) nounwind {
   ret <64 x i8> %shift
 }
 
+define <64 x i8> @splatconstant_shift_v64i8_by_one(<64 x i8> %a) nounwind {
+; AVX512DQ-LABEL: splatconstant_shift_v64i8_by_one:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512DQ-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpavgb %ymm2, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpavgb %ymm2, %ymm0, %ymm2
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; AVX512DQ-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & ~zmm0)
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: splatconstant_shift_v64i8_by_one:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512BW-NEXT:    vpavgb %zmm1, %zmm0, %zmm1
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & ~zmm0)
+; AVX512BW-NEXT:    retq
+  %shift = ashr <64 x i8> %a, splat (i8 1)
+  ret <64 x i8> %shift
+}
+
 define <64 x i8> @ashr_const7_v64i8(<64 x i8> %a) {
 ; AVX512DQ-LABEL: ashr_const7_v64i8:
 ; AVX512DQ:       # %bb.0:

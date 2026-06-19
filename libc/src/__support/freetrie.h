@@ -1,9 +1,14 @@
-//===-- Interface for freetrie --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Interface for freetrie.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
@@ -87,16 +92,16 @@ public:
 
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
-  LIBC_INLINE void set_range(FreeTrie::SizeRange range) {
+  LIBC_INLINE void set_range(FreeTrie::SizeRange new_range) {
     LIBC_ASSERT(empty() && "cannot change the range of a preexisting trie");
-    this->range = range;
+    range = new_range;
   }
 
   /// @returns Whether the trie contains any blocks.
   LIBC_INLINE bool empty() const { return !root; }
 
   /// Push a block to the trie.
-  void push(Block *block);
+  void push(BlockRef block);
 
   /// Remove a node from this trie node's free list.
   void remove(Node *node);
@@ -117,10 +122,10 @@ private:
   SizeRange range;
 };
 
-LIBC_INLINE void FreeTrie::push(Block *block) {
-  LIBC_ASSERT(block->inner_size_free() >= sizeof(Node) &&
+LIBC_INLINE void FreeTrie::push(BlockRef block) {
+  LIBC_ASSERT(block.inner_size_free() >= sizeof(Node) &&
               "block too small to accomodate free trie node");
-  size_t size = block->inner_size();
+  size_t size = block.inner_size();
   LIBC_ASSERT(range.contains(size) && "requested size out of trie range");
 
   // Find the position in the tree to push to.
@@ -139,7 +144,7 @@ LIBC_INLINE void FreeTrie::push(Block *block) {
     }
   }
 
-  Node *node = new (block->usable_space()) Node;
+  Node *node = new (block.usable_space()) Node;
   FreeList list = *cur;
   if (list.empty()) {
     node->parent = parent;

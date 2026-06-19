@@ -234,6 +234,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+
+  loadMultilibsFromYAML(Args, D);
+
   llvm::Triple::ArchType Arch = Triple.getArch();
   std::string SysRoot = computeSysRoot();
   ToolChain::path_list &PPaths = getProgramPaths();
@@ -481,9 +484,10 @@ static void setPAuthABIInTriple(const Driver &D, const ArgList &Args,
 }
 
 std::string Linux::ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                               llvm::StringRef BoundArch,
                                                types::ID InputType) const {
   std::string TripleString =
-      Generic_ELF::ComputeEffectiveClangTriple(Args, InputType);
+      Generic_ELF::ComputeEffectiveClangTriple(Args, BoundArch, InputType);
   if (getTriple().isAArch64()) {
     llvm::Triple Triple(TripleString);
     setPAuthABIInTriple(getDriver(), Args, Triple);
@@ -548,11 +552,13 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
 
 void Linux::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
+                                  StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
   llvm::Triple Triple(ComputeEffectiveClangTriple(DriverArgs));
   if (Triple.isAArch64() && Triple.getEnvironment() == llvm::Triple::PAuthTest)
     handlePAuthABI(getDriver(), DriverArgs, CC1Args);
-  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                     DeviceOffloadKind);
 }
 
 std::string Linux::getDynamicLinker(const ArgList &Args) const {
@@ -763,6 +769,18 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (D.getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+
   // After the resource directory, we prioritize the standard clang include
   // directory.
   if (std::optional<std::string> Path = getStdlibIncludePath())
@@ -864,8 +882,10 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
   if (ActiveKinds & Action::OFK_HIP)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
-  else if (ActiveKinds & Action::OFK_SYCL)
-    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(), "libsycl.so");
+  else if ((ActiveKinds & Action::OFK_SYCL) &&
+           !Args.hasArg(options::OPT_nolibsycl))
+    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
+                           "libLLVMSYCL.so");
 
   for (auto [Path, Library] : Libraries) {
     if (Args.hasFlag(options::OPT_frtlib_add_rpath,
@@ -884,6 +904,18 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (ActiveKinds & Action::OFK_HIP)
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
+
+  // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
+  // self-contained superset of clang_rt.profile, emitted first so the base
+  // archive stays inert.
+  if ((ActiveKinds & Action::OFK_HIP) && needsProfileRT(Args) &&
+      getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static))) {
+    CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
+    // Force-retain the constructor-only hipModuleLoad* interceptor object; its
+    // constructor self-skips when the program does not use hipModuleLoad.
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back("__llvm_profile_offload_register_dynamic_module");
+  }
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
@@ -925,7 +957,9 @@ bool Linux::IsMathErrnoDefault() const {
   return Generic_ELF::IsMathErrnoDefault();
 }
 
-SanitizerMask Linux::getSupportedSanitizers() const {
+SanitizerMask
+Linux::getSupportedSanitizers(StringRef BoundArch,
+                              Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsMIPS = getTriple().isMIPS32();
@@ -943,7 +977,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -961,7 +996,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsAArch64 || IsSystemZ)
+  if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;

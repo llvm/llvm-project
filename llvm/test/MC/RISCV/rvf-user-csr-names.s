@@ -4,7 +4,7 @@
 # RUN:     | llvm-objdump -d --mattr=+f - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d - \
+# RUN:     | llvm-objdump -d --mattr=-f - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS-NO-F %s
 #
 # RUN: llvm-mc %s -triple=riscv64 -M no-aliases -mattr=+f -show-encoding \
@@ -13,7 +13,7 @@
 # RUN:     | llvm-objdump -d --mattr=+f - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+f < %s \
-# RUN:     | llvm-objdump -d - \
+# RUN:     | llvm-objdump -d --mattr=-f - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS-NO-F %s
 
 ##################################

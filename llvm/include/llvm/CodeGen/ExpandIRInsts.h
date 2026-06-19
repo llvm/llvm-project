@@ -16,18 +16,20 @@ namespace llvm {
 
 class TargetMachine;
 
-class ExpandIRInstsPass : public PassInfoMixin<ExpandIRInstsPass> {
+class ExpandIRInstsPass : public RequiredPassInfoMixin<ExpandIRInstsPass> {
 private:
   const TargetMachine *TM;
   CodeGenOptLevel OptLevel;
 
 public:
-  explicit ExpandIRInstsPass(const TargetMachine &TM, CodeGenOptLevel OptLevel);
+  LLVM_ABI explicit ExpandIRInstsPass(const TargetMachine &TM,
+                                      CodeGenOptLevel OptLevel);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm
