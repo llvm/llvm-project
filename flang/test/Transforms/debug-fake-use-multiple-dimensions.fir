@@ -66,6 +66,25 @@
 // NO-FAKE-USE-NOT: fir.fake_use
 // NO-FAKE-USE: return
 
+// FAKE-USE-LABEL: func.func @test_3d_mixed_array
+// FAKE-USE: %[[CST_COUNT:.*]] = arith.constant 10 : index
+// FAKE-USE: %[[CST_LB:.*]] = arith.constant 1 : index
+// FAKE-USE: fircg.ext_declare %arg0(%[[CST_COUNT]], %[[DYN_COUNT1:.*]], %[[DYN_COUNT2:.*]]) origin %[[CST_LB]], %[[DYN_LB1:.*]], %[[DYN_LB2:.*]] dummy_scope
+// FAKE-USE: fir.call @foo() : () -> ()
+// FAKE-USE: fir.fake_use %arg0
+// FAKE-USE: fir.fake_use %[[DYN_COUNT1]]
+// FAKE-USE: fir.fake_use %[[DYN_COUNT2]]
+// FAKE-USE: fir.fake_use %[[DYN_LB1]]
+// FAKE-USE: fir.fake_use %[[DYN_LB2]]
+// FAKE-USE-NOT: fir.fake_use
+// FAKE-USE: return
+
+// NO-FAKE-USE-LABEL: func.func @test_3d_mixed_array
+// NO-FAKE-USE: fircg.ext_declare %arg0(%{{.*}}, %{{.*}}, %{{.*}}) origin %{{.*}}, %{{.*}}, %{{.*}} dummy_scope
+// NO-FAKE-USE: fir.call @foo() : () -> ()
+// NO-FAKE-USE-NOT: fir.fake_use
+// NO-FAKE-USE: return
+
 #loc1 = loc("debug-fake-use-multiple-dimensions.f90":1:1)
 #loc3 = loc("debug-fake-use-multiple-dimensions.f90":3:14)
 #loc4 = loc("debug-fake-use-multiple-dimensions.f90":4:14)
@@ -102,5 +121,15 @@ module {
     return loc(#loc5)
   ^bb2:
     return loc(#loc6)
+  } loc(#loc1)
+
+  // 3D array with mixed constant and dynamic dimensions.
+  func.func @test_3d_mixed_array(%arg0: !fir.ref<!fir.array<10x?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_3d_mixed_array"} {
+    %c10 = arith.constant 10 : index
+    %c1 = arith.constant 1 : index
+    %0 = fir.undefined !fir.dscope loc(#loc1)
+    %1 = fircg.ext_declare %arg0(%c10, %arg1, %arg3) origin %c1, %arg2, %arg4 dummy_scope %0 arg 1 {uniq_name = "_QFtest_3d_mixed_arrayEarr"} : (!fir.ref<!fir.array<10x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<10x?x?xi32>> loc(#loc3)
+    fir.call @foo() : () -> ()
+    return loc(#loc5)
   } loc(#loc1)
 } loc(#loc)
