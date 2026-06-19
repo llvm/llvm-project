@@ -967,13 +967,12 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 /// factoring will reduce the instruction count.
 static bool ShouldBreakUpDistribution(Instruction *Mul) {
   Value *A, *B;
-  if (!match(Mul, m_Mul(m_OneUse(m_CombineOr(m_Add(m_Value(A), m_Value(B)),
-                                             m_Sub(m_Value(A), m_Value(B)))),
-                        m_ImmConstant())))
+  if (!match(Mul, m_OneUse(m_Mul(
+                      m_OneUse(m_CombineOr(m_Add(m_Value(A), m_Value(B)),
+                                           m_Sub(m_Value(A), m_Value(B)))),
+                      m_ImmConstant()))))
     return false;
 
-  if (!Mul->hasOneUse())
-    return false;
   auto *MulUser = cast<Instruction>(Mul->user_back());
   // The parent MUST be an Add or Sub to ensure the tree is flattened
   if (MulUser->getOpcode() != Instruction::Add &&
@@ -2267,11 +2266,11 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
 
   if (I->getOpcode() == Instruction::Mul && ShouldBreakUpDistribution(I)) {
     Instruction *MulUser = cast<Instruction>(I->user_back());
-    BreakUpDistribute(I, RedoInsts);
+    Instruction *NI = BreakUpDistribute(I, RedoInsts);
     RedoInsts.insert(I);
     RedoInsts.insert(MulUser);
     MadeChange = true;
-    return;
+    I = NI;
   }
 
   // If this is a subtract instruction which is not already in negate form,
