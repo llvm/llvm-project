@@ -3,7 +3,9 @@
 // RUN:   -analyzer-config alpha.core.NullTerminated:MaxArraySize=3 \
 // RUN:   -DMAX_ARR -verify %s
 
-void receive(__attribute__((null_terminated)) const int signals[]);
+#define NULL_TERMINATED __attribute__((annotate("null_terminated")))
+
+void receive(NULL_TERMINATED const int signals[]);
 
 #ifdef DEFAULT
 void test_static_bad(void) {
@@ -80,7 +82,7 @@ void test_zero_length(struct flex *f) {
   receive(f->data);
 }
 
-void receive_char(__attribute__((null_terminated)) const char buf[]);
+void receive_char(NULL_TERMINATED const char buf[]);
 
 void test_char_bad(void) {
   char buf[] = {'a', 'b', 'c'};
@@ -127,7 +129,7 @@ void test_static_local_good(void) {
 }
 
 // CSA cannot reason about memset - we test here for false positives.
-void *memset(void *, int, unsigned long);
+void *memset(void *, int, __SIZE_TYPE__);
 
 void test_memset_zero_bad(void) {
   int sigs[4] = {0, 0, 0, 0};

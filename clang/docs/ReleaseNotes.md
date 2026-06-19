@@ -178,9 +178,6 @@ features cannot lower the translation-unit ABI level;
 ### Attribute Changes in Clang
 
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
-- Added the ``null_terminated`` attribute, which can be applied to function
-  parameters of pointer or array type (of scalar type) to indicate that the
-  function expects a null-terminated buffer.
 
 ### Improvements to Clang's diagnostics
 
@@ -538,8 +535,8 @@ features cannot lower the translation-unit ABI level;
 #### New checkers or options
 
 - Introduced the ``alpha.core.NullTerminated`` checker to detect arrays missing
-  a null terminator passed as a parameter marked with the ``null_terminated``
-  attribute.
+  a null terminator passed as a parameter annotated with
+  ``__attribute__((annotate("null_terminated")))``.
 
 #### Diagnostic changes
 
