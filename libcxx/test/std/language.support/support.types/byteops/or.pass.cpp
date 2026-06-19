@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cassert>
-#include <cstddef>
-#include <type_traits>
-
 // REQUIRES: std-at-least-c++17
 
 // constexpr byte operator|(byte l, byte r) noexcept;
+
+#include <cassert>
+#include <cstddef>
+#include <type_traits>
 
 static_assert(noexcept(std::byte{} | std::byte{}));
 static_assert(std::is_same_v<decltype(std::byte{} | std::byte{}), std::byte>);

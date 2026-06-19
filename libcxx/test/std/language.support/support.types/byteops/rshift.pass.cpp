@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cassert>
-#include <cstddef>
-#include <type_traits>
-
-#include "type_algorithms.h"
-
 // REQUIRES: std-at-least-c++17
 
 // template<class IntType>
 //   constexpr byte operator>>(byte b, IntType shift) noexcept;
 // Constraints: is_integral_v<IntType> is true.
+
+#include <cassert>
+#include <cstddef>
+#include <type_traits>
+
+#include "type_algorithms.h"
 
 template <class, class = void>
 constexpr bool can_shr_byte = false;
