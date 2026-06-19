@@ -105,6 +105,7 @@ static void copyGlobalResource(CodeGenFunction &CGF, const VarDecl *ResourceVD,
                                AggValueSlot &DestSlot) {
   GlobalVariable *ResGV =
       cast<GlobalVariable>(CGF.CGM.GetAddrOfGlobalVar(ResourceVD));
+  assert(ResGV && "expected valid global variable");
   CGF.Builder.CreateStore(ResGV, DestSlot.getAddress());
 }
 
@@ -492,7 +493,7 @@ class HLSLBufferCopyEmitter {
   SmallVector<llvm::Value *> CurStoreIndices;
   SmallVector<llvm::Value *> CurLoadIndices;
 
-  using EmitResourceFn = llvm::function_ref<void(AggValueSlot &)>;
+  using EmitResourceFnTy = llvm::function_ref<void(AggValueSlot &)>;
 
   // Creates & returns either a structured.gep or a ptradd/gep depending on
   // langopts.
@@ -536,7 +537,7 @@ class HLSLBufferCopyEmitter {
     return true;
   }
 
-  // Returns true if the type is either a struct represening a resource record,
+  // Returns true if the type is either a struct representing a resource record,
   // or an array of structs that are resource records. This assumes a struct is
   // a resource record if the first element is a target type (resource handle).
   // This is the case for all target types used by HLSL except the padding type
@@ -555,7 +556,7 @@ class HLSLBufferCopyEmitter {
   }
 
   void emitResourceOrResourceArray(Value *Dst, llvm::Type *DstTy,
-                                   EmitResourceFn EmitResFn) {
+                                   EmitResourceFnTy EmitResFn) {
     CharUnits DstAlign =
         CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(DstTy));
     Address DstAddr(Dst, DstTy, DstAlign);
@@ -568,7 +569,8 @@ class HLSLBufferCopyEmitter {
   }
 
   void emitBufferLayoutCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
-                            llvm::ArrayType *DstTy, EmitResourceFn EmitResFn) {
+                            llvm::ArrayType *DstTy,
+                            EmitResourceFnTy EmitResFn) {
     // Those assumptions are checked by isBufferLayoutArray.
     auto *SrcPaddedArrayTy = cast<llvm::ArrayType>(SrcTy->getElementType(0));
     assert(SrcPaddedArrayTy->getNumElements() + 1 == DstTy->getNumElements());
@@ -596,7 +598,7 @@ class HLSLBufferCopyEmitter {
   }
 
   void emitCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
-                llvm::Type *DstTy, EmitResourceFn EmitResFn) {
+                llvm::Type *DstTy, EmitResourceFnTy EmitResFn) {
     assert(!isResourceOrResourceArray(DstTy) &&
            "direct access to resources or resource arrays should be handled "
            "separately");
@@ -645,7 +647,7 @@ class HLSLBufferCopyEmitter {
   }
 
   void emitCopy(Value *Src, llvm::ArrayType *SrcTy, Value *Dst,
-                llvm::Type *DstTy, EmitResourceFn EmitResFn) {
+                llvm::Type *DstTy, EmitResourceFnTy EmitResFn) {
     for (unsigned I = 0, E = SrcTy->getNumElements(); I < E; ++I) {
       auto *SrcElt =
           emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, I)});
@@ -658,7 +660,7 @@ class HLSLBufferCopyEmitter {
   }
 
   void emitElementCopy(Value *Src, llvm::Type *SrcTy, Value *Dst,
-                       llvm::Type *DstTy, EmitResourceFn EmitResFn) {
+                       llvm::Type *DstTy, EmitResourceFnTy EmitResFn) {
     if (auto *AT = dyn_cast<llvm::ArrayType>(SrcTy))
       return emitCopy(Src, AT, Dst, DstTy, EmitResFn);
     if (auto *ST = dyn_cast<llvm::StructType>(SrcTy))
@@ -679,7 +681,7 @@ public:
   HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DstPtr, Address SrcPtr)
       : CGF(CGF), DstPtr(DstPtr), SrcPtr(SrcPtr) {}
 
-  bool emitCopy(QualType CType, EmitResourceFn EmitResFn = nullptr) {
+  bool emitCopy(QualType CType, EmitResourceFnTy EmitResFn = nullptr) {
     LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
 
     // TODO: We should be able to fall back to a regular memcpy if the layout
@@ -700,6 +702,10 @@ public:
 // The resources are always returned in that order, which is the same order
 // we need when a struct is copied element-by-element.
 class AssociatedResourcesList {
+  // Iterator pointers for the associated resource attributes that match the
+  // prefix. Begin = begin of the range of attributes that match the prefix End
+  // = end of the range of attributes that match the prefix Next = the current
+  // attribute in the iteration to be returned by getNextResource
   specific_attr_iterator<HLSLAssociatedResourceDeclAttr> Begin, End, Next;
 
 public:
@@ -722,6 +728,7 @@ public:
                          ->getName()
                          .starts_with(ResourceNamePrefix))
       End = ++I;
+
     Next = Begin;
   }
 
