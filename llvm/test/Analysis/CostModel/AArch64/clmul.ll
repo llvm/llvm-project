@@ -3,10 +3,11 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64-- -mattr=+aes | FileCheck %s --check-prefixes=AES
 
 define void @clmul() {
+;
 ; NOAES-LABEL: 'clmul'
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
-; NOAES-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
-; NOAES-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
+; NOAES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
+; NOAES-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %call_i8 = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
