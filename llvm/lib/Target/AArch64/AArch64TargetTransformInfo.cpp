@@ -5184,6 +5184,33 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
   }
 
+  // For composite factors (e.g. factor-6 = 2 x ld3), decompose into multiple
+  // ldN groups and return the cost of those loads. This is load-only for now
+  // composite factor store lowering (st3+st3) is not yet implemented, so we
+  // let stores fall through to BaseT:: which returns a conservative cost and
+  // prevents the LV from emitting interleaved store IR it can't lower.
+  // TODO: Extend support for composite factor stores as well.
+  if (Opcode == Instruction::Load && !UseMaskForGaps &&
+      !VecTy->isScalableTy() &&
+      Factor > TLI->getMaxSupportedInterleaveFactor()) {
+    unsigned MaxSupported = TLI->getMaxSupportedInterleaveFactor();
+    unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
+
+    for (unsigned i = MaxSupported; i >= 2; --i) {
+      if (Factor % i != 0)
+        continue;
+      unsigned NumGroups = Factor / i;
+      auto *SubVecTy = VectorType::get(
+          VecVTy->getElementType(),
+          VecVTy->getElementCount().divideCoefficientBy(Factor));
+      bool UseScalable;
+      if (MinElts % Factor == 0 &&
+          TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+        return NumGroups * i *
+               TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+    }
+  }
+
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);

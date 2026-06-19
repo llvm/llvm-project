@@ -3297,6 +3297,13 @@ public:
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }
 
+  /// Get the maximum interleave factor that this target can lower, including
+  /// composite factors that decompose into multiple supported ldN/stN groups.
+  /// override this to return the highest composite factor they handle.
+  virtual unsigned getMaxSupportedCompositeInterleaveFactor() const {
+    return getMaxSupportedInterleaveFactor();
+  }
+
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///

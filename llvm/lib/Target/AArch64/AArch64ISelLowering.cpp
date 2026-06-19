@@ -18828,8 +18828,7 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
 bool AArch64TargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
-  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
-         "Invalid interleave factor");
+  assert(Factor >= 2 && "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
   assert(Shuffles.size() == Indices.size() &&
          "Unmatched number of shufflevectors and indices");
@@ -18889,9 +18888,6 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   Type *PredTy = VectorType::get(Type::getInt1Ty(LDVTy->getContext()),
                                  LDVTy->getElementCount());
 
-  Function *LdNFunc = getStructuredLoadFunction(LI->getModule(), Factor,
-                                                UseScalable, LDVTy, PtrTy);
-
   // Holds sub-vectors extracted from the load intrinsic return values. The
   // sub-vectors are associated with the shufflevector instructions they will
   // replace.
@@ -18907,6 +18903,101 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
     } else
       PTrue = ConstantInt::getTrue(PredTy);
   }
+
+  // Handle composite factors (e.g. factor-6 = 2 x ld3) by splitting into
+  // two ldN groups. Each ldN covers SubFactor channels; the two halves are
+  // then deinterleaved via even/odd shuffle masks to produce the final
+  // per-channel vectors. Max composite factor is 8, as mandated by the
+  // vectorizer. So the splitting of even odd channels will at most be into two
+  // groups of 4 (e.g. factor-8 = 2 x ld4), which is supported by the ldN
+  // intrinsics.
+  if (Factor > getMaxSupportedInterleaveFactor()) {
+    unsigned SubFactor = 0;
+    for (unsigned S = getMaxSupportedInterleaveFactor(); S >= 2; --S) {
+      if (Factor % S == 0) {
+        SubFactor = S;
+        break;
+      }
+    }
+
+    if (!SubFactor)
+      return false;
+
+    unsigned NumGroups = Factor / SubFactor;
+    if (NumGroups != 2)
+      return false;
+
+    Function *LdNFunc = getStructuredLoadFunction(LI->getModule(), SubFactor,
+                                                  UseScalable, LDVTy, PtrTy);
+    Value *ChunkBaseAddr = BaseAddr;
+
+    for (unsigned LoadCount = 0; LoadCount < NumLoads; ++LoadCount) {
+      if (LoadCount > 0)
+        ChunkBaseAddr =
+            Builder.CreateConstGEP1_32(LDVTy->getElementType(), ChunkBaseAddr,
+                                       FVTy->getNumElements() * Factor);
+
+      auto createLdN = [&](Value *Addr) -> CallInst * {
+        if (UseScalable)
+          return Builder.CreateCall(LdNFunc, {PTrue, Addr}, "ldN");
+        return Builder.CreateCall(LdNFunc, Addr, "ldN");
+      };
+
+      // First ldN at ChunkBaseAddr, second ldN at ChunkBaseAddr + SubFactor*VF.
+      CallInst *FirstLdN = createLdN(ChunkBaseAddr);
+      Value *SecondAddr =
+          Builder.CreateConstGEP1_32(LDVTy->getElementType(), ChunkBaseAddr,
+                                     SubFactor * FVTy->getNumElements());
+      CallInst *SecondLdN = createLdN(SecondAddr);
+
+      // Build even/odd masks of length FVTy->getNumElements() to deinterleave
+      // the two halves of each channel.
+      SmallVector<int, 16> EvenMask, OddMask;
+      for (unsigned M = 0; M < FVTy->getNumElements(); ++M) {
+        EvenMask.push_back(2 * M);
+        OddMask.push_back(2 * M + 1);
+      }
+
+      for (unsigned LocalIdx = 0; LocalIdx < SubFactor; ++LocalIdx) {
+        Value *Lo = Builder.CreateExtractValue(FirstLdN, LocalIdx);
+        Value *Hi = Builder.CreateExtractValue(SecondLdN, LocalIdx);
+
+        if (UseScalable) {
+          Lo = Builder.CreateExtractVector(FVTy, Lo, uint64_t(0));
+          Hi = Builder.CreateExtractVector(FVTy, Hi, uint64_t(0));
+        }
+
+        Value *Even = Builder.CreateShuffleVector(Lo, Hi, EvenMask);
+        Value *Odd = Builder.CreateShuffleVector(Lo, Hi, OddMask);
+
+        if (EltTy->isPointerTy()) {
+          auto *PtrVecTy = FixedVectorType::get(EltTy, FVTy->getNumElements());
+          Even = Builder.CreateIntToPtr(Even, PtrVecTy);
+          Odd = Builder.CreateIntToPtr(Odd, PtrVecTy);
+        }
+
+        for (unsigned I = 0; I < Shuffles.size(); ++I) {
+          unsigned Index = Indices[I];
+          if (Index == LocalIdx)
+            SubVecs[Shuffles[I]].push_back(Even);
+          else if (Index == LocalIdx + SubFactor)
+            SubVecs[Shuffles[I]].push_back(Odd);
+        }
+      }
+    }
+
+    for (ShuffleVectorInst *SVI : Shuffles) {
+      auto &SubVec = SubVecs[SVI];
+      auto *WideVec =
+          SubVec.size() > 1 ? concatenateVectors(Builder, SubVec) : SubVec[0];
+      SVI->replaceAllUsesWith(WideVec);
+    }
+
+    return true;
+  }
+
+  Function *LdNFunc = getStructuredLoadFunction(LI->getModule(), Factor,
+                                                UseScalable, LDVTy, PtrTy);
 
   for (unsigned LoadCount = 0; LoadCount < NumLoads; ++LoadCount) {
 
@@ -19016,8 +19107,13 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
                                                   unsigned Factor,
                                                   const APInt &GapMask) const {
 
-  assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
-         "Invalid interleave factor");
+  assert(Factor >= 2 && "Invalid interleave factor");
+  // Composite factor store lowering is not yet implemented. Return false so
+  // the backend falls back to the default scalarized store sequence.
+  // TODO: extend lowerInterleavedStore to handle composite factors (e.g.
+  // factor-6 as two st3 calls) analogously to lowerInterleavedLoad.
+  if (Factor > getMaxSupportedInterleaveFactor())
+    return false;
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
