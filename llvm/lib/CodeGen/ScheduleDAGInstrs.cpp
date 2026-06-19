@@ -544,9 +544,8 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-
-void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
-                                            unsigned Latency) {
+void ScheduleDAGInstrs::addChainDependency(SUnit *SUa, SUnit *SUb,
+                                           unsigned Latency) {
   if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
@@ -614,9 +613,6 @@ void ScheduleDAGInstrs::initSUnits() {
 
 class ScheduleDAGInstrs::Value2SUsMap
     : public SmallMapVector<ValueType, SUList, 4> {
-  /// Current total number of SUs in map.
-  unsigned NumNodes = 0;
-
   /// 1 for loads, 0 for stores. (see comment in SUList)
   unsigned TrueMemOrderLatency;
 
@@ -632,34 +628,10 @@ public:
   /// reduce().
   void inline insert(SUnit *SU, ValueType V) {
     MapVector::operator[](V).push_back(SU);
-    NumNodes++;
-  }
-
-  /// Clears the list of SUs mapped to V.
-  void inline clearList(ValueType V) {
-    iterator Itr = find(V);
-    if (Itr != end()) {
-      assert(NumNodes >= Itr->second.size());
-      NumNodes -= Itr->second.size();
-
-      Itr->second.clear();
-    }
   }
 
   /// Clears map from all contents.
-  void clear() {
-    SmallMapVector<ValueType, SUList, 4>::clear();
-    NumNodes = 0;
-  }
-
-  unsigned inline size() const { return NumNodes; }
-
-  /// Counts the number of SUs in this map after a reduction.
-  void reComputeSize() {
-    NumNodes = 0;
-    for (auto &I : *this)
-      NumNodes += I.second.size();
-  }
+  void clear() { SmallMapVector<ValueType, SUList, 4>::clear(); }
 
   unsigned inline getTrueMemOrderLatency() const {
     return TrueMemOrderLatency;
