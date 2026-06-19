@@ -297,7 +297,7 @@ bool Combiner::combineMachineInstrs() {
         // Erase dead insts before even adding to the list.
         if (EnableDCE && tryDCE(CurMI, MRI))
           continue;
-        if (shouldAddToWorkList(CurMI))
+        if (canMatchOpcode(CurMI.getOpcode()))
           WorkList.deferred_insert(&CurMI);
       }
     }
