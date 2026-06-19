@@ -37,11 +37,13 @@ def mappings(f):
         if not m:
             continue
         group_1 = m.group(1)
-        if "b" in group_1: group_1 = group_1[2:]
+        if "b" in group_1:
+            group_1 = group_1[2:]
         from_char = int(group_1, 16)
         to_char = int(m.group(2), 16)
         group_3 = m.group(3)
-        if "\\n" in group_3: group_3 = group_3[:-3]
+        if "\\n" in group_3:
+            group_3 = group_3[:-3]
         from_name = group_3
 
         if from_char <= previous_from:
