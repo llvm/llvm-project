@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/RWMutex.h"
 #include <system_error>
 #include <utility>
 
@@ -367,7 +368,7 @@ using ConverterCache = StringMap<std::unique_ptr<TextEncodingConverter>>;
 
 struct ConverterCacheData {
   ConverterCache Cache;
-  std::shared_mutex Mutex;
+  llvm::sys::RWMutex Mutex;
 };
 
 static ManagedStatic<ConverterCacheData> GlobalConverterCache;
@@ -388,14 +389,14 @@ TextEncodingConverterCache::getOrCreateConverter(StringRef SourceEncoding,
 
   // First, try to find existing converter with shared lock (allows concurrent reads)
   {
-    std::shared_lock<std::shared_mutex> ReadLock(GlobalConverterCache->Mutex);
+    llvm::sys::ScopedReader ReadLock(GlobalConverterCache->Mutex);
     auto Iter = GlobalConverterCache->Cache.find(Key);
     if (Iter != GlobalConverterCache->Cache.end())
       return Iter->second.get();
   }
 
   // Not found, need to create - acquire unique lock for writing
-  std::unique_lock<std::shared_mutex> WriteLock(GlobalConverterCache->Mutex);
+  llvm::sys::ScopedWriter WriteLock(GlobalConverterCache->Mutex);
   
   // Double-check: another thread might have created it while we were waiting
   auto Iter = GlobalConverterCache->Cache.find(Key);
