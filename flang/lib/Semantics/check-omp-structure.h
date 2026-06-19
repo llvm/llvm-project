@@ -392,6 +392,7 @@ private:
       const parser::OmpClause &initClause);
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+  void CheckTempDescriptorMappings();
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -413,6 +414,14 @@ private:
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
+
+  struct TempDescriptorMappings {
+    SymbolSourceMap enterMaps;
+    std::set<const Symbol *> exitMaps;
+  };
+  // Track descriptor mappings per subprogram scope so internal subprograms do
+  // not affect their host's TARGET ENTER/EXIT DATA pairing.
+  std::vector<TempDescriptorMappings> tempDescriptorMappings_;
 
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into

@@ -312,6 +312,25 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
+bool HasTemporaryStackDescriptor(const Symbol &symbol) {
+  const Symbol &ultimate(symbol.GetUltimate());
+  bool isDummy = IsDummy(ultimate);
+
+  if (IsAllocatableOrPointer(ultimate)) {
+    return !isDummy && !IsSaved(ultimate);
+  }
+
+  if (!isDummy) {
+    return false;
+  }
+
+  if (const auto *obj = ultimate.detailsIf<ObjectEntityDetails>()) {
+    return obj->IsAssumedShape() || obj->IsAssumedRank();
+  }
+
+  return false;
+}
+
 static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()

@@ -490,6 +490,9 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
   EXPECT_EQ(
       CamelCaseToLowerCaseHyphenated(EnumToString(UsageWarning::OpenMPUsage)),
       "openmp-usage");
+  EXPECT_EQ(CamelCaseToLowerCaseHyphenated(EnumToString(
+                UsageWarning::OpenMPTargetEnterDataLocalDescriptor)),
+      "openmp-target-enter-data-local-descriptor");
   EXPECT_EQ(
       CamelCaseToLowerCaseHyphenated(EnumToString(UsageWarning::DataLength)),
       "data-length");

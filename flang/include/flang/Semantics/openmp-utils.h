@@ -119,6 +119,10 @@ const Symbol *GetHostSymbol(const Symbol &sym);
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
+// Returns true if mapping the symbol may map a local descriptor whose lifetime
+// is tied to the current procedure activation.
+bool HasTemporaryStackDescriptor(const Symbol &symbol);
+
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
 template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
   return GetEvaluateExpr(parser::UnwrapRef<parser::Expr>(inp));
