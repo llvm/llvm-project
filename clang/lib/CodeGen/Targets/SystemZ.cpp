@@ -941,7 +941,7 @@ RValue ZOSXPLinkABIInfo::EmitZOSVAArg(CodeGenFunction &CGF, Address VAListAddr,
       Addr, ArgTySize.isZero() ? SlotSize : ArgTySize, "arg.next.next");
   CGF.Builder.CreateStore(NextPtr.emitRawPointer(CGF), Next);
 
-  // Fetch next arg
+  // Fetch next argument.
   if (ArgTySize < SlotSize && !isAggregateTypeForABI(ArgTy))
     Addr = CGF.Builder.CreateConstInBoundsByteGEP(Addr, SlotSize - ArgTySize);
 
