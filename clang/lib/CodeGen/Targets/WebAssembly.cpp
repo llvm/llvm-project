@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include "clang/AST/ParentMapContext.h"
 
@@ -147,12 +148,14 @@ public:
     if (SrcParams > DstParams)
       return nullptr;  // Can't remove parameters
 
-    // Check return types: we can discard a return value but cannot invent one
+    // Check return types: compare LLVM types, not C types.
     QualType SrcRetTy = SrcProtoType->getReturnType();
     QualType DstRetTy = DstProtoType->getReturnType();
-    bool sameReturnType = CGM.getContext().hasSameType(SrcRetTy, DstRetTy);
+    llvm::Type *SrcRetLLVMTy = CGM.getTypes().ConvertType(SrcRetTy);
+    llvm::Type *DstRetLLVMTy = CGM.getTypes().ConvertType(DstRetTy);
+    bool sameReturnType = SrcRetLLVMTy == DstRetLLVMTy;
 
-    if (!DstRetTy->isVoidType() && !sameReturnType)
+    if (!DstProtoType->getReturnType()->isVoidType() && !sameReturnType)
       return nullptr;  // Can't invent return values
 
     // Reject if signatures are identical (no adaptation needed)
@@ -221,7 +224,7 @@ public:
 
   llvm::Value *emitWasmRuntimeFunctionPointerBinding(
       CodeGenFunction &CGF, llvm::Value *FnPtr, QualType SrcType,
-      QualType DstType) const override;
+      QualType DstType, bool IsImmediate) const override;
 
 private:
   // The thunk cache for compile-time thunks
@@ -359,7 +362,7 @@ std::string WebAssemblyTargetCodeGenInfo::getRuntimeWrapperName(
 // needs to be cast from fewer params to more params
 llvm::Value *WebAssemblyTargetCodeGenInfo::emitWasmRuntimeFunctionPointerBinding(
     CodeGenFunction &CGF, llvm::Value *FnPtr, QualType SrcType,
-    QualType DstType) const {
+    QualType DstType, bool IsImmediate) const {
 
   const FunctionProtoType *SrcProto =
       SrcType->getPointeeType()->getAs<FunctionProtoType>();
@@ -378,12 +381,13 @@ llvm::Value *WebAssemblyTargetCodeGenInfo::emitWasmRuntimeFunctionPointerBinding
   if (SrcParams > DstParams)
     return nullptr;  // Can't remove parameters
 
-  // Check return types: we can discard a return value but cannot invent one
-  // Allow: int -> void (discard return), int -> int (pass through), void -> void
-  // Reject: void -> int (can't invent return value)
+  // Check return types: we can discard a return value but cannot invent one.
+  // Compare LLVM types (not C types) since wasm only cares about i32/i64/f32/f64.
   QualType SrcRetTy = SrcProto->getReturnType();
   QualType DstRetTy = DstProto->getReturnType();
-  bool sameReturnType = CGF.getContext().hasSameType(SrcRetTy, DstRetTy);
+  llvm::Type *SrcRetLLVMTy = CGF.CGM.getTypes().ConvertType(SrcRetTy);
+  llvm::Type *DstRetLLVMTy = CGF.CGM.getTypes().ConvertType(DstRetTy);
+  bool sameReturnType = SrcRetLLVMTy == DstRetLLVMTy;
 
   if (!DstRetTy->isVoidType() && !sameReturnType)
     return nullptr;  // Can't invent return values
@@ -392,98 +396,309 @@ llvm::Value *WebAssemblyTargetCodeGenInfo::emitWasmRuntimeFunctionPointerBinding
   if (SrcParams == DstParams && sameReturnType)
     return nullptr;
 
+  // A null function pointer needs no wrapper — fall through to bitcast
+  if (isa<llvm::ConstantPointerNull>(FnPtr))
+    return nullptr;
+
   LLVM_DEBUG(llvm::dbgs() << "emitWasmRuntimeFunctionPointerBinding: "
                           << "src params=" << SrcParams
                           << " dst params=" << DstParams << "\n");
 
-  auto Key = std::make_pair(SrcProto, DstProto);
-  auto It = RuntimeWrapperCache.find(Key);
-
   llvm::Module &M = CGF.CGM.getModule();
   llvm::LLVMContext &Context = M.getContext();
-  llvm::Type *PtrTy = llvm::PointerType::getUnqual(Context);
+  llvm::PointerType *PtrTy = llvm::PointerType::getUnqual(Context);
+  llvm::Type *I32Ty = llvm::IntegerType::getInt32Ty(Context);
+
+  // Pre-allocated pool: N wrapper functions + N TLS slots per signature pair.
+  // Each runtime invocation atomically claims a slot. This supports both
+  // "call immediately" and "store for later" patterns without overwrites.
+  static const unsigned POOL_SIZE = 64;
 
   std::string WrapperName = getRuntimeWrapperName(SrcProto, DstProto, CGF.CGM.getContext());
-  std::string GlobalName = WrapperName + "_fptr";
 
-  // Get or create the global variable for storing the function pointer
-  // Use LinkOnceODRLinkage to match the wrapper function, allowing the linker
-  // to merge globals across translation units into a single shared variable
-  llvm::GlobalVariable *FnPtrGlobal = M.getNamedGlobal(GlobalName);
-  if (!FnPtrGlobal) {
-    FnPtrGlobal = new llvm::GlobalVariable(
-        M, PtrTy, /*isConstant=*/false, llvm::GlobalValue::LinkOnceODRLinkage,
-        llvm::Constant::getNullValue(PtrTy), GlobalName);
-    // Make it thread-local to support WebAssembly threads
-    FnPtrGlobal->setThreadLocalMode(llvm::GlobalValue::GeneralDynamicTLSModel);
-  }
+  std::string SourceId = M.getSourceFileName();
+  if (SourceId.empty())
+    SourceId = M.getName();
+  for (char &C : SourceId)
+    if (!isalnum(C) && C != '_')
+      C = '_';
+  WrapperName += "_" + SourceId;
 
-  llvm::Function *Wrapper;
-  if (It != RuntimeWrapperCache.end()) {
-    Wrapper = It->second;
-  } else {
-    // Create a new wrapper function that takes a function pointer
-    // and returns a thunk with the destination signature
+  std::string PoolName = "__wasm_runtime_pool_" + WrapperName;
 
-    llvm::FunctionType *SrcFnType = llvm::cast<llvm::FunctionType>(
+  // Get or create pool globals (once per module per signature pair)
+  llvm::GlobalVariable *Counter = M.getNamedGlobal(PoolName + "_counter");
+  llvm::GlobalVariable *ImmediateSlot = M.getNamedGlobal(PoolName + "_immediate_slot");
+  llvm::Function *ImmediateWrapper = M.getFunction(WrapperName + "_immediate");
+  llvm::ArrayType *SlotArrayTy = llvm::ArrayType::get(PtrTy, POOL_SIZE);
+  llvm::GlobalVariable *Slots = nullptr;
+  llvm::GlobalVariable *WrapperTable = nullptr;
+  llvm::FunctionType *SrcFnType = nullptr;
+  llvm::FunctionType *DstFnType = nullptr;
+
+  if (!Counter) {
+    SrcFnType = llvm::cast<llvm::FunctionType>(
         CGF.CGM.getTypes().ConvertType(QualType(SrcProto, 0)));
-    llvm::FunctionType *DstFnType = llvm::cast<llvm::FunctionType>(
+    DstFnType = llvm::cast<llvm::FunctionType>(
         CGF.CGM.getTypes().ConvertType(QualType(DstProto, 0)));
 
-    // Wrapper signature: takes src function pointer, has dst signature
-    // Use LinkOnceODRLinkage to:
-    // 1. Prevent dead argument elimination (optimizer can't see all callers)
-    // 2. Allow linker to merge duplicates across modules (no symbol collisions)
-    // 3. Preserve exact signature required by WebAssembly type checking
-    Wrapper = llvm::Function::Create(
-        DstFnType, llvm::GlobalValue::LinkOnceODRLinkage, WrapperName, M);
+    Counter = new llvm::GlobalVariable(
+        M, I32Ty, false, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantInt::get(I32Ty, 0), PoolName + "_counter");
+    Counter->setThreadLocalMode(llvm::GlobalValue::GeneralDynamicTLSModel);
 
-    // Mark as noinline to prevent inlining that would expose unused parameters
-    Wrapper->addFnAttr(llvm::Attribute::NoInline);
-    Wrapper->addFnAttr(llvm::Attribute::NoUnwind);
+    // Immediate-call TLS slot: per-thread, no races, reused every call
+    ImmediateSlot = new llvm::GlobalVariable(
+        M, PtrTy, false, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantPointerNull::get(PtrTy), PoolName + "_immediate_slot");
+    ImmediateSlot->setThreadLocalMode(llvm::GlobalValue::GeneralDynamicTLSModel);
 
-    // Build wrapper body
-    llvm::BasicBlock *EntryBB = llvm::BasicBlock::Create(Context, "entry", Wrapper);
-    llvm::IRBuilder<> Builder(EntryBB);
-
-    // Load the stored function pointer
-    llvm::Value *StoredFnPtr = Builder.CreateLoad(PtrTy, FnPtrGlobal);
-
-    // Prepare arguments for the call (only pass what the source function expects)
-    llvm::SmallVector<llvm::Value *, 8> CallArgs;
-    auto ArgIt = Wrapper->arg_begin();
-    for (unsigned i = 0; i < SrcParams && ArgIt != Wrapper->arg_end(); ++i, ++ArgIt) {
-      llvm::Value *A = &*ArgIt;
-      if (A->getType() != SrcFnType->getParamType(i))
-        A = Builder.CreateBitOrPointerCast(A, SrcFnType->getParamType(i));
-      CallArgs.push_back(A);
+    // Immediate wrapper: loads from TLS slot, calls with adapted signature
+    ImmediateWrapper = llvm::Function::Create(
+        DstFnType, llvm::GlobalValue::InternalLinkage,
+        WrapperName + "_immediate", M);
+    ImmediateWrapper->addFnAttr(llvm::Attribute::NoInline);
+    ImmediateWrapper->addFnAttr(llvm::Attribute::NoUnwind);
+    {
+      llvm::BasicBlock *BB = llvm::BasicBlock::Create(Context, "entry", ImmediateWrapper);
+      llvm::IRBuilder<> B(BB);
+      llvm::Value *FP = B.CreateLoad(PtrTy, ImmediateSlot);
+      llvm::BasicBlock *CallBB = llvm::BasicBlock::Create(Context, "call", ImmediateWrapper);
+      llvm::BasicBlock *NullBB = llvm::BasicBlock::Create(Context, "nullslot", ImmediateWrapper);
+      B.CreateCondBr(B.CreateIsNotNull(FP), CallBB, NullBB);
+      B.SetInsertPoint(CallBB);
+      llvm::SmallVector<llvm::Value *, 8> ImmArgs;
+      auto AI = ImmediateWrapper->arg_begin();
+      for (unsigned J = 0; J < SrcParams && AI != ImmediateWrapper->arg_end(); ++J, ++AI) {
+        llvm::Value *A = &*AI;
+        if (A->getType() != SrcFnType->getParamType(J))
+          A = B.CreateBitOrPointerCast(A, SrcFnType->getParamType(J));
+        ImmArgs.push_back(A);
+      }
+      llvm::CallInst *ImmCall = B.CreateCall(SrcFnType, FP, ImmArgs);
+      if (DstFnType->getReturnType()->isVoidTy()) {
+        B.CreateRetVoid(); B.SetInsertPoint(NullBB); B.CreateRetVoid();
+      } else {
+        llvm::Value *R = ImmCall;
+        if (R->getType() != DstFnType->getReturnType())
+          R = B.CreateBitOrPointerCast(R, DstFnType->getReturnType());
+        B.CreateRet(R);
+        B.SetInsertPoint(NullBB);
+        B.CreateRet(llvm::Constant::getNullValue(DstFnType->getReturnType()));
+      }
     }
 
-    // Call the source function
-    llvm::CallInst *Call = Builder.CreateCall(SrcFnType, StoredFnPtr, CallArgs);
+    Slots = new llvm::GlobalVariable(
+        M, SlotArrayTy, false, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantAggregateZero::get(SlotArrayTy), PoolName + "_slots");
 
-    // Return the result
-    if (DstFnType->getReturnType()->isVoidTy()) {
-      Builder.CreateRetVoid();
-    } else {
-      llvm::Value *Ret = Call;
-      if (Ret->getType() != DstFnType->getReturnType())
-        Ret = Builder.CreateBitOrPointerCast(Ret, DstFnType->getReturnType());
-      Builder.CreateRet(Ret);
+    // 8-entry direct-mapped cache: avoids pool allocation for repeated fn_ptrs
+    static const unsigned CACHE_SIZE = 8;
+    llvm::ArrayType *CacheTy = llvm::ArrayType::get(PtrTy, CACHE_SIZE);
+    new llvm::GlobalVariable(
+        M, CacheTy, false, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantAggregateZero::get(CacheTy), PoolName + "_cache_keys");
+    new llvm::GlobalVariable(
+        M, CacheTy, false, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantAggregateZero::get(CacheTy), PoolName + "_cache_wrappers");
+
+    // Pre-generate POOL_SIZE wrapper functions + build lookup table
+    llvm::SmallVector<llvm::Constant *, 64> WrappersConst;
+    for (unsigned I = 0; I < POOL_SIZE; ++I) {
+      std::string InstName = WrapperName + "_" + std::to_string(I);
+      llvm::Function *W = llvm::Function::Create(
+          DstFnType, llvm::GlobalValue::InternalLinkage, InstName, M);
+      W->addFnAttr(llvm::Attribute::NoInline);
+      W->addFnAttr(llvm::Attribute::NoUnwind);
+
+      llvm::BasicBlock *BB = llvm::BasicBlock::Create(Context, "entry", W);
+      llvm::IRBuilder<> B(BB);
+
+      llvm::Value *SlotPtr = B.CreateConstInBoundsGEP1_32(PtrTy, Slots, I);
+      llvm::Value *FP = B.CreateLoad(PtrTy, SlotPtr);
+
+      // Defensive null check: if slot was never written, skip call
+      llvm::BasicBlock *CallBB = llvm::BasicBlock::Create(Context, "call", W);
+      llvm::BasicBlock *NullBB = llvm::BasicBlock::Create(Context, "nullslot", W);
+      llvm::Value *IsNotNull = B.CreateIsNotNull(FP);
+      B.CreateCondBr(IsNotNull, CallBB, NullBB);
+
+      B.SetInsertPoint(CallBB);
+      llvm::SmallVector<llvm::Value *, 8> CallArgs;
+      auto ArgIt = W->arg_begin();
+      for (unsigned J = 0; J < SrcParams && ArgIt != W->arg_end(); ++J, ++ArgIt) {
+        llvm::Value *A = &*ArgIt;
+        if (A->getType() != SrcFnType->getParamType(J))
+          A = B.CreateBitOrPointerCast(A, SrcFnType->getParamType(J));
+        CallArgs.push_back(A);
+      }
+      llvm::CallInst *Call = B.CreateCall(SrcFnType, FP, CallArgs);
+
+      if (DstFnType->getReturnType()->isVoidTy()) {
+        B.CreateRetVoid();
+        B.SetInsertPoint(NullBB);
+        B.CreateRetVoid();
+      } else {
+        llvm::Value *Ret = Call;
+        if (Ret->getType() != DstFnType->getReturnType())
+          Ret = B.CreateBitOrPointerCast(Ret, DstFnType->getReturnType());
+        B.CreateRet(Ret);
+        B.SetInsertPoint(NullBB);
+        B.CreateRet(llvm::Constant::getNullValue(DstFnType->getReturnType()));
+      }
+
+      WrappersConst.push_back(llvm::ConstantExpr::getBitCast(W, PtrTy));
     }
 
-    RuntimeWrapperCache[Key] = Wrapper;
+    // Create constant lookup table (not TLS — read-only function pointers)
+    llvm::ArrayType *WrapTblTy = llvm::ArrayType::get(PtrTy, POOL_SIZE);
+    WrapperTable = new llvm::GlobalVariable(
+        M, WrapTblTy, true, llvm::GlobalValue::InternalLinkage,
+        llvm::ConstantArray::get(WrapTblTy, WrappersConst),
+        PoolName + "_wrappers");
+    WrapperTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  } else {
+    Slots = M.getNamedGlobal(PoolName + "_slots");
+    WrapperTable = M.getNamedGlobal(PoolName + "_wrappers");
+    SrcFnType = llvm::cast<llvm::FunctionType>(
+        CGF.CGM.getTypes().ConvertType(QualType(SrcProto, 0)));
   }
 
-  // Store the function pointer in the global variable
-  CharUnits Alignment = CGF.CGM.getPointerAlign();
-  Address GlobalAddr(FnPtrGlobal, PtrTy, Alignment);
+  // Runtime null check
+  llvm::Value *IsNull = CGF.Builder.CreateIsNull(FnPtr);
+  llvm::BasicBlock *NullContBB = llvm::BasicBlock::Create(Context, "nullcont", CGF.CurFn);
+  llvm::BasicBlock *NotNullBB = llvm::BasicBlock::Create(Context, "notnull", CGF.CurFn);
+  CharUnits PtrAlign = CGF.CGM.getPointerAlign();
 
-  // Store the function pointer to be used by the wrapper
-  CGF.Builder.CreateStore(FnPtr, GlobalAddr);
+  if (IsImmediate) {
+    // === Immediate call: 1 TLS slot + 1 wrapper, no branches after null check ===
+    CGF.Builder.CreateCondBr(IsNull, NullContBB, NotNullBB);
 
-  // Return the wrapper function
-  return Wrapper;
+    CGF.Builder.SetInsertPoint(NotNullBB);
+    CGF.Builder.CreateStore(FnPtr, Address(ImmediateSlot, PtrTy, PtrAlign));
+    CGF.Builder.CreateBr(NullContBB);
+
+    CGF.Builder.SetInsertPoint(NullContBB);
+    llvm::PHINode *PHI = CGF.Builder.CreatePHI(PtrTy, 2);
+    PHI->addIncoming(llvm::ConstantExpr::getBitCast(ImmediateWrapper, PtrTy), NotNullBB);
+    PHI->addIncoming(llvm::ConstantPointerNull::get(PtrTy), NullContBB);
+    return PHI;
+  }
+
+  // === Store-for-later: pool with 64 slots + 8-entry cache + atomic counter ===
+  CGF.Builder.CreateCondBr(IsNull, NullContBB, NotNullBB);
+
+  CGF.Builder.SetInsertPoint(NotNullBB);
+  llvm::ArrayType *WrapTblTy = llvm::ArrayType::get(PtrTy, POOL_SIZE);
+  static const unsigned CACHE_SIZE = 8;
+  llvm::ArrayType *CacheTy = llvm::ArrayType::get(PtrTy, CACHE_SIZE);
+  llvm::GlobalVariable *CacheKeys = M.getNamedGlobal(PoolName + "_cache_keys");
+  llvm::GlobalVariable *CacheWrappers = M.getNamedGlobal(PoolName + "_cache_wrappers");
+  llvm::BasicBlock *CacheHitBB = llvm::BasicBlock::Create(Context, "cachehit", CGF.CurFn);
+  llvm::BasicBlock *CacheMissBB = llvm::BasicBlock::Create(Context, "cachemiss", CGF.CurFn);
+  llvm::BasicBlock *ScanBB = llvm::BasicBlock::Create(Context, "scan", CGF.CurFn);
+  llvm::BasicBlock *ScanFoundBB = llvm::BasicBlock::Create(Context, "scanfnd", CGF.CurFn);
+  llvm::BasicBlock *ScanNextBB = llvm::BasicBlock::Create(Context, "scannxt", CGF.CurFn);
+  llvm::BasicBlock *AllocCheckBB = llvm::BasicBlock::Create(Context, "allocchk", CGF.CurFn);
+  llvm::BasicBlock *AllocStoreBB = llvm::BasicBlock::Create(Context, "allocstr", CGF.CurFn);
+  llvm::BasicBlock *OverflowBB = llvm::BasicBlock::Create(Context, "overflow", CGF.CurFn);
+  llvm::BasicBlock *ContBB = llvm::BasicBlock::Create(Context, "cont", CGF.CurFn);
+
+  // Cache lookup: idx = (fn_ptr >> 2) & 7
+  llvm::Value *CacheIdx = CGF.Builder.CreateAnd(
+      CGF.Builder.CreateLShr(
+          CGF.Builder.CreatePtrToInt(FnPtr, I32Ty),
+          llvm::ConstantInt::get(I32Ty, 2)),
+      llvm::ConstantInt::get(I32Ty, CACHE_SIZE - 1));
+  llvm::Value *CacheKeyGEP = CGF.Builder.CreateInBoundsGEP(
+      CacheTy, CacheKeys, {llvm::ConstantInt::get(I32Ty, 0), CacheIdx});
+  Address CacheKeyAddr(CacheKeyGEP, PtrTy, PtrAlign);
+  llvm::Value *CachedFn = CGF.Builder.CreateLoad(CacheKeyAddr);
+  llvm::Value *CacheHit = CGF.Builder.CreateICmpEQ(CachedFn, FnPtr);
+  llvm::Value *CacheWrapGEP = CGF.Builder.CreateInBoundsGEP(
+      CacheTy, CacheWrappers, {llvm::ConstantInt::get(I32Ty, 0), CacheIdx});
+  Address CacheWrapAddr(CacheWrapGEP, PtrTy, PtrAlign);
+
+  CGF.Builder.CreateCondBr(CacheHit, CacheHitBB, CacheMissBB);
+
+  // Cache hit: load cached wrapper, branch to cont
+  CGF.Builder.SetInsertPoint(CacheHitBB);
+  llvm::Value *CacheHitW = CGF.Builder.CreateLoad(CacheWrapAddr);
+  CGF.Builder.CreateBr(ContBB);
+
+  // Cache miss: scan pool for existing mapping
+  CGF.Builder.SetInsertPoint(CacheMissBB);
+  CGF.Builder.CreateBr(ScanBB);
+
+  // Scan loop: find fn_ptr in slots[0..POOL_SIZE-1]
+  CGF.Builder.SetInsertPoint(ScanBB);
+  llvm::PHINode *ScanIdx = CGF.Builder.CreatePHI(I32Ty, 2);
+  ScanIdx->addIncoming(llvm::ConstantInt::get(I32Ty, 0), CacheMissBB);
+  llvm::Value *ScanSlotGEP = CGF.Builder.CreateInBoundsGEP(
+      SlotArrayTy, Slots, {llvm::ConstantInt::get(I32Ty, 0), ScanIdx});
+  llvm::Value *ScanFn = CGF.Builder.CreateLoad(Address(ScanSlotGEP, PtrTy, PtrAlign));
+  llvm::Value *ScanMatch = CGF.Builder.CreateICmpEQ(ScanFn, FnPtr);
+  CGF.Builder.CreateCondBr(ScanMatch, ScanFoundBB, ScanNextBB);
+
+  // Found existing slot: update cache, return existing wrapper
+  CGF.Builder.SetInsertPoint(ScanFoundBB);
+  CGF.Builder.CreateStore(FnPtr, CacheKeyAddr);
+  llvm::Value *FoundWrapGEP = CGF.Builder.CreateInBoundsGEP(
+      WrapTblTy, WrapperTable, {llvm::ConstantInt::get(I32Ty, 0), ScanIdx});
+  llvm::Value *FoundW = CGF.Builder.CreateLoad(Address(FoundWrapGEP, PtrTy, PtrAlign));
+  CGF.Builder.CreateStore(FoundW, CacheWrapAddr);
+  CGF.Builder.CreateBr(ContBB);
+
+  // Advance scan
+  CGF.Builder.SetInsertPoint(ScanNextBB);
+  llvm::Value *NextIdx = CGF.Builder.CreateAdd(
+      ScanIdx, llvm::ConstantInt::get(I32Ty, 1));
+  llvm::Value *ScanEnd = CGF.Builder.CreateICmpUGE(
+      NextIdx, llvm::ConstantInt::get(I32Ty, POOL_SIZE));
+  ScanIdx->addIncoming(NextIdx, ScanNextBB);
+  CGF.Builder.CreateCondBr(ScanEnd, AllocCheckBB, ScanBB);
+
+  // Allocate new slot: atomic counter increment
+  CGF.Builder.SetInsertPoint(AllocCheckBB);
+  Address CounterAddr(Counter, I32Ty, PtrAlign);
+  llvm::Value *Slot = CGF.Builder.CreateAtomicRMW(
+      llvm::AtomicRMWInst::Add, CounterAddr,
+      llvm::ConstantInt::get(I32Ty, 1), llvm::AtomicOrdering::Monotonic);
+  llvm::Value *InBounds = CGF.Builder.CreateICmpULT(
+      Slot, llvm::ConstantInt::get(I32Ty, POOL_SIZE));
+  CGF.Builder.CreateCondBr(InBounds, AllocStoreBB, OverflowBB);
+
+  // Overflow
+  CGF.Builder.SetInsertPoint(OverflowBB);
+  CGF.Builder.CreateCall(llvm::Intrinsic::getOrInsertDeclaration(
+      &M, llvm::Intrinsic::trap));
+  CGF.Builder.CreateUnreachable();
+
+  // Store in pool + update cache
+  CGF.Builder.SetInsertPoint(AllocStoreBB);
+  llvm::Value *SlotIdx[] = {llvm::ConstantInt::get(I32Ty, 0), Slot};
+  llvm::Value *SlotGEP = CGF.Builder.CreateInBoundsGEP(
+      SlotArrayTy, Slots, SlotIdx);
+  CGF.Builder.CreateStore(FnPtr, Address(SlotGEP, PtrTy, PtrAlign));
+  llvm::Value *WrapGEP = CGF.Builder.CreateInBoundsGEP(
+      WrapTblTy, WrapperTable, SlotIdx);
+  llvm::Value *W = CGF.Builder.CreateLoad(Address(WrapGEP, PtrTy, PtrAlign));
+  CGF.Builder.CreateStore(FnPtr, CacheKeyAddr);
+  CGF.Builder.CreateStore(W, CacheWrapAddr);
+  CGF.Builder.CreateBr(ContBB);
+
+  // Null path
+  CGF.Builder.SetInsertPoint(NullContBB);
+  CGF.Builder.CreateBr(ContBB);
+
+  // ContBB: PHI for result
+  CGF.Builder.SetInsertPoint(ContBB);
+  llvm::PHINode *PHI = CGF.Builder.CreatePHI(PtrTy, 4);
+  PHI->addIncoming(CacheHitW, CacheHitBB);
+  PHI->addIncoming(FoundW, ScanFoundBB);
+  PHI->addIncoming(W, AllocStoreBB);
+  PHI->addIncoming(llvm::ConstantPointerNull::get(PtrTy), NullContBB);
+  return PHI;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

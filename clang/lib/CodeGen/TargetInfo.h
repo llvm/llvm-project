@@ -419,7 +419,7 @@ public:
   /// that need signature adaptation.
   virtual llvm::Value *emitWasmRuntimeFunctionPointerBinding(
       CodeGenFunction &CGF, llvm::Value *FnPtr, QualType SrcType,
-      QualType DstType) const {
+      QualType DstType, bool IsImmediate) const {
     return nullptr;
   }
 

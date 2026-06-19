@@ -2695,9 +2695,24 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       // If not statically traceable, use runtime binding for non-constant values
       Value *Src = Visit(E);
       if (!isa<llvm::Constant>(Src)) {
+        // Detect call-immediately vs store-for-later pattern.
+        // Call-immediately: the cast result is the callee of a CallExpr
+        //   -> use 1 TLS slot, no pool needed
+        // Store-for-later: the cast result is assigned/saved
+        //   -> use pool with 64 slots for closure support
+        bool IsImmediate = false;
+        auto parents = CGF.getContext().getParentMapContext().getParents(*E);
+        for (auto &parent : parents) {
+          if (auto *Call = parent.get<CallExpr>()) {
+            if (Call->getCallee()->IgnoreParens() == E) {
+              IsImmediate = true;
+              break;
+            }
+          }
+        }
         llvm::Value *RuntimeThunk =
             CGF.CGM.getTargetCodeGenInfo().emitWasmRuntimeFunctionPointerBinding(
-                CGF, Src, CE->getSubExpr()->getType(), DestTy);
+                CGF, Src, CE->getSubExpr()->getType(), DestTy, IsImmediate);
         if (RuntimeThunk)
           return RuntimeThunk;
       }
