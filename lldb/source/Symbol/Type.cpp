@@ -1212,11 +1212,11 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   return true;
 }
 
-CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
+CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name,
+                                            bool prefer_dynamic) {
   if (name.empty())
     return CompilerType();
-  return GetCompilerType(/*prefer_dynamic=*/false)
-      .GetDirectNestedTypeWithName(name);
+  return GetCompilerType(prefer_dynamic).GetDirectNestedTypeWithName(name);
 }
 
 bool TypeMemberFunctionImpl::IsValid() {
