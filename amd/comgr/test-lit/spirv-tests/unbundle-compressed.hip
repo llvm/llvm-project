@@ -1,5 +1,4 @@
 // REQUIRES: comgr-has-spirv-translator
-// XFAIL: *
 // COM: Build a compressed bitcode bundle for amdgcnspirv.
 // RUN: %clang -c -x hip --offload-arch=amdgcnspirv \
 // RUN:    -nogpulib -nogpuinc -emit-llvm \
