@@ -308,8 +308,8 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
     const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
@@ -351,8 +351,8 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   CalleeName = getCanonicalFnName(CalleeName);
 
   auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));

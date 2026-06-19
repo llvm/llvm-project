@@ -69,7 +69,6 @@ CHECK-NEXT:	ObjCPreciseLifetime
 CHECK-NEXT:	ObjCRequiresPropertyDefs
 CHECK-NEXT:	ObjCReturnsInnerPointer
 CHECK-NEXT:	ObjCRootClass
-CHECK-NEXT:	OverflowBehavior
 CHECK-NEXT:	Packed
 CHECK-NEXT:	Pascal
 CHECK-NEXT:	PointerFieldProtection
@@ -91,4 +90,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 85
+CHECK-NEXT: Total: 84

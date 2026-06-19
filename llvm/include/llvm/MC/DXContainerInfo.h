@@ -22,7 +22,7 @@ struct DebugName {
   dxbc::DebugNameHeader Parameters;
   StringRef Filename;
 
-  DebugName() { Parameters.Flags = 0; }
+  DebugName() : Parameters{0, 0} {}
   DebugName(dxbc::DebugNameHeader &Parameters, StringRef Filename)
       : Parameters(Parameters), Filename(Filename) {}
 
