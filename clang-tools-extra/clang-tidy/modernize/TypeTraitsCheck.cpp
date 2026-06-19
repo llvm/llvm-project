@@ -326,11 +326,10 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *TSTL = Result.Nodes.getNodeAs<TemplateSpecializationTypeLoc>(
           "remove_cvref")) {
     auto Diag = diag(TSTL->getBeginLoc(), "use c++20 type alias");
-    TemplateSpecializationTypeLoc OuterTL =
-        TSTL->getArgLoc(0)
-            .getTypeSourceInfo()
-            ->getTypeLoc()
-            .castAs<TemplateSpecializationTypeLoc>();
+    auto OuterTL = TSTL->getArgLoc(0)
+                       .getTypeSourceInfo()
+                       ->getTypeLoc()
+                       .castAs<TemplateSpecializationTypeLoc>();
     Diag << FixItHint::CreateReplacement(
                 SourceRange(TSTL->getBeginLoc(), OuterTL.getLAngleLoc()),
                 "std::remove_cvref_t<")
