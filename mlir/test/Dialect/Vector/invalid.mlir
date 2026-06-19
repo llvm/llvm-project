@@ -2145,6 +2145,24 @@ func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%va
 
 // -----
 
+func.func @load_negative_stride(%flip: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
+  // expected-error @+2 {{'vector.load' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  %v = vector.load %flip[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<8xf32>
+  return %v : vector<8xf32>
+}
+
+// -----
+
+func.func @store_negative_stride(%flip: memref<100x100xf32, strided<[-100, 1]>>, %val: vector<4xf32>) {
+  // expected-error @+2 {{'vector.store' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  vector.store %val, %flip[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<4xf32>
+  return
+}
+
+// -----
+
 // Verify that vector.bitcast rejects vectors with i0 (zero-bitwidth) element type.
 func.func @bitcast_i0(%a: vector<4xi0>) -> vector<4xi0> {
   // expected-error @+1 {{'vector.bitcast' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
