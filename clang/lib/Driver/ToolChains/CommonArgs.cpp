@@ -3115,7 +3115,7 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   }
 }
 
-void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
+bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
 
@@ -3126,12 +3126,12 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
     LibclcNamespec = A->getValue();
   } else {
     if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
-      return;
+      return false;
 
     // TODO: Should this accept following -stdlib to override?
     if (DriverArgs.hasArg(options::OPT_no_offloadlib,
                           options::OPT_nodefaultlibs, options::OPT_nostdlib))
-      return;
+      return false;
   }
 
   bool FilenameSearch = LibclcNamespec.consume_front(":");
@@ -3140,10 +3140,10 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
     if (D.getVFS().exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
-      return;
+      return true;
     }
     D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
-    return;
+    return false;
   }
 
   // The OpenCL libraries are stored in <ResourceDir>/lib/<triple>.
@@ -3161,7 +3161,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
       if (D.getVFS().exists(CPUPath)) {
         CC1Args.push_back("-mlink-builtin-bitcode");
         CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
-        return;
+        return true;
       }
     }
   }
@@ -3172,10 +3172,11 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
   if (D.getVFS().exists(GenericPath)) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
-    return;
+    return true;
   }
 
   D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
+  return false;
 }
 
 void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
