@@ -72,7 +72,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
   }
-#  if TEST_STD_VER > 11
+#  if TEST_STD_VER >= 11
   {
     typedef std::pair<const int, double> V;
     V ar[] = {

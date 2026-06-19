@@ -149,7 +149,6 @@ public:
     __guard.__complete();
   }
 
-#if _LIBCPP_STD_VER >= 14
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n, const allocator_type& __a)
       : __alloc_(__a) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
@@ -159,7 +158,6 @@ public:
     }
     __guard.__complete();
   }
-#endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));

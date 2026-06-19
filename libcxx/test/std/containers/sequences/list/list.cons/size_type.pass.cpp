@@ -8,7 +8,8 @@
 
 // <list>
 
-// explicit list(size_type n); // constexpr since C++26
+// explicit list(size_type n);                       // constexpr since C++26
+// explicit list(size_type n, const Allocator& a);   // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -21,7 +22,7 @@
 
 template <class T, class Allocator>
 TEST_CONSTEXPR_CXX26 void test1(unsigned n, Allocator const& alloc = Allocator()) {
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   typedef std::list<T, Allocator> C;
   {
     C d(n, alloc);
@@ -59,7 +60,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     ++i;
     assert(*i == 0);
   }
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   {
     typedef std::list<int, min_allocator<int> > C;
     C l(3, min_allocator<int>());
