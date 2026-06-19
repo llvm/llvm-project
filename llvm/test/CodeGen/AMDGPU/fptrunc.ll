@@ -233,16 +233,14 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-SDAG-NEXT:    s_mov_b32 s0, s4
 ; VI-SDAG-NEXT:    s_lshr_b32 s4, s7, 8
-; VI-SDAG-NEXT:    s_and_b32 s8, s4, 0xffe
-; VI-SDAG-NEXT:    s_and_b32 s4, s7, 0x1ff
-; VI-SDAG-NEXT:    s_or_b32 s4, s4, s6
 ; VI-SDAG-NEXT:    s_mov_b32 s1, s5
-; VI-SDAG-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; VI-SDAG-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-SDAG-NEXT:    s_and_b32 s4, s4, 0xffe
+; VI-SDAG-NEXT:    s_and_b32 s5, s7, 0x1ff
+; VI-SDAG-NEXT:    s_or_b32 s5, s5, s6
+; VI-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
 ; VI-SDAG-NEXT:    s_bfe_u32 s6, s7, 0xb0014
-; VI-SDAG-NEXT:    s_or_b32 s4, s8, s4
 ; VI-SDAG-NEXT:    s_sub_i32 s8, 0x3f1, s6
+; VI-SDAG-NEXT:    s_or_b32 s4, s4, s5
 ; VI-SDAG-NEXT:    v_med3_i32 v0, s8, 0, 13
 ; VI-SDAG-NEXT:    s_or_b32 s5, s4, 0x1000
 ; VI-SDAG-NEXT:    v_readfirstlane_b32 s8, v0
