@@ -469,6 +469,24 @@ static void normalizeGEPs(Module &M, PointeeTypeMap &PTM) {
         Changed = true;
       }
     }
+
+    {
+      SmallVector<GetElementPtrInst *, 8> ToFix;
+      for (auto &BB : F)
+        for (auto &I : BB)
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+            Value *Base = GEP->getPointerOperand();
+            if (isa<GlobalVariable>(Base) || isa<BitCastInst>(Base))
+              continue;
+            Type *Pointee = effectivePointee(Base, PTM);
+            if (Pointee && Pointee != GEP->getSourceElementType())
+              ToFix.push_back(GEP);
+          }
+      for (auto *GEP : ToFix)
+        GEP->setOperand(0, retypePointerVia(GEP->getPointerOperand(),
+                                            GEP->getSourceElementType(), GEP,
+                                            PTM));
+    }
   }
 }
 
@@ -919,7 +937,7 @@ static void lowerFreezeInsts(Module &M) {
 // `[N x T]`-typed LOAD record. The mid-end produces them when it widens a
 // small fixed-count gather into one load. Expand into per-element
 // GEP+load+insertvalue so every load is scalar/vector-typed.
-static void scalarizeAggregateLoads(Module &M) {
+static void scalarizeAggregateLoads(Module &M, PointeeTypeMap &PTM) {
   // Field-based (not lane-based): decompose along the aggregate's elements, so
   // every emitted load is scalar/vector-typed. Distinct from the vector
   // scalarizers above, which decompose along SIMD lanes.
@@ -929,6 +947,9 @@ static void scalarizeAggregateLoads(Module &M) {
     auto *AT = cast<ArrayType>(LI->getType());
     Type *ElemTy = AT->getElementType();
     Value *Ptr = LI->getPointerOperand();
+    if (effectivePointee(Ptr, PTM) != ElemTy &&
+        (isa<ConstantPointerNull>(Ptr) || isa<IntToPtrInst>(Ptr)))
+      Ptr = retypePointerVia(Ptr, ElemTy, LI, PTM);
     Value *Agg = UndefValue::get(AT);
     IRBuilder<> B(LI);
     for (uint64_t E = 0; E < AT->getNumElements(); ++E) {
@@ -938,6 +959,28 @@ static void scalarizeAggregateLoads(Module &M) {
     }
     LI->replaceAllUsesWith(Agg);
     LI->eraseFromParent();
+  }
+}
+
+static void scalarizeAggregateStores(Module &M, PointeeTypeMap &PTM) {
+  auto Aggs = collectInsts<StoreInst>(M, [](StoreInst *SI) {
+    return isa<ArrayType>(SI->getValueOperand()->getType());
+  });
+  for (StoreInst *SI : Aggs) {
+    Value *Val = SI->getValueOperand();
+    auto *AT = cast<ArrayType>(Val->getType());
+    Type *ElemTy = AT->getElementType();
+    Value *Ptr = SI->getPointerOperand();
+    if (effectivePointee(Ptr, PTM) != ElemTy &&
+        (isa<ConstantPointerNull>(Ptr) || isa<IntToPtrInst>(Ptr)))
+      Ptr = retypePointerVia(Ptr, ElemTy, SI, PTM);
+    IRBuilder<> B(SI);
+    for (uint64_t E = 0; E < AT->getNumElements(); ++E) {
+      Value *EP = B.CreateGEP(ElemTy, Ptr, B.getInt64(E));
+      Value *EV = B.CreateExtractValue(Val, {unsigned(E)});
+      B.CreateStore(EV, EP);
+    }
+    SI->eraseFromParent();
   }
 }
 
@@ -1556,7 +1599,8 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     fixPhiIncomingTypes(M, PTM);
     fixMMAPointerSuffixMismatch(M, PTM);
     fixSelectPointerArms(M, PTM);
-    scalarizeAggregateLoads(M);
+    scalarizeAggregateLoads(M, PTM);
+    scalarizeAggregateStores(M, PTM);
     fixAccessTypeMismatch(M, PTM);
 
     // --- Stage D: materialize constexprs, then post-constexpr fixups ---

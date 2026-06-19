@@ -150,19 +150,23 @@ public:
 private:
   // The MLIR gpu dialect passes a statically-sized `workgroup(...)` attribution
   // as an addrspace(3) kernel pointer PARAMETER (Apple's host-bound
-  // `[[threadgroup(N)]]` shape). Metal cannot auto-allocate such a param and
-  // this pipeline's host runner has no API to bind threadgroup memory, so the
-  // buffer reads back as zero. Apple's own frontend lowers a kernel-local
-  // `threadgroup T s[N]` to an INTERNAL addrspace(3) global instead (no param,
-  // driver-allocated). Mirror that: replace each addrspace(3) pointer param
-  // with an internal addrspace(3) global and drop it from the signature, so the
+  // `[[threadgroup(N)]]` shape). A consumer whose host has no API to bind
+  // threadgroup memory at dispatch reads the buffer back as zero, so for those
+  // we mirror Apple's frontend: replace each addrspace(3) pointer param with an
+  // internal addrspace(3) global and drop it from the signature, letting the
   // existing threadgroup-global machinery (TGGlobalCoalesce/AIRPrepare) and
   // AIRSystemValues (which then sees no TG param) handle it unchanged.
+  //
+  // A frontend whose runtime DOES bind threadgroup memory (setThreadgroupMemory
+  // Length:atIndex:) declares it via the "air.thread_group_bound" function
+  // attribute; we then keep the param as a true dynamic threadgroup argument
+  // (staticThreadgroupMemoryLength stays 0, freeing per-core occupancy).
   bool promoteWorkgroupAttributions(Module &M) {
     bool Changed = false;
     SmallVector<Function *, 2> Kernels;
     for (Function &F : M)
-      if (!F.isDeclaration() && F.hasFnAttribute("air-kernel"))
+      if (!F.isDeclaration() && F.hasFnAttribute("air-kernel") &&
+          !F.hasFnAttribute("air.thread_group_bound"))
         Kernels.push_back(&F);
 
     for (Function *F : Kernels) {
