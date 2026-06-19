@@ -2171,6 +2171,24 @@ private:
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
+
+  /// Check if a variable declaration is suitable to be treated as a loadtime
+  /// comment variable (must be a character pointer or array with initializer).
+  bool isValidLoadTimeCommentVariable(const VarDecl *D) const;
+
+  /// Check if a variable is eligible to be treated as a loadtime comment
+  /// variable (must be in the requested list and have a valid char type).
+  bool isLoadTimeCommentCandidateVariable(
+      const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars);
+
+  /// Queue loadtime comment variable candidates into the deferred
+  /// emission list before EmitDeferred() so their initializers are emitted
+  /// through the normal infrastructure with correct ordering.
+  void QueueLoadTimeCommentVarEmission();
+
+  /// Attach loadtime_comment metadata and add variables to
+  /// llvm.compiler.used after EmitDeferred() has defined them.
+  void ProcessLoadTimeCommentVars();
 };
 
 }  // end namespace CodeGen

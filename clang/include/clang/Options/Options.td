@@ -4792,6 +4792,13 @@ def fvisibility_global_new_delete_EQ : Joined<["-"], "fvisibility-global-new-del
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"The visibility for global C++ operator new and delete declarations. If 'source' is specified the visibility is not adjusted">,
   MarshallingInfoVisibilityGlobalNewDelete<LangOpts<"GlobalAllocationFunctionVisibility">, "ForceDefault">;
+def mloadtime_comment_vars_EQ
+    : CommaJoined<["-"], "mloadtime-comment-vars=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Comma-separated list of global variable names to treat as "
+               "loadtime variables">,
+      MarshallingInfoStringVector<CodeGenOpts<"LoadTimeCommentVars">>;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,
   NormalizedValuesScope<"LangOptions::DefaultVisiblityExportMapping">,

@@ -6873,6 +6873,72 @@ When ``#pragma comment(copyright, ...)`` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
 
+Preserving Identifying Variables with -mloadtime-comment-vars
+--------------------------------------------------------------
+
+The ``-mloadtime-comment-vars=`` flag accepts a comma-separated list of
+global variable names that should be preserved in the final object file as
+loadtime identifying strings. This is an AIX-specific feature and is ignored
+on other targets.
+
+This flag complements ``#pragma comment(copyright, ...)`` for codebases that
+already use the traditional UNIX convention of embedding identifying strings
+directly in source variables rather than via a pragma.
+
+Syntax:
+
+.. code-block:: console
+
+  -mloadtime-comment-vars=<var1>[,<var2>,...]
+
+Valid variable types:
+
+A variable named in the list must meet both of these conditions to be
+preserved:
+
+- Its type must be a character pointer (``char *``, ``const char *``) or a
+  character array (``char[]``).
+- It must have an initializer.
+
+Variables that fail either check -- for example, an ``int`` or a ``struct`` --
+are silently skipped. Variables that appear in the list but are not defined in
+the translation unit are also ignored.
+
+Example:
+
+.. code-block:: c
+
+  static char *sccsid = "@(#) MyApp Version 1.0";
+  static char  version[] = "@(#) Built 2026-05-24";
+
+  void foo() {}
+
+Compiled with:
+
+.. code-block:: console
+
+  clang -target powerpc64-ibm-aix \
+    -mloadtime-comment-vars=sccsid,version \
+    -c source.c -o source.o
+
+Both ``sccsid`` and ``version`` survive optimization and are retained in the
+object file.
+
+.. code-block:: console
+
+  $ what source.o
+  source.o:
+           MyApp Version 1.0
+           Built 2026-05-24
+
+Interaction with ``#pragma comment(copyright, ...)`` :
+
+The two mechanisms can be used together in the same translation unit. The
+pragma produces a dedicated ``__loadtime_comment_str`` symbol placed in the
+``__loadtime_comment`` section, while ``-mloadtime-comment-vars`` preserves
+the named source variables in place using ``.ref`` directives. Both sets of
+strings appear in the final object file independently.
+
 Evaluating Object Size
 ======================
 
