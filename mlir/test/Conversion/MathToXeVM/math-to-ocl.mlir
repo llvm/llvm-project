@@ -75,6 +75,21 @@ module @test_module {
 // -----
 
 module @test_module {
+  // CHECK-DAG: llvm.func @_Z{{.*}}__spirv_ocl_native_sinf(f32) -> f32
+  // CHECK-DAG: llvm.func @_Z{{.*}}__spirv_ocl_native_sind(f64) -> f64
+  // CHECK-LABEL: func @math_fast_sin
+  func.func @math_fast_sin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.sin %arg_f32 fastmath<afn> : f32
+    // CHECK: llvm.call @_Z{{.*}}__spirv_ocl_native_sinf(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
+    %result64 = math.sin %arg_f64 fastmath<afn> : f64
+    // CHECK: llvm.call @_Z{{.*}}__spirv_ocl_native_sind(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+module @test_module {
   // CHECK-OCL: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_acosf(f32) -> f32
   // CHECK-OCL: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_acosd(f64) -> f64
   // CHECK-LABEL: func @math_acos

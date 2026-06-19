@@ -21,7 +21,8 @@ class Pass;
 
 /// Populate the given list with patterns that convert from Math to XeVM calls.
 void populateMathToXeVMConversionPatterns(RewritePatternSet &patterns,
-                                          bool convertArith);
+                                          bool convertArith,
+                                          PatternBenefit benefit = 1);
 
 /// Populate the given list with patterns that convert from Math to OCL LLVM-SPV
 /// builtin calls.

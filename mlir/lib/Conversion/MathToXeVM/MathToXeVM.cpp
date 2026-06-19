@@ -194,32 +194,33 @@ void mlir::populateMathToScalarOCLExtSetConversionPatterns(
 }
 
 void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns,
-                                                bool convertArith) {
-  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_exp");
-  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_cos");
+                                                bool convertArith,
+                                                PatternBenefit benefit) {
+  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(
+      patterns.getContext(), "__spirv_ocl_native_exp", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(
+      patterns.getContext(), "__spirv_ocl_native_cos", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Exp2Op>>(
-      patterns.getContext(), "__spirv_ocl_native_exp2");
-  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_log");
+      patterns.getContext(), "__spirv_ocl_native_exp2", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(
+      patterns.getContext(), "__spirv_ocl_native_log", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Log2Op>>(
-      patterns.getContext(), "__spirv_ocl_native_log2");
+      patterns.getContext(), "__spirv_ocl_native_log2", benefit);
   patterns.add<ConvertNativeFuncPattern<math::Log10Op>>(
-      patterns.getContext(), "__spirv_ocl_native_log10");
+      patterns.getContext(), "__spirv_ocl_native_log10", benefit);
   patterns.add<ConvertNativeFuncPattern<math::PowFOp>>(
-      patterns.getContext(), "__spirv_ocl_native_powr");
+      patterns.getContext(), "__spirv_ocl_native_powr", benefit);
   patterns.add<ConvertNativeFuncPattern<math::RsqrtOp>>(
-      patterns.getContext(), "__spirv_ocl_native_rsqrt");
-  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_sin");
+      patterns.getContext(), "__spirv_ocl_native_rsqrt", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(
+      patterns.getContext(), "__spirv_ocl_native_sin", benefit);
   patterns.add<ConvertNativeFuncPattern<math::SqrtOp>>(
-      patterns.getContext(), "__spirv_ocl_native_sqrt");
-  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(patterns.getContext(),
-                                                      "__spirv_ocl_native_tan");
+      patterns.getContext(), "__spirv_ocl_native_sqrt", benefit);
+  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(
+      patterns.getContext(), "__spirv_ocl_native_tan", benefit);
   if (convertArith)
     patterns.add<ConvertNativeFuncPattern<arith::DivFOp>>(
-        patterns.getContext(), "__spirv_ocl_native_divide");
+        patterns.getContext(), "__spirv_ocl_native_divide", benefit);
 }
 
 namespace {
@@ -241,13 +242,16 @@ void ConvertMathToXeVMPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
 
+  // Native OCL patterns should take precedence for `fast` ops even when
+  // convertToOCL is set.
+  populateMathToXeVMConversionPatterns(patterns, convertArith,
+                                       convertToOCL + 1);
   if (convertToOCL) {
     populateMathToScalarOCLExtSetConversionPatterns(converter, patterns, 1);
     target
         .addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::LogOp,
                       LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();
   }
-  populateMathToXeVMConversionPatterns(patterns, convertArith);
   target.addLegalDialect<BuiltinDialect, LLVM::LLVMDialect>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
