@@ -633,8 +633,8 @@ private:
   static constexpr auto __other_idx_   = 0u;
   static constexpr auto __unknown_idx_ = 1u;
 
-  unsigned short __encoding_idx_{1u};
   char __name_[max_name_length + 1]{};
+  unsigned short __encoding_idx_{1u};
 
   static constexpr __te_data __entries[] = {
       {0, 1, 0},      {1, 2, 0},      {2, 3, 11},     {13, 4, 9},     {22, 5, 7},     {29, 6, 7},     {36, 7, 7},
