@@ -3086,16 +3086,18 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX11-TRUE16-LABEL: safe_math_fract_v2f16:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
-; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
-; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.l, 0x204
-; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v4.h, v0.h
-; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v4.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s0
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0, s1
-; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX11-TRUE16-NEXT:    s_movk_i32 s0, 0x204
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, s0
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v4.l, v0.h
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v5.h, v0.h
+; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v5.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e32 vcc_lo, v0.h, v3.l
+; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, v3.l
+; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v5, off
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0, vcc_lo
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.h, 0, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: safe_math_fract_v2f16:
@@ -3124,16 +3126,21 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
-; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
-; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
-; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.l, 0x204
-; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v4.h, v0.h
-; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v4.l, v0.l
+; GFX12-TRUE16-NEXT:    s_movk_i32 s0, 0x204
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.l
+; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.l, s0
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v4.l, v0.h
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v5.h, v0.h
+; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v5.l, v0.l
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e32 vcc_lo, v0.h, v3.l
+; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, v3.l
+; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v5, off
+; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0, vcc_lo
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s0
-; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0, s1
-; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.h, 0, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: safe_math_fract_v2f16:

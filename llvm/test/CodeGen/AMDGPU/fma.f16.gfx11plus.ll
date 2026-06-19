@@ -36,8 +36,8 @@ define amdgpu_kernel void @fma_v2f16_divergent(
   ; GFX11-NEXT:   S_CMP_LG_U32 killed [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_2]], implicit-def $scc
   ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:sreg_32_xm0_xexec = COPY $scc
   ; GFX11-NEXT:   [[V_CNDMASK_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CNDMASK_B16_t16_e64 0, killed [[V_XOR_B16_t16_e64_]], 0, killed [[V_AND_B16_t16_e64_]], killed [[COPY10]], 0, implicit $exec
-  ; GFX11-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; GFX11-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GFX11-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; GFX11-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_CNDMASK_B16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
   ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE2]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.4, addrspace 1)
   ; GFX11-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed [[REG_SEQUENCE3]], 0, 0 :: ("amdgpu-noclobber" load (s32) from %ir.5, addrspace 1)
