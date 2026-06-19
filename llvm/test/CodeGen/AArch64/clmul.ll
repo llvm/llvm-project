@@ -17,53 +17,35 @@ define i8 @clmul_i8(i8 %x, i8 %y) {
 define i16 @clmul_i16(i16 %x, i16 %y) {
 ; CHECK-NEON-LABEL: clmul_i16:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    and w8, w1, #0x2
-; CHECK-NEON-NEXT:    and w9, w1, #0x1
-; CHECK-NEON-NEXT:    and w10, w1, #0x4
-; CHECK-NEON-NEXT:    mul w8, w0, w8
-; CHECK-NEON-NEXT:    and w11, w1, #0x8
-; CHECK-NEON-NEXT:    and w12, w1, #0x10
-; CHECK-NEON-NEXT:    mul w9, w0, w9
-; CHECK-NEON-NEXT:    and w13, w1, #0x20
-; CHECK-NEON-NEXT:    and w15, w1, #0x80
-; CHECK-NEON-NEXT:    mul w10, w0, w10
-; CHECK-NEON-NEXT:    and w16, w1, #0x100
-; CHECK-NEON-NEXT:    and w2, w1, #0x800
-; CHECK-NEON-NEXT:    mul w11, w0, w11
-; CHECK-NEON-NEXT:    and w14, w1, #0x40
-; CHECK-NEON-NEXT:    and w17, w1, #0x200
-; CHECK-NEON-NEXT:    mul w12, w0, w12
-; CHECK-NEON-NEXT:    eor w8, w9, w8
-; CHECK-NEON-NEXT:    and w9, w1, #0x1000
-; CHECK-NEON-NEXT:    mul w13, w0, w13
-; CHECK-NEON-NEXT:    and w18, w1, #0x400
-; CHECK-NEON-NEXT:    mul w15, w0, w15
-; CHECK-NEON-NEXT:    eor w10, w10, w11
-; CHECK-NEON-NEXT:    and w11, w1, #0x2000
-; CHECK-NEON-NEXT:    mul w16, w0, w16
-; CHECK-NEON-NEXT:    eor w8, w8, w10
-; CHECK-NEON-NEXT:    and w10, w1, #0x4000
-; CHECK-NEON-NEXT:    mul w2, w0, w2
-; CHECK-NEON-NEXT:    eor w12, w12, w13
-; CHECK-NEON-NEXT:    and w13, w1, #0xffff8000
-; CHECK-NEON-NEXT:    mul w9, w0, w9
-; CHECK-NEON-NEXT:    mul w14, w0, w14
-; CHECK-NEON-NEXT:    eor w15, w15, w16
-; CHECK-NEON-NEXT:    mul w17, w0, w17
-; CHECK-NEON-NEXT:    mul w11, w0, w11
-; CHECK-NEON-NEXT:    eor w9, w2, w9
-; CHECK-NEON-NEXT:    mul w18, w0, w18
-; CHECK-NEON-NEXT:    eor w12, w12, w14
-; CHECK-NEON-NEXT:    mul w10, w0, w10
-; CHECK-NEON-NEXT:    eor w14, w15, w17
-; CHECK-NEON-NEXT:    eor w8, w8, w12
-; CHECK-NEON-NEXT:    mul w13, w0, w13
-; CHECK-NEON-NEXT:    eor w9, w9, w11
-; CHECK-NEON-NEXT:    eor w11, w14, w18
-; CHECK-NEON-NEXT:    eor w9, w9, w10
-; CHECK-NEON-NEXT:    eor w8, w8, w11
-; CHECK-NEON-NEXT:    eor w9, w9, w13
-; CHECK-NEON-NEXT:    eor w0, w8, w9
+; CHECK-NEON-NEXT:    mov w8, #-28087 // =0xffff9249
+; CHECK-NEON-NEXT:    mov w9, #9362 // =0x2492
+; CHECK-NEON-NEXT:    mov w15, #18724 // =0x4924
+; CHECK-NEON-NEXT:    and w10, w1, w8
+; CHECK-NEON-NEXT:    and w11, w0, w9
+; CHECK-NEON-NEXT:    and w12, w1, w9
+; CHECK-NEON-NEXT:    and w13, w0, w8
+; CHECK-NEON-NEXT:    and w17, w1, w15
+; CHECK-NEON-NEXT:    and w18, w0, w15
+; CHECK-NEON-NEXT:    mul w14, w11, w10
+; CHECK-NEON-NEXT:    mul w16, w13, w12
+; CHECK-NEON-NEXT:    mul w0, w18, w17
+; CHECK-NEON-NEXT:    mul w1, w11, w17
+; CHECK-NEON-NEXT:    mul w17, w13, w17
+; CHECK-NEON-NEXT:    eor w14, w16, w14
+; CHECK-NEON-NEXT:    mul w13, w13, w10
+; CHECK-NEON-NEXT:    eor w14, w14, w0
+; CHECK-NEON-NEXT:    mul w11, w11, w12
+; CHECK-NEON-NEXT:    and w9, w14, w9
+; CHECK-NEON-NEXT:    mul w12, w18, w12
+; CHECK-NEON-NEXT:    mul w10, w18, w10
+; CHECK-NEON-NEXT:    eor w13, w13, w1
+; CHECK-NEON-NEXT:    eor w11, w17, w11
+; CHECK-NEON-NEXT:    eor w12, w13, w12
+; CHECK-NEON-NEXT:    and w8, w12, w8
+; CHECK-NEON-NEXT:    eor w10, w11, w10
+; CHECK-NEON-NEXT:    orr w8, w8, w9
+; CHECK-NEON-NEXT:    and w9, w10, w15
+; CHECK-NEON-NEXT:    orr w0, w8, w9
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i16:
@@ -473,30 +455,38 @@ define i128 @clmul_i128(i128 %x, i128 %y) {
 define i16 @clmul_i16_zext(i8 %x, i8 %y) {
 ; CHECK-NEON-LABEL: clmul_i16_zext:
 ; CHECK-NEON:       // %bb.0:
-; CHECK-NEON-NEXT:    and w8, w0, #0xff
-; CHECK-NEON-NEXT:    and w9, w1, #0x2
-; CHECK-NEON-NEXT:    and w10, w1, #0x1
-; CHECK-NEON-NEXT:    mul w9, w8, w9
-; CHECK-NEON-NEXT:    and w11, w1, #0x4
-; CHECK-NEON-NEXT:    and w12, w1, #0x8
-; CHECK-NEON-NEXT:    mul w10, w8, w10
-; CHECK-NEON-NEXT:    and w13, w1, #0x10
-; CHECK-NEON-NEXT:    and w14, w1, #0x20
-; CHECK-NEON-NEXT:    mul w11, w8, w11
-; CHECK-NEON-NEXT:    and w15, w1, #0x40
-; CHECK-NEON-NEXT:    mul w12, w8, w12
-; CHECK-NEON-NEXT:    mul w13, w8, w13
-; CHECK-NEON-NEXT:    eor w9, w10, w9
-; CHECK-NEON-NEXT:    and w10, w1, #0x80
-; CHECK-NEON-NEXT:    mul w14, w8, w14
+; CHECK-NEON-NEXT:    mov w8, #73 // =0x49
+; CHECK-NEON-NEXT:    mov w9, #146 // =0x92
+; CHECK-NEON-NEXT:    mov w13, #36 // =0x24
+; CHECK-NEON-NEXT:    and w10, w1, w8
+; CHECK-NEON-NEXT:    and w11, w0, w9
+; CHECK-NEON-NEXT:    and w9, w1, w9
+; CHECK-NEON-NEXT:    and w8, w0, w8
+; CHECK-NEON-NEXT:    and w15, w1, w13
+; CHECK-NEON-NEXT:    and w13, w0, w13
+; CHECK-NEON-NEXT:    mul w12, w11, w10
+; CHECK-NEON-NEXT:    mul w14, w8, w9
+; CHECK-NEON-NEXT:    mul w16, w13, w15
+; CHECK-NEON-NEXT:    mul w17, w11, w15
 ; CHECK-NEON-NEXT:    mul w15, w8, w15
-; CHECK-NEON-NEXT:    eor w11, w11, w12
+; CHECK-NEON-NEXT:    eor w12, w14, w12
+; CHECK-NEON-NEXT:    mov w14, #9362 // =0x2492
 ; CHECK-NEON-NEXT:    mul w8, w8, w10
-; CHECK-NEON-NEXT:    eor w9, w9, w11
-; CHECK-NEON-NEXT:    eor w12, w13, w14
-; CHECK-NEON-NEXT:    eor w10, w12, w15
-; CHECK-NEON-NEXT:    eor w9, w9, w10
-; CHECK-NEON-NEXT:    eor w0, w9, w8
+; CHECK-NEON-NEXT:    eor w12, w12, w16
+; CHECK-NEON-NEXT:    mul w11, w11, w9
+; CHECK-NEON-NEXT:    and w12, w12, w14
+; CHECK-NEON-NEXT:    mul w9, w13, w9
+; CHECK-NEON-NEXT:    mul w10, w13, w10
+; CHECK-NEON-NEXT:    eor w8, w8, w17
+; CHECK-NEON-NEXT:    eor w11, w15, w11
+; CHECK-NEON-NEXT:    eor w8, w8, w9
+; CHECK-NEON-NEXT:    mov w9, #4681 // =0x1249
+; CHECK-NEON-NEXT:    and w8, w8, w9
+; CHECK-NEON-NEXT:    eor w9, w11, w10
+; CHECK-NEON-NEXT:    mov w10, #18724 // =0x4924
+; CHECK-NEON-NEXT:    orr w8, w8, w12
+; CHECK-NEON-NEXT:    and w9, w9, w10
+; CHECK-NEON-NEXT:    orr w0, w8, w9
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-AES-LABEL: clmul_i16_zext:
