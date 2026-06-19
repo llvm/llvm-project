@@ -17,6 +17,7 @@
 
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VersionTuple.h"
@@ -169,6 +170,11 @@ public:
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
                   llvm::ArrayRef<std::string> Parameters);
 
+  /// Collect exact parameter selectors stored for the given C++ method.
+  void collectCXXMethodParameterSelectors(
+      ContextID CtxID, llvm::StringRef Name,
+      llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors);
+
   /// Look for information regarding the given global variable.
   ///
   /// \param Name The name of the global variable.
@@ -194,6 +200,12 @@ public:
   lookupGlobalFunction(llvm::StringRef Name,
                        llvm::ArrayRef<std::string> Parameters,
                        std::optional<Context> Ctx = std::nullopt);
+
+  /// Collect exact parameter selectors stored for the given global function.
+  void collectGlobalFunctionParameterSelectors(
+      llvm::StringRef Name,
+      llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors,
+      std::optional<Context> Ctx = std::nullopt);
 
   /// Look for information regarding the given enumerator.
   ///

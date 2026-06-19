@@ -19,6 +19,8 @@
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/OnDiskHashTable.h"
+#include <string>
+#include <utility>
 
 namespace clang {
 namespace api_notes {
@@ -833,6 +835,16 @@ public:
   /// optional if the string is unknown.
   std::optional<IdentifierID> getIdentifier(llvm::StringRef Str);
 
+  /// Retrieve the identifier string for the given ID, or an empty optional if
+  /// the ID is unknown.
+  std::optional<llvm::StringRef> getIdentifierString(IdentifierID ID);
+
+  /// Collect exact parameter selectors stored in the given function-like table.
+  template <typename TableT>
+  void collectFunctionParameterSelectors(
+      TableT *Table, uint32_t ParentContextID, llvm::StringRef Name,
+      llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors);
+
   /// Retrieve the selector ID for the given selector, or an empty
   /// optional if the string is unknown.
   std::optional<SelectorID> getSelector(ObjCSelectorRef Selector);
@@ -891,6 +903,56 @@ APINotesReader::Implementation::getIdentifier(llvm::StringRef Str) {
     return std::nullopt;
 
   return *Known;
+}
+
+std::optional<llvm::StringRef>
+APINotesReader::Implementation::getIdentifierString(IdentifierID ID) {
+  if (!IdentifierTable)
+    return std::nullopt;
+
+  if (ID == IdentifierID(0))
+    return llvm::StringRef();
+
+  for (llvm::StringRef Identifier : IdentifierTable->keys()) {
+    auto KnownID = IdentifierTable->find(Identifier);
+    if (KnownID != IdentifierTable->end() && *KnownID == ID)
+      return Identifier;
+  }
+
+  return std::nullopt;
+}
+
+template <typename TableT>
+void APINotesReader::Implementation::collectFunctionParameterSelectors(
+    TableT *Table, uint32_t ParentContextID, llvm::StringRef Name,
+    llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors) {
+  if (!Table)
+    return;
+
+  std::optional<IdentifierID> NameID = getIdentifier(Name);
+  if (!NameID)
+    return;
+
+  for (auto I = Table->key_begin(), E = Table->key_end(); I != E; ++I) {
+    FunctionTableKey Key = I.getInternalKey();
+    if (Key.parentContextID != ParentContextID ||
+        Key.nameID != static_cast<unsigned>(*NameID) || !Key.parameterTypeIDs)
+      continue;
+
+    llvm::SmallVector<std::string, 4> ParameterSelector;
+    ParameterSelector.reserve(Key.parameterTypeIDs->size());
+    bool Failed = false;
+    for (IdentifierID TypeID : *Key.parameterTypeIDs) {
+      std::optional<llvm::StringRef> TypeName = getIdentifierString(TypeID);
+      if (!TypeName) {
+        Failed = true;
+        break;
+      }
+      ParameterSelector.push_back(TypeName->str());
+    }
+    if (!Failed)
+      Selectors.push_back(std::move(ParameterSelector));
+  }
 }
 
 std::optional<FunctionTableKey>
@@ -2351,6 +2413,13 @@ auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
   return lookupCXXMethodImpl(CtxID, Name, Parameters);
 }
 
+void APINotesReader::collectCXXMethodParameterSelectors(
+    ContextID CtxID, llvm::StringRef Name,
+    llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors) {
+  Implementation->collectFunctionParameterSelectors(
+      Implementation->CXXMethodTable.get(), CtxID.Value, Name, Selectors);
+}
+
 auto APINotesReader::lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name)
     -> VersionedInfo<CXXMethodInfo> {
   if (!Implementation->CXXMethodTable)
@@ -2416,6 +2485,16 @@ auto APINotesReader::lookupGlobalFunction(
     llvm::StringRef Name, llvm::ArrayRef<std::string> Parameters,
     std::optional<Context> Ctx) -> VersionedInfo<GlobalFunctionInfo> {
   return lookupGlobalFunctionImpl(Name, Parameters, Ctx);
+}
+
+void APINotesReader::collectGlobalFunctionParameterSelectors(
+    llvm::StringRef Name,
+    llvm::SmallVectorImpl<llvm::SmallVector<std::string, 4>> &Selectors,
+    std::optional<Context> Ctx) {
+  uint32_t ParentContextID = Ctx ? Ctx->id.Value : static_cast<uint32_t>(-1);
+  Implementation->collectFunctionParameterSelectors(
+      Implementation->GlobalFunctionTable.get(), ParentContextID, Name,
+      Selectors);
 }
 
 auto APINotesReader::lookupGlobalFunctionImpl(llvm::StringRef Name,

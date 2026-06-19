@@ -75,3 +75,8 @@ module WhereParametersSema {
   header "WhereParametersSema.h"
   export *
 }
+
+module WhereParametersDiagnostics {
+  header "WhereParametersDiagnostics.h"
+  export *
+}

@@ -1017,6 +1017,50 @@ struct APINotesParameterSelectorCandidates {
   std::optional<APINotesParameterSelector> Desugared;
 };
 
+struct APINotesParameterSelectorSet {
+  SmallVector<APINotesParameterSelector, 4> Selectors;
+
+  void add(const APINotesParameterSelector &Selector) {
+    Selectors.push_back(Selector);
+  }
+
+  void add(ArrayRef<std::string> Parameters) {
+    APINotesParameterSelector Selector;
+    Selector.Parameters.append(Parameters.begin(), Parameters.end());
+    add(Selector);
+  }
+
+  void add(const APINotesParameterSelectorCandidates &Candidates) {
+    add(Candidates.Source);
+    if (Candidates.Desugared)
+      add(*Candidates.Desugared);
+  }
+
+  bool contains(ArrayRef<std::string> Parameters) const {
+    for (const APINotesParameterSelector &Selector : Selectors) {
+      if (Selector.Parameters.size() != Parameters.size())
+        continue;
+
+      bool Matches = true;
+      for (unsigned I = 0, E = Parameters.size(); I != E; ++I) {
+        if (Selector.Parameters[I] == Parameters[I])
+          continue;
+        Matches = false;
+        break;
+      }
+      if (Matches)
+        return true;
+    }
+
+    return false;
+  }
+
+  bool empty() const { return Selectors.empty(); }
+
+  auto begin() const { return Selectors.begin(); }
+  auto end() const { return Selectors.end(); }
+};
+
 static PrintingPolicy
 getAPINotesParameterSelectorPrintingPolicy(const ASTContext &Context) {
   PrintingPolicy Policy(Context.getLangOpts());
@@ -1070,6 +1114,84 @@ getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
     Candidates.Desugared = std::move(Desugared);
 
   return Candidates;
+}
+
+static APINotesParameterSelectorSet
+makeParameterSelectorSet(ArrayRef<SmallVector<std::string, 4>> Selectors) {
+  APINotesParameterSelectorSet Set;
+  for (const SmallVector<std::string, 4> &Selector : Selectors)
+    Set.add(Selector);
+  return Set;
+}
+
+static std::string
+formatParameterSelectorForDiagnostic(ArrayRef<std::string> Parameters) {
+  std::string Result = "[";
+  for (unsigned I = 0, E = Parameters.size(); I != E; ++I) {
+    if (I)
+      Result += ", ";
+    Result += Parameters[I];
+  }
+  Result += "]";
+  return Result;
+}
+
+static void collectOverloadParameterSelectors(const Sema &S,
+                                              const FunctionDecl *FD,
+                                              APINotesParameterSelectorSet &Set,
+                                              bool &IsRepresentative) {
+  IsRepresentative = false;
+  bool FoundRepresentative = false;
+
+  auto AddCandidate = [&](const FunctionDecl *Candidate) {
+    if (!FoundRepresentative) {
+      IsRepresentative =
+          Candidate->getCanonicalDecl() == FD->getCanonicalDecl();
+      FoundRepresentative = true;
+    }
+
+    if (auto Candidates = getAPINotesParameterSelectorCandidates(S, Candidate))
+      Set.add(*Candidates);
+  };
+
+  for (NamedDecl *ND : FD->getDeclContext()->lookup(FD->getDeclName())) {
+    if (auto *Candidate = dyn_cast<FunctionDecl>(ND))
+      AddCandidate(Candidate);
+  }
+
+  if (FoundRepresentative)
+    return;
+
+  for (Decl *D : FD->getDeclContext()->decls()) {
+    auto *ND = dyn_cast<NamedDecl>(D);
+    if (!ND || ND->getDeclName() != FD->getDeclName())
+      continue;
+
+    if (auto *Candidate = dyn_cast<FunctionDecl>(ND))
+      AddCandidate(Candidate);
+  }
+
+  if (!FoundRepresentative)
+    AddCandidate(FD);
+}
+
+static void diagnoseUnmatchedParameterSelectors(
+    Sema &S, SourceLocation Loc, StringRef Name,
+    const APINotesParameterSelectorSet &APINotesSelectors,
+    const APINotesParameterSelectorSet &DeclarationSelectors) {
+  if (DeclarationSelectors.empty())
+    return;
+
+  for (const APINotesParameterSelector &APINotesSelector : APINotesSelectors) {
+    if (DeclarationSelectors.contains(APINotesSelector.Parameters))
+      continue;
+
+    S.Diag(Loc, diag::warn_apinotes_message)
+        << (llvm::Twine("API notes entry for '") + Name +
+            "' has unmatched Where.Parameters " +
+            formatParameterSelectorForDiagnostic(APINotesSelector.Parameters))
+               .str();
+  }
 }
 
 // Apply the first exact selector entry found. This preserves source-spelling
@@ -1131,6 +1253,12 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (FD->getDeclName().isIdentifier()) {
         auto ParameterSelectorCandidates =
             getAPINotesParameterSelectorCandidates(*this, FD);
+
+        APINotesParameterSelectorSet DeclarationSelectors;
+        bool DiagnoseUnmatchedSelectors = false;
+        collectOverloadParameterSelectors(*this, FD, DeclarationSelectors,
+                                          DiagnoseUnmatchedSelectors);
+
         for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
@@ -1143,6 +1271,17 @@ void Sema::ProcessAPINotes(Decl *D) {
                   return Reader->lookupGlobalFunction(FD->getName(), Parameters,
                                                       APINotesContext);
                 });
+
+          if (DiagnoseUnmatchedSelectors && !DeclarationSelectors.empty()) {
+            SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
+            Reader->collectGlobalFunctionParameterSelectors(
+                FD->getName(), RawAPINotesSelectors, APINotesContext);
+            APINotesParameterSelectorSet APINotesSelectors =
+                makeParameterSelectorSet(RawAPINotesSelectors);
+            diagnoseUnmatchedParameterSelectors(
+                *this, FD->getLocation(), FD->getName(), APINotesSelectors,
+                DeclarationSelectors);
+          }
         }
       }
 
@@ -1348,6 +1487,22 @@ void Sema::ProcessAPINotes(Decl *D) {
                     return Reader->lookupCXXMethod(Context->id, MethodName,
                                                    Parameters);
                   });
+
+            APINotesParameterSelectorSet DeclarationSelectors;
+            bool DiagnoseUnmatchedSelectors = false;
+            collectOverloadParameterSelectors(*this, CXXMethod,
+                                              DeclarationSelectors,
+                                              DiagnoseUnmatchedSelectors);
+            if (DiagnoseUnmatchedSelectors && !DeclarationSelectors.empty()) {
+              SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
+              Reader->collectCXXMethodParameterSelectors(
+                  Context->id, MethodName, RawAPINotesSelectors);
+              APINotesParameterSelectorSet APINotesSelectors =
+                  makeParameterSelectorSet(RawAPINotesSelectors);
+              diagnoseUnmatchedParameterSelectors(
+                  *this, CXXMethod->getLocation(), MethodName,
+                  APINotesSelectors, DeclarationSelectors);
+            }
           }
         }
       }

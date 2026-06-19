@@ -1,0 +1,66 @@
+---
+Name: WhereParametersDiagnostics
+Functions:
+- Name: duplicateGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: duplicateGlobalA(_:)
+- Name: duplicateGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: duplicateGlobalB(_:)
+- Name: duplicateEmpty
+  Where:
+    Parameters: []
+  SwiftName: duplicateEmptyA()
+- Name: duplicateEmpty
+  Where:
+    Parameters: []
+  SwiftName: duplicateEmptyB()
+- Name: allowedGlobal
+  SwiftPrivate: true
+- Name: allowedGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: allowedGlobalInt(_:)
+- Name: allowedGlobal
+  Where:
+    Parameters:
+    - double
+  SwiftName: allowedGlobalDouble(_:)
+Tags:
+- Name: DiagnosticWidget
+  Methods:
+  - Name: duplicateMethod
+    Where:
+      Parameters:
+      - int
+    SwiftName: duplicateMethodA(_:)
+  - Name: duplicateMethod
+    Where:
+      Parameters:
+      - int
+    SwiftName: duplicateMethodB(_:)
+  - Name: duplicateEmpty
+    Where:
+      Parameters: []
+    SwiftName: duplicateEmptyA()
+  - Name: duplicateEmpty
+    Where:
+      Parameters: []
+    SwiftName: duplicateEmptyB()
+  - Name: allowed
+    SwiftPrivate: true
+  - Name: allowed
+    Where:
+      Parameters:
+      - int
+    SwiftName: allowedInt(_:)
+  - Name: allowed
+    Where:
+      Parameters:
+      - double
+    SwiftName: allowedDouble(_:)
