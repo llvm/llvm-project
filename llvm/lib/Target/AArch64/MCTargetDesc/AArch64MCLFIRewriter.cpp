@@ -27,9 +27,9 @@
 using namespace llvm;
 
 static cl::opt<bool>
-    NoLFIGuardElim("aarch64-lfi-no-guard-elim", cl::Hidden,
-                   cl::desc("Disable the LFI guard elimination optimization"),
-                   cl::init(false));
+    LFIGuardElim("aarch64-lfi-guard-elim", cl::Hidden,
+                 cl::desc("Enable the LFI guard elimination optimization"),
+                 cl::init(true));
 
 namespace llvm::AArch64 {
 struct LFIVariantEntry {
@@ -277,7 +277,7 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        const MCSubtargetInfo &STI) {
   // If x28 already holds the guarded value of Src, this guard is redundant and
   // can be skipped.
-  if (!NoLFIGuardElim && Dest == LFIAddrReg && ActiveGuard &&
+  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuard &&
       ActiveGuardReg == Src)
     return;
 
