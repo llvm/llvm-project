@@ -551,13 +551,14 @@ public:
 /*Syntax:
 
     ```
-    quantile-type ::= `!quant.quantile` `<` type `:` type `,` `{` float-list `}`
+    quantile-type ::= `!quant.quantile` `<` type `:` type `,` `{` float-list /
+   int-list `}`
    (`,` `<` int `,` int `>`)? `>`
     ```
 
     A quantile type represents a quantile-based floating point encoding, where
-    discrete storage values are totally defined by the floating-point values
-   entries in a quantile lookup table of F8/F16/F32/F64.
+    discrete storage values are totally defined by the floating-point or integer
+   values entries in a quantile lookup table of F8/F16/F32/F64 or integer types.
 
     Optionally, explicit minimum and maximum storage values can be specified
     after the LUT as `<min:max>`.
@@ -587,8 +588,7 @@ public:
 */
 
 class QuantileType
-    : public Type::TypeBase<QuantileType, QuantizedType,
-                            detail::QuantileTypeStorage,
+    : public Type::TypeBase<QuantileType, Type, detail::QuantileTypeStorage,
                             mlir::QuantStorageTypeInterface::Trait> {
 public:
   using ImplType = detail::QuantileTypeStorage;

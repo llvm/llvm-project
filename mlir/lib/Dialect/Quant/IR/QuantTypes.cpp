@@ -41,7 +41,8 @@ unsigned QuantizedType::getFlags() const {
 }
 
 bool QuantizedType::classof(Type type) {
-  return llvm::isa<QuantDialect>(type.getDialect());
+  return llvm::isa<QuantDialect>(type.getDialect()) &&
+         !llvm::isa<QuantileType>(type);
 }
 
 LogicalResult
@@ -578,8 +579,9 @@ LogicalResult QuantileType::verifyInvariants(
     std::optional<int64_t> storageMin, std::optional<int64_t> storageMax) {
   if (!storageType.isIntOrFloat())
     return emitError() << "storage type must be an integer or float type";
-  if (!llvm::isa<mlir::FloatType>(quantileType))
-    return emitError() << "quantile type must be a float type";
+  if (!llvm::isa<mlir::FloatType>(quantileType) &&
+      !llvm::isa<mlir::IntegerType>(quantileType))
+    return emitError() << "quantile type must be a float or integer type";
   if (quantiles.empty())
     return emitError() << "quantile values must not be empty";
   if (storageMin.has_value() != storageMax.has_value())
