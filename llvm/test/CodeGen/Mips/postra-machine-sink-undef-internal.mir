@@ -10,12 +10,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $a0 = LUi 1
-  ; CHECK-NEXT:   renamable $a1 = COPY killed renamable $a0, implicit undef $a2
   ; CHECK-NEXT:   $a2 = LUi 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $a1
+  ; CHECK-NEXT:   liveins: $a0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $a1 = COPY killed renamable $a0, implicit undef $a2
   ; CHECK-NEXT:   RetRA implicit $a1
   bb.0:
     successors: %bb.1

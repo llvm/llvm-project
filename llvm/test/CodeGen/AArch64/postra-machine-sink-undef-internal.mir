@@ -10,12 +10,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $x0, $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x1 = COPY killed renamable $x0, implicit undef $x2
   ; CHECK-NEXT:   $x2 = COPY $xzr
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $x1
+  ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x1 = COPY killed renamable $x0, implicit undef $x2
   ; CHECK-NEXT:   RET_ReallyLR implicit $x1
   bb.0:
     liveins: $x0, $x2

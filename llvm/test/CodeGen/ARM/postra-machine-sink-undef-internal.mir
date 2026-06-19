@@ -10,12 +10,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK-NEXT:   renamable $r1 = COPY killed renamable $r0, implicit undef $r2
   ; CHECK-NEXT:   $r2 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $r1
+  ; CHECK-NEXT:   liveins: $r0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1 = COPY killed renamable $r0, implicit undef $r2
   ; CHECK-NEXT:   BX_RET 14 /* CC::al */, $noreg, implicit $r1
   bb.0:
     successors: %bb.1

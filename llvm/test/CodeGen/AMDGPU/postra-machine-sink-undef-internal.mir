@@ -10,12 +10,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 1
-  ; CHECK-NEXT:   renamable $sgpr1 = COPY killed renamable $sgpr0, implicit undef $vgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY killed renamable $sgpr0, implicit undef $vgpr0
   ; CHECK-NEXT:   S_ENDPGM 0, implicit $sgpr1
   bb.0:
     successors: %bb.1
@@ -40,7 +40,7 @@ body:             |
   ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr1 = COPY killed renamable $sgpr0, implicit-def $vgpr0, implicit internal $vgpr0
   ; CHECK-NEXT:   S_ENDPGM 0, implicit $sgpr1

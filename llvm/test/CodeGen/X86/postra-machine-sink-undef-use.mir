@@ -10,12 +10,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $ebx = MOV32ri 1
-  ; CHECK-NEXT:   renamable $eax = COPY killed renamable $ebx, implicit undef $ecx
   ; CHECK-NEXT:   $ecx = MOV32ri 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $eax
+  ; CHECK-NEXT:   liveins: $ebx
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $eax = COPY killed renamable $ebx, implicit undef $ecx
   ; CHECK-NEXT:   RET 0, $eax
   bb.0:
     successors: %bb.1
@@ -40,7 +40,7 @@ body:             |
   ; CHECK-NEXT:   $edx = MOV32ri 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $ebx, $ecx
+  ; CHECK-NEXT:   liveins: $ebx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $eax = COPY killed renamable $ebx, implicit-def $ecx, implicit internal $ecx
   ; CHECK-NEXT:   RET 0, $eax

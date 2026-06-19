@@ -10,12 +10,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x10 = ADDI $x0, 1
-  ; CHECK-NEXT:   renamable $x11 = COPY killed renamable $x10, implicit undef $x12
   ; CHECK-NEXT:   $x12 = ADDI $x0, 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $x11
+  ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x11 = COPY killed renamable $x10, implicit undef $x12
   ; CHECK-NEXT:   PseudoRET implicit $x11
   bb.0:
     successors: %bb.1
