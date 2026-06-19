@@ -20,8 +20,15 @@ updates:
     directory: "/amd/hipcc/docs/sphinx" # Location of package manifests
     open-pull-requests-limit: 10
     schedule:
-      interval: "daily"
+      interval: "weekly"
     labels:
       - "documentation"
-    reviewers:
-      - "samjwu"
+
+  - package-ecosystem: "pip" # See documentation for possible values
+    directory: "/amd/docs/sphinx" # Location of package manifests
+    open-pull-requests-limit: 10
+    schedule:
+      interval: "weekly"
+    labels:
+      - "documentation"
+      - "dependencies"

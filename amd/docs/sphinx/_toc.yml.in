@@ -1,0 +1,37 @@
+# Anywhere {branch} is used, the branch name will be substituted.
+# These comments will also be removed.
+root: index
+subtrees:
+
+  - caption: Conceptual
+    entries:
+    - file: conceptual/using-gpu-sanitizer.md
+      title: Using AddressSanitizer
+    - file: conceptual/openmp.md
+      title: ROCm OpenMP support
+    - file: conceptual/code-portability.rst
+    - file: conceptual/spirv.rst
+      title: ROCm support for SPIR-V
+
+
+  - caption: Reference
+    entries:
+    - file: reference/rocmcc.rst
+      title: ROCm compiler reference
+    - url: http://rocm.docs.amd.com/projects/llvm-project/en/${branch}/LLVM/clang/html/index.html
+      title: Clang documentation
+    - url: http://rocm.docs.amd.com/projects/llvm-project/en/${branch}/LLVM/clang-tools/html/index.html
+      title: Clang-tools documentation
+    - url: https://rocm.docs.amd.com/projects/HIPCC/en/latest/index.html
+      title: HIPCC documentation
+    - url: https://rocm.docs.amd.com/projects/HIPIFY/en/latest/index.html
+      title: HIPIFY documentation
+    - url: http://rocm.docs.amd.com/projects/llvm-project/en/${branch}/LLVM/lld/html/index.html
+      title: LLD documentation
+    - url: http://rocm.docs.amd.com/projects/llvm-project/en/${branch}/LLVM/llvm/html/index.html
+      title: LLVM documentation
+
+  - caption: About
+    entries:
+    - url: https://github.com/ROCm/llvm-project/blob/amd-staging/LICENSE.TXT
+      title: License
