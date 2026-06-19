@@ -24,6 +24,7 @@ add_orc_rt_unittest(CoreTests
   ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp
   ExecutorProcessInfoTest.cpp
+  InProcessControllerAccessTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   LockedAccessTest.cpp
