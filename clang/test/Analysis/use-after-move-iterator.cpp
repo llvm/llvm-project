@@ -6,13 +6,6 @@
 
 #include "Inputs/system-header-simulator-cxx.h"
 
-//===----------------------------------------------------------------------===//
-// Test suite for test functions that require both MoveChecker.cpp and
-// IteratorModeling.cpp to be enabled.
-// NOTE: Currently the iterator dereference detection is only working when
-// IteratorModeling is enabled.
-//===----------------------------------------------------------------------===//
-
 enum Target {MovedFromSource, Destination};
 
 std::string gh137157_iteratorDerefList(Target trg) {

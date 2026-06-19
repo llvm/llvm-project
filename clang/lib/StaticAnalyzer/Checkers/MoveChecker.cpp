@@ -50,8 +50,8 @@ public:
 
 namespace {
 class MoveChecker
-    : public Checker<check::PreCall, check::PostCall,
-                     check::DeadSymbols, check::RegionChanges, eval::Call> {
+    : public Checker<check::PreCall, check::PostCall, check::DeadSymbols,
+                     check::RegionChanges, eval::Call> {
 public:
   void checkPreCall(const CallEvent &MC, CheckerContext &C) const;
   void checkPostCall(const CallEvent &MC, CheckerContext &C) const;
@@ -240,7 +240,8 @@ REGISTER_MAP_WITH_PROGRAMSTATE(TrackedRegionMap, const MemRegion *, RegionState)
 
 // Custom map designed to track containers whose contents were moved by 3-arg
 // std::move
-REGISTER_MAP_WITH_PROGRAMSTATE(TrackedContentsMap, const MemRegion *, RegionState)
+REGISTER_MAP_WITH_PROGRAMSTATE(TrackedContentsMap, const MemRegion *,
+                               RegionState)
 
 // Define the inter-checker API.
 namespace clang {
@@ -526,8 +527,8 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   if (!ContainerRegion)
     return false;
 
-  const auto *TypedRegion =
-      dyn_cast_if_present<TypedValueRegion>(ContainerRegion);
+  const auto *TypedRegion = dyn_cast<TypedValueRegion>(ContainerRegion);
+
   if (!TypedRegion)
     return false;
 
@@ -558,16 +559,16 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
     return false;
 
   const MemRegion *DestRegion =
-      State->getLValue(DestVD, C.getLocationContext()).getAsRegion();
+      State->getLValue(DestVD, C.getStackFrame()).getAsRegion();
   if (!DestRegion)
     return false;
 
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   SVal ReturnVal = SVB.conjureSymbolVal(Call, C.blockCount());
-  State = State->BindExpr(CE, C.getLocationContext(), ReturnVal);
+  State = State->BindExpr(CE, C.getStackFrame(), ReturnVal);
 
   State = State->invalidateRegions({DestRegion}, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getLocationContext(),
+                                   C.blockCount(), C.getStackFrame(),
                                    /*CausesPointerEscape=*/false);
 
   if (shouldBeTracked(OK))
@@ -738,8 +739,7 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
       if (!ContainerRegion)
         return;
 
-      const auto *TypedRegion =
-          dyn_cast_if_present<TypedValueRegion>(ContainerRegion);
+      const auto *TypedRegion = dyn_cast<TypedValueRegion>(ContainerRegion);
       if (!TypedRegion)
         return;
 
