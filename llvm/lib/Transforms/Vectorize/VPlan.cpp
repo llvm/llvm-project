@@ -1803,7 +1803,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   unsigned AverageVectorTripCount = 0;
   unsigned RemainderAverageTripCount = 0;
   auto EC = VectorLoop->getLoopPreheader()->getParent()->getEntryCount();
-  auto IsProfiled = EC && EC->getCount();
+  auto IsProfiled = EC && *EC != 0;
   if (!OrigAverageTripCount) {
     if (!IsProfiled)
       return;
