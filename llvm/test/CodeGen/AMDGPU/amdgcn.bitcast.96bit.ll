@@ -11708,6 +11708,7 @@ define inreg <6 x half> @bitcast_v6bf16_to_v6f16_scalar(<6 x bfloat> inreg %a, i
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 16, v[4:5]
 ; VI-NEXT:    v_lshrrev_b64 v[0:1], 16, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, v3
+; VI-NEXT:    ; implicit-def: $vgpr3
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ; VI-NEXT:  .LBB49_3:
 ; VI-NEXT:    s_branch .LBB49_2
@@ -12771,6 +12772,7 @@ define inreg <6 x i16> @bitcast_v6bf16_to_v6i16_scalar(<6 x bfloat> inreg %a, i3
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 16, v[4:5]
 ; VI-NEXT:    v_lshrrev_b64 v[0:1], 16, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, v3
+; VI-NEXT:    ; implicit-def: $vgpr3
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ; VI-NEXT:  .LBB53_3:
 ; VI-NEXT:    s_branch .LBB53_2
