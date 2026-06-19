@@ -11,7 +11,7 @@ define i64 @PR203868(i64 %g28, i1 %tobool, i1 %c.next, i64 %arr.init, i64 %ov.in
 ; CHECK-NEXT:    [[OV_NEXT]] = add i64 [[OV_02]], [[OV_INIT:%.*]]
 ; CHECK-NEXT:    br i1 [[C_NEXT:%.*]], label [[BF7]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[ARR1:%.*]] = phi i64 [ [[OV_NEXT]], [[BF7]] ], [ [[ARR_INIT:%.*]], [[BR6]] ]
+; CHECK-NEXT:    [[ARR1:%.*]] = phi i64 [ [[OV_02]], [[BF7]] ], [ [[ARR_INIT:%.*]], [[BR6]] ]
 ; CHECK-NEXT:    ret i64 [[ARR1]]
 ;
 entry:
