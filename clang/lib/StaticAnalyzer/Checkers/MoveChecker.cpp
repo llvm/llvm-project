@@ -738,8 +738,7 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
       if (!ContainerRegion)
         return;
 
-      const auto *TypedRegion =
-          dyn_cast_if_present<TypedValueRegion>(ContainerRegion);
+      const auto *TypedRegion = dyn_cast<TypedValueRegion>(ContainerRegion);
       if (!TypedRegion)
         return;
 
