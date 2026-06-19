@@ -570,9 +570,8 @@ protected:
             runBeforeAdding(InsertedPassT::name());
             break;
           case AfterCallbackControl::Mode::Normal:
-            if (runBeforeAdding(InsertedPassT::name())) {
+            if (runBeforeAdding(InsertedPassT::name()))
               MFPM.addPass(std::forward<InsertedPassT>(Pass));
-            }
             break;
           }
         });
@@ -636,9 +635,8 @@ private:
 
   void runAfterCallbacks(StringRef Name,
                          MachineFunctionPassManager &MFPM) const {
-    for (auto &C : AfterCallbacks) {
+    for (auto &C : AfterCallbacks)
       C(Name, MFPM);
-    }
   }
 
   unsigned probeInsertedTargetPasses(StringRef Name,
