@@ -972,6 +972,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInCommentsStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpacesInCommentsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SICS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::SICS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::SICS_Leave);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
   static void mapping(IO &IO, FormatStyle::SpacesInLineComment &Space) {
     // Transform the maximum to signed, to parse "-1" correctly
@@ -1505,6 +1513,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
     IO.mapOptional("SpacesInAngles", Style.SpacesInAngles);
+    IO.mapOptional("SpacesInComments", Style.SpacesInComments);
     IO.mapOptional("SpacesInContainerLiterals",
                    Style.SpacesInContainerLiterals);
     IO.mapOptional("SpacesInLineCommentPrefix",
@@ -2029,6 +2038,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
+  LLVMStyle.SpacesInComments = FormatStyle::SICS_Leave;
   LLVMStyle.SpacesInContainerLiterals = true;
   LLVMStyle.SpacesInLineCommentPrefix = {
       /*Minimum=*/1, /*Maximum=*/std::numeric_limits<unsigned>::max()};
