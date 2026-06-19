@@ -35,9 +35,6 @@ public:
   bool matchFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo) const;
   void applyFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo) const;
 
-  bool matchFoldFAbsFptrunc(MachineInstr &Fabs, MachineInstr &Fptrunc) const;
-  void applyFoldFAbsFptrunc(MachineInstr &Fabs, MachineInstr &Fptrunc) const;
-
   bool matchExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
                                    Register Src1, Register Src2) const;
   void applyExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
