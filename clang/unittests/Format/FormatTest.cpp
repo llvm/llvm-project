@@ -14394,6 +14394,7 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("{ operator } a");
   verifyNoCrash("decltype( {\n"
                 "  {");
 }
@@ -15423,6 +15424,15 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
   verifyFormat("int f() {\n"
                "}",
+               MergeInlineOnly);
+
+  MergeInlineOnly.NamespaceIndentation = FormatStyle::NI_All;
+  verifyFormat("namespace {\n"
+               "  class Class {\n"
+               "#define MACRO 1\n"
+               "    int f() { return 1; }\n"
+               "  };\n"
+               "} // namespace",
                MergeInlineOnly);
 
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
@@ -22547,6 +22557,8 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash(
+      "  #xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {

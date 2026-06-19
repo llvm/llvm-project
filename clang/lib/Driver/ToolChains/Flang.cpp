@@ -282,6 +282,11 @@ void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     CmdArgs.push_back("-flto=full");
   else if (LTOMode == LTOK_Thin)
     CmdArgs.push_back("-flto=thin");
+
+  if (Args.hasFlag(options::OPT_fsplit_lto_unit,
+                   options::OPT_fno_split_lto_unit, /*Default=*/false))
+    CmdArgs.push_back("-fsplit-lto-unit");
+
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
 }
@@ -1326,7 +1331,17 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
+  // Handle "clang --driver-mode=flang" case
+  bool isClangDriverWithFlangMode = false;
+  std::string DriverName = D.Name;
+  if (const char *PA = D.getPrependArg())
+    DriverName = PA;
+  if (DriverName.find("clang") != std::string::npos && D.IsFlangMode())
+    isClangDriverWithFlangMode = true;
+
+  const char *Exec = isClangDriverWithFlangMode
+                         ? Args.MakeArgString(D.GetProgramPath("flang", TC))
+                         : D.getDriverProgramPath();
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
