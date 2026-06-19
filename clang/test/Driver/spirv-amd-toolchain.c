@@ -17,12 +17,14 @@
 // RUN: %clang -### -ccc-print-bindings -use-spirv-backend --target=spirv64-amd-amdhsa %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=BINDINGS
 
-// RUN: %clang -### --target=spirv64-amd-amdhsa %s 2>&1 \
+// RUN: %clang -### -no-use-spirv-backend --target=spirv64-amd-amdhsa %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=INVOCATION
 // INVOCATION: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-disable-llvm-optzns" {{.*}} "-o" "[[OUTPUT:.+]]" "-x" "c"
 // INVOCATION: "{{.*}}llvm-link" "-o" "[[LINKED_OUTPUT:.+]]" "[[OUTPUT]]"
 // INVOCATION: "{{.*}}llvm-spirv" "--spirv-max-version=1.6" "--spirv-ext=+all" "--spirv-allow-unknown-intrinsics" "--spirv-lower-const-expr" "--spirv-preserve-auxdata" "--spirv-debug-info-version=nonsemantic-shader-200" "[[LINKED_OUTPUT]]" "-o" "a.out"
 
+// RUN: %clang -### --target=spirv64-amd-amdhsa %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=INVOCATION-SPIRV-BACKEND
 // RUN: %clang -### -use-spirv-backend --target=spirv64-amd-amdhsa %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=INVOCATION-SPIRV-BACKEND
 // INVOCATION-SPIRV-BACKEND: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-disable-llvm-optzns" {{.*}} "-o" "[[OUTPUT:.+]]" "-x" "c"

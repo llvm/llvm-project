@@ -688,7 +688,8 @@
 // Test the new driver bundling SPIR-V targets.
 //
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-phases \
-// RUN:        --offload-device-only --offload-arch=amdgcnspirv,gfx1030 %s 2>&1 \
+// RUN:        --offload-device-only -no-use-spirv-backend \
+// RUN:        --offload-arch=amdgcnspirv,gfx1030 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SPIRV-ONLY %s
 //      SPIRV-ONLY: 0: input, "[[INPUT:.+]]", hip, (device-hip, gfx1030)
 // SPIRV-ONLY-NEXT: 1: preprocessor, {0}, hip-cpp-output, (device-hip, gfx1030)
