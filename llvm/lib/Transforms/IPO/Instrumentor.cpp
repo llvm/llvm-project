@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/InstrumentorConfigFile.h"
+#include "llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"
 #include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
@@ -1704,18 +1705,6 @@ Value *NumericIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
   else
     return PoisonValue::get(&Ty);
 }
-
-// NumericIO flag bitmask values.
-enum NumericFlags : uint64_t {
-  NUMERIC_FLAG_NONE = 0,
-  NUMERIC_FLAG_NO_SIGNED_WRAP = 1 << 0,
-  NUMERIC_FLAG_NO_UNSIGNED_WRAP = 1 << 1,
-  NUMERIC_FLAG_HAS_NO_NANS = 1 << 2,
-  NUMERIC_FLAG_HAS_NO_INFS = 1 << 3,
-  NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS = 1 << 4,
-  NUMERIC_FLAG_IS_DISJOINT = 1 << 5,
-  NUMERIC_FLAG_IS_EXACT = 1 << 6,
-};
 
 Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB) {

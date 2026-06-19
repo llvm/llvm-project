@@ -186,7 +186,7 @@ private:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return CCCR_Error;
+      return HasTailCall ? CCCR_OK : CCCR_Error;
     default:
       return CCCR_Warning;
     }

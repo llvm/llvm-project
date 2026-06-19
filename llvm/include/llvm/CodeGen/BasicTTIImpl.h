@@ -3090,18 +3090,33 @@ public:
     case Intrinsic::clmul: {
       // This cost model should match the expansion in
       // TargetLowering::expandCLMUL.
-      InstructionCost PerBitCostMul =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
-          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
           thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost MulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+      // When the multiplication with holes approach is used, that emits 16
+      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
+      if (BW >= 32 && BW <= 64 &&
+          TLI->isOperationLegalOrCustom(ISD::MUL,
+                                        TLI->getValueType(DL, RetTy))) {
+        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+      }
+
+      InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
       InstructionCost PerBitCostBittest =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          AndCost +
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
                                       ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
           thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
-      return RetTy->getScalarSizeInBits() * PerBitCost;
+      return BW * PerBitCost;
     }
     default:
       break;

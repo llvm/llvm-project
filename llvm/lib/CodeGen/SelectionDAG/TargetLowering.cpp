@@ -8897,6 +8897,56 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     // calculation in BasicTTIImpl::getTypeBasedIntrinsicInstrCost for
     // Intrinsic::clmul.
 
+    // Strategy 4: multiplication with holes.
+    //
+    // Uses "holes" (sequences of zeroes) to avoid carry spilling. When carries
+    // do occur, they wind up in a "hole" and are subsequently masked out of the
+    // result.
+    //
+    // A hole of 3 bits is optimal for 32-bit and 64-bit inputs. 128-bit
+    // integers need a larger hole, and for smaller integers the fallback below
+    // is more efficient.
+    //
+    // Based on bmul64 in bearssl and bmul in the rust polyval crate.
+    if (BW >= 32 && BW <= 64 &&
+        isOperationLegalOrCustom(ISD::MUL, getTypeToTransformTo(Ctx, VT))) {
+
+      // Set every fourth bit of each nibble, equivalent to 0b00010001...0001.
+      APInt MaskVal = APInt::getSplat(BW, APInt(4, 0b0001));
+
+      // Create versions of X and Y that keep only the I-th bit of
+      // each nibble.
+      SDValue M[4], Xp[4], Yp[4];
+      for (unsigned I = 0; I < 4; ++I) {
+        M[I] = DAG.getConstant(MaskVal.shl(I), DL, VT);
+        Xp[I] = DAG.getNode(ISD::AND, DL, VT, X, M[I]);
+        Yp[I] = DAG.getNode(ISD::AND, DL, VT, Y, M[I]);
+      }
+
+      // Codegens these expressions (16 multiplications):
+      //
+      // z0 = (x0 * y0) ^ (x1 * y3) ^ (x2 * y2) ^ (x3 * y1);
+      // z1 = (x0 * y1) ^ (x1 * y0) ^ (x2 * y3) ^ (x3 * y2);
+      // z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3);
+      // z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0);
+      SDValue Res = DAG.getConstant(0, DL, VT);
+      for (unsigned I = 0; I < 4; ++I) {
+        SDValue Zi = DAG.getConstant(0, DL, VT);
+        for (unsigned J = 0; J < 4; ++J) {
+          unsigned K = (I + 4 - J) % 4;
+          SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[J], Yp[K]);
+          Zi = DAG.getNode(ISD::XOR, DL, VT, Zi, P);
+        }
+
+        // Keep only the bits belonging to this iteration, and bitwise or it all
+        // together.
+        Zi = DAG.getNode(ISD::AND, DL, VT, Zi, M[I]);
+        Res = DAG.getNode(ISD::OR, DL, VT, Res, Zi, SDNodeFlags::Disjoint);
+      }
+      return Res;
+    }
+
+    // Strategy 5: the naive fallback.
     EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
 
     SDValue Res = DAG.getConstant(0, DL, VT);

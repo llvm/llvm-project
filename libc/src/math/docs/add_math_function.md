@@ -85,13 +85,13 @@ If the function should be available to internal LLVM projects:
 - Floating point utilities and math functions that are also used internally are
 located at:
 ```
-  libc/src/__support/FPUtils
+  libc/src/__support/FPUtil
 ```
 - These are preferred to be included as header-only.
 - To manipulate bits of floating point numbers, use the template class
 `LIBC_NAMESPACE::fputil::FPBits<>` in the header file:
 ```
-  libc/src/__support/FPUtils/FPBits.h
+  libc/src/__support/FPUtil/FPBits.h
 ```
 
 ## Testing

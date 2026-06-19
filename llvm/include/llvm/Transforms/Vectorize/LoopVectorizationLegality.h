@@ -532,7 +532,7 @@ private:
   /// the new code path being implemented for outer loop vectorization
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
-  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath);
+  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath) const;
 
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count

@@ -725,6 +725,7 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
+  /// \pre \p TheLoop has a unique latch.
   LLVM_ABI static bool blockNeedsPredication(const BasicBlock *BB,
                                              const Loop *TheLoop,
                                              const DominatorTree *DT);

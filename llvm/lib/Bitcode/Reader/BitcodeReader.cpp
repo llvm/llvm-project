@@ -697,6 +697,12 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
+  /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
+  /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
+  /// debug records by globalCleanup(); the caller is expected to perform the
+  /// upgrade manually after any custom processing.
+  bool SkipDebugIntrinsicUpgrade = false;
+
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                 StringRef ProducerIdentification, LLVMContext &Context);
@@ -4025,7 +4031,9 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    if (UpgradeIntrinsicFunction(&F, NewFn))
+    if (UpgradeIntrinsicFunction(&F,
+                                 NewFn, /*CanUpgradeDebugIntrinsicsToRecords=*/
+                                 !SkipDebugIntrinsicUpgrade))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4869,6 +4877,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   };
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
+  SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
   return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
