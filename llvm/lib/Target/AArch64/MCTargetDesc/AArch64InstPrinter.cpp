@@ -1586,14 +1586,21 @@ void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
-                   AArch64PSBHint::lookupPSBByEncoding, decodeIdentityHint);
+                   AArch64PSBHint::lookupPSBHintByEncoding, decodePSBHint);
+}
+
+void AArch64InstPrinter::printPCDPHintOp(const MCInst *MI, unsigned OpNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
+                   AArch64PCDPHint::lookupPCDPHintByEncoding, decodePCDPHint);
 }
 
 void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
-                   AArch64BTIHint::lookupBTIByEncoding, decodeBTIHint);
+                   AArch64BTIHint::lookupBTIHintByEncoding, decodeBTIHint);
 }
 
 void AArch64InstPrinter::printSHUHintOp(const MCInst *MI, unsigned OpNum,
@@ -1608,15 +1615,6 @@ void AArch64InstPrinter::printTSBHintOp(const MCInst *MI, unsigned OpNum,
                                         raw_ostream &O) {
   printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
                    AArch64TSBHint::lookupTSBHintByEncoding, decodeTSBHint);
-}
-
-void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
-                                                unsigned OpNum,
-                                                const MCSubtargetInfo &STI,
-                                                raw_ostream &O) {
-  printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
-                   AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding,
-                   decodeIdentityHint);
 }
 
 void AArch64InstPrinter::printTIndexHintOp(const MCInst *MI, unsigned OpNum,
@@ -2266,11 +2264,4 @@ void AArch64InstPrinter::printSyspXzrPair(const MCInst *MI, unsigned OpNum,
   assert(Reg == AArch64::XZR &&
          "MC representation of SyspXzrPair should be XZR");
   O << getRegisterName(Reg) << ", " << getRegisterName(Reg);
-}
-
-void AArch64InstPrinter::printPHintOp(const MCInst *MI, unsigned OpNum,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  printNamedHintOp(MI->getOperand(OpNum).getImm(), O,
-                   AArch64PHint::lookupPHintByEncoding, decodePHint);
 }

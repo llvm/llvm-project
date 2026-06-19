@@ -1566,7 +1566,7 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-def : InstAlias<"stshh $policy", (HINT phint_op:$policy)>;
+def : InstAlias<"stshh $policy", (HINT pcdphint_op:$policy)>;
 def : InstAlias<"shuh", (HINT 50)>;
 def : InstAlias<"shuh $op", (HINT shuhint_op:$op)>;
 def : InstAlias<"stcph", (HINT 52)>;
@@ -1583,7 +1583,6 @@ def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
 def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
-
 def : InstAlias<"tsb $op", (HINT tsbhint_op:$op)>, Requires<[HasTRACEV8_4]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.

@@ -3468,13 +3468,13 @@ _func:
         hint #6
         hint #127
 // CHECK: nop                             // encoding: [0x1f,0x20,0x03,0xd5]
-// CHECK: yield                           // encoding: [0x3f,0x20,0x03,0xd5]
-// CHECK: wfe                             // encoding: [0x5f,0x20,0x03,0xd5]
-// CHECK: wfi                             // encoding: [0x7f,0x20,0x03,0xd5]
-// CHECK: sev                             // encoding: [0x9f,0x20,0x03,0xd5]
-// CHECK: sevl                            // encoding: [0xbf,0x20,0x03,0xd5]
-// CHECK: dgh                             // encoding: [0xdf,0x20,0x03,0xd5]
-// CHECK: hint    #{{127|0x7f}}           // encoding: [0xff,0x2f,0x03,0xd5]
+// CHECK-NEXT: yield                           // encoding: [0x3f,0x20,0x03,0xd5]
+// CHECK-NEXT: wfe                             // encoding: [0x5f,0x20,0x03,0xd5]
+// CHECK-NEXT: wfi                             // encoding: [0x7f,0x20,0x03,0xd5]
+// CHECK-NEXT: sev                             // encoding: [0x9f,0x20,0x03,0xd5]
+// CHECK-NEXT: sevl                            // encoding: [0xbf,0x20,0x03,0xd5]
+// CHECK-NEXT: dgh                             // encoding: [0xdf,0x20,0x03,0xd5]
+// CHECK-NEXT: hint    #{{127|0x7f}}           // encoding: [0xff,0x2f,0x03,0xd5]
 
         nop
         yield
@@ -5027,4 +5027,3 @@ _func:
 // CHECK: ret                                 // encoding: [0xc0,0x03,0x5f,0xd6]
 // CHECK: eret                                // encoding: [0xe0,0x03,0x9f,0xd6]
 // CHECK: drps                                // encoding: [0xe0,0x03,0xbf,0xd6]
-

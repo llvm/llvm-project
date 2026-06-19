@@ -266,11 +266,11 @@ private:
   template <bool IsSVEPrefetch = false>
   ParseStatus tryParsePrefetch(OperandVector &Operands);
   ParseStatus tryParseRPRFMOperand(OperandVector &Operands);
-  ParseStatus tryParsePSBHint(OperandVector &Operands);
-  ParseStatus tryParseBTIHint(OperandVector &Operands);
+  ParseStatus tryParsePSBHintOperand(OperandVector &Operands);
+  ParseStatus tryParsePCDPHintOperand(OperandVector &Operands);
+  ParseStatus tryParseBTIHintOperand(OperandVector &Operands);
   ParseStatus tryParseSHUHintOperand(OperandVector &Operands);
   ParseStatus tryParseTSBHintOperand(OperandVector &Operands);
-  ParseStatus tryParseCMHPriorityHint(OperandVector &Operands);
   ParseStatus tryParseTIndexHint(OperandVector &Operands);
   ParseStatus tryParseAdrpLabel(OperandVector &Operands);
   ParseStatus tryParseAdrLabel(OperandVector &Operands);
@@ -301,7 +301,6 @@ private:
   ParseStatus tryParseGPR64x8(OperandVector &Operands);
   ParseStatus tryParseImmRange(OperandVector &Operands);
   template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
-  ParseStatus tryParsePHintInstOperand(OperandVector &Operands);
   template <typename LookupFn, typename CreateFn>
   ParseStatus tryParseNamedHintOperand(OperandVector &Operands,
                                        LookupFn LookupByName,
@@ -392,11 +391,10 @@ private:
     k_FPImm,
     k_Barrier,
     k_PSBHint,
-    k_PHint,
+    k_PCDPHint,
     k_BTIHint,
     k_SHUHint,
     k_TSBHint,
-    k_CMHPriorityHint,
     k_TIndexHint,
   } Kind;
 
@@ -518,11 +516,10 @@ private:
     unsigned Val;
   };
   using PSBHintOp = NamedHintOp;
-  using PHintOp = NamedHintOp;
+  using PCDPHintOp = NamedHintOp;
   using BTIHintOp = NamedHintOp;
   using SHUHintOp = NamedHintOp;
   using TSBHintOp = NamedHintOp;
-  using CMHPriorityHintOp = NamedHintOp;
   using TIndexHintOp = NamedHintOp;
 
   struct SVCROp {
@@ -548,11 +545,10 @@ private:
     SysCRImmOp SysCRImm;
     PrefetchOp Prefetch;
     PSBHintOp PSBHint;
-    PHintOp PHint;
+    PCDPHintOp PCDPHint;
     BTIHintOp BTIHint;
     SHUHintOp SHUHint;
     TSBHintOp TSBHint;
-    CMHPriorityHintOp CMHPriorityHint;
     TIndexHintOp TIndexHint;
     ShiftExtendOp ShiftExtend;
     SVCROp SVCR;
@@ -618,8 +614,8 @@ public:
     case k_PSBHint:
       PSBHint = o.PSBHint;
       break;
-    case k_PHint:
-      PHint = o.PHint;
+    case k_PCDPHint:
+      PCDPHint = o.PCDPHint;
       break;
     case k_BTIHint:
       BTIHint = o.BTIHint;
@@ -629,9 +625,6 @@ public:
       break;
     case k_TSBHint:
       TSBHint = o.TSBHint;
-      break;
-    case k_CMHPriorityHint:
-      CMHPriorityHint = o.CMHPriorityHint;
       break;
     case k_TIndexHint:
       TIndexHint = o.TIndexHint;
@@ -785,19 +778,9 @@ public:
     return PSBHint.Val;
   }
 
-  unsigned getPHint() const {
-    assert(Kind == k_PHint && "Invalid access!");
-    return PHint.Val;
-  }
-
-  StringRef getPSBHintName() const {
-    assert(Kind == k_PSBHint && "Invalid access!");
-    return StringRef(PSBHint.Data, PSBHint.Length);
-  }
-
-  StringRef getPHintName() const {
-    assert(Kind == k_PHint && "Invalid access!");
-    return StringRef(PHint.Data, PHint.Length);
+  unsigned getPCDPHint() const {
+    assert(Kind == k_PCDPHint && "Invalid access!");
+    return PCDPHint.Val;
   }
 
   unsigned getBTIHint() const {
@@ -815,6 +798,16 @@ public:
     return TSBHint.Val;
   }
 
+  StringRef getPSBHintName() const {
+    assert(Kind == k_PSBHint && "Invalid access!");
+    return StringRef(PSBHint.Data, PSBHint.Length);
+  }
+
+  StringRef getPCDPHintName() const {
+    assert(Kind == k_PCDPHint && "Invalid access!");
+    return StringRef(PCDPHint.Data, PCDPHint.Length);
+  }
+
   StringRef getBTIHintName() const {
     assert(Kind == k_BTIHint && "Invalid access!");
     return StringRef(BTIHint.Data, BTIHint.Length);
@@ -828,16 +821,6 @@ public:
   StringRef getTSBHintName() const {
     assert(Kind == k_TSBHint && "Invalid access!");
     return StringRef(TSBHint.Data, TSBHint.Length);
-  }
-
-  unsigned getCMHPriorityHint() const {
-    assert(Kind == k_CMHPriorityHint && "Invalid access!");
-    return CMHPriorityHint.Val;
-  }
-
-  StringRef getCMHPriorityHintName() const {
-    assert(Kind == k_CMHPriorityHint && "Invalid access!");
-    return StringRef(CMHPriorityHint.Data, CMHPriorityHint.Length);
   }
 
   unsigned getTIndexHint() const {
@@ -1590,11 +1573,10 @@ public:
   bool isSysCR() const { return Kind == k_SysCR; }
   bool isPrefetch() const { return Kind == k_Prefetch; }
   bool isPSBHint() const { return Kind == k_PSBHint; }
-  bool isPHint() const { return Kind == k_PHint; }
+  bool isPCDPHint() const { return Kind == k_PCDPHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
   bool isSHUHint() const { return Kind == k_SHUHint; }
   bool isTSBHint() const { return Kind == k_TSBHint; }
-  bool isCMHPriorityHint() const { return Kind == k_CMHPriorityHint; }
   bool isTIndexHint() const { return Kind == k_TIndexHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
@@ -2271,9 +2253,9 @@ public:
     Inst.addOperand(MCOperand::createImm(getPSBHint()));
   }
 
-  void addPHintOperands(MCInst &Inst, unsigned N) const {
+  void addPCDPHintOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getPHint()));
+    Inst.addOperand(MCOperand::createImm(getPCDPHint()));
   }
 
   void addBTIHintOperands(MCInst &Inst, unsigned N) const {
@@ -2289,11 +2271,6 @@ public:
   void addTSBHintOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getTSBHint()));
-  }
-
-  void addCMHPriorityHintOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getCMHPriorityHint()));
   }
 
   void addTIndexHintOperands(MCInst &Inst, unsigned N) const {
@@ -2589,17 +2566,16 @@ public:
     return Op;
   }
 
-  struct IdentityHintEncoding {
-    unsigned operator()(unsigned Val) const { return Val; }
+  template <unsigned Offset> struct OffsetHintEncoding {
+    unsigned operator()(unsigned Val) const { return Val + Offset; }
   };
 
-  struct BTIHintEncoding {
-    unsigned operator()(unsigned Val) const { return Val | 32; }
-  };
-
-  struct PHintEncoding {
-    unsigned operator()(unsigned Val) const { return Val + 48; }
-  };
+  using IdentityHintEncoding = OffsetHintEncoding<0>;
+  using BTIHintEncoding = OffsetHintEncoding<32>;
+  using PCDPHintEncoding = OffsetHintEncoding<48>;
+  using PSBHintEncoding = OffsetHintEncoding<16>;
+  using SHUHintEncoding = OffsetHintEncoding<50>;
+  using TSBHintEncoding = OffsetHintEncoding<16>;
 
   template <KindTy Kind, NamedHintOp AArch64Operand::*Member,
             typename Encode = IdentityHintEncoding>
@@ -2617,9 +2593,9 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    return CreateNamedHintOperand<k_PHint, &AArch64Operand::PHint>(
-        Val, Str, S, Ctx, PHintEncoding{});
+  CreatePCDPHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    return CreateNamedHintOperand<k_PCDPHint, &AArch64Operand::PCDPHint>(
+        Val, Str, S, Ctx, PCDPHintEncoding{});
   }
 
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
@@ -2644,18 +2620,14 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<AArch64Operand> CreatePSBHint(unsigned Val,
-                                                       StringRef Str,
-                                                       SMLoc S,
-                                                       MCContext &Ctx) {
-    return CreateNamedHintOperand<k_PSBHint, &AArch64Operand::PSBHint>(Val, Str,
-                                                                       S, Ctx);
+  static std::unique_ptr<AArch64Operand>
+  CreatePSBHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    return CreateNamedHintOperand<k_PSBHint, &AArch64Operand::PSBHint>(
+        Val, Str, S, Ctx, PSBHintEncoding{});
   }
 
-  static std::unique_ptr<AArch64Operand> CreateBTIHint(unsigned Val,
-                                                       StringRef Str,
-                                                       SMLoc S,
-                                                       MCContext &Ctx) {
+  static std::unique_ptr<AArch64Operand>
+  CreateBTIHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
     return CreateNamedHintOperand<k_BTIHint, &AArch64Operand::BTIHint,
                                   BTIHintEncoding>(Val, Str, S, Ctx);
   }
@@ -2663,20 +2635,13 @@ public:
   static std::unique_ptr<AArch64Operand>
   CreateSHUHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
     return CreateNamedHintOperand<k_SHUHint, &AArch64Operand::SHUHint>(
-        Val, Str, S, Ctx, [](unsigned EncodedVal) { return EncodedVal + 50; });
+        Val, Str, S, Ctx, SHUHintEncoding{});
   }
 
   static std::unique_ptr<AArch64Operand>
   CreateTSBHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
     return CreateNamedHintOperand<k_TSBHint, &AArch64Operand::TSBHint>(
-        Val, Str, S, Ctx, [](unsigned EncodedVal) { return EncodedVal | 16; });
-  }
-
-  static std::unique_ptr<AArch64Operand>
-  CreateCMHPriorityHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    return CreateNamedHintOperand<k_CMHPriorityHint,
-                                  &AArch64Operand::CMHPriorityHint>(Val, Str, S,
-                                                                    Ctx);
+        Val, Str, S, Ctx, TSBHintEncoding{});
   }
 
   static std::unique_ptr<AArch64Operand>
@@ -2789,8 +2754,8 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   case k_PSBHint:
     OS << getPSBHintName();
     break;
-  case k_PHint:
-    OS << getPHintName();
+  case k_PCDPHint:
+    OS << getPCDPHintName();
     break;
   case k_BTIHint:
     OS << getBTIHintName();
@@ -2800,9 +2765,6 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case k_TSBHint:
     OS << getTSBHintName();
-    break;
-  case k_CMHPriorityHint:
-    OS << getCMHPriorityHintName();
     break;
   case k_TIndexHint:
     OS << getTIndexHintName();
@@ -3363,9 +3325,9 @@ ParseStatus AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-/// tryParsePSBHint - Try to parse a PSB operand, mapped to Hint command
-ParseStatus AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
-  return tryParseNamedHintOperand(Operands, AArch64PSBHint::lookupPSBByName,
+/// tryParsePSBHintOperand - Try to parse a PSB operand, mapped to Hint command
+ParseStatus AArch64AsmParser::tryParsePSBHintOperand(OperandVector &Operands) {
+  return tryParseNamedHintOperand(Operands, AArch64PSBHint::lookupPSBHintByName,
                                   AArch64Operand::CreatePSBHint);
 }
 
@@ -3402,17 +3364,10 @@ ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-/// tryParseBTIHint - Try to parse a BTI operand, mapped to Hint command
-ParseStatus AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
-  return tryParseNamedHintOperand(Operands, AArch64BTIHint::lookupBTIByName,
+/// tryParseBTIHintOperand - Try to parse a BTI operand, mapped to Hint command
+ParseStatus AArch64AsmParser::tryParseBTIHintOperand(OperandVector &Operands) {
+  return tryParseNamedHintOperand(Operands, AArch64BTIHint::lookupBTIHintByName,
                                   AArch64Operand::CreateBTIHint);
-}
-
-/// tryParseCMHPriorityHint - Try to parse a CMHPriority operand
-ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
-  return tryParseNamedHintOperand(
-      Operands, AArch64CMHPriorityHint::lookupCMHPriorityHintByName,
-      AArch64Operand::CreateCMHPriorityHint);
 }
 
 /// tryParseTIndexHint - Try to parse a TIndex operand
@@ -4342,15 +4297,15 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return TokError("invalid operand for instruction");
 
   StringRef Operand = Tok.getString();
-  bool IsTSB = Mnemonic == "tsb" && Operand == "csync";
+  auto TSB = AArch64TSBHint::lookupTSBHintByName(Operand);
   auto DB = AArch64DB::lookupDBByName(Operand);
   // The only valid named option for ISB is 'sy'
   if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy))
     return TokError("'sy' or #imm operand expected");
   // The only valid named option for TSB is 'csync'
-  if (Mnemonic == "tsb" && !IsTSB)
+  if (Mnemonic == "tsb" && (!TSB || TSB->Encoding != AArch64TSBHint::csync))
     return TokError("'csync' operand expected");
-  if (!DB && !IsTSB) {
+  if (!DB && (Mnemonic != "tsb" || !TSB)) {
     if (Mnemonic == "dsb") {
       // This case is a no match here, but it might be matched by the nXS
       // variant.
@@ -4360,8 +4315,8 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   }
 
   Operands.push_back(AArch64Operand::CreateBarrier(
-      DB ? DB->Encoding : 2, Tok.getString(), getLoc(), getContext(),
-      false /*hasnXSModifier*/));
+      DB ? DB->Encoding : TSB->Encoding, Tok.getString(), getLoc(),
+      getContext(), false /*hasnXSModifier*/));
   Lex(); // Consume the option
 
   return ParseStatus::Success;
@@ -4448,10 +4403,10 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus
-AArch64AsmParser::tryParsePHintInstOperand(OperandVector &Operands) {
-  return tryParseNamedHintOperand(Operands, AArch64PHint::lookupPHintByName,
-                                  AArch64Operand::CreatePHintInst);
+ParseStatus AArch64AsmParser::tryParsePCDPHintOperand(OperandVector &Operands) {
+  return tryParseNamedHintOperand(Operands,
+                                  AArch64PCDPHint::lookupPCDPHintByName,
+                                  AArch64Operand::CreatePCDPHint);
 }
 
 ParseStatus AArch64AsmParser::tryParseSHUHintOperand(OperandVector &Operands) {

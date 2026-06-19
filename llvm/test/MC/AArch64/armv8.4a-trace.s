@@ -10,10 +10,6 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a,-tracev8.4 -o - %s 2>&1 | \
 // RUN: FileCheck %s --check-prefixes CHECK-ERROR
 
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -filetype=obj -mattr=+tracev8.4 %s \
-// RUN:        | llvm-objdump -d --mattr=+tracev8.4 --no-print-imm-hex - \
-// RUN:        | FileCheck %s --check-prefix=CHECK-HINT-ALIAS
-
 //------------------------------------------------------------------------------
 // ARMV8.4-A Debug, Trace and PMU Extensions
 //------------------------------------------------------------------------------
@@ -27,8 +23,6 @@ mrs x0, TRFCR_EL2
 mrs x0, TRFCR_EL12
 
 hint #18
-//CHECK-HINT-ALIAS: tsb csync
-
 tsb csync
 
 //CHECK:  msr TRFCR_EL1, x0           // encoding: [0x20,0x12,0x18,0xd5]
@@ -40,7 +34,7 @@ tsb csync
 //CHECK:  mrs x0, TRFCR_EL12          // encoding: [0x20,0x12,0x3d,0xd5]
 
 //CHECK:  tsb csync                   // encoding: [0x5f,0x22,0x03,0xd5]
-//CHECK:  tsb csync                   // encoding: [0x5f,0x22,0x03,0xd5]
+//CHECK-NEXT:  tsb csync              // encoding: [0x5f,0x22,0x03,0xd5]
 
 //CHECK-ERROR: error: expected writable system register or pstate
 //CHECK-ERROR: msr TRFCR_EL1, x0

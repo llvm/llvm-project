@@ -150,6 +150,9 @@ protected:
   void printPSBHintOp(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
 
+  void printPCDPHintOp(const MCInst *MI, unsigned OpNum,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printBTIHintOp(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
 
@@ -158,9 +161,6 @@ protected:
 
   void printTSBHintOp(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
-
-  void printCMHPriorityHintOp(const MCInst *MI, unsigned OpNum,
-                              const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printTIndexHintOp(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
@@ -173,10 +173,11 @@ protected:
                         LookupFn LookupByEncoding, DecodeFn DecodeValue);
 
   static unsigned decodeIdentityHint(unsigned Value) { return Value; }
-  static unsigned decodeBTIHint(unsigned Value) { return Value ^ 32; }
-  static unsigned decodePHint(unsigned Value) { return Value - 48; }
+  static unsigned decodePSBHint(unsigned Value) { return Value - 16; }
+  static unsigned decodePCDPHint(unsigned Value) { return Value - 48; }
+  static unsigned decodeBTIHint(unsigned Value) { return Value - 32; }
   static unsigned decodeSHUHint(unsigned Value) { return Value - 50; }
-  static unsigned decodeTSBHint(unsigned Value) { return Value ^ 16; }
+  static unsigned decodeTSBHint(unsigned Value) { return Value - 16; }
 
   void printVectorList(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O,
@@ -261,8 +262,6 @@ protected:
   template <unsigned ImmIs0, unsigned ImmIs1>
   void printExactFPImm(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printPHintOp(const MCInst *MI, unsigned OpNum,
-                    const MCSubtargetInfo &STI, raw_ostream &O);
 };
 
 class AArch64AppleInstPrinter : public AArch64InstPrinter {

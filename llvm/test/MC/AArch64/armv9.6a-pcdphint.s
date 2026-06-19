@@ -13,7 +13,7 @@ hint #48
 // CHECK-ENCODING: encoding: [0x1f,0x26,0x03,0xd5]
 
 hint #49
-// CHECK-HINT-ALIAS: stshh strm
+// CHECK-HINT-ALIAS-NEXT: stshh strm
 // CHECK-ENCODING: encoding: [0x3f,0x26,0x03,0xd5]
 
 stshh keep

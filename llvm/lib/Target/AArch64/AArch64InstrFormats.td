@@ -1861,60 +1861,36 @@ let mayStore = 1, mayLoad = 1, hasSideEffects = 1 in
     let Inst{11-5} = imm;
   }
 
-def PHintInstOperand : AsmOperandClass {
-    let Name = "PHint";
-    let ParserMethod = "tryParsePHintInstOperand";
+def PCDPHintOperand : AsmOperandClass {
+  let Name = "PCDPHint";
+  let ParserMethod = "tryParsePCDPHintOperand";
 }
 
-def phint_op : Operand<i32> {
-    let ParserMatchClass = PHintInstOperand;
-    let PrintMethod = "printPHintOp";
-    let MCOperandPredicate = [{
-      if (!MCOp.isImm() || MCOp.getImm() < 48)
-        return false;
-      return AArch64PHint::lookupPHintByEncoding(MCOp.getImm() - 48) != nullptr;
-    }];
-    let OperandType = "OPERAND_IMMEDIATE";
-    let MIOperandInfo = (ops i32imm: $policy);
-    let DecoderMethod = "DecodeUImm<7>";
-}
-
-def TSBHintOperand : AsmOperandClass {
-    let Name = "TSBHint";
-    let ParserMethod = "tryParseTSBHintOperand";
-}
-
-def tsbhint_op : Operand<i32> {
-    let ParserMatchClass = TSBHintOperand;
-    let PrintMethod = "printTSBHintOp";
-    let MCOperandPredicate = [{
-      if (!MCOp.isImm() || MCOp.getImm() < 16)
-        return false;
-      return AArch64TSBHint::lookupTSBHintByEncoding(MCOp.getImm() - 16) !=
-             nullptr;
-    }];
-    let OperandType = "OPERAND_IMMEDIATE";
-    let MIOperandInfo = (ops i32imm: $policy);
-    let DecoderMethod = "DecodeUImm<7>";
+def pcdphint_op : Operand<i32> {
+  let ParserMatchClass = PCDPHintOperand;
+  let PrintMethod = "printPCDPHintOp";
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm() || MCOp.getImm() < 48)
+      return false;
+    return AArch64PCDPHint::lookupPCDPHintByEncoding(MCOp.getImm() - 48);
+  }];
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def SHUHintOperand : AsmOperandClass {
-    let Name = "SHUHint";
-    let ParserMethod = "tryParseSHUHintOperand";
+  let Name = "SHUHint";
+  let ParserMethod = "tryParseSHUHintOperand";
 }
 
 def shuhint_op : Operand<i32> {
-    let ParserMatchClass = SHUHintOperand;
-    let PrintMethod = "printSHUHintOp";
-    let MCOperandPredicate = [{
-      if (!MCOp.isImm() || MCOp.getImm() < 50)
-        return false;
-      return AArch64SHUHint::lookupSHUHintByEncoding(MCOp.getImm() - 50) !=
-             nullptr;
-    }];
-    let OperandType = "OPERAND_IMMEDIATE";
-    let MIOperandInfo = (ops i32imm: $priority);
-    let DecoderMethod = "DecodeUImm<7>";
+  let ParserMatchClass = SHUHintOperand;
+  let PrintMethod = "printSHUHintOp";
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm() || MCOp.getImm() < 50)
+      return false;
+    return AArch64SHUHint::lookupSHUHintByEncoding(MCOp.getImm() - 50);
+  }];
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 // System instructions taking a single literal operand which encodes into
@@ -1987,7 +1963,7 @@ def msr_sysreg_op : Operand<i32> {
 
 def PSBHintOperand : AsmOperandClass {
   let Name = "PSBHint";
-  let ParserMethod = "tryParsePSBHint";
+  let ParserMethod = "tryParsePSBHintOperand";
 }
 def psbhint_op : Operand<i32> {
   let ParserMatchClass = PSBHintOperand;
@@ -1995,16 +1971,34 @@ def psbhint_op : Operand<i32> {
   let MCOperandPredicate = [{
     // Check, if operand is valid, to fix exhaustive aliasing in disassembly.
     // "psb" is an alias to "hint" only for certain values of CRm:Op2 fields.
-    if (!MCOp.isImm())
+    if (!MCOp.isImm() || MCOp.getImm() < 16)
       return false;
-    return AArch64PSBHint::lookupPSBByEncoding(MCOp.getImm()) != nullptr;
+    return AArch64PSBHint::lookupPSBHintByEncoding(MCOp.getImm() - 16);
+  }];
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def TSBHintOperand : AsmOperandClass {
+  let Name = "TSBHint";
+  let ParserMethod = "tryParseTSBHintOperand";
+}
+
+def tsbhint_op : Operand<i32> {
+  let ParserMatchClass = TSBHintOperand;
+  let PrintMethod = "printTSBHintOp";
+  let MCOperandPredicate = [{
+    // Check, if operand is valid, to fix exhaustive aliasing in disassembly.
+    // "tsb" is an alias to "hint" only for certain values of CRm:Op2 fields.
+    if (!MCOp.isImm() || MCOp.getImm() < 16)
+      return false;
+    return AArch64TSBHint::lookupTSBHintByEncoding(MCOp.getImm() - 16);
   }];
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def BTIHintOperand : AsmOperandClass {
   let Name = "BTIHint";
-  let ParserMethod = "tryParseBTIHint";
+  let ParserMethod = "tryParseBTIHintOperand";
 }
 def btihint_op : Operand<i32> {
   let ParserMatchClass = BTIHintOperand;
@@ -2014,22 +2008,6 @@ def btihint_op : Operand<i32> {
     if (!MCOp.isImm())
       return false;
     return AArch64BTIHint::isHintSpaceBTI(MCOp.getImm());
-  }];
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def CMHPriorityHintOperand : AsmOperandClass {
-  let Name = "CMHPriorityHint";
-  let ParserMethod = "tryParseCMHPriorityHint";
-}
-
-def CMHPriorityHint_op : Operand<i32> {
-  let ParserMatchClass = CMHPriorityHintOperand;
-  let PrintMethod = "printCMHPriorityHintOp";
-  let MCOperandPredicate = [{
-    if (!MCOp.isImm())
-      return false;
-    return AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(MCOp.getImm()) != nullptr;
   }];
   let OperandType = "OPERAND_IMMEDIATE";
 }

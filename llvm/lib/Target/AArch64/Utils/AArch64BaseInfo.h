@@ -692,52 +692,33 @@ namespace AArch64PState {
 }
 
 namespace AArch64PSBHint {
-  struct PSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_PSBValues_DECL
-#define GET_PSBsList_DECL
+struct PSBHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_PSBHINT_DECL
 #include "AArch64GenSystemOperands.inc"
-}
+} // namespace AArch64PSBHint
 
-namespace AArch64PHint {
-struct PHint : SysAlias {
+namespace AArch64PCDPHint {
+struct PCDPHint : SysAlias {
   using SysAlias::SysAlias;
 };
 
-#define GET_PHINT_DECL
+#define GET_PCDPHINT_DECL
 #include "AArch64GenSystemOperands.inc"
-} // namespace AArch64PHint
-
-namespace AArch64TSBHint {
-struct TSBHint : SysAlias {
-  using SysAlias::SysAlias;
-};
-
-#define GET_TSBHINT_DECL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64TSBHint
+} // namespace AArch64PCDPHint
 
 namespace AArch64BTIHint {
-  struct BTI : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_BTIValues_DECL
-#define GET_BTIsList_DECL
+struct BTIHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_BTIHINT_DECL
 #include "AArch64GenSystemOperands.inc"
 
   inline static bool isHintSpaceBTI(int64_t Imm) {
-    return Imm >= 32 && Imm < 64 && lookupBTIByEncoding(Imm ^ 32);
+    return Imm >= 32 && Imm < 64 && lookupBTIHintByEncoding(Imm - 32);
   }
 }
-
-namespace AArch64CMHPriorityHint {
-struct CMHPriorityHint : SysAlias {
-  using SysAlias::SysAlias;
-};
-#define GET_CMHPRIORITYHINT_DECL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64CMHPriorityHint
 
 namespace AArch64SHUHint {
 struct SHUHint : SysAlias {
@@ -747,6 +728,15 @@ struct SHUHint : SysAlias {
 #define GET_SHUHINT_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64SHUHint
+
+namespace AArch64TSBHint {
+struct TSBHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+
+#define GET_TSBHINT_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TSBHint
 
 namespace AArch64TIndexHint {
 struct TIndex : SysAlias {

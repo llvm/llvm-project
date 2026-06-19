@@ -19,11 +19,11 @@ hint #50
 // CHECK-ENCODING: encoding: [0x5f,0x26,0x03,0xd5]
 
 hint #51
-// CHECK-HINT-ALIAS: shuh  ph
+// CHECK-HINT-ALIAS-NEXT: shuh  ph
 // CHECK-ENCODING: encoding: [0x7f,0x26,0x03,0xd5]
 
 hint #52
-// CHECK-HINT-ALIAS: stcph
+// CHECK-HINT-ALIAS-NEXT: stcph
 // CHECK-ENCODING: encoding: [0x9f,0x26,0x03,0xd5]
 
 shuh
