@@ -17,7 +17,6 @@
 #include "llvm/ADT/Repeated.h"
 #include <cassert>
 #include <optional>
-#include <utility>
 
 namespace mlir {
 namespace memref {
@@ -199,44 +198,9 @@ public:
   }
 };
 
-/// Returns the mapping of preserved non-unit dimensions from the source MemRef
-/// to the result MemRef if both MemRefs have the same non-unit dimensions in
-/// the same order. Unit dimensions may be inserted or removed at any in-bounds
-/// position.
-static std::optional<SmallVector<std::pair<int64_t, int64_t>>>
-getNonUnitDimMapping(MemRefType inputTy, MemRefType outputTy) {
-  ArrayRef<int64_t> inputShape = inputTy.getShape();
-  ArrayRef<int64_t> outputShape = outputTy.getShape();
-  int64_t inputDim = 0;
-  int64_t outputDim = 0;
-  int64_t inputRank = inputTy.getRank();
-  int64_t outputRank = outputTy.getRank();
-  SmallVector<std::pair<int64_t, int64_t>> mapping;
-
-  while (inputDim < inputRank && outputDim < outputRank) {
-    if (inputShape[inputDim] == 1) {
-      ++inputDim;
-      continue;
-    }
-    if (outputShape[outputDim] == 1) {
-      ++outputDim;
-      continue;
-    }
-
-    if (inputDim == inputRank || outputDim == outputRank)
-      return std::nullopt;
-
-    if (ShapedType::isDynamic(inputShape[inputDim]) ||
-        ShapedType::isDynamic(outputShape[outputDim]) ||
-        inputShape[inputDim] != outputShape[outputDim])
-      return std::nullopt;
-
-    mapping.push_back({inputDim, outputDim});
-    ++inputDim;
-    ++outputDim;
-  }
-  return mapping;
-}
+//===----------------------------------------------------------------------===//
+// Load Rewrite Helpers
+//===----------------------------------------------------------------------===//
 
 static bool hasStaticZeroOffset(memref::ReinterpretCastOp rc) {
   ArrayRef<int64_t> offsets = rc.getStaticOffsets();
@@ -263,14 +227,22 @@ static bool isConstantIndexExplicitlyOutOfBounds(Value idx,
   return idxVal && (*idxVal < 0 || *idxVal >= upperBound);
 }
 
-/// Examples accepted by this shape restriction:
+using NonUnitDimMapping = SmallVector<std::pair<int64_t, int64_t>>;
+
+/// Shape restriction accepting only unit-dim insertion/removal
+/// reinterpret_casts.
+///
+/// Examples accepted:
 ///   memref<1x1x1x108xf32>    <-> memref<1x108xf32>
 ///   memref<100x1xf32>        <-> memref<100x1x1xf32>
 ///   memref<1x33x40xf32>      <-> memref<33x1x1x40xf32>
 ///   memref<1>                <-> memref<1x1x1>
 ///
-/// General reinterpret_casts are intentionally rejected.
-static bool isUnitDimInsertionOrRemovalRC(memref::ReinterpretCastOp rc) {
+/// Returns the mapping of non-unit dimensions from the source
+/// to the result MemRef if the reinterpret_cast preserved sizes and order (no
+/// transposition) of these dimensions.
+static std::optional<NonUnitDimMapping>
+getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
   auto inputTy = cast<MemRefType>(rc.getSource().getType());
   auto outputTy = cast<MemRefType>(rc.getResult().getType());
 
@@ -278,19 +250,47 @@ static bool isUnitDimInsertionOrRemovalRC(memref::ReinterpretCastOp rc) {
   // offsets would require reasoning about storage shifts in the underlying
   // reinterpret_cast, which this helper does not model.
   if (!hasStaticZeroOffset(rc))
-    return false;
+    return std::nullopt;
 
   // Dynamic sizes/strides prevent precise reasoning about the underlying
   // reinterpret_cast, so only fully static shape metadata is accepted.
   if (llvm::any_of(rc.getStaticSizes(), ShapedType::isDynamic) ||
       llvm::any_of(rc.getStaticStrides(), ShapedType::isDynamic))
-    return false;
+    return std::nullopt;
 
-  // Only unit-dim insertion/removal is accepted. The preserved non-unit
-  // dimensions must have the same static sizes and appear in the same order.
-  if (!getNonUnitDimMapping(inputTy, outputTy))
-    return false;
-  return true;
+  ArrayRef<int64_t> inputShape = inputTy.getShape();
+  ArrayRef<int64_t> outputShape = outputTy.getShape();
+  int64_t inputDim = 0;
+  int64_t outputDim = 0;
+  int64_t inputRank = inputTy.getRank();
+  int64_t outputRank = outputTy.getRank();
+  NonUnitDimMapping mapping;
+
+  // The preserved non-unit dimensions must have the same static sizes and
+  // appear in the same order.
+  while (inputDim < inputRank || outputDim < outputRank) {
+    if (inputDim < inputRank && inputShape[inputDim] == 1) {
+      ++inputDim;
+      continue;
+    }
+    if (outputDim < outputRank && outputShape[outputDim] == 1) {
+      ++outputDim;
+      continue;
+    }
+
+    if (inputDim == inputRank || outputDim == outputRank)
+      return std::nullopt;
+
+    if (ShapedType::isDynamic(inputShape[inputDim]) ||
+        ShapedType::isDynamic(outputShape[outputDim]) ||
+        inputShape[inputDim] != outputShape[outputDim])
+      return std::nullopt;
+
+    mapping.push_back({inputDim, outputDim});
+    ++inputDim;
+    ++outputDim;
+  }
+  return mapping;
 }
 
 /// Checks statically known and constant indices accessed by a load from a
@@ -314,8 +314,8 @@ static bool isUnitDimInsertionOrRemovalRC(memref::ReinterpretCastOp rc) {
 
 /// Rewrites `memref.load` through a reinterpret_cast that only inserts/removes
 /// unit dimensions by mapping the load indices directly onto the source MemRef.
-
-/// Shape restriction gated by isUnitDimInsertionOrRemovalRC().
+///
+/// Shape restriction gated by getNonUnitDimMapping().
 ///
 /// BEFORE (rank expansion)
 ///   %view = memref.reinterpret_cast %src
@@ -343,7 +343,8 @@ public:
     if (!rc)
       return rewriter.notifyMatchFailure(
           op, "target is not a memref.reinterpret_cast");
-    if (!isUnitDimInsertionOrRemovalRC(rc))
+    std::optional<NonUnitDimMapping> dimMapping = getNonUnitDimMapping(rc);
+    if (!dimMapping)
       return rewriter.notifyMatchFailure(
           op, "reinterpret_cast is not a unit-dim insertion/removal preserving "
               "non-unit dimensions");
@@ -351,16 +352,11 @@ public:
     assert(areIndicesInBounds(op) &&
            "load from reinterpret_cast indexes out of bounds!");
 
-    auto rcOutputTy = cast<MemRefType>(rc.getResult().getType());
     auto rcInputTy = cast<MemRefType>(rc.getSource().getType());
 
     int64_t rcInputRank = rcInputTy.getRank();
 
     SmallVector<Value> oldIdxs(op.getIndices().begin(), op.getIndices().end());
-
-    std::optional<SmallVector<std::pair<int64_t, int64_t>>> dimMapping =
-        getNonUnitDimMapping(rcInputTy, rcOutputTy);
-    assert(dimMapping && "expected matching non-unit dims");
 
     // Prefer reusing an explicit constant-zero index from the old load.
     Value zeroIndex;
@@ -408,7 +404,7 @@ struct ElideReinterpretCastPass
       auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
       if (!rc)
         return true;
-      return !isUnitDimInsertionOrRemovalRC(rc);
+      return !getNonUnitDimMapping(rc);
     });
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
