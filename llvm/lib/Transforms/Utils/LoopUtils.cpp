@@ -1153,6 +1153,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicID(Intrinsic::ID IID) {
     return Intrinsic::vector_reduce_smin;
   case Intrinsic::smax:
     return Intrinsic::vector_reduce_smax;
+  case Intrinsic::minimum:
+    return Intrinsic::vector_reduce_fminimum;
+  case Intrinsic::maximum:
+    return Intrinsic::vector_reduce_fmaximum;
   }
 }
 

@@ -234,6 +234,129 @@ define i16 @test_reduce_v6i16_xor_neg(<6 x i16> %a0) {
   ret i16 %7
 }
 
+define float @test_reduce_v8f32_fmaximum(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_fmaximum(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <8 x float> @llvm.maximum.v8f32(<8 x float> %a0, <8 x float> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <8 x float> @llvm.maximum.v8f32(<8 x float> %2, <8 x float> %3)
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <8 x float> @llvm.maximum.v8f32(<8 x float> %4, <8 x float> %5)
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+define float @test_reduce_v8f32_fminimum(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_fminimum(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <8 x float> @llvm.minimum.v8f32(<8 x float> %a0, <8 x float> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <8 x float> @llvm.minimum.v8f32(<8 x float> %2, <8 x float> %3)
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <8 x float> @llvm.minimum.v8f32(<8 x float> %4, <8 x float> %5)
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+; Negative tests: maxnum/minnum/maximumnum/minimumnum reductions map to
+; llvm.vector.reduce.fmax/fmin, whose comparison order is non-deterministic for
+; signaling-NaN inputs, so these chains are intentionally not folded.
+define float @test_reduce_v8f32_maxnum_neg(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_maxnum_neg(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0]], <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[A0]], <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP6]], i64 0
+; CHECK-NEXT:    ret float [[TMP7]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <8 x float> @llvm.maxnum.v8f32(<8 x float> %a0, <8 x float> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <8 x float> @llvm.maxnum.v8f32(<8 x float> %2, <8 x float> %3)
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <8 x float> @llvm.maxnum.v8f32(<8 x float> %4, <8 x float> %5)
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+define float @test_reduce_v8f32_minnum_neg(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_minnum_neg(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0]], <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x float> @llvm.minnum.v8f32(<8 x float> [[A0]], <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x float> @llvm.minnum.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x float> @llvm.minnum.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP6]], i64 0
+; CHECK-NEXT:    ret float [[TMP7]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <8 x float> @llvm.minnum.v8f32(<8 x float> %a0, <8 x float> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <8 x float> @llvm.minnum.v8f32(<8 x float> %2, <8 x float> %3)
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <8 x float> @llvm.minnum.v8f32(<8 x float> %4, <8 x float> %5)
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+define float @test_reduce_v8f32_maximumnum_neg(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_maximumnum_neg(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0]], <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x float> @llvm.maximumnum.v8f32(<8 x float> [[A0]], <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x float> @llvm.maximumnum.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x float> @llvm.maximumnum.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP6]], i64 0
+; CHECK-NEXT:    ret float [[TMP7]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %a0, <8 x float> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %2, <8 x float> %3)
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %4, <8 x float> %5)
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+define float @test_reduce_v8f32_minimumnum_neg(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_minimumnum_neg(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0]], <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x float> @llvm.minimumnum.v8f32(<8 x float> [[A0]], <8 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <8 x float> @llvm.minimumnum.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <8 x float> @llvm.minimumnum.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP6]], i64 0
+; CHECK-NEXT:    ret float [[TMP7]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = tail call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %a0, <8 x float> %1)
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = tail call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %2, <8 x float> %3)
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = tail call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %4, <8 x float> %5)
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
 ; Partial reduction: reduce lower 8 elements of a 16-element vector using smax.
 define i16 @test_partial_reduce_v16i16_v8i16_smax(<16 x i16> %a0) {
 ; CHECK-LABEL: define i16 @test_partial_reduce_v16i16_v8i16_smax(
