@@ -103,13 +103,10 @@ define <vscale x 2 x i64> @masked_gather_nxv1i64(ptr %base, <vscale x 2 x i64> %
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, lsl #3]
 ; CHECK-NEXT:    ret
-  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(
-      <vscale x 2 x i64> %wide.offsets, i64 0)
+  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
   %ptrs = getelementptr i64, ptr %base, <vscale x 1 x i64> %offsets
-  %r = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64(
-      <vscale x 1 x ptr> %ptrs, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
-  %r.legal = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(
-      <vscale x 2 x i64> poison, <vscale x 1 x i64> %r, i64 0)
+  %r = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64(<vscale x 1 x ptr> align 8 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
+  %r.legal = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %r, i64 0)
   ret <vscale x 2 x i64> %r.legal
 }
 

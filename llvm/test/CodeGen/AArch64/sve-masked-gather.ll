@@ -108,12 +108,9 @@ define <vscale x 16 x i8> @masked_gather_nxv1i8(<vscale x 2 x ptr> %wide.ptrs, <
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %r = call <vscale x 1 x i8> @llvm.masked.gather.nxv1i8(
-      <vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> poison)
-  %r.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(
-      <vscale x 16 x i8> poison, <vscale x 1 x i8> %r, i64 0)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %r = call <vscale x 1 x i8> @llvm.masked.gather.nxv1i8(<vscale x 1 x ptr> align 1 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i8> poison)
+  %r.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %r, i64 0)
   ret <vscale x 16 x i8> %r.legal
 }
 
@@ -127,12 +124,9 @@ define <vscale x 8 x i16> @masked_gather_nxv1i16(<vscale x 2 x ptr> %wide.ptrs, 
 ; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %r = call <vscale x 1 x i16> @llvm.masked.gather.nxv1i16(
-      <vscale x 1 x ptr> %ptrs, i32 2, <vscale x 1 x i1> %mask, <vscale x 1 x i16> poison)
-  %r.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(
-      <vscale x 8 x i16> poison, <vscale x 1 x i16> %r, i64 0)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %r = call <vscale x 1 x i16> @llvm.masked.gather.nxv1i16(<vscale x 1 x ptr> align 2 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i16> poison)
+  %r.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %r, i64 0)
   ret <vscale x 8 x i16> %r.legal
 }
 
@@ -144,12 +138,9 @@ define <vscale x 4 x i32> @masked_gather_nxv1i32(<vscale x 2 x ptr> %wide.ptrs, 
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %r = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32(
-      <vscale x 1 x ptr> %ptrs, i32 4, <vscale x 1 x i1> %mask, <vscale x 1 x i32> poison)
-  %r.legal = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(
-      <vscale x 4 x i32> poison, <vscale x 1 x i32> %r, i64 0)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %r = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32(<vscale x 1 x ptr> align 4 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i32> poison)
+  %r.legal = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %r, i64 0)
   ret <vscale x 4 x i32> %r.legal
 }
 
@@ -160,12 +151,9 @@ define <vscale x 2 x i64> @masked_gather_nxv1i64(<vscale x 2 x ptr> %wide.ptrs, 
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %r = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64(
-      <vscale x 1 x ptr> %ptrs, i32 8, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
-  %r.legal = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(
-      <vscale x 2 x i64> poison, <vscale x 1 x i64> %r, i64 0)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %r = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64(<vscale x 1 x ptr> align 8 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i64> poison)
+  %r.legal = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %r, i64 0)
   ret <vscale x 2 x i64> %r.legal
 }
 

@@ -83,11 +83,9 @@ define void @masked_scatter_nxv1i8(<vscale x 16 x i8> %data.wide, <vscale x 2 x 
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1b { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %data = call <vscale x 1 x i8> @llvm.vector.extract.nxv1i8.nxv16i8(
-      <vscale x 16 x i8> %data.wide, i64 0)
-  call void @llvm.masked.scatter.nxv1i8(<vscale x 1 x i8> %data, <vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %mask)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %data = call <vscale x 1 x i8> @llvm.vector.extract.nxv1i8.nxv16i8(<vscale x 16 x i8> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i8(<vscale x 1 x i8> %data, <vscale x 1 x ptr> align 1 %ptrs, <vscale x 1 x i1> %mask)
   ret void
 }
 
@@ -100,11 +98,9 @@ define void @masked_scatter_nxv1i16(<vscale x 8 x i16> %data.wide, <vscale x 2 x
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %data = call <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv8i16(
-      <vscale x 8 x i16> %data.wide, i64 0)
-  call void @llvm.masked.scatter.nxv1i16(<vscale x 1 x i16> %data, <vscale x 1 x ptr> %ptrs, i32 2, <vscale x 1 x i1> %mask)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %data = call <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv8i16(<vscale x 8 x i16> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i16(<vscale x 1 x i16> %data, <vscale x 1 x ptr> align 2 %ptrs, <vscale x 1 x i1> %mask)
   ret void
 }
 
@@ -116,11 +112,9 @@ define void @masked_scatter_nxv1i32(<vscale x 4 x i32> %data.wide, <vscale x 2 x
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %data = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(
-      <vscale x 4 x i32> %data.wide, i64 0)
-  call void @llvm.masked.scatter.nxv1i32(<vscale x 1 x i32> %data, <vscale x 1 x ptr> %ptrs, i32 4, <vscale x 1 x i1> %mask)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %data = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i32(<vscale x 1 x i32> %data, <vscale x 1 x ptr> align 4 %ptrs, <vscale x 1 x i1> %mask)
   ret void
 }
 
@@ -131,11 +125,9 @@ define void @masked_scatter_nxv1i64(<vscale x 2 x i64> %data.wide, <vscale x 2 x
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(
-      <vscale x 2 x ptr> %wide.ptrs, i64 0)
-  %data = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(
-      <vscale x 2 x i64> %data.wide, i64 0)
-  call void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64> %data, <vscale x 1 x ptr> %ptrs, i32 8, <vscale x 1 x i1> %mask)
+  %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
+  %data = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64> %data, <vscale x 1 x ptr> align 8 %ptrs, <vscale x 1 x i1> %mask)
   ret void
 }
 
