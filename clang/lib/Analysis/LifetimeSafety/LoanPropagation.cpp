@@ -130,11 +130,6 @@ struct Lattice {
   }
 };
 
-struct BuildOriginFlowChainResult {
-  const llvm::SmallVector<OriginID> OriginFlowChain;
-  const bool Complete;
-};
-
 class AnalysisImpl
     : public DataflowAnalysis<AnalysisImpl, Lattice, Direction::Forward> {
 public:
@@ -237,7 +232,7 @@ public:
 
     llvm_unreachable(
         "buildOriginFlowChain should return at BuildResult.Complete");
-    return OriginFlowChain;
+    return {};
   }
 
   llvm::SmallVector<OriginID>
@@ -274,7 +269,7 @@ private:
     return LoanSetFactory.getEmptySet();
   }
 
-  BuildOriginFlowChainResult
+  std::pair<llvm::SmallVector<OriginID>, bool>
   buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
                        const LoanID TargetLoan) const {
     OriginID CurrOID = StartOID;

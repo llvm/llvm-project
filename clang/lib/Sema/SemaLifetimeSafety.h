@@ -671,7 +671,7 @@ private:
     const Expr *LastExpr = OriginExprChain.back();
     std::string IssueStr = getDiagSubjectDescription(LastExpr);
 
-    for (const Expr *CurrExpr : llvm::reverse(OriginExprChain.drop_back())) {
+    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
       if (!shouldShowInAliasChain(CurrExpr, LastExpr))
         continue;
       S.Diag(CurrExpr->getBeginLoc(),
