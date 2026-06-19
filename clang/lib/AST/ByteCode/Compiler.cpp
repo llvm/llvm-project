@@ -3764,13 +3764,23 @@ bool Compiler<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
         continue;
       }
 
+      if (IndexT == PT_IntAP || IndexT == PT_IntAPS) {
+        // AP types (e.g. __uint128_t, __int128) cannot be safely cast to
+        // Sint64. Evaluate the constant and push it directly as Sint64.
+        Expr::EvalResult EvalResult;
+        if (!ArrayIndexExpr->EvaluateAsInt(EvalResult, Ctx.getASTContext()))
+          return false;
+        llvm::APSInt IdxVal = EvalResult.Val.getInt();
+        if (IdxVal.isNegative() || !IdxVal.isSignedIntN(64))
+          return false;
+        if (!this->emitConstSint64((int64_t)IdxVal.getZExtValue(), E))
+          return false;
+        continue;
+      }
       if (!this->visit(ArrayIndexExpr))
         return false;
       // Cast to Sint64. For unsigned types, cast to Uint64 first to avoid
       // sign-extending values with the high bit set (e.g. uint8_t >= 128).
-      // AP types cannot be safely narrowed to Sint64; fail constant evaluation.
-      if (IndexT == PT_IntAP || IndexT == PT_IntAPS)
-        return false;
       if (IndexT != PT_Sint64) {
         if (!isSignedType(IndexT) && IndexT != PT_Uint64) {
           if (!this->emitCast(IndexT, PT_Uint64, E))

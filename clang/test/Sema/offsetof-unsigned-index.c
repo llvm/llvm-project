@@ -31,6 +31,11 @@ _Static_assert(__builtin_offsetof(struct NegIdxStruct, x[-1]) == 0, ""); // expe
 // __uint128_t indices >= 0x8000000000000000 must be rejected.
 _Static_assert(__builtin_offsetof(struct NegIdxStruct, x[(__uint128_t)0x8000000000000000]) == 0, ""); // expected-error {{not an integral constant expression}} expected-note {{subexpression not valid in a constant expression}}
 
+// Small __uint128_t values that fit in int64_t must work correctly.
+_Static_assert(__builtin_offsetof(struct NegIdxStruct, x[(__uint128_t)0]) ==
+               __builtin_offsetof(struct NegIdxStruct, x),
+               "offsetof with __uint128_t index 0 should work");
+
 // __uint128_t indices > UINT64_MAX must be rejected (e.g. adding another zero:
 // old code would truncate 2^64 to 0 via PT_Uint64 cast, silently producing a
 // wrong result instead of an error).
