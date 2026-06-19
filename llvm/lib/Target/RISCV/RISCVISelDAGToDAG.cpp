@@ -1278,7 +1278,8 @@ bool RISCVDAGToDAGISel::tryCVBitManipBClr(SDNode *Node) {
   if (InvMask == 0)
     return false;
 
-  // Skip cases where the mask itself is a low mask (extractu/extbz/exthz handle those)
+  // Skip cases where the mask itself is a low mask (extractu/extbz/exthz handle
+  // those)
   if (isMask_32(Mask))
     return false;
 
@@ -1289,7 +1290,8 @@ bool RISCVDAGToDAGISel::tryCVBitManipBClr(SDNode *Node) {
   unsigned Width = llvm::popcount(InvMask);
   unsigned Offset = llvm::countr_zero(InvMask);
 
-  // Skip if LHS is itself a shift — let extractu handle (srl X, C) & mask patterns
+  // Skip if LHS is itself a shift — let extractu handle (srl X, C) & mask
+  // patterns
   if (LHS.getOpcode() == ISD::SRL)
     return false;
 
@@ -1423,7 +1425,7 @@ bool RISCVDAGToDAGISel::tryCVBitManipInsert(SDNode *Node) {
     if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
       continue;
 
-    uint32_t LowMask = (1u << Width) - 1;  // (1 << width) - 1
+    uint32_t LowMask = (1u << Width) - 1; // (1 << width) - 1
     SDValue RS1;
 
     // --- Form 1: (shl (and rs1, LowMask), Offset) ---
