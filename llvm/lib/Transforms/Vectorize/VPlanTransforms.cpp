@@ -2632,6 +2632,13 @@ static void licm(VPlan &Plan) {
           continue;
       }
 
+      [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      assert((!R.mayWriteToMemory() ||
+              (RepR && RepR->getOpcode() == Instruction::Store &&
+               RepR->getOperand(1)->isDefinedOutsideLoopRegions())) &&
+             "The only recipes that may write to memory are expected to be "
+             "stores with invariant pointer-operand");
+
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
       auto *Def = cast<VPSingleDefRecipe>(&R);
