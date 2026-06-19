@@ -642,6 +642,22 @@ LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
       LRM->checkInterferenceLanes(BeforeMIUses, MIIndex.getRegSlot(), PhysReg);
   LiveOutUndefLanes &= ~InterferingLanes;
 
+  // LiveOutUndefLanes may contain lanes that are part of the
+  // register (e.g. sub1) but not independently addressable by any
+  // sub-register index valid on this class (e.g. hi16), since
+  // lane masks are numbered globally across classes. Such lanes
+  // do not need to become separate implicit defs, so drop them.
+  const TargetRegisterClass *RC = MRI->getRegClass(LI.reg());
+  LaneBitmask NewLiveOutUndefLanes;
+  for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E; ++Idx) {
+    if (!TRI->isSubRegValidForRegClass(RC, Idx))
+      continue;
+    LaneBitmask M = TRI->getSubRegIndexLaneMask(Idx);
+    if ((M & LiveOutUndefLanes) == M)
+      NewLiveOutUndefLanes |= M;
+  }
+  LiveOutUndefLanes = NewLiveOutUndefLanes;
+
   LLVM_DEBUG(if (LiveOutUndefLanes.any()) {
     dbgs() << "Need live out undef defs for " << printReg(PhysReg)
            << LiveOutUndefLanes << " from " << printMBBReference(MBB) << '\n';
@@ -710,30 +726,13 @@ void VirtRegRewriter::rewrite() {
                 LaneBitmask LiveOutUndefLanes =
                     liveOutUndefPhiLanesForUndefSubregDef(LI, *MBBI, SubReg,
                                                           PhysReg, MI);
-                const TargetRegisterClass *RC = MRI->getRegClass(VirtReg);
-
-                // LiveOutUndefLanes may contain lanes that are part of the
-                // register (e.g. sub1) but not independently addressable by any
-                // sub-register index valid on this class (e.g. hi16), since
-                // lane masks are numbered globally across classes. Such lanes
-                // do not need to become separate implicit defs, so drop them.
-                LaneBitmask NewLiveOutUndefLanes;
-                for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E;
-                     ++Idx) {
-                  if (!TRI->isSubRegValidForRegClass(RC, Idx))
-                    continue;
-                  LaneBitmask M = TRI->getSubRegIndexLaneMask(Idx);
-                  if ((M & LiveOutUndefLanes) == M)
-                    NewLiveOutUndefLanes |= M;
-                }
-                LiveOutUndefLanes = NewLiveOutUndefLanes;
-
                 if (LiveOutUndefLanes.any()) {
                   SmallVector<unsigned, 16> CoveringIndexes;
 
                   // TODO: Just use one super register def if none of the lanes
                   // are needed?
-                  if (!TRI->getCoveringSubRegIndexes(RC, LiveOutUndefLanes,
+                  if (!TRI->getCoveringSubRegIndexes(MRI->getRegClass(VirtReg),
+                                                     LiveOutUndefLanes,
                                                      CoveringIndexes))
                     llvm_unreachable(
                         "cannot represent required subregister defs");
