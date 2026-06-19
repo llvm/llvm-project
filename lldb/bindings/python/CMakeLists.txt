@@ -244,8 +244,6 @@ function(add_python_wrapper target)
 
   add_dependencies(${target} swig_wrapper_python)
   add_swig_wrapper(${target} ${lldb_python_wrapper})
-  
-  set_source_files_properties(${lldb_python_wrapper} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
   # lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
   # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
