@@ -29,6 +29,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
@@ -2231,13 +2232,10 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
       CGF.Builder.CreateAlignedLoad(CGF.GlobalsVoidPtrTy, VTT,
                                     CGF.getPointerAlign());
 
-  if (auto &Schema = CGF.CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers) {
-    CGPointerAuthInfo PointerAuth = CGF.EmitPointerAuthInfo(Schema, VTT,
-                                                            GlobalDecl(),
-                                                            QualType());
-    AP = CGF.EmitPointerAuthAuth(PointerAuth, AP);
+  if (auto PointerAuth = CGM.getVTablePointerAuthInfo(&CGF, VTableClass, VTT,
+                                                      /*IsVTTEntry=*/true)) {
+    AP = CGF.EmitPointerAuthAuth(*PointerAuth, AP);
   }
-
   return AP;
 }
 

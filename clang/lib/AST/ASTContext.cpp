@@ -3366,13 +3366,16 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
 }
 
 uint16_t
-ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                     bool IsVTTEntry) {
   assert(RD->isPolymorphic() &&
          "Attempted to get vtable pointer discriminator on a monomorphic type");
   std::unique_ptr<MangleContext> MC(createMangleContext());
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
   MC->mangleCXXVTable(RD, Out);
+  if (IsVTTEntry)
+    Out << "_VTT";
   return llvm::getPointerAuthStableSipHash(Str);
 }
 

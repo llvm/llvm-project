@@ -1515,8 +1515,8 @@ public:
 
   /// Return the "other" discriminator used for the pointer auth schema used for
   /// vtable pointers in instances of the requested type.
-  uint16_t
-  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+  uint16_t getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                    bool IsVTTEntry = false);
 
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
