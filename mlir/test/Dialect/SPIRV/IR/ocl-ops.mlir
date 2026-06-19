@@ -857,3 +857,43 @@ func.func @rootn_wrong_type_vec(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) ->
   %0 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<2xi32> -> vector<3xf32>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.expm1
+//===----------------------------------------------------------------------===//
+
+func.func @expm1(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.expm1 {{%.*}} : f32
+  %2 = spirv.CL.expm1 %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @expm1(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.expm1 {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.expm1 %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.log1p
+//===----------------------------------------------------------------------===//
+
+func.func @log1p(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.log1p {{%.*}} : f32
+  %2 = spirv.CL.log1p %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @log1p(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.log1p {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.log1p %arg0 : vector<4xf16>
+  return
+}

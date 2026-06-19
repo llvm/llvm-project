@@ -766,7 +766,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
   cl::opt<cl::boolOrDefault> UseColor(
       "use-color", cl::desc("Emit colored output (default=autodetect)"),
-      cl::init(cl::BOU_UNSET));
+      cl::init(cl::boolOrDefault::BOU_UNSET));
 
   cl::list<std::string> DemanglerOpts(
       "Xdemangler", cl::desc("<demangler-path>|<demangler-option>"));
@@ -849,17 +849,17 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.Format = Format;
     switch (ViewOpts.Format) {
     case CoverageViewOptions::OutputFormat::Text:
-      ViewOpts.Colors = UseColor == cl::BOU_UNSET
+      ViewOpts.Colors = UseColor == cl::boolOrDefault::BOU_UNSET
                             ? sys::Process::StandardOutHasColors()
-                            : UseColor == cl::BOU_TRUE;
+                            : UseColor == cl::boolOrDefault::BOU_TRUE;
       break;
     case CoverageViewOptions::OutputFormat::HTML:
-      if (UseColor == cl::BOU_FALSE)
+      if (UseColor == cl::boolOrDefault::BOU_FALSE)
         errs() << "Color output cannot be disabled when generating html.\n";
       ViewOpts.Colors = true;
       break;
     case CoverageViewOptions::OutputFormat::Lcov:
-      if (UseColor == cl::BOU_TRUE)
+      if (UseColor == cl::boolOrDefault::BOU_TRUE)
         errs() << "Color output cannot be enabled when generating lcov.\n";
       ViewOpts.Colors = false;
       break;

@@ -1997,6 +1997,366 @@ define <32 x half> @atomic_vec32_half(ptr %x) nounwind {
   ret <32 x half> %ret
 }
 
+define <8 x float> @atomic_vec8_float_align(ptr %x) nounwind {
+; CHECK-SSE-O3-LABEL: atomic_vec8_float_align:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    subq $40, %rsp
+; CHECK-SSE-O3-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O3-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O3-NEXT:    movl $32, %edi
+; CHECK-SSE-O3-NEXT:    movl $2, %ecx
+; CHECK-SSE-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O3-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O3-NEXT:    addq $40, %rsp
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: atomic_vec8_float_align:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    subq $40, %rsp
+; CHECK-AVX-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX-O3-NEXT:    movl $32, %edi
+; CHECK-AVX-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX-O3-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX-O3-NEXT:    addq $40, %rsp
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec8_float_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $40, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movl $32, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $2, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O0-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O0-NEXT:    addq $40, %rsp
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: atomic_vec8_float_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    subq $40, %rsp
+; CHECK-AVX-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX-O0-NEXT:    movl $32, %edi
+; CHECK-AVX-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX-O0-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX-O0-NEXT:    addq $40, %rsp
+; CHECK-AVX-O0-NEXT:    retq
+  %ret = load atomic <8 x float>, ptr %x acquire, align 32
+  ret <8 x float> %ret
+}
+
+define <16 x float> @atomic_vec16_float_align(ptr %x) nounwind {
+; CHECK-SSE-O3-LABEL: atomic_vec16_float_align:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    subq $72, %rsp
+; CHECK-SSE-O3-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O3-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O3-NEXT:    movl $64, %edi
+; CHECK-SSE-O3-NEXT:    movl $2, %ecx
+; CHECK-SSE-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O3-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-SSE-O3-NEXT:    addq $72, %rsp
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX2-O3-LABEL: atomic_vec16_float_align:
+; CHECK-AVX2-O3:       # %bb.0:
+; CHECK-AVX2-O3-NEXT:    subq $72, %rsp
+; CHECK-AVX2-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX2-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX2-O3-NEXT:    movl $64, %edi
+; CHECK-AVX2-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX2-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX2-O3-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX2-O3-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
+; CHECK-AVX2-O3-NEXT:    addq $72, %rsp
+; CHECK-AVX2-O3-NEXT:    retq
+;
+; CHECK-AVX512-O3-LABEL: atomic_vec16_float_align:
+; CHECK-AVX512-O3:       # %bb.0:
+; CHECK-AVX512-O3-NEXT:    subq $72, %rsp
+; CHECK-AVX512-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX512-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX512-O3-NEXT:    movl $64, %edi
+; CHECK-AVX512-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX512-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX512-O3-NEXT:    vmovups (%rsp), %zmm0
+; CHECK-AVX512-O3-NEXT:    addq $72, %rsp
+; CHECK-AVX512-O3-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec16_float_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $72, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movl $64, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $2, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O0-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-SSE-O0-NEXT:    addq $72, %rsp
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX2-O0-LABEL: atomic_vec16_float_align:
+; CHECK-AVX2-O0:       # %bb.0:
+; CHECK-AVX2-O0-NEXT:    subq $72, %rsp
+; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX2-O0-NEXT:    movl $64, %edi
+; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX2-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX2-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX2-O0-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX2-O0-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
+; CHECK-AVX2-O0-NEXT:    addq $72, %rsp
+; CHECK-AVX2-O0-NEXT:    retq
+;
+; CHECK-AVX512-O0-LABEL: atomic_vec16_float_align:
+; CHECK-AVX512-O0:       # %bb.0:
+; CHECK-AVX512-O0-NEXT:    subq $72, %rsp
+; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX512-O0-NEXT:    movl $64, %edi
+; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX512-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX512-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX512-O0-NEXT:    vmovups (%rsp), %zmm0
+; CHECK-AVX512-O0-NEXT:    addq $72, %rsp
+; CHECK-AVX512-O0-NEXT:    retq
+  %ret = load atomic <16 x float>, ptr %x acquire, align 64
+  ret <16 x float> %ret
+}
+
+define <8 x double> @atomic_vec8_double_align(ptr %x) nounwind {
+; CHECK-SSE-O3-LABEL: atomic_vec8_double_align:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    subq $72, %rsp
+; CHECK-SSE-O3-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O3-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O3-NEXT:    movl $64, %edi
+; CHECK-SSE-O3-NEXT:    movl $2, %ecx
+; CHECK-SSE-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O3-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-SSE-O3-NEXT:    addq $72, %rsp
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX2-O3-LABEL: atomic_vec8_double_align:
+; CHECK-AVX2-O3:       # %bb.0:
+; CHECK-AVX2-O3-NEXT:    subq $72, %rsp
+; CHECK-AVX2-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX2-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX2-O3-NEXT:    movl $64, %edi
+; CHECK-AVX2-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX2-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX2-O3-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX2-O3-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
+; CHECK-AVX2-O3-NEXT:    addq $72, %rsp
+; CHECK-AVX2-O3-NEXT:    retq
+;
+; CHECK-AVX512-O3-LABEL: atomic_vec8_double_align:
+; CHECK-AVX512-O3:       # %bb.0:
+; CHECK-AVX512-O3-NEXT:    subq $72, %rsp
+; CHECK-AVX512-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX512-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX512-O3-NEXT:    movl $64, %edi
+; CHECK-AVX512-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX512-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX512-O3-NEXT:    vmovups (%rsp), %zmm0
+; CHECK-AVX512-O3-NEXT:    addq $72, %rsp
+; CHECK-AVX512-O3-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec8_double_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $72, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movl $64, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $2, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O0-NEXT:    movapd (%rsp), %xmm0
+; CHECK-SSE-O0-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O0-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
+; CHECK-SSE-O0-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; CHECK-SSE-O0-NEXT:    addq $72, %rsp
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX2-O0-LABEL: atomic_vec8_double_align:
+; CHECK-AVX2-O0:       # %bb.0:
+; CHECK-AVX2-O0-NEXT:    subq $72, %rsp
+; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX2-O0-NEXT:    movl $64, %edi
+; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX2-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX2-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX2-O0-NEXT:    vmovupd (%rsp), %ymm0
+; CHECK-AVX2-O0-NEXT:    vmovupd {{[0-9]+}}(%rsp), %ymm1
+; CHECK-AVX2-O0-NEXT:    addq $72, %rsp
+; CHECK-AVX2-O0-NEXT:    retq
+;
+; CHECK-AVX512-O0-LABEL: atomic_vec8_double_align:
+; CHECK-AVX512-O0:       # %bb.0:
+; CHECK-AVX512-O0-NEXT:    subq $72, %rsp
+; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX512-O0-NEXT:    movl $64, %edi
+; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX512-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX512-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX512-O0-NEXT:    vmovupd (%rsp), %zmm0
+; CHECK-AVX512-O0-NEXT:    addq $72, %rsp
+; CHECK-AVX512-O0-NEXT:    retq
+  %ret = load atomic <8 x double>, ptr %x acquire, align 64
+  ret <8 x double> %ret
+}
+
+define <16 x bfloat> @atomic_vec16_bfloat_align(ptr %x) nounwind {
+; CHECK-SSE-O3-LABEL: atomic_vec16_bfloat_align:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    subq $40, %rsp
+; CHECK-SSE-O3-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O3-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O3-NEXT:    movl $32, %edi
+; CHECK-SSE-O3-NEXT:    movl $2, %ecx
+; CHECK-SSE-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O3-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O3-NEXT:    addq $40, %rsp
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: atomic_vec16_bfloat_align:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    subq $40, %rsp
+; CHECK-AVX-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX-O3-NEXT:    movl $32, %edi
+; CHECK-AVX-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX-O3-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX-O3-NEXT:    addq $40, %rsp
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec16_bfloat_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $40, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movl $32, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $2, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O0-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O0-NEXT:    addq $40, %rsp
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: atomic_vec16_bfloat_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    subq $40, %rsp
+; CHECK-AVX-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX-O0-NEXT:    movl $32, %edi
+; CHECK-AVX-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX-O0-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX-O0-NEXT:    addq $40, %rsp
+; CHECK-AVX-O0-NEXT:    retq
+  %ret = load atomic <16 x bfloat>, ptr %x acquire, align 32
+  ret <16 x bfloat> %ret
+}
+
+define <32 x half> @atomic_vec32_half_align(ptr %x) nounwind {
+; CHECK-SSE-O3-LABEL: atomic_vec32_half_align:
+; CHECK-SSE-O3:       # %bb.0:
+; CHECK-SSE-O3-NEXT:    subq $72, %rsp
+; CHECK-SSE-O3-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O3-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O3-NEXT:    movl $64, %edi
+; CHECK-SSE-O3-NEXT:    movl $2, %ecx
+; CHECK-SSE-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O3-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-SSE-O3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-SSE-O3-NEXT:    addq $72, %rsp
+; CHECK-SSE-O3-NEXT:    retq
+;
+; CHECK-AVX2-O3-LABEL: atomic_vec32_half_align:
+; CHECK-AVX2-O3:       # %bb.0:
+; CHECK-AVX2-O3-NEXT:    subq $72, %rsp
+; CHECK-AVX2-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX2-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX2-O3-NEXT:    movl $64, %edi
+; CHECK-AVX2-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX2-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX2-O3-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX2-O3-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
+; CHECK-AVX2-O3-NEXT:    addq $72, %rsp
+; CHECK-AVX2-O3-NEXT:    retq
+;
+; CHECK-AVX512-O3-LABEL: atomic_vec32_half_align:
+; CHECK-AVX512-O3:       # %bb.0:
+; CHECK-AVX512-O3-NEXT:    subq $72, %rsp
+; CHECK-AVX512-O3-NEXT:    movq %rdi, %rsi
+; CHECK-AVX512-O3-NEXT:    movq %rsp, %rdx
+; CHECK-AVX512-O3-NEXT:    movl $64, %edi
+; CHECK-AVX512-O3-NEXT:    movl $2, %ecx
+; CHECK-AVX512-O3-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX512-O3-NEXT:    vmovups (%rsp), %zmm0
+; CHECK-AVX512-O3-NEXT:    addq $72, %rsp
+; CHECK-AVX512-O3-NEXT:    retq
+;
+; CHECK-SSE-O0-LABEL: atomic_vec32_half_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $72, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movl $64, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $2, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-SSE-O0-NEXT:    movaps (%rsp), %xmm0
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
+; CHECK-SSE-O0-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; CHECK-SSE-O0-NEXT:    addq $72, %rsp
+; CHECK-SSE-O0-NEXT:    retq
+;
+; CHECK-AVX2-O0-LABEL: atomic_vec32_half_align:
+; CHECK-AVX2-O0:       # %bb.0:
+; CHECK-AVX2-O0-NEXT:    subq $72, %rsp
+; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX2-O0-NEXT:    movl $64, %edi
+; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX2-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX2-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX2-O0-NEXT:    vmovups (%rsp), %ymm0
+; CHECK-AVX2-O0-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
+; CHECK-AVX2-O0-NEXT:    addq $72, %rsp
+; CHECK-AVX2-O0-NEXT:    retq
+;
+; CHECK-AVX512-O0-LABEL: atomic_vec32_half_align:
+; CHECK-AVX512-O0:       # %bb.0:
+; CHECK-AVX512-O0-NEXT:    subq $72, %rsp
+; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX512-O0-NEXT:    movl $64, %edi
+; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX512-O0-NEXT:    movl $2, %ecx
+; CHECK-AVX512-O0-NEXT:    callq __atomic_load@PLT
+; CHECK-AVX512-O0-NEXT:    vmovups (%rsp), %zmm0
+; CHECK-AVX512-O0-NEXT:    addq $72, %rsp
+; CHECK-AVX512-O0-NEXT:    retq
+  %ret = load atomic <32 x half>, ptr %x acquire, align 64
+  ret <32 x half> %ret
+}
+
 define void @store_atomic_vec1_ptr_unaligned(ptr %x, <1 x ptr> %v) nounwind {
 ; CHECK-O3-LABEL: store_atomic_vec1_ptr_unaligned:
 ; CHECK-O3:       # %bb.0:

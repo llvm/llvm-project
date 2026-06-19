@@ -431,9 +431,6 @@ protected:
 
   /// Hanler for output sections.
   SectionHandlerTy SectionHandler = nullptr;
-
-  /// Overall compile units number.
-  uint64_t OverallNumberOfCU = 0;
   /// @}
 };
 

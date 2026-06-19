@@ -6850,6 +6850,29 @@ The ``#pragma comment(lib, ...)`` directive is supported on all ELF targets.
 The second parameter is the library name (without the traditional Unix prefix of
 ``lib``).  This allows you to provide an implicit link of dependent libraries.
 
+Embedding Copyright Information on AIX
+======================================
+Clang supports the ``#pragma comment(copyright, "string")`` directive for AIX
+targets. This directive embeds a copyright or identifying string into the
+compiled object file. The string is included in the final executable or shared
+library and loaded into memory at program runtime. The directive is ignored on
+non-AIX targets.
+
+.. code-block:: c
+
+   #pragma comment(copyright, "string-literal")
+
+The second argument is an ordinary string literal. Concatenated ordinary string
+literals are also accepted. The directive is intended to appear at file scope;
+Clang treats it as being at file scope when it appears within other scopes.
+
+Interaction with C++20 Modules
+-------------------------------
+
+When ``#pragma comment(copyright, ...)`` appears in a C++20 module interface
+unit, the copyright string is embedded only in the object file compiled from
+that interface unit. Importing TUs do not re-emit the string.
+
 Evaluating Object Size
 ======================
 

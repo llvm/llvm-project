@@ -68,7 +68,6 @@ void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
     for (const std::unique_ptr<DWARFUnit> &CU :
          ObjectContexts.back()->InputDWARFFile.Dwarf->compile_units()) {
       DWARFDie CUDie = CU->getUnitDIE();
-      OverallNumberOfCU++;
 
       if (!CUDie)
         continue;
@@ -175,12 +174,16 @@ Error DWARFLinkerImpl::link() {
     });
   }
 
-  // Set parallel options.
-  if (GlobalData.getOptions().Threads == 0)
-    llvm::parallel::strategy = optimal_concurrency(OverallNumberOfCU);
-  else
+  // Set this process-global once. link() runs per architecture and dsymutil
+  // may run those links concurrently, so assigning it from each would be a
+  // data race; the thread count is the same for every architecture, so the
+  // first assignment suffices. Size the executor from that thread count rather
+  // than the per-architecture CU count, which is moot once it is shared.
+  static llvm::once_flag ParallelStrategyFlag;
+  llvm::call_once(ParallelStrategyFlag, [&] {
     llvm::parallel::strategy =
         hardware_concurrency(GlobalData.getOptions().Threads);
+  });
 
   // Link object files.
   if (GlobalData.getOptions().Threads == 1) {

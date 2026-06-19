@@ -940,6 +940,8 @@ Clang options that don't fit neatly into other categories.
   * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
     aren't available. This is the default for arm64.
   * ``always`` - Always emit DWARF unwind regardless.
+  * ``dwarf-only`` - Always emit DWARF unwind, and force compact unwind to defer
+    to DWARF.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 

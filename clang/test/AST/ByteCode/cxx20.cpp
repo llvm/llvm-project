@@ -1,6 +1,11 @@
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      -fcxx-exceptions %s
 
+
+int x;
+static_assert(++x, "test"); // both-error {{not an integral constant expression}} \
+                            // both-note {{cannot modify an object that is visible outside that expression}}
+
 void test_alignas_operand() {
   alignas(8) char dummy;
   static_assert(__alignof(dummy) == 8);
@@ -1422,4 +1427,38 @@ namespace FuncPtrRef {
     return true;
   }
   static_assert(bullet_five_tests());
+}
+
+namespace ConstWrites {
+  struct basic_string {
+    unsigned char a;
+    constexpr basic_string() {
+      a = false;
+    }
+  };
+  struct array {
+    basic_string str;
+  };
+
+  constexpr bool tests() {
+    const array right{};
+    return true;
+  }
+  static_assert(tests());
+
+  struct A {
+    int n;
+    constexpr A() : n(1) { n = 2; }
+  };
+  struct B {
+    const A a;
+    constexpr B(bool mutate) {
+      if (mutate)
+        const_cast<A &>(a).n = 3; // both-note {{modification of object of const-qualified type 'const int'}}
+    }
+  };
+  constexpr B b(false);
+  static_assert(b.a.n == 2, "");
+  constexpr B bad(true); // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{in call to 'B(true)'}}
 }

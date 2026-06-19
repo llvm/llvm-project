@@ -7021,27 +7021,25 @@ SDValue DAGTypeLegalizer::WidenVecRes_MGATHER(MaskedGatherSDNode *N) {
   EVT MaskVT = Mask.getValueType();
   SDValue PassThru = GetWidenedVector(N->getPassThru());
   SDValue Scale = N->getScale();
-  unsigned NumElts = WideVT.getVectorNumElements();
+  ElementCount WideEC = WideVT.getVectorElementCount();
   SDLoc dl(N);
 
   // The mask should be widened as well
   EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
-                                    MaskVT.getVectorElementType(),
-                                    WideVT.getVectorNumElements());
+                                    MaskVT.getVectorElementType(), WideEC);
   Mask = ModifyToType(Mask, WideMaskVT, true);
 
   // Widen the Index operand
   SDValue Index = N->getIndex();
-  EVT WideIndexVT = EVT::getVectorVT(*DAG.getContext(),
-                                     Index.getValueType().getScalarType(),
-                                     NumElts);
+  EVT WideIndexVT = EVT::getVectorVT(
+      *DAG.getContext(), Index.getValueType().getScalarType(), WideEC);
   Index = ModifyToType(Index, WideIndexVT);
   SDValue Ops[] = { N->getChain(), PassThru, Mask, N->getBasePtr(), Index,
                     Scale };
 
   // Widen the MemoryType
   EVT WideMemVT = EVT::getVectorVT(*DAG.getContext(),
-                                   N->getMemoryVT().getScalarType(), NumElts);
+                                   N->getMemoryVT().getScalarType(), WideEC);
   SDValue Res = DAG.getMaskedGather(DAG.getVTList(WideVT, MVT::Other),
                                     WideMemVT, dl, Ops, N->getMemOperand(),
                                     N->getIndexType(), N->getExtensionType());
@@ -8373,23 +8371,23 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSCATTER(SDNode *N, unsigned OpNo) {
 
   if (OpNo == 1) {
     DataOp = GetWidenedVector(DataOp);
-    unsigned NumElts = DataOp.getValueType().getVectorNumElements();
+    ElementCount WideEC = DataOp.getValueType().getVectorElementCount();
 
     // Widen index.
     EVT IndexVT = Index.getValueType();
     EVT WideIndexVT = EVT::getVectorVT(*DAG.getContext(),
-                                       IndexVT.getVectorElementType(), NumElts);
+                                       IndexVT.getVectorElementType(), WideEC);
     Index = ModifyToType(Index, WideIndexVT);
 
     // The mask should be widened as well.
     EVT MaskVT = Mask.getValueType();
     EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
-                                      MaskVT.getVectorElementType(), NumElts);
+                                      MaskVT.getVectorElementType(), WideEC);
     Mask = ModifyToType(Mask, WideMaskVT, true);
 
     // Widen the MemoryType
     WideMemVT = EVT::getVectorVT(*DAG.getContext(),
-                                 MSC->getMemoryVT().getScalarType(), NumElts);
+                                 MSC->getMemoryVT().getScalarType(), WideEC);
   } else if (OpNo == 4) {
     // Just widen the index. It's allowed to have extra elements.
     Index = GetWidenedVector(Index);

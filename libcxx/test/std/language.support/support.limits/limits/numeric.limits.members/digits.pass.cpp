@@ -10,6 +10,8 @@
 
 // digits
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <limits>
 #include <cfloat>
 
@@ -55,7 +57,7 @@ int main(int, char**)
 
     // _BitInt(N): digits must equal N for unsigned and N-1 for signed,
     // regardless of padding bits for non-byte-aligned widths.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
     // Byte-aligned widths.
     test<unsigned _BitInt(8), 8>();
     test<signed _BitInt(8), 7>();
@@ -89,7 +91,7 @@ int main(int, char**)
     test<unsigned _BitInt(4096), 4096>();
     test<signed _BitInt(4096), 4095>();
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

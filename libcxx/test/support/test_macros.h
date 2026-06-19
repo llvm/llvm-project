@@ -42,6 +42,15 @@
 #define TEST_HAS_EXTENSION(X) 0
 #endif
 
+// _BitInt(N) is a C23 standard feature and a Clang extension in earlier C and C++.
+// __BITINT_MAXWIDTH__ is the portable probe: defined by every compiler that accepts _BitInt.
+// Note __has_extension(bit_int) is unusable because it is not recognized by Clang and produces 0.
+#ifdef __BITINT_MAXWIDTH__
+#  define TEST_HAS_BITINT 1
+#else
+#  define TEST_HAS_BITINT 0
+#endif
+
 #ifdef __has_warning
 #define TEST_HAS_WARNING(X) __has_warning(X)
 #else

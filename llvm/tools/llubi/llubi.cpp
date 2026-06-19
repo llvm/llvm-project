@@ -17,6 +17,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -87,6 +88,10 @@ static cl::opt<bool>
 static cl::opt<bool> FuseFMulAdd("fuse-fmuladd",
                                  cl::desc("Fuse llvm.fmuladd.* intrinsic"),
                                  cl::init(true), cl::cat(InterpreterCategory));
+
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the IR verifier"),
+                              cl::init(false), cl::cat(InterpreterCategory));
 
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
@@ -217,6 +222,11 @@ int main(int argc, char **argv) {
   Module *Mod = Owner.get();
   if (!Mod) {
     Err.print(argv[0], errs());
+    return 1;
+  }
+
+  if (!NoVerify && verifyModule(*Mod, &errs())) {
+    WithColor::error() << InputFile << ": input module is broken!\n";
     return 1;
   }
 

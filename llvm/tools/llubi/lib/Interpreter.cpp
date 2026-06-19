@@ -24,6 +24,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
 #include <limits>
 
 namespace llvm::ubi {
@@ -1144,8 +1145,8 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_insert: {
-      if (Args[2].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[2].isPoison() &&
+             "Verifier should reject poison vector_insert immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
@@ -1153,8 +1154,8 @@ public:
           cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_insert index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
@@ -1173,15 +1174,15 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_extract: {
-      if (Args[1].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[1].isPoison() &&
+             "Verifier should reject poison vector_extract immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_extract index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)

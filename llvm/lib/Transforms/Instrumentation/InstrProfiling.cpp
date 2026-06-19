@@ -549,6 +549,15 @@ public:
 
   bool run(int64_t *NumPromoted) {
     bool RC = promoteCandidates(NumPromoted);
+    // In certain case, e.g. with -fprofile-update=atomic, we want to generate
+    // atomic updates of the PGO counters, but also perform promotion of these
+    // updates out of loops to reduce train time. The strategy is:
+    //  1) generate non-atomic load-increment-store sequence of instructions
+    //  during lowerIntrinsics phase,
+    //  2) perform the promotion (in promoteCandidates function), then
+    //  3) convert all (promoted and unpromotable) updates to atomicRMW.
+    // This requires that promoted candidates are set to nullptr in the
+    // LoopToCandidates[&L] array by the promoteCandidates() function.
     if (IsAtomic)
       for (auto &Cand : LoopToCandidates[&L])
         if (Cand.first != nullptr && Cand.second != nullptr)
@@ -577,7 +586,7 @@ private:
     if (MaxProm == 0)
       return false;
 
-    const void *Ptr = LoopToCandidates.getPointerIntoBucketsArray();
+    [[maybe_unused]] auto *Ptr = LoopToCandidates.getPointerIntoBucketsArray();
     unsigned Promoted = 0;
     for (auto &Cand : LoopToCandidates[&L]) {
       SmallVector<PHINode *, 4> NewPHIs;
@@ -699,7 +708,7 @@ private:
   Loop &L;
   LoopInfo &LI;
   BlockFrequencyInfo *BFI;
-  const bool IsAtomic;
+  const bool IsAtomic; // Whether to convert counter updates to atomics.
 };
 
 enum class ValueProfilingCallType {
@@ -917,7 +926,7 @@ bool InstrLowerer::isAtomic() const {
   return Options.Atomic || AtomicCounterUpdateAll;
 }
 
-static void doAtomicPromotionCheck(Function *F) {
+static void doAtomicCheck(Function *F) {
   for (const llvm::Instruction &I : llvm::instructions(F)) {
     const Value *Addr = nullptr;
     if (const LoadInst *LI = dyn_cast<LoadInst>(&I))
@@ -972,7 +981,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   }
 
   if (isAtomic() && VerifyAtomicPromotion)
-    doAtomicPromotionCheck(F);
+    doAtomicCheck(F);
 }
 
 static bool needsRuntimeHookUnconditionally(const Triple &TT) {
@@ -1281,8 +1290,11 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     Value *StepI64 =
         Builder.CreateZExtOrTrunc(Inc->getStep(), Int64Ty, "step.i64");
     Builder.CreateCall(Callee, {CastAddr, Uniform, StepI64});
-  } else if ((!isCounterPromotionEnabled() && isAtomic()) ||
-             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
+  }
+  // If promotion is enabled then delay generating atomic updates until
+  // after promotion is done.
+  else if ((!isCounterPromotionEnabled() && isAtomic()) ||
+           (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {

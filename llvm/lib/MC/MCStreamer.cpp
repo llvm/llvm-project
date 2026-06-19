@@ -300,8 +300,7 @@ void MCStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     bool PrologueEnd, bool IsStmt,
                                     StringRef FileName, SMLoc Loc) {}
 
-bool MCStreamer::checkCVLocSection(unsigned FuncId, unsigned FileNo,
-                                   SMLoc Loc) {
+bool MCStreamer::checkCVLocSection(unsigned FuncId, SMLoc Loc) {
   CodeViewContext &CVC = getContext().getCVContext();
   MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FuncId);
   if (!FI) {

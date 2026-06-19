@@ -98,7 +98,7 @@ public:
                                    cl::boolOrDefault PrintSectionMapping) {
     if (PrintProgramHeaders)
       printProgramHeaders();
-    if (PrintSectionMapping == cl::BOU_TRUE)
+    if (PrintSectionMapping == cl::boolOrDefault::BOU_TRUE)
       printSectionMapping();
   }
 

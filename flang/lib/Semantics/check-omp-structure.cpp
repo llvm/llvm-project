@@ -5694,6 +5694,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::ReverseOffload &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_reverse_offload);
+  if (IsAllowedClause(llvm::omp::Clause::OMPC_reverse_offload)) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not supported and will be ignored"_warn_en_US,
+        GetUpperName(llvm::omp::Clause::OMPC_reverse_offload, version));
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::UnifiedAddress &x) {

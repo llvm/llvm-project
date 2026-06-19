@@ -1435,6 +1435,34 @@ void use_trivial_temporary_after_destruction() {
   use(a); // expected-note {{later used here}}
 }
 
+namespace cast_modeling {
+// A pointer bit-cast (`__builtin_bit_cast`/`std::bit_cast`) preserves the
+// value, so a borrow flowed through it is tracked (matching reinterpret_cast).
+int *bit_cast_stack() {
+  int x = 0;
+  return __builtin_bit_cast(int *, &x); // expected-warning {{stack memory associated with local variable 'x' is returned}} expected-note {{returned here}}
+}
+
+int *bit_cast_static() {
+  static int s = 0;
+  return __builtin_bit_cast(int *, &s); // no-warning
+}
+
+void bit_cast_use_after_scope() {
+  int *p;
+  {
+    int local = 0;
+    p = __builtin_bit_cast(int *, &local); // expected-warning {{local variable 'local' does not live long enough}}
+  }                                        // expected-note {{destroyed here}}
+  (void)*p;                                // expected-note {{later used here}}
+}
+
+int **bit_cast_multilevel() {
+  int *p = nullptr;
+  return __builtin_bit_cast(int **, &p); // expected-warning {{stack memory associated with local variable 'p' is returned}} expected-note {{returned here}}
+}
+} // namespace cast_modeling
+
 namespace FullExprCleanupLoc {
 void var_initializer() {
   View v = non_trivially_destructed_temporary() // expected-warning {{temporary object does not live long enough}} \

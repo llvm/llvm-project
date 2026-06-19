@@ -30551,6 +30551,19 @@ private:
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
     bool AllConsts = allConstant(ReducedVals);
+    // A reduced value may have been replaced by an extractelement while
+    // vectorizing a previous subvector of the reduction. Such tracked values
+    // are not present in ReducedValsToOps, so look through them to the
+    // reduction operation that uses the replaced value.
+    auto GetReductionOp = [&](Value *RdxVal) -> Instruction * {
+      auto It = ReducedValsToOps.find(RdxVal);
+      if (It != ReducedValsToOps.end())
+        return It->second.front();
+      for (User *U : RdxVal->users())
+        if (getRdxKind(U) == RdxKind)
+          return cast<Instruction>(U);
+      return cast<Instruction>(RdxVal);
+    };
     auto EvaluateScalarCost =
         [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
           InstructionCost Cost = 0;
@@ -30559,7 +30572,7 @@ private:
           for (auto [Idx, RdxVal] : enumerate(ReducedVals)) {
             if (!isa<Instruction>(RdxVal))
               continue;
-            Instruction *RdxOp = ReducedValsToOps[ReducedVals[Idx]].front();
+            Instruction *RdxOp = GetReductionOp(RdxVal);
             if (Cnt == 1) {
               unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
               Cost +=
@@ -30639,7 +30652,7 @@ private:
                   RdxOpcode, VecTy, CostKind,
                   TTI::getOperandInfo(ReducedVals[I]),
                   TTI::getOperandInfo(ReducedVals[I + 1]), {},
-                  ReducedValsToOps[ReducedVals[I]].front());
+                  GetReductionOp(ReducedVals[I]));
             }
           } else {
             Type *RedTy = VectorTy->getElementType();

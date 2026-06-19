@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
 
-int *global; // expected-note 4 {{this global dangles}}
+int *global; // expected-note 10 {{this global dangles}}
 int *global_backup; // expected-note {{this global dangles}}
 
 struct ObjWithStaticField {
@@ -69,4 +69,51 @@ void conditional_no_escape(int c) {
   if (c)
     global = nullptr; // no-warning
   (void)local;
+}
+
+// Pointer compound assignment and increment/decrement keep the pointer in the
+// same allocation, so the result carries the borrow.
+void via_compound_add() {
+  int local[10];
+  int *p = local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+  global = (p += 1);
+}
+
+void via_compound_sub() {
+  int local[10];
+  int *p = local + 5; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+  global = (p -= 1);
+}
+
+void via_preinc() {
+  int local[10];
+  int *p = local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+  global = ++p;
+}
+
+void via_postinc() {
+  int local[10];
+  int *p = local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+  global = p++;
+}
+
+void via_predec() {
+  int local[10];
+  int *p = local + 5; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+  global = --p;
+}
+
+void via_postdec() {
+  int local[10];
+  int *p = local + 5; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
+  global = p--;
+}
+
+// Negative: arithmetic on a pointer into long-lived storage stays silent.
+void ok_global_storage() {
+  static int s[10];
+  int *p = s;
+  p += 1;
+  ++p;
+  global = (p -= 1); // no-warning
 }

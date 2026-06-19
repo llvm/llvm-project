@@ -79,7 +79,7 @@ static_assert(!std::__signed_integer<int&>);
 static_assert(!std::__signed_integer<const int&>);
 
 // Extended signed integer types per [basic.fundamental]/p3 Note 1.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
 static_assert(std::__signed_integer<signed _BitInt(8)>);
 static_assert(std::__signed_integer<signed _BitInt(16)>);
 static_assert(std::__signed_integer<signed _BitInt(64)>);

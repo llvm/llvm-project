@@ -5982,11 +5982,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
 
   SMRange TargetRange = SMRange(TargetStart, getTok().getLoc());
   if (getTargetStreamer().getTargetID()->toString() != TargetIDDirective)
-    return getParser().Error(TargetRange.Start,
+    return getParser().Error(
+        TargetRange.Start,
         (Twine(".amdgcn_target directive's target id ") +
          Twine(TargetIDDirective) +
          Twine(" does not match the specified target id ") +
-         Twine(getTargetStreamer().getTargetID()->toString())).str());
+         Twine(getTargetStreamer().getTargetID()->toString())));
 
   return false;
 }

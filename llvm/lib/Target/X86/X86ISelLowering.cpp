@@ -39748,25 +39748,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One.clearAllBits();
     break;
   }
-  case X86ISD::PDEP: {
-    KnownBits Known2;
-    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // Zeros are retained from the mask operand. But not ones.
-    Known.One.clearAllBits();
-    // The result will have at least as many trailing zeros as the non-mask
-    // operand since bits can only map to the same or higher bit position.
-    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
-    break;
-  }
-  case X86ISD::PEXT: {
-    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    // The result has as many leading zeros as the number of zeroes in the mask.
-    unsigned Count = Known.Zero.popcount();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Count);
-    Known.One.clearAllBits();
-    break;
-  }
   case X86ISD::VTRUNC:
   case X86ISD::VTRUNCS:
   case X86ISD::VTRUNCUS:
@@ -46014,34 +45995,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
 
     break;
-  }
-  case X86ISD::PDEP: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-
-    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
-    APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
-
-    // If the demanded bits has leading zeroes, we don't demand those from the
-    // mask.
-    if (SimplifyDemandedBits(Op1, LoMask, Known, TLO, Depth + 1))
-      return true;
-
-    // The number of possible 1s in the mask determines the number of LSBs of
-    // operand 0 used. Undemanded bits from the mask don't matter so filter
-    // them before counting.
-    KnownBits Known2;
-    uint64_t Count = (~Known.Zero & LoMask).popcount();
-    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, Count));
-    if (SimplifyDemandedBits(Op0, DemandedMask, Known2, TLO, Depth + 1))
-      return true;
-
-    // Zeroes are retained from the mask, but not ones.
-    Known.One.clearAllBits();
-    // The result will have at least as many trailing zeros as the non-mask
-    // operand since bits can only map to the same or higher bit position.
-    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
-    return false;
   }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
@@ -62023,14 +61976,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
     return DAG.getBuildVector(VT, DL, InVec->ops().slice(IdxVal, NumSubElts));
 
-  // EXTRACT_SUBVECTOR(EXTRACT_SUBVECTOR(V,C1)),C2) - EXTRACT_SUBVECTOR(V,C1+C2)
-  if (IdxVal != 0 && InVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      InVec.hasOneUse() && TLI.isTypeLegal(VT) &&
-      TLI.isTypeLegal(InVec.getOperand(0).getValueType())) {
-    unsigned NewIdx = IdxVal + InVec.getConstantOperandVal(1);
-    return extractSubVector(InVec.getOperand(0), NewIdx, DAG, DL, SizeInBits);
-  }
-
   // EXTRACT_SUBVECTOR(INSERT_SUBVECTOR(SRC,SUB,C1),C2)
   // --> INSERT_SUBVECTOR(EXTRACT_SUBVECTOR(SRC,C2),SUB,C1-C2)
   // iff SUB is entirely contained in the extraction.
@@ -63423,8 +63368,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI:
-  case X86ISD::BZHI:
-  case X86ISD::PDEP:        return combineBMI(N, DAG, DCI);
+  case X86ISD::BZHI:        return combineBMI(N, DAG, DCI);
   case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);

@@ -692,10 +692,14 @@ bool ReductionProcessor::processReductionArguments(
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic)) {
           // If not an intrinsic is has to be a custom reduction op, and should
-          // be available in the module.
+          // be available in the module. The op is named using the scope in
+          // which the user-defined reduction was declared, so qualify the
+          // lookup name the same way the declaration and use sides do.
           semantics::Symbol *sym = reductionIntrinsic->v.sym();
           mlir::ModuleOp module = builder.getModule();
-          auto decl = module.lookupSymbol<OpType>(getRealName(sym).ToString());
+          std::string declName = getRealName(sym).ToString();
+          declName = converter.mangleName(declName, sym->GetUltimate().owner());
+          auto decl = module.lookupSymbol<OpType>(declName);
           if (!decl)
             return false;
         }
@@ -843,8 +847,14 @@ bool ReductionProcessor::processReductionArguments(
           // Custom reductions we can just add to the symbols without
           // generating the declare reduction op.
           semantics::Symbol *sym = reductionIntrinsic->v.sym();
-          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-              builder.getContext(), sym->name().ToString()));
+          // Qualify the name with the scope in which the user-defined
+          // reduction was declared so that reductions with the same name in
+          // different scopes refer to distinct omp.declare_reduction ops.
+          std::string reductionName = getRealName(sym).ToString();
+          reductionName =
+              converter.mangleName(reductionName, sym->GetUltimate().owner());
+          reductionDeclSymbols.push_back(
+              mlir::SymbolRefAttr::get(builder.getContext(), reductionName));
           ++idx;
           continue;
         }

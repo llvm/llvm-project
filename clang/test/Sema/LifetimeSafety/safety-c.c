@@ -173,9 +173,44 @@ void *void_pointer_dereference(void) {
   return &*bytes;
 }
 
-// FIXME: Atomics are not modeled yet.
+// `_Atomic(T)` is transparent for lifetime purposes; a stack address laundered
+// through an atomic is caught.
 int *atomic_pointer_declref(void) {
   int value;
+  _Atomic(int *) p = &value; // expected-warning {{stack memory associated with local variable 'value' is returned}}
+  return p;                  // expected-note {{returned here}}
+}
+
+int *atomic_pointer_static(void) {
+  static int value;
   _Atomic(int *) p = &value;
-  return p;
+  return p; // no-warning
+}
+
+int **atomic_pointer_multilevel(void) {
+  int *inner;
+  _Atomic(int **) p = &inner; // expected-warning {{stack memory associated with local variable 'inner' is returned}}
+  return p;                   // expected-note {{returned here}}
+}
+
+// In C, a pointer compound assignment is a prvalue; its result still carries
+// the LHS pointer's loans.
+void compound_assign_prvalue(void) {
+  int *p;
+  {
+    int local[10];
+    int *q = local; // expected-warning {{local variable 'local' does not live long enough}}
+    p = (q += 1);
+  }               // expected-note {{destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void preincrement_prvalue(void) {
+  int *p;
+  {
+    int local[10];
+    int *q = local; // expected-warning {{local variable 'local' does not live long enough}}
+    p = ++q;
+  }               // expected-note {{destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
 }

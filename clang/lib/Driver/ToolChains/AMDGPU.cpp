@@ -1130,9 +1130,10 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
   auto Features = TT.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
                                 : llvm::AMDGPU::getArchAttrR600(ProcKind);
 
-  // If processor has xnack always on, Address sanitizer is supported
-  bool XnackAvailable = (Features & llvm::AMDGPU::FEATURE_XNACK_ALWAYS);
-  if (XnackAvailable)
+  // If processor has xnack but doesn't support on/off modes, xnack is always on
+  bool XnackAlwaysOn = (Features & llvm::AMDGPU::FEATURE_XNACK) &&
+                       !(Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES);
+  if (XnackAlwaysOn)
     return true;
 
   // Otherwise, check if xnack+ is explicitly enabled in the target ID

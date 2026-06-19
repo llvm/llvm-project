@@ -1171,9 +1171,10 @@ static void dumpPretty(StringRef Path) {
     Session->setLoadAddress(opts::pretty::LoadAddress);
 
   auto &Stream = outs();
-  const bool UseColor = opts::pretty::ColorOutput == cl::BOU_UNSET
-                            ? Stream.has_colors()
-                            : opts::pretty::ColorOutput == cl::BOU_TRUE;
+  const bool UseColor =
+      opts::pretty::ColorOutput == cl::boolOrDefault::BOU_UNSET
+          ? Stream.has_colors()
+          : opts::pretty::ColorOutput == cl::boolOrDefault::BOU_TRUE;
   LinePrinter Printer(2, UseColor, Stream, opts::Filters);
 
   auto GlobalScope(Session->getGlobalScope());

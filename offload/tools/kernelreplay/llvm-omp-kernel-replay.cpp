@@ -130,7 +130,8 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
   if (!ReplayOutputBufferOrErr)
     return createErr("failed to read the kernel replay output file");
 
-  // Compare record and replay outputs to verify they match.
+  // Compare record and replay outputs to verify they match. If they are both
+  // empty, the verification is successful.
   StringRef RecordOutput = RecordOutputBufferOrErr.get()->getBuffer();
   StringRef ReplayOutput = ReplayOutputBufferOrErr.get()->getBuffer();
   if (RecordOutput != ReplayOutput)

@@ -293,6 +293,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
 
     // Property of the kernel/environment which can't actually differ.
     AMDGPU::FeatureSGPRInitBug, AMDGPU::FeatureXNACK,
+    AMDGPU::FeatureXNACKOnOffModes, AMDGPU::FeatureSupportsXNACK,
     AMDGPU::FeatureTrapHandler,
 
     // The default assumption needs to be ecc is enabled, but no directly

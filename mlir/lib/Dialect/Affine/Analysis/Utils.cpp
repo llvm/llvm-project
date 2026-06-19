@@ -1833,9 +1833,9 @@ bool mlir::affine::buildSliceTripCountMap(
             forOp.getConstantUpperBound() - forOp.getConstantLowerBound();
         continue;
       }
-      std::optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
+      std::optional<APInt> maybeConstTripCount = forOp.getStaticTripCount();
       if (maybeConstTripCount.has_value()) {
-        (*tripCountMap)[op] = *maybeConstTripCount;
+        (*tripCountMap)[op] = maybeConstTripCount->getZExtValue();
         continue;
       }
       return false;

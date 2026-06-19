@@ -349,3 +349,374 @@ poly128_t test_vaddq_p128(poly128_t a, poly128_t b) {
   // LLVM-NEXT:    ret i128 [[TMP3]]
   return vaddq_p128(a, b);
 }
+
+//===----------------------------------------------------------------------===//
+// 2.1.1.1.2. Widening addition
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#widening-addition
+//===----------------------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vaddl_s8(
+// CIR-LABEL: @vaddl_s8(
+int16x8_t test_vaddl_s8(int8x8_t a, int8x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !s16i>
+
+  // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[VMOVL_I5_I:%.*]] = sext <8 x i8> [[A]] to <8 x i16>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[VMOVL_I5_I]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddl_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_s16(
+// CIR-LABEL: @vaddl_s16(
+int32x4_t test_vaddl_s16(int16x4_t a, int16x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !s32i>
+
+  // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[VMOVL_I5_I:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = sext <4 x i16> [[TMP3]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[VMOVL_I5_I]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddl_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_s32(
+// CIR-LABEL: @vaddl_s32(
+int64x2_t test_vaddl_s32(int32x2_t a, int32x2_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !s64i>
+
+  // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[VMOVL_I5_I:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = sext <2 x i32> [[TMP3]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[VMOVL_I5_I]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddl_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_u8(
+// CIR-LABEL: @vaddl_u8(
+uint16x8_t test_vaddl_u8(uint8x8_t a, uint8x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !u16i>
+
+  // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[VMOVL_I5_I:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[VMOVL_I5_I]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddl_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_u16(
+// CIR-LABEL: @vaddl_u16(
+uint32x4_t test_vaddl_u16(uint16x4_t a, uint16x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !u32i>
+
+  // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[VMOVL_I5_I:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[VMOVL_I5_I]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddl_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_u32(
+// CIR-LABEL: @vaddl_u32(
+uint64x2_t test_vaddl_u32(uint32x2_t a, uint32x2_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !u64i>
+
+  // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[VMOVL_I5_I:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[VMOVL_I5_I]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddl_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_high_s8(
+// CIR-LABEL: @vaddl_high_s8(
+int16x8_t test_vaddl_high_s8(int8x16_t a, int8x16_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !s16i>
+
+  // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I12_I:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[A]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM-NEXT:    [[TMP0:%.*]] = sext <8 x i8> [[SHUFFLE_I_I12_I]] to <8 x i16>
+  // LLVM-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[SHUFFLE_I_I_I]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[TMP0]], [[TMP1]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddl_high_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_high_s16(
+// CIR-LABEL: @vaddl_high_s16(
+int32x4_t test_vaddl_high_s16(int16x8_t a, int16x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !s32i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I12_I:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I12_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x i16>
+  // LLVM-NEXT:    [[TMP5:%.*]] = sext <4 x i16> [[TMP4]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[TMP2]], [[TMP5]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddl_high_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_high_s32(
+// CIR-LABEL: @vaddl_high_s32(
+int64x2_t test_vaddl_high_s32(int32x4_t a, int32x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !s64i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I12_I:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[A]], <2 x i32> <i32 2, i32 3>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I_I12_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x i32>
+  // LLVM-NEXT:    [[TMP5:%.*]] = sext <2 x i32> [[TMP4]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[TMP2]], [[TMP5]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddl_high_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_high_u8(
+// CIR-LABEL: @vaddl_high_u8(
+uint16x8_t test_vaddl_high_u8(uint8x16_t a, uint8x16_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !u16i>
+
+  // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I12_I:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[A]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[SHUFFLE_I_I12_I]] to <8 x i16>
+  // LLVM-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[SHUFFLE_I_I_I]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[TMP0]], [[TMP1]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddl_high_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_high_u16(
+// CIR-LABEL: @vaddl_high_u16(
+uint32x4_t test_vaddl_high_u16(uint16x8_t a, uint16x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !u32i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I12_I:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I12_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x i16>
+  // LLVM-NEXT:    [[TMP5:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[TMP2]], [[TMP5]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddl_high_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddl_high_u32(
+// CIR-LABEL: @vaddl_high_u32(
+uint64x2_t test_vaddl_high_u32(uint32x4_t a, uint32x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !u64i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I12_I:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[A]], <2 x i32> <i32 2, i32 3>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I_I12_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
+  // LLVM-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to <2 x i32>
+  // LLVM-NEXT:    [[TMP5:%.*]] = zext <2 x i32> [[TMP4]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[TMP2]], [[TMP5]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddl_high_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_s8(
+// CIR-LABEL: @vaddw_s8(
+int16x8_t test_vaddw_s8(int16x8_t a, int8x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !s16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[VMOVL_I_I:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[A]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddw_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_s16(
+// CIR-LABEL: @vaddw_s16(
+int32x4_t test_vaddw_s16(int32x4_t a, int16x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !s32i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[A]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddw_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_s32(
+// CIR-LABEL: @vaddw_s32(
+int64x2_t test_vaddw_s32(int64x2_t a, int32x2_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !s64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[A]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddw_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_u8(
+// CIR-LABEL: @vaddw_u8(
+uint16x8_t test_vaddw_u8(uint16x8_t a, uint8x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !u16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[VMOVL_I_I:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[A]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddw_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_u16(
+// CIR-LABEL: @vaddw_u16(
+uint32x4_t test_vaddw_u16(uint32x4_t a, uint16x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !u32i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[A]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddw_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_u32(
+// CIR-LABEL: @vaddw_u32(
+uint64x2_t test_vaddw_u32(uint64x2_t a, uint32x2_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !u64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[VMOVL_I_I:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[A]], [[VMOVL_I_I]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddw_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_high_s8(
+// CIR-LABEL: @vaddw_high_s8(
+int16x8_t test_vaddw_high_s8(int16x8_t a, int8x16_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !s16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM-NEXT:    [[TMP0:%.*]] = sext <8 x i8> [[SHUFFLE_I_I_I]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[A]], [[TMP0]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddw_high_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_high_s16(
+// CIR-LABEL: @vaddw_high_s16(
+int32x4_t test_vaddw_high_s16(int32x4_t a, int16x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !s32i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[A]], [[TMP2]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddw_high_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_high_s32(
+// CIR-LABEL: @vaddw_high_s32(
+int64x2_t test_vaddw_high_s32(int64x2_t a, int32x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !s64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[TMP2:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[A]], [[TMP2]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddw_high_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_high_u8(
+// CIR-LABEL: @vaddw_high_u8(
+uint16x8_t test_vaddw_high_u8(uint16x8_t a, uint8x16_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<8 x !u16i>
+
+  // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[SHUFFLE_I_I_I]] to <8 x i16>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <8 x i16> [[A]], [[TMP0]]
+  // LLVM-NEXT:    ret <8 x i16> [[ADD_I]]
+  return vaddw_high_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_high_u16(
+// CIR-LABEL: @vaddw_high_u16(
+uint32x4_t test_vaddw_high_u16(uint32x4_t a, uint16x8_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<4 x !u32i>
+
+  // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+  // LLVM-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <4 x i32> [[A]], [[TMP2]]
+  // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
+  return vaddw_high_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddw_high_u32(
+// CIR-LABEL: @vaddw_high_u32(
+uint64x2_t test_vaddw_high_u32(uint64x2_t a, uint32x4_t b) {
+  // CIR: cir.add {{.*}} : !cir.vector<2 x !u64i>
+
+  // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+  // LLVM:    [[SHUFFLE_I_I_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
+  // LLVM-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I_I_I]] to <8 x i8>
+  // LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+  // LLVM-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+  // LLVM-NEXT:    [[ADD_I:%.*]] = add <2 x i64> [[A]], [[TMP2]]
+  // LLVM-NEXT:    ret <2 x i64> [[ADD_I]]
+  return vaddw_high_u32(a, b);
+}
