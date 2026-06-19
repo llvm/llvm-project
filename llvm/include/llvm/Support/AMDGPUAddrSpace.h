@@ -47,6 +47,10 @@ enum : unsigned {
   BUFFER_STRIDED_POINTER = 9, ///< Address space for 192-bit fat buffer
                               ///< pointers with an additional index.
 
+  VGPR = 13, ///< Address space for "VGPR as memory": objects backed by VGPRs
+             ///< rather than scratch. Shares its numeric value with the
+             ///< graphics-only CONSTANT_BUFFER_5 alias below.
+
   RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
 
   /// Internal address spaces. Can be freely renumbered.

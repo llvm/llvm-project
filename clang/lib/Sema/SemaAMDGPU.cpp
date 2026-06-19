@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
@@ -624,6 +625,19 @@ void SemaAMDGPU::handleAMDGPUFlatWorkGroupSizeAttr(Decl *D,
   Expr *MaxExpr = AL.getArgAsExpr(1);
 
   addAMDGPUFlatWorkGroupSizeAttr(D, AL, MinExpr, MaxExpr);
+}
+
+void SemaAMDGPU::handleAMDGPUVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  // The LocalVar subject list already guarantees this is a local variable.
+  // Restrict it further to locals declared directly in a __global__ kernel;
+  // it is meaningless (and an error) in __device__ or host functions.
+  const auto *FD = dyn_cast<FunctionDecl>(D->getDeclContext());
+  if (!FD || !FD->hasAttr<CUDAGlobalAttr>()) {
+    Diag(AL.getLoc(), diag::err_amdgpu_vgpr_not_kernel_local) << AL;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext()) AMDGPUVGPRAttr(getASTContext(), AL));
 }
 
 static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,

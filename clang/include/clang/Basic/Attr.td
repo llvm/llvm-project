@@ -2522,6 +2522,14 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUVGPR : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_vgpr">];
+  let Documentation = [AMDGPUVGPRDocs];
+  let Subjects = SubjectList<[LocalVar], ErrorDiag>;
+  // Only meaningful in CUDA/HIP; semantic checks restrict it to kernel locals.
+  let LangOpts = [CUDA];
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];

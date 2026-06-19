@@ -31,6 +31,7 @@ struct amd_kernel_code_t;
 namespace llvm {
 
 struct Align;
+class AllocaInst;
 class Argument;
 class Function;
 class GlobalValue;
@@ -1036,6 +1037,16 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
+
+/// Decoded form of the \c !amdgpu.allocated.vgprs metadata attached to a
+/// "VGPR as memory" alloca: the byte offset (address) the object was allocated
+/// to within the VGPR file, and its size in bytes.
+struct AllocatedVGPRsMetadata {
+  unsigned Address;
+  unsigned Size;
+
+  static AllocatedVGPRsMetadata get(const AllocaInst &Alloca);
+};
 
 // The following methods are only meaningful on targets that support
 // S_WAITCNT.

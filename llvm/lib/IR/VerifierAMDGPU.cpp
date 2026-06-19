@@ -122,8 +122,10 @@ void llvm::verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI) {
   if (!VS.TT.isAMDGPU())
     return;
 
-  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
-    VS.CheckFailed("alloca on amdgpu must be in addrspace(5)", &AI);
+  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS &&
+      AI.getAddressSpace() != AMDGPUAS::VGPR)
+    VS.CheckFailed("alloca on amdgpu must be in addrspace(5) or addrspace(13)",
+                   &AI);
 }
 
 bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {

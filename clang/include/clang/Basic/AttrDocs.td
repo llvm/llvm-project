@@ -3604,6 +3604,26 @@ An error will be given if:
   }];
 }
 
+def AMDGPUVGPRDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute requests that a kernel-local variable be allocated in the
+"VGPR as memory" address space (``addrspace(13)``) on the AMDGPU target,
+so that accesses with statically known indices lower to vector register
+copies instead of scratch memory traffic.
+
+Clang supports the ``__attribute__((amdgpu_vgpr))`` or
+``[[clang::amdgpu_vgpr]]`` attribute in HIP/CUDA. It may only be applied to
+local variables declared in a ``__global__`` (kernel) function; applying it to
+a variable in a ``__device__`` or host function, or outside HIP/CUDA, is an
+error.
+
+Known limitation: the request is only honored with optimizations enabled. At
+``-O0`` the variable falls back to ordinary (scratch) memory and a warning is
+emitted.
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target

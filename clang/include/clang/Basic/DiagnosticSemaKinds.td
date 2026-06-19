@@ -3711,6 +3711,9 @@ def err_attribute_argument_invalid : Error<
 def err_attribute_amdgpu_flat_work_group_size_mismatch : Error<
   "'amdgpu_flat_work_group_size' attribute must match "
   "'reqd_work_group_size' product">;
+def err_amdgpu_vgpr_not_kernel_local : Error<
+  "%0 attribute can only be applied to local variables in "
+  "'__global__' (kernel) functions">;
 def err_attribute_argument_is_zero : Error<
   "%0 attribute must be greater than 0">;
 def warn_attribute_argument_n_negative : Warning<

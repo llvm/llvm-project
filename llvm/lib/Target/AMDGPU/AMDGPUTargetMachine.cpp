@@ -668,6 +668,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
+  initializeAMDGPUPrivateObjectVGPRsPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -1500,9 +1501,12 @@ void AMDGPUPassConfig::addIRPasses() {
 
   addPass(createAtomicExpandLegacyPass());
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    addPass(createAMDGPUPromoteAlloca());
+  // With optimizations enabled, do the full promotion of allocas. Without
+  // optimizations, this only allocates pre-existing VGPR address space allocas,
+  // which is required for functionality.
+  addPass(createAMDGPUPromoteAlloca(TM.getOptLevel()));
 
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
 
@@ -1717,6 +1721,11 @@ void GCNPassConfig::addFastRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
+  // Lower "VGPR as memory" accesses to register copies once out of SSA form.
+  // At O0 there is no register coalescer; anchor on TwoAddress, where
+  // LiveIntervals is already available.
+  insertPass(&TwoAddressInstructionPassID, &AMDGPUPrivateObjectVGPRsID);
+
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
@@ -1742,6 +1751,12 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
+
+  // Lower "VGPR as memory" accesses to register copies once out of SSA form.
+  // This runs after the coalescer so it does not perturb the kill flags that
+  // earlier passes (and -stop-after=twoaddr based tests) rely on, and updates
+  // the LiveIntervals the register allocator consumes next.
+  insertPass(&RegisterCoalescerID, &AMDGPUPrivateObjectVGPRsID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
@@ -2283,8 +2298,15 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
 
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+  // With optimizations enabled, do the full promotion of allocas. Without
+  // optimizations, only allocate pre-existing VGPR address space allocas, which
+  // is required for functionality.
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
     addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
+  else
+    addFunctionPass(AMDGPUVGPRAllocatePass(TM), PMW);
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(PMW);
 
