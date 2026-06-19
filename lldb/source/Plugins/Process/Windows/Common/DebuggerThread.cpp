@@ -255,11 +255,14 @@ void DebuggerThread::ContinueAsyncDllEvent() {
   m_dll_event_pred.SetValue(true, eBroadcastAlways);
 }
 
+void DebuggerThread::ArmDllEventWait() {
+  m_dll_event_pred.SetValue(false, eBroadcastNever);
+  m_pending_dll_event.store(true);
+}
+
 void DebuggerThread::WaitForResumeAfterDllEvent() {
   Log *log = GetLog(WindowsLog::Process | WindowsLog::Event);
 
-  m_dll_event_pred.SetValue(false, eBroadcastNever);
-  m_pending_dll_event.store(true);
   if (m_is_shutting_down.load()) {
     m_pending_dll_event.store(false);
     return;

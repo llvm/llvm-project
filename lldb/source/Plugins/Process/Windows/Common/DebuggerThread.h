@@ -46,8 +46,13 @@ public:
   /// waiting for ContinueAsyncDllEvent.
   bool HasPendingDllEvent() const { return m_pending_dll_event; }
 
+  /// Mark a DLL-event wait as pending so a Resume that arrives between the
+  /// SetState(eStateStopped) broadcast and WaitForResumeAfterDllEvent does
+  /// not race past the predicate.
+  void ArmDllEventWait();
+
   /// Block the current debugger thread until ContinueAsyncDllEvent is
-  /// invoked.
+  /// invoked. ArmDllEventWait must have been called first.
   void WaitForResumeAfterDllEvent();
 
   /// Release a HandleLoadDllEvent / HandleUnloadDllEvent that is waiting on

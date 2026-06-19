@@ -468,7 +468,9 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
                                        "fork-events+",
                                        "vfork-events+",
                                        "swbreak+",
-                                       "hwbreak+"};
+                                       "hwbreak+",
+                                       "qXfer:libraries:read+",
+                                       "qXfer:libraries-svr4:read+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {

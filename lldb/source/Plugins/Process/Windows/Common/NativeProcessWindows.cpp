@@ -472,18 +472,19 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   if (GetID() == LLDB_INVALID_PROCESS_ID)
     SetID(GetDebuggedProcessId());
 
+  ProcessInstanceInfo info;
+  bool got_info = Host::GetProcessInfo(GetDebuggedProcessId(), info);
+
   if (GetArchitecture().GetMachine() == llvm::Triple::UnknownArch) {
-    ProcessInstanceInfo process_info;
-    if (!Host::GetProcessInfo(GetDebuggedProcessId(), process_info)) {
+    if (!got_info) {
       LLDB_LOG(log, "Cannot get process information during debugger connecting "
                     "to process");
       return;
     }
-    SetArchitecture(process_info.GetArchitecture());
+    SetArchitecture(info.GetArchitecture());
   }
 
-  ProcessInstanceInfo info;
-  if (Host::GetProcessInfo(GetDebuggedProcessId(), info)) {
+  if (got_info) {
     FileSpec exe = info.GetExecutableFile();
     if (exe) {
       FileSystem::Instance().Resolve(exe);
@@ -744,6 +745,7 @@ void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
     info.signo = 0;
     loader_thread->SetStopReason(info, "");
   }
+  m_session_data->m_debugger->ArmDllEventWait();
   SetState(eStateStopped, true);
 
   m_session_data->m_debugger->WaitForResumeAfterDllEvent();
@@ -780,6 +782,7 @@ void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
     info.signo = 0;
     unloader_thread->SetStopReason(info, "");
   }
+  m_session_data->m_debugger->ArmDllEventWait();
   SetState(eStateStopped, true);
   m_session_data->m_debugger->WaitForResumeAfterDllEvent();
 }
