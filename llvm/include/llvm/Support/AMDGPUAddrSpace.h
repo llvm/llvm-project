@@ -26,8 +26,7 @@ namespace llvm {
 /// memory locations.
 namespace AMDGPUAS {
 enum : unsigned {
-  // The maximum value for flat, generic, local, private, constant and region.
-  MAX_AMDGPU_ADDRESS = 9,
+  MAX_AMDGPU_ADDRESS = 15,
 
   FLAT_ADDRESS = 0,   ///< Address space for flat memory.
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
@@ -46,6 +45,14 @@ enum : unsigned {
 
   BUFFER_STRIDED_POINTER = 9, ///< Address space for 192-bit fat buffer
                               ///< pointers with an additional index.
+
+  RESERVED_0 = 10,
+  RESERVED_1 = 11,
+  RESERVED_2 = 12,
+  RESERVED_3 = 13,
+  RESERVED_4 = 14,
+
+  BARRIER = 15, ///< Address space for modeling barrier IDs as addresses.
 
   RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
 
@@ -84,6 +91,11 @@ enum : unsigned {
   // Some places use this if the address space can't be determined.
   UNKNOWN_ADDRESS_SPACE = ~0u,
 };
+
+/// The BARRIER AS does not have an aperture in HW, so when converting
+/// BARRIER addresses from/to generic, we represent them as LDS addresses
+/// offset by a large amount so they can never alias with real LDS memory.
+static constexpr unsigned BarrierAddrLDSOffset = 0x802000u;
 } // end namespace AMDGPUAS
 
 namespace AMDGPU {
