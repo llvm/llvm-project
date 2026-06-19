@@ -12,6 +12,7 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -143,10 +144,7 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   if (!mTy)
     return rewriter.notifyMatchFailure(op, "Expected memref result type");
 
-  if (!op.getMetadata() && op.getType().hasPtrMetadata()) {
-    return rewriter.notifyMatchFailure(
-        op, "Can convert only memrefs with metadata");
-  }
+  bool hasMetadata = static_cast<bool>(op.getMetadata());
 
   // Convert the result type
   Type descriptorTy = getTypeConverter()->convertType(mTy);
@@ -167,9 +165,11 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   auto desc = MemRefDescriptor::poison(rewriter, loc, descriptorTy);
 
   // Set the allocated and aligned pointers.
-  desc.setAllocatedPtr(
-      rewriter, loc,
-      LLVM::ExtractValueOp::create(rewriter, loc, adaptor.getMetadata(), 0));
+  desc.setAllocatedPtr(rewriter, loc,
+                       hasMetadata
+                           ? LLVM::ExtractValueOp::create(
+                                 rewriter, loc, adaptor.getMetadata(), 0)
+                           : adaptor.getPtr());
   desc.setAlignedPtr(rewriter, loc, adaptor.getPtr());
 
   // Extract metadata from the passed struct.
@@ -177,9 +177,11 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
 
   // Set dynamic offset if needed.
   if (offset == ShapedType::kDynamic) {
-    Value offsetValue = LLVM::ExtractValueOp::create(
-        rewriter, loc, adaptor.getMetadata(), fieldIdx++);
-    desc.setOffset(rewriter, loc, offsetValue);
+    if (hasMetadata) {
+      Value offsetValue = LLVM::ExtractValueOp::create(
+          rewriter, loc, adaptor.getMetadata(), fieldIdx++);
+      desc.setOffset(rewriter, loc, offsetValue);
+    }
   } else {
     desc.setConstantOffset(rewriter, loc, offset);
   }
@@ -187,9 +189,11 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   // Set dynamic sizes if needed.
   for (auto [i, dim] : llvm::enumerate(shape)) {
     if (dim == ShapedType::kDynamic) {
-      Value sizeValue = LLVM::ExtractValueOp::create(
-          rewriter, loc, adaptor.getMetadata(), fieldIdx++);
-      desc.setSize(rewriter, loc, i, sizeValue);
+      if (hasMetadata) {
+        Value sizeValue = LLVM::ExtractValueOp::create(
+            rewriter, loc, adaptor.getMetadata(), fieldIdx++);
+        desc.setSize(rewriter, loc, i, sizeValue);
+      }
     } else {
       desc.setConstantSize(rewriter, loc, i, dim);
     }
@@ -198,9 +202,11 @@ LogicalResult FromPtrOpConversion::matchAndRewrite(
   // Set dynamic strides if needed.
   for (auto [i, stride] : llvm::enumerate(strides)) {
     if (stride == ShapedType::kDynamic) {
-      Value strideValue = LLVM::ExtractValueOp::create(
-          rewriter, loc, adaptor.getMetadata(), fieldIdx++);
-      desc.setStride(rewriter, loc, i, strideValue);
+      if (hasMetadata) {
+        Value strideValue = LLVM::ExtractValueOp::create(
+            rewriter, loc, adaptor.getMetadata(), fieldIdx++);
+        desc.setStride(rewriter, loc, i, strideValue);
+      }
     } else {
       desc.setConstantStride(rewriter, loc, i, stride);
     }
@@ -433,7 +439,10 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add conversion patterns.
   patterns.add<FromPtrOpConversion, GetMetadataOpConversion, PtrAddOpConversion,
-               ToPtrOpConversion, TypeOffsetOpConversion>(converter);
+               ToPtrOpConversion, TypeOffsetOpConversion,
+               VectorConvertToLLVMPattern<ptr::IntToPtrOp, LLVM::IntToPtrOp>,
+               VectorConvertToLLVMPattern<ptr::PtrToIntOp, LLVM::PtrToIntOp>>(
+      converter);
 }
 
 void mlir::ptr::registerConvertPtrToLLVMInterface(DialectRegistry &registry) {

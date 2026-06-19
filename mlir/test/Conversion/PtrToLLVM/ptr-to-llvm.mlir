@@ -316,3 +316,60 @@ func.func @test_memref_ptradd_indexing(%arg0: memref<10x?x30xf32, #ptr.generic_s
   %3 = ptr.ptr_add %0, %2 : !ptr.ptr<#ptr.generic_space>, index
   return %3 : !ptr.ptr<#ptr.generic_space>
 }
+
+// Tests reconstructing a static-sized memref from a pointer without metadata
+// CHECK-LABEL:   llvm.func @test_from_ptr_pure(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) -> !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> {
+// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[ARG0]], %[[MLIR_0]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[ARG0]], %[[INSERTVALUE_0]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[MLIR_1:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:           %[[INSERTVALUE_2:.*]] = llvm.insertvalue %[[MLIR_1]], %[[INSERTVALUE_1]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(10 : index) : i64
+// CHECK:           %[[INSERTVALUE_3:.*]] = llvm.insertvalue %[[MLIR_2]], %[[INSERTVALUE_2]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[MLIR_3:.*]] = llvm.mlir.constant(20 : index) : i64
+// CHECK:           %[[INSERTVALUE_4:.*]] = llvm.insertvalue %[[MLIR_3]], %[[INSERTVALUE_3]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[MLIR_4:.*]] = llvm.mlir.constant(20 : index) : i64
+// CHECK:           %[[INSERTVALUE_5:.*]] = llvm.insertvalue %[[MLIR_4]], %[[INSERTVALUE_4]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           %[[MLIR_5:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[INSERTVALUE_6:.*]] = llvm.insertvalue %[[MLIR_5]], %[[INSERTVALUE_5]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:           llvm.return %[[INSERTVALUE_6]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK:         }
+func.func @test_from_ptr_pure(%arg0: !ptr.ptr<#ptr.generic_space>) -> memref<10x20xf32, #ptr.generic_space> {
+  %0 = ptr.from_ptr %arg0 : <#ptr.generic_space> -> memref<10x20xf32, #ptr.generic_space>
+  return %0 : memref<10x20xf32, #ptr.generic_space>
+}
+
+// Tests int_to_ptr with both scalar and vector forms
+// CHECK-LABEL:   llvm.func @test_int_to_ptr(
+// CHECK-SAME:      %[[ARG0:.*]]: i64,
+// CHECK-SAME:      %[[ARG1:.*]]: vector<10xi64>) -> !llvm.struct<(ptr, vector<10x!llvm.ptr>)> {
+// CHECK:           %[[INTTOPTR_0:.*]] = llvm.inttoptr %[[ARG0]] : i64 to !llvm.ptr
+// CHECK:           %[[INTTOPTR_1:.*]] = llvm.inttoptr %[[ARG1]] : vector<10xi64> to vector<10x!llvm.ptr>
+// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, vector<10x!llvm.ptr>)>
+// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[INTTOPTR_0]], %[[MLIR_0]][0] : !llvm.struct<(ptr, vector<10x!llvm.ptr>)>
+// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[INTTOPTR_1]], %[[INSERTVALUE_0]][1] : !llvm.struct<(ptr, vector<10x!llvm.ptr>)>
+// CHECK:           llvm.return %[[INSERTVALUE_1]] : !llvm.struct<(ptr, vector<10x!llvm.ptr>)>
+// CHECK:         }
+func.func @test_int_to_ptr(%arg0: i64, %arg1: vector<10xi64>) -> (!ptr.ptr<#ptr.generic_space>, vector<10x!ptr.ptr<#ptr.generic_space>>) {
+  %0 = ptr.int_to_ptr %arg0 : i64 -> !ptr.ptr<#ptr.generic_space>
+  %1 = ptr.int_to_ptr %arg1 : vector<10xi64> -> vector<10x!ptr.ptr<#ptr.generic_space>>
+  return %0, %1 : !ptr.ptr<#ptr.generic_space>, vector<10x!ptr.ptr<#ptr.generic_space>>
+}
+
+// Tests ptr_to_int with both scalar and vector forms
+// CHECK-LABEL:   llvm.func @test_ptr_to_int(
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr,
+// CHECK-SAME:      %[[ARG1:.*]]: vector<10x!llvm.ptr>) -> !llvm.struct<(i64, vector<10xi64>)> {
+// CHECK:           %[[PTRTOINT_0:.*]] = llvm.ptrtoint %[[ARG0]] : !llvm.ptr to i64
+// CHECK:           %[[PTRTOINT_1:.*]] = llvm.ptrtoint %[[ARG1]] : vector<10x!llvm.ptr> to vector<10xi64>
+// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.poison : !llvm.struct<(i64, vector<10xi64>)>
+// CHECK:           %[[INSERTVALUE_0:.*]] = llvm.insertvalue %[[PTRTOINT_0]], %[[MLIR_0]][0] : !llvm.struct<(i64, vector<10xi64>)>
+// CHECK:           %[[INSERTVALUE_1:.*]] = llvm.insertvalue %[[PTRTOINT_1]], %[[INSERTVALUE_0]][1] : !llvm.struct<(i64, vector<10xi64>)>
+// CHECK:           llvm.return %[[INSERTVALUE_1]] : !llvm.struct<(i64, vector<10xi64>)>
+// CHECK:         }
+func.func @test_ptr_to_int(%arg0: !ptr.ptr<#ptr.generic_space>, %arg1: vector<10x!ptr.ptr<#ptr.generic_space>>) -> (i64, vector<10xi64>) {
+  %0 = ptr.ptr_to_int %arg0 : !ptr.ptr<#ptr.generic_space> -> i64
+  %1 = ptr.ptr_to_int %arg1 : vector<10x!ptr.ptr<#ptr.generic_space>> -> vector<10xi64>
+  return %0, %1 : i64, vector<10xi64>
+}

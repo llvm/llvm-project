@@ -128,6 +128,45 @@ def Ptr_PtrMetadata : Ptr_Type<"PtrMetadata", "ptr_metadata"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Common props
+//===----------------------------------------------------------------------===//
+
+def AlignmentProp : OptionalProp<I64Prop>;
+
+//===----------------------------------------------------------------------===//
+// Common types
+//===----------------------------------------------------------------------===//
+
+// A shaped value type with value semantics and rank.
+class Ptr_ShapedValueType<list<Type> allowedTypes, list<Pred> preds = []> :
+  ShapedContainerType<allowedTypes,
+    /*containerPred=*/And<[HasValueSemanticsPred] # preds>,
+    /*descr=*/[{A shaped type with value semantics and rank.}],
+    /*cppType=*/"::mlir::ShapedType">;
+
+// A ptr-like type, either scalar or shaped type with value semantics.
+def Ptr_PtrLikeType :
+  AnyTypeOf<[Ptr_ShapedValueType<[Ptr_PtrType], [HasRankPred]>, Ptr_PtrType]>;
+
+// An int-like type, either scalar or shaped type with value semantics.
+def Ptr_IntLikeType :AnyTypeOf<[
+  Ptr_ShapedValueType<[AnySignlessIntegerOrIndex], [HasRankPred]>,
+  AnySignlessIntegerOrIndex
+]>;
+
+// A shaped value type of rank 1 of any element type.
+def Ptr_Any1DType :
+  Ptr_ShapedValueType<[AnyType], [HasAnyRankOfPred<[1]>]>;
+
+// A shaped value type of rank 1 of `i1` element type.
+def Ptr_Mask1DType :
+  Ptr_ShapedValueType<[I1], [HasAnyRankOfPred<[1]>]>;
+
+// A shaped value type of rank 1 of `i1` element type.
+def Ptr_Ptr1DType :
+  Ptr_ShapedValueType<[Ptr_PtrType], [HasAnyRankOfPred<[1]>]>;
+
+//===----------------------------------------------------------------------===//
 // Base address operation definition.
 //===----------------------------------------------------------------------===//
 

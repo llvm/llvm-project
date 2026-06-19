@@ -19,45 +19,6 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/OpAsmInterface.td"
 
 //===----------------------------------------------------------------------===//
-// Common props
-//===----------------------------------------------------------------------===//
-
-def AlignmentProp : OptionalProp<I64Prop>;
-
-//===----------------------------------------------------------------------===//
-// Common types
-//===----------------------------------------------------------------------===//
-
-// A shaped value type with value semantics and rank.
-class Ptr_ShapedValueType<list<Type> allowedTypes, list<Pred> preds = []> :
-  ShapedContainerType<allowedTypes,
-    /*containerPred=*/And<[HasValueSemanticsPred] # preds>,
-    /*descr=*/[{A shaped type with value semantics and rank.}],
-    /*cppType=*/"::mlir::ShapedType">;
-
-// A ptr-like type, either scalar or shaped type with value semantics.
-def Ptr_PtrLikeType :
-  AnyTypeOf<[Ptr_ShapedValueType<[Ptr_PtrType], [HasRankPred]>, Ptr_PtrType]>;
-
-// An int-like type, either scalar or shaped type with value semantics.
-def Ptr_IntLikeType :AnyTypeOf<[
-  Ptr_ShapedValueType<[AnySignlessIntegerOrIndex], [HasRankPred]>,
-  AnySignlessIntegerOrIndex
-]>;
-
-// A shaped value type of rank 1 of any element type.
-def Ptr_Any1DType :
-  Ptr_ShapedValueType<[AnyType], [HasAnyRankOfPred<[1]>]>;
-
-// A shaped value type of rank 1 of `i1` element type.
-def Ptr_Mask1DType :
-  Ptr_ShapedValueType<[I1], [HasAnyRankOfPred<[1]>]>;
-
-// A shaped value type of rank 1 of `i1` element type.
-def Ptr_Ptr1DType :
-  Ptr_ShapedValueType<[Ptr_PtrType], [HasAnyRankOfPred<[1]>]>;
-
-//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -645,4 +606,51 @@ def Ptr_TypeOffsetOp : Pointer_Op<"type_offset", [Pure]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// IntToPtrOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_IntToPtrOp : Pointer_Op<"int_to_ptr", [Pure, SameOperandsAndResultShape]> {
+  let summary = "Integer to a pointer operation";
+  let description = [{
+    The `int_to_ptr` operation casts an int or index value to a pointer.
+
+    Example:
+    ```mlir
+    // Cast an integer to a pointer in the generic address space
+    %ptr = ptr.int_to_ptr %int : i64 -> !ptr.ptr<#ptr.generic_space>
+    // Cast a tensor of integer to a tensor of pointers in the generic address space
+    %ptr = ptr.int_to_ptr %int : tensor<10xi64> -> tensor<10x!ptr.ptr<#ptr.generic_space>>
+    // Cast a vector of integer to a vector of pointers in the generic address space
+    %ptr = ptr.int_to_ptr %int : vector<10xi64> -> vector<10x!ptr.ptr<#ptr.generic_space>>
+    ```
+  }];
+  let arguments = (ins Ptr_IntLikeType:$arg);
+  let results = (outs Ptr_PtrLikeType:$res);
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($res)";
+}
+
+//===----------------------------------------------------------------------===//
+// PtrToIntOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_PtrToIntOp : Pointer_Op<"ptr_to_int", [Pure, SameOperandsAndResultShape]> {
+  let summary = "Pointer to an integer operation";
+  let description = [{
+    The `ptr_to_int` operation casts a pointer value to an int or index.
+
+    Example:
+    ```mlir
+    // Cast a pointer in the generic address space to an integer
+    %int = ptr.ptr_to_int %ptr : !ptr.ptr<#ptr.generic_space> -> i64
+    // Cast a tensor of pointers in the generic address space to a tensor of integer
+    %int = ptr.ptr_to_int %ptr : tensor<10x!ptr.ptr<#ptr.generic_space>> -> tensor<10xi64>
+    // Cast a vector of pointers in the generic address space to a vector of integer
+    %int = ptr.ptr_to_int %ptr : vector<10x!ptr.ptr<#ptr.generic_space>> -> vector<10xi64>
+    ```
+  }];
+  let arguments = (ins Ptr_PtrLikeType:$arg);
+  let results = (outs Ptr_IntLikeType:$res);
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($res)";
+}
 #endif // PTR_OPS
