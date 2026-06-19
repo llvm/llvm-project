@@ -125,6 +125,7 @@ LANGOPT(PointerAuthIndirectGotos, 1, 0, NotCompatible, "indirect gotos pointer a
 LANGOPT(PointerAuthAuthTraps, 1, 0, NotCompatible, "pointer authentication failure traps")
 LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, NotCompatible, "incorporate address discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, NotCompatible, "incorporate type discrimination in authenticated vtable pointers")
+LANGOPT(PointerAuthVTTVTPtrDiscrimination, 1, 0, NotCompatible, "incorporate discrimination in authenticated vtable pointers in VTTs")
 LANGOPT(PointerAuthTypeInfoVTPtrDiscrimination, 1, 0, NotCompatible, "incorporate type and address discrimination in authenticated vtable pointers for std::type_info")
 LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0, Benign,
         "Use type discrimination when signing function pointers")
