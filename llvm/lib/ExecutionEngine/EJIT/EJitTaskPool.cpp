@@ -1,6 +1,7 @@
 //===-- EJitTaskPool.cpp - SRE taskpool compile scheduler -----------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitTaskPool.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include <algorithm>
 #include <vector>
 
@@ -317,9 +318,13 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, const EJitDimPair *dims,
                            uint32_t numDims, void *fallback) {
   CompileOrGetResult R;
   R.fnPtr = fallback;
+  EJIT_DIAG("taskpool request func=%u dims=%u fallback=%p", funcIndex, numDims,
+            fallback);
 
   // 1. Parameter check.
   if ((numDims > 0 && !dims) || numDims > 4) {
+    EJIT_DIAG("taskpool reject func=%u: invalid dims ptr=%p count=%u",
+              funcIndex, dims, numDims);
     R.status = EJitCompileOrGetStatus::InvalidParam;
     return R;
   }
@@ -329,6 +334,8 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, const EJitDimPair *dims,
   for (uint32_t i = 0; i < numDims; ++i) {
     if (!switch_.isInstanceEnabled(dims[i].dimType, dims[i].instanceId)) {
       counters_.instanceDisabled.fetchAdd(1);
+      EJIT_DIAG("taskpool disabled func=%u dim[%u]=(%u,%u)", funcIndex, i,
+                dims[i].dimType, dims[i].instanceId);
       R.status = EJitCompileOrGetStatus::InstanceDisabled;
       return R;
     }
@@ -345,11 +352,14 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, const EJitDimPair *dims,
     R.fnPtr = Hit.fnPtr;
     R.bucketIndex = Hit.bucketIndex;
     R.hasReadToken = true;
+    EJIT_DIAG("taskpool hit func=%u bucket=%u fn=%p", funcIndex,
+              Hit.bucketIndex, Hit.fnPtr);
     return R;
   }
 
   // 4. Off mode (§5.2 step 2) — fall back, never enqueue/compile.
   if (switch_.getMode() == EJitCompileMode::Off) {
+    EJIT_DIAG("taskpool fallback func=%u: mode off", funcIndex);
     R.status = EJitCompileOrGetStatus::OffMode;
     return R;
   }
@@ -368,21 +378,25 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, const EJitDimPair *dims,
   EJitTaskQueue::EnqueueResult EQ = queue_.tryEnqueue(Req);
   if (EQ == EJitTaskQueue::EnqueueResult::Enqueued) {
     counters_.asyncEnqueues.fetchAdd(1);
+    EJIT_DIAG("taskpool enqueued func=%u", funcIndex);
     R.status = EJitCompileOrGetStatus::EnqueuedPending;
     return R;
   }
   if (EQ == EJitTaskQueue::EnqueueResult::AlreadyPending) {
     counters_.alreadyPending.fetchAdd(1);
+    EJIT_DIAG("taskpool coalesced func=%u: already pending", funcIndex);
     R.status = EJitCompileOrGetStatus::AlreadyPending;
     return R;
   }
   if (EQ == EJitTaskQueue::EnqueueResult::InvalidFuncIndex) {
     // funcIndex out of the flat dedup table's range: reject, never alias.
+    EJIT_DIAG("taskpool reject func=%u: out of range", funcIndex);
     R.status = EJitCompileOrGetStatus::InvalidParam;
     return R;
   }
 
   counters_.queueFull.fetchAdd(1);
+  EJIT_DIAG("taskpool fallback func=%u: queue full", funcIndex);
   R.status = EJitCompileOrGetStatus::QueueFullFallback;
   return R;
 }
@@ -397,10 +411,13 @@ bool EJitTaskPool::versionsMatch(const EJitCompileRequest &req) const {
 }
 
 void EJitTaskPool::runCompile(const EJitCompileRequest &req) {
+  EJIT_DIAG("worker compile begin func=%u dims=%u", req.funcIndex, req.numDims);
   // Checkpoint 1 (§5.3): drop a request invalidated before compilation started.
   if (!versionsMatch(req)) {
     queue_.release(req.funcIndex);
     counters_.compileFailed.fetchAdd(1);
+    EJIT_DIAG("worker compile drop func=%u: version changed before compile",
+              req.funcIndex);
     return;
   }
 
@@ -410,6 +427,8 @@ void EJitTaskPool::runCompile(const EJitCompileRequest &req) {
   if (!ok || !fn) {
     queue_.release(req.funcIndex);
     counters_.compileFailed.fetchAdd(1);
+    EJIT_DIAG("worker compile failed func=%u ok=%u fn=%p", req.funcIndex,
+              static_cast<unsigned>(ok), fn);
     return;
   }
 
@@ -418,6 +437,8 @@ void EJitTaskPool::runCompile(const EJitCompileRequest &req) {
     cache_.retireCode(fn); // Retire the now-stale code (real callback only).
     queue_.release(req.funcIndex);
     counters_.compileFailed.fetchAdd(1);
+    EJIT_DIAG("worker compile drop func=%u: version changed after compile",
+              req.funcIndex);
     return;
   }
 
@@ -430,6 +451,7 @@ void EJitTaskPool::runCompile(const EJitCompileRequest &req) {
   case EJitPublishStatus::Published:
     counters_.asyncCompiles.fetchAdd(1);
     queue_.release(req.funcIndex);
+    EJIT_DIAG("worker publish ok func=%u fn=%p", req.funcIndex, fn);
     return;
   case EJitPublishStatus::VersionMismatch:
     // Rejected at the commit gate: retire the stale code, do not overwrite any
@@ -437,12 +459,15 @@ void EJitTaskPool::runCompile(const EJitCompileRequest &req) {
     cache_.retireCode(fn);
     queue_.release(req.funcIndex);
     counters_.compileFailed.fetchAdd(1);
+    EJIT_DIAG("worker publish drop func=%u: version mismatch", req.funcIndex);
     return;
   case EJitPublishStatus::InvalidParam:
   case EJitPublishStatus::Failed:
     cache_.retireCode(fn);
     queue_.release(req.funcIndex);
     counters_.publishFailed.fetchAdd(1);
+    EJIT_DIAG("worker publish failed func=%u status=%u", req.funcIndex,
+              static_cast<unsigned>(PS));
     return;
   }
 }

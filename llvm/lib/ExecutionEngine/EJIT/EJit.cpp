@@ -240,12 +240,18 @@ EJit::EJit(const Config &config) : config_(config) {
   if (!initFailed_) {
     regPhase_ = RegistrationPhase::Frozen;
     if (config_.compileMode == CompileMode::Async) {
+      EJIT_DIAG("taskpool async init: engineReady=%u",
+                static_cast<unsigned>(engineReady));
       if (!engineReady)
         recordInitError(EJIT_ERR_COMPILE_FAILED,
                         "Async mode requires a ready ORC engine", "");
       else if (!compileDriver_->startTaskPoolWorker())
         recordInitError(EJIT_ERR_COMPILE_FAILED,
                         "taskpool worker failed to start", "");
+      else
+        EJIT_DIAG("taskpool async init complete: worker running");
+    } else {
+      EJIT_DIAG("taskpool sync init complete: worker remains stopped");
     }
   }
 #else
@@ -512,14 +518,20 @@ bool EJit::setCompileMode(CompileMode mode) {
     // Do not expose Async until both the compiler engine and consumer exist.
     // Failure preserves the old mode, so callers cannot enqueue permanent
     // pending work into a worker-less taskpool.
-    if (!compileDriver_->hasSyncEngine())
+    if (!compileDriver_->hasSyncEngine()) {
+      EJIT_DIAG("compile mode switch rejected: async without engine");
       return false;
-    if (!tp->isWorkerRunning() && !compileDriver_->startTaskPoolWorker())
+    }
+    if (!tp->isWorkerRunning() && !compileDriver_->startTaskPoolWorker()) {
+      EJIT_DIAG("compile mode switch rejected: worker start failed");
       return false;
+    }
     tp->switchController().setMode(EJitCompileMode::Async);
+    EJIT_DIAG("compile mode switched to async");
   } else {
     tp->switchController().setMode(EJitCompileMode::Off);
     compileDriver_->stopTaskPoolWorker();
+    EJIT_DIAG("compile mode switched to sync; taskpool worker stopped");
   }
 #endif
   config_.compileMode = mode;

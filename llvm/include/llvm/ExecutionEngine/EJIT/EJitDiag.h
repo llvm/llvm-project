@@ -25,13 +25,14 @@
 // linker can resolve it against the device firmware's libc / BSP.
 extern "C" int SRE_printf(const char *fmt, ...);
 
-// NOTE: The ## before __VA_ARGS__ is a GNU extension that removes the
-// preceding comma when __VA_ARGS__ is empty.  Both GCC and Clang support
-// it in C++ mode.  If you are using a different compiler, always supply
-// at least one argument after the format string.
-#define EJIT_DIAG(fmt, ...)                                               \
-  do {                                                                    \
-    SRE_printf("[EJIT] %s:%d " fmt "\n", __func__, __LINE__, ##__VA_ARGS__); \
+// Split the prefix, payload, and newline into separate calls so the macro works
+// in C++17 without the GNU `, ##__VA_ARGS__` extension. Diagnostics are a
+// bring-up-only facility, so preserving one atomic printf call is not required.
+#define EJIT_DIAG(...)                                                     \
+  do {                                                                     \
+    SRE_printf("[EJIT] %s:%d ", __func__, __LINE__);                       \
+    SRE_printf(__VA_ARGS__);                                               \
+    SRE_printf("\n");                                                      \
   } while (0)
 
 #else // !EJIT_DIAG_ENABLE

@@ -3,6 +3,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/EJIT/EJitFuncRegistry.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLifecycleRegistry.h"
 #include "llvm/IR/Function.h"
@@ -19,27 +20,41 @@ bool EJitModuleLoader::registerBitcode(const std::string &funcName,
                                        const uint8_t *data, size_t size) {
   // Reject malformed payloads up front; the caller propagates the failure to
   // ejit_init (never builds a half-registered taskpool).
-  if (!data || size == 0)
+  if (!data || size == 0) {
+    EJIT_DIAG("bitcode register reject name=%s data=%p size=%zu",
+              funcName.c_str(), data, size);
     return false;
+  }
   // Dense, order-independent funcIndex assigned ONCE by name in the process-
   // global registry. The wrapper backfills the SAME value into its per-function
   // global, so the index it requests always selects this bitcode. Distinct
   // names get distinct dense indices (a monotonic counter), so two functions
   // can never alias one slot; capacity exhaustion is a clean rejection.
   uint32_t idx = EJitFuncRegistry::instance().resolveAssign(funcName);
-  if (idx == kEJitInvalidFuncIndex)
+  if (idx == kEJitInvalidFuncIndex) {
+    EJIT_DIAG("bitcode register reject name=%s: func index exhausted",
+              funcName.c_str());
     return false; // funcIndex capacity exhausted.
+  }
   auto It = entriesByFuncIdx_.find(idx);
   if (It != entriesByFuncIdx_.end()) {
     // An occupied slot is always the same name re-registering (the counter
     // registry never hands two names the same index).
-    if (It->second.funcName != funcName)
+    if (It->second.funcName != funcName) {
+      EJIT_DIAG("bitcode register reject name=%s idx=%u: name collision",
+                funcName.c_str(), idx);
       return false; // defensive: unreachable with the counter registry.
+    }
     // Same name, same payload (data ptr + size): idempotent success. A
     // different payload is rejected (the original bitcode, funcIndex and any
     // live cache are kept) rather than silently swapped.
-    if (It->second.data == data && It->second.size == size)
+    if (It->second.data == data && It->second.size == size) {
+      EJIT_DIAG("bitcode register idempotent name=%s idx=%u", funcName.c_str(),
+                idx);
       return true;
+    }
+    EJIT_DIAG("bitcode register reject name=%s idx=%u: payload changed",
+              funcName.c_str(), idx);
     return false;
   }
   Entry E;
@@ -47,6 +62,8 @@ bool EJitModuleLoader::registerBitcode(const std::string &funcName,
   E.data = data;
   E.size = size;
   entriesByFuncIdx_.emplace(idx, std::move(E));
+  EJIT_DIAG("bitcode registered name=%s idx=%u data=%p size=%zu",
+            funcName.c_str(), idx, data, size);
   return true;
 }
 

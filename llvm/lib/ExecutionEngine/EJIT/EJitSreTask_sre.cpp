@@ -1,5 +1,6 @@
 //===-- EJitSreTask_sre.cpp - SRE task implementation shim ---------------===//
 
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/EJIT/EJitSreTask.h"
 
 #ifdef EJIT_FREESTANDING
@@ -15,23 +16,32 @@ void ejit_sre_task_join_destroy(void *Handle);
 
 bool EJitSreTask::create(EJitSreTask &out, EntryFn entry, void *ctx,
                          const char *name) {
-  if (out.handle_)
+  if (out.handle_) {
+    EJIT_DIAG("platform task create ignored: handle=%p", out.handle_);
     return true;
+  }
+  EJIT_DIAG("platform task create begin name=%s entry=%p ctx=%p",
+            name ? name : "<null>", reinterpret_cast<void *>(entry), ctx);
   out.stopFlag_.storeRelease(0);
   out.entry_ = entry;
   out.ctx_ = ctx;
   out.handle_ = ejit_sre_task_create(entry, ctx, name);
+  EJIT_DIAG("platform task create end handle=%p", out.handle_);
   return out.handle_ != nullptr;
 }
 
 void EJitSreTask::destroy(EJitSreTask &task) {
-  if (!task.handle_)
+  if (!task.handle_) {
+    EJIT_DIAG("platform task destroy ignored: no handle");
     return;
+  }
+  EJIT_DIAG("platform task destroy begin handle=%p", task.handle_);
   task.stopFlag_.storeRelease(1);
   ejit_sre_task_join_destroy(task.handle_);
   task.handle_ = nullptr;
   task.entry_ = nullptr;
   task.ctx_ = nullptr;
+  EJIT_DIAG("platform task destroy complete");
 }
 
 // Idle hint for the worker loop. Uses the AArch64 `yield` hint instruction when
