@@ -73,7 +73,8 @@ define i32 @PR197725() {
 ; CHECK-LABEL: @PR197725(
 ; CHECK-NEXT:  exit:
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 0, 1
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[NOT]], 1
+; CHECK-NEXT:    ret i32 [[NOT]]
 ;
 entry:
   br i1 false, label %loop2, label %loop1
