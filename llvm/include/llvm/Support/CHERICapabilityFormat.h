@@ -41,7 +41,7 @@ struct RVYCapabilityFormat
 };
 
 using RV32YCapabilityFormat = RVYCapabilityFormat<uint32_t, 10, 24>;
-using RV64YCapabilityFormat = RVYCapabilityFormat<uint64_t, 14, 24>;
+using RV64YCapabilityFormat = RVYCapabilityFormat<uint64_t, 14, 52>;
 
 struct CHERIoTCapabilityFormat
     : public CHERICapabilityFormatBase<CHERIoTCapabilityFormat, uint32_t> {
