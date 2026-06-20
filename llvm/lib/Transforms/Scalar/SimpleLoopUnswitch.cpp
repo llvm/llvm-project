@@ -624,7 +624,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
         PN.addIncoming(V, BI.getParent());
       }
       if (MSSAU)
-        MSSAU->applyUpdates(Updates, DT);
+        MSSAU->applyUpdates(Updates, DT, true);
       else
         DT.applyUpdates(Updates);
 
