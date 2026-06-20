@@ -179,3 +179,25 @@ int *atomic_pointer_declref(void) {
   _Atomic(int *) p = &value;
   return p;
 }
+
+// In C, a pointer compound assignment is a prvalue; its result still carries
+// the LHS pointer's loans.
+void compound_assign_prvalue(void) {
+  int *p;
+  {
+    int local[10];
+    int *q = local; // expected-warning {{local variable 'local' does not live long enough}}
+    p = (q += 1);
+  }               // expected-note {{destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void preincrement_prvalue(void) {
+  int *p;
+  {
+    int local[10];
+    int *q = local; // expected-warning {{local variable 'local' does not live long enough}}
+    p = ++q;
+  }               // expected-note {{destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
