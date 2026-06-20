@@ -6,6 +6,7 @@
 
 subroutine requires_1(a)
   real(8), intent(inout) :: a
+  !WARNING: REVERSE_OFFLOAD clause is not supported and will be ignored
   !$omp requires reverse_offload, unified_shared_memory, atomic_default_mem_order(relaxed)
   a = a + 0.01
 end subroutine requires_1
