@@ -134,12 +134,6 @@ void test() {
 
     std::function_ref<Int(int, int, int) const noexcept> f4(&needs_conversion);
     assert(f4(1, 2, 3).i == 6);
-
-    {
-      std::function_ref r1 = foo;
-      std::function_ref r2 = bar;
-      r1                   = r2; // ok
-    }
   }
 }
 

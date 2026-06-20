@@ -11,6 +11,7 @@
 // template<class T> function_ref& operator=(T) = delete;
 
 #include <cassert>
+#include <concepts>
 #include <functional>
 #include <utility>
 #include <type_traits>
@@ -73,38 +74,49 @@ static_assert(
 
 int forty_two() { return 42; }
 
+// These runtime tests are testing that when the constraints are not met,
+// the assignment operator is not deleted and the implicit constructor
+// and the move assignment are called
 void test() {
   {
     std::function_ref<int()> f(std::cw<[] { return 41; }>);
-    f = std::function_ref<int()>(std::cw<[] { return 42; }>);
+    std::same_as<std::function_ref<int()>&> decltype(auto) result = f =
+        std::function_ref<int()>(std::cw<[] { return 42; }>);
+    assert(&result == &f);
     assert(f() == 42);
   }
   {
     std::function_ref<int() > f(std::cw<[] { return 41; }>);
-    f = &forty_two;
+    std::same_as<std::function_ref<int()>&> decltype(auto) result = f = &forty_two;
+    assert(&result == &f);
     assert(f() == 42);
   }
   {
     std::function_ref<int() > f(std::cw<[] { return 41; }>);
-    f = std::cw<[] { return 42; }>;
+    std::same_as<std::function_ref<int()>&> decltype(auto) result = f = std::cw<[] { return 42; }>;
+    assert(&result == &f);
     assert(f() == 42);
   }
   {
     // const
     std::function_ref<int() const> f(std::cw<[] { return 41; }>);
-    f = std::cw<[] { return 42; }>;
+    std::same_as<std::function_ref<int() const>&> decltype(auto) result = f = std::cw<[] { return 42; }>;
+    assert(&result == &f);
     assert(f() == 42);
   }
   {
     // noexcept
     std::function_ref<int() noexcept> f(std::cw<[] noexcept { return 41; }>);
-    f = std::cw<[] noexcept { return 42; }>;
+    std::same_as<std::function_ref<int() noexcept>&> decltype(auto) result = f = std::cw<[] noexcept { return 42; }>;
+    assert(&result == &f);
     assert(f() == 42);
   }
   {
     // const noexcept
     std::function_ref<int() const noexcept> f(std::cw<[] noexcept { return 41; }>);
-    f = std::cw<[] noexcept { return 42; }>;
+    std::same_as<std::function_ref<int() const noexcept>&> decltype(auto) result = f =
+        std::cw<[] noexcept { return 42; }>;
+    assert(&result == &f);
     assert(f() == 42);
   }
 }

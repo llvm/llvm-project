@@ -98,15 +98,6 @@ constexpr bool __is_constant_wrapper = false;
 template <auto _Value>
 constexpr bool __is_constant_wrapper<constant_wrapper<_Value>> = true;
 
-template <class _Arg>
-concept __itanium_trivial_for_calls =
-    is_trivially_destructible_v<_Arg> && is_trivially_copy_constructible_v<_Arg> &&
-    is_trivially_move_constructible_v<_Arg>;
-
-template <class _Arg>
-concept __register_passable =
-    !is_reference_v<_Arg> && sizeof(_Arg) <= 2 * sizeof(void*) && __itanium_trivial_for_calls<_Arg>;
-
 template <class _Fn, class... _Args>
 concept __statically_callable = requires { _Fn::operator()(std::declval<_Args>()...); };
 

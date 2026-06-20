@@ -26,6 +26,7 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/register_passable.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_pointer.h>
@@ -92,7 +93,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI function_ref(_Fp* __fn_ptr) noexcept
       : __storage_(__fn_ptr),
         __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
-          return __storage_t::template __get<_Fp>(__storage)(std::forward<__arg_t<_ArgTypes>>(__args)...);
+          _Fp* __fn_ptr1 = __storage_t::template __get<_Fp>(__storage);
+          return std::invoke_r<_Rp>(__fn_ptr1, std::forward<__arg_t<_ArgTypes>>(__args)...);
         }) {
     _LIBCPP_ASSERT_NON_NULL(__fn_ptr != nullptr, "the function pointer should not be a nullptr");
   }
@@ -110,7 +112,7 @@ public:
       __storage_ = __storage_t(std::addressof(__obj)),
       __call_    = [](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
         _LIBCPP_FUNCTION_REF_CV _Tp& __obj1 = *__storage_t::template __get<_Tp>(__storage);
-        return __obj1(std::forward<__arg_t<_ArgTypes>>(__args)...);
+        return std::invoke_r<_Rp>(__obj1, std::forward<__arg_t<_ArgTypes>>(__args)...);
       };
     }
   }
@@ -145,7 +147,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_wrapper<_Cw, _Fn> __f, _Up&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
         __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
-          _LIBCPP_FUNCTION_REF_CV _Tp& __obj1 = *__storage_t::template __get<_Tp>(__storage);
+          auto& __obj1 = static_cast<_LIBCPP_FUNCTION_REF_CV _Tp&>(*__storage_t::template __get<_Tp>(__storage));
           return std::invoke_r<_Rp>(decltype(__f)::value, __obj1, std::forward<__arg_t<_ArgTypes>>(__args)...);
         }) {
     if constexpr (is_pointer_v<_Fn> || is_member_pointer_v<_Fn>) {

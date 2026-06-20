@@ -8,6 +8,15 @@
 
 // REQUIRES: std-at-least-c++26
 
+// template<class F>
+// function_ref(F*) -> function_ref<F>;
+//
+// template<auto c, class F0>
+// function_ref(constant_wrapper<c, F0>) -> function_ref<see below>;
+//
+// template<auto c, class F, class T>
+// function_ref(constant_wrapper<c, F>, T&&) -> function_ref<see below>;
+
 #include <cassert>
 #include <functional>
 #include <utility>

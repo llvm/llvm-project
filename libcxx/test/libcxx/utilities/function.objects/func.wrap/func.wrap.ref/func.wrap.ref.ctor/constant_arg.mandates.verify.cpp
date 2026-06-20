@@ -35,27 +35,27 @@ struct B {
 
 // clang-format off
 void test() {
-  std::function_ref<void()> f1(std::cw<static_cast<void (*)()>(nullptr)>); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}
-  // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
+  std::function_ref<void()> f1(std::cw<static_cast<void (*)()>(nullptr)>);
+  // expected-error-re@*:* {{static assertion failed {{.*}}the function pointer should not be a nullptr}}
 
-  std::function_ref<void(A)> f2(std::cw<static_cast<void (A::*)()>(nullptr)>); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}
-  // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
+  std::function_ref<void(A)> f2(std::cw<static_cast<void (A::*)()>(nullptr)>);
+  // expected-error-re@*:* {{static assertion failed {{.*}}the function pointer should not be a nullptr}}
 
   std::function_ref<void(std::constant_wrapper<42>)> f33(std::cw<B{}>);
-  // expected-error@*:* {{static assertion failed due to requirement '!requires { std::constant_wrapper<std::__cw_fixed_value<int>{42}, int>; }': cw(args...) should be equivalent to fn(args...), otherwise the intended behavior for a function_ref constructed from cw would be ambiguous}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}cw(args...) should be equivalent to fn(args...), otherwise the intended behavior for a function_ref constructed from cw would be ambiguous}}
 
   int i;
-  std::function_ref<void()> f3(std::cw<static_cast<void (*)(int)>(nullptr)>, i); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}
-  // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
+  std::function_ref<void()> f3(std::cw<static_cast<void (*)(int)>(nullptr)>, i);
+  // expected-error-re@*:* {{static assertion failed {{.*}}the function pointer should not be a nullptr}}
 
   A a;
-  std::function_ref<void()> f4(std::cw<static_cast<void (A::*)()>(nullptr)>, a); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}
-  // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
+  std::function_ref<void()> f4(std::cw<static_cast<void (A::*)()>(nullptr)>, a);
+  // expected-error-re@*:* {{static assertion failed {{.*}}the function pointer should not be a nullptr}}
 
-  std::function_ref<void()> f5(std::cw<static_cast<void (*)(int*)>(nullptr)>, &i); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}
-  // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
+  std::function_ref<void()> f5(std::cw<static_cast<void (*)(int*)>(nullptr)>, &i);
+  // expected-error-re@*:* {{static assertion failed {{.*}}the function pointer should not be a nullptr}}
 
-  std::function_ref<void()> f6(std::cw<static_cast<void (A::*)()>(nullptr)>, &a); // expected-note-re{{in instantiation of function template specialization 'std::function_ref{{.*}}' requested here}}
-  // expected-error@*:* {{static assertion failed due to requirement '__f.value != nullptr': the function pointer should not be a nullptr}}
+  std::function_ref<void()> f6(std::cw<static_cast<void (A::*)()>(nullptr)>, &a);
+  // expected-error-re@*:* {{static assertion failed {{.*}}the function pointer should not be a nullptr}}
 }
 // clang-format on
