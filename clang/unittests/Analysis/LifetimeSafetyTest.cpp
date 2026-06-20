@@ -2078,5 +2078,49 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainWithLifetimeBound) {
   EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("result")));
   EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("a"))));
 }
+
+TEST_F(LifetimeAnalysisTest, BuildOriginFlowChainInMultiBlock) {
+  SetupTest(R"(
+    void target(bool c1, bool c2) {
+      int *s;
+      int *a, *b, *c;
+
+      {
+        int tgta, tgtb, tgtc;
+        a = &tgta;
+        b = &tgtb;
+        c = &tgtc;
+      }
+
+      if (c1) {
+        s = c2 ? a : b;
+      } else {
+        s = c;
+      }
+
+      POINT(after_nested_merge);
+      (void)*s;
+    }
+  )");
+
+  llvm::SmallVector<OriginID> ChainForTgtA =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgta", "after_nested_merge");
+  llvm::SmallVector<OriginID> ChainForTgtB =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgtb", "after_nested_merge");
+  llvm::SmallVector<OriginID> ChainForTgtC =
+      Helper->buildOriginFlowChainInOneBlock("s", "tgtc", "after_nested_merge");
+
+  EXPECT_THAT(ChainForTgtA, Contains(*Helper->getOriginForDecl("a")));
+  EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("b"))));
+  EXPECT_THAT(ChainForTgtA, Not(Contains(*Helper->getOriginForDecl("c"))));
+
+  EXPECT_THAT(ChainForTgtB, Contains(*Helper->getOriginForDecl("b")));
+  EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("a"))));
+  EXPECT_THAT(ChainForTgtB, Not(Contains(*Helper->getOriginForDecl("c"))));
+
+  EXPECT_THAT(ChainForTgtC, Contains(*Helper->getOriginForDecl("c")));
+  EXPECT_THAT(ChainForTgtC, Not(Contains(*Helper->getOriginForDecl("b"))));
+  EXPECT_THAT(ChainForTgtC, Not(Contains(*Helper->getOriginForDecl("a"))));
+}
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

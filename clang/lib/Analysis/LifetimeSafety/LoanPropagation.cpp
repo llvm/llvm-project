@@ -210,8 +210,7 @@ public:
            "TargetLoan must be present in the StartOID at the StartPoint");
 
     llvm::SmallVector<OriginID> OriginFlowChain;
-    std::optional<size_t> BlockID = FactMgr.getBlockID(StartPoint);
-    assert(BlockID.has_value());
+    size_t BlockID = FactMgr.getBlockID(StartPoint);
     const auto EndBlockIt =
         llvm::find_if(*POV, [&BlockID](const CFGBlock *Block) {
           return Block->getBlockID() == BlockID;
@@ -232,8 +231,7 @@ public:
     }
 
     llvm_unreachable(
-        "buildOriginFlowChain should return at BuildResult.Complete");
-    return {};
+        "buildOriginFlowChain did not reach IssueFact for TargetLoan");
   }
 
   llvm::SmallVector<OriginID>
