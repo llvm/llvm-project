@@ -252,6 +252,10 @@
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should not be defined before c++20"
 #  endif
@@ -1186,6 +1190,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -2224,6 +2232,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -3508,6 +3520,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -5002,6 +5018,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -6742,6 +6762,13 @@
 #  endif
 #  if __cpp_lib_constexpr_queue != 202502L
 #    error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_set != 202502L
+#    error "__cpp_lib_constexpr_set should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
