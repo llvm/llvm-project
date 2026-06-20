@@ -2273,7 +2273,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     fail(DL, DAG,
          "a funcref can only be converted to a pointer to be directly called; "
          "the resulting pointer cannot otherwise be used");
-    return DAG.getUNDEF(Op.getValueType());
+    return DAG.getPOISON(Op.getValueType());
   }
 
   case Intrinsic::thread_pointer: {
