@@ -2247,7 +2247,8 @@ DeclResult Sema::CheckClassTemplate(
     NewTemplate->setModulePrivate();
 
   if (!Invalid && IsMemberSpecialization) {
-    assert(PrevClassTemplate && "Member specialization without a primary template?");
+    assert(PrevClassTemplate &&
+           "Member specialization without a primary template?");
     NewTemplate->setMemberSpecialization();
   }
 
