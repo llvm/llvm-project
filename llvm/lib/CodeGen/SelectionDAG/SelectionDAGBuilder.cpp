@@ -4217,7 +4217,7 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
 
   // Rotate left by (Offset + ResultWidth) - brings target field to bit 0
-  SDValue Rotated = DAG.getNode(ISD::ROTR, dl, SrcVT, Src, LegalRotateAmount);
+  SDValue Rotated = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalRotateAmount);
 
   // Truncating to ResultVT discards the high bits for free
   setValue(&I, DAG.getZExtOrTrunc(Rotated, dl, ResultVT));
