@@ -12,9 +12,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
-
 using namespace lldb;
 using namespace lldb_private;
 

@@ -6,6 +6,7 @@
 
 int var() {
   std::this_thread::sleep_for(std::chrono::seconds(100)); // break here
+  return 0;
 }
 int baz() { return 10 + var(); }
 int bar() { return 15 + baz(); }
@@ -26,4 +27,5 @@ int main() {
   thread_3.join();
   thread_2.join();
   thread_1.join();
+  return 0;
 }
