@@ -2326,8 +2326,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
-   FeatureSmemPrefetchInsts,
-   FeatureTransCoexecutionHazard
+   FeatureSmemPrefetchInsts
 ]>;
 
 //===----------------------------------------------------------------------===//
