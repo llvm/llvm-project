@@ -654,22 +654,22 @@ private:
 
   bool isInValidExpr(const Expr *E) {
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      return !DRE->getDecl()->isImplicit();
+      return DRE->getDecl()->isImplicit();
     }
 
     if (const auto *CE = dyn_cast<CallExpr>(E)) {
       if (const auto *FE = CE->getDirectCallee())
-        return !FE->isImplicit();
+        return FE->isImplicit();
     }
 
-    return false;
+    return true;
   }
 
   bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
     CurrExpr = CurrExpr->IgnoreImpCasts();
     LastExpr = LastExpr->IgnoreImpCasts();
 
-    if (!isInValidExpr(CurrExpr))
+    if (isInValidExpr(CurrExpr))
       return false;
     // Source ranges can be used to filter out many implicit expressions,
     // because operations between class objects often involve numerous implicit
