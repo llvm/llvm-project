@@ -86,14 +86,15 @@ public:
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
-    std::string DiagSubject = getDiagSubjectDescription(IssueExpr);
+    std::string DestroyedSubject = getDiagSubjectDescription(IssueExpr);
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
-        << DiagSubject << IssueExpr->getSourceRange();
+        << DestroyedSubject << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
-    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here) << DiagSubject;
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
+        << DestroyedSubject;
 
     reportAliasingChain(ExprChain);
 
@@ -167,10 +168,10 @@ public:
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
-    std::string DiagSubject = getDiagSubjectDescription(IssueExpr);
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(), WarnDiag)
-        << DiagSubject << IssueExpr->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, DiagSubject);
+        << InvalidatedSubject << IssueExpr->getSourceRange();
+    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -180,11 +181,11 @@ public:
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
-    std::string DiagSubject = getDiagSubjectDescription(PVD);
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
 
     S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
-        << DiagSubject << PVD->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, DiagSubject);
+        << InvalidatedSubject << PVD->getSourceRange();
+    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -192,12 +193,12 @@ public:
   void reportInvalidatedField(const Expr *IssueExpr,
                               const FieldDecl *DanglingField,
                               const Expr *InvalidationExpr) override {
-    std::string DiagSubject = getDiagSubjectDescription(IssueExpr);
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_field)
-        << DiagSubject << getDiagSubjectDescription(DanglingField)
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingField)
         << IssueExpr->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, DiagSubject);
+    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
@@ -206,12 +207,12 @@ public:
   void reportInvalidatedField(const ParmVarDecl *PVD,
                               const FieldDecl *DanglingField,
                               const Expr *InvalidationExpr) override {
-    std::string DiagSubject = getDiagSubjectDescription(PVD);
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
     S.Diag(PVD->getSourceRange().getBegin(),
            diag::warn_lifetime_safety_invalidated_field)
-        << DiagSubject << getDiagSubjectDescription(DanglingField)
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingField)
         << PVD->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, DiagSubject);
+    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
@@ -220,12 +221,12 @@ public:
   void reportInvalidatedGlobal(const Expr *IssueExpr,
                                const VarDecl *DanglingGlobal,
                                const Expr *InvalidationExpr) override {
-    std::string DiagSubject = getDiagSubjectDescription(IssueExpr);
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_global)
-        << DiagSubject << getDiagSubjectDescription(DanglingGlobal)
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingGlobal)
         << IssueExpr->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, DiagSubject);
+    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)
@@ -239,12 +240,12 @@ public:
   void reportInvalidatedGlobal(const ParmVarDecl *PVD,
                                const VarDecl *DanglingGlobal,
                                const Expr *InvalidationExpr) override {
-    std::string DiagSubject = getDiagSubjectDescription(PVD);
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
     S.Diag(PVD->getSourceRange().getBegin(),
            diag::warn_lifetime_safety_invalidated_global)
-        << DiagSubject << getDiagSubjectDescription(DanglingGlobal)
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingGlobal)
         << PVD->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, DiagSubject);
+    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)
@@ -423,7 +424,7 @@ public:
 
 private:
   void reportInvalidationNote(const Expr *InvalidationExpr,
-                              StringRef DiagSubject) {
+                              StringRef InvalidatedSubject) {
     if (isa<CXXDeleteExpr>(InvalidationExpr)) {
       S.Diag(InvalidationExpr->getExprLoc(),
              diag::note_lifetime_safety_freed_here)
@@ -432,7 +433,7 @@ private:
     }
     S.Diag(InvalidationExpr->getExprLoc(),
            diag::note_lifetime_safety_invalidated_here)
-        << DiagSubject << InvalidationExpr->getSourceRange();
+        << InvalidatedSubject << InvalidationExpr->getSourceRange();
   }
 
   std::pair<SourceLocation, StringRef>

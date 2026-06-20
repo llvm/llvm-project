@@ -263,6 +263,7 @@ public:
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
+
         } else
           // Scope-based expiry (use-after-scope).
           SemaHelper->reportUseAfterScope(
