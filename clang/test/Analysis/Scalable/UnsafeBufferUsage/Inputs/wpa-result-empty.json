@@ -7,5 +7,6 @@
         "UnsafeBufferUsageAnalysisResult": []
       }
     }
-  ]
+  ],
+  "type": "WPASuite"
 }

@@ -207,3 +207,26 @@ llvm::Error MockSerializationFormat::writeWPASuite(const WPASuite &Suite,
                                                    llvm::StringRef Path) {
   llvm_unreachable("MockSerializationFormat does not support WPASuite");
 }
+
+llvm::Expected<Artifact>
+MockSerializationFormat::readArtifact(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support readArtifact");
+}
+
+llvm::Error MockSerializationFormat::writeArtifact(const Artifact &A,
+                                                   llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support writeArtifact");
+}
+
+llvm::Expected<ArtifactEncoding>
+MockSerializationFormat::readArtifactEncoding(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support readArtifactEncoding");
+}
+
+llvm::Error
+MockSerializationFormat::writeArtifactEncoding(const ArtifactEncoding &E,
+                                               llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support writeArtifactEncoding");
+}

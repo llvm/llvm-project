@@ -106,6 +106,24 @@ public:
     return failing("writeWPASuite");
   }
 
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override {
+    return failing("readArtifact");
+  }
+
+  llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override {
+    return failing("writeArtifact");
+  }
+
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef Path) override {
+    return failing("readArtifactEncoding");
+  }
+
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &E,
+                                    llvm::StringRef Path) override {
+    return failing("writeArtifactEncoding");
+  }
+
   void forEachRegisteredAnalysis(
       llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>
           Callback) const override {}
@@ -164,6 +182,20 @@ public:
     return llvm::createStringError("not implemented");
   }
   llvm::Error writeWPASuite(const WPASuite &, llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeArtifact(const Artifact &, llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &,
+                                    llvm::StringRef) override {
     return llvm::Error::success();
   }
   void forEachRegisteredAnalysis(
