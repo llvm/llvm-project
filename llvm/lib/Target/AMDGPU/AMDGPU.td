@@ -1109,6 +1109,11 @@ defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   /*GenPredicate=*/0
 >;
 
+defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
+  "Hazards when WMMA co-executes with other WMMA/VALU instruction",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -2225,7 +2230,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
-   FeatureTransCoexecutionHazard])>;
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2250,7 +2256,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureUseAddPC64Inst,
-   FeatureTransCoexecutionHazard])>;
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2262,7 +2269,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
    FeatureGFX125xLowestRateWMMA,
-   FeatureTransCoexecutionHazard])>;
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
