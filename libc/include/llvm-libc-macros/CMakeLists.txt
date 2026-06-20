@@ -167,6 +167,7 @@ add_macro_header(
     math-function-macros.h
   DEPENDS
     .math_macros
+    .float16_macros
 )
 
 add_macro_header(
