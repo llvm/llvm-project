@@ -14256,6 +14256,11 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
   }
 
   QualType T = D->getType();
+  // A reference to a function is never null either; look through it.
+  const bool IsFunctionReference =
+      T->isReferenceType() && T->getPointeeType()->isFunctionType();
+  if (IsFunctionReference)
+    T = T->getPointeeType();
   const bool IsArray = T->isArrayType();
   const bool IsFunction = T->isFunctionType();
 
@@ -14292,6 +14297,10 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
                                 << Range << IsEqual;
 
   if (!IsFunction)
+    return;
+
+  // The fix-it notes below only apply to a bare function name, not a reference.
+  if (IsFunctionReference)
     return;
 
   // Suggest '&' to silence the function warning.

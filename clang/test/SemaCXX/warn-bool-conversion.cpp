@@ -132,6 +132,15 @@ void bar() {
   b = S2::f4;
   if (S2::f4) {}
 }
+
+// GH46362: a reference to a function is never null, like a bare function name.
+void func_ref(void (&f)(), int *&ptr) {
+  bool b;
+  b = f; // expected-warning {{address of function 'f' will always evaluate to 'true'}}
+  if (f) {} // expected-warning {{address of function 'f' will always evaluate to 'true'}}
+  b = ptr;
+  if (ptr) {}
+}
 }
 
 namespace Array {
