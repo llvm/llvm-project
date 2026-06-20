@@ -73,7 +73,8 @@ static size_t ComputeLongestRegisterName(Args &command,
   // Loop through all the arguments to find the longest register name.
   for (auto &entry : command) {
     // In most LLDB commands we accept '$<register>' as well as '<register>'
-    // for example '$rbx' for 'rbx'. However internally the name does not have '$'.
+    // for example '$rbx' for 'rbx'. However internally the name does not have
+    // '$'.
     llvm::StringRef arg_str = entry.ref();
     arg_str.consume_front("$");
 
@@ -176,8 +177,7 @@ public:
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
       size_t reg_name_right_align_at = ComputeLongestRegisterName(
-          reg_ctx, *reg_set,
-          !m_command_options.alternate_name, primitive_only);
+          reg_ctx, *reg_set, !m_command_options.alternate_name, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -252,8 +252,7 @@ protected:
                            "registers names are supplied as arguments\n");
       } else {
         int reg_name_right_align_at = ComputeLongestRegisterName(
-            command, reg_ctx,
-            !m_command_options.alternate_name);
+            command, reg_ctx, !m_command_options.alternate_name);
         // Extra ident to be consistent with register sets dumping.
         strm.IndentMore();
         for (auto &entry : command) {
