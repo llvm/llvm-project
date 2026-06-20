@@ -1166,6 +1166,7 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("macosx", "macos")
              .Case("tvOS", "tvos")
              .Case("watchOS", "watchos")
+             .Case("DriverKit", "driverkit")
              .Case("iOSApplicationExtension", "ios_app_extension")
              .Case("macOSApplicationExtension", "macos_app_extension")
              .Case("tvOSApplicationExtension", "tvos_app_extension")
@@ -1242,6 +1243,7 @@ static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
              .Case("tvos", OSType::TvOS)
              .Case("watchos", OSType::WatchOS)
              .Case("bridgeos", OSType::BridgeOS)
+             .Case("driverkit", OSType::DriverKit)
              .Case("ios_app_extension", OSType::IOS)
              .Case("maccatalyst_app_extension", OSType::IOS)
              .Case("macos_app_extension", OSType::MacOSX)
@@ -2127,14 +2129,14 @@ def ExplicitInit : InheritableAttr {
 }
 
 def LifetimeBound : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetimebound", 0>];
+  let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;
 }
 
 def LifetimeCaptureBy : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetime_capture_by", 0>];
+  let Spellings = [Clang<"lifetime_capture_by", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Args = [VariadicParamOrParamIdxArgument<"Params">];
   let Documentation = [LifetimeCaptureByDocs];
@@ -3902,7 +3904,7 @@ def VecReturn : InheritableAttr {
 def WarnUnused : InheritableAttr {
   let Spellings = [GCC<"warn_unused">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
+  let Documentation = [WarnUnusedDocs];
   let SimpleHandler = 1;
 }
 
@@ -5176,6 +5178,12 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let LangOpts = [HLSL];
@@ -5475,7 +5483,7 @@ def OverflowBehavior : TypeAttr {
   let Args = [IdentifierArgument<"BehaviorKind">];
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
-  let Documentation = [Undocumented];
+  let Documentation = [OverflowBehaviorDocs];
 }
 
 def Personality : InheritableAttr {

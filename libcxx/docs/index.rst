@@ -45,10 +45,12 @@ Getting Started with libc++
    Modules
    Hardening
    ReleaseProcedure
+   PostMeetingProcedure
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
-   Status/Cxx2c
+   Status/Cxx26
+   Status/Cxx29
    Status/Format
    Status/Parallelism
 
@@ -69,7 +71,7 @@ user base of over 1 billion daily active users.
 
 Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
 been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14,
-with C++17, C++20, C++23, and C++26 features being actively developed and making steady progress.
+with C++17, C++20, C++23, C++26, and C++29 features being actively developed and making steady progress.
 
 libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
 and compatibility across various systems. The library's extensive test suite and rigorous quality assurance process have
@@ -183,7 +185,8 @@ this release is described in the pages below:
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`
-* :ref:`C++2c - In Progress <cxx2c-status>`
+* :ref:`C++26 - In Progress <cxx26-status>`
+* :ref:`C++29 - In Progress <cxx29-status>`
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 
