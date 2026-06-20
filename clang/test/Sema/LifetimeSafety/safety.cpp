@@ -1549,7 +1549,7 @@ void range_based_for_use_after_scope() {
   {
     MyObjStorage s;
     for (const MyObj &o : s) { // expected-warning {{local variable 's' does not live long enough}} \
-                               // expected-note {{local variable '__range2' aliases the storage of local variable 's'}}
+                               // expected-note {{result of call to 'begin' aliases the storage of local variable 's'}}
       v = o;
     }
   } // expected-note {{local variable 's' is destroyed here}}
