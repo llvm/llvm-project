@@ -365,12 +365,14 @@ define i32 @pext32_knownbits(i32 %x)   {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $1431655765, %ecx # imm = 0x55555555
 ; X86-NEXT:    pextl %ecx, %eax, %eax
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pext32_knownbits:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1431655765, %eax # imm = 0x55555555
 ; X64-NEXT:    pextl %eax, %edi, %eax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: pext32_knownbits:
@@ -378,6 +380,7 @@ define i32 @pext32_knownbits(i32 %x)   {
 ; EGPR-NEXT:    movl $1431655765, %eax # encoding: [0xb8,0x55,0x55,0x55,0x55]
 ; EGPR-NEXT:    # imm = 0x55555555
 ; EGPR-NEXT:    pextl %eax, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x42,0xf5,0xc0]
+; EGPR-NEXT:    movzwl %ax, %eax # encoding: [0x0f,0xb7,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = tail call i32 @llvm.x86.bmi.pext.32(i32 %x, i32 1431655765)
   %tmp2 = and i32 %tmp, 65535

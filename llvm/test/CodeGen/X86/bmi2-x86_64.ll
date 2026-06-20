@@ -118,6 +118,7 @@ define i64 @pext64_knownbits(i64 %x, i64 %y)   {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
 ; CHECK-NEXT:    pextq %rax, %rdi, %rax
+; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    retq
 ;
 ; EGPR-LABEL: pext64_knownbits:
@@ -125,6 +126,7 @@ define i64 @pext64_knownbits(i64 %x, i64 %y)   {
 ; EGPR-NEXT:    movabsq $6148914691236517205, %rax # encoding: [0x48,0xb8,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55]
 ; EGPR-NEXT:    # imm = 0x5555555555555555
 ; EGPR-NEXT:    pextq %rax, %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xc2,0xf5,0xc0]
+; EGPR-NEXT:    movl %eax, %eax # encoding: [0x89,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 6148914691236517205)
   %tmp2 = and i64 %tmp, 4294967295
