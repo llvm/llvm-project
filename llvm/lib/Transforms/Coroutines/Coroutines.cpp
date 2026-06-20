@@ -630,7 +630,7 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
 /// Check that the given value is a well-formed prototype for the
 /// llvm.coro.id.retcon.* intrinsics.
 static void checkWFRetconPrototype(const AnyCoroIdInst *I, Value *V) {
-  auto F = dyn_cast<Function>(V->stripPointerCasts());
+  auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.id.retcon.* prototype not a Function", V);
 
@@ -666,7 +666,7 @@ static void checkWFRetconPrototype(const AnyCoroIdInst *I, Value *V) {
 
 /// Check that the given value is a well-formed allocator.
 static void checkWFAlloc(const Instruction *I, Value *V) {
-  auto F = dyn_cast<Function>(V->stripPointerCasts());
+  auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.* allocator not a Function", V);
 
@@ -686,7 +686,7 @@ static void checkWFAlloc(const Instruction *I, Value *V) {
 
 /// Check that the given value is a well-formed deallocator.
 static void checkWFDealloc(const Instruction *I, Value *V) {
-  auto F = dyn_cast<Function>(V->stripPointerCasts());
+  auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.* deallocator not a Function", V);
 
@@ -742,7 +742,8 @@ void CoroIdRetconOnceDynamicInst::checkWellFormed() const {
 }
 
 static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
-  auto *AsyncFuncPtrAddr = dyn_cast<GlobalVariable>(V->stripPointerCasts());
+  auto *AsyncFuncPtrAddr =
+      dyn_cast<GlobalVariable>(V->stripPointerCastsAndAliases());
   if (!AsyncFuncPtrAddr)
     fail(I, "llvm.coro.id.async async function pointer not a global", V);
 }
