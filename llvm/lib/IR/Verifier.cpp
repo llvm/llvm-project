@@ -4515,7 +4515,7 @@ void Verifier::visitBitExtractInst(BitExtractInst &IE) {
   Check(BitExtractInst::isValidOperands(IE.getType(), IE.getOperand(0),
                                         IE.getOperand(1)),
         "Invalid bitextract operands!", &IE);
-   Check(DL.getTypeSizeInBits(IE.getType()) <=
+  Check(DL.getTypeSizeInBits(IE.getType()) <=
             DL.getTypeSizeInBits(IE.getOperand(0)->getType()),
         "bitextract result type cannot be wider than source type!", &IE);
   visitInstruction(IE);
