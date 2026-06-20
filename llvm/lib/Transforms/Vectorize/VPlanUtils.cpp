@@ -527,8 +527,6 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
   // would destroy information.
   if (match(&R, m_Intrinsic<Intrinsic::assume>()))
     return Sinking;
-  // TODO: Relax checks in the future, e.g. we could also hoist reads, if their
-  // memory location is not modified in the vector loop.
   if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi())
     return true;
   // Allocas cannot be hoisted.
