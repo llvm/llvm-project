@@ -587,11 +587,44 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (S.initializingBlock(Ptr.block()))
-    return true;
+  for (PtrView V : llvm::reverse(S.InitializingPtrs)) {
+    if (V.block() != Ptr.block())
+      continue;
+    if (!V.getFieldDesc()->IsConst) {
+      // If the pointer being initialized is not declared as const,
+      // Ptr is const because of a parent of V, but that is irrelevant
+      // since V is being initialized and NOT const.
+      // This is fine, so return true.
+      return true;
+    }
+
+    // We know that Ptr is const because of a parent field and we also
+    // know that V is explicitly marked const.
+    // But since V is in InitializingPtrs, the fact that it is const doesn't
+    // matter and it is writable.
+    // What we now need to check is whether there is a pointer between Ptr and V
+    // that is marked const but NOT in InitializingPtrs. If that is the case,
+    // Ptr is currently not writable.
+    bool FoundProblem = false;
+    for (PtrView P = Ptr.view(); P != V; P = P.getBase()) {
+      if (P.getFieldDesc()->IsConst) {
+        FoundProblem = true;
+        break;
+      }
+    }
+
+    // We couldn't find any pointer that's explicitly marked const, so
+    // Ptr is writable right now.
+    if (!FoundProblem)
+      return true;
+    // We only need to find the right block once.
+    break;
+  }
 
   if (!S.checkingPotentialConstantExpression()) {
-    const QualType Ty = Ptr.getType();
+    QualType Ty = Ptr.getType();
+    if (!Ptr.getFieldDesc()->IsConst)
+      Ty.addConst();
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
   }
@@ -1803,6 +1836,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
   };
 
+  bool InstancePtrTracked = false;
   if (Func->hasThisPointer()) {
     size_t ArgSize = Func->getArgSize() + VarArgSize;
     size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
@@ -1845,7 +1879,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
 
-    if (Func->isConstructor() || Func->isDestructor())
+    InstancePtrTracked = (Func->isConstructor() || Func->isDestructor());
+    if (InstancePtrTracked)
       S.InitializingPtrs.push_back(ThisPtr.view());
   }
 
@@ -1872,7 +1907,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
   // Remove initializing  block again.
-  if (Func->isConstructor() || Func->isDestructor())
+  if (InstancePtrTracked)
     S.InitializingPtrs.pop_back();
 
   if (!Success) {
