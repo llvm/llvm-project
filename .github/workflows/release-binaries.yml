@@ -299,12 +299,20 @@ jobs:
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
           mv $zstd $env:GITHUB_WORKSPACE
         }
-        $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.exe" | Select-Object -First 1).fullName
+        $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.msi" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
         mv $installer $env:GITHUB_WORKSPACE
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
+    
+    - name: Dump Wix logs
+      if: runner.os == 'Windows'
+      env:
+        LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
+      run: |
+        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
     - name: Create zstd compressed tarball
       shell: bash

@@ -301,7 +301,6 @@ define amdgpu_kernel void @srem25_i11_i24_i32(ptr addrspace(1) %out, ptr addrspa
 ; FUNC-LABEL: {{^}}srem25_i17_i12_i32:
 ; SI: v_cvt_f32_i32
 ; SI: v_rcp_f32
-; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 17
 
 ; EG: INT_TO_FLT
 ; EG: RECIP_IEEE
