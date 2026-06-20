@@ -199,6 +199,11 @@ struct M {
   }
 };
 
+struct Overload {
+  constexpr int operator()(int&) const noexcept { return 4; }
+  constexpr int operator()(const int&) const noexcept { return 5; }
+};
+
 struct Int {
   int i;
   constexpr Int(int ii) noexcept : i(ii) {}
@@ -249,6 +254,14 @@ constexpr bool test() {
     }
   }
   {
+    // const
+    const int i = 5;
+    std::function_ref<int() const> f(std::cw<[](int j) { return j + 42; }>, i);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f() == 47);
+    }
+  }
+  {
     // noexcept
     int i = 5;
     std::function_ref<double(double) noexcept> f(std::cw<&f1>, i);
@@ -259,6 +272,14 @@ constexpr bool test() {
   {
     // const noexcept
     int i = 5;
+    std::function_ref<double(double) const noexcept> f(std::cw<&f1>, i);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f(2.0) == 7.0);
+    }
+  }
+  {
+    // const noexcept
+    const int i = 5;
     std::function_ref<double(double) const noexcept> f(std::cw<&f1>, i);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f(2.0) == 7.0);
@@ -278,37 +299,49 @@ constexpr bool test() {
       assert(g(j) == 45);
       assert(j == 42);
     }
-
+  }
+  {
+    // member ptr
+    // const
+    M m{3};
     std::function_ref<int() const> f_const(std::cw<&M::f_const>, m);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_const() == 8);
     }
 
-    j = 0;
+    int j = 0;
     std::function_ref<int(int&)> g_const(std::cw<&M::g_const>, m);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(g_const(j) == 46);
       assert(j == 42);
     }
-
+  }
+  {
+    // member ptr
+    // noexcept
+    M m{3};
     std::function_ref<int() noexcept> f_noexcept(std::cw<&M::f_noexcept>, m);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_noexcept() == 10);
     }
 
-    j = 0;
+    int j = 0;
     std::function_ref<int(int&) noexcept> g_noexcept(std::cw<&M::g_noexcept>, m);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(g_noexcept(j) == 47);
       assert(j == 42);
     }
-
+  }
+  {
+    // member ptr
+    // const noexcept
+    M m{3};
     std::function_ref<int() const noexcept> f_const_noexcept(std::cw<&M::f_const_noexcept>, m);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_const_noexcept() == 12);
     }
 
-    j = 0;
+    int j = 0;
     std::function_ref<int(int&) const noexcept> g_const_noexcept(std::cw<&M::g_const_noexcept>, m);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(g_const_noexcept(j) == 48);
@@ -368,6 +401,20 @@ constexpr bool test() {
     std::function_ref<int() > f(std::cw<[](int j) { return j + 42; }>, i);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f() == 47);
+    }
+  }
+  {
+    // CV forwarded correctly
+    int i = 0;
+    std::function_ref<int()> f(std::cw<Overload{}>, i);
+    std::function_ref<int() const> f_const(std::cw<Overload{}>, i);
+    std::function_ref<int() noexcept> f_noexcept(std::cw<Overload{}>, i);
+    std::function_ref<int() const noexcept> f_const_noexcept(std::cw<Overload{}>, i);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(f() == 4);
+      assert(f_const() == 5);
+      assert(f_noexcept() == 4);
+      assert(f_const_noexcept() == 5);
     }
   }
 

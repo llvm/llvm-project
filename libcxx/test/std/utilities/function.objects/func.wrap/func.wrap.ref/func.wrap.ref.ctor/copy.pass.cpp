@@ -22,6 +22,11 @@ static_assert(std::is_copy_constructible_v<std::function_ref<void() const>>);
 static_assert(std::is_copy_constructible_v<std::function_ref<void() noexcept>>);
 static_assert(std::is_copy_constructible_v<std::function_ref<void() const noexcept>>);
 
+static_assert(std::is_trivially_copy_constructible_v<std::function_ref<void()>>);
+static_assert(std::is_trivially_copy_constructible_v<std::function_ref<void() const>>);
+static_assert(std::is_trivially_copy_constructible_v<std::function_ref<void() noexcept>>);
+static_assert(std::is_trivially_copy_constructible_v<std::function_ref<void() const noexcept>>);
+
 double f1(int x, double y) noexcept { return x + y; }
 
 struct Int {

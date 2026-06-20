@@ -8,6 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
+// Each specialization of function_ref is a trivially copyable type ([basic.types.general]) that models copyable.
+
 #include <cassert>
 #include <functional>
 #include <utility>
@@ -20,18 +22,12 @@ static_assert(std::is_move_constructible_v<std::function_ref<void() const>>);
 static_assert(std::is_move_constructible_v<std::function_ref<void() noexcept>>);
 static_assert(std::is_move_constructible_v<std::function_ref<void() const noexcept>>);
 
+static_assert(std::is_trivially_move_constructible_v<std::function_ref<void()>>);
+static_assert(std::is_trivially_move_constructible_v<std::function_ref<void() const>>);
+static_assert(std::is_trivially_move_constructible_v<std::function_ref<void() noexcept>>);
+static_assert(std::is_trivially_move_constructible_v<std::function_ref<void() const noexcept>>);
+
 double f1(int x, double y) noexcept { return x + y; }
-
-struct Int {
-  int i;
-  constexpr Int(int ii) noexcept : i(ii) {}
-};
-
-struct NeedsConversion {
-  int operator()(Int x, Int y, Int z) const noexcept { return x.i + y.i + z.i; }
-};
-
-int needs_conversion(Int x, Int y, Int z) noexcept { return x.i + y.i + z.i; }
 
 constexpr bool test() {
   {
@@ -64,58 +60,6 @@ constexpr bool test() {
     auto f2 = std::move(f);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f2(1, 2.0) == 3.0);
-    }
-  }
-  {
-    // with conversions
-    std::function_ref<Int(int, int, int)> f(std::cw<NeedsConversion{}>);
-    auto f_copy = std::move(f);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f_copy(1, 2, 3).i == 6);
-    }
-
-    std::function_ref<Int(int, int, int) const> f2(std::cw<NeedsConversion{}>);
-    auto f2_copy = std::move(f2);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f2_copy(1, 2, 3).i == 6);
-    }
-
-    std::function_ref<Int(int, int, int) noexcept> f3(std::cw<NeedsConversion{}>);
-    auto f3_copy = std::move(f3);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f3_copy(1, 2, 3).i == 6);
-    }
-
-    std::function_ref<Int(int, int, int) const noexcept> f4(std::cw<NeedsConversion{}>);
-    auto f4_copy = std::move(f4);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f4_copy(1, 2, 3).i == 6);
-    }
-  }
-  {
-    // with conversions function pointer
-    std::function_ref<Int(int, int, int)> f(std::cw<&needs_conversion>);
-    auto f_copy = std::move(f);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f_copy(1, 2, 3).i == 6);
-    }
-
-    std::function_ref<Int(int, int, int) const> f2(std::cw<&needs_conversion>);
-    auto f2_copy = std::move(f2);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f2_copy(1, 2, 3).i == 6);
-    }
-
-    std::function_ref<Int(int, int, int) noexcept> f3(std::cw<&needs_conversion>);
-    auto f3_copy = std::move(f3);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f3_copy(1, 2, 3).i == 6);
-    }
-
-    std::function_ref<Int(int, int, int) const noexcept> f4(std::cw<&needs_conversion>);
-    auto f4_copy = std::move(f4);
-    if (!TEST_IS_CONSTANT_EVALUATED) {
-      assert(f4_copy(1, 2, 3).i == 6);
     }
   }
 

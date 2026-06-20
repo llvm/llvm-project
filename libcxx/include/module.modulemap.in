@@ -350,6 +350,7 @@ module std_core [system] {
       header "__type_traits/reference_converts_from_temporary.h"
       export std_core.type_traits.integral_constant
     }
+    module register_passable                          { header "__type_traits/register_passable.h" }
     module remove_all_extents                         { header "__type_traits/remove_all_extents.h" }
     module remove_const_ref                           { header "__type_traits/remove_const_ref.h" }
     module remove_const                               { header "__type_traits/remove_const.h" }

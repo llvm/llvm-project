@@ -11,6 +11,7 @@
 // constexpr function_ref& operator=(const function_ref&) noexcept = default;
 
 #include <cassert>
+#include <concepts>
 #include <functional>
 #include <utility>
 #include <type_traits>
@@ -21,6 +22,11 @@ static_assert(std::is_copy_assignable_v<std::function_ref<void()>>);
 static_assert(std::is_copy_assignable_v<std::function_ref<void() const>>);
 static_assert(std::is_copy_assignable_v<std::function_ref<void() noexcept>>);
 static_assert(std::is_copy_assignable_v<std::function_ref<void() const noexcept>>);
+
+static_assert(std::is_trivially_copy_assignable_v<std::function_ref<void()>>);
+static_assert(std::is_trivially_copy_assignable_v<std::function_ref<void() const>>);
+static_assert(std::is_trivially_copy_assignable_v<std::function_ref<void() noexcept>>);
+static_assert(std::is_trivially_copy_assignable_v<std::function_ref<void() const noexcept>>);
 
 double plus(int x, double y) noexcept { return x + y; }
 double minus(int x, double y) noexcept { return x - y; }
@@ -41,7 +47,8 @@ constexpr bool test() {
   {
     std::function_ref<void()> f(std::cw<[] {}>);
     std::function_ref<void()> f2(std::cw<[] {}>);
-    f2 = f;
+    std::same_as<std::function_ref<void()>&> decltype(auto) result = f2 = f;
+    assert(&result == &f2);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       f();
       f2();
@@ -51,7 +58,8 @@ constexpr bool test() {
     // const
     std::function_ref<int() const> f(std::cw<[] { return 42; }>);
     std::function_ref<int() const> f2(std::cw<[] { return 41; }>);
-    f2 = f;
+    std::same_as<std::function_ref<int() const>&> decltype(auto) result = f2 = f;
+    assert(&result == &f2);
 
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f() == 42);
@@ -62,7 +70,8 @@ constexpr bool test() {
     // noexcept
     std::function_ref<double(int, double) noexcept> f(std::cw<&plus>);
     std::function_ref<double(int, double) noexcept> f2(std::cw<&minus>);
-    f2 = f;
+    std::same_as<std::function_ref<double(int, double) noexcept>&> decltype(auto) result = f2 = f;
+    assert(&result == &f2);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f(1, 2.0) == 3.0);
       assert(f2(1, 2.0) == 3.0);
@@ -72,7 +81,8 @@ constexpr bool test() {
     // const noexcept
     std::function_ref<double(int, double) const noexcept> f(std::cw<&plus>);
     std::function_ref<double(int, double) const noexcept> f2(std::cw<&minus>);
-    f2 = f;
+    std::same_as<std::function_ref<double(int, double) const noexcept>&> decltype(auto) result = f2 = f;
+    assert(&result == &f2);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f(1, 2.0) == 3.0);
       assert(f2(1, 2.0) == 3.0);
@@ -82,32 +92,47 @@ constexpr bool test() {
     // with conversions
     std::function_ref<Int(int, int, int)> f(std::cw<[](int, int, int) { return Int{1}; }>);
     std::function_ref<Int(int, int, int)> f2(std::cw<NeedsConversion{}>);
-    f = f2;
+    std::same_as<std::function_ref<Int(int, int, int)>&> decltype(auto) result = f = f2;
+    assert(&result == &f);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f(1, 2, 3).i == 6);
       assert(f2(1, 2, 3).i == 6);
     }
+  }
 
+  {
+    // with conversions
+    // const
     std::function_ref<Int(int, int, int) const> f_const(std::cw<[](int, int, int) { return Int{1}; }>);
     std::function_ref<Int(int, int, int) const> f2_const(std::cw<NeedsConversion{}>);
-    f_const = f2_const;
+    std::same_as<std::function_ref<Int(int, int, int) const>&> decltype(auto) result = f_const = f2_const;
+    assert(&result == &f_const);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_const(1, 2, 3).i == 6);
       assert(f2_const(1, 2, 3).i == 6);
     }
-
+  }
+  {
+    // with conversions
+    // noexcept
     std::function_ref<Int(int, int, int) noexcept> f_noexcept(std::cw<[](int, int, int) noexcept { return Int{1}; }>);
     std::function_ref<Int(int, int, int) noexcept> f2_noexcept(std::cw<NeedsConversion{}>);
-    f_noexcept = f2_noexcept;
+    std::same_as<std::function_ref<Int(int, int, int) noexcept>&> decltype(auto) result = f_noexcept = f2_noexcept;
+    assert(&result == &f_noexcept);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_noexcept(1, 2, 3).i == 6);
       assert(f2_noexcept(1, 2, 3).i == 6);
     }
-
+  }
+  {
+    // with conversions
+    // const noexcept
     std::function_ref<Int(int, int, int) const noexcept> f_const_noexcept(
         std::cw<[](int, int, int) noexcept { return Int{1}; }>);
     std::function_ref<Int(int, int, int) const noexcept> f2_const_noexcept(std::cw<NeedsConversion{}>);
-    f_const_noexcept = f2_const_noexcept;
+    std::same_as<std::function_ref<Int(int, int, int) const noexcept>&> decltype(auto) result = f_const_noexcept =
+        f2_const_noexcept;
+    assert(&result == &f_const_noexcept);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_const_noexcept(1, 2, 3).i == 6);
       assert(f2_const_noexcept(1, 2, 3).i == 6);
@@ -117,31 +142,47 @@ constexpr bool test() {
     // with conversions function pointer
     std::function_ref<Int(int, int, int)> f(std::cw<&zero>);
     std::function_ref<Int(int, int, int)> f2(std::cw<&needs_conversion>);
-    f = f2;
+    std::same_as<std::function_ref<Int(int, int, int)>&> decltype(auto) result = f = f2;
+    assert(&result == &f);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f(1, 2, 3).i == 6);
       assert(f2(1, 2, 3).i == 6);
     }
+  }
 
+  {
+    // with conversions function pointer
+    // const
     std::function_ref<Int(int, int, int) const> f_const(std::cw<&zero>);
     std::function_ref<Int(int, int, int) const> f2_const(std::cw<&needs_conversion>);
-    f_const = f2_const;
+    std::same_as<std::function_ref<Int(int, int, int) const>&> decltype(auto) result = f_const = f2_const;
+    assert(&result == &f_const);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_const(1, 2, 3).i == 6);
       assert(f2_const(1, 2, 3).i == 6);
     }
-
+  }
+  {
+    // with conversions function pointer
+    // noexcept
     std::function_ref<Int(int, int, int) noexcept> f_noexcept(std::cw<&zero>);
     std::function_ref<Int(int, int, int) noexcept> f2_noexcept(std::cw<&needs_conversion>);
-    f_noexcept = f2_noexcept;
+    std::same_as<std::function_ref<Int(int, int, int) noexcept>&> decltype(auto) result = f_noexcept = f2_noexcept;
+    assert(&result == &f_noexcept);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_noexcept(1, 2, 3).i == 6);
       assert(f2_noexcept(1, 2, 3).i == 6);
     }
+  }
 
+  {
+    // with conversions function pointer
+    // const noexcept
     std::function_ref<Int(int, int, int) const noexcept> f_const_noexcept(std::cw<&zero>);
     std::function_ref<Int(int, int, int) const noexcept> f2_const_noexcept(std::cw<&needs_conversion>);
-    f_const_noexcept = f2_const_noexcept;
+    std::same_as<std::function_ref<Int(int, int, int) const noexcept>&> decltype(auto) result = f_const_noexcept =
+        f2_const_noexcept;
+    assert(&result == &f_const_noexcept);
     if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(f_const_noexcept(1, 2, 3).i == 6);
       assert(f2_const_noexcept(1, 2, 3).i == 6);

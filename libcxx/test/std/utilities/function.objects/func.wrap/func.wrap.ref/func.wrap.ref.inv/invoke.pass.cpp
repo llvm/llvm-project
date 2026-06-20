@@ -67,6 +67,32 @@ struct S3Value {
   char operator()(Big b) const noexcept { return b.c[0]; }
 };
 
+struct TrackCopyMove {
+  mutable int copy_count = 0;
+  int move_count         = 0;
+
+  TrackCopyMove() = default;
+  TrackCopyMove(const TrackCopyMove& other) : copy_count(other.copy_count), move_count(other.move_count) {
+    ++copy_count;
+    ++other.copy_count;
+  }
+
+  TrackCopyMove(TrackCopyMove&& other) noexcept : copy_count(other.copy_count), move_count(other.move_count) {
+    ++move_count;
+    ++other.move_count;
+  }
+  TrackCopyMove& operator=(const TrackCopyMove& other) {
+    ++copy_count;
+    ++other.copy_count;
+    return *this;
+  }
+  TrackCopyMove& operator=(TrackCopyMove&& other) noexcept {
+    ++move_count;
+    ++other.move_count;
+    return *this;
+  }
+};
+
 void test_default() {
   {
     std::function_ref<void()> f = [] {};
@@ -134,6 +160,40 @@ void test_default() {
     assert(f1(b) == 'a');
     std::function_ref<char(Big)> f2(std::cw<S3Value{}>);
     assert(f2(b) == 'a');
+  }
+  {
+    // Arg type is an lvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove& tm) {
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&)> f = lambda;
+    f(t);
+  }
+  {
+    // Arg type is an rvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove&& tm) {
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&&)> f = lambda;
+    f(std::move(t));
+  }
+  {
+    // Arg type is a prvalue, we should move but not copy the object
+    // In libc++, where the type is not trivially copyable, the object should be
+    // moved exactly once when passing into the lambda. The internal functions
+    // of function_ref should forward the argument without copying or moving it
+    auto lambda = [](TrackCopyMove tm) {
+      assert(tm.copy_count == 0);
+      LIBCPP_ASSERT(tm.move_count == 1);
+    };
+    std::function_ref<void(TrackCopyMove)> f = lambda;
+    f(TrackCopyMove{});
   }
 }
 
@@ -204,6 +264,40 @@ void test_const() {
     assert(f1(b) == 'a');
     std::function_ref<char(Big) const> f2(std::cw<S3Value{}>);
     assert(f2(b) == 'a');
+  }
+  {
+    // Arg type is an lvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove& tm) {
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&) const> f = lambda;
+    f(t);
+  }
+  {
+    // Arg type is an rvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove&& tm) {
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&&) const> f = lambda;
+    f(std::move(t));
+  }
+  {
+    // Arg type is a prvalue, we should move but not copy the object
+    // In libc++, where the type is not trivially copyable, the object should be
+    // moved exactly once when passing into the lambda. The internal functions
+    // of function_ref should forward the argument without copying or moving it
+    auto lambda = [](TrackCopyMove tm) {
+      assert(tm.copy_count == 0);
+      LIBCPP_ASSERT(tm.move_count == 1);
+    };
+    std::function_ref<void(TrackCopyMove) const> f = lambda;
+    f(TrackCopyMove{});
   }
 }
 
@@ -276,6 +370,40 @@ void test_noexcept() {
     std::function_ref<char(Big) noexcept> f2(std::cw<S3Value{}>);
     assert(f2(b) == 'a');
   }
+  {
+    // Arg type is an lvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove& tm) noexcept {
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&) noexcept> f = lambda;
+    f(t);
+  }
+  {
+    // Arg type is an rvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove&& tm) noexcept{
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&&) noexcept> f = lambda;
+    f(std::move(t));
+  }
+  {
+    // Arg type is a prvalue, we should move but not copy the object
+    // In libc++, where the type is not trivially copyable, the object should be
+    // moved exactly once when passing into the lambda. The internal functions
+    // of function_ref should forward the argument without copying or moving it
+    auto lambda = [](TrackCopyMove tm) noexcept{
+      assert(tm.copy_count == 0);
+      LIBCPP_ASSERT(tm.move_count == 1);
+    };
+    std::function_ref<void(TrackCopyMove) noexcept> f = lambda;
+    f(TrackCopyMove{});
+  }
 }
 
 void test_const_noexcept() {
@@ -346,6 +474,40 @@ void test_const_noexcept() {
     assert(f1(b) == 'a');
     std::function_ref<char(Big) const noexcept> f2(std::cw<S3Value{}>);
     assert(f2(b) == 'a');
+  }
+  {
+    // Arg type is an lvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove& tm) noexcept {
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&) const noexcept> f = lambda;
+    f(t);
+  }
+  {
+    // Arg type is an rvalue reference, we should not copy or move the object
+    TrackCopyMove t;
+    auto lambda = [&t](TrackCopyMove&& tm) noexcept{
+      assert(&tm == &t);
+      assert(tm.copy_count == 0);
+      assert(tm.move_count == 0);
+    };
+    std::function_ref<void(TrackCopyMove&&) const noexcept> f = lambda;
+    f(std::move(t));
+  }
+  {
+    // Arg type is a prvalue, we should move but not copy the object
+    // In libc++, where the type is not trivially copyable, the object should be
+    // moved exactly once when passing into the lambda. The internal functions
+    // of function_ref should forward the argument without copying or moving it
+    auto lambda = [](TrackCopyMove tm) noexcept{
+      assert(tm.copy_count == 0);
+      LIBCPP_ASSERT(tm.move_count == 1);
+    };
+    std::function_ref<void(TrackCopyMove) const noexcept> f = lambda;
+    f(TrackCopyMove{});
   }
 }
 
