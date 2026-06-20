@@ -108,7 +108,6 @@ public:
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
-    Parser.Line->IsModuleOrImportDecl = PreBlockLine->IsModuleOrImportDecl;
     Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
   }
 
@@ -4718,6 +4717,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->FirstStartColumn = 0;
   Line->IsContinuation = false;
   Line->SeenDecltypeAuto = false;
+  Line->IsModuleOrImportDecl = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;

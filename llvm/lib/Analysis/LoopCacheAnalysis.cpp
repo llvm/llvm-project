@@ -679,9 +679,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 CacheCostTy
 CacheCost::computeLoopCacheCost(const Loop &L,
                                 const ReferenceGroupsTy &RefGroups) const {
-  if (!L.isLoopSimplifyForm())
-    return CacheCostTy::getInvalid();
-
   LLVM_DEBUG(dbgs() << "Considering loop '" << L.getName()
                     << "' as innermost loop.\n");
 
