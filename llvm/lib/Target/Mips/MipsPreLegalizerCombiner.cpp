@@ -59,7 +59,7 @@ public:
       return false;
     case TargetOpcode::G_MEMCPY_INLINE:
     case TargetOpcode::G_MEMSET_INLINE:
-      return Helper.tryEmitMemcpyInlineFamily(MI);
+      return Helper.tryCombineMemCpyFamily(MI);
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_SEXTLOAD:
     case TargetOpcode::G_ZEXTLOAD: {
