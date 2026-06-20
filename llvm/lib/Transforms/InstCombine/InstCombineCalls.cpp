@@ -3721,11 +3721,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }
 
         Value *BasePtr;
-        uint64_t PtrOffset;
+        const APInt *PtrOffset;
         if (match(Ptr.get(),
-                  m_PtrAdd(m_Value(BasePtr), m_ConstantInt(PtrOffset)))) {
+                  m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
+          auto PtrOffsetVal =
+              PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
+                  .trySExtValue();
+          if (!PtrOffsetVal)
+            break;
           Builder.CreateAlignmentAssumption(
-              DL, BasePtr, *Alignment, Builder.getInt64(*Offset - PtrOffset));
+              DL, BasePtr, *Alignment,
+              Builder.getInt64(*Offset - *PtrOffsetVal));
           return RemoveBundle();
         }
 
