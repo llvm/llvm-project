@@ -2785,9 +2785,16 @@ static bool resolveAllocationOverload(
       R.clear();
       R.setLookupName(S.Context.DeclarationNames.getCXXOperatorName(OO_New));
       S.LookupQualifiedName(R, S.Context.getTranslationUnitDecl());
+      // Only try this fallback without the alignment argument.
+      auto &Args =
+          (FallbackArgs.empty() || PrefArgs.size() < FallbackArgs.size())
+              ? PrefArgs
+              : FallbackArgs;
+      SmallVector<Expr *, 1> EmptyArgs;
+      PassAlignment = AlignedAllocationMode::No;
       // FIXME: This will give bad diagnostics pointing at the wrong functions.
-      return resolveAllocationOverload(S, R, Range, Mode, PrefArgs,
-                                       FallbackArgs, PassAlignment, Operator,
+      return resolveAllocationOverload(S, R, Range, Mode, Args, EmptyArgs,
+                                       PassAlignment, Operator,
                                        /*PrefCandidates=*/nullptr, Diagnose);
     }
     if (Mode == ResolveMode::Typed) {
