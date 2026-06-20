@@ -4546,6 +4546,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_clmul:
     return RValue::get(
         emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::clmul));
+  case Builtin::BI__builtin_elementwise_pext:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::pext));
+  case Builtin::BI__builtin_elementwise_pdep:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::pdep));
 
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
