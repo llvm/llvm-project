@@ -203,7 +203,7 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
+LLVM_ABI bool isValidParameterType(uint32_t V);
 
 LLVM_ABI bool isValidRangeType(uint32_t V);
 
