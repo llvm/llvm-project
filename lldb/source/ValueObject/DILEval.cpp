@@ -1277,14 +1277,52 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "could not get the index as an integer", node.GetLocation());
 
+  if (first_index < 0 || last_index < 0) {
+    std::string message =
+        llvm::formatv("bitfield range {0}:{1} is not valid (negative index)",
+                      first_index, last_index);
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
+
   // if the format given is [high-low], swap range
   if (first_index > last_index)
     std::swap(first_index, last_index);
+
+  // The underlying DataExtractor bitfield accessors only support extracting up
+  // to 64 bits at once (GetMaxU64Bitfield asserts bitfield_bit_size <= 64 and
+  // would otherwise perform an out-of-bounds shift). Reject oversized ranges
+  // here instead of crashing deep in the data layer.
+  if (last_index - first_index + 1 > 64) {
+    std::string message =
+        llvm::formatv("bitfield range {0}:{1} is not valid (more than 64 bits)",
+                      first_index, last_index);
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
 
   auto base_or_err = EvaluateAndDereference(node.GetBase());
   if (!base_or_err)
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
+
+  // The bitfield range must lie within the storage of the base object. A
+  // bit offset/size that extends past the base's bit size leads to an
+  // out-of-bounds shift when the value is later read or formatted (e.g. in
+  // DataExtractor::GetMaxU64Bitfield via DumpDataExtractor).
+  llvm::Expected<uint64_t> base_bit_size =
+      base->GetCompilerType().GetBitSize(&m_stack_frame);
+  if (!base_bit_size)
+    return base_bit_size.takeError();
+  if (static_cast<uint64_t>(last_index) >= *base_bit_size) {
+    std::string message = llvm::formatv(
+        "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
+        last_index, base->GetTypeName().AsCString("<invalid type>"),
+        base->GetName().GetStringRef());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
+
   lldb::ValueObjectSP child_valobj_sp =
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {
