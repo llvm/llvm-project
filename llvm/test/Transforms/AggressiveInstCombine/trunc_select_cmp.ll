@@ -182,11 +182,10 @@ define i16 @cmp_select_signed_const_i16Const_noTransformation(i8 %a) {
 
 define i16 @cmp_select_unsigned_const_i16Const(i8 %a) {
 ; CHECK-LABEL: @cmp_select_unsigned_const_i16Const(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[CONV]], 32768
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 32768, i32 [[CONV]]
-; CHECK-NEXT:    [[CONV4:%.*]] = trunc i32 [[COND]] to i16
-; CHECK-NEXT:    ret i16 [[CONV4]]
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[CONV]], -32768
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i16 -32768, i16 [[CONV]]
+; CHECK-NEXT:    ret i16 [[COND]]
 ;
   %conv = zext i8 %a to i32
   %cmp = icmp ult i32 %conv, 32768

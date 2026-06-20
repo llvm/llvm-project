@@ -43,6 +43,7 @@ class AssumptionCache;
 class DataLayout;
 class DominatorTree;
 class Function;
+class ICmpInst;
 class Instruction;
 class TargetLibraryInfo;
 class TruncInst;
@@ -75,6 +76,12 @@ class TruncInstCombine {
   /// structure. The map is ordered such that each instruction appears before
   /// all other instructions in the graph that uses it.
   MapVector<Instruction *, Info> InstInfoMap;
+
+  /// Outside-graph ICmp users of in-graph values that getBestTruncatedType
+  /// has validated as safe to narrow alongside the graph itself. Populated
+  /// by getBestTruncatedType and consumed (and cleared) by
+  /// ReduceExpressionGraph.
+  SmallVector<ICmpInst *, 4> NarrowedICmps;
 
 public:
   TruncInstCombine(AssumptionCache &AC, TargetLibraryInfo &TLI,
