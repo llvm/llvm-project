@@ -1692,6 +1692,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     return BinaryOperator::CreateAnd(X, ZextC);
   }
 
+  Value *Y;
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(m_NUWTrunc(m_Value(X)), m_Value(Y)))) &&
+      X->getType() == DestTy) {
+    Value *ZextC = Builder.CreateZExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  ZextC);
+  }
+
   if (match(Src, m_VScale())) {
     if (Zext.getFunction() &&
         Zext.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {

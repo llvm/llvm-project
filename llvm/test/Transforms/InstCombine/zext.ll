@@ -979,10 +979,9 @@ entry:
 
 define i8 @zext_or_trunc_nuw(i8 %x, i4 %y) {
 ; CHECK-LABEL: @zext_or_trunc_nuw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i4
-; CHECK-NEXT:    [[OR:%.*]] = or i4 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[OR]] to i8
-; CHECK-NEXT:    ret i8 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[OR:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = or i8 [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
 ;
   %trunc = trunc nuw i8 %x to i4
   %or = or i4 %y, %trunc
@@ -992,10 +991,9 @@ define i8 @zext_or_trunc_nuw(i8 %x, i4 %y) {
 
 define i8 @zext_xor_trunc_nuw(i8 %x, i4 %y) {
 ; CHECK-LABEL: @zext_xor_trunc_nuw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i4
-; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[XOR]] to i8
-; CHECK-NEXT:    ret i8 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[XOR:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = xor i8 [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
 ;
   %trunc = trunc nuw i8 %x to i4
   %xor = xor i4 %y, %trunc
@@ -1005,10 +1003,9 @@ define i8 @zext_xor_trunc_nuw(i8 %x, i4 %y) {
 
 define i8 @zext_and_trunc_nuw(i8 %x, i4 %y) {
 ; CHECK-LABEL: @zext_and_trunc_nuw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i4
-; CHECK-NEXT:    [[AND:%.*]] = and i4 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[AND]] to i8
-; CHECK-NEXT:    ret i8 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[AND:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i8 [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
 ;
   %trunc = trunc nuw i8 %x to i4
   %and = and i4 %y, %trunc
@@ -1020,9 +1017,9 @@ define i8 @zext_or_trunc_nuw_multi_use(i8 %x, i1 %y) {
 ; CHECK-LABEL: @zext_or_trunc_nuw_multi_use(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[OR]] to i8
-; CHECK-NEXT:    ret i8 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[OR:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = or i8 [[X]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
 ;
   %trunc = trunc nuw i8 %x to i1
   call void @use1(i1 %trunc)
@@ -1059,12 +1056,24 @@ define i8 @neg_zext_or_trunc_nsw(i8 %x, i4 %y) {
   ret i8 %zext
 }
 
+define i32 @neg_zext_or_trunc_nuw_type(i8 %x, i4 %y) {
+; CHECK-LABEL: @neg_zext_or_trunc_nuw_type(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i4
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[Y:%.*]], [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[OR]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %trunc = trunc nsw i8 %x to i4
+  %or = or i4 %y, %trunc
+  %zext = zext i4 %or to i32
+  ret i32 %zext
+}
+
 define <2 x i8> @zext_or_trunc_nuw_vec(<2 x i8> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @zext_or_trunc_nuw_vec(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i4>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i4> [[OR]] to <2 x i8>
-; CHECK-NEXT:    ret <2 x i8> [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i4> [[OR:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[ZEXT1:%.*]] = or <2 x i8> [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i8> [[ZEXT1]]
 ;
   %trunc = trunc nuw <2 x i8> %x to <2 x i4>
   %or = or <2 x i4> %y, %trunc
