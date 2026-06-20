@@ -470,7 +470,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
-        checkInReduction(op, result);
+        checkInReductionByref(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -3106,6 +3106,22 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   if (failed(buildAffinityData(taskOp, builder, moduleTranslation, ad)))
     return llvm::failure();
 
+  // Resolve and validate in_reduction declarations. Byref in_reduction has
+  // already been rejected by checkImplementationStatus; the helper rejects the
+  // remaining richer declare_reduction shapes (two-argument initializer,
+  // cleanup region, missing combiner). This is pure MLIR symbol-table work and
+  // emits no IR. The matching task_reduction descriptor is registered by an
+  // enclosing taskgroup; here we only look the per-task storage up at runtime.
+  SmallVector<omp::DeclareReductionOp> inRedDecls;
+  if (failed(collectAndValidateTaskloopRedDecls(
+          taskOp.getOperation(), taskOp.getInReductionSyms(), "omp.task",
+          "in_reduction", inRedDecls)))
+    return failure();
+  SmallVector<llvm::Value *> inRedOrigPtrs;
+  inRedOrigPtrs.reserve(inRedDecls.size());
+  for (Value v : taskOp.getInReductionVars())
+    inRedOrigPtrs.push_back(moduleTranslation.lookupValue(v));
+
   // Set up for call to createTask()
   builder.SetInsertPoint(taskStartBlock);
 
@@ -3173,6 +3189,56 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       assert(llvmPrivateVar->getType() ==
              moduleTranslation.convertType(blockArg.getType()));
       moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+    }
+
+    // Map in_reduction block arguments to the per-task private storage returned
+    // by __kmpc_task_reduction_get_th_data. This call must be emitted inside
+    // the to-be-outlined task body so that it returns the *executing* thread's
+    // gtid (not the encountering thread's). The descriptor is NULL: the runtime
+    // walks up enclosing taskgroups to find the matching task_reduction
+    // registration for `origPtr`. The original pointers are auto-captured into
+    // the task shareds aggregate by CodeExtractor during
+    // OpenMPIRBuilder::finalize.
+    if (!inRedDecls.empty()) {
+      auto iface = cast<omp::BlockArgOpenMPOpInterface>(taskOp.getOperation());
+      llvm::OpenMPIRBuilder &ompB = *moduleTranslation.getOpenMPBuilder();
+      llvm::Module *m = moduleTranslation.getLLVMModule();
+      llvm::LLVMContext &llvmCtx = m->getContext();
+      llvm::OpenMPIRBuilder::LocationDescription bodyLoc(builder);
+      uint32_t srcLocSize;
+      llvm::Constant *srcLocStr =
+          ompB.getOrCreateSrcLocStr(bodyLoc, srcLocSize);
+      llvm::Value *bodyIdent = ompB.getOrCreateIdent(srcLocStr, srcLocSize);
+      // Align OpenMPIRBuilder's internal IRBuilder with `builder` so the gtid
+      // call lands inside the to-be-outlined task body.
+      ompB.updateToLocation(bodyLoc);
+      llvm::Value *bodyGtid = ompB.getOrCreateThreadID(bodyIdent);
+      llvm::FunctionCallee getThData = ompB.getOrCreateRuntimeFunction(
+          *m, llvm::omp::OMPRTL___kmpc_task_reduction_get_th_data);
+      llvm::Type *ptrTy = llvm::PointerType::getUnqual(llvmCtx);
+      llvm::Value *nullDesc = llvm::ConstantPointerNull::get(ptrTy);
+      ArrayRef<BlockArgument> inRedBlockArgs = iface.getInReductionBlockArgs();
+      for (auto [blockArg, origPtr] :
+           llvm::zip_equal(inRedBlockArgs, inRedOrigPtrs)) {
+        // __kmpc_task_reduction_get_th_data takes and returns a generic,
+        // default-address-space `ptr`. Normalize a non-default-address-space
+        // original pointer to the generic address space before the call, and
+        // cast the returned private pointer back to the block argument's
+        // address space when it differs (mirrors the taskloop reduction
+        // remapping in convertOmpTaskloopContextOp).
+        llvm::Value *lookupPtr = origPtr;
+        if (auto *origPtrTy =
+                llvm::dyn_cast<llvm::PointerType>(lookupPtr->getType());
+            origPtrTy && origPtrTy->getAddressSpace() != 0)
+          lookupPtr = builder.CreateAddrSpaceCast(lookupPtr, ptrTy);
+        llvm::Value *priv = builder.CreateCall(
+            getThData, {bodyGtid, nullDesc, lookupPtr}, "omp.inred.priv");
+        if (auto *argPtrTy = llvm::dyn_cast<llvm::PointerType>(
+                moduleTranslation.convertType(blockArg.getType()));
+            argPtrTy && argPtrTy->getAddressSpace() != 0)
+          priv = builder.CreateAddrSpaceCast(priv, argPtrTy);
+        moduleTranslation.mapValue(blockArg, priv);
+      }
     }
 
     auto continuationBlockOrError = convertOmpOpRegions(
