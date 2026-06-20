@@ -3854,6 +3854,11 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   }
   if (Arg *A = Args.getLastArg(options::OPT_dxc_Zsb))
     A->claim(); // /Zsb is the default behavior, no need to forward it to llc.
+
+  if (Args.hasArg(options::OPT_dxc_Qpdb_in_private)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-pdb-in-private");
+  }
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
