@@ -14123,6 +14123,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
   case Builtin::BI__builtin_elementwise_clmul:
     return EvaluateBinOpExpr(llvm::APIntOps::clmul);
+  case Builtin::BI__builtin_elementwise_pext:
+    return EvaluateBinOpExpr(llvm::APIntOps::compressBits);
+  case Builtin::BI__builtin_elementwise_pdep:
+    return EvaluateBinOpExpr(llvm::APIntOps::expandBits);
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -17923,7 +17927,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di: {
+  case clang::X86::BI__builtin_ia32_pdep_di:
+  case Builtin::BI__builtin_elementwise_pdep: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
@@ -17932,7 +17937,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di: {
+  case clang::X86::BI__builtin_ia32_pext_di:
+  case Builtin::BI__builtin_elementwise_pext: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
