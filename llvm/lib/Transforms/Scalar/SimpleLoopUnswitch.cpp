@@ -651,7 +651,6 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   if (!ModifiedBranch &&
       !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
-    assert(!ModifiedBranch && "Modified the branch but didn't unswitch");
     return false;
   }
 
