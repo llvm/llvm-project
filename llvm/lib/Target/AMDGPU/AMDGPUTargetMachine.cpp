@@ -1281,10 +1281,6 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this, BufRelaxed,
                                        TBufRelaxed);
   }
@@ -1630,7 +1626,8 @@ bool GCNPassConfig::addPreISel() {
 
   // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
   // with -new-reg-bank-select and without any of the fallback options.
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
       !isGlobalISelAbortEnabled() || !NewRegBankSelect)
     addPass(createLCSSAPass());
 
@@ -2394,7 +2391,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // control flow modifications.
   addFunctionPass(AMDGPURewriteUndefForPHIPass(), PMW);
 
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
       !isGlobalISelAbortEnabled() || !NewRegBankSelect)
     addFunctionPass(LCSSAPass(), PMW);
 

@@ -525,6 +525,17 @@ static const Type *createHostLayoutType(Sema &S, const Type *Ty) {
   return Ty;
 }
 
+// Returns the type to use for a host layout struct field. For most types this
+// is the unqualified desugared type. Matrix types, however, retain their sugar
+// so that the row_major/column_major orientation (carried as an AttributedType)
+// is preserved; the orientation determines the in-memory cbuffer layout.
+static const Type *getHostLayoutFieldType(QualType QT) {
+  const Type *Desugared = QT->getUnqualifiedDesugaredType();
+  if (Desugared->isConstantMatrixType())
+    return QT.getTypePtr();
+  return Desugared;
+}
+
 // Creates a field declaration of given name and type for HLSL buffer layout
 // struct. Returns nullptr if the type cannot be use in HLSL Buffer layout.
 static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
@@ -597,7 +608,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 
   // filter struct fields
   for (const FieldDecl *FD : StructDecl->fields()) {
-    const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
+    const Type *Ty = getHostLayoutFieldType(FD->getType());
     if (FieldDecl *NewFD =
             createFieldForHostLayoutStruct(S, Ty, FD->getIdentifier(), LS))
       LS->addDecl(NewFD);
@@ -635,7 +646,7 @@ static void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
     if (!VD || VD->getStorageClass() == SC_Static ||
         VD->getType().getAddressSpace() == LangAS::hlsl_groupshared)
       continue;
-    const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+    const Type *Ty = getHostLayoutFieldType(VD->getType());
 
     FieldDecl *FD =
         createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS);
@@ -1013,7 +1024,9 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       FD->setInvalidDecl();
     }
     if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
-      if (Ver < VersionTuple(6, 6)) {
+      if (TargetInfo.getTriple().isSPIRV()) {
+        Diag(WS->getLocation(), diag::warn_hlsl_wavesize_unsupported_spirv);
+      } else if (Ver < VersionTuple(6, 6)) {
         Diag(WS->getLocation(), diag::err_hlsl_attribute_in_wrong_shader_model)
             << WS << "6.6";
         FD->setInvalidDecl();
@@ -2141,6 +2154,13 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.RawBuffer = true;
       break;
+    case attr::HLSLIsArray:
+      if (ResAttrs.IsArray) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.IsArray = true;
+      break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
@@ -2260,6 +2280,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   case ParsedAttr::AT_HLSLIsCounter:
     A = HLSLIsCounterAttr::Create(getASTContext(), ACI);
+    break;
+
+  case ParsedAttr::AT_HLSLIsArray:
+    A = HLSLIsArrayAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -2780,6 +2804,39 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
       K == attr::HLSLRowMajor ? "row_major" : "column_major");
   Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << II;
   return true;
+}
+
+// Transpose and matrix mul need to read the destination layout.
+// Elementwise builtins reuse the operand layout instead.
+static bool isLayoutAdaptingMatrixBuiltin(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_mul:
+  case Builtin::BI__builtin_hlsl_transpose:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void SemaHLSL::propagateContextualMatrixLayout(Expr *E, QualType DestType) {
+  if (!E || DestType.isNull())
+    return;
+  const auto *DestMat = DestType->getAs<ConstantMatrixType>();
+  if (!DestMat)
+    return;
+  auto *Call = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+  if (!Call)
+    return;
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  if (!Callee || !isLayoutAdaptingMatrixBuiltin(Callee->getBuiltinID()))
+    return;
+  const auto *CallMat = Call->getType()->getAs<ConstantMatrixType>();
+  if (!CallMat || CallMat->getNumRows() != DestMat->getNumRows() ||
+      CallMat->getNumColumns() != DestMat->getNumColumns())
+    return;
+  // Re-type the call with the destination sugar so CodeGen lowers into that
+  // layout, not the TU default.
+  Call->setType(DestType.getUnqualifiedType());
 }
 
 namespace {
@@ -3374,6 +3431,20 @@ static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
       Expr::MLV_Valid)
     return false;
   S->Diag(OrigLoc, diag::error_hlsl_inout_lvalue) << Arg << 0;
+  return true;
+}
+
+// Verifies that the argument at `ArgIndex` of `TheCall` refers to memory in
+// one of `AllowedSpaces`. Intended for HLSL builtins (e.g. atomics).
+static bool CheckArgAddrSpaceOneOf(Sema *S, CallExpr *TheCall,
+                                   unsigned ArgIndex,
+                                   ArrayRef<LangAS> AllowedSpaces) {
+  Expr *Arg = TheCall->getArg(ArgIndex);
+  QualType LValueTy = Arg->IgnoreCasts()->getType();
+  if (llvm::is_contained(AllowedSpaces, LValueTy.getAddressSpace()))
+    return false;
+  S->Diag(Arg->getBeginLoc(), diag::err_hlsl_atomic_arg_addr_space)
+      << (ArgIndex + 1) << LValueTy;
   return true;
 }
 
@@ -4498,6 +4569,53 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_interlocked_add: {
+    // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
+    // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
+    // When reached via the synthesized `InterlockedAdd` overload set in
+    // HLSLExternalSemaSource, overload resolution has already enforced the
+    // argument count, integer-type matching, and the address-space requirement
+    // on `dest`. The checks below are a safety net for callers that invoke the
+    // builtin by its mangled name and would otherwise reach CodeGen unchecked.
+    if (TheCall->getNumArgs() < 2) {
+      SemaRef.Diag(TheCall->getEndLoc(),
+                   diag::err_typecheck_call_too_few_args_at_least)
+          << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
+          << /*is_non_object=*/0 << TheCall->getSourceRange();
+      return true;
+    }
+    if (SemaRef.checkArgCountAtMost(TheCall, 3))
+      return true;
+
+    QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
+    if (!DestTy->isIntegerType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
+          << DestTy;
+      return true;
+    }
+
+    if (CheckModifiableLValue(&SemaRef, TheCall, 0))
+      return true;
+
+    if (CheckArgAddrSpaceOneOf(&SemaRef, TheCall, 0,
+                               {LangAS::hlsl_groupshared, LangAS::hlsl_device}))
+      return true;
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), DestTy))
+      return true;
+
+    if (TheCall->getNumArgs() == 3) {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), DestTy))
+        return true;
+      if (CheckModifiableLValue(&SemaRef, TheCall, 2))
+        return true;
+    }
+
+    TheCall->setType(SemaRef.Context.VoidTy);
+    break;
+  }
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {
@@ -4574,7 +4692,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_x:
-  case Builtin::BI__builtin_hlsl_quad_read_across_y: {
+  case Builtin::BI__builtin_hlsl_quad_read_across_y:
+  case Builtin::BI__builtin_hlsl_quad_read_across_diagonal: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -5825,14 +5944,25 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize non-static resources at the global scope.
   if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
     const Type *Ty = VD->getType().getTypePtr();
-    if (Ty->isHLSLResourceRecord())
-      return initGlobalResourceDecl(VD);
-    if (Ty->isHLSLResourceRecordArray())
-      return initGlobalResourceArrayDecl(VD);
+    if (Ty->isHLSLResourceRecord() && initGlobalResourceDecl(VD))
+      return true;
+    if (Ty->isHLSLResourceRecordArray() && initGlobalResourceArrayDecl(VD))
+      return true;
   }
+
+  // User-defined structs/classes do not have constructors.
+  // When declared at a global scope, they are part of the constant buffer
+  // and should not be initialized by the compiler.
+  // When declared at a local scope, they are not initialized.
+  // Also applies to arrays of user-defined structs/classes.
+  const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+  while (Ty->isArrayType())
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl())
+    return !RD->isHLSLBuiltinRecord();
+
   return false;
 }
 
@@ -5924,6 +6054,15 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
     }
   }
   return true;
+}
+
+// Returns true if the given type can have an overload of the given
+// binary operator.
+bool SemaHLSL::canHaveOverloadedBinOp(QualType LHSTy, BinaryOperatorKind Opc) {
+  CXXRecordDecl *RD = LHSTy->getAsCXXRecordDecl();
+  if (!RD)
+    return true;
+  return RD->isHLSLBuiltinRecord() || Opc != BO_Assign;
 }
 
 // Walks though the global variable declaration, collects all resource binding

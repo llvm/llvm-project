@@ -2007,6 +2007,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (Opcode) {
   case RISCV::PseudoMV_FPR16INX:
   case RISCV::PseudoMV_FPR32INX:
+  case RISCV::PseudoClearGPR:
     // MV is always compressible to either c.mv or c.li rd, 0.
     return STI.hasStdExtZca() ? 2 : 4;
   // Below cases are for short forward branch pseudos
@@ -3075,6 +3076,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(8)
         CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
+        CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
@@ -3940,6 +3942,22 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
                       .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
                                         RISCVII::MO_CALL));
   return It;
+}
+
+void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator Iter,
+                                        DebugLoc &DL,
+                                        bool AllowSideEffects) const {
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearGPR), Reg);
+  } else {
+    llvm::reportFatalInternalError(
+        "buildClearRegister is not implemented for non-GPR registers");
+  }
 }
 
 std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,

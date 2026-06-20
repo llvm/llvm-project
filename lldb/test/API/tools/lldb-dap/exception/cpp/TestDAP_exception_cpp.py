@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
+@skipIfWasm  # wasm inferiors are built with -fno-exceptions
 class TestDAP_exception_cpp(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_stopped_description(self):

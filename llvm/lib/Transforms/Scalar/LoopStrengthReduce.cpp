@@ -5240,6 +5240,7 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
 
     // Find a compatible LSRUse inside the loop that we could merge LU with
     LSRUse *LUToMergeWith = nullptr;
+    const Formula &ThisF = LU.Formulae[0];
     for (LSRUse &OtherLU : Uses) {
       // Only merge with uses inside the loop
       if (OtherLU.AllFixupsOutsideLoop)
@@ -5251,11 +5252,16 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
       // Can't merge with uses without any formulae
       if (OtherLU.Formulae.empty())
         continue;
+      // Can't merge if LU's offsets aren't legal for all of OtherLU's formulae
+      if (any_of(OtherLU.Formulae, [&](const Formula &F) {
+            return !isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, OtherLU.Kind,
+                               OtherLU.AccessTy, F);
+          }))
+        continue;
       // We can merge with uses that have the same initial formula. We allow
       // merging of uses with different Kind and AccessTy which means that the
       // cost may end up being inaccurate, but it's also what we would have
       // gotten if we'd ignored uses outside the loop entirely.
-      const Formula &ThisF = LU.Formulae[0];
       const Formula &OtherF = OtherLU.Formulae[0];
       if (ThisF.BaseRegs == OtherF.BaseRegs &&
           ThisF.ScaledReg == OtherF.ScaledReg &&
@@ -5660,11 +5666,11 @@ void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
 
   const bool EnableDropUnprofitableSolution = [&] {
     switch (AllowDropSolutionIfLessProfitable) {
-    case cl::BOU_TRUE:
+    case cl::boolOrDefault::BOU_TRUE:
       return true;
-    case cl::BOU_FALSE:
+    case cl::boolOrDefault::BOU_FALSE:
       return false;
-    case cl::BOU_UNSET:
+    case cl::boolOrDefault::BOU_UNSET:
       return TTI.shouldDropLSRSolutionIfLessProfitable();
     }
     llvm_unreachable("Unhandled cl::boolOrDefault enum");
@@ -5818,6 +5824,10 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
+  // For ICmpZero with pointer-typed operands, keep the comparison in the
+  // integer domain to avoid generating inttoptr casts.
+  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())
+    OpTy = SE.getEffectiveSCEVType(OpTy);
   // This will be the type that we'll initially expand to.
   Type *Ty = F.getType();
   if (!Ty)
@@ -6126,8 +6136,11 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     Value *FullV = Expand(LU, LF, F, LF.UserInst->getIterator(), DeadInsts);
 
     // If this is reuse-by-noop-cast, insert the noop cast.
+    // For ICmpZero with pointer operands, Expand() already set both operands
+    // in integer domain, so no cast is needed here.
     Type *OpTy = LF.OperandValToReplace->getType();
-    if (FullV->getType() != OpTy) {
+    if (FullV->getType() != OpTy &&
+        !(LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())) {
       Instruction *Cast =
           CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
                            FullV, OpTy, "tmp", LF.UserInst->getIterator());

@@ -254,8 +254,8 @@ define <256 x i8> @vmaxu_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zer
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    vmaxu.vx v16, v16, a0
+; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <256 x i8> %elt.head, <256 x i8> poison, <256 x i32> zeroinitializer
@@ -268,8 +268,8 @@ define <256 x i8> @vmaxu_vx_v258i8_unmasked(<256 x i8> %va, i8 %b, i32 zeroext %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    vmaxu.vx v16, v16, a0
+; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <256 x i8> %elt.head, <256 x i8> poison, <256 x i32> zeroinitializer
@@ -284,8 +284,8 @@ define <256 x i8> @vmaxu_vx_v258i8_evl129(<256 x i8> %va, i8 %b, <256 x i1> %m) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    vmaxu.vx v16, v16, a0
+; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <256 x i8> %elt.head, <256 x i8> poison, <256 x i32> zeroinitializer
@@ -300,8 +300,8 @@ define <256 x i8> @vmaxu_vx_v258i8_evl128(<256 x i8> %va, i8 %b, <256 x i1> %m) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    vmaxu.vx v16, v16, a0
+; CHECK-NEXT:    vmaxu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <256 x i8> %elt.head, <256 x i8> poison, <256 x i32> zeroinitializer

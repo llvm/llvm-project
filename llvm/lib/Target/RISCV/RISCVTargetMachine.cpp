@@ -251,10 +251,6 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
                            << CPU << TuneCPU << FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     auto ABIName = Options.MCOptions.getABIName();
     if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
             F.getParent()->getModuleFlag("target-abi"))) {
@@ -508,8 +504,8 @@ bool RISCVPassConfig::addPreISel() {
   }
 
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::BOU_UNSET) ||
-      EnableGlobalMerge == cl::BOU_TRUE) {
+       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
+      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
     // FIXME: Like AArch64, we disable extern global merging by default due to
     // concerns it might regress some workloads. Unlike AArch64, we don't
     // currently support enabling the pass in an "OnlyOptimizeForSize" mode.

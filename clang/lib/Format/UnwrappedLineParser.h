@@ -61,6 +61,9 @@ struct UnwrappedLine {
   /// addition to the normal indention level.
   bool IsContinuation = false;
 
+  /// Whether it is a C++20 module/import declaration.
+  bool IsModuleOrImportDecl = false;
+
   /// If this \c UnwrappedLine closes a block in a sequence of lines,
   /// \c MatchingOpeningBlockLineIndex stores the index of the corresponding
   /// opening line. Otherwise, \c MatchingOpeningBlockLineIndex must be
@@ -164,7 +167,8 @@ private:
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();
-  bool parseModuleImport();
+  bool parseModuleDecl();
+  bool parseImportDecl();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();

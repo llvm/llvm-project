@@ -16,7 +16,7 @@ namespace {
 TEST(LUSummaryTest, GetNamespace) {
   BuildNamespace LU(BuildNamespaceKind::LinkUnit, "app");
   NestedBuildNamespace NS(LU);
-  LUSummary Summary(NS);
+  LUSummary Summary(llvm::Triple("arm64-apple-macosx"), NS);
 
   EXPECT_EQ(Summary.getNamespace(), NS);
 }
