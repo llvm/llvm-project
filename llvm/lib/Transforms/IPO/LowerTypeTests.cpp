@@ -2454,8 +2454,8 @@ bool LowerTypeTestsModule::lower() {
 
         auto It = GlobalTypeMembers.find(Base);
         if (It == GlobalTypeMembers.end())
-            reportFatalUsageError(
-                "Expected branch funnel operand to be global value");
+          reportFatalUsageError(
+              "Expected branch funnel operand to be global value");
         GlobalTypeMember *GTM = It->second;
         Targets.push_back(GTM);
         GlobalClassesTy::member_iterator NewSet =
