@@ -425,14 +425,10 @@ public:
 private:
   void reportInvalidationNote(const Expr *InvalidationExpr,
                               StringRef InvalidatedSubject) {
-    if (isa<CXXDeleteExpr>(InvalidationExpr)) {
-      S.Diag(InvalidationExpr->getExprLoc(),
-             diag::note_lifetime_safety_freed_here)
-          << InvalidationExpr->getSourceRange();
-      return;
-    }
-    S.Diag(InvalidationExpr->getExprLoc(),
-           diag::note_lifetime_safety_invalidated_here)
+    auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
+                    ? diag::note_lifetime_safety_freed_here
+                    : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(InvalidationExpr->getExprLoc(), Diag)
         << InvalidatedSubject << InvalidationExpr->getSourceRange();
   }
 
