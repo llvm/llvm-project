@@ -1554,6 +1554,8 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[1588] = {
     0x0b598062,
     0x0b6b180c,
     0x0b6b383c,
+    0x0b6cc002,
+    0x0b6ce802,
     0x0b7a7802,
     0x0b7a8b6a,
     0x0b7c7832,
