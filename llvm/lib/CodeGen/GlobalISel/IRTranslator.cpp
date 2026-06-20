@@ -3525,7 +3525,7 @@ bool IRTranslator::translateShuffleVector(const User &U,
 }
 
 bool IRTranslator::translateBitInsert(const User &U,
-                                       MachineIRBuilder &MIRBuilder) {
+                                      MachineIRBuilder &MIRBuilder) {
   Register Res = getOrCreateVReg(U);
   Register Base = getOrCreateVReg(*U.getOperand(0));
   Register Val = getOrCreateVReg(*U.getOperand(1));
@@ -3559,7 +3559,7 @@ bool IRTranslator::translateBitInsert(const User &U,
 }
 
 bool IRTranslator::translateBitExtract(const User &U,
-                                        MachineIRBuilder &MIRBuilder) {
+                                       MachineIRBuilder &MIRBuilder) {
   Register Res = getOrCreateVReg(U);
   Register Src = getOrCreateVReg(*U.getOperand(0));
   Register Offset = getOrCreateVReg(*U.getOperand(1));
@@ -3575,8 +3575,7 @@ bool IRTranslator::translateBitExtract(const User &U,
   Register LegalOffset = MIRBuilder.buildZExtOrTrunc(SrcTy, Offset).getReg(0);
 
   // Shift right by Offset to bring the target field down to bit 0.
-  Register Shifted =
-      MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
+  Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
 
   // Truncating to ResTy discards the high bits for free.
   if (SrcTy == ResTy)

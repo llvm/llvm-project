@@ -4174,7 +4174,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   APInt ClearMask =
       APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
   SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, RotatedBase,
-                                     DAG.getConstant(ClearMask, dl, BaseVT));
+                                    DAG.getConstant(ClearMask, dl, BaseVT));
 
   SDValue ExtVal = DAG.getZExtOrTrunc(Val, dl, BaseVT);
   SDValue Inserted = DAG.getNode(ISD::OR, dl, BaseVT, ClearedBase, ExtVal);
