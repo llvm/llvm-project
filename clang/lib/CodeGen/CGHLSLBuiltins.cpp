@@ -311,7 +311,7 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
 }
 
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
-                                  const Twine &Name) {
+                                  Intrinsic::ID ID, const Twine &Name) {
   // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
   //   void InterlockedOp(groupshared|device T &dest, T value);
   //   void InterlockedOp(groupshared|device T &dest, T value,
@@ -324,7 +324,6 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   assert(E->getArg(1)->getType()->isIntegerType() &&
          "Intrinsic InterlockedOp value operand must be an integer");
 
-  Intrinsic::ID ID = CGF.CGM.getHLSLRuntime().getInterlockedAddIntrinsic();
   Value *Call = CGF.EmitRuntimeCall(
       Intrinsic::getOrInsertDeclaration(&CGF.CGM.getModule(), ID,
                                         {Val->getType(), Ptr->getType()}),
@@ -1457,10 +1456,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                              "hlsl.wave.active.bit.and");
   }
   case Builtin::BI__builtin_hlsl_interlocked_add: {
-    return handleInterlockedOp(*this, E, "hlsl.interlocked.add");
+    return handleInterlockedOp(
+        *this, E, CGM.getHLSLRuntime().getInterlockedAddIntrinsic(),
+        "hlsl.interlocked.add");
   }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
-    return handleInterlockedOp(*this, E, "hlsl.interlocked.or");
+    return handleInterlockedOp(*this, E,
+                               CGM.getHLSLRuntime().getInterlockedOrIntrinsic(),
+                               "hlsl.interlocked.or");
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
