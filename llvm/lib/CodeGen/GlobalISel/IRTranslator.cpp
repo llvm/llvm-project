@@ -4375,8 +4375,7 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   Register LegalOffset = MIRBuilder.buildZExtOrTrunc(SrcTy, Offset).getReg(0);
 
   // Shift right by Offset to bring the target field down to bit 0.
-  Register Shifted =
-      MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
+  Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
 
   // Truncating to ResTy discards the high bits for free.
   if (SrcTy == ResTy)
