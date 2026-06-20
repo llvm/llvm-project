@@ -12245,12 +12245,18 @@ SDValue DAGCombiner::visitPDEP(SDNode *N) {
   // pdep(x, 0) -> 0
   if (isNullOrNullSplat(N1))
     return DAG.getConstant(0, DL, VT);
+
   // pdep(x, -1) -> x  (all positions selected, bits deposited at identity)
   if (isAllOnesOrAllOnesSplat(N1))
     return N0;
+
   // fold pdep(c1, c2) -> expandBits(c1, c2)
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::PDEP, DL, VT, {N0, N1}))
     return C;
+
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
