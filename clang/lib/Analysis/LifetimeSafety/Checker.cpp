@@ -258,18 +258,15 @@ public:
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
-                                                   Warning.InvalidatedByExpr,
-                                                   L->getAccessPath());
+                                                   Warning.InvalidatedByExpr);
           else if (InvalidatedPVD)
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
-                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
-                L->getAccessPath());
+                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
         } else
           // Scope-based expiry (use-after-scope).
           SemaHelper->reportUseAfterScope(
               IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
-              L->getAccessPath(),
               getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
 
       } else if (const auto *OEF =
@@ -279,28 +276,28 @@ public:
             // Invalidated object escapes to a field.
             if (IssueExpr)
               // Invalidated object on stack escapes to a field.
-              SemaHelper->reportInvalidatedField(
-                  IssueExpr, FieldEscape->getFieldDecl(),
-                  Warning.InvalidatedByExpr, L->getAccessPath());
+              SemaHelper->reportInvalidatedField(IssueExpr,
+                                                 FieldEscape->getFieldDecl(),
+                                                 Warning.InvalidatedByExpr);
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to a field.
-              SemaHelper->reportInvalidatedField(
-                  InvalidatedPVD, FieldEscape->getFieldDecl(),
-                  Warning.InvalidatedByExpr, L->getAccessPath());
+              SemaHelper->reportInvalidatedField(InvalidatedPVD,
+                                                 FieldEscape->getFieldDecl(),
+                                                 Warning.InvalidatedByExpr);
           } else if (const auto *GlobalEscape =
                          dyn_cast<GlobalEscapeFact>(OEF)) {
             // Invalidated object escapes to global or static storage.
             if (IssueExpr)
               // Invalidated object on stack escapes to global or static
               // storage.
-              SemaHelper->reportInvalidatedGlobal(
-                  IssueExpr, GlobalEscape->getGlobal(),
-                  Warning.InvalidatedByExpr, L->getAccessPath());
+              SemaHelper->reportInvalidatedGlobal(IssueExpr,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to global or static storage.
-              SemaHelper->reportInvalidatedGlobal(
-                  InvalidatedPVD, GlobalEscape->getGlobal(),
-                  Warning.InvalidatedByExpr, L->getAccessPath());
+              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
+                                                  GlobalEscape->getGlobal(),
+                                                  Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
           } else

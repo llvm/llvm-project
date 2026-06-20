@@ -64,7 +64,6 @@ public:
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc,
-                                   const internal::AccessPath &ExpiredPath,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
@@ -83,30 +82,24 @@ public:
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
-  virtual void
-  reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
-                             const Expr *InvalidationExpr,
-                             const internal::AccessPath &InvalidatedPath) {}
-  virtual void
-  reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
-                             const Expr *InvalidationExpr,
-                             const internal::AccessPath &InvalidatedPath) {}
-  virtual void
-  reportInvalidatedField(const Expr *IssueExpr, const FieldDecl *Field,
-                         const Expr *InvalidationExpr,
-                         const internal::AccessPath &InvalidatedPath) {}
-  virtual void
-  reportInvalidatedField(const ParmVarDecl *PVD, const FieldDecl *Field,
-                         const Expr *InvalidationExpr,
-                         const internal::AccessPath &InvalidatedPath) {}
-  virtual void
-  reportInvalidatedGlobal(const Expr *IssueExpr, const VarDecl *Global,
-                          const Expr *InvalidationExpr,
-                          const internal::AccessPath &InvalidatedPath) {}
-  virtual void
-  reportInvalidatedGlobal(const ParmVarDecl *PVD, const VarDecl *Global,
-                          const Expr *InvalidationExpr,
-                          const internal::AccessPath &InvalidatedPath) {}
+  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
+                                          const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
+  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
+                                          const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const Expr *IssueExpr,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const ParmVarDecl *PVD,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
