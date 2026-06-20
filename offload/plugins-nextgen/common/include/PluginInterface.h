@@ -1252,6 +1252,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
                          bool IsNative, bool SaveOutput, bool EmitReport,
+                         const char *ReportFilename,
                          const char *OutputDirPath) {
     if (RecordReplay)
       return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
@@ -1267,7 +1268,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
     RecordReplay =
         new NativeRecordReplayTy(Status, OutputDirPath ? OutputDirPath : "",
-                                 SaveOutput, EmitReport, *this);
+                                 SaveOutput, EmitReport, ReportFilename, *this);
     return RecordReplay->init(Size, VAddr);
   }
 
@@ -1587,6 +1588,7 @@ public:
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,
                                    bool SaveOutput, bool EmitReport,
+                                   const char *ReportFilename,
                                    const char *OutputDirPath);
 
   /// Loads the associated binary into the plugin and returns a handle to it.
