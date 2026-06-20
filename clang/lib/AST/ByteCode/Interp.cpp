@@ -97,9 +97,10 @@ static void noteValueLocation(InterpState &S, const Block *B) {
 }
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
-                                     const ValueDecl *VD);
+                                     const ValueDecl *VD,
+                                     AccessKinds AK = AK_Read);
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
-                                const ValueDecl *D) {
+                                const ValueDecl *D, AccessKinds AK = AK_Read) {
   // This function tries pretty hard to produce a good diagnostic. Just skip
   // that if nobody will see it anyway.
   if (!S.diagnosing())
@@ -129,7 +130,7 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   }
 
   if (!D->getType().isConstQualified()) {
-    diagnoseNonConstVariable(S, OpPC, D);
+    diagnoseNonConstVariable(S, OpPC, D, AK);
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->getAnyInitializer()) {
       diagnoseMissingInitializer(S, OpPC, VD);
@@ -143,8 +144,13 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool isModification(AccessKinds AK) {
+  return AK == AK_Assign || AK == AK_Increment || AK == AK_Decrement ||
+         AK == AK_Construct || AK == AK_Destroy;
+}
+
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
-                                     const ValueDecl *VD) {
+                                     const ValueDecl *VD, AccessKinds AK) {
   if (!S.diagnosing())
     return;
 
@@ -168,8 +174,12 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
 
   if (VD->getType()->isIntegralOrEnumerationType()) {
-    S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
-    S.Note(VD->getLocation(), diag::note_declared_at);
+    if (isModification(AK)) {
+      S.FFDiag(Loc, diag::note_constexpr_modify_global);
+    } else {
+      S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    }
     return;
   }
 
@@ -1266,7 +1276,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK) {
     return false;
 
   if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
-    return diagnoseUnknownDecl(S, OpPC, D);
+    return diagnoseUnknownDecl(S, OpPC, D, AK);
 
   if (AK == AK_Destroy || S.getLangOpts().CPlusPlus14) {
     const SourceInfo &E = S.Current->getSource(OpPC);
