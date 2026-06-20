@@ -3414,10 +3414,7 @@ define i32 @floor_sdiv_using_srem_by_2(i32 %x) {
 
 define i8 @signum_i8_i8(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[ISNOTNULL_ZEXT:%.*]] = zext i1 [[ISNOTNULL]] to i8
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SIGNBIT]], [[ISNOTNULL_ZEXT]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[X:%.*]], i8 0)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sgt0 = icmp sgt i8 %x, 0
@@ -3433,9 +3430,7 @@ define i8 @signum_i8_i8_use1(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_use1(
 ; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use(i8 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[ISNOTNULL_ZEXT:%.*]] = zext i1 [[ISNOTNULL]] to i8
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SIGNBIT]], [[ISNOTNULL_ZEXT]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[X]], i8 0)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sgt0 = icmp sgt i8 %x, 0
@@ -3489,10 +3484,7 @@ define i8 @signum_i8_i8_use3(i8 %x) {
 
 define <2 x i5> @signum_v2i5_v2i5(<2 x i5> %x) {
 ; CHECK-LABEL: @signum_v2i5_v2i5(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr <2 x i5> [[X:%.*]], <i5 4, i5 poison>
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne <2 x i5> [[X]], zeroinitializer
-; CHECK-NEXT:    [[ISNOTNULL_ZEXT:%.*]] = zext <2 x i1> [[ISNOTNULL]] to <2 x i5>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i5> [[SIGNBIT]], [[ISNOTNULL_ZEXT]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i5> @llvm.scmp.v2i5.v2i5(<2 x i5> [[X:%.*]], <2 x i5> zeroinitializer)
 ; CHECK-NEXT:    ret <2 x i5> [[R]]
 ;
   %sgt0 = icmp sgt <2 x i5> %x, zeroinitializer
