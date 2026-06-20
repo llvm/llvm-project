@@ -232,7 +232,6 @@ LANGOPT(OpenMPCUDAMode    , 1, 0, NotCompatible, "Generate code for OpenMP pragm
 LANGOPT(OpenMPIRBuilder   , 1, 0, NotCompatible, "Use the experimental OpenMP-IR-Builder codegen path.")
 LANGOPT(OpenMPCUDANumSMs  , 32, 0, NotCompatible, "Number of SMs for CUDA devices.")
 LANGOPT(OpenMPCUDABlocksPerSM  , 32, 0, NotCompatible, "Number of blocks per SM for CUDA devices.")
-LANGOPT(OpenMPCUDAReductionBufNum , 32, 1024, NotCompatible, "Number of the reduction records in the intermediate reduction buffer used for the teams reductions.")
 LANGOPT(OpenMPGPUThreadsPerTeam, 32, 256, NotCompatible, "Number of threads per team for GPUs.")
 LANGOPT(OpenMPTargetXteamReductionBlockSize, 32, 512, NotCompatible, "Number of threads in a block used by cross-team reduction.")
 LANGOPT(OpenMPTargetDebug , 32, 0, NotCompatible, "Enable debugging in the OpenMP offloading device RTL")
