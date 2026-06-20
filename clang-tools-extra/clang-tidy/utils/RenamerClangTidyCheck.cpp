@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
