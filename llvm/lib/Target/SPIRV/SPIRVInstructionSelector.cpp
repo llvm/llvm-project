@@ -178,7 +178,7 @@ private:
                        unsigned NewOpcode, unsigned NegateOpcode = 0) const;
 
   bool selectInterlockedOp(Register ResVReg, SPIRVTypeInst ResType,
-                            MachineInstr &I, unsigned Opcode) const;
+                           MachineInstr &I, unsigned Opcode) const;
 
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
@@ -2446,9 +2446,9 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectInterlockedOp(Register ResVReg,
-                                                    SPIRVTypeInst ResType,
-                                                    MachineInstr &I,
-                                                    unsigned Opcode) const {
+                                                   SPIRVTypeInst ResType,
+                                                   MachineInstr &I,
+                                                   unsigned Opcode) const {
   Register Ptr = I.getOperand(2).getReg();
   Register Value = I.getOperand(3).getReg();
 
