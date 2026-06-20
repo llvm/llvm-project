@@ -683,16 +683,22 @@ static std::vector<EncodingIsland> getIslands(const KnownBits &EncodingBits,
   return Islands;
 }
 
-/// Emit `if (!Check(...)) return <Helper>(<Args>[, &DecodeComplete]);`.
+/// Emit:
+///   if (!Check(...)) {
+///     LLVM_DEBUG(<Helper>(<Args>));
+///     [DecodeComplete = false;]
+///     return MCDisassembler::Fail;
+///   }
 static void emitCheckWithDbgMsg(raw_ostream &OS, indent Indent,
                                 const Twine &CheckCall, StringRef Helper,
                                 const Twine &Args,
                                 bool SetDecodeCompleteOnFail) {
-  OS << Indent << "if (!Check(S, " << CheckCall << ")) return " << Helper << "("
-     << Args;
+  OS << Indent << "if (!Check(S, " << CheckCall << ")) {\n";
+  OS << Indent << "  LLVM_DEBUG(" << Helper << "(" << Args << "));\n";
   if (SetDecodeCompleteOnFail)
-    OS << ", &DecodeComplete";
-  OS << ");\n";
+    OS << Indent << "  DecodeComplete = false;\n";
+  OS << Indent << "  return MCDisassembler::Fail;\n";
+  OS << Indent << "}\n";
 }
 
 /// Operand-level decoder (emitBinaryParser).
@@ -715,7 +721,7 @@ static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
     AS << '}';
   }
 
-  emitCheckWithDbgMsg(OS, Indent, CheckCall, "dbgFailOpd", Args,
+  emitCheckWithDbgMsg(OS, Indent, CheckCall, "reportOperandDecodeFailure", Args,
                       !OpInfo.HasCompleteDecoder);
 }
 
@@ -725,10 +731,11 @@ static void emitDecoderMethodOpcDebug(raw_ostream &OS, indent Indent,
                                       const InstructionEncoding &Encoding,
                                       StringRef DecoderMethod) {
   StringRef EncName = Encoding.getName();
-  emitCheckWithDbgMsg(
-      OS, Indent, formatv("{}(MI, insn, Address, Decoder)", DecoderMethod),
-      "dbgFailInsn", formatv("\"{}\", \"{}\"", EncName, DecoderMethod),
-      !Encoding.hasCompleteDecoder());
+  emitCheckWithDbgMsg(OS, Indent,
+                      formatv("{}(MI, insn, Address, Decoder)", DecoderMethod),
+                      "reportInsnDecodeFailure",
+                      formatv("\"{}\", \"{}\"", EncName, DecoderMethod),
+                      !Encoding.hasCompleteDecoder());
 }
 
 static void emitBinaryParser(raw_ostream &OS, indent Indent,
@@ -1560,43 +1567,35 @@ namespace {
 // on their usage.
 template <typename T> constexpr uint32_t InsnBitWidth = 0;
 
+#ifndef NDEBUG
 // Operand with no encoding fields: `Desc` is either "imm" (a constant
 // immediate) or "bits<0>" (no encoding at all).
-DecodeStatus dbgFailOpd(const char *Op, const char *Desc, const char *Decoder,
-                        bool *DecodeComplete = nullptr) {
-  LLVM_DEBUG(dbgs() << "OPC_Decode for " << Op << ": " << Desc << " using "
-                    << Decoder << " : FAIL\n");
-  if (DecodeComplete)
-    *DecodeComplete = false;
-  return MCDisassembler::Fail;
+[[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
+                                                 const char *Desc,
+                                                 const char *Decoder) {
+  dbgs() << "OPC_Decode for " << Op << ": " << Desc << " using " << Decoder
+         << " : FAIL\n";
 }
 
 // Operand with encoding fields, passed as (base, width) integer pairs.
-DecodeStatus dbgFailOpd(const char *Op, const char *Decoder,
-                        ArrayRef<uint32_t> Fields,
-                        bool *DecodeComplete = nullptr) {
-  LLVM_DEBUG({
-    dbgs() << "OPC_Decode for " << Op << ": ";
-    for (unsigned I = 0, E = Fields.size(); I != E; I += 2) {
-      if (I)
-        dbgs() << " + ";
-      dbgs() << "field(" << Fields[I] << ',' << Fields[I + 1] << ')';
-    }
-    dbgs() << " using " << Decoder << " : FAIL\n";
-  });
-  if (DecodeComplete)
-    *DecodeComplete = false;
-  return MCDisassembler::Fail;
+[[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
+                                                 const char *Decoder,
+                                                 ArrayRef<uint32_t> Fields) {
+  dbgs() << "OPC_Decode for " << Op << ": ";
+  for (unsigned I = 0, E = Fields.size(); I != E; I += 2) {
+    if (I)
+      dbgs() << " + ";
+    dbgs() << "field(" << Fields[I] << ',' << Fields[I + 1] << ')';
+  }
+  dbgs() << " using " << Decoder << " : FAIL\n";
 }
 
-[[maybe_unused]] DecodeStatus dbgFailInsn(const char *Name, const char *Decoder,
-                                          bool *DecodeComplete = nullptr) {
-  LLVM_DEBUG(dbgs() << "OPC_Decode for " << Name << ": insn using " << Decoder
-                    << " : FAIL\n");
-  if (DecodeComplete)
-    *DecodeComplete = false;
-  return MCDisassembler::Fail;
+[[maybe_unused]] void reportInsnDecodeFailure(const char *Name,
+                                              const char *Decoder) {
+  dbgs() << "OPC_Decode for " << Name << ": insn using " << Decoder
+         << " : FAIL\n";
 }
+#endif // NDEBUG
 
 )";
 

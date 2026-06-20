@@ -44,4 +44,8 @@ def InstB : TestInstruction {
 // CHECK-NEXT: };
 
 // CHECK-LABEL: case 0:
-// CHECK-NEXT:    if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) return dbgFailInsn("InstB", "DecodeInstB", &DecodeComplete);
+// CHECK-NEXT:    if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) {
+// CHECK-NEXT:      LLVM_DEBUG(reportInsnDecodeFailure("InstB", "DecodeInstB"));
+// CHECK-NEXT:      DecodeComplete = false;
+// CHECK-NEXT:      return MCDisassembler::Fail;
+// CHECK-NEXT:    }
