@@ -47,6 +47,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetVerifier.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
@@ -125,6 +126,9 @@ cl::opt<bool>
 static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"));
+static cl::opt<bool>
+    VerifyTarget("verify-target", cl::Hidden,
+                 cl::desc("Run the target's IR verifier before codegen"));
 static cl::opt<cl::boolOrDefault>
     DebugifyAndStripAll("debugify-and-strip-all-safe", cl::Hidden,
                         cl::desc("Debugify MIR before and Strip debug after "
@@ -848,6 +852,11 @@ void TargetPassConfig::addIRPasses() {
   // coming from the front-end and/or optimizer is valid.
   if (!DisableVerify)
     addPass(createVerifierPass());
+
+  // Optionally run the target's own IR verifier (opt-in via -verify-target).
+  // It is a no-op unless the backend registered a TargetVerify for this target.
+  if (VerifyTarget)
+    addPass(createTargetVerifierPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Basic AliasAnalysis support.
