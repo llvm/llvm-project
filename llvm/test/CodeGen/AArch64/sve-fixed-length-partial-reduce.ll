@@ -472,12 +472,9 @@ define <2 x i64> @four_way_i8_i64_vl128_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
 ; SME-NEXT:    ldr q1, [x1]
 ; SME-NEXT:    ldr q2, [x2]
 ; SME-NEXT:    usdot z0.s, z1.b, z2.b
-; SME-NEXT:    ldr q2, [x0]
-; SME-NEXT:    sunpklo z1.d, z0.s
-; SME-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SME-NEXT:    sunpklo z0.d, z0.s
-; SME-NEXT:    add z1.d, z2.d, z1.d
-; SME-NEXT:    add z0.d, z1.d, z0.d
+; SME-NEXT:    ldr q1, [x0]
+; SME-NEXT:    saddwb z1.d, z1.d, z0.s
+; SME-NEXT:    saddwt z0.d, z1.d, z0.s
 ; SME-NEXT:    ret
   %acc = load <2 x i64>, ptr %accptr
   %u = load <16 x i8>, ptr %uptr
@@ -842,12 +839,9 @@ define <2 x i64> @eight_way_i8_i64_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
 ; SME-NEXT:    ldr q1, [x1]
 ; SME-NEXT:    ldr q2, [x2]
 ; SME-NEXT:    udot z0.s, z2.b, z1.b
-; SME-NEXT:    ldr q2, [x0]
-; SME-NEXT:    uunpklo z1.d, z0.s
-; SME-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SME-NEXT:    uunpklo z0.d, z0.s
-; SME-NEXT:    add z1.d, z2.d, z1.d
-; SME-NEXT:    add z0.d, z1.d, z0.d
+; SME-NEXT:    ldr q1, [x0]
+; SME-NEXT:    uaddwb z1.d, z1.d, z0.s
+; SME-NEXT:    uaddwt z0.d, z1.d, z0.s
 ; SME-NEXT:    ret
   %acc = load <2 x i64>, ptr %accptr
   %u = load <16 x i8>, ptr %uptr
@@ -894,12 +888,9 @@ define <2 x i64> @eight_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vsca
 ; SME-NEXT:    ldr q1, [x1]
 ; SME-NEXT:    ldr q2, [x2]
 ; SME-NEXT:    udot z0.s, z2.b, z1.b
-; SME-NEXT:    ldr q2, [x0]
-; SME-NEXT:    uunpklo z1.d, z0.s
-; SME-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SME-NEXT:    uunpklo z0.d, z0.s
-; SME-NEXT:    add z1.d, z2.d, z1.d
-; SME-NEXT:    add z0.d, z1.d, z0.d
+; SME-NEXT:    ldr q1, [x0]
+; SME-NEXT:    uaddwb z1.d, z1.d, z0.s
+; SME-NEXT:    uaddwt z0.d, z1.d, z0.s
 ; SME-NEXT:    ret
   %acc = load <2 x i64>, ptr %accptr
   %u = load <16 x i8>, ptr %uptr
@@ -945,23 +936,17 @@ define <4 x i64> @four_way_i8_i64_vl128_double_width(ptr %accptr, ptr %uptr, ptr
 ;
 ; SME-LABEL: four_way_i8_i64_vl128_double_width:
 ; SME:       // %bb.0:
-; SME-NEXT:    mov z0.s, #0 // =0x0
 ; SME-NEXT:    mov z1.s, #0 // =0x0
-; SME-NEXT:    ldp q2, q5, [x2]
-; SME-NEXT:    ldp q3, q4, [x1]
-; SME-NEXT:    udot z0.s, z2.b, z3.b
-; SME-NEXT:    udot z1.s, z5.b, z4.b
-; SME-NEXT:    ldp q5, q4, [x0]
-; SME-NEXT:    uunpklo z2.d, z0.s
-; SME-NEXT:    ext z0.b, z0.b, z0.b, #8
-; SME-NEXT:    uunpklo z3.d, z1.s
-; SME-NEXT:    ext z1.b, z1.b, z1.b, #8
-; SME-NEXT:    uunpklo z0.d, z0.s
-; SME-NEXT:    uunpklo z1.d, z1.s
-; SME-NEXT:    add z2.d, z5.d, z2.d
-; SME-NEXT:    add z3.d, z4.d, z3.d
-; SME-NEXT:    add z0.d, z2.d, z0.d
-; SME-NEXT:    add z1.d, z3.d, z1.d
+; SME-NEXT:    mov z0.s, #0 // =0x0
+; SME-NEXT:    ldp q3, q2, [x1]
+; SME-NEXT:    ldp q5, q4, [x2]
+; SME-NEXT:    udot z0.s, z5.b, z3.b
+; SME-NEXT:    udot z1.s, z4.b, z2.b
+; SME-NEXT:    ldp q3, q2, [x0]
+; SME-NEXT:    uaddwb z3.d, z3.d, z0.s
+; SME-NEXT:    uaddwb z2.d, z2.d, z1.s
+; SME-NEXT:    uaddwt z0.d, z3.d, z0.s
+; SME-NEXT:    uaddwt z1.d, z2.d, z1.s
 ; SME-NEXT:    ret
   %acc = load <4 x i64>, ptr %accptr
   %u = load <32 x i8>, ptr %uptr
@@ -1013,13 +998,9 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z1, [x2]
 ; SME-NEXT:    mov z2.s, #0 // =0x0
 ; SME-NEXT:    udot z2.s, z1.b, z0.b
-; SME-NEXT:    uunpklo z0.d, z2.s
-; SME-NEXT:    movprfx z1, z2
-; SME-NEXT:    ext z1.b, z1.b, z2.b, #16
-; SME-NEXT:    ldr z2, [x0]
-; SME-NEXT:    uunpklo z1.d, z1.s
-; SME-NEXT:    add z0.d, z2.d, z0.d
-; SME-NEXT:    add z0.d, z0.d, z1.d
+; SME-NEXT:    ldr z0, [x0]
+; SME-NEXT:    uaddwb z0.d, z0.d, z2.s
+; SME-NEXT:    uaddwt z0.d, z0.d, z2.s
 ; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    ret

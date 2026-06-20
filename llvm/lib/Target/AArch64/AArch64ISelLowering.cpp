@@ -33406,6 +33406,7 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDLoc DL(Op);
 
   SDValue Acc = Op.getOperand(0);
+  SDValue OrigAcc = Acc;
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
@@ -33449,7 +33450,6 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
       ResultVT.isFixedLengthVector() &&
       useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true);
 
-  SDValue OrigAcc = Acc;
   if (ConvertToScalable) {
     ResultVT = getContainerForFixedLengthVector(DAG, ResultVT);
     OpVT = getContainerForFixedLengthVector(DAG, LHS.getValueType());
@@ -33471,26 +33471,22 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
 
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
 
-  // UADDW{B,T}/SADDW{B,T} fold the dot in the scalable domain, spreading the
-  // sums across all VL/64 lanes. That is only valid for a genuinely scalable
-  // result; a fixed-length result must convert from the scalable container
-  // before splitting (below), else the trailing extract drops the high lanes
-  // for any VL > the fixed width.
-  if (OrigResultVT.isScalableVector() &&
-      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
     SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
-    return DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+    SDValue Res = DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+    return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Res)
+                             : Res;
   }
 
-  // Fold the (nx)v4i32 dot into the (nx)v2i64 result. For a fixed-length
-  // result, convert from the scalable container before splitting: the sums sit
-  // in the low i32 lanes regardless of VL, so splitting after the extract would
-  // drop a 128-bit result's high lanes for VL > 128. See PR #177119 / issue
-  // #176954.
+  // Fold (nx)v4i32 into (nx)v2i64. Convert from scalable vectors before
+  // splitting: the dot sums sit in the low i32 lanes regardless of VL, so
+  // splitting after the extract would drop a fixed-length result's high lanes
+  // for VL > 128. See PR #177119 / issue #176954.
   SDValue FoldDot = DotNode;
   if (ConvertToScalable) {
+    // The dot holds two i32 lanes per i64 result lane.
     EVT FixedDotVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                       OrigResultVT.getVectorNumElements() * 2);
     FoldDot = convertFromScalableVector(DAG, FixedDotVT, DotNode);
