@@ -22527,12 +22527,10 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   // immediate invocation.
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
-    llvm::SmallVector<PartialDiagnosticAt, 8> Notes;
     Expr::EvalResult Eval;
-    Eval.Diag = &Notes;
     bool Res = E.get()->EvaluateAsConstantExpr(
         Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
-    if (Res && Notes.empty()) {
+    if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
     }

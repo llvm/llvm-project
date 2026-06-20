@@ -169,6 +169,7 @@ public:
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+  bool PrevDiagsEmitted = false;
 #ifndef NDEBUG
   unsigned SpeculationDepth = 0;
 #endif
