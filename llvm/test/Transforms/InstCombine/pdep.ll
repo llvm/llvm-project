@@ -3,8 +3,7 @@
 
 define i32 @test_pdep_32_zero_src(i32 %x) nounwind readnone {
 ; CHECK-LABEL: @test_pdep_32_zero_src(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.pdep.i32(i32 0, i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = tail call i32 @llvm.pdep.i32(i32 0, i32 %x)
   ret i32 %1
@@ -12,8 +11,7 @@ define i32 @test_pdep_32_zero_src(i32 %x) nounwind readnone {
 
 define i64 @test_pdep_64_zero_src(i64 %x) nounwind readnone {
 ; CHECK-LABEL: @test_pdep_64_zero_src(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.pdep.i64(i64 0, i64 [[X:%.*]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    ret i64 0
 ;
   %1 = tail call i64 @llvm.pdep.i64(i64 0, i64 %x)
   ret i64 %1
