@@ -72,6 +72,13 @@ func.func @tensor_2d() -> () {
   return
 }
 
+// CHECK-LABEL: func @tensor_unsigned_int
+// CHECK-NEXT:    spirv.Constant dense<[10, 200]> : tensor<2xui32> : !spirv.array<2 x ui32>
+func.func @tensor_unsigned_int() -> () {
+  %x = arith.constant dense<[10, 200]> : tensor<2xui8>
+  return
+}
+
 // We do not handle zero-element tensors yet. Just make we do not crash on them.
 // CHECK-LABEL: func @tensor_2d_empty
 // CHECK-NEXT:    arith.constant dense<>
