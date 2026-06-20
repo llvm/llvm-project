@@ -6,9 +6,15 @@
 // End-to-end FlashAttention (3D batched) using ONLY linalg.generic ops.
 // Shapes: Q=[32,4,16], K^T=[32,16,128], V=[32,128,64], O=[32,4,64]
 // Batch dimension (32) is fully parallel across all ops.
+//
+// The second GEMM is emitted split (op1 matmul + op1b lsum + op2 recurrence +
+// op3 divide). Tiling op2 on batch + tn fuses everything into the loops.
+//
+// NOTE: structure-only. Tiling op2's `tn` *reduction* with
+// transform.structured.fuse re-initializes the accumulator each iteration
+// (numerically wrong for tn > 1; see build/bug-online-attn-accumulator-reset.md).
 
 // CHECK-LABEL: func.func @flash_attention_3d_batch
-// Full fusion: batch_matmul + local softmax + rescaling matmul all inside loops.
 // CHECK: scf.for
 // CHECK:   scf.for
 // CHECK:     linalg.generic
@@ -29,17 +35,17 @@ func.func @flash_attention_3d_batch(%Q : tensor<32x4x16xf32>, %K_T : tensor<32x1
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    // Match the 3D rescaling matmul: (batch, m, tn, ts, kv)
-    %rescaling = transform.structured.match ops{["linalg.generic"]}
+    // Match op2 (the online recurrence): (batch, m, tn, kv) with tn reduction.
+    %op2 = transform.structured.match ops{["linalg.generic"]}
         attributes{iterator_types = [
           #linalg.iterator_type<parallel>,
           #linalg.iterator_type<parallel>,
           #linalg.iterator_type<reduction>,
-          #linalg.iterator_type<reduction>,
           #linalg.iterator_type<parallel>
         ]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // Tile both batch (dim 0) and tn (dim 2) dimensions
-    %fused, %loops:2 = transform.structured.fuse %rescaling tile_sizes [1, 0, 1]
+    // Tile batch (dim 0) and tn (dim 2); fusing op2 pulls op1/op1b/local-softmax
+    // and the first GEMM into the loops.
+    %fused, %loops:2 = transform.structured.fuse %op2 tile_sizes [1, 0, 1, 0]
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }

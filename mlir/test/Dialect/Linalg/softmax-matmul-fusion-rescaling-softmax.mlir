@@ -12,17 +12,26 @@
 
 // CHECK-LABEL: func.func @softmax_multi_user
 //
-// Local softmax generics (max, exp, sum, div):
+// Local softmax generics (max, exp, sum — no per-tile divide; matmul consumes
+// the unnormalized num. l (sum) is kept for the recovery path below):
 // CHECK: tensor.expand_shape
-// CHECK: linalg.generic
 // CHECK: linalg.generic
 // CHECK: linalg.generic
 // CHECK: linalg.generic
 //
-// Rescaling matmul (replaces second matmul):
+// Second GEMM, emitted split so the matmul is a standalone contraction:
+//   op1 (pv): contraction over ts (tn parallel); op2: recurrence over tn.
 // CHECK: tensor.expand_shape
 // CHECK: linalg.generic
-// CHECK-SAME: iterator_types = ["parallel", "reduction", "reduction", "parallel"]
+// CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction", "parallel"]
+// CHECK: linalg.generic
+// CHECK-SAME: iterator_types = ["parallel", "reduction", "parallel"]
+// CHECK:   arith.maximumf
+//
+// Final divide O = O / L (elementwise):
+// CHECK: linalg.generic
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]
+// CHECK:   arith.divf
 //
 // Rescaling softmax — Generic 1: reduce m, l over tn to get M_global, L_global
 // CHECK: linalg.generic

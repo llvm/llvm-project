@@ -57,35 +57,51 @@ static Operation *findMatchingMatmulUser(linalg::SoftmaxOp softmaxOp) {
   return nullptr;
 }
 
-/// Build the rescaling body (shared between rescaling matmul and rescaling
-/// softmax). The body implements the online softmax correction algorithm.
+/// Build the online-softmax recurrence body for the rescale-and-reduce generic
+/// (op2). It reduces over the tile dimension `tn`, combining the per-tile
+/// matmul partial `pv = sum_ts(num * V)` and the per-tile denominator
+/// `lsum = sum_ts(num)` into the running output O, max M, and denominator L.
 ///
-/// Args layout: [p_val, m_tile, l_tile, v_val, O_acc, M_acc, L_acc]
-static void buildRescalingBody(OpBuilder &b, Location loc, ValueRange args) {
-  Value p_val = args[0], m_tile = args[1], l_tile = args[2], v_val = args[3];
-  Value O_acc = args[4], M_acc = args[5], L_acc = args[6];
+/// The matmul (sum over ts of num*V) is a SEPARATE preceding generic (op1, a
+/// pure contraction that lowers to vector.contract). This body therefore
+/// contains no contraction — only the per-tile rescaling. This is the key
+/// deviation from Triton's `acc += dot(exp(qk - m_ij), v)`: there the matmul
+/// operand is shifted by the running max `m_ij`, which couples it to the
+/// recurrence. We instead contract `num = exp(S - m_local)` (local-max shifted,
+/// loop-invariant) in op1 and apply the running-max correction factor `beta`
+/// here, using the identity sum_ts(num*beta*V) = beta*sum_ts(num*V) (beta is
+/// constant over ts). Same result, but op1 is a standalone contraction.
+///
+/// Per tile (reduce over tn):
+///   M_new = max(M_acc, m_local)
+///   alpha = exp(M_acc - M_new)         // rescale prior running state
+///   beta  = exp(m_local - M_new)       // rebase this tile: local -> running max
+///   O_new = O_acc * alpha + beta * pv
+///   L_new = L_acc * alpha + beta * lsum
+///
+/// Args layout: [pv_val, m_tile, lsum_tile, O_acc, M_acc, L_acc]
+static void buildRescaleReduceBody(OpBuilder &b, Location loc, ValueRange args) {
+  Value pv_val = args[0], m_tile = args[1], lsum_tile = args[2];
+  Value O_acc = args[3], M_acc = args[4], L_acc = args[5];
 
-  // Step 1: M_new = max(M_acc, m_tile)
+  // M_new = max(M_acc, m_local)
   Value M_new = arith::MaximumFOp::create(b, loc, M_acc, m_tile);
 
-  // Step 2: Update L
+  // Correction factors.
   Value diff1 = arith::SubFOp::create(b, loc, M_acc, M_new);
-  Value correction = math::ExpOp::create(b, loc, diff1);
-  Value L_rescaled = arith::MulFOp::create(b, loc, L_acc, correction);
+  Value alpha = math::ExpOp::create(b, loc, diff1); // exp(M_acc - M_new)
   Value diff2 = arith::SubFOp::create(b, loc, m_tile, M_new);
-  Value exp_diff = math::ExpOp::create(b, loc, diff2);
-  Value unnorm = arith::MulFOp::create(b, loc, p_val, l_tile);
-  Value shifted = arith::MulFOp::create(b, loc, unnorm, exp_diff);
-  Value L_new = arith::AddFOp::create(b, loc, L_rescaled, shifted);
+  Value beta = math::ExpOp::create(b, loc, diff2); // exp(m_local - M_new)
 
-  // Step 3: Rescale O
-  Value scale = arith::DivFOp::create(b, loc, L_rescaled, L_new);
-  Value O_rescaled = arith::MulFOp::create(b, loc, O_acc, scale);
+  // O_new = O_acc * alpha + beta * pv
+  Value O_rescaled = arith::MulFOp::create(b, loc, O_acc, alpha);
+  Value O_contrib = arith::MulFOp::create(b, loc, beta, pv_val);
+  Value O_new = arith::AddFOp::create(b, loc, O_rescaled, O_contrib);
 
-  // Step 4: Accumulate contribution
-  Value contrib = arith::MulFOp::create(b, loc, shifted, v_val);
-  Value contrib_norm = arith::DivFOp::create(b, loc, contrib, L_new);
-  Value O_new = arith::AddFOp::create(b, loc, O_rescaled, contrib_norm);
+  // L_new = L_acc * alpha + beta * lsum
+  Value L_rescaled = arith::MulFOp::create(b, loc, L_acc, alpha);
+  Value L_contrib = arith::MulFOp::create(b, loc, beta, lsum_tile);
+  Value L_new = arith::AddFOp::create(b, loc, L_rescaled, L_contrib);
 
   linalg::YieldOp::create(b, loc, ValueRange{O_new, M_new, L_new});
 }
@@ -285,21 +301,10 @@ struct SoftmaxMatmulToSoftmaxMatmulFusion
         });
     Value l = sumGeneric.getResult(0);
 
-    // (e) Compute P = num / l: elementwise
-    Value P_init = tensor::EmptyOp::create(rewriter, loc, expandedSShape, elemType)
-                       .getResult();
-    auto divGeneric = linalg::GenericOp::create(
-        rewriter, loc,
-        TypeRange{expandedSType},
-        /*inputs=*/ValueRange{num, l},
-        /*outputs=*/ValueRange{P_init},
-        SmallVector<AffineMap>{fullMap, reducedMap, fullMap},
-        allParallel,
-        [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
-          Value result = arith::DivFOp::create(b, nestedLoc, args[0], args[1]);
-          linalg::YieldOp::create(b, nestedLoc, result);
-        });
-    Value P = divGeneric.getResult(0);
+    // No per-tile normalization: the rescaling matmul consumes the unnormalized
+    // num = exp(S - m_local) directly (matching Triton, which feeds p into the
+    // dot). `l` is still produced above — it is only needed by the global
+    // softmax recovery path below.
 
     // (f) Reshape V: [...batch, N, Kv] -> [...batch, tn, ts, Kv]
     SmallVector<int64_t> expandedVShape;
@@ -331,62 +336,149 @@ struct SoftmaxMatmulToSoftmaxMatmulFusion
     Value L_init =
         createFilledTensor(rewriter, loc, oShape, elemType, zeroScalar);
 
-    // (h) Build the rescaling matmul linalg.generic.
-    // Dimensions: (batch..., m, tn, ts, kv)
-    //   batch dims = parallel, m = parallel, tn = reduction, ts = reduction, kv = parallel
-    int64_t numRescaleDims = static_cast<int64_t>(batchAndM.size()) + 3; // +tn+ts+kv
-    SmallVector<AffineExpr> rescaleDims;
-    for (int64_t i = 0; i < numRescaleDims; ++i)
-      rescaleDims.push_back(rewriter.getAffineDimExpr(i));
-
+    // (h) Build the online-softmax matmul as THREE ops so the matmul is a
+    //     standalone contraction (-> vector.contract):
+    //   op1  (pv):   pv[batch.., m, tn, kv] = sum_ts num * V    (ts reduction,
+    //                tn parallel) — a pure multiply-accumulate contraction.
+    //   op1b (lsum): lsum[batch.., m, tn]   = sum_ts num        (ts reduction)
+    //   op2:         online recurrence reduced over tn (running max/rescale),
+    //                consuming pv, m, lsum (see buildRescaleReduceBody).
+    //   op3:         final divide O = O / L.
     int64_t nBatchAndM = batchAndM.size(); // number of batch+M dims
-    // Indices: batch..., M are [0..nBatchAndM-1], tn=nBatchAndM, ts=nBatchAndM+1, kv=nBatchAndM+2
-    int64_t tnIdx = nBatchAndM;
-    int64_t tsIdx = nBatchAndM + 1;
-    int64_t kvIdx = nBatchAndM + 2;
-
-    // P map: (batch..., m, tn, ts, kv) -> (batch..., m, tn, ts)
-    SmallVector<AffineExpr> pExprs(rescaleDims.begin(), rescaleDims.begin() + nBatchAndM);
-    pExprs.push_back(rescaleDims[tnIdx]);
-    pExprs.push_back(rescaleDims[tsIdx]);
-    // m/l map: (batch..., m, tn, ts, kv) -> (batch..., m, tn)
-    SmallVector<AffineExpr> mlExprs(rescaleDims.begin(), rescaleDims.begin() + nBatchAndM);
-    mlExprs.push_back(rescaleDims[tnIdx]);
-    // V map: (batch..., m, tn, ts, kv) -> (batch..., tn, ts, kv)
-    SmallVector<AffineExpr> vExprs;
-    for (int64_t i = 0; i < nBatchAndM - 1; ++i) // batch dims only (exclude M)
-      vExprs.push_back(rescaleDims[i]);
-    vExprs.push_back(rescaleDims[tnIdx]);
-    vExprs.push_back(rescaleDims[tsIdx]);
-    vExprs.push_back(rescaleDims[kvIdx]);
-    // O/M_run/L_run map: (batch..., m, tn, ts, kv) -> (batch..., m, kv)
-    SmallVector<AffineExpr> oExprs(rescaleDims.begin(), rescaleDims.begin() + nBatchAndM);
-    oExprs.push_back(rescaleDims[kvIdx]);
-
-    SmallVector<AffineMap> indexingMaps = {
-        AffineMap::get(numRescaleDims, 0, pExprs, ctx),  // P
-        AffineMap::get(numRescaleDims, 0, mlExprs, ctx), // m
-        AffineMap::get(numRescaleDims, 0, mlExprs, ctx), // l
-        AffineMap::get(numRescaleDims, 0, vExprs, ctx),  // V
-        AffineMap::get(numRescaleDims, 0, oExprs, ctx),  // O
-        AffineMap::get(numRescaleDims, 0, oExprs, ctx),  // M_run
-        AffineMap::get(numRescaleDims, 0, oExprs, ctx),  // L_run
-    };
-
-    SmallVector<utils::IteratorType> iteratorTypes(numRescaleDims,
-                                                    utils::IteratorType::parallel);
-    iteratorTypes[tnIdx] = utils::IteratorType::reduction;
-    iteratorTypes[tsIdx] = utils::IteratorType::reduction;
-
     auto oType = RankedTensorType::get(oShape, elemType);
-    auto rescalingMatmulOp = linalg::GenericOp::create(
+
+    // partial (pv) shape: [batch..., M, tn, Kv]
+    SmallVector<int64_t> pvShape(batchAndM);
+    pvShape.push_back(tn);
+    pvShape.push_back(Kv);
+    auto pvType = RankedTensorType::get(pvShape, elemType);
+
+    // --- op1 (pv): contraction over ts, tn parallel ---
+    // Dimensions: (batch..., m, tn, ts, kv)
+    int64_t numMmDims = nBatchAndM + 3; // +tn+ts+kv
+    SmallVector<AffineExpr> mmDims;
+    for (int64_t i = 0; i < numMmDims; ++i)
+      mmDims.push_back(rewriter.getAffineDimExpr(i));
+    int64_t mm_tn = nBatchAndM, mm_ts = nBatchAndM + 1, mm_kv = nBatchAndM + 2;
+    // num: (batch..., m, tn, ts)
+    SmallVector<AffineExpr> mmNum(mmDims.begin(), mmDims.begin() + nBatchAndM);
+    mmNum.push_back(mmDims[mm_tn]);
+    mmNum.push_back(mmDims[mm_ts]);
+    // V: (batch..., tn, ts, kv)
+    SmallVector<AffineExpr> mmV;
+    for (int64_t i = 0; i < nBatchAndM - 1; ++i)
+      mmV.push_back(mmDims[i]);
+    mmV.push_back(mmDims[mm_tn]);
+    mmV.push_back(mmDims[mm_ts]);
+    mmV.push_back(mmDims[mm_kv]);
+    // pv: (batch..., m, tn, kv)
+    SmallVector<AffineExpr> mmPv(mmDims.begin(), mmDims.begin() + nBatchAndM);
+    mmPv.push_back(mmDims[mm_tn]);
+    mmPv.push_back(mmDims[mm_kv]);
+    SmallVector<utils::IteratorType> mmIters(numMmDims,
+                                             utils::IteratorType::parallel);
+    mmIters[mm_ts] = utils::IteratorType::reduction;
+    Value pvInit = createFilledTensor(rewriter, loc, pvShape, elemType, zeroScalar);
+    auto pvOp = linalg::GenericOp::create(
+        rewriter, loc, TypeRange{pvType}, ValueRange{num, V_tiled},
+        ValueRange{pvInit},
+        SmallVector<AffineMap>{AffineMap::get(numMmDims, 0, mmNum, ctx),
+                               AffineMap::get(numMmDims, 0, mmV, ctx),
+                               AffineMap::get(numMmDims, 0, mmPv, ctx)},
+        mmIters, [&](OpBuilder &b, Location l, ValueRange a) {
+          Value prod = arith::MulFOp::create(b, l, a[0], a[1]);
+          Value sum = arith::AddFOp::create(b, l, a[2], prod);
+          linalg::YieldOp::create(b, l, sum);
+        });
+    Value pv = pvOp.getResult(0);
+
+    // --- op1b (lsum): lsum[batch..., m, tn] = sum_ts num ---
+    SmallVector<int64_t> lsumShape(batchAndM);
+    lsumShape.push_back(tn);
+    auto lsumType = RankedTensorType::get(lsumShape, elemType);
+    int64_t numLsumDims = nBatchAndM + 2; // +tn+ts
+    SmallVector<AffineExpr> lsDims;
+    for (int64_t i = 0; i < numLsumDims; ++i)
+      lsDims.push_back(rewriter.getAffineDimExpr(i));
+    int64_t ls_tn = nBatchAndM, ls_ts = nBatchAndM + 1;
+    SmallVector<AffineExpr> lsNum(lsDims.begin(), lsDims.begin() + nBatchAndM);
+    lsNum.push_back(lsDims[ls_tn]);
+    lsNum.push_back(lsDims[ls_ts]);
+    SmallVector<AffineExpr> lsOut(lsDims.begin(), lsDims.begin() + nBatchAndM);
+    lsOut.push_back(lsDims[ls_tn]);
+    SmallVector<utils::IteratorType> lsIters(numLsumDims,
+                                             utils::IteratorType::parallel);
+    lsIters[ls_ts] = utils::IteratorType::reduction;
+    Value lsumInit =
+        createFilledTensor(rewriter, loc, lsumShape, elemType, zeroScalar);
+    auto lsumOp = linalg::GenericOp::create(
+        rewriter, loc, TypeRange{lsumType}, ValueRange{num},
+        ValueRange{lsumInit},
+        SmallVector<AffineMap>{AffineMap::get(numLsumDims, 0, lsNum, ctx),
+                               AffineMap::get(numLsumDims, 0, lsOut, ctx)},
+        lsIters, [&](OpBuilder &b, Location l, ValueRange a) {
+          Value sum = arith::AddFOp::create(b, l, a[1], a[0]);
+          linalg::YieldOp::create(b, l, sum);
+        });
+    Value lsum = lsumOp.getResult(0);
+
+    // --- op2: online recurrence reduced over tn ---
+    // Dimensions: (batch..., m, tn, kv); reduce tn.
+    int64_t numRecDims = nBatchAndM + 2; // +tn+kv
+    SmallVector<AffineExpr> recDims;
+    for (int64_t i = 0; i < numRecDims; ++i)
+      recDims.push_back(rewriter.getAffineDimExpr(i));
+    int64_t rec_tn = nBatchAndM, rec_kv = nBatchAndM + 1;
+    // pv: (batch..., m, tn, kv)
+    SmallVector<AffineExpr> recPv(recDims.begin(), recDims.begin() + nBatchAndM);
+    recPv.push_back(recDims[rec_tn]);
+    recPv.push_back(recDims[rec_kv]);
+    // m/lsum: (batch..., m, tn)
+    SmallVector<AffineExpr> recMl(recDims.begin(), recDims.begin() + nBatchAndM);
+    recMl.push_back(recDims[rec_tn]);
+    // O/M/L: (batch..., m, kv)
+    SmallVector<AffineExpr> recO(recDims.begin(), recDims.begin() + nBatchAndM);
+    recO.push_back(recDims[rec_kv]);
+    SmallVector<utils::IteratorType> recIters(numRecDims,
+                                              utils::IteratorType::parallel);
+    recIters[rec_tn] = utils::IteratorType::reduction;
+    auto recOp = linalg::GenericOp::create(
         rewriter, loc,
         /*resultTypes=*/TypeRange{oType, oType, oType},
-        /*inputs=*/ValueRange{P, m, l, V_tiled},
-        /*outputs=*/ValueRange{O_init, M_init, L_init}, indexingMaps,
-        iteratorTypes, buildRescalingBody);
+        /*inputs=*/ValueRange{pv, m, lsum},
+        /*outputs=*/ValueRange{O_init, M_init, L_init},
+        SmallVector<AffineMap>{AffineMap::get(numRecDims, 0, recPv, ctx),
+                               AffineMap::get(numRecDims, 0, recMl, ctx),
+                               AffineMap::get(numRecDims, 0, recMl, ctx),
+                               AffineMap::get(numRecDims, 0, recO, ctx),
+                               AffineMap::get(numRecDims, 0, recO, ctx),
+                               AffineMap::get(numRecDims, 0, recO, ctx)},
+        recIters, buildRescaleReduceBody);
 
-    Value rescaledO = rescalingMatmulOp.getResult(0);
+    // The recurrence keeps O unnormalized; divide by the final denominator L
+    // once, here (elementwise over [batch..., M, Kv]).
+    Value A_final = recOp.getResult(0); // unnormalized output
+    Value L_final = recOp.getResult(2); // denominator
+    int64_t numDivDims = oShape.size();
+    SmallVector<AffineExpr> divDims;
+    for (int64_t i = 0; i < numDivDims; ++i)
+      divDims.push_back(rewriter.getAffineDimExpr(i));
+    AffineMap divMap = AffineMap::get(numDivDims, 0, divDims, ctx);
+    SmallVector<utils::IteratorType> divIters(numDivDims,
+                                              utils::IteratorType::parallel);
+    Value O_div_init =
+        tensor::EmptyOp::create(rewriter, loc, oShape, elemType).getResult();
+    auto divideOp = linalg::GenericOp::create(
+        rewriter, loc, TypeRange{oType},
+        /*inputs=*/ValueRange{A_final, L_final},
+        /*outputs=*/ValueRange{O_div_init},
+        SmallVector<AffineMap>{divMap, divMap, divMap}, divIters,
+        [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
+          Value q = arith::DivFOp::create(b, nestedLoc, args[0], args[1]);
+          linalg::YieldOp::create(b, nestedLoc, q);
+        });
+
+    Value rescaledO = divideOp.getResult(0);
 
     // (f) Handle softmax result replacement.
     // Check if softmax has users other than the matched matmul.
@@ -476,23 +568,25 @@ struct SoftmaxMatmulToSoftmaxMatmulFusion
       SmallVector<AffineExpr> globalExprs(allDims.begin(), allDims.end() - 2); // drop tn and ts
       AffineMap globalMap = AffineMap::get(numLocalDims, 0, globalExprs, ctx);
 
+      // softmax[..., tn, ts] = num * exp(m - Mg) / Lg.
+      // (Since num = exp(S - m_local) and P = num/l_local, the local l cancels:
+      //  P * l * exp(m - Mg)/Lg = num * exp(m - Mg)/Lg.)
       auto correctionOp = linalg::GenericOp::create(
           rewriter, loc,
           TypeRange{correctedType},
-          /*inputs=*/ValueRange{P, l, m, M_global, L_global},
+          /*inputs=*/ValueRange{num, m, M_global, L_global},
           /*outputs=*/ValueRange{corrected_init},
-          SmallVector<AffineMap>{fullMap, reducedMap, reducedMap, globalMap, globalMap, fullMap},
+          SmallVector<AffineMap>{fullMap, reducedMap, globalMap, globalMap, fullMap},
           allParallel,
           [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
-            Value p = args[0], l_i = args[1], m_i = args[2];
-            Value Mg = args[3], Lg = args[4];
-            // w = l_i * exp(m_i - Mg) / Lg
+            Value num_v = args[0], m_i = args[1];
+            Value Mg = args[2], Lg = args[3];
+            // w = exp(m_i - Mg) / Lg
             Value diff = arith::SubFOp::create(b, nestedLoc, m_i, Mg);
             Value expDiff = math::ExpOp::create(b, nestedLoc, diff);
-            Value num = arith::MulFOp::create(b, nestedLoc, l_i, expDiff);
-            Value w = arith::DivFOp::create(b, nestedLoc, num, Lg);
-            // corrected = P * w
-            Value result = arith::MulFOp::create(b, nestedLoc, p, w);
+            Value w = arith::DivFOp::create(b, nestedLoc, expDiff, Lg);
+            // corrected = num * w
+            Value result = arith::MulFOp::create(b, nestedLoc, num_v, w);
             linalg::YieldOp::create(b, nestedLoc, result);
           });
       Value correctedP = correctionOp.getResult(0);
