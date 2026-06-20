@@ -342,6 +342,20 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     if (Src && Dest && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_LValueToRValueBitCast:
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic: {
+    // `__builtin_bit_cast`/`std::bit_cast` of a pointer, and
+    // wrapping/unwrapping `_Atomic(T*)`, preserve the pointer value, so
+    // propagate the borrow. The operand may be a glvalue, so strip its outer
+    // lvalue level first. A bit-cast that materializes a pointer from a
+    // non-pointer representation has no matching source origin and is
+    // untracked.
+    OriginList *RVSrc = getRValueOrigins(SubExpr, Src);
+    if (RVSrc && Dest->getLength() == RVSrc->getLength())
+      flow(Dest, RVSrc, /*Kill=*/true);
+    return;
+  }
   default:
     return;
   }
