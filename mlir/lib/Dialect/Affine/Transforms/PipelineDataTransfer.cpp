@@ -245,8 +245,7 @@ static void findMatchingStartFinishInsts(
 /// 'forOp' is deleted, and a prologue, a new pipelined loop, and epilogue are
 /// inserted right before where it was.
 void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
-  auto mayBeConstTripCount = getConstantTripCount(forOp);
-  if (!mayBeConstTripCount) {
+  if (!forOp.getStaticTripCount()) {
     LLVM_DEBUG(forOp.emitRemark("won't pipeline due to unknown trip count"));
     return;
   }
