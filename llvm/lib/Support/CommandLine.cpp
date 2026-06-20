@@ -2011,7 +2011,8 @@ bool parser<bool>::parse(Option &O, StringRef ArgName, StringRef Arg,
 //
 bool parser<boolOrDefault>::parse(Option &O, StringRef ArgName, StringRef Arg,
                                   boolOrDefault &Value) {
-  return parseBool<boolOrDefault, BOU_TRUE, BOU_FALSE>(O, ArgName, Arg, Value);
+  return parseBool<boolOrDefault, boolOrDefault::BOU_TRUE,
+                   boolOrDefault::BOU_FALSE>(O, ArgName, Arg, Value);
 }
 
 // parser<int> implementation
@@ -2229,6 +2230,14 @@ void generic_parser_base::printGenericOptionDiff(
 
 // printOptionDiff - Specializations for printing basic value types.
 //
+namespace llvm {
+namespace cl {
+static raw_ostream &operator<<(raw_ostream &OS, boolOrDefault V) {
+  return OS << static_cast<int>(V);
+}
+} // namespace cl
+} // namespace llvm
+
 #define PRINT_OPT_DIFF(T)                                                      \
   void parser<T>::printOptionDiff(const Option &O, T V, OptionValue<T> D,      \
                                   size_t GlobalWidth) const {                  \

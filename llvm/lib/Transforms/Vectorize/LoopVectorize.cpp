@@ -999,11 +999,11 @@ public:
   bool isDivRemScalarWithPredication(InstructionCost ScalarCost,
                                      InstructionCost MaskedCost) const {
     switch (ForceMaskedDivRem) {
-    case cl::BOU_UNSET:
+    case cl::boolOrDefault::BOU_UNSET:
       return ScalarCost < MaskedCost;
-    case cl::BOU_TRUE:
+    case cl::boolOrDefault::BOU_TRUE:
       return false;
-    case cl::BOU_FALSE:
+    case cl::boolOrDefault::BOU_FALSE:
       return true;
     }
     llvm_unreachable("impossible case value");
