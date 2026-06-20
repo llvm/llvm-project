@@ -397,6 +397,8 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
           // strategy, so split the in-loop EH backedges instead.
           if (!cloneEHPadEntriesForBackedges(MutualLoopEntries, Blocks, MF,
                                              Graph))
+            // Cannot safely fix this SCC; preserve changes made to earlier
+            // SCCs.
             return Changed;
         } else {
           makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
