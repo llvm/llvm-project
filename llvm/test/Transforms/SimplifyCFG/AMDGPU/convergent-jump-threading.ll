@@ -9,16 +9,18 @@ define void @preserve_loop_header_branch(i1 %cond, ptr %ptr) convergent {
 ; CHECK-SAME: i1 [[COND:%.*]], ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @barrier() #[[ATTR0]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[PRE_THEN:.*]], label %[[LOOP_LATCH:.*]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[PRE_THEN:.*]], label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[PRE_THEN]]:
 ; CHECK-NEXT:    store i32 1, ptr [[PTR]], align 4
-; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_BODY:.*]], label %[[LOOP_LATCH:.*]]
 ; CHECK:       [[LOOP_BODY]]:
 ; CHECK-NEXT:    store i32 2, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    call void @barrier() #[[ATTR0]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_BODY]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -90,5 +92,52 @@ loop.latch:
   br i1 %cond, label %loop.header, label %exit
 
 exit:
+  ret void
+}
+
+define void @thread_convergent_only_on_exit_path(i1 %cond, ptr %ptr) convergent {
+; CHECK-LABEL: define void @thread_convergent_only_on_exit_path(
+; CHECK-SAME: i1 [[COND:%.*]], ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @plain()
+; CHECK-NEXT:    br i1 [[COND]], label %[[PRE_THEN:.*]], label %[[EXIT_CRITEDGE:.*]]
+; CHECK:       [[PRE_THEN]]:
+; CHECK-NEXT:    store i32 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
+; CHECK:       [[LOOP_BODY]]:
+; CHECK-NEXT:    store i32 2, ptr [[PTR]], align 4
+; CHECK-NEXT:    call void @plain()
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_BODY]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT_CRITEDGE]]:
+; CHECK-NEXT:    call void @plain()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @barrier() #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %pre
+
+pre:
+  call void @plain()
+  br i1 %cond, label %pre.then, label %loop.header
+
+pre.then:
+  store i32 1, ptr %ptr, align 4
+  br label %loop.header
+
+loop.header:
+  br i1 %cond, label %loop.body, label %loop.latch
+
+loop.body:
+  store i32 2, ptr %ptr, align 4
+  br label %loop.latch
+
+loop.latch:
+  call void @plain()
+  br i1 %cond, label %loop.header, label %exit
+
+exit:
+  call void @barrier() convergent
   ret void
 }
