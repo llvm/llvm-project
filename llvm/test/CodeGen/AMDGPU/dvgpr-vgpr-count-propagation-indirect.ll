@@ -15,9 +15,9 @@
 
 ; NODVGPR:  .set .Lgfx_func_a.num_vgpr, 40
 ; NODVGPR:  .set .Lgfx_func_b.num_vgpr, 80
-; NODVGPR:  .set .Lfunc_with_indirect_call.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc_direct_only.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc_chain_only.num_vgpr, max(11, amdgpu.max_num_vgpr)
+; NODVGPR:  .set .Lfunc_with_indirect_call.num_vgpr, min(192, max(11, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc_direct_only.num_vgpr, min(192, max(11, amdgpu.max_num_vgpr))
+; NODVGPR:  .set .Lfunc_chain_only.num_vgpr, min(192, max(11, amdgpu.max_num_vgpr))
 ; NODVGPR:  .set amdgpu.max_num_vgpr, 80
 
 define amdgpu_gfx void @gfx_func_a() #0 {
