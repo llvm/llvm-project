@@ -177,7 +177,7 @@ public:
       const size_t num_registers = reg_set->num_registers;
       size_t reg_name_right_align_at = ComputeLongestRegisterName(
           reg_ctx, *reg_set,
-          !static_cast<bool>(m_command_options.alternate_name), primitive_only);
+          m_command_options.alternate_name != nullptr, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -253,7 +253,7 @@ protected:
       } else {
         int reg_name_right_align_at = ComputeLongestRegisterName(
             command, reg_ctx,
-            !static_cast<bool>(m_command_options.alternate_name));
+            m_command_options.alternate_name != nullptr);
         // Extra ident to be consistent with register sets dumping.
         strm.IndentMore();
         for (auto &entry : command) {
