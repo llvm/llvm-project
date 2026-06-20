@@ -4,7 +4,7 @@ define i16 @test_bitextract_var(b32 %src, i32 %off) {
 ; CHECK-LABEL: test_bitextract_var:
 ; CHECK:       movl %edi, %eax
 ; CHECK:       leal 16(%rsi), %ecx
-; CHECK:       rorl %cl, %eax
+; CHECK:       shrl	%cl, %eax
 ; CHECK:       retq
   %result = bitextract i16, b32 %src, i32 %off
   ret i16 %result
@@ -13,7 +13,7 @@ define i16 @test_bitextract_var(b32 %src, i32 %off) {
 define i16 @test_bitextract_const(b32 %src) {
 ; CHECK-LABEL: test_bitextract_const:
 ; CHECK:       movl %edi, %eax
-; CHECK:       rorl $24, %eax
+; CHECK:       shrl $24, %eax
 ; CHECK:       retq
   %result = bitextract i16, b32 %src, i32 8
   ret i16 %result
