@@ -31,7 +31,7 @@
 # CHECK: {{^  gs_base = }}
 # CHECK: {{^       ds = }}
 
-## Registers within different sets align only within their own set.
+## Registers within sets are aligned, but not aligned across different sets.
 # CHECK: (lldb) register read --all
 
 # CHECK: General Purpose Registers:
