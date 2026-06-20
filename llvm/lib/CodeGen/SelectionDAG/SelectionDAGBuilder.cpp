@@ -4162,23 +4162,19 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
 
   SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, BaseVT);
 
-  unsigned ValBitWidth = ValVT.getScalarSizeInBits();
-  SDValue ValWidth = DAG.getConstant(ValBitWidth, dl, BaseVT);
-  SDValue RotateAmount =
-      DAG.getNode(ISD::ADD, dl, BaseVT, LegalOffset, ValWidth);
-
-  // Legalize rotate amount to the target's shift amount type
+  // Legalize rotate amount to the target's shift amount type.
   EVT ShiftAmtTy = TLI.getShiftAmountTy(BaseVT, DAG.getDataLayout());
-  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
+  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
 
   SDValue RotatedBase =
       DAG.getNode(ISD::ROTR, dl, BaseVT, Base, LegalRotateAmount);
 
   unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
+  unsigned ValBitWidth = ValVT.getScalarSizeInBits();
   APInt ClearMask =
       APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
   SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, RotatedBase,
-                                    DAG.getConstant(ClearMask, dl, BaseVT));
+                                     DAG.getConstant(ClearMask, dl, BaseVT));
 
   SDValue ExtVal = DAG.getZExtOrTrunc(Val, dl, BaseVT);
   SDValue Inserted = DAG.getNode(ISD::OR, dl, BaseVT, ClearedBase, ExtVal);
@@ -4206,20 +4202,13 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   // Convert offset to SrcVT
   SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, SrcVT);
 
-  // RotateAmount = Offset + width(Result), computed in SrcVT
-  unsigned ResultBitWidth = ResultVT.getScalarSizeInBits();
-  SDValue ResultWidth = DAG.getConstant(ResultBitWidth, dl, SrcVT);
-  SDValue RotateAmount =
-      DAG.getNode(ISD::ADD, dl, SrcVT, LegalOffset, ResultWidth);
-
   // Legalize rotate amount to the target's shift amount type
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
-  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
+  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
 
   // Rotate left by (Offset + ResultWidth) - brings target field to bit 0
   SDValue Rotated = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalRotateAmount);
 
-  // Truncating to ResultVT discards the high bits for free
   setValue(&I, DAG.getZExtOrTrunc(Rotated, dl, ResultVT));
 }
 
