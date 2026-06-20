@@ -433,7 +433,6 @@ private:
         << InvalidatedSubject << InvalidationExpr->getSourceRange();
   }
 
-  std::pair<SourceLocation, StringRef>
   std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,
                                         bool AllowGNUAttrMacro = true) {
     StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
