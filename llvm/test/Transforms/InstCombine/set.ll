@@ -540,10 +540,9 @@ define i1 @test25(i32 %A) {
 
 define i8 @sext_or_trunc_nsw(i8 %x, i4 %y) {
 ; CHECK-LABEL: @sext_or_trunc_nsw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i4
-; CHECK-NEXT:    [[OR:%.*]] = or i4 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[OR]] to i8
-; CHECK-NEXT:    ret i8 [[SEXT]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[OR:%.*]] to i8
+; CHECK-NEXT:    [[SEXT1:%.*]] = or i8 [[X:%.*]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[SEXT1]]
 ;
   %trunc = trunc nsw i8 %x to i4
   %or = or i4 %y, %trunc
@@ -553,10 +552,9 @@ define i8 @sext_or_trunc_nsw(i8 %x, i4 %y) {
 
 define i8 @sext_xor_trunc_nsw(i8 %x, i4 %y) {
 ; CHECK-LABEL: @sext_xor_trunc_nsw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i4
-; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[XOR]] to i8
-; CHECK-NEXT:    ret i8 [[SEXT]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[XOR:%.*]] to i8
+; CHECK-NEXT:    [[SEXT1:%.*]] = xor i8 [[X:%.*]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[SEXT1]]
 ;
   %trunc = trunc nsw i8 %x to i4
   %xor = xor i4 %y, %trunc
@@ -566,10 +564,9 @@ define i8 @sext_xor_trunc_nsw(i8 %x, i4 %y) {
 
 define i8 @sext_and_trunc_nsw(i8 %x, i4 %y) {
 ; CHECK-LABEL: @sext_and_trunc_nsw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i4
-; CHECK-NEXT:    [[AND:%.*]] = and i4 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[AND]] to i8
-; CHECK-NEXT:    ret i8 [[SEXT]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[AND:%.*]] to i8
+; CHECK-NEXT:    [[SEXT1:%.*]] = and i8 [[X:%.*]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[SEXT1]]
 ;
   %trunc = trunc nsw i8 %x to i4
   %and = and i4 %y, %trunc
@@ -581,8 +578,7 @@ define i8 @sext_or_trunc_nsw_multi_use(i8 %x, i1 %y) {
 ; CHECK-LABEL: @sext_or_trunc_nsw_multi_use(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @use(i1 [[TRUNC]])
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[OR]] to i8
+; CHECK-NEXT:    [[SEXT:%.*]] = select i1 [[Y:%.*]], i8 -1, i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[SEXT]]
 ;
   %trunc = trunc nsw i8 %x to i1
@@ -635,10 +631,9 @@ define i32 @neg_sext_or_trunc_nsw_type(i8 %x, i4 %y) {
 
 define <2 x i8> @sext_or_trunc_nsw_vec(<2 x i8> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @sext_or_trunc_nsw_vec(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw <2 x i8> [[X:%.*]] to <2 x i4>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[Y:%.*]], [[TRUNC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i4> [[OR]] to <2 x i8>
-; CHECK-NEXT:    ret <2 x i8> [[SEXT]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i4> [[OR:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[SEXT1:%.*]] = or <2 x i8> [[X:%.*]], [[SEXT]]
+; CHECK-NEXT:    ret <2 x i8> [[SEXT1]]
 ;
   %trunc = trunc nsw <2 x i8> %x to <2 x i4>
   %or = or <2 x i4> %y, %trunc

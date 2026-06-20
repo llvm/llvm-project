@@ -2026,6 +2026,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                     DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
   }
 
+  Value *Y;
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(m_NSWTrunc(m_Value(X)), m_Value(Y)))) &&
+      X->getType() == DestTy) {
+    Value *SextY = Builder.CreateSExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  SextY);
+  }
+
   return nullptr;
 }
 
