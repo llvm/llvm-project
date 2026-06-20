@@ -1,6 +1,5 @@
 ; RUN: %lli %s | FileCheck %s
-; CHECK: extract=0x0012 insert=0xef3456be
-
+; CHECK: extract=0x3456 insert=0x12beef78
 
 @.str = private unnamed_addr constant [30 x i8] c"extract=0x%04x insert=0x%08x\0A\00", align 1
 
