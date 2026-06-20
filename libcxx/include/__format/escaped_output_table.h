@@ -98,7 +98,7 @@ namespace __escaped_output_table {
 /// - Unassigned.
 ///
 /// The data is generated from
-/// - https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedGeneralCategory.txt
+/// - https://www.unicode.org/Public/18.0.0/ucd/extracted/DerivedGeneralCategory.txt
 ///
 /// The table is similar to the table
 ///  __extended_grapheme_custer_property_boundary::__entries
