@@ -1665,7 +1665,6 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))
     return transformZExtICmp(Cmp, Zext);
 
-  // zext(trunc(X) & C) -> (X & zext(C)).
   Constant *C;
   Value *X;
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
