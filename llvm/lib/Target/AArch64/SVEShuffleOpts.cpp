@@ -101,8 +101,7 @@ using DeinterleaveMap = SmallDenseMap<CallInst *, std::array<CastInst *, 4>>;
 static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
                                  Loop &L, const AArch64TargetLowering &TL,
                                  const DataLayout DL) {
-  unsigned IntId = I->getIntrinsicID();
-  assert(IntId == Intrinsic::vector_deinterleave4 &&
+  assert(I->getIntrinsicID() == Intrinsic::vector_deinterleave4 &&
          "Only deinterleave4 supported currently");
 
   ConstantRange VScaleRange = getVScaleRange(I->getFunction(), 64);
