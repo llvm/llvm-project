@@ -28,6 +28,7 @@ class CASID;
 enum class EmitDwarfUnwindType {
   Always,          // Always emit dwarf unwind
   NoCompactUnwind, // Only emit if compact unwind isn't available
+  DwarfOnly,       // Force compact unwind to reference DWARF
   Default,         // Default behavior is based on the target
 };
 
