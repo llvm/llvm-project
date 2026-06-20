@@ -1573,10 +1573,9 @@ func.func @gather_tensor_alignment(%base: tensor<16xf32>, %indices: vector<16xi3
 // -----
 
 func.func @gather_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %indices: vector<16xi32>,
-                                  %mask: vector<16xi1>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
-  %c0 = arith.constant 0 : index
+                                  %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %idx: index) -> vector<16xf32> {
   // expected-error @+1 {{'vector.gather' op memref strides must be non-negative}}
-  %0 = vector.gather %src[%c0, %c0][%indices], %mask, %pass_thru
+  %0 = vector.gather %src[%idx, %idx][%indices], %mask, %pass_thru
     : memref<100x100xf32, strided<[-100, 1]>>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %0 : vector<16xf32>
 }
@@ -1672,10 +1671,9 @@ func.func @scatter_tensor_alignment(%base: tensor<?xf32>, %indices: vector<16xi3
 // -----
 
 func.func @scatter_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %indices: vector<16xi32>,
-                                   %mask: vector<16xi1>, %value: vector<16xf32>) {
-  %c0 = arith.constant 0 : index
+                                   %mask: vector<16xi1>, %value: vector<16xf32>, %idx: index) {
   // expected-error @+1 {{'vector.scatter' op memref strides must be non-negative}}
-  vector.scatter %src[%c0, %c0][%indices], %mask, %value
+  vector.scatter %src[%idx, %idx][%indices], %mask, %value
     : memref<100x100xf32, strided<[-100, 1]>>, vector<16xi32>, vector<16xi1>, vector<16xf32>
   return
 }
