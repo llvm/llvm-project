@@ -1099,20 +1099,19 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 
 namespace IsaInfo {
 
-AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
-    : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any) {
-  if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
-    XnackSetting = TargetIDSetting::Unsupported;
-  if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
-    SramEccSetting = TargetIDSetting::Unsupported;
-}
+AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
+                               StringRef FeatureString)
+    : STI(STI), XnackSetting(STI.getFeatureBits().test(FeatureSupportsXNACK)
+                                 ? TargetIDSetting::Any
+                                 : TargetIDSetting::Unsupported),
+      SramEccSetting(STI.getFeatureBits().test(FeatureSupportsSRAMECC)
+                         ? TargetIDSetting::Any
+                         : TargetIDSetting::Unsupported) {
 
-void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
   // Check if xnack or sramecc is explicitly enabled or disabled.  In the
   // absence of the target features we assume we must generate code that can run
   // in any environment.
-  SubtargetFeatures Features(FS);
+  SubtargetFeatures Features(FeatureString);
   std::optional<bool> XnackRequested;
   std::optional<bool> SramEccRequested;
 
@@ -1127,7 +1126,10 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
       SramEccRequested = false;
   }
 
-  bool XnackSupported = isXnackSupported();
+  // Only allow changing xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support keep their initial setting (Any).
+
+  bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
   bool SramEccSupported = isSramEccSupported();
 
   if (XnackRequested) {
