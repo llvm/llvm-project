@@ -2169,6 +2169,8 @@ inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
     return false;
   Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
+  if (!VirtBase)
+    return false;
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
 }
