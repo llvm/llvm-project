@@ -11,7 +11,3 @@ breaks rocgdb UT
 breaks windows build
 [cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
 ---
-needs newer SPIRv
-[IRBuilder] Refactor for intrinsics const-folding (NFC) (#202738)
-[SPIR-V] Lower undef nested in a constant 
----
