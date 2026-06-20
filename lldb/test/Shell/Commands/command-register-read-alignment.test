@@ -5,7 +5,7 @@
 # RUN:        -o run \
 # RUN:        -o "register read rip r10d rflags" \
 # RUN:        -o "register read -A rsp rbp rip" \
-# RUN:        -o "register read" \
+# RUN:        -o "register read -s 0" \
 # RUN:        -o "register read --all" \
 # RUN:        %t.out | FileCheck --strict-whitespace %s
 
@@ -19,7 +19,8 @@
 # CHECK-NEXT: {{^  rbp/fp = }}
 # CHECK-NEXT: {{^  rip/pc = }}
 
-# CHECK: (lldb) register read
+## Registers within a set align to each other.
+# CHECK: (lldb) register read -s 0
 # CHECK: General Purpose Registers:
 # CHECK: {{^      rsi = }}
 # CHECK: {{^       r8 = }}
@@ -30,6 +31,7 @@
 # CHECK: {{^  gs_base = }}
 # CHECK: {{^       ds = }}
 
+## Registers within different sets align only within their own set.
 # CHECK: (lldb) register read --all
 
 # CHECK: General Purpose Registers:
