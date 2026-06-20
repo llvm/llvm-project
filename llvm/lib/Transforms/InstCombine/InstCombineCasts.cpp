@@ -1289,6 +1289,16 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
+  // trunc(scmp(x, y)) -> scmp(x, y) with a narrower result type.
+  // trunc(ucmp(x, y)) -> ucmp(x, y) with a narrower result type.
+  // scmp/ucmp produce only -1, 0, or 1, so any result type with at least 2
+  // bits can represent every possible value and the truncation is lossless.
+  if (DestWidth >= 2)
+    if (auto *CI = dyn_cast<CmpIntrinsic>(Src); CI && CI->hasOneUse())
+      return replaceInstUsesWith(
+          Trunc, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
+                                         {CI->getLHS(), CI->getRHS()}));
+
   if (DestWidth == 1 &&
       (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
       isKnownNonZero(Src, SQ.getWithInstruction(&Trunc)))
@@ -2018,13 +2028,10 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // sext(ucmp(x, y)) -> ucmp(x, y) with a wider result type.
   // scmp/ucmp return only -1, 0, or 1, which sign-extend correctly to any
   // wider integer type, so we can sink the extension into the intrinsic.
-  if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
-    Intrinsic::ID IID = II->getIntrinsicID();
-    if ((IID == Intrinsic::scmp || IID == Intrinsic::ucmp) && II->hasOneUse())
-      return replaceInstUsesWith(
-          Sext, Builder.CreateIntrinsic(
-                    DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
-  }
+  if (auto *CI = dyn_cast<CmpIntrinsic>(Src); CI && CI->hasOneUse())
+    return replaceInstUsesWith(
+        Sext, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
+                                      {CI->getLHS(), CI->getRHS()}));
 
   return nullptr;
 }

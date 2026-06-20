@@ -6931,6 +6931,8 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   }
   case Intrinsic::pdep: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
     if (match(Op1, m_Zero()))
       return Constant::getNullValue(ReturnType);
     if (match(Op1, m_AllOnes()))
@@ -6938,6 +6940,8 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   }
   case Intrinsic::pext: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
     if (match(Op1, m_Zero()))
       return Constant::getNullValue(ReturnType);
     if (match(Op1, m_AllOnes()))
