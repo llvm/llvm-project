@@ -19,12 +19,32 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 #include <string>
 
 namespace clang::lifetimes {
 
 inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
+  // TODO: Enable ObjectiveC later when we know it's stable enough.
+  if (S.getLangOpts().ObjC)
+    return false;
+
+  // TODO: Default this flag to on in the future.
+  if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().EnableLifetimeSafetyInC)
+    return false;
+
+  // Translation-unit mode: whole-program analysis runs once on TU.
+  // Individual function analysis is disabled when TU mode is enabled.
+  if (S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
+    return isa<TranslationUnitDecl>(D);
+
+  // Per-function mode: analysis runs on each function/method individually.
+  // Skip TU-level calls when per-function mode is enabled.
+  if (isa<TranslationUnitDecl>(D))
+    return false;
+
+  // Enable per-function mode via debug flag or specific diagnostics.
   if (S.getLangOpts().DebugRunLifetimeSafety)
     return true;
   DiagnosticsEngine &Diags = S.getDiagnostics();
@@ -422,27 +442,49 @@ public:
   }
 
 private:
-  std::pair<SourceLocation, StringRef>
+  std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,
+                                        bool AllowGNUAttrMacro = true) {
+    StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
+    if (Spelling.empty() && Loc.isValid()) {
+      const Preprocessor &PP = S.getPreprocessor();
+      Spelling = PP.getLastMacroWithSpelling(
+          Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
+                tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
+                tok::r_square, tok::r_square});
+
+      if (Spelling.empty() && AllowGNUAttrMacro)
+        Spelling = PP.getLastMacroWithSpelling(
+            Loc, {tok::kw___attribute, tok::l_paren, tok::l_paren,
+                  PP.getIdentifierInfo("lifetimebound"), tok::r_paren,
+                  tok::r_paren});
+    }
+    const std::string Text =
+        Spelling.empty() ? "[[clang::lifetimebound]]" : Spelling.str();
+    return LeadingSpace ? " " + Text : Text + " ";
+  }
+
+  std::pair<SourceLocation, std::string>
   getLifetimeBoundFixIt(const ParmVarDecl *Decl) {
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
         Decl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    StringRef FixItText = " [[clang::lifetimebound]]";
+    bool LeadingSpace = true;
 
     if (!Decl->getIdentifier()) {
       // For unnamed parameters, placing attributes after the type would be
       // parsed as a type attribute, not a parameter attribute.
       InsertionPoint = Decl->getBeginLoc();
-      FixItText = "[[clang::lifetimebound]] ";
+      LeadingSpace = false;
     } else if (Decl->hasDefaultArg()) {
       // If the parameter has a default argument, place the attribute after the
       // named argument.
       InsertionPoint = Lexer::getLocForEndOfToken(
           Decl->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
     }
-    return {InsertionPoint, FixItText};
+    return {InsertionPoint,
+            getLifetimeBoundFixItText(InsertionPoint, LeadingSpace)};
   }
 
-  std::pair<SourceLocation, StringRef>
+  std::pair<SourceLocation, std::string>
   getLifetimeBoundFixIt(const CXXMethodDecl *MD) {
     const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
@@ -463,7 +505,9 @@ private:
               ->getLocation(),
           0, S.getSourceManager(), S.getLangOpts());
     }
-    return {InsertionPoint, " [[clang::lifetimebound]]"};
+    return {InsertionPoint,
+            getLifetimeBoundFixItText(InsertionPoint, /*LeadingSpace=*/true,
+                                      /*AllowGNUAttrMacro=*/false)};
   }
 
   std::string getDiagSubjectDescription(const ValueDecl *VD) {
