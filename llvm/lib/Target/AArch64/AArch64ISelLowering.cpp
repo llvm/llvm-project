@@ -33445,9 +33445,18 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
 
+  // Keep a fixed-length i8 -> i64 reduction fixed-length when NEON is
+  // available. The scalable path spreads the sums across all VL-dependent lanes
+  // but only extracts the low fixed-width lanes, dropping the high lanes for VL
+  // > the fixed width (e.g. 256-bit Neoverse V1). i64 sibling of the v16i8 ->
+  // v2i32 case fixed in PR #177119 / issue #176954.
+  bool KeepFixedI8ToI64 = Subtarget->isNeonAvailable() &&
+                          ResultVT == MVT::v2i64 && OpVT == MVT::v16i8;
+
   bool ConvertToScalable =
       ResultVT.isFixedLengthVector() &&
-      useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true);
+      useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true) &&
+      !KeepFixedI8ToI64;
 
   if (ConvertToScalable) {
     ResultVT = getContainerForFixedLengthVector(DAG, ResultVT);
@@ -33470,7 +33479,10 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
 
   SDValue Res;
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
-  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
+  // UADDW{B,T}/SADDW{B,T} are scalable-only; a fixed-length result (the i8 ->
+  // i64 case kept fixed above) must use the NEON widening-add path below.
+  if (ResultVT.isScalableVector() &&
+      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
     SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
