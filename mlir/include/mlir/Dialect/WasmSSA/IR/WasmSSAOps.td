@@ -318,7 +318,7 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
     }
     ```
   }];
-  let regions = (region SizedRegion<1>: $initializer);
+  let regions = (region AnyRegion: $initializer);
 
   let extraClassDeclaration = [{
     ::mlir::SymbolTable::Visibility getVisibility() {
@@ -326,11 +326,8 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
         ::mlir::SymbolTable::Visibility::Public :
         ::mlir::SymbolTable::Visibility::Nested;
     };
-
-    wasmssa::ReturnOp getInitTerminator();
   }];
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 }
 
 def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
