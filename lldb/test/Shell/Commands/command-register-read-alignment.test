@@ -4,6 +4,7 @@
 # RUN: %lldb -b -o "breakpoint set --name main" \
 # RUN:        -o run \
 # RUN:        -o "register read rip r10d rflags" \
+# RUN:        -o "register read -A rsp rbp rip" \
 # RUN:        -o "register read" \
 # RUN:        -o "register read --all" \
 # RUN:        %t.out | FileCheck --strict-whitespace %s
@@ -12,6 +13,11 @@
 # CHECK-NEXT: {{^     rip = }}
 # CHECK-NEXT: {{^    r10d = }}
 # CHECK-NEXT: {{^  rflags = }}
+
+# CHECK: (lldb) register read -A rsp rbp rip
+# CHECK-NEXT: {{^  rsp/sp = }}
+# CHECK-NEXT: {{^  rbp/fp = }}
+# CHECK-NEXT: {{^  rip/pc = }}
 
 # CHECK: (lldb) register read
 # CHECK: General Purpose Registers:
