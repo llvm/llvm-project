@@ -62023,14 +62023,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
     return DAG.getBuildVector(VT, DL, InVec->ops().slice(IdxVal, NumSubElts));
 
-  // EXTRACT_SUBVECTOR(EXTRACT_SUBVECTOR(V,C1)),C2) - EXTRACT_SUBVECTOR(V,C1+C2)
-  if (IdxVal != 0 && InVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      InVec.hasOneUse() && TLI.isTypeLegal(VT) &&
-      TLI.isTypeLegal(InVec.getOperand(0).getValueType())) {
-    unsigned NewIdx = IdxVal + InVec.getConstantOperandVal(1);
-    return extractSubVector(InVec.getOperand(0), NewIdx, DAG, DL, SizeInBits);
-  }
-
   // EXTRACT_SUBVECTOR(INSERT_SUBVECTOR(SRC,SUB,C1),C2)
   // --> INSERT_SUBVECTOR(EXTRACT_SUBVECTOR(SRC,C2),SUB,C1-C2)
   // iff SUB is entirely contained in the extraction.
