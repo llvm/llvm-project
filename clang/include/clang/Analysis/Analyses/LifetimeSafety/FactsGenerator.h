@@ -29,9 +29,7 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
 
 public:
   FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC),
-        IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
-                !AC.getASTContext().getLangOpts().ObjC) {}
+      : FactMgr(FactMgr), AC(AC) {}
 
   void run();
 
@@ -162,7 +160,6 @@ private:
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
   const CFGBlock *CurrentBlock;
-  bool IsCMode = false;
 };
 
 } // namespace clang::lifetimes::internal
