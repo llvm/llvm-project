@@ -72,8 +72,8 @@ static size_t ComputeLongestRegisterName(Args &command,
 
   // Loop through all the arguments to find the longest register name.
   for (auto &entry : command) {
-    // In most LLDB commands we accept $rbx as the name for register RBX
-    //  -> Internally it must be restricted to plain [ rbx ] format.
+    // In most LLDB commands we accept $rbx as the name for register RBX,
+    //  therefore internally it must be restricted to plain [ rbx ] format.
     llvm::StringRef arg_str = entry.ref();
     arg_str.consume_front("$");
 
