@@ -179,6 +179,15 @@ static bool airSystemValues(Module &M) {
               SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
         }
         for (CallInst *CI : USV.Calls) {
+          // The sysval call may return a <3 x i32> vector (extractelement
+          // users) instead of the [3 x i32] array aggregate (extractvalue
+          // users).  SysArg is the vector form, so it is the exact replacement;
+          // the array reconstruction below would assert on a vector type.
+          if (CI->getType()->isVectorTy()) {
+            CI->replaceAllUsesWith(SysArg);
+            CI->eraseFromParent();
+            continue;
+          }
           SmallVector<ExtractValueInst *, 4> Extracts;
           for (User *U : CI->users())
             if (auto *EV = dyn_cast<ExtractValueInst>(U))
