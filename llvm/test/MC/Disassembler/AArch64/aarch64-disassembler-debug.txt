@@ -8,7 +8,7 @@
 
 # Malformed `add (imm)` with `shift` field = 2 (only 0 and 1 are legal). The
 # whole-instruction decoder DecodeAddSubImmShift returns Fail, so the generated
-# table emits dbgFailInsn("ADDXri", "DecodeAddSubImmShift").
+# table emits LLVM_DEBUG(reportInsnDecodeFailure("ADDXri", "DecodeAddSubImmShift")).
 # CHECK: OPC_Decode for ADDXri: insn using DecodeAddSubImmShift : FAIL
 # CHECK-NEXT: OPC_Decode: opcode {{[0-9]+}}, using decoder {{[0-9]+}}: FAIL, decoding complete
 

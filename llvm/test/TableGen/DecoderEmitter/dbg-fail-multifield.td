@@ -3,7 +3,7 @@
 // Verify the per-operand decode debug path for an operand whose encoding bits
 // are spread across several disjoint islands of the instruction. Each island
 // becomes one (base, width) pair; the call site passes them as raw integers
-// and dbgFailOpd joins them with " + " at runtime, so no unique
+// and reportOperandDecodeFailure joins them with " + " at runtime, so no unique
 // "field(b,w) + ..." string literal is baked into the table.
 
 include "llvm/Target/Target.td"
@@ -32,11 +32,14 @@ def I : Instruction {
 }
 
 // The operand is assembled from the three islands, then the field overload of
-// dbgFailOpd is called with all three (base, width) pairs.
+// reportOperandDecodeFailure is called with all three (base, width) pairs.
 // CHECK-LABEL: case 0:
 // CHECK-NEXT:    tmp = 0x0;
 // CHECK-NEXT:    tmp |= fieldFromInstruction(insn, 0, 2);
 // CHECK-NEXT:    tmp |= fieldFromInstruction(insn, 8, 2) << 2;
 // CHECK-NEXT:    tmp |= fieldFromInstruction(insn, 19, 2) << 4;
-// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, tmp, Address, Decoder))) return dbgFailOpd("op", "DecodeRCRegisterClass", {0, 2, 8, 2, 19, 2});
+// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, tmp, Address, Decoder))) {
+// CHECK-NEXT:      LLVM_DEBUG(reportOperandDecodeFailure("op", "DecodeRCRegisterClass", {0, 2, 8, 2, 19, 2}));
+// CHECK-NEXT:      return MCDisassembler::Fail;
+// CHECK-NEXT:    }
 // CHECK-NEXT:    return S;

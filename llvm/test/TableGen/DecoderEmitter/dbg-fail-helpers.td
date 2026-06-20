@@ -1,6 +1,6 @@
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s
 
-// Verify the DecoderEmitter emits the dbgFailOpd / dbgFailInsn helpers used
+// Verify the DecoderEmitter emits the reportOperandDecodeFailure / reportInsnDecodeFailure helpers used
 // by per-operand and whole-instruction decode debug logging.
 
 include "llvm/Target/Target.td"
@@ -24,50 +24,39 @@ def I : Instruction {
   let Inst{31...4} = 0;
 }
 
-// dbgFailOpd (no-field overload): the description is a single shared literal.
-// CHECK:      DecodeStatus dbgFailOpd(const char *Op, const char *Desc, const char *Decoder,
-// CHECK-NEXT:                         bool *DecodeComplete = nullptr) {
-// CHECK-NEXT:   LLVM_DEBUG(dbgs() << "OPC_Decode for " << Op << ": " << Desc << " using "
-// CHECK-NEXT:                     << Decoder << " : FAIL\n");
-// CHECK-NEXT:   if (DecodeComplete)
-// CHECK-NEXT:     *DecodeComplete = false;
-// CHECK-NEXT:   return MCDisassembler::Fail;
+// CHECK: #ifndef NDEBUG
+
+// CHECK{LITERAL}: [[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
+// CHECK-NEXT:                          const char *Desc,
+// CHECK-NEXT:                          const char *Decoder) {
+// CHECK-NEXT:   dbgs() << "OPC_Decode for " << Op << ": " << Desc << " using " << Decoder
+// CHECK-NEXT:          << " : FAIL\n";
 // CHECK-NEXT: }
 
-// dbgFailOpd (field overload): forms "field(b,w)" from raw (base, width)
-// integers rather than baking a unique string literal into each call site.
-// CHECK:      DecodeStatus dbgFailOpd(const char *Op, const char *Decoder,
-// CHECK-NEXT:                         ArrayRef<uint32_t> Fields,
-// CHECK-NEXT:                         bool *DecodeComplete = nullptr) {
-// CHECK-NEXT:   LLVM_DEBUG({
-// CHECK-NEXT:     dbgs() << "OPC_Decode for " << Op << ": ";
-// CHECK-NEXT:     for (unsigned I = 0, E = Fields.size(); I != E; I += 2) {
-// CHECK-NEXT:       if (I)
-// CHECK-NEXT:         dbgs() << " + ";
-// CHECK-NEXT:       dbgs() << "field(" << Fields[I] << ',' << Fields[I + 1] << ')';
-// CHECK-NEXT:     }
-// CHECK-NEXT:     dbgs() << " using " << Decoder << " : FAIL\n";
-// CHECK-NEXT:   });
-// CHECK-NEXT:   if (DecodeComplete)
-// CHECK-NEXT:     *DecodeComplete = false;
-// CHECK-NEXT:   return MCDisassembler::Fail;
+// CHECK{LITERAL}: [[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
+// CHECK-NEXT:                          const char *Decoder,
+// CHECK-NEXT:                          ArrayRef<uint32_t> Fields) {
+// CHECK-NEXT:   dbgs() << "OPC_Decode for " << Op << ": ";
+// CHECK-NEXT:   for (unsigned I = 0, E = Fields.size(); I != E; I += 2) {
+// CHECK-NEXT:     if (I)
+// CHECK-NEXT:       dbgs() << " + ";
+// CHECK-NEXT:     dbgs() << "field(" << Fields[I] << ',' << Fields[I + 1] << ')';
+// CHECK-NEXT:   }
+// CHECK-NEXT:   dbgs() << " using " << Decoder << " : FAIL\n";
 // CHECK-NEXT: }
 
-// dbgFailInsn: whole-instruction custom-decoder check-site helper.
-// CHECK{LITERAL}: [[maybe_unused]] DecodeStatus dbgFailInsn(const char *Name, const char *Decoder,
-// CHECK-NEXT:                                           bool *DecodeComplete = nullptr) {
-// CHECK-NEXT:   LLVM_DEBUG(dbgs() << "OPC_Decode for " << Name << ": insn using " << Decoder
-// CHECK-NEXT:                     << " : FAIL\n");
-// CHECK-NEXT:   if (DecodeComplete)
-// CHECK-NEXT:     *DecodeComplete = false;
-// CHECK-NEXT:   return MCDisassembler::Fail;
+// CHECK{LITERAL}: [[maybe_unused]] void reportInsnDecodeFailure(const char *Name,
+// CHECK-NEXT:                          const char *Decoder) {
+// CHECK-NEXT:   dbgs() << "OPC_Decode for " << Name << ": insn using " << Decoder
+// CHECK-NEXT:          << " : FAIL\n";
 // CHECK-NEXT: }
+// CHECK-NEXT: #endif // NDEBUG
 
-// And the per-operand check site inside decodeToMCInst calls dbgFailOpd
-// with the operand name, field description, and decoder-method name as
-// separate string-literal arguments.
 // CHECK-LABEL: static DecodeStatus decodeToMCInst(
 // CHECK:       case 0:
 // CHECK-NEXT:    tmp = fieldFromInstruction(insn, 0, 4);
-// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, tmp, Address, Decoder))) return dbgFailOpd("dst", "DecodeRCRegisterClass", {0, 4});
+// CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, tmp, Address, Decoder))) {
+// CHECK-NEXT:      LLVM_DEBUG(reportOperandDecodeFailure("dst", "DecodeRCRegisterClass", {0, 4}));
+// CHECK-NEXT:      return MCDisassembler::Fail;
+// CHECK-NEXT:    }
 // CHECK-NEXT:    return S;
