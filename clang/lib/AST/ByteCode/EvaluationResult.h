@@ -51,6 +51,8 @@ private:
   void takeValue(APValue &&V) {
     assert(empty());
     Value = std::move(V);
+    Kind = Valid;
+    assert(!empty());
   }
   void setInvalid() {
     // We are NOT asserting empty() here, since setting it to invalid
@@ -72,13 +74,7 @@ public:
   bool empty() const { return Kind == Empty; }
   bool isInvalid() const { return Kind == Invalid; }
 
-  /// Returns an APValue for the evaluation result.
-  APValue toAPValue() const {
-    assert(!empty());
-    assert(!isInvalid());
-    return Value;
-  }
-
+  /// Moves the APValue containing the evaluation result to the caller.
   APValue stealAPValue() { return std::move(Value); }
 
   /// Check that all subobjects of the given pointer have been initialized.
