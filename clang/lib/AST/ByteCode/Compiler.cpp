@@ -168,19 +168,6 @@ private:
   CaseMap OldCaseLabels;
 };
 
-template <class Emitter> class StmtExprScope final {
-public:
-  StmtExprScope(Compiler<Emitter> *Ctx) : Ctx(Ctx), OldFlag(Ctx->InStmtExpr) {
-    Ctx->InStmtExpr = true;
-  }
-
-  ~StmtExprScope() { Ctx->InStmtExpr = OldFlag; }
-
-private:
-  Compiler<Emitter> *Ctx;
-  bool OldFlag;
-};
-
 /// When generating code for e.g. implicit field initializers in constructors,
 /// we don't have anything to point to in case the initializer causes an error.
 /// In that case, we need to disable location tracking for the initializer so
@@ -4605,7 +4592,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   LocalScope<Emitter> BS(this);
-  StmtExprScope<Emitter> SS(this);
+  llvm::SaveAndRestore StmtExprSAR(this->InStmtExpr, true);
 
   const CompoundStmt *CS = E->getSubStmt();
   const Stmt *Result = CS->body_back();
