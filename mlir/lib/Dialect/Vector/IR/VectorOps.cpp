@@ -6296,7 +6296,9 @@ LogicalResult MaskedLoadOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
     return failure();
 
-  // Negative strides are not supported on vector.maskedload.
+  // Negative strides are not supported on vector.maskedload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
   auto [strides, offset] = memType.getStridesAndOffset();
   for (int64_t stride : strides) {
     if (ShapedType::isStatic(stride) && stride < 0)
@@ -6366,7 +6368,9 @@ LogicalResult MaskedStoreOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
     return failure();
 
-  // Negative strides are not supported on vector.maskedstore.
+  // Negative strides are not supported on vector.maskedstore. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
   auto [strides, offset] = memType.getStridesAndOffset();
   for (int64_t stride : strides) {
     if (ShapedType::isStatic(stride) && stride < 0)
@@ -6435,6 +6439,8 @@ LogicalResult GatherOp::verify() {
     return emitOpError("requires base to be a memref or ranked tensor type");
 
   // Negative strides are not supported on vector.gather.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
   if (auto memRefType = dyn_cast<MemRefType>(baseType)) {
     auto [strides, offset] = memRefType.getStridesAndOffset();
     for (int64_t stride : strides) {
@@ -6558,6 +6564,8 @@ LogicalResult ScatterOp::verify() {
     return emitOpError("requires base to be a memref or ranked tensor type");
 
   // Negative strides are not supported on vector.scatter.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
   if (auto memRefType = dyn_cast<MemRefType>(baseType)) {
     auto [strides, offset] = memRefType.getStridesAndOffset();
     for (int64_t stride : strides) {
