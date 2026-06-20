@@ -2331,7 +2331,7 @@ const OverviewView = {
 
     // Query core capabilities only — avoid expensive/unstable capabilities
     const coreCaps = ['llvm.ir.summary', 'llvm.ir.function_stats', 'clang.diag.summary',
-                      'llvm.obj.summary', 'llvm.remarks.summary', 'llvm.remarks.detail',
+                      'llvm.obj.summary', 'llvm.remarks.summary',
                       'llvm.debug.summary', 'clang.ast.summary',
                       'llvm.lto.summary', 'llvm.lto.function_stats'];
     const registeredIds = new Set(specs.map(s => s.id));
@@ -4488,7 +4488,7 @@ const RemarksView = {
     container.appendChild(skeleton);
 
     const [relRes, queryRes] = await Promise.all([
-      API.get(`/snapshots/${snap.id}/remarks/relational`),
+      API.get(`/snapshots/${snap.id}/remarks/relational?limit=5000`),
       API.querySnapshot(snap.id, ['llvm.remarks.summary']),
     ]);
 
@@ -4520,8 +4520,9 @@ const RemarksView = {
 
     // Header stat row
     const statRow = h('div', { class: 'metric-cards', style: { marginBottom: '18px' } });
-    statRow.appendChild(UI.metric('Total Remarks', totalRemarks));
-    statRow.appendChild(UI.metric('Units', queryUnits.length));
+    const actualTotal = (rel && rel.total) ? rel.total : totalRemarks;
+    statRow.appendChild(UI.metric('Total Remarks', actualTotal || totalRemarks));
+    statRow.appendChild(UI.metric('Units', snap.unit_count || queryUnits.length));
     if (rel) statRow.appendChild(UI.metric('Relational Rows', rel.count || 0));
     container.appendChild(statRow);
 
@@ -4664,353 +4665,152 @@ const RemarksView = {
         container.appendChild(tableSection);
       }
 
-      // Full triage grid: virtualised, filterable, sortable view of every
-      // remark in the relational payload. Lives below the summary tables.
-      container.appendChild(this._renderTriageGrid(rel));
+      // Full triage grid: server-paginated view of all remarks.
+      container.appendChild(this._renderTriageGrid(snap.id, totalRemarks));
     }
   },
 
-  // Triage Grid — Phase 1B of the proposal, against the C++ relational
-  // endpoint. Renders one row per remark via DOM virtualisation: a fixed pool
-  // of ~32 row elements floats over an absolute-positioned spacer so that
-  // arbitrarily large payloads stay smooth. Filters and sorts operate on the
-  // integer columns first; strings are dereferenced only for display.
-  _renderTriageGrid(rel) {
-    const { columns, strings } = rel;
-    const total = rel.count || 0;
+  _renderTriageGrid(snapshotId, totalRemarks) {
+    const PAGE_SIZE = 10000;
+    const ROW_H = 26;
+    const VIEWPORT_ROWS = 22;
+    const POOL_SIZE = VIEWPORT_ROWS + 4;
+    const TYPE_NAMES = ['unknown', 'passed', 'missed', 'analysis', 'analysis-fp-commute', 'analysis-aliasing', 'failure'];
+    const TYPE_LABELS = { unknown: 'Unknown', passed: 'Passed', missed: 'Missed', analysis: 'Analysis', 'analysis-fp-commute': 'FP-Commute', 'analysis-aliasing': 'Aliasing', failure: 'Failure' };
 
-    // Canonical lowercase type keys; index = remarks::Type enum value.
-    const TYPE_NAMES = [
-      'unknown', 'passed', 'missed', 'analysis',
-      'analysis-fp-commute', 'analysis-aliasing', 'failure',
-    ];
-    const TYPE_LABELS = {
-      'unknown': 'Unknown',
-      'passed': 'Passed',
-      'missed': 'Missed',
-      'analysis': 'Analysis',
-      'analysis-fp-commute': 'FP-Commute',
-      'analysis-aliasing': 'Aliasing',
-      'failure': 'Failure',
-    };
+    let page = 0, pageCount = 0, serverTotal = 0;
+    let columns = {}, strings = {}, count = 0;
+    const filters = { pass: '', name: '', func: '', source: '', type: '' };
 
-    // Column descriptors. `key` maps to a getter that resolves the integer
-    // column to a displayable value (string for text cells, number for
-    // numeric cells, null for missing).
-    const COLS = [
-      { id: 'unit',     label: 'Unit',     width: 90,  sortable: true,  align: 'left',  mono: true,  text: true,
-        get: (i) => columns.unit ? (strings.unit?.[columns.unit[i]] || null) : null,
-        idx: (i) => columns.unit ? columns.unit[i] : -1 },
-      { id: 'pass',     label: 'Pass',     width: 160, sortable: true,  align: 'left',  mono: true,  text: true,
-        get: (i) => strings.pass[columns.pass[i]] || '?',
-        idx: (i) => columns.pass[i] },
-      { id: 'name',     label: 'Remark',   width: 200, sortable: true,  align: 'left',  mono: false, text: true,
-        get: (i) => strings.name[columns.name[i]] || '?',
-        idx: (i) => columns.name[i] },
-      { id: 'type',     label: 'Type',     width: 100, sortable: true,  align: 'left',  mono: false, text: true,
-        get: (i) => TYPE_NAMES[columns.type[i]] || 'unknown',
-        idx: (i) => columns.type[i] },
-      { id: 'function', label: 'Function', width: 200, sortable: true,  align: 'left',  mono: true,  text: true,
-        get: (i) => columns.function[i] < 0 ? null : (strings.function[columns.function[i]] || '?'),
-        idx: (i) => columns.function[i] },
-      { id: 'source',   label: 'Source',   width: 220, sortable: false, align: 'left',  mono: true,  text: true,
-        get: (i) => {
-          const fi = columns.file[i];
-          if (fi < 0) return null;
-          const file = (strings.file[fi] || '?').split('/').pop() || strings.file[fi];
-          return `${file}:${columns.line[i]}:${columns.column[i]}`;
-        } },
-      { id: 'hotness',  label: 'Hot',      width: 80,  sortable: true,  align: 'right', mono: true,  num: true,
-        get: (i) => columns.hotness[i] < 0 ? null : columns.hotness[i],
-        idx: (i) => columns.hotness[i] },
-    ];
-
-    // Mutable state -------------------------------------------------------
-    let filtered = new Int32Array(total);
-    for (let i = 0; i < total; i++) filtered[i] = i;
-    let filteredLen = total;
-    const filters = { pass: '', name: '', func: '', source: '', types: new Set() };
-    let sortColId = null;
-    let sortDir = 1; // 1 = ascending, -1 = descending
-
-    // DOM -----------------------------------------------------------------
     const wrap = h('div', { class: 'chart-section triage-grid', style: { marginTop: '18px' } });
-
-    const counter = h('span', { class: 'triage-counter' }, `${formatNumber(total)} remarks`);
-    const resetBtn = h('button', { class: 'triage-reset', onClick: () => resetAll() }, 'Reset');
+    const counter = h('span', { class: 'triage-counter' }, '...');
+    const pageInfo = h('span', { class: 'text-muted', style: { fontSize: '11px' } }, '');
     wrap.appendChild(h('div', { class: 'triage-header-row' },
       h('h3', { style: { margin: '0' } }, 'All Remarks'),
-      counter,
-      resetBtn,
+      counter, pageInfo
     ));
 
-    // Filter bar. Text inputs filter on a case-insensitive substring of the
-    // matching string column; type chips toggle a set of allowed type enum
-    // values; hotness slider filters on minimum hotness.
     const filterBar = h('div', { class: 'triage-filter-bar' });
-    const textFields = [
-      { key: 'pass',   placeholder: 'pass…' },
-      { key: 'name',   placeholder: 'remark name…' },
-      { key: 'func',   placeholder: 'function…' },
-      { key: 'source', placeholder: 'source file…' },
-    ];
-    textFields.forEach(f => {
-      const inp = h('input', {
-        class: 'triage-input',
-        type: 'search',
-        placeholder: f.placeholder,
-        onInput: (e) => { filters[f.key] = e.target.value.toLowerCase(); refilter(); },
-      });
+    const inputs = {};
+    [{ key: 'pass', placeholder: 'pass…' }, { key: 'name', placeholder: 'remark name…' }, { key: 'func', placeholder: 'function…' }, { key: 'source', placeholder: 'source file…' }].forEach(f => {
+      const inp = h('input', { class: 'triage-input', type: 'search', placeholder: f.placeholder });
+      inputs[f.key] = inp;
       filterBar.appendChild(inp);
     });
 
-    // Type chips — clickable on/off filters for each remarks::Type value.
     const typeChipBox = h('div', { class: 'triage-chips' });
     TYPE_NAMES.forEach((name, enumVal) => {
-      if (name === 'unknown') return; // hide unless they actually appear
-      const chip = h('button', {
-        class: `triage-chip triage-chip-${name}`,
-        title: `Toggle ${TYPE_LABELS[name]}`,
-        onClick: () => {
-          if (filters.types.has(enumVal)) {
-            filters.types.delete(enumVal);
-            chip.classList.remove('on');
-          } else {
-            filters.types.add(enumVal);
-            chip.classList.add('on');
-          }
-          refilter();
-        },
-      }, TYPE_LABELS[name]);
+      if (name === 'unknown') return;
+      const chip = h('button', { class: `triage-chip triage-chip-${name}` }, TYPE_LABELS[name]);
+      chip.addEventListener('click', () => {
+        if (filters.type === String(enumVal)) { filters.type = ''; chip.classList.remove('on'); }
+        else { filterBar.querySelectorAll('.triage-chip.on').forEach(c => c.classList.remove('on')); filters.type = String(enumVal); chip.classList.add('on'); }
+        page = 0; fetchPage();
+      });
       typeChipBox.appendChild(chip);
     });
     filterBar.appendChild(typeChipBox);
     wrap.appendChild(filterBar);
 
-    // Header row (sortable columns).
-    const tHead = h('div', { class: 'triage-thead' });
-    const thEls = {};
+    let debounce = null;
+    const onFilterInput = () => {
+      filters.pass = inputs.pass.value; filters.name = inputs.name.value;
+      filters.func = inputs.func.value; filters.source = inputs.source.value;
+      page = 0;
+      clearTimeout(debounce);
+      debounce = setTimeout(fetchPage, 300);
+    };
+    Object.values(inputs).forEach(inp => inp.addEventListener('input', onFilterInput));
+
+    const COLS = [
+      { id: 'unit', label: 'Unit', width: 80, mono: true },
+      { id: 'pass', label: 'Pass', width: 120, mono: true },
+      { id: 'name', label: 'Remark', width: 160 },
+      { id: 'type', label: 'Type', width: 80 },
+      { id: 'function', label: 'Function', width: 250, mono: true },
+      { id: 'source', label: 'Source', width: 200, mono: true },
+      { id: 'hotness', label: 'Hot', width: 60, align: 'right', mono: true },
+    ];
+
+    const colStyle = (col) => col.width ? { width: col.width + 'px', flexShrink: '0' } : { flex: col.flex, minWidth: '0' };
+
+    const tHead = h('div', { class: 'triage-thead', style: { display: 'flex' } });
     COLS.forEach(col => {
-      const th = h('div', {
-        class: `triage-th${col.align === 'right' ? ' right' : ''}${col.sortable ? ' sortable' : ''}`,
-        style: { width: col.width + 'px' },
-        onClick: col.sortable ? () => onSort(col.id) : null,
-      },
-        h('span', { class: 'triage-th-label' }, col.label),
-        col.sortable ? h('span', { class: 'triage-sort-indicator' }, '') : null,
-      );
-      thEls[col.id] = th;
-      tHead.appendChild(th);
+      tHead.appendChild(h('div', { class: `triage-th${col.align === 'right' ? ' right' : ''}`, style: colStyle(col) }, col.label));
     });
     wrap.appendChild(tHead);
 
-    // Virtualised viewport.
-    const ROW_H = 26;
-    const VIEWPORT_ROWS = 22;
-    const POOL_SIZE = VIEWPORT_ROWS + 4; // a couple extra for smoother scroll
-
-    const viewport = h('div', {
-      class: 'triage-viewport',
-      style: { height: `${VIEWPORT_ROWS * ROW_H}px` },
-    });
+    const viewport = h('div', { class: 'triage-viewport', style: { height: `${VIEWPORT_ROWS * ROW_H}px` } });
     const spacer = h('div', { class: 'triage-spacer' });
-    spacer.style.height = `${total * ROW_H}px`;
     viewport.appendChild(spacer);
-
-    // Pre-allocate the row pool once. Each row is an absolutely-positioned
-    // flex container with one span per column. Scroll only mutates each
-    // span's textContent and the row's top position.
     const pool = [];
     for (let p = 0; p < POOL_SIZE; p++) {
-      const row = h('div', { class: 'triage-row' });
-      row.style.height = `${ROW_H}px`;
-      const cells = COLS.map(col => h('span', {
-        class: `triage-td${col.mono ? ' mono' : ''}${col.align === 'right' ? ' right' : ''}${col.num ? ' num' : ''}`,
-        style: { width: col.width + 'px' },
-      }, ''));
+      const row = h('div', { class: 'triage-row', style: { height: ROW_H + 'px', display: 'flex' } });
+      const cells = COLS.map(col => h('span', { class: `triage-td${col.mono ? ' mono' : ''}${col.align === 'right' ? ' right' : ''}`, style: { ...colStyle(col), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, ''));
       cells.forEach(c => row.appendChild(c));
       spacer.appendChild(row);
       pool.push({ row, cells });
     }
     wrap.appendChild(viewport);
 
-    // Empty-state element shown when filteredLen === 0.
-    const emptyEl = h('div', { class: 'triage-empty' },
-      'No remarks match the current filters.'
-    );
-    viewport.appendChild(emptyEl);
+    const pager = h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', fontSize: '12px' } });
+    const prevBtn = h('button', { class: 'triage-chip', onClick: () => { if (page > 0) { page--; fetchPage(); } } }, '← Prev');
+    const nextBtn = h('button', { class: 'triage-chip', onClick: () => { if (page < pageCount - 1) { page++; fetchPage(); } } }, 'Next →');
+    const pageLabel = h('span', { class: 'text-muted' }, '');
+    pager.appendChild(prevBtn); pager.appendChild(pageLabel); pager.appendChild(nextBtn);
+    wrap.appendChild(pager);
 
-    // -----------------------------------------------------------------------
-    // Render the visible window. Called on scroll, filter, sort.
-    // -----------------------------------------------------------------------
+    const getCell = (i, colId) => {
+      if (!columns.pass) return null;
+      switch (colId) {
+        case 'unit': return columns.unit ? (strings.unit?.[columns.unit[i]] || '').slice(0, 10) : '';
+        case 'pass': return strings.pass?.[columns.pass[i]] || '';
+        case 'name': return strings.name?.[columns.name[i]] || '';
+        case 'type': return TYPE_LABELS[TYPE_NAMES[columns.type[i]]] || '';
+        case 'function': return columns.function[i] < 0 ? '' : (strings.function?.[columns.function[i]] || '');
+        case 'source': { const fi = columns.file[i]; if (fi < 0) return ''; const f = (strings.file?.[fi] || '').split('/').pop(); return `${f}:${columns.line[i]}`; }
+        case 'hotness': return columns.hotness[i] < 0 ? '' : formatNumber(columns.hotness[i]);
+      }
+    };
+
     const renderVisible = () => {
-      const len = filteredLen;
-      emptyEl.style.display = len === 0 ? 'flex' : 'none';
+      const len = count;
+      spacer.style.height = `${len * ROW_H}px`;
       const scrollTop = viewport.scrollTop;
       const first = Math.max(0, Math.floor(scrollTop / ROW_H));
       for (let p = 0; p < pool.length; p++) {
-        const visibleIdx = first + p;
+        const idx = first + p;
         const { row, cells } = pool[p];
-        if (visibleIdx >= len) {
-          row.style.display = 'none';
-          continue;
-        }
-        const r = filtered[visibleIdx];
-        row.style.display = '';
-        row.style.top = `${visibleIdx * ROW_H}px`;
-        for (let c = 0; c < COLS.length; c++) {
-          const col = COLS[c];
-          const cell = cells[c];
-          const val = col.get(r);
-          if (val === null || val === undefined) {
-            cell.textContent = '–';
-            cell.classList.add('triage-td-missing');
-          } else {
-            cell.classList.remove('triage-td-missing');
-            if (col.id === 'unit') {
-              cell.textContent = String(val).slice(0, 10);
-              cell.title = val;
-            } else if (col.id === 'type') {
-              cell.textContent = TYPE_LABELS[val] || val;
-              cell.className = `triage-td triage-type triage-type-${val}`;
-            } else if (col.num) {
-              cell.textContent = formatNumber(val);
-            } else {
-              cell.textContent = val;
-              if (col.id === 'source' || col.id === 'function' || col.id === 'name') {
-                cell.title = val;
-              }
-            }
-          }
-        }
+        if (idx >= len) { row.style.display = 'none'; continue; }
+        row.style.display = ''; row.style.top = `${idx * ROW_H}px`;
+        COLS.forEach((col, c) => { const v = getCell(idx, col.id) || '–'; cells[c].textContent = v; cells[c].title = v; });
       }
     };
-
-    // -----------------------------------------------------------------------
-    // Rebuild the filtered index array. O(N), runs on every filter change.
-    // -----------------------------------------------------------------------
-    const refilter = () => {
-      const out = new Int32Array(total);
-      let n = 0;
-      const fPass = filters.pass;
-      const fName = filters.name;
-      const fFunc = filters.func;
-      const fSource = filters.source;
-      const fTypes = filters.types;
-      const useTypes = fTypes.size > 0;
-
-      for (let i = 0; i < total; i++) {
-        if (useTypes && !fTypes.has(columns.type[i])) continue;
-        if (fPass) {
-          const s = (strings.pass[columns.pass[i]] || '').toLowerCase();
-          if (!s.includes(fPass)) continue;
-        }
-        if (fName) {
-          const s = (strings.name[columns.name[i]] || '').toLowerCase();
-          if (!s.includes(fName)) continue;
-        }
-        if (fFunc) {
-          const fi = columns.function[i];
-          if (fi < 0) continue;
-          const s = (strings.function[fi] || '').toLowerCase();
-          if (!s.includes(fFunc)) continue;
-        }
-        if (fSource) {
-          const fi = columns.file[i];
-          if (fi < 0) continue;
-          const s = (strings.file[fi] || '').toLowerCase();
-          if (!s.includes(fSource)) continue;
-        }
-        out[n++] = i;
-      }
-      filtered = out;
-      filteredLen = n;
-      spacer.style.height = `${n * ROW_H}px`;
-      viewport.scrollTop = 0;
-      counter.textContent = n === total
-        ? `${formatNumber(total)} remarks`
-        : `${formatNumber(n)} of ${formatNumber(total)} remarks`;
-      if (sortColId) applySort();
-      renderVisible();
-    };
-
-    // -----------------------------------------------------------------------
-    // Sort the filtered index array in place, then re-render.
-    // -----------------------------------------------------------------------
-    const applySort = () => {
-      const col = COLS.find(c => c.id === sortColId);
-      if (!col) return;
-      const dir = sortDir;
-      const view = Array.from(filtered.subarray(0, filteredLen));
-      if (col.idx) {
-        // Numeric / index sort, fast path. -1 sentinels sort last regardless
-        // of direction so missing values don't crowd the top.
-        view.sort((a, b) => {
-          const va = col.idx(a);
-          const vb = col.idx(b);
-          if (va < 0 && vb < 0) return 0;
-          if (va < 0) return 1;
-          if (vb < 0) return -1;
-          return (va - vb) * dir;
-        });
-      } else {
-        // Lexicographic fallback for text-only columns without an .idx.
-        view.sort((a, b) => {
-          const va = (col.get(a) || '').toString();
-          const vb = (col.get(b) || '').toString();
-          return va.localeCompare(vb) * dir;
-        });
-      }
-      for (let i = 0; i < filteredLen; i++) filtered[i] = view[i];
-    };
-
-    const onSort = (colId) => {
-      if (sortColId === colId) {
-        sortDir = -sortDir;
-      } else {
-        sortColId = colId;
-        sortDir = 1;
-      }
-      applySort();
-      // Update sort indicators in the header.
-      COLS.forEach(c => {
-        const th = thEls[c.id];
-        const ind = th.querySelector('.triage-sort-indicator');
-        if (!ind) return;
-        if (c.id === sortColId) {
-          ind.textContent = sortDir === 1 ? '▲' : '▼';
-          th.classList.add('sorted');
-        } else {
-          ind.textContent = '';
-          th.classList.remove('sorted');
-        }
-      });
-      viewport.scrollTop = 0;
-      renderVisible();
-    };
-
-    const resetAll = () => {
-      filters.pass = filters.name = filters.func = filters.source = '';
-      filters.types.clear();
-      // Reset DOM
-      filterBar.querySelectorAll('input.triage-input').forEach(i => { i.value = ''; });
-      filterBar.querySelectorAll('.triage-chip.on').forEach(c => c.classList.remove('on'));
-      sortColId = null;
-      sortDir = 1;
-      COLS.forEach(c => {
-        const th = thEls[c.id];
-        th.classList.remove('sorted');
-        const ind = th.querySelector('.triage-sort-indicator');
-        if (ind) ind.textContent = '';
-      });
-      refilter();
-    };
-
     viewport.addEventListener('scroll', renderVisible, { passive: true });
 
-    // Initial render — defer until the viewport is laid out in the document.
-    requestAnimationFrame(renderVisible);
+    const fetchPage = async () => {
+      const offset = page * PAGE_SIZE;
+      let url = `/snapshots/${encodeURIComponent(snapshotId)}/remarks/relational?offset=${offset}&limit=${PAGE_SIZE}`;
+      if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
+      if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.func) url += `&function=${encodeURIComponent(filters.func)}`;
+      if (filters.source) url += `&file=${encodeURIComponent(filters.source)}`;
+      if (filters.type) url += `&type=${filters.type}`;
+      counter.textContent = 'loading...';
+      const res = await API.get(url);
+      if (!res.ok) { counter.textContent = 'error'; return; }
+      const d = res.data;
+      columns = d.columns || {}; strings = d.strings || {};
+      count = d.count || 0; serverTotal = d.total || 0;
+      pageCount = Math.max(1, Math.ceil(serverTotal / PAGE_SIZE));
+      counter.textContent = `${formatNumber(serverTotal)} remarks`;
+      pageLabel.textContent = `Page ${page + 1} of ${formatNumber(pageCount)}`;
+      prevBtn.disabled = page === 0; nextBtn.disabled = page >= pageCount - 1;
+      viewport.scrollTop = 0;
+      renderVisible();
+    };
 
+    fetchPage();
     return wrap;
   },
 };

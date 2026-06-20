@@ -22,6 +22,12 @@ public:
     return It->second;
   }
 
+  StringRef get(int64_t Idx) const {
+    if (Idx < 0 || static_cast<size_t>(Idx) >= Strings.size())
+      return "";
+    return Strings[static_cast<size_t>(Idx)];
+  }
+
   json::Array toJSON() const {
     json::Array Out;
     Out.reserve(Strings.size());

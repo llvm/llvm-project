@@ -19,6 +19,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cmath>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -32,6 +33,8 @@
 
 using namespace llvm;
 using namespace llvm::advisor;
+
+static std::mutex HeavyQueryMutex;
 
 static std::string renderJSON(const json::Value &Value) {
   std::string Body;
@@ -398,6 +401,7 @@ static bool isSummarySafeCapability(StringRef ID) {
 }
 
 static HTTPResult handleGetSummary(CoreClient &Client, StringRef SnapID) {
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
   json::Object Summary;
   Summary["snapshot_id"] = SnapID;
   auto Units = Client.listUnits(SnapID);
@@ -578,6 +582,12 @@ public:
     JOS.objectEnd();
   }
 
+  size_t size() const { return UnitColG.size(); }
+
+  RelationalStringTable Unit, Pass, Name, Function, File;
+  std::vector<int64_t> UnitColG, PassColG, NameColG, TypeColG, FuncColG,
+      FileColG, LineColG, ColumnColG, HotnessColG;
+
 private:
 
   static std::vector<int64_t> remapStrings(const json::Object *Strs,
@@ -604,45 +614,234 @@ private:
       return -1;
     return Map[Local];
   }
-
-  RelationalStringTable Unit, Pass, Name, Function, File;
-  std::vector<int64_t> UnitColG, PassColG, NameColG, TypeColG, FuncColG,
-      FileColG, LineColG, ColumnColG, HotnessColG;
 };
 
 } // namespace
 
+struct RelationalFilter {
+  StringRef Pass;
+  StringRef Name;
+  int64_t Type = -1;
+  StringRef Function;
+  StringRef File;
+  int64_t MinHotness = -1;
+};
+
 static HTTPResult handleGetRemarksRelational(CoreClient &Client,
-                                             StringRef SnapID) {
+                                             StringRef SnapID,
+                                             const RelationalFilter &Filter,
+                                             int64_t Offset, int64_t Limit) {
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
   SmallVector<UnitRecord, 64> Units =
       Client.storage().metadata().listUnits(SnapID);
   if (Units.empty())
     return makeJSONErrorStr(404, "snapshot has no captured units");
 
+  if (Offset < 0) Offset = 0;
+  if (Limit <= 0) Limit = 10000;
+  if (Limit > 100000) Limit = 100000;
+
   const SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
-  RelationalMerger Merger;
-  for (const UnitRecord &Unit : Units) {
-    Expected<json::Array> Results = Client.queryUnit(Unit.ID, Caps);
-    if (!Results) {
-      consumeError(Results.takeError());
-      continue;
+  bool HasFilter = !Filter.Pass.empty() || !Filter.Name.empty() ||
+                   Filter.Type >= 0 || !Filter.Function.empty() ||
+                   !Filter.File.empty() || Filter.MinHotness >= 0;
+
+  auto matchesFilter = [&](const json::Array *PassStrs,
+                           const json::Array *NameStrs,
+                           const json::Array *FuncStrs,
+                           const json::Array *FileStrs,
+                           int64_t PassIdx, int64_t NameIdx, int64_t Type,
+                           int64_t FuncIdx, int64_t FileIdx,
+                           int64_t Hotness) -> bool {
+    if (Filter.Type >= 0 && Type != Filter.Type) return false;
+    if (Filter.MinHotness >= 0 && Hotness < Filter.MinHotness) return false;
+    if (!Filter.Pass.empty()) {
+      if (PassIdx < 0 || PassIdx >= (int64_t)PassStrs->size()) return false;
+      StringRef S = (*PassStrs)[PassIdx].getAsString().value_or("");
+      if (!S.contains_insensitive(Filter.Pass)) return false;
     }
-    for (const json::Value &ResultValue : *Results) {
-      const json::Object *ResultObj = ResultValue.getAsObject();
-      if (!ResultObj)
+    if (!Filter.Name.empty()) {
+      if (NameIdx < 0 || NameIdx >= (int64_t)NameStrs->size()) return false;
+      StringRef S = (*NameStrs)[NameIdx].getAsString().value_or("");
+      if (!S.contains_insensitive(Filter.Name)) return false;
+    }
+    if (!Filter.Function.empty()) {
+      if (FuncIdx < 0 || FuncIdx >= (int64_t)FuncStrs->size()) return false;
+      StringRef S = (*FuncStrs)[FuncIdx].getAsString().value_or("");
+      if (!S.contains_insensitive(Filter.Function)) return false;
+    }
+    if (!Filter.File.empty()) {
+      if (FileIdx < 0 || FileIdx >= (int64_t)FileStrs->size()) return false;
+      StringRef S = (*FileStrs)[FileIdx].getAsString().value_or("");
+      if (!S.contains_insensitive(Filter.File)) return false;
+    }
+    return true;
+  };
+
+  auto getUnitResults = [&](const UnitRecord &U)
+      -> SmallVector<const json::Object *, 1> {
+    SmallVector<const json::Object *, 1> Out;
+    Expected<json::Array> Results = Client.queryUnit(U.ID, Caps);
+    if (!Results) { consumeError(Results.takeError()); return Out; }
+    for (const json::Value &RV : *Results) {
+      const json::Object *RO = RV.getAsObject();
+      if (!RO) continue;
+      if (RO->getString("capability").value_or("") != "llvm.remarks.relational")
         continue;
-      std::optional<StringRef> Capability = ResultObj->getString("capability");
-      if (!Capability || *Capability != "llvm.remarks.relational")
+      if (const json::Object *VO = RO->getObject("value"))
+        Out.push_back(VO);
+    }
+    return Out;
+  };
+
+  // Pass 1: count total matching rows (streaming, one unit at a time)
+  int64_t TotalMatching = 0;
+  for (const UnitRecord &U : Units) {
+    Expected<json::Array> Results = Client.queryUnit(U.ID, Caps);
+    if (!Results) { consumeError(Results.takeError()); continue; }
+    for (const json::Value &RV : *Results) {
+      const json::Object *RO = RV.getAsObject();
+      if (!RO || RO->getString("capability").value_or("") != "llvm.remarks.relational")
         continue;
-      if (const json::Object *ValueObj = ResultObj->getObject("value"))
-        Merger.absorb(*ValueObj);
+      const json::Object *VO = RO->getObject("value");
+      if (!VO) continue;
+      const json::Object *Cols = VO->getObject("columns");
+      const json::Object *Strs = VO->getObject("strings");
+      if (!Cols || !Strs) continue;
+      const json::Array *PassCol = Cols->getArray("pass");
+      if (!PassCol) continue;
+      size_t N = PassCol->size();
+      if (!HasFilter) { TotalMatching += N; continue; }
+      const json::Array *NameCol = Cols->getArray("name");
+      const json::Array *TypeCol = Cols->getArray("type");
+      const json::Array *FuncCol = Cols->getArray("function");
+      const json::Array *FileCol = Cols->getArray("file");
+      const json::Array *HotnessCol = Cols->getArray("hotness");
+      const json::Array *PassStrs = Strs->getArray("pass");
+      const json::Array *NameStrs = Strs->getArray("name");
+      const json::Array *FuncStrs = Strs->getArray("function");
+      const json::Array *FileStrs = Strs->getArray("file");
+      if (!NameCol || !TypeCol || !FuncCol || !FileCol || !HotnessCol ||
+          !PassStrs || !NameStrs || !FuncStrs || !FileStrs) continue;
+      for (size_t I = 0; I < N; ++I) {
+        int64_t PI = (*PassCol)[I].getAsInteger().value_or(-1);
+        int64_t NI = (*NameCol)[I].getAsInteger().value_or(-1);
+        int64_t T  = (*TypeCol)[I].getAsInteger().value_or(-1);
+        int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
+        int64_t FiI = (*FileCol)[I].getAsInteger().value_or(-1);
+        int64_t H  = (*HotnessCol)[I].getAsInteger().value_or(-1);
+        if (matchesFilter(PassStrs, NameStrs, FuncStrs, FileStrs, PI, NI, T, FI, FiI, H))
+          ++TotalMatching;
+      }
+    }
+  }
+
+  int64_t Count = std::min(Limit, std::max((int64_t)0, TotalMatching - Offset));
+
+  // Pass 2: collect only the page rows into a small merger
+  RelationalMerger Page;
+  int64_t Seen = 0;
+  int64_t Collected = 0;
+  for (const UnitRecord &U : Units) {
+    if (Collected >= Count) break;
+    Expected<json::Array> Results = Client.queryUnit(U.ID, Caps);
+    if (!Results) { consumeError(Results.takeError()); continue; }
+    for (const json::Value &RV : *Results) {
+      if (Collected >= Count) break;
+      const json::Object *RO = RV.getAsObject();
+      if (!RO || RO->getString("capability").value_or("") != "llvm.remarks.relational")
+        continue;
+      const json::Object *VO = RO->getObject("value");
+      if (!VO) continue;
+      const json::Object *Cols = VO->getObject("columns");
+      const json::Object *Strs = VO->getObject("strings");
+      if (!Cols || !Strs) continue;
+      const json::Array *PassCol = Cols->getArray("pass");
+      const json::Array *NameCol = Cols->getArray("name");
+      const json::Array *TypeCol = Cols->getArray("type");
+      const json::Array *FuncCol = Cols->getArray("function");
+      const json::Array *FileCol = Cols->getArray("file");
+      const json::Array *LineCol = Cols->getArray("line");
+      const json::Array *ColumnCol = Cols->getArray("column");
+      const json::Array *HotnessCol = Cols->getArray("hotness");
+      const json::Array *PassStrs = Strs->getArray("pass");
+      const json::Array *NameStrs = Strs->getArray("name");
+      const json::Array *FuncStrs = Strs->getArray("function");
+      const json::Array *FileStrs = Strs->getArray("file");
+      if (!PassCol || !NameCol || !TypeCol || !FuncCol || !FileCol ||
+          !LineCol || !ColumnCol || !HotnessCol || !PassStrs || !NameStrs ||
+          !FuncStrs || !FileStrs)
+        continue;
+      StringRef UnitID = VO->getString("unit_id").value_or(U.ID);
+      size_t N = PassCol->size();
+      for (size_t I = 0; I < N; ++I) {
+        if (Collected >= Count) break;
+        int64_t PI = (*PassCol)[I].getAsInteger().value_or(-1);
+        int64_t NI = (*NameCol)[I].getAsInteger().value_or(-1);
+        int64_t T  = (*TypeCol)[I].getAsInteger().value_or(-1);
+        int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
+        int64_t FiI = (*FileCol)[I].getAsInteger().value_or(-1);
+        int64_t H  = (*HotnessCol)[I].getAsInteger().value_or(-1);
+        if (HasFilter &&
+            !matchesFilter(PassStrs, NameStrs, FuncStrs, FileStrs, PI, NI, T, FI, FiI, H))
+          continue;
+        if (Seen < Offset) { ++Seen; continue; }
+        ++Seen;
+        Page.UnitColG.push_back(static_cast<int64_t>(Page.Unit.getOrAdd(UnitID)));
+        Page.PassColG.push_back(static_cast<int64_t>(
+            Page.Pass.getOrAdd(PI >= 0 ? (*PassStrs)[PI].getAsString().value_or("") : "")));
+        Page.NameColG.push_back(static_cast<int64_t>(
+            Page.Name.getOrAdd(NI >= 0 ? (*NameStrs)[NI].getAsString().value_or("") : "")));
+        Page.TypeColG.push_back(T);
+        Page.FuncColG.push_back(static_cast<int64_t>(
+            Page.Function.getOrAdd(FI >= 0 ? (*FuncStrs)[FI].getAsString().value_or("") : "")));
+        Page.FileColG.push_back(static_cast<int64_t>(
+            Page.File.getOrAdd(FiI >= 0 ? (*FileStrs)[FiI].getAsString().value_or("") : "")));
+        Page.LineColG.push_back((*LineCol)[I].getAsInteger().value_or(-1));
+        Page.ColumnColG.push_back((*ColumnCol)[I].getAsInteger().value_or(-1));
+        Page.HotnessColG.push_back(H);
+        ++Collected;
+      }
     }
   }
 
   std::string Body;
   raw_string_ostream OS(Body);
-  writeSuccessEnvelope(OS,
-                       [&](json::OStream &JOS) { Merger.write(JOS, SnapID); });
+  writeSuccessEnvelope(OS, [&](json::OStream &JOS) {
+    JOS.objectBegin();
+    JOS.attribute("snapshot_id", SnapID);
+    JOS.attribute("schema_version", 1);
+    JOS.attribute("total", TotalMatching);
+    JOS.attribute("offset", Offset);
+    JOS.attribute("limit", Limit);
+    JOS.attribute("count", Collected);
+
+    JOS.attributeBegin("strings");
+    JOS.objectBegin();
+    JOS.attributeBegin("unit");     Page.Unit.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.attributeBegin("pass");     Page.Pass.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.attributeBegin("name");     Page.Name.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.attributeBegin("function"); Page.Function.writeJSON(JOS); JOS.attributeEnd();
+    JOS.attributeBegin("file");     Page.File.writeJSON(JOS);     JOS.attributeEnd();
+    JOS.objectEnd();
+    JOS.attributeEnd();
+
+    JOS.attributeBegin("columns");
+    JOS.objectBegin();
+    writeInt64Column(JOS, "unit",     Page.UnitColG);
+    writeInt64Column(JOS, "pass",     Page.PassColG);
+    writeInt64Column(JOS, "name",     Page.NameColG);
+    writeInt64Column(JOS, "type",     Page.TypeColG);
+    writeInt64Column(JOS, "function", Page.FuncColG);
+    writeInt64Column(JOS, "file",     Page.FileColG);
+    writeInt64Column(JOS, "line",     Page.LineColG);
+    writeInt64Column(JOS, "column",   Page.ColumnColG);
+    writeInt64Column(JOS, "hotness",  Page.HotnessColG);
+    JOS.objectEnd();
+    JOS.attributeEnd();
+
+    JOS.objectEnd();
+  });
   OS.flush();
   return HTTPResult{200, "application/json", std::move(Body)};
 }
@@ -659,11 +858,28 @@ static HTTPResult handleGetQueryUnit(CoreClient &Client, StringRef UnitID,
 static HTTPResult handleGetQuerySnapshot(CoreClient &Client,
                                          StringRef SnapshotID,
                                          StringRef Capabilities) {
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
   SmallVector<std::string, 16> Caps = parseCapabilityList(Capabilities);
-  Expected<json::Array> R = Client.querySnapshot(SnapshotID, Caps);
-  if (!R)
-    return makeJSONError(400, R.takeError());
-  return makeJSONSuccess(200, std::move(*R));
+  llvm::erase_if(Caps, [](const std::string &C) {
+    return C == "llvm.remarks.detail";
+  });
+
+  SmallVector<UnitRecord, 64> Units =
+      Client.storage().metadata().listUnits(SnapshotID);
+  if (Units.empty())
+    return makeJSONErrorStr(404, "snapshot has no units");
+
+  static constexpr size_t MaxUnits = 200;
+  size_t Limit = std::min(Units.size(), MaxUnits);
+  json::Array Out;
+  for (size_t I = 0; I < Limit; ++I) {
+    Expected<json::Array> R = Client.queryUnit(Units[I].ID, Caps);
+    if (!R) { consumeError(R.takeError()); continue; }
+    Out.push_back(json::Object{{"unit_id", Units[I].ID},
+                               {"source_path", Units[I].SourcePath},
+                               {"results", std::move(*R)}});
+  }
+  return makeJSONSuccess(200, std::move(Out));
 }
 
 static HTTPResult handleGetCompare(CoreClient &Client, StringRef Before,
@@ -898,8 +1114,32 @@ Error llvm::advisor::HTTPServer::run() {
                     Segs[4] == "mappings" || Segs[4] == "link-units"))
             Res = handleGetEntities(Client, ResolvedSnap, Segs[4]);
           else if (Segs.size() == 6 && Segs[4] == "remarks" &&
-                   Segs[5] == "relational")
-            Res = handleGetRemarksRelational(Client, ResolvedSnap);
+                   Segs[5] == "relational") {
+            RelationalFilter Filter;
+            auto getParam = [&](StringRef K) -> StringRef {
+              auto It = QueryParams.find(K);
+              return It != QueryParams.end() ? StringRef(It->second) : "";
+            };
+            Filter.Pass = getParam("pass");
+            Filter.Name = getParam("name");
+            Filter.Function = getParam("function");
+            Filter.File = getParam("file");
+            auto TypeIt = QueryParams.find("type");
+            if (TypeIt != QueryParams.end())
+              StringRef(TypeIt->second).getAsInteger(10, Filter.Type);
+            auto HotIt = QueryParams.find("min_hotness");
+            if (HotIt != QueryParams.end())
+              StringRef(HotIt->second).getAsInteger(10, Filter.MinHotness);
+            int64_t Offset = 0, Limit = 10000;
+            auto OffIt = QueryParams.find("offset");
+            if (OffIt != QueryParams.end())
+              StringRef(OffIt->second).getAsInteger(10, Offset);
+            auto LimIt = QueryParams.find("limit");
+            if (LimIt != QueryParams.end())
+              StringRef(LimIt->second).getAsInteger(10, Limit);
+            Res = handleGetRemarksRelational(Client, ResolvedSnap, Filter,
+                                            Offset, Limit);
+          }
         } else if (Path == "/api/v1/jobs")
           Res = handleGetJobs(Client);
         else if (IsAPI && Segs.size() == 4 && Segs[2] == "jobs")
