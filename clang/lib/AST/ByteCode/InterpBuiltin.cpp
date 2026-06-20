@@ -100,7 +100,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   if (T == PT_IntAPS) {
     unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
-    Result.copy(Val);
+    Result.copy(Val.extOrTrunc(BitWidth));
     S.Stk.push<IntegralAP<true>>(Result);
     return;
   }
@@ -108,12 +108,12 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   if (T == PT_IntAP) {
     unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
-    Result.copy(Val);
+    Result.copy(Val.extOrTrunc(BitWidth));
     S.Stk.push<IntegralAP<false>>(Result);
     return;
   }
 
-  if (QT->isSignedIntegerOrEnumerationType()) {
+  if (isSignedType(*T)) {
     int64_t V = Val.getSExtValue();
     INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
   } else {
@@ -2580,7 +2580,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   }
 
   // Check if we're currently running an initializer.
-  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+  if (S.initializingBlock(Ptr.block()))
     return Error(2);
   if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
     return Error(2);
