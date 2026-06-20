@@ -338,23 +338,24 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   uint64_t RecordSize = CurrentSize;
   AllocationLock.unlock();
 
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
-  if (!DeviceMemoryMB)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                         "creating MemoryBuffer for device memory");
+  std::unique_ptr<WritableMemoryBuffer> DeviceMB;
+  if (RecordSize) {
+    DeviceMB = WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
+    if (!DeviceMB)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "creating MemoryBuffer for device memory");
 
-  if (auto Err = Device.dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
-                                     StartAddr, RecordSize, nullptr))
-    return Err;
-
-  StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), RecordSize);
+    if (auto Err = Device.dataRetrieve(DeviceMB->getBufferStart(), StartAddr,
+                                       RecordSize, nullptr))
+      return Err;
+  }
 
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
-  OS << DeviceMemory;
+  if (DeviceMB)
+    OS.write(DeviceMB->getBufferStart(), RecordSize);
   OS.close();
   return Plugin::success();
 }
@@ -389,13 +390,12 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
     NumGlobals++;
   }
 
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
+  auto GlobalsMB = WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
   if (!GlobalsMB)
     return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                          "creating MemoryBuffer for globals memory");
 
-  void *BufferPtr = GlobalsMB.get()->getBufferStart();
+  void *BufferPtr = GlobalsMB->getBufferStart();
   *((uint32_t *)(BufferPtr)) = NumGlobals;
   BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
@@ -418,16 +418,15 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
       return Err;
     BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
-  assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
+  assert(BufferPtr == GlobalsMB->getBufferEnd() &&
          "Buffer over or under-filled.");
   assert(TotalSize == (uint64_t)utils::getPtrDiff(
-                          BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+                          BufferPtr, GlobalsMB->getBufferStart()) &&
          "Buffer size mismatch.");
 
-  StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), TotalSize);
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
-  OS << GlobalsMemory;
+  OS.write(GlobalsMB->getBufferStart(), TotalSize);
   OS.close();
   return Plugin::success();
 }
