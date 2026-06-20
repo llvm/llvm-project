@@ -6503,7 +6503,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     StringRef FcValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fc);
     // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
     // handle this as part of the SLASH_Fa handling below.
-    return C.addResultFile(C.getArgs().MakeArgString(FcValue.str()), &JA);
+    return C.addResultFile(C.getArgs().MakeArgString(FcValue), &JA);
   }
 
   if ((JA.getType() == types::TY_Object &&
@@ -6519,7 +6519,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     // that is using Fc or just printing disassembly.
     if (TC.isLastOutputProducingJob(C.getArgs(), JA.getKind()) &&
         !FoValue.empty())
-      return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+      return C.addResultFile(C.getArgs().MakeArgString(FoValue), &JA);
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
     const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);

@@ -6276,7 +6276,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(isa<ConstantPointerNull>(Promise) || isa<AllocaInst>(Promise),
           "promise argument must refer to an alloca");
 
-    auto *CoroAddr = Call.getArgOperand(2)->stripPointerCasts();
+    auto *CoroAddr = Call.getArgOperand(2)->stripPointerCastsAndAliases();
     bool BeforeCoroEarly = isa<ConstantPointerNull>(CoroAddr);
     Check(BeforeCoroEarly || isa<Function>(CoroAddr),
           "coro argument must refer to a function");
