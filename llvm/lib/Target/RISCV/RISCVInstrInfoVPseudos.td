@@ -538,24 +538,35 @@ defset list<VTypeInfoToFraction> AllFractionableVF8IntVectors = {
   def : VTypeInfoToFraction<VI64M8, VI8M1>;
 }
 
-defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
-  def : VTypeInfoToWide<VI8MF8, VF16MF4>;
-  def : VTypeInfoToWide<VI8MF4, VF16MF2>;
-  def : VTypeInfoToWide<VI8MF2, VF16M1>;
-  def : VTypeInfoToWide<VI8M1, VF16M2>;
-  def : VTypeInfoToWide<VI8M2, VF16M4>;
-  def : VTypeInfoToWide<VI8M4, VF16M8>;
+defset list<VTypeInfoToWide> AllWidenableIntToFloatAndBF16Vectors = {
+  defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
+    def : VTypeInfoToWide<VI8MF8, VF16MF4>;
+    def : VTypeInfoToWide<VI8MF4, VF16MF2>;
+    def : VTypeInfoToWide<VI8MF2, VF16M1>;
+    def : VTypeInfoToWide<VI8M1, VF16M2>;
+    def : VTypeInfoToWide<VI8M2, VF16M4>;
+    def : VTypeInfoToWide<VI8M4, VF16M8>;
 
-  def : VTypeInfoToWide<VI16MF4, VF32MF2>;
-  def : VTypeInfoToWide<VI16MF2, VF32M1>;
-  def : VTypeInfoToWide<VI16M1, VF32M2>;
-  def : VTypeInfoToWide<VI16M2, VF32M4>;
-  def : VTypeInfoToWide<VI16M4, VF32M8>;
+    def : VTypeInfoToWide<VI16MF4, VF32MF2>;
+    def : VTypeInfoToWide<VI16MF2, VF32M1>;
+    def : VTypeInfoToWide<VI16M1, VF32M2>;
+    def : VTypeInfoToWide<VI16M2, VF32M4>;
+    def : VTypeInfoToWide<VI16M4, VF32M8>;
 
-  def : VTypeInfoToWide<VI32MF2, VF64M1>;
-  def : VTypeInfoToWide<VI32M1, VF64M2>;
-  def : VTypeInfoToWide<VI32M2, VF64M4>;
-  def : VTypeInfoToWide<VI32M4, VF64M8>;
+    def : VTypeInfoToWide<VI32MF2, VF64M1>;
+    def : VTypeInfoToWide<VI32M1, VF64M2>;
+    def : VTypeInfoToWide<VI32M2, VF64M4>;
+    def : VTypeInfoToWide<VI32M4, VF64M8>;
+  }
+
+  defset list<VTypeInfoToWide> AllWidenableIntToBFloatVectors = {
+    def : VTypeInfoToWide<VI8MF8, VBF16MF4>;
+    def : VTypeInfoToWide<VI8MF4, VBF16MF2>;
+    def : VTypeInfoToWide<VI8MF2, VBF16M1>;
+    def : VTypeInfoToWide<VI8M1, VBF16M2>;
+    def : VTypeInfoToWide<VI8M2, VBF16M4>;
+    def : VTypeInfoToWide<VI8M4, VBF16M8>;
+  }
 }
 
 // This class holds the record of the RISCVVPseudoTable below.
@@ -4827,9 +4838,13 @@ multiclass VPatConversionRTZ<string intrinsic,
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist, bit isSEWAware = 0,
-                          list<Predicate> ExtraPreds = []> {
+                          list<Predicate> ExtraPreds = [],
+                          bit requireMinimal = false> {
   foreach vti = vtilist in
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    let Predicates = !listconcat(ExtraPreds,
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<vti>.Predicates,
+                                     GetVTypePredicates<vti>.Predicates)) in
     defm : VPatBinary<intrinsic,
                       !if(isSEWAware,
                           instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
@@ -4975,13 +4990,18 @@ multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
 
 multiclass VPatBinaryW_VV<string intrinsic, string instruction,
                           list<VTypeInfoToWide> vtilist,
-                          list<Predicate> ExtraPreds = []> {
+                          list<Predicate> ExtraPreds = [],
+                          bit requireMinimal = false> {
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(ExtraPreds,
-                                 GetVTypePredicates<Vti>.Predicates,
-                                 GetVTypePredicates<Wti>.Predicates) in
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<Vti>.Predicates,
+                                     GetVTypePredicates<Vti>.Predicates),
+                                 !if(requireMinimal,
+                                     GetVTypeMinimalPredicates<Wti>.Predicates,
+                                     GetVTypePredicates<Wti>.Predicates)) in
     defm : VPatBinary<intrinsic, instruction # "_VV_" # Vti.LMul.MX,
                       Wti.Vector, Vti.Vector, Vti.Vector, Vti.Mask,
                       Vti.Log2SEW, Wti.RegClass,

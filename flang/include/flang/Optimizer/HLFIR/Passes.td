@@ -58,7 +58,22 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                         "argument of hlfir.eval_in_mem, which may block "
                         "some existing MLIR transformations (e.g. CSE) "
                         "that otherwise would have been possible across "
-                        "the hlfir.matmul.">];
+                        "the hlfir.matmul.">,
+                 Option<"fpMaxminBehavior", "fp-maxmin-behavior",
+                        "Fortran::common::FPMaxminBehavior",
+                        /*default=*/"Fortran::common::FPMaxminBehavior::Legacy",
+                        "This option defines the FP max/min behavior.",
+                        [{::llvm::cl::values(
+               clEnumValN(Fortran::common::FPMaxminBehavior::Legacy,
+                          "legacy", "cmp+select"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                          "portable", "same as legacy, except that "
+                          "arith.max/minnumf may be used when nnan "
+                          "and nsz fast math flags are enabled"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                          "extremum", "arith.max/minimumf"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                          "extremenum", "arith.max/minnumf"))}]>];
 }
 
 def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
@@ -69,8 +84,24 @@ def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
 }
 
+def SeparateAllocatableAssign : Pass<"separate-allocatable-assign"> {
+  let summary = "Separate reallocation from allocatable array assignments";
+  let description = [{
+    Transform `hlfir.assign %rhs to %lhs realloc` into a conditional
+    reallocation of the LHS followed by a non-realloc `hlfir.assign`.
+    This separates host-side allocation from device-side computation
+    for OpenACC/OpenMP offloading and runs at all optimization levels.
+  }];
+}
+
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
+  let options = [Option<
+      "onlyScalarRHS", "only-scalar-rhs", "bool", /*default=*/"false",
+      "Only inline assignments where RHS is a numeric or logical scalar "
+      "broadcast "
+      "to an array LHS. Used at O0 to avoid runtime calls in "
+      "device code without inlining all array assignments.">];
 }
 
 def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {

@@ -142,7 +142,6 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
-  bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
   // beginning of the output section this section was assigned to.
@@ -377,6 +376,8 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 } // namespace section_names
 
 void addInputSection(InputSection *inputSection);
+
+uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type, int64_t offset);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);

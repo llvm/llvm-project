@@ -136,9 +136,6 @@ template <> struct DenseMapInfo<clang::tok::PPKeywordKind> {
   static inline clang::tok::PPKeywordKind getEmptyKey() {
     return clang::tok::PPKeywordKind::pp_not_keyword;
   }
-  static inline clang::tok::PPKeywordKind getTombstoneKey() {
-    return clang::tok::PPKeywordKind::NUM_PP_KEYWORDS;
-  }
   static unsigned getHashValue(const clang::tok::PPKeywordKind &Val) {
     return static_cast<unsigned>(Val);
   }

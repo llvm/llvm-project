@@ -15,10 +15,12 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -109,6 +111,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPDynGroupprivateClause *>(C);
   case OMPC_message:
     return static_cast<const OMPMessageClause *>(C);
+  case OMPC_transparent:
+    return static_cast<const OMPTransparentClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -127,7 +131,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadset:
-  case OMPC_transparent:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
   case OMPC_flush:
@@ -983,6 +986,26 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
                                             unsigned NumSizes) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumSizes));
   return new (Mem) OMPSizesClause(NumSizes);
+}
+
+OMPCountsClause *OMPCountsClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+    std::optional<unsigned> FillIdx, SourceLocation FillLoc) {
+  OMPCountsClause *Clause = CreateEmpty(C, Counts.size());
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setCountsRefs(Counts);
+  Clause->setOmpFillIndex(FillIdx);
+  Clause->setOmpFillLoc(FillLoc);
+  return Clause;
+}
+
+OMPCountsClause *OMPCountsClause::CreateEmpty(const ASTContext &C,
+                                              unsigned NumCounts) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumCounts));
+  return new (Mem) OMPCountsClause(NumCounts);
 }
 
 OMPPermutationClause *OMPPermutationClause::Create(const ASTContext &C,
@@ -1983,6 +2006,19 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
+  OS << "counts(";
+  std::optional<unsigned> FillIdx = Node->getOmpFillIndex();
+  ArrayRef<Expr *> Refs = Node->getCountsRefs();
+  llvm::interleaveComma(llvm::seq<unsigned>(Refs.size()), OS, [&](unsigned I) {
+    if (FillIdx && I == *FillIdx)
+      OS << "omp_fill";
+    else
+      Refs[I]->printPretty(OS, nullptr, Policy, 0);
+  });
+  OS << ")";
+}
+
 void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
   OS << "permutation(";
   llvm::interleaveComma(Node->getArgsRefs(), OS, [&](const Expr *E) {
@@ -2290,8 +2326,20 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
-    OS << "num_teams";
-    VisitOMPClauseList(Node, '(');
+    OS << "num_teams(";
+    // Handle lower-bound:upper-bound syntax when there are exactly 2
+    // expressions
+    if (Node->varlist_size() == 2) {
+      llvm::interleave(
+          Node->varlist(), OS,
+          [&](const auto *Expr) { Expr->printPretty(OS, nullptr, Policy, 0); },
+          ":");
+    } else {
+      // For single expression or other cases, use comma-separated list
+      llvm::interleaveComma(Node->varlist(), OS, [&](const auto *Expr) {
+        Expr->printPretty(OS, nullptr, Policy, 0);
+      });
+    }
     OS << ")";
   }
 }

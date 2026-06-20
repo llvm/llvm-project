@@ -31,14 +31,24 @@ end program
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   InlineElementals
+! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
@@ -115,6 +125,7 @@ end program
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
+! ALL-NEXT:     RematerializeFIRBoxOpsPass
 ! ALL-NEXT:   'gpu.module' Pipeline
 ! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
 ! ALL-NEXT:   'func.func' Pipeline

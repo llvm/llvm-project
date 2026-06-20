@@ -317,10 +317,6 @@ struct DenseMapInfo<mlir::Type> {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
   }
-  static mlir::Type getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::Type val) { return mlir::hash_value(val); }
   static bool isEqual(mlir::Type LHS, mlir::Type RHS) { return LHS == RHS; }
 };
@@ -330,10 +326,6 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value &&
     : public DenseMapInfo<mlir::Type> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static T getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
     return T::getFromOpaquePointer(pointer);
   }
 };

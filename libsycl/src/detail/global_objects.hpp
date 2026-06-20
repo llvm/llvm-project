@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of all the global objects of libsycl.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_GLOBAL_OBJECTS
 #define _LIBSYCL_GLOBAL_OBJECTS

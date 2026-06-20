@@ -139,10 +139,6 @@ struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
     auto pair = PairInfo::getEmptyKey();
     return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
   }
-  static T getTombstoneKey() {
-    auto pair = PairInfo::getTombstoneKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
   static unsigned getHashValue(T val) {
     return PairInfo::getHashValue({val.parentThreadID, val.parentPass});
   }

@@ -125,6 +125,13 @@ static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
   return DecodeStatus::Success;
 }
 
+static DecodeStatus DecodeScale(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                                const void *Decoder) {
+  assert(isUInt<2>(Imm));
+  Inst.addOperand(MCOperand::createImm(1 << Imm));
+  return DecodeStatus::Success;
+}
+
 #include "M68kGenDisassemblerTables.inc"
 
 #undef DecodeFPDR32RegisterClass

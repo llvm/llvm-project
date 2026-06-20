@@ -1908,7 +1908,7 @@ bool BinaryFunction::scanExternalRefs() {
 }
 
 bool BinaryFunction::validateInternalBranches() {
-  if (!isSimple() || TrapsOnEntry)
+  if (!hasInstructions() || !isSimple() || TrapsOnEntry)
     return true;
 
   for (const auto &KV : Labels) {
@@ -2834,8 +2834,12 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -2975,8 +2979,12 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      return false;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3126,8 +3134,12 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
       break;
@@ -3620,7 +3632,7 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
-void BinaryFunction::fixBranches() {
+void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
   assert(isSimple() && "Expected function with valid CFG.");
 
   auto &MIB = BC.MIB;
@@ -3679,7 +3691,7 @@ void BinaryFunction::fixBranches() {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (!MIB->isReversibleBranch(*CondBranch)) {
+        if (!MIB->isReversibleBranch(*CondBranch, DIM)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3689,7 +3701,8 @@ void BinaryFunction::fixBranches() {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
+        MIB->reverseBranchCondition(BB, *CondBranch, TSuccessor->getLabel(),
+                                    Ctx, DIM);
         return true;
       };
 
@@ -3885,8 +3898,9 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   return nullptr;
 }
 
-uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
-  if (!isMultiEntry())
+std::optional<uint64_t>
+BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
+  if (!isMultiEntry() || !Symbol)
     return 0;
 
   for (const MCSymbol *FunctionSymbol : getSymbols())
@@ -3912,8 +3926,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-
-  llvm_unreachable("symbol not found");
+  return std::nullopt;
 }
 
 bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
@@ -4631,8 +4644,10 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
 
   // Check if the address is associated with an instruction that is tracked
   // by address translation.
-  if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
-    return *OutputAddress;
+  if (BC.hasIOAddressMap()) {
+    if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
+      return *OutputAddress;
+  }
 
   // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
   //        intact. Instead we can use pseudo instructions and/or annotations.
@@ -4843,7 +4858,9 @@ bool BinaryFunction::isAArch64Veneer() const {
 
 bool BinaryFunction::isPossibleVeneer() const {
   return BC.isAArch64() &&
-         (isAArch64Veneer() || getOneName().starts_with("__AArch64"));
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64") ||
+          getOneName().starts_with("e843419") ||
+          getOneName().starts_with("__CortexA53843419_"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,

@@ -28,6 +28,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -319,7 +320,7 @@ bool X86_64::relaxOnce(int pass) const {
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
-  // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
+  // If the max VA is under 2^31, GOTPCRELX relocations cannot overflow. In
   // -pie/-shared, the condition can be relaxed to test the max VA difference as
   // there is no R_RELAX_GOT_PC_NOPIC.
   if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && ctx.arg.isPic))
@@ -353,6 +354,13 @@ bool X86_64::relaxOnce(int pass) const {
     }
   }
   return changed;
+}
+
+void X86_64::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
 }
 
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
@@ -395,7 +403,7 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
   // in the psABI and glibc before Aug 2021 used the entry to compute run-time
   // load address of the shared object (note that this is relevant for linking
   // ld.so, not any other program).
-  write64le(buf, ctx.mainPart->dynamic->getVA());
+  write64le(buf, ctx.in.dynamic->getVA());
 }
 
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {

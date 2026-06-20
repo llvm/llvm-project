@@ -112,9 +112,6 @@ template <> struct DenseMapInfo<MCRegister> {
   static inline MCRegister getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }
-  static inline MCRegister getTombstoneKey() {
-    return DenseMapInfo<unsigned>::getTombstoneKey();
-  }
   static unsigned getHashValue(const MCRegister &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }

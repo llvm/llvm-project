@@ -23,6 +23,8 @@
 namespace clang {
 namespace dependencies {
 
+class DependencyScanningService;
+
 using DependencyDirectivesTy =
     SmallVector<dependency_directives_scan::Directive, 20>;
 
@@ -370,7 +372,7 @@ public:
   static const char ID;
 
   DependencyScanningWorkerFilesystem(
-      DependencyScanningFilesystemSharedCache &SharedCache,
+      DependencyScanningService &Service,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
@@ -381,12 +383,6 @@ public:
                               SmallVectorImpl<char> &Output) override;
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
-
-  /// Make it so that no paths bypass this VFS.
-  void resetBypassedPathPrefix() { BypassedPathPrefix.reset(); }
-  /// Set the prefix for paths that should bypass this VFS and go straight to
-  /// the underlying VFS.
-  void setBypassedPathPrefix(StringRef Prefix) { BypassedPathPrefix = Prefix; }
 
   /// Returns entry for the given filename.
   ///
@@ -456,10 +452,7 @@ private:
   /// Returns entry associated with the unique ID in the shared cache or nullptr
   /// if none is found.
   const CachedFileSystemEntry *
-  findSharedEntryByUID(llvm::vfs::Status Stat) const {
-    return SharedCache.getShardForUID(Stat.getUniqueID())
-        .findEntryByUID(Stat.getUniqueID());
-  }
+  findSharedEntryByUID(llvm::vfs::Status Stat) const;
 
   /// Associates the given entry with the filename in the local cache and
   /// returns it.
@@ -473,20 +466,14 @@ private:
   /// some. Otherwise, constructs new one with the given error code, associates
   /// it with the filename and returns the result.
   const CachedFileSystemEntry &
-  getOrEmplaceSharedEntryForFilename(StringRef Filename, std::error_code EC) {
-    return SharedCache.getShardForFilename(Filename)
-        .getOrEmplaceEntryForFilename(Filename, EC);
-  }
+  getOrEmplaceSharedEntryForFilename(StringRef Filename, std::error_code EC);
 
   /// Returns entry associated with the filename in the shared cache if there is
   /// some. Otherwise, associates the given entry with the filename and returns
   /// it.
   const CachedFileSystemEntry &
   getOrInsertSharedEntryForFilename(StringRef Filename,
-                                    const CachedFileSystemEntry &Entry) {
-    return SharedCache.getShardForFilename(Filename)
-        .getOrInsertEntryForFilename(Filename, Entry);
-  }
+                                    const CachedFileSystemEntry &Entry);
 
   void printImpl(raw_ostream &OS, PrintType Type,
                  unsigned IndentLevel) const override {
@@ -495,18 +482,11 @@ private:
     getUnderlyingFS().print(OS, Type, IndentLevel + 1);
   }
 
-  /// Whether this path should bypass this VFS and go straight to the underlying
-  /// VFS.
-  bool shouldBypass(StringRef Path) const;
-
-  /// The global cache shared between worker threads.
-  DependencyScanningFilesystemSharedCache &SharedCache;
+  /// The service associated with this VFS.
+  DependencyScanningService &Service;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;
-
-  /// Prefix of paths that should go straight to the underlying VFS.
-  std::optional<std::string> BypassedPathPrefix;
 
   /// The working directory to use for making relative paths absolute before
   /// using them for cache lookups.

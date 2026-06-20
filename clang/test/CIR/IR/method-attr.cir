@@ -2,7 +2,7 @@
 
 !void = !cir.void
 
-!rec_Foo = !cir.record<struct "Foo" {!cir.vptr}>
+!rec_Foo = !cir.struct<"Foo" {!cir.vptr}>
 !s32i = !cir.int<s, 32>
 module {
   cir.func private @_ZN3Foo2m1Ei(!s32i)

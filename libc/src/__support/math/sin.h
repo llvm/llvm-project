@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr double sin(double x) {
+LIBC_INLINE double sin(double x) {
   using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
@@ -142,7 +142,7 @@ LIBC_INLINE constexpr double sin(double x) {
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
 
-  Float128 u_f128, sin_u, cos_u;
+  DFloat128 u_f128, sin_u, cos_u;
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT))
     u_f128 = range_reduction_small_f128(x);
   else
@@ -150,22 +150,22 @@ LIBC_INLINE constexpr double sin(double x) {
 
   math::sincos_eval_internal::sincos_eval(u_f128, sin_u, cos_u);
 
-  auto get_sin_k = [](unsigned kk) -> Float128 {
+  auto get_sin_k = [](unsigned kk) -> DFloat128 {
     unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-    Float128 ans = SIN_K_PI_OVER_128_F128[idx];
+    DFloat128 ans = SIN_K_PI_OVER_128_F128[idx];
     if (kk & 128)
       ans.sign = Sign::NEG;
     return ans;
   };
 
   // cos(k * pi/128) = sin(k * pi/128 + pi/2) = sin((k + 64) * pi/128).
-  Float128 sin_k_f128 = get_sin_k(k);
-  Float128 cos_k_f128 = get_sin_k(k + 64);
+  DFloat128 sin_k_f128 = get_sin_k(k);
+  DFloat128 cos_k_f128 = get_sin_k(k + 64);
 
   // sin(x) = sin(k * pi/128 + u)
   //        = sin(u) * cos(k*pi/128) + cos(u) * sin(k*pi/128)
-  Float128 r = fputil::quick_add(fputil::quick_mul(sin_k_f128, cos_u),
-                                 fputil::quick_mul(cos_k_f128, sin_u));
+  DFloat128 r = fputil::quick_add(fputil::quick_mul(sin_k_f128, cos_u),
+                                  fputil::quick_mul(cos_k_f128, sin_u));
 
   // TODO: Add assertion if Ziv's accuracy tests fail in debug mode.
   // https://github.com/llvm/llvm-project/issues/96452.

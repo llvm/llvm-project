@@ -391,12 +391,6 @@ struct DenseMapInfo<clang::CanonicalDeclPtr<decl_type>> {
     return P;
   }
 
-  static CanonicalDeclPtr getTombstoneKey() {
-    CanonicalDeclPtr P;
-    P.Ptr = BaseInfo::getTombstoneKey();
-    return P;
-  }
-
   static unsigned getHashValue(const CanonicalDeclPtr &P) {
     return BaseInfo::getHashValue(P);
   }

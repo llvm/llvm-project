@@ -42,8 +42,16 @@ MlirDynamicOpTrait mlirDynamicOpTraitIsTerminatorCreate() {
   return wrap(new DynamicOpTraits::IsTerminator());
 }
 
+MlirTypeID mlirDynamicOpTraitIsTerminatorGetTypeID() {
+  return wrap(DynamicOpTraits::IsTerminator::getStaticTypeID());
+}
+
 MlirDynamicOpTrait mlirDynamicOpTraitNoTerminatorCreate() {
   return wrap(new DynamicOpTraits::NoTerminator());
+}
+
+MlirTypeID mlirDynamicOpTraitNoTerminatorGetTypeID() {
+  return wrap(DynamicOpTraits::NoTerminator::getStaticTypeID());
 }
 
 void mlirDynamicOpTraitDestroy(MlirDynamicOpTrait dynamicOpTrait) {
@@ -129,6 +137,11 @@ MlirDynamicTypeDefinition mlirDynamicTypeGetTypeDef(MlirType type) {
   return wrap(llvm::cast<mlir::DynamicType>(unwrap(type)).getTypeDef());
 }
 
+MlirTypeID
+mlirDynamicTypeDefinitionGetTypeID(MlirDynamicTypeDefinition typeDef) {
+  return wrap(unwrap(typeDef)->getTypeID());
+}
+
 MlirStringRef
 mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef) {
   return wrap(unwrap(typeDef)->getName());
@@ -174,6 +187,11 @@ MlirAttribute mlirDynamicAttrGetParam(MlirAttribute attr, intptr_t index) {
 
 MlirDynamicAttrDefinition mlirDynamicAttrGetAttrDef(MlirAttribute attr) {
   return wrap(llvm::cast<mlir::DynamicAttr>(unwrap(attr)).getAttrDef());
+}
+
+MlirTypeID
+mlirDynamicAttrDefinitionGetTypeID(MlirDynamicAttrDefinition attrDef) {
+  return wrap(unwrap(attrDef)->getTypeID());
 }
 
 MlirStringRef

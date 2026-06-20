@@ -166,9 +166,6 @@ template <> struct DenseMapInfo<Register> {
   static inline Register getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }
-  static inline Register getTombstoneKey() {
-    return DenseMapInfo<unsigned>::getTombstoneKey();
-  }
   static unsigned getHashValue(const Register &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }

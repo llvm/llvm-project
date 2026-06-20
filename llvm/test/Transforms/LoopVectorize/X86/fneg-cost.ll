@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @fneg_cost(ptr %a, i64 %n) {
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4

@@ -119,10 +119,6 @@ template <> struct DenseMapInfo<clang::clangd::dex::Token> {
     return {clang::clangd::dex::Token::Kind::Sentinel, "EmptyKey"};
   }
 
-  static inline clang::clangd::dex::Token getTombstoneKey() {
-    return {clang::clangd::dex::Token::Kind::Sentinel, "TombstoneKey"};
-  }
-
   static unsigned getHashValue(const clang::clangd::dex::Token &Tag) {
     return hash_value(Tag);
   }

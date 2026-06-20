@@ -30,18 +30,22 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// Given the name of an identifier, check to see if it matches the name of a
 /// global variable. If so, find the ValueObject for that global variable, and
 /// create and return an IdentifierInfo object containing all the relevant
-/// informatin about it.
+/// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
 
+/// Given the name of an identifier, attempt to find an enumeration value.
+/// If found, return a ValueObject with a const scalar value of the enum.
+lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
+                                    ExecutionContextScope &ctx_scope);
+
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
               std::shared_ptr<StackFrame> frame_sp,
-              lldb::DynamicValueType use_dynamic, bool use_synthetic,
-              bool fragile_ivar, bool check_ptr_vs_member);
+              lldb::DynamicValueType use_dynamic, uint32_t options);
 
   /// Evaluate an ASTNode.
   /// \returns A non-null lldb::ValueObjectSP or an Error.
@@ -57,6 +61,7 @@ private:
   Visit(const IdentifierNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const BinaryOpNode &node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode &node) override;
   llvm::Expected<lldb::ValueObjectSP>
@@ -73,10 +78,62 @@ private:
   /// includes array-to-pointer and integral promotion for eligible types.
   llvm::Expected<lldb::ValueObjectSP>
   UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location);
+
+  /// If `lhs_type` is unsigned and `rhs_type` is signed, check whether it
+  /// can represent all of the values of `lhs_type`.
+  /// If not, then promote `rhs_type` to the unsigned version of its type.
+  /// This expects that Rank(lhs_type) < Rank(rhs_type).
+  /// \returns Unchanged `rhs_type` or promoted unsigned version.
+  llvm::Expected<CompilerType> PromoteSignedInteger(CompilerType &lhs_type,
+                                                    CompilerType &rhs_type);
+
+  /// Perform an arithmetic conversion on two values from an arithmetic
+  /// operation.
+  llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                                    lldb::ValueObjectSP &rhs,
+                                                    uint32_t location);
+
+  /// Add or subtract the offset to the pointer according to the pointee type
+  /// byte size.
+  /// \returns A new `ValueObject` with a new pointer value.
+  llvm::Expected<lldb::ValueObjectSP> PointerOffset(lldb::ValueObjectSP ptr,
+                                                    lldb::ValueObjectSP offset,
+                                                    BinaryOpKind operation,
+                                                    uint32_t location);
+
+  llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
+                                                       lldb::ValueObjectSP lhs,
+                                                       lldb::ValueObjectSP rhs,
+                                                       CompilerType result_type,
+                                                       uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                      lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                            uint32_t location);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryMultiplication(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                               uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryDivision(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                          uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
                   const IntegerLiteralNode &literal);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateAssignment(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                     uint32_t location);
 
   /// A helper function for VerifyCastType (below). This performs
   /// arithmetic-specific checks. It should only be called if the target_type
@@ -101,8 +158,9 @@ private:
   std::shared_ptr<StackFrame> m_exe_ctx_scope;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
+  bool m_allow_var_updates;
+  bool m_allow_globals = true;
 };
 
 } // namespace lldb_private::dil

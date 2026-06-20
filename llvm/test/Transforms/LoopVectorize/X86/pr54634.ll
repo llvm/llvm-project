@@ -4,11 +4,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:10:11:12:13"
 target triple = "x86_64-unknown-linux-gnu"
 
-@jlplt_ijl_alloc_array_1d_10294_got = external dso_local local_unnamed_addr global ptr
+@jlplt_ijl_alloc_array_1d_10294_got = external global ptr
 
-define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) local_unnamed_addr #0 {
+define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0 {
 ; CHECK-LABEL: define ptr addrspace(10) @japi1_vect_42283(
-; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = load atomic ptr, ptr @jlplt_ijl_alloc_array_1d_10294_got unordered, align 8
@@ -37,9 +37,9 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
-; CHECK-NEXT:    [[STEP_ADD5:%.*]] = add <4 x i64> [[STEP_ADD4]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add nuw <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD5:%.*]] = add nuw <4 x i64> [[STEP_ADD4]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[VEC_IND]], i32 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], <4 x i64> [[STEP_ADD4]], i32 0
@@ -120,7 +120,7 @@ top:
   %.unpack2 = load i64, ptr addrspace(10) %.elt1, align 8, !tbaa !8
   br label %L26
 
-L26:                                              ; preds = %L26, %top
+L26:
   %value_phi5 = phi i64 [ 0, %top ], [ %8, %L26 ]
   %.repack = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) %7, i64 %value_phi5, i32 0
   store ptr addrspace(10) %.unpack, ptr addrspace(13) %.repack, align 8, !tbaa !10
@@ -130,7 +130,7 @@ L26:                                              ; preds = %L26, %top
   %.not = icmp eq i64 %value_phi5, %2
   br i1 %.not, label %L44, label %L26
 
-L44:                                              ; preds = %L26
+L44:
   ret ptr addrspace(10) null
 }
 

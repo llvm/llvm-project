@@ -874,11 +874,6 @@ struct DenseMapInfo<AAMDNodes> {
                      nullptr, nullptr);
   }
 
-  static inline AAMDNodes getTombstoneKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getTombstoneKey(), nullptr,
-                     nullptr, nullptr, nullptr);
-  }
-
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
@@ -1625,7 +1620,7 @@ template <class T> class TypedMDOperandIterator {
   MDNode::op_iterator I = nullptr;
 
 public:
-  using iterator_category = std::input_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
   using value_type = T *;
   using difference_type = std::ptrdiff_t;
   using pointer = void;

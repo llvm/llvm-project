@@ -1,9 +1,14 @@
-//===-- tuple utility -------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Tuple utility.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_TUPLE_H
@@ -125,7 +130,12 @@ LIBC_INLINE constexpr auto tuple_cat(const Tuples &...tuples) {
 } // namespace LIBC_NAMESPACE_DECL
 
 // Standard namespace definitions required for structured binding support.
+
+#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_NAMESPACE_STD
+#else
 namespace std {
+#endif
 
 template <class T> struct tuple_size;
 template <size_t Idx, class T> struct tuple_element;
@@ -139,6 +149,10 @@ struct tuple_element<Idx, LIBC_NAMESPACE::cpp::tuple<Ts...>>
     : LIBC_NAMESPACE::cpp::tuple_element<Idx,
                                          LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
 
+#ifdef _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD
+#else
 } // namespace std
+#endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_TUPLE_H

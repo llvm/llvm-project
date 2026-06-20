@@ -22,7 +22,7 @@ class NativeProcessWindows;
 class NativeThreadWindows;
 class NativeDebugDelegate;
 
-typedef std::shared_ptr<NativeDebugDelegate> NativeDebugDelegateSP;
+using NativeDebugDelegateSP = std::shared_ptr<NativeDebugDelegate>;
 
 //------------------------------------------------------------------
 // NativeProcessWindows
@@ -41,6 +41,10 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
+
+    Extension GetSupportedExtensions() const override {
+      return Extension::libraries;
+    }
   };
 
   Status Resume(const ResumeActionList &resume_actions) override;
@@ -95,6 +99,10 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
+  llvm::Expected<std::vector<LoadedLibraryInfo>> GetLoadedLibraries() override;
+
+  bool HasPendingLibraryEvents() override;
+
   // ProcessDebugger Overrides
   void OnExitProcess(uint32_t exit_code) override;
   void OnDebuggerConnected(lldb::addr_t image_base) override;
@@ -132,8 +140,21 @@ private:
   NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                        NativeDelegate &delegate, llvm::Error &E);
 
+  ExceptionResult HandleSingleStepException(const ExceptionRecord &record);
+  ExceptionResult HandleBreakpointException(const ExceptionRecord &record);
+  ExceptionResult HandleGenericException(bool first_chance,
+                                         const ExceptionRecord &record);
+
   Status CacheLoadedModules();
   std::map<lldb_private::FileSpec, lldb::addr_t> m_loaded_modules;
+
+  /// Set whenever an OS DLL load/unload event has been seen since the last stop
+  /// reply.
+  bool m_pending_library_events = true;
+
+  /// Whether we've seen the loader breakpoint that fires once per process at
+  /// launch / attach.
+  bool m_initial_stop_seen = false;
 };
 
 //------------------------------------------------------------------
@@ -173,8 +194,9 @@ public:
     m_process.OnUnloadDll(module_addr);
   }
 
-  void OnDebugString(const std::string &string) override {
-    m_process.OnDebugString(string);
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override {
+    m_process.OnDebugString(debug_string_addr, is_unicode, length_lower_word);
   }
 
   void OnDebuggerError(const Status &error, uint32_t type) override {

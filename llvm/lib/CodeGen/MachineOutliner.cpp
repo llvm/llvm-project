@@ -245,9 +245,7 @@ struct InstructionMapper {
       report_fatal_error("Instruction mapping overflow!");
 
     assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
+           "Tried to assign DenseMap empty key to instruction.");
 
     // Statistics.
     ++NumLegalInUnsignedVec;
@@ -285,10 +283,7 @@ struct InstructionMapper {
            "Instruction mapping overflow!");
 
     assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
+           "IllegalInstrNumber cannot be DenseMap empty key!");
 
     return MINumber;
   }
@@ -423,8 +418,6 @@ struct InstructionMapper {
     // changed.
     static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
                   static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
   }
 };
 
@@ -1158,6 +1151,8 @@ bool MachineOutliner::outline(
                  Last = std::next(CallInst.getReverse());
              Iter != Last; Iter++) {
           MachineInstr *MI = &*Iter;
+          if (MI->isDebugInstr())
+            continue;
           SmallSet<Register, 2> InstrUseRegs;
           for (MachineOperand &MOP : MI->operands()) {
             // Skip over anything that isn't a register.

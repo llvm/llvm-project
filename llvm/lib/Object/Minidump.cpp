@@ -129,8 +129,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
       continue;
     }
 
-    if (Type == DenseMapInfo<StreamType>::getEmptyKey() ||
-        Type == DenseMapInfo<StreamType>::getTombstoneKey())
+    if (Type == DenseMapInfo<StreamType>::getEmptyKey())
       return createError("Cannot handle one of the minidump streams");
 
     // Update the directory map, checking for duplicate stream types.

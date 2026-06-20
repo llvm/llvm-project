@@ -173,14 +173,11 @@ public:
   // If the key is already in the map, it returns false and doesn't update the
   // value.
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    auto MapResult = Map.insert(std::make_pair(Wrap(KV.first), KV.second));
-    return std::make_pair(iterator(MapResult.first), MapResult.second);
+    return Map.insert(std::make_pair(Wrap(KV.first), KV.second));
   }
 
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    auto MapResult =
-        Map.insert(std::make_pair(Wrap(KV.first), std::move(KV.second)));
-    return std::make_pair(iterator(MapResult.first), MapResult.second);
+    return Map.insert(std::make_pair(Wrap(KV.first), std::move(KV.second)));
   }
 
   /// insert - Range insertion of pairs.
@@ -248,7 +245,7 @@ class ValueMapCallbackVH final : public CallbackVH {
       : CallbackVH(const_cast<Value *>(static_cast<const Value *>(Key))),
         Map(Map) {}
 
-  // Private constructor used to create empty/tombstone DenseMap keys.
+  // Private constructor used to create empty DenseMap keys.
   ValueMapCallbackVH(Value *V) : CallbackVH(V), Map(nullptr) {}
 
 public:
@@ -297,10 +294,6 @@ struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
 
   static inline VH getEmptyKey() {
     return VH(DenseMapInfo<Value *>::getEmptyKey());
-  }
-
-  static inline VH getTombstoneKey() {
-    return VH(DenseMapInfo<Value *>::getTombstoneKey());
   }
 
   static unsigned getHashValue(const VH &Val) {

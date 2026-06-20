@@ -28,8 +28,11 @@ struct StrtoTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 
   void InvalidBase(FunctionT func) {
     const char *ten = "10";
-    ASSERT_EQ(func(ten, nullptr, -1), ReturnT(0));
+    char *str_end = nullptr;
+    ASSERT_EQ(func(ten, &str_end, -1), ReturnT(0));
     ASSERT_ERRNO_EQ(EINVAL);
+    // Verify that str_end isn't touched for EINVAL errors.
+    ASSERT_EQ(str_end, nullptr);
   }
 
   void CleanBaseTenDecode(FunctionT func) {

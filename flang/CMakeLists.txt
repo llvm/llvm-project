@@ -273,7 +273,6 @@ set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(FLANG_TOOLS_INSTALL_DIR)
 
-set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
 # TODO: Remove when libclangDriver is lifted out of Clang
@@ -583,6 +582,10 @@ get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
 install(
   FILES include/flang/ISO_Fortran_binding.h
   DESTINATION ${HEADER_INSTALL_DIR}
+  COMPONENT flang-fortran-binding)
+install(
+  FILES include/flang/ISO_Fortran_binding.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/flang
   COMPONENT flang-fortran-binding)
 add_llvm_install_targets(install-flang-fortran-binding
   COMPONENT flang-fortran-binding)

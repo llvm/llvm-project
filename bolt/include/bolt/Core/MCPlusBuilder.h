@@ -52,6 +52,7 @@ namespace bolt {
 class BinaryBasicBlock;
 class BinaryContext;
 class BinaryFunction;
+class DataflowInfoManager;
 
 /// Different types of indirect branches encountered during disassembly.
 enum class IndirectBranchType : char {
@@ -138,10 +139,8 @@ private:
 
   MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
     for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
-      if (Iter->isInst()) {
-        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+      if (MCPlus::isAnnotationSentinel(*Iter))
         return Iter;
-      }
     }
     return Inst.end();
   }
@@ -477,7 +476,8 @@ public:
   }
 
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst) const {
+  virtual bool isReversibleBranch(const MCInst &Inst,
+                                  DataflowInfoManager *DIM = nullptr) const {
     assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
            "Instruction is not known conditional branch");
 
@@ -863,12 +863,7 @@ public:
     return false;
   }
 
-  virtual bool isLDRWl(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
-  virtual bool isLDRXl(const MCInst &Inst) const {
+  virtual bool isLoadLiteralGPR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1595,13 +1590,18 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Similar to getDefaultDefIn
+  /// Registers which may contain a meaningful value after a function returns.
   virtual void getDefaultLiveOut(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
   /// Change \p Regs with a bitmask with all general purpose regs
   virtual void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Remove non scavengeable special registers from \p Regs
+  virtual void removeNonScavengeableRegs(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1887,6 +1887,14 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Match Cortex-A53 erratum 843419 workaround veneer. Such veneers have
+  /// exactly one BB with two instructions: a load/store and an unconditional
+  /// branch back to the call site. Returns true if BF matches this pattern
+  /// (name e843419* or __CortexA53843419_*, 2-instruction body).
+  virtual bool matchE843419Veneer(const BinaryFunction &BF) const {
+    return false;
+  }
+
   virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
     llvm_unreachable("not implemented");
     return false;
@@ -2130,8 +2138,11 @@ public:
   }
 
   /// Reverses the branch condition in Inst and update its taken target to TBB.
-  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                                      MCContext *Ctx) const {
+  /// Assumes that the branch is reversible.
+  virtual void
+  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                         const MCSymbol *TBB, MCContext *Ctx,
+                         DataflowInfoManager *DIM = nullptr) const {
     llvm_unreachable("not implemented");
   }
 

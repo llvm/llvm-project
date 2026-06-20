@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx"
 
 define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %call) {
 ; CHECK-LABEL: define noundef i1 @test_order_1(
-; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias captures(address) [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
@@ -21,7 +21,7 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
 ; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
 ; CHECK:       for.body45.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr ptr, ptr [[OTHER]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr [8 x i8], ptr [[OTHER]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    br label [[FOR_BODY45:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    store i32 0, ptr [[THIS]], align 4

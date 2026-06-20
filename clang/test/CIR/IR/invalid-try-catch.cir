@@ -151,7 +151,7 @@ cir.func dso_local @catch_handler_missing_begin_catch() {
     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
       cir.yield
     } unwind (%eh_token_1 : !cir.eh_token) {
-      cir.resume
+      cir.resume %eh_token_1 : !cir.eh_token
     }
   }
   cir.return

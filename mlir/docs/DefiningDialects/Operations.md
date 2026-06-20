@@ -349,6 +349,10 @@ for example, in the case of array properties (which are stored as `SmallVector`s
 but use `ArrayRef` as an interface type), add the storage-type equivalent
 of the default value as the third argument.
 
+When using the `prop-dict` directive in an assembly format, the generated
+operation printing function will not print default-valued properties when the
+property value is equal to the default.
+
 To declare an optional property, use `OptionalProp<...>`.
 This wraps the underlying property in an `std::optional` and gives it a
 default value of `std::nullopt`.
@@ -1567,10 +1571,6 @@ template<> struct DenseMapInfo<Outer::Inner::MyIntEnum> {
     return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getEmptyKey());
   }
 
-  static inline Outer::Inner::MyIntEnum getTombstoneKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Outer::Inner::MyIntEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
   }
@@ -1695,10 +1695,6 @@ template<> struct DenseMapInfo<::MyBitEnum> {
 
   static inline ::MyBitEnum getEmptyKey() {
     return static_cast<::MyBitEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline ::MyBitEnum getTombstoneKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const ::MyBitEnum &val) {

@@ -9,6 +9,7 @@ LLVM's Analysis and Transform Passes
    :hidden:
 
    KernelInfo
+   LoopFusion
 
 Introduction
 ============
@@ -219,8 +220,8 @@ This pass decodes the debug info metadata in a module and prints it to standard 
 This pass is a simple post-dominator construction algorithm for finding
 post-dominators.
 
-``print-alias-sets``: Alias Set Printer
----------------------------------------
+``print<alias-sets>``: Alias Set Printer
+----------------------------------------
 
 Yet to be written.
 
@@ -236,8 +237,8 @@ in a human-readable form.
 This pass, only available in ``opt``, prints the SCCs of the call graph to
 standard error in a human-readable form.
 
-``print-cfg-sccs``: Print SCCs of each function CFG
----------------------------------------------------
+``print<cfg-sccs>``: Print SCCs of each function CFG
+----------------------------------------------------
 
 This pass, only available in ``opt``, prints the SCCs of each function CFG to
 standard error in a human-readable form.
@@ -663,6 +664,12 @@ A pass wrapper around the ``ExtractLoop()`` scalar transformation to extract
 each top-level loop into its own new function.  If the loop is the *only* loop
 in a given function, it is not touched.  This is a pass most useful for
 debugging via bugpoint.
+
+``loop-fusion``: Loop Fusion
+----------------------------
+
+Merges adjacent loops when it can prove the transformation preserves the
+program's semantics.  This pass is :doc:`documented separately<LoopFusion>`.
 
 ``loop-reduce``: Loop Strength Reduction
 ----------------------------------------

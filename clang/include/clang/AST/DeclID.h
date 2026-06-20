@@ -252,10 +252,6 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
     return GlobalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
   }
 
-  static GlobalDeclID getTombstoneKey() {
-    return GlobalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const GlobalDeclID &Key) {
     return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
   }
@@ -271,10 +267,6 @@ template <> struct DenseMapInfo<clang::LocalDeclID> {
 
   static LocalDeclID getEmptyKey() {
     return LocalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
-  }
-
-  static LocalDeclID getTombstoneKey() {
-    return LocalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
   }
 
   static unsigned getHashValue(const LocalDeclID &Key) {

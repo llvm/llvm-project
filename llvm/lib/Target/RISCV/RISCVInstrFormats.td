@@ -256,10 +256,11 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{21-20} = TargetOverlapConstraintType;
 
   // Most vector instructions are elementwise, but some may depend on the value
-  // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
-  // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
-  // changing their VL and/or mask.
-  EltDeps ElementsDependOn = EltDepsNone;
+  // of vl (vslide1down.vx), and others may depend on the mask (viota.m) or both
+  // (vredsum.vs). By default we assume elements depend on both vl and the mask,
+  // but if marked as EltDepsNone or EltDepsMask then RISCVVLOptimizer will
+  // reduce its vl.
+  EltDeps ElementsDependOn = EltDepsVLMask;
   let TSFlags{22} = ElementsDependOn.VL;
   let TSFlags{23} = ElementsDependOn.Mask;
 
@@ -333,7 +334,6 @@ class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
   let mayLoad = 1;
   let mayStore = 0;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
@@ -342,7 +342,6 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
   let mayLoad = 1;
   let mayStore = 0;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 // Pseudo store instructions.
@@ -352,7 +351,6 @@ class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
   let mayLoad = 0;
   let mayStore = 1;
   let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
 }
 
 // Instruction formats are listed in the order they appear in the RISC-V

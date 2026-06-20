@@ -594,4 +594,11 @@ SomeObj* provide();
   auto *obj = [self getSomeObj];
   [obj doWork];
 }
+
+- (void)assignToGuardianArg:(RetainPtr<SomeObj>&)obj {
+  SomeObj* ptr = obj.get();
+  // expected-warning@-1{{Local variable 'ptr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  obj = nullptr;
+  [ptr doWork];
+}
 @end

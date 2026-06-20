@@ -19,7 +19,7 @@
 // CHECK-DAG: @CB.cb = global target("dx.CBuffer", %__cblayout_CB)
 // CHECK-DAG: @a = external hidden addrspace(2) global float, align 4
 // CHECK-DAG: @b = external hidden addrspace(2) global double, align 8
-// CHECK-DAG: @c = external hidden addrspace(2) global <2 x i32>, align 8
+// CHECK-DAG: @c = external hidden addrspace(2) global <2 x i32>, align 4
 // CHECK: @CB.str = private unnamed_addr constant [3 x i8] c"CB\00", align 1
 
 cbuffer CB : register(b1, space3) {
@@ -30,7 +30,7 @@ cbuffer CB : register(b1, space3) {
 
 // CHECK-DAG: @CB.cb.1 = global target("dx.CBuffer", %__cblayout_CB_1)
 // CHECK-DAG: @x = external hidden addrspace(2) global float, align 4
-// CHECK-DAG: @y = external hidden addrspace(2) global <2 x float>, align 8
+// CHECK-DAG: @y = external hidden addrspace(2) global <2 x float>, align 4
 
 // Missing packoffset annotation will produce a warning.
 // Element x will be placed after the element y that has an explicit packoffset.
@@ -50,6 +50,7 @@ float foo() {
 }
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer_with_packoffset.hlsl()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @_init_buffer_CB.cb()
 
 [numthreads(4,1,1)]

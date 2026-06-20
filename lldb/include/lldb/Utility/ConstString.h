@@ -178,14 +178,9 @@ public:
 
   /// Get the string value as a C string.
   ///
-  /// Get the value of the contained string as a NULL terminated C string
-  /// value.
-  ///
-  /// If \a value_if_empty is nullptr, then nullptr will be returned.
-  ///
   /// \return Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
-  const char *AsCString(const char *value_if_empty = nullptr) const {
+  const char *AsCString(const char *value_if_empty) const {
     return (IsEmpty() ? value_if_empty : m_string);
   }
 
@@ -435,10 +430,6 @@ template <> struct DenseMapInfo<lldb_private::ConstString> {
   static inline lldb_private::ConstString getEmptyKey() {
     return lldb_private::ConstString::FromStringPoolPointer(
         DenseMapInfo<const char *>::getEmptyKey());
-  }
-  static inline lldb_private::ConstString getTombstoneKey() {
-    return lldb_private::ConstString::FromStringPoolPointer(
-        DenseMapInfo<const char *>::getTombstoneKey());
   }
   static unsigned getHashValue(lldb_private::ConstString val) {
     return DenseMapInfo<const char *>::getHashValue(val.m_string);

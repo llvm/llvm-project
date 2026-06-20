@@ -30,12 +30,12 @@ void Mother::MotherKey() {}
 void Father::FatherKey() {}
 void Child::MotherKey() {}
 
-// CIR-DAG: [[MOTHER_VTABLE_TYPE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
-// CIR-DAG: [[FATHER_VTABLE_TYPE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
-// CIR-DAG: [[CHILD_VTABLE_TYPE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 3>}>
-// CIR-DAG: !rec_Father = !cir.record<class "Father" {!cir.vptr}
-// CIR-DAG: !rec_Mother = !cir.record<class "Mother" {!cir.vptr}
-// CIR-DAG: !rec_Child = !cir.record<class "Child" {!rec_Mother, !rec_Father}
+// CIR-DAG: [[MOTHER_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-DAG: [[FATHER_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR-DAG: [[CHILD_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR-DAG: !rec_Father = !cir.struct<class "Father" {!cir.vptr}
+// CIR-DAG: !rec_Mother = !cir.struct<class "Mother" {!cir.vptr}
+// CIR-DAG: !rec_Child = !cir.struct<class "Child" {!rec_Mother, !rec_Father}
 
 // Child vtable
 
@@ -67,7 +67,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV5Child = unnamed_addr constant { [4 x ptr], [3 x ptr] } {
+// OGCG:      @_ZTV5Child = constant { [4 x ptr], [3 x ptr] } {
 // OGCG-SAME:     [4 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -101,7 +101,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV6Mother = unnamed_addr constant { [4 x ptr] } {
+// OGCG:      @_ZTV6Mother = constant { [4 x ptr] } {
 // OGCG-SAME:     [4 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -128,7 +128,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV6Father = unnamed_addr constant { [3 x ptr] } {
+// OGCG:      @_ZTV6Father = constant { [3 x ptr] } {
 // OGCG-SAME:     [3 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,

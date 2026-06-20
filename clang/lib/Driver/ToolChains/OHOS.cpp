@@ -176,12 +176,12 @@ ToolChain::RuntimeLibType OHOS::GetRuntimeLibType(
     const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt")
-      getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
-          << A->getAsString(Args);
+    if (Value != "compiler-rt" && Value != "platform")
+      getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
+          << Value << "OHOS";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 ToolChain::CXXStdlibType
@@ -379,8 +379,11 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   CmdArgs.push_back("--enable-new-dtags");
 }
 
-SanitizerMask OHOS::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask
+OHOS::getSupportedSanitizers(StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

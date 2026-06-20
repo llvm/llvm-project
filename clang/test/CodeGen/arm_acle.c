@@ -1821,5 +1821,3 @@ int test_rndrrs(uint64_t *__addr) {
   return __rndrrs(__addr);
 }
 #endif
-
-

@@ -27,7 +27,6 @@ class ObjectRef;
 class ReferenceBase {
 protected:
   struct DenseMapEmptyTag {};
-  struct DenseMapTombstoneTag {};
   static constexpr uint64_t getDenseMapEmptyRef() { return -1ULL; }
   static constexpr uint64_t getDenseMapTombstoneRef() { return -2ULL; }
 
@@ -78,8 +77,6 @@ protected:
   }
   explicit ReferenceBase(DenseMapEmptyTag)
       : InternalRef(getDenseMapEmptyRef()) {}
-  explicit ReferenceBase(DenseMapTombstoneTag)
-      : InternalRef(getDenseMapTombstoneRef()) {}
 
 private:
   uint64_t InternalRef;
@@ -119,9 +116,6 @@ public:
   static ObjectRef getDenseMapEmptyKey() {
     return ObjectRef(DenseMapEmptyTag{});
   }
-  static ObjectRef getDenseMapTombstoneKey() {
-    return ObjectRef(DenseMapTombstoneTag{});
-  }
 
   /// Print internal ref and/or CASID. Only suitable for debugging.
   void print(raw_ostream &OS) const { return ReferenceBase::print(OS, *this); }
@@ -138,7 +132,6 @@ private:
     assert(InternalRef != -2ULL && "Reserved for DenseMapInfo");
   }
   explicit ObjectRef(DenseMapEmptyTag T) : ReferenceBase(T) {}
-  explicit ObjectRef(DenseMapTombstoneTag T) : ReferenceBase(T) {}
   explicit ObjectRef(ReferenceBase) = delete;
 };
 
@@ -175,10 +168,6 @@ private:
 template <> struct DenseMapInfo<cas::ObjectRef> {
   static cas::ObjectRef getEmptyKey() {
     return cas::ObjectRef::getDenseMapEmptyKey();
-  }
-
-  static cas::ObjectRef getTombstoneKey() {
-    return cas::ObjectRef::getDenseMapTombstoneKey();
   }
 
   static unsigned getHashValue(cas::ObjectRef Ref) {

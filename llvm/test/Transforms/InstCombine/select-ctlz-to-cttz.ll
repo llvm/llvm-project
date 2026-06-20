@@ -131,6 +131,27 @@ define i64 @select_clz_to_ctz_i64(i64 %a) {
   ret i64 %cond
 }
 
+; Negative test: xor with (bitwidth - 1) is not (bitwidth - 1) - ctlz when
+; bitwidth is not a power of two (here i33: 31 xor 32 = 63, not cttz(2) = 1).
+define i33 @select_clz_to_ctz_xor_non_pot(i33 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_xor_non_pot(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i33 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i33 [[A]], [[SUB]]
+; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i33 0, 34) i33 @llvm.ctlz.i33(i33 [[AND]], i1 false)
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i33 [[A]], 0
+; CHECK-NEXT:    [[SUB1:%.*]] = xor i33 [[LZ]], 32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i33 33, i33 [[SUB1]]
+; CHECK-NEXT:    ret i33 [[COND]]
+;
+  %sub = sub i33 0, %a
+  %and = and i33 %sub, %a
+  %lz = tail call i33 @llvm.ctlz.i33(i33 %and, i1 false)
+  %tobool = icmp eq i33 %a, 0
+  %sub1 = xor i33 %lz, 32
+  %cond = select i1 %tobool, i33 33, i33 %sub1
+  ret i33 %cond
+}
+
 ; Negative tests
 
 define i32 @select_clz_to_ctz_wrong_sub(i32 %a) {

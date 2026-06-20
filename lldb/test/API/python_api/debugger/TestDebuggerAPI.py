@@ -4,6 +4,7 @@ Test Debugger APIs.
 
 import lldb
 
+from lldbsuite.test import lldbplatform
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -94,6 +95,7 @@ class DebuggerAPITestCase(TestBase):
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
 
     @expectedFailureAll(
+        oslist=no_match(lldbplatform.translate(lldbplatform.darwin_all)),
         remote=True,
         bugnumber="github.com/llvm/llvm-project/issues/92419",
     )

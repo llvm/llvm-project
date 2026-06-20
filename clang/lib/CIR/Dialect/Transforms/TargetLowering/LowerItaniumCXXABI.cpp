@@ -33,10 +33,13 @@ namespace {
 class LowerItaniumCXXABI : public CIRCXXABI {
 protected:
   bool useARMMethodPtrABI;
+  bool use32BitVTableOffsetABI;
 
 public:
-  LowerItaniumCXXABI(LowerModule &lm, bool useARMMethodPtrABI = false)
-      : CIRCXXABI(lm), useARMMethodPtrABI(useARMMethodPtrABI) {}
+  LowerItaniumCXXABI(LowerModule &lm, bool useARMMethodPtrABI = false,
+                     bool use32BitVTableOffsetABI = false)
+      : CIRCXXABI(lm), useARMMethodPtrABI(useARMMethodPtrABI),
+        use32BitVTableOffsetABI(use32BitVTableOffsetABI) {}
 
   /// Lower the given data member pointer type to its ABI type. The returned
   /// type is also a CIR type.
@@ -106,6 +109,18 @@ public:
 
   mlir::Value lowerDynamicCast(cir::DynamicCastOp op,
                                mlir::OpBuilder &builder) const override;
+  mlir::Value lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                                     mlir::OpBuilder &builder) const override;
+
+  clang::CharUnits
+  getArrayCookieSizeImpl(mlir::Type elementType,
+                         const mlir::DataLayout &dataLayout) const override;
+
+  mlir::Value readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
+                                  clang::CharUnits cookieSize,
+                                  clang::CharUnits cookieAlignment,
+                                  const mlir::DataLayout &dataLayout,
+                                  CIRBaseBuilderTy &builder) const override;
 };
 
 } // namespace
@@ -116,12 +131,18 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   // include the other 32-bit ARM oddities: constructor/destructor return values
   // and array cookies.
   case clang::TargetCXXABI::GenericAArch64:
+    return std::make_unique<LowerItaniumCXXABI>(
+        lm,
+        /*useARMMethodPtrABI=*/true,
+        /*use32BitVTableOffsetABI=*/false);
   case clang::TargetCXXABI::AppleARM64:
     // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
     // from ARMCXXABI. We'll have to follow suit.
     assert(!cir::MissingFeatures::appleArm64CXXABI());
-    return std::make_unique<LowerItaniumCXXABI>(lm,
-                                                /*useARMMethodPtrABI=*/true);
+    return std::make_unique<LowerItaniumCXXABI>(
+        lm,
+        /*useARMMethodPtrABI=*/true,
+        /*use32BitVTableOffsetABI=*/true);
 
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
@@ -165,9 +186,9 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
 
   // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
   // function pointers. Let's follow this approach.
-  return cir::RecordType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
+  return cir::StructType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
                               /*packed=*/false, /*padded=*/false,
-                              cir::RecordType::Struct);
+                              /*is_class=*/false);
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
@@ -196,10 +217,7 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
     const mlir::TypeConverter &typeConverter) const {
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
 
-  // lowerMethodType returns the CIR type used to represent the method pointer
-  // in an ABI-specific way. That's why lowerMethodType returns cir::RecordType
-  // here.
-  auto loweredMethodTy = mlir::cast<cir::RecordType>(
+  auto loweredMethodTy = mlir::cast<cir::StructType>(
       lowerMethodType(attr.getType(), typeConverter));
 
   auto zero = cir::IntAttr::get(ptrdiffCIRTy, 0);
@@ -235,7 +253,12 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
       //   least significant bit of adj then makes exactly the same
       //   discrimination as the least significant bit of ptr does for
       //   Itanium.
-      llvm_unreachable("ARM method ptr abi NYI");
+      assert(!cir::MissingFeatures::pointerAuthentication());
+      auto ptr =
+          cir::IntAttr::get(ptrdiffCIRTy, attr.getVtableOffset().value());
+      auto one = cir::IntAttr::get(ptrdiffCIRTy, 1);
+      return cir::ConstRecordAttr::get(
+          loweredMethodTy, mlir::ArrayAttr::get(attr.getContext(), {ptr, one}));
     }
 
     // Itanium C++ ABI 2.3.2:
@@ -309,12 +332,12 @@ void LowerItaniumCXXABI::lowerGetMethod(
   mlir::Value ptrdiffOne =
       cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 1));
 
-  mlir::Value adj =
+  mlir::Value rawAdj =
       cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredMethod, 1);
-  if (useARMMethodPtrABI) {
-    op.emitError("ARM method ptr abi NYI");
-    return;
-  }
+  mlir::Value adj = rawAdj;
+  if (useARMMethodPtrABI)
+    adj = cir::ShiftOp::create(locBuilder, ptrdiffCIRTy, adj, ptrdiffOne,
+                               /*isLeftShift=*/false);
 
   // Apply the adjustment to the 'this' pointer.
   mlir::Type thisVoidPtrTy =
@@ -329,14 +352,13 @@ void LowerItaniumCXXABI::lowerGetMethod(
   // points to a virtual function.
   mlir::Value methodPtrField =
       cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredMethod, 0);
-  mlir::Value virtualBit = cir::BinOp::create(
-      rewriter, op.getLoc(), cir::BinOpKind::And, methodPtrField, ptrdiffOne);
-  mlir::Value isVirtual;
+  mlir::Value virtualBit;
   if (useARMMethodPtrABI)
-    llvm_unreachable("ARM method ptr abi NYI");
+    virtualBit = cir::AndOp::create(locBuilder, rawAdj, ptrdiffOne);
   else
-    isVirtual = cir::CmpOp::create(locBuilder, cir::CmpOpKind::eq, virtualBit,
-                                   ptrdiffOne);
+    virtualBit = cir::AndOp::create(locBuilder, methodPtrField, ptrdiffOne);
+  mlir::Value isVirtual = cir::CmpOp::create(locBuilder, cir::CmpOpKind::eq,
+                                             virtualBit, ptrdiffOne);
 
   assert(!cir::MissingFeatures::emitCFICheck());
   assert(!cir::MissingFeatures::emitVFEInfo());
@@ -359,11 +381,15 @@ void LowerItaniumCXXABI::lowerGetMethod(
                             /*sync_scope=*/cir::SyncScopeKindAttr{},
                             /*mem_order=*/cir::MemOrderAttr());
 
-    // Get the vtable offset.
+    // Apply the offset.
+    // On ARM64, to reserve extra space in virtual member function pointers,
+    // we only pay attention to the low 32 bits of the offset.
     mlir::Value vtableOffset = methodPtrField;
-    assert(!useARMMethodPtrABI && "ARM method ptr abi NYI");
-    vtableOffset = cir::BinOp::create(b, loc, cir::BinOpKind::Sub, vtableOffset,
-                                      ptrdiffOne);
+    if (!useARMMethodPtrABI)
+      vtableOffset = cir::SubOp::create(b, loc, vtableOffset.getType(),
+                                        vtableOffset, ptrdiffOne);
+    if (use32BitVTableOffsetABI)
+      llvm_unreachable("AppleARM64 method ptr abi NYI");
 
     assert(!cir::MissingFeatures::emitCFICheck());
     assert(!cir::MissingFeatures::emitVFEInfo());
@@ -417,10 +443,16 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
                                    nullValue);
 
   cir::ConstantOp offsetValue = getConstantInt(offset);
-  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
-  cir::BinOp adjustedPtr =
-      cir::BinOp::create(builder, loc, ty, binOpKind, loweredSrc, offsetValue);
-  adjustedPtr.setNoSignedWrap(true);
+  mlir::Value adjustedPtr;
+  if (isDerivedToBase) {
+    auto subOp = cir::SubOp::create(builder, loc, ty, loweredSrc, offsetValue);
+    subOp.setNoSignedWrap(true);
+    adjustedPtr = subOp;
+  } else {
+    auto addOp = cir::AddOp::create(builder, loc, ty, loweredSrc, offsetValue);
+    addOp.setNoSignedWrap(true);
+    adjustedPtr = addOp;
+  }
 
   return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
                                adjustedPtr);
@@ -444,10 +476,16 @@ LowerItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
 
 static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
                                    std::int64_t offset, bool isDerivedToBase,
+                                   bool useARMMethodPtrABI,
                                    LowerModule &lowerMod,
                                    mlir::OpBuilder &builder) {
   if (offset == 0)
     return loweredSrc;
+
+  // The this-adjustment is left-shifted by 1 on ARM, since the low bit of the
+  // adjustment field is used to encode whether the member function is virtual.
+  if (useARMMethodPtrABI)
+    offset <<= 1;
 
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lowerMod);
   auto adjField = cir::ExtractMemberOp::create(builder, op->getLoc(),
@@ -455,10 +493,18 @@ static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
 
   auto offsetValue = cir::ConstantOp::create(
       builder, op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
-  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
-  auto adjustedAdjField = cir::BinOp::create(
-      builder, op->getLoc(), ptrdiffCIRTy, binOpKind, adjField, offsetValue);
-  adjustedAdjField.setNoSignedWrap(true);
+  mlir::Value adjustedAdjField;
+  if (isDerivedToBase) {
+    auto subOp = cir::SubOp::create(builder, op->getLoc(), ptrdiffCIRTy,
+                                    adjField, offsetValue);
+    subOp.setNoSignedWrap(true);
+    adjustedAdjField = subOp;
+  } else {
+    auto addOp = cir::AddOp::create(builder, op->getLoc(), ptrdiffCIRTy,
+                                    adjField, offsetValue);
+    addOp.setNoSignedWrap(true);
+    adjustedAdjField = addOp;
+  }
 
   return cir::InsertMemberOp::create(builder, op->getLoc(), loweredSrc, 1,
                                      adjustedAdjField);
@@ -469,7 +515,8 @@ LowerItaniumCXXABI::lowerBaseMethod(cir::BaseMethodOp op,
                                     mlir::Value loweredSrc,
                                     mlir::OpBuilder &builder) const {
   return lowerMethodCast(op, loweredSrc, op.getOffset().getSExtValue(),
-                         /*isDerivedToBase=*/true, lm, builder);
+                         /*isDerivedToBase=*/true, useARMMethodPtrABI, lm,
+                         builder);
 }
 
 mlir::Value
@@ -477,7 +524,8 @@ LowerItaniumCXXABI::lowerDerivedMethod(cir::DerivedMethodOp op,
                                        mlir::Value loweredSrc,
                                        mlir::OpBuilder &builder) const {
   return lowerMethodCast(op, loweredSrc, op.getOffset().getSExtValue(),
-                         /*isDerivedToBase=*/false, lm, builder);
+                         /*isDerivedToBase=*/false, useARMMethodPtrABI, lm,
+                         builder);
 }
 
 mlir::Value
@@ -517,18 +565,49 @@ mlir::Value LowerItaniumCXXABI::lowerMethodCmp(cir::CmpOp op,
       cir::CmpOp::create(locBuilder, op.getKind(), lhsAdjField, rhsAdjField);
 
   auto create_and = [&](mlir::Value lhs, mlir::Value rhs) {
-    return cir::BinOp::create(locBuilder, cir::BinOpKind::And, lhs, rhs);
+    return cir::AndOp::create(locBuilder, lhs.getType(), lhs, rhs);
   };
   auto create_or = [&](mlir::Value lhs, mlir::Value rhs) {
-    return cir::BinOp::create(locBuilder, cir::BinOpKind::Or, lhs, rhs);
+    return cir::OrOp::create(locBuilder, lhs.getType(), lhs, rhs);
   };
+
+  // Null member function pointers on ARM clear the low bit of Adj,
+  // so the zero condition has to check that neither low bit is set.
+  if (useARMMethodPtrABI) {
+    mlir::Value one =
+        cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 1));
+
+    // The low bit of the adjustment field is used to encode whether the member
+    // function is virtual, but the ARM ABI specifies that for null pointers
+    // this bit must be clear. Therefore, to test whether the member pointer is
+    // null, we need to check that bit.
+    //
+    // If we are performing an equality check, ptrCmpToNull indicates that both
+    // pointers are null (if they are equal -- we only actually test lhs).
+    // If we are performing an inequality check, ptrCmpToNull indicates that
+    // one of the pointers is not null.
+    //
+    // To apply the ARM-specific logic, if either virtual bit is set, they
+    // cannot both be null (equality case -- ptrCmpToNull &= orAdjAnd1CmpZero),
+    // and if either virtual bit is set, one of the pointers is not null
+    // (inequality case -- ptrCmpToNull |= orAdjAnd1CmpZero).
+    mlir::Value orAdj = create_or(lhsAdjField, rhsAdjField);
+    mlir::Value orAdjAnd1 = create_and(orAdj, one);
+    mlir::Value orAdjAnd1CmpZero =
+        cir::CmpOp::create(locBuilder, op.getKind(), orAdjAnd1, ptrdiffZero);
+
+    if (op.getKind() == cir::CmpOpKind::eq)
+      ptrCmpToNull = create_and(ptrCmpToNull, orAdjAnd1CmpZero);
+    else
+      ptrCmpToNull = create_or(ptrCmpToNull, orAdjAnd1CmpZero);
+  }
 
   mlir::Value result;
   if (op.getKind() == cir::CmpOpKind::eq) {
     // (lhs.ptr == null || lhs.adj == rhs.adj) && lhs.ptr == rhs.ptr
     result = create_and(ptrCmp, create_or(ptrCmpToNull, adjCmp));
   } else {
-    // (lhs.ptr != null && lhs.adj != rhs.adj) || lhs.ptr != rhs.ptr
+    // lhs.ptr == rhs.ptr && (lhs.ptr == null || lhs.adj == rhs.adj)
     result = create_or(ptrCmp, create_and(ptrCmpToNull, adjCmp));
   }
 
@@ -567,26 +646,46 @@ LowerItaniumCXXABI::lowerMethodBitcast(cir::CastOp op, mlir::Type loweredDstTy,
 
 mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
     cir::CastOp op, mlir::Value loweredSrc, mlir::OpBuilder &builder) const {
+  mlir::ImplicitLocOpBuilder locBuilder(op.getLoc(), builder);
+
   // Itanium C++ ABI 2.3.2:
   //
   //   In the standard representation, a null member function pointer is
   //   represented with ptr set to a null pointer. The value of adj is
   //   unspecified for null member function pointers.
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
-  mlir::Value ptrdiffZero = cir::ConstantOp::create(
-      builder, op.getLoc(), cir::IntAttr::get(ptrdiffCIRTy, 0));
-  mlir::Value ptrField = cir::ExtractMemberOp::create(
-      builder, op.getLoc(), ptrdiffCIRTy, loweredSrc, 0);
-  return cir::CmpOp::create(builder, op.getLoc(), cir::CmpOpKind::ne, ptrField,
-                            ptrdiffZero);
+  mlir::Value ptrdiffZero =
+      cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 0));
+  mlir::Value ptrField =
+      cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredSrc, 0);
+
+  mlir::Value result =
+      cir::CmpOp::create(locBuilder, cir::CmpOpKind::ne, ptrField, ptrdiffZero);
+
+  // On ARM, a member function pointer is also non-null if the low bit of 'adj'
+  // (the virtual bit) is set.
+  if (useARMMethodPtrABI) {
+    mlir::Value one =
+        cir::ConstantOp::create(locBuilder, cir::IntAttr::get(ptrdiffCIRTy, 1));
+    mlir::Value adj =
+        cir::ExtractMemberOp::create(locBuilder, ptrdiffCIRTy, loweredSrc, 1);
+    mlir::Value virtualBit =
+        cir::AndOp::create(locBuilder, ptrdiffCIRTy, adj, one);
+    mlir::Value isVirtual = cir::CmpOp::create(locBuilder, cir::CmpOpKind::ne,
+                                               virtualBit, ptrdiffZero);
+    result = cir::OrOp::create(locBuilder, result, isVirtual);
+  }
+
+  return result;
 }
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
-  cir::CallOp::create(builder, loc, badCastFuncRef, /*resType=*/cir::VoidType(),
-                      /*operands=*/mlir::ValueRange{});
-  // TODO(cir): Set the 'noreturn' attribute on the function.
-  assert(!cir::MissingFeatures::opFuncNoReturn());
+  auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
+                                    /*resType=*/cir::VoidType(),
+                                    /*operands=*/mlir::ValueRange{});
+  callOp->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                  builder.getUnitAttr());
 
   cir::UnreachableOp::create(builder, loc);
   builder.clearInsertionPoint();
@@ -743,6 +842,65 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
                cir::YieldOp::create(builder, loc, null);
              })
       .getResult();
+}
+mlir::Value
+LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
+                                           mlir::OpBuilder &builder) const {
+  mlir::Location loc = op->getLoc();
+  auto offset = cir::ConstantOp::create(
+      builder, op->getLoc(), cir::IntAttr::get(getPtrDiffCIRTy(lm), -1));
+
+  // Cast the vptr to type_info-ptr, so that we can go backwards 1 pointer.
+  auto vptrCast = cir::CastOp::create(builder, loc, op.getType(),
+                                      cir::CastKind::bitcast, op.getVptr());
+
+  return cir::PtrStrideOp::create(builder, loc, vptrCast.getType(), vptrCast,
+                                  offset)
+      .getResult();
+}
+
+clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
+    mlir::Type elementType, const mlir::DataLayout &dataLayout) const {
+  // The array cookie is a size_t; pad that up to the element alignment.
+  // The cookie is actually right-justified in that space.
+  clang::CharUnits sizeOfSizeT =
+      clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
+  clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
+      dataLayout.getTypePreferredAlignment(elementType));
+  return std::max(sizeOfSizeT, eltAlign);
+}
+
+mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
+    mlir::Location loc, mlir::Value allocPtr, clang::CharUnits cookieSize,
+    clang::CharUnits cookieAlignment, const mlir::DataLayout &dataLayout,
+    CIRBaseBuilderTy &builder) const {
+  unsigned ptrSizeInBits = getPtrSizeInBits();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  auto ptrDiffTy = builder.getSIntNTy(ptrSizeInBits);
+  auto sizeTy = builder.getUIntNTy(ptrSizeInBits);
+
+  // The element count is right-justified in the cookie.
+  clang::CharUnits sizeOfSizeT =
+      clang::CharUnits::fromQuantity(ptrSizeInBits / 8);
+  clang::CharUnits countOffset = cookieSize - sizeOfSizeT;
+
+  mlir::Value countBytePtr = allocPtr;
+  clang::CharUnits countAlignment = cookieAlignment;
+  if (!countOffset.isZero()) {
+    mlir::Value offsetVal = cir::ConstantOp::create(
+        builder, loc, cir::IntAttr::get(ptrDiffTy, countOffset.getQuantity()));
+    countBytePtr =
+        cir::PtrStrideOp::create(builder, loc, u8PtrTy, allocPtr, offsetVal);
+    countAlignment = cookieAlignment.alignmentAtOffset(countOffset);
+  }
+
+  auto countPtrTy = cir::PointerType::get(sizeTy);
+  mlir::Value countPtr = cir::CastOp::create(
+      builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
+  return cir::LoadOp::create(
+      builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
+      builder.getI64IntegerAttr(countAlignment.getQuantity()),
+      cir::SyncScopeKindAttr(), cir::MemOrderAttr());
 }
 
 } // namespace cir

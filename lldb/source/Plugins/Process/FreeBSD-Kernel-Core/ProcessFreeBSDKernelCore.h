@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Target/PostMortemProcess.h"
 
 #include <kvm.h>
@@ -16,7 +17,7 @@
 class ProcessFreeBSDKernelCore : public lldb_private::PostMortemProcess {
 public:
   ProcessFreeBSDKernelCore(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                           kvm_t *kvm, const lldb_private::FileSpec &core_file);
+                           const lldb_private::FileSpec &core_file);
 
   ~ProcessFreeBSDKernelCore();
 
@@ -26,6 +27,8 @@ public:
                  bool can_connect);
 
   static void Initialize();
+
+  static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
   static void Terminate();
 
@@ -40,6 +43,8 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
+  lldb_private::CommandObject *GetPluginCommandObject() override;
+
   lldb_private::Status DoLoadCore() override;
 
   lldb_private::DynamicLoader *GetDynamicLoader() override;
@@ -48,7 +53,12 @@ public:
 
   void RefreshStateAfterStop() override;
 
+  size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       lldb_private::Status &error) override;
+
 protected:
+  friend class CommandObjectProcessFreeBSDKernelCoreRefreshThreads;
+
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
 
@@ -58,9 +68,13 @@ protected:
   lldb::addr_t FindSymbol(const char *name);
 
 private:
+  void SetKernelDisplacement();
+
   void PrintUnreadMessage();
 
   const char *GetError();
+
+  std::unique_ptr<lldb_private::CommandObjectMultiword> m_command_sp;
 
   bool m_printed_unread_message = false;
 

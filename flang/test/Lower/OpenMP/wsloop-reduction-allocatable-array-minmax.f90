@@ -246,8 +246,7 @@ end program
 ! CHECK-DAG:                   %[[VAL_81:.*]] = arith.addi %[[VAL_69]], %[[VAL_80]] : index
 ! CHECK-DAG:                   %[[VAL_82:.*]] = hlfir.designate %[[VAL_67]] (%[[VAL_81]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
 ! CHECK-DAG:                   %[[VAL_83:.*]] = fir.load %[[VAL_82]] : !fir.ref<i32>
-! CHECK:                   %[[VAL_84:.*]] = arith.cmpi sgt, %[[VAL_76]], %[[VAL_83]] : i32
-! CHECK:                   %[[VAL_85:.*]] = arith.select %[[VAL_84]], %[[VAL_76]], %[[VAL_83]] : i32
+! CHECK:                   %[[VAL_85:.*]] = arith.maxsi %[[VAL_76]], %[[VAL_83]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_85]] : i32
 ! CHECK:                 }
 ! CHECK:                 hlfir.assign %[[VAL_68]] to %[[VAL_62]]#0 realloc : !hlfir.expr<?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -287,8 +286,7 @@ end program
 ! CHECK-DAG:               %[[VAL_113:.*]] = arith.addi %[[VAL_101]], %[[VAL_112]] : index
 ! CHECK-DAG:               %[[VAL_114:.*]] = hlfir.designate %[[VAL_99]] (%[[VAL_113]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
 ! CHECK-DAG:               %[[VAL_115:.*]] = fir.load %[[VAL_114]] : !fir.ref<i32>
-! CHECK:                   %[[VAL_116:.*]] = arith.cmpi slt, %[[VAL_108]], %[[VAL_115]] : i32
-! CHECK:                   %[[VAL_117:.*]] = arith.select %[[VAL_116]], %[[VAL_108]], %[[VAL_115]] : i32
+! CHECK:                   %[[VAL_117:.*]] = arith.minsi %[[VAL_108]], %[[VAL_115]] : i32
 ! CHECK:                   hlfir.yield_element %[[VAL_117]] : i32
 ! CHECK:                 }
 ! CHECK:                 hlfir.assign %[[VAL_100]] to %[[VAL_94]]#0 realloc : !hlfir.expr<?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

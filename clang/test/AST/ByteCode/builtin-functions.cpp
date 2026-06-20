@@ -889,6 +889,9 @@ namespace bswap {
   int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
   // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
   // ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  int h16 = __builtin_bswapg((_BitInt(5))0x1) == (_BitInt(5))0x1 ? 1 : f();
+  // expected-error@-1 {{_BitInt type '_BitInt(5)' (5 bits) must be a multiple of 16 bits for byte swapping}}
+  // ref-error@-2 {{_BitInt type '_BitInt(5)' (5 bits) must be a multiple of 16 bits for byte swapping}}
 #endif
 
   constexpr const int const_expr = 0x1234;
@@ -1213,7 +1216,7 @@ namespace shufflevector {
 #if __cplusplus >= 202002L
   constexpr int discarded3() {
     int i = 0;
-    vector4char a;
+    vector4char a; // both-note {{declared here}}
     __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
                                              // both-warning {{expression result unused}}
     return i;
@@ -1380,6 +1383,23 @@ namespace ElementwisePopcount {
 #if __INT_WIDTH__ == 32
   static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
 #endif
+}
+
+namespace ElementwiseClmul {
+  static_assert(__builtin_elementwise_clmul(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_clmul(1U, 1U) == 1U);
+  static_assert(__builtin_elementwise_clmul(3U, 3U) == 5U);
+  static_assert(__builtin_elementwise_clmul(0xBU, 0xDU) == 0x7FU);
+  static_assert(__builtin_elementwise_clmul(0xFU, 0xFU) == 0x55U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_clmul((unsigned _BitInt(31))3,
+                                            (unsigned _BitInt(31))3) ==
+                (unsigned _BitInt(31))5);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_clmul(
+                    (vector4uint){0U, 1U, 3U, 7U},
+                    (vector4uint){0U, 1U, 3U, 7U})) == 27U);
 }
 
 namespace BuiltinMemcpy {
@@ -1946,6 +1966,16 @@ namespace WithinLifetime {
   static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
                                      // both-note {{in call to}}
+
+
+  void LocalGlobal() {
+    constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{reference to temporary is not a constant expression}} \
+                                   // both-note {{temporary created here}} \
+                                   // ref-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
+                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+  }
 }
 
 #ifdef __SIZEOF_INT128__
@@ -1960,6 +1990,53 @@ namespace I128Mul {
   static_assert(mul() == 1);
 }
 #endif
+
+namespace OverflowOps {
+  constexpr bool add_bool() {
+    bool r = false;
+    return __builtin_add_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(add_bool());
+
+  constexpr bool add_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_add_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(add_bool_non_overflow_true());
+
+  constexpr bool add_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_add_overflow(0u, 0u, &r) && r == false;
+  }
+  static_assert(add_bool_non_overflow_false());
+
+  constexpr bool sub_bool() {
+    bool r = false;
+    return __builtin_sub_overflow(0u, 1u, &r) && r == true;
+  }
+  static_assert(sub_bool());
+
+  constexpr bool sub_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_sub_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(sub_bool_non_overflow_true());
+
+  constexpr bool sub_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_sub_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(sub_bool_non_overflow_false());
+
+  constexpr int add_sub() {
+    int r = 0;
+    int s = 0;
+    __builtin_add_overflow(10, 20, &r);
+    __builtin_sub_overflow(10, 3, &s);
+    return r + s;
+  }
+  static_assert(add_sub() == 37);
+}
 
 namespace InitParam {
   constexpr int foo(int a) {
@@ -1987,4 +2064,11 @@ namespace WcslenInvalidArg {
                                                               // both-note {{cast that performs the conversions of a reinterpret_cast}}
   static_assert(__builtin_wcslen(L"x") == 1);
 
+}
+
+namespace SubCb {
+  constexpr unsigned char subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+    return __builtin_subcb(lhs, rhs, carry, &rhs);
+  }
+  static_assert(subcb(10, 15, 1) == 250);
 }

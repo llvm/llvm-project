@@ -60,7 +60,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   ArgStringList LinkArgs{};
 
   for (auto Input : Inputs)
-    LinkArgs.push_back(Input.getFilename());
+    if (Input.isFilename())
+      LinkArgs.push_back(Input.getFilename());
 
   // Add static device libraries using the common helper function.
   // This handles unbundling archives (.a) containing bitcode bundles.
@@ -304,7 +305,8 @@ HIPSPVToolChain::getDeviceLibs(
   return BCLibs;
 }
 
-SanitizerMask HIPSPVToolChain::getSupportedSanitizers() const {
+SanitizerMask HIPSPVToolChain::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   // The HIPSPVToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
   // toolchain. The HIPSPVToolChain will actually ignore any command line
@@ -314,9 +316,11 @@ SanitizerMask HIPSPVToolChain::getSupportedSanitizers() const {
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must
   // tolerate flags meant only for the host toolchain.
+
+  // FIXME: Be accurate and use DeviceOffloadKind.
   if (HostTC)
-    return HostTC->getSupportedSanitizers();
-  return ToolChain::getSupportedSanitizers();
+    return HostTC->getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  return ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 }
 
 VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,

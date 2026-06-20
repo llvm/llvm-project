@@ -9,6 +9,7 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBAddress.h"
@@ -244,7 +245,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
   const llvm::StringRef name = v.GetName();
-  return !name.empty() ? name : "<null>";
+  return !name.empty() ? name : "(anonymous)";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
@@ -311,9 +312,16 @@ VariableDescription::VariableDescription(
     }
   }
 
-  lldb::SBStream evaluateStream;
-  val.GetExpressionPath(evaluateStream);
-  evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
+  // Only include the evaluation name if the name is not empty. If the name is
+  // empty then 'GetExpressionPath' will return an empty string like 'foo.',
+  // which does not actually work in expression evaluation.
+  if (!llvm::StringRef{val.GetName()}.empty()) {
+    lldb::SBStream evaluateStream;
+    val.GetExpressionPath(evaluateStream);
+    evaluate_name =
+        llvm::StringRef{evaluateStream.GetData(), evaluateStream.GetSize()}
+            .str();
+  }
 }
 
 std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
@@ -338,10 +346,12 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
 }
 
 bool ValuePointsToCode(lldb::SBValue v) {
-  if (!v.GetType().GetPointeeType().IsFunctionType())
+  lldb::SBType type = v.GetType();
+  if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBError error;
+  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
@@ -386,7 +396,11 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     std::stringstream ss;
     std::string_view delimiter;
     for (const std::optional<protocol::String> &file : stdio) {
+#ifdef _WIN32
+      ss << std::exchange(delimiter, ";");
+#else
       ss << std::exchange(delimiter, ":");
+#endif
       if (file)
         ss << file->str();
     }
@@ -443,13 +457,9 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
   case lldb::eStructuredDataTypeBoolean:
     out.try_emplace(key_utf8, value.GetBooleanValue());
     break;
-  case lldb::eStructuredDataTypeString: {
-    // Get the string size before reading
-    const size_t str_length = value.GetStringValue(nullptr, 0);
-    std::string str(str_length + 1, 0);
-    value.GetStringValue(&str[0], str_length);
-    out.try_emplace(key_utf8, llvm::json::fixUTF8(str));
-  } break;
+  case lldb::eStructuredDataTypeString:
+    out.try_emplace(key_utf8, llvm::json::fixUTF8(GetStringValue(value)));
+    break;
   case lldb::eStructuredDataTypeDictionary: {
     lldb::SBStream contents;
     value.GetAsJSON(contents);

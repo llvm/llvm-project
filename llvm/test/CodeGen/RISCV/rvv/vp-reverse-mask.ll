@@ -304,3 +304,68 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1(<vscale x 64 x i1> %src, i32 
   ret <vscale x 64 x i1> %dst
 }
 
+; nxv128i1 is split via the generic SplitVecRes_VP_REVERSE stack round-trip.
+; The i1 elements must be widened to a byte type so the strided store uses a
+; per-element stride, not stride 0 (which aliases every lane to one slot).
+define <vscale x 128 x i1> @test_vp_reverse_nxv128i1(<vscale x 128 x i1> %src, i32 zeroext %evl) {
+; CHECK-LABEL: test_vp_reverse_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    bltu a0, a2, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 4
+; CHECK-NEXT:    sub sp, sp, a3
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    addi a3, sp, 64
+; CHECK-NEXT:    li a4, -1
+; CHECK-NEXT:    sub a5, a0, a2
+; CHECK-NEXT:    add a6, a0, a3
+; CHECK-NEXT:    sltu a0, a0, a5
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsse8.v v24, (a6), a4
+; CHECK-NEXT:    sub a6, a6, a1
+; CHECK-NEXT:    and a0, a0, a5
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    vsse8.v v8, (a6), a4
+; CHECK-NEXT:    vle8.v v8, (a2)
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v16, (a3)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vand.vi v24, v8, 1
+; CHECK-NEXT:    vand.vi v16, v16, 1
+; CHECK-NEXT:    vmsne.vi v8, v24, 0
+; CHECK-NEXT:    vmsne.vi v0, v16, 0
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %dst = call <vscale x 128 x i1> @llvm.experimental.vp.reverse.nxv128i1(<vscale x 128 x i1> %src, <vscale x 128 x i1> splat (i1 1), i32 %evl)
+  ret <vscale x 128 x i1> %dst
+}
+

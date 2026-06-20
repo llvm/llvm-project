@@ -352,8 +352,23 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(
-      getMacroDebugLoc(CGM, Loc));
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  SourceLocation NewLoc = SM.getExpansionLoc(getMacroDebugLoc(CGM, Loc));
+  if (CurLoc != NewLoc) {
+    CurLoc = NewLoc;
+    CurLocFile = nullptr;
+    CurLocLine = 0;
+    CurLocColumn = 0;
+
+    PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
+    if (PCLoc.isInvalid())
+      return;
+
+    CurLocLine = PCLoc.getLine();
+    if (CGM.getCodeGenOpts().DebugColumnInfo)
+      CurLocColumn = PCLoc.getColumn();
+    CurLocFile = getOrCreateFile(CurLoc);
+  }
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -361,21 +376,19 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (LexicalBlockStack.empty())
     return;
 
-  SourceManager &SM = CGM.getContext().getSourceManager();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
-  if (PCLoc.isInvalid() || Scope->getFile() == getOrCreateFile(CurLoc))
+  if (!CurLocFile || Scope->getFile() == CurLocFile)
     return;
 
   if (auto *LBF = dyn_cast<llvm::DILexicalBlockFile>(Scope)) {
     LexicalBlockStack.pop_back();
-    LexicalBlockStack.emplace_back(DBuilder.createLexicalBlockFile(
-        LBF->getScope(), getOrCreateFile(CurLoc)));
+    LexicalBlockStack.emplace_back(
+        DBuilder.createLexicalBlockFile(LBF->getScope(), CurLocFile));
   } else if (isa<llvm::DILexicalBlock>(Scope) ||
              isa<llvm::DISubprogram>(Scope)) {
     LexicalBlockStack.pop_back();
     LexicalBlockStack.emplace_back(
-        DBuilder.createLexicalBlockFile(Scope, getOrCreateFile(CurLoc)));
+        DBuilder.createLexicalBlockFile(Scope, CurLocFile));
   }
 }
 
@@ -582,7 +595,11 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
+    Loc = getMacroDebugLoc(CGM, Loc);
+    if (Loc == CurLoc && CurLocFile)
+      return CurLocFile;
+
+    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -665,20 +682,25 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc)).getLine();
+  SourceLocation DebugLoc = getMacroDebugLoc(CGM, Loc);
+  if (DebugLoc == CurLoc)
+    return CurLocLine;
+  return SM.getPresumedLoc(DebugLoc).getLine();
 }
 
-unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
+unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
   // We may not want column information at all.
-  if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
+  if (!CGM.getCodeGenOpts().DebugColumnInfo)
     return 0;
 
   // If the location is invalid then use the current column.
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc =
-      SM.getPresumedLoc(Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc);
+  SourceLocation DebugLoc = Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc;
+  if (DebugLoc == CurLoc)
+    return CurLocColumn;
+  PresumedLoc PLoc = SM.getPresumedLoc(DebugLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -694,7 +716,11 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.ObjC)
+    if (LO.HLSL)
+      LangTag = llvm::dwarf::DW_LANG_HLSL;
+    else if (LO.HIP)
+      LangTag = llvm::dwarf::DW_LANG_HIP;
+    else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
     else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
@@ -730,7 +756,11 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.ObjC) {
+    if (LO.HLSL) {
+      LangTag = llvm::dwarf::DW_LNAME_HLSL;
+    } else if (LO.HIP) {
+      LangTag = llvm::dwarf::DW_LNAME_HIP;
+    } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
     } else {
       LangTag = llvm::dwarf::DW_LNAME_C_plus_plus;
@@ -844,9 +874,11 @@ void CGDebugInfo::CreateCompileUnit() {
 
   StringRef Sysroot, SDK;
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB) {
-    Sysroot = CGM.getHeaderSearchOpts().Sysroot;
-    auto B = llvm::sys::path::rbegin(Sysroot);
-    auto E = llvm::sys::path::rend(Sysroot);
+    StringRef FullSysroot = CGM.getHeaderSearchOpts().Sysroot;
+    if (CGM.getCodeGenOpts().DebugRecordSysroot)
+      Sysroot = FullSysroot;
+    auto B = llvm::sys::path::rbegin(FullSysroot);
+    auto E = llvm::sys::path::rend(FullSysroot);
     auto It =
         std::find_if(B, E, [](auto SDK) { return SDK.ends_with(".sdk"); });
     if (It != E)
@@ -1101,6 +1133,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
           DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_unsigned); \
     return SingletonId;                                                        \
   }
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createBasicType(Name, Width, llvm::dwarf::DW_ATE_boolean);  \
+    return SingletonId;                                                        \
+  }
 #include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
@@ -1322,6 +1361,7 @@ static bool hasCXXMangling(llvm::dwarf::SourceLanguage Lang, bool IsTagDecl) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
+  case llvm::dwarf::DW_LANG_HIP:
     return true;
   case llvm::dwarf::DW_LANG_ObjC_plus_plus:
     return IsTagDecl;
@@ -1334,6 +1374,7 @@ static bool hasCXXMangling(llvm::dwarf::SourceLanguageName Lang,
                            bool IsTagDecl) {
   switch (Lang) {
   case llvm::dwarf::DW_LNAME_C_plus_plus:
+  case llvm::dwarf::DW_LNAME_HIP:
     return true;
   case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
     return IsTagDecl;
@@ -2075,6 +2116,56 @@ void CGDebugInfo::CollectRecordLambdaFields(
   }
 }
 
+/// Build an llvm::ConstantDataArray from the initialized elements of an
+/// APValue array, using the narrowest integer type that fits the element width.
+template <typename T>
+static llvm::Constant *
+buildConstantDataArrayFromElements(llvm::LLVMContext &Ctx, const APValue &Arr) {
+  const unsigned NumElts = Arr.getArraySize();
+  SmallVector<T, 64> Vals(
+      NumElts,
+      Arr.hasArrayFiller()
+          ? static_cast<T>(Arr.getArrayFiller().getInt().getZExtValue())
+          : 0);
+  for (unsigned I : llvm::seq(Arr.getArrayInitializedElts()))
+    Vals[I] =
+        static_cast<T>(Arr.getArrayInitializedElt(I).getInt().getZExtValue());
+  return llvm::ConstantDataArray::get(Ctx, Vals);
+}
+
+/// Try to create an llvm::Constant for a constexpr array of integer elements.
+/// Handles arrays of char, short, int, long with element width up to 64 bits.
+/// Returns nullptr if the array cannot be represented.
+static llvm::Constant *tryEmitConstexprArrayAsConstant(CodeGenModule &CGM,
+                                                       const VarDecl *Var,
+                                                       const APValue *Value) {
+  const auto *ArrayTy = CGM.getContext().getAsConstantArrayType(Var->getType());
+  if (!ArrayTy)
+    return nullptr;
+
+  const QualType ElemQTy = ArrayTy->getElementType();
+  if (ElemQTy.isNull() || !ElemQTy->isIntegerType())
+    return nullptr;
+
+  const uint64_t ElemBitWidth = CGM.getContext().getTypeSize(ElemQTy);
+
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+  switch (ElemBitWidth) {
+  case 8:
+    return buildConstantDataArrayFromElements<uint8_t>(Ctx, *Value);
+  case 16:
+    return buildConstantDataArrayFromElements<uint16_t>(Ctx, *Value);
+  case 32:
+    return buildConstantDataArrayFromElements<uint32_t>(Ctx, *Value);
+  case 64:
+    return buildConstantDataArrayFromElements<uint64_t>(Ctx, *Value);
+  default:
+    // ConstantDataArray only supports 8/16/32/64-bit elements.
+    // Wider types (e.g. __int128) are not representable.
+    return nullptr;
+  }
+}
+
 llvm::DIDerivedType *
 CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
                                      const RecordDecl *RD) {
@@ -2097,6 +2188,8 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
         C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
       if (Value->isFloat())
         C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+      if (Value->isArray())
+        C = tryEmitConstexprArrayAsConstant(CGM, Var, Value);
     }
   }
 
@@ -2792,7 +2885,7 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 }
 
 // Emit symbol for the debugger that points to the vtable address for
-// the given class. The symbol is named as '_vtable$'.
+// the given class. The symbol is named as '__clang_vtable'.
 // The debugger does not need to know any details about the contents of the
 // vtable as it can work this out using its knowledge of the ABI and the
 // existing information in the DWARF. The type is assumed to be 'void *'.
@@ -2815,7 +2908,7 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
     return;
 
   ASTContext &Context = CGM.getContext();
-  StringRef SymbolName = "_vtable$";
+  StringRef SymbolName = "__clang_vtable";
   SourceLocation Loc;
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
 
@@ -3460,7 +3553,12 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
       IsRootModule ? nullptr
                    : getOrCreateModuleRef(ASTSourceDescriptor(*M->Parent),
                                           CreateSkeletonCU);
-  std::string IncludePath = Mod.getPath().str();
+  StringRef IncludePath = Mod.getPath();
+  if (!CGM.getCodeGenOpts().DebugRecordSysroot) {
+    StringRef Sysroot = CGM.getHeaderSearchOpts().Sysroot;
+    if (!Sysroot.empty() && IncludePath.starts_with(Sysroot))
+      IncludePath = "";
+  }
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
                             RemapPath(IncludePath));
@@ -3529,7 +3627,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   };
   {
     // Use 'char' for the isClassProperty bit as DenseSet requires space for
-    // empty/tombstone keys in the data type (and bool is too small for that).
+    // the empty key in the data type (and bool is too small for that).
     typedef std::pair<char, const IdentifierInfo *> IsClassAndIdent;
     /// List of already emitted properties. Two distinct class and instance
     /// properties can share the same identifier (but not two instance
@@ -3957,12 +4055,19 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                                       StringRef FuncName) {
-  llvm::DISubprogram *SP =
-      createInlinedSubprogram(FuncName, Location->getFile());
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     llvm::DISubprogram *SynthSubprogram) {
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/SP, /*InlinedAt=*/Location);
+                               SynthSubprogram, ParentLocation);
+}
+
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     StringRef SynthFuncName,
+                                     llvm::DIFile *SynthFile) {
+  llvm::DISubprogram *SP = createInlinedSubprogram(SynthFuncName, SynthFile);
+  return CreateSyntheticInlineAt(ParentLocation, SP);
 }
 
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
@@ -3976,7 +4081,8 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  return CreateSyntheticInlineAt(TrapLocation, FuncName);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName,
+                                 TrapLocation->getFile());
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -4849,6 +4955,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     // This is a global initializer or atexit destructor for a global variable.
     Name = getDynamicInitializerName(cast<VarDecl>(D), GD.getDynamicInitKind(),
                                      Fn);
+    if (Name != Fn->getName())
+      LinkageName = Fn->getName();
   } else {
     Name = Fn->getName();
 
@@ -4867,7 +4975,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
       isa<VarDecl>(D) || isa<CapturedDecl>(D)) {
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions should not silently reuse CurLoc.
-    CurLoc = SourceLocation();
+    clearCurLoc();
   }
 
   if (CurFuncIsThunk)
@@ -4953,7 +5061,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions without a location should not silently reuse CurLoc.
     if (Loc.isInvalid())
-      CurLoc = SourceLocation();
+      clearCurLoc();
   }
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = 0;
@@ -5067,9 +5175,8 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
-  Builder.SetCurrentDebugLocation(
-      llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(CurLoc),
-                            getColumnNumber(CurLoc), Scope, CurInlinedAt));
+  Builder.SetCurrentDebugLocation(llvm::DILocation::get(
+      CGM.getLLVMContext(), CurLocLine, CurLocColumn, Scope, CurInlinedAt));
 }
 
 void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
@@ -5921,15 +6028,14 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
-      if (!ED->getIdentifier()) {
-        Reconstitutable = false;
-        return false;
-      }
-      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
-        Reconstitutable = false;
-        return false;
-      }
+    const EnumDecl *ED = ET->getDecl();
+    if (!ED->getIdentifier()) {
+      Reconstitutable = false;
+      return false;
+    }
+    if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
+      Reconstitutable = false;
+      return false;
     }
     return true;
   }
@@ -6701,8 +6807,15 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); }))
-    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
+  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
+    // Use ubsan header file to have the same filename for all checks. There is
+    // nothing special in that file, we just want to make tools to count all
+    // syntetic functions of a check as the same.
+    llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
+                                           /*Filename=*/"ubsan_interface.h",
+                                           /*Directory=*/"sanitizer");
+    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label, File);
+  }
 
   return CheckDebugLoc;
 }

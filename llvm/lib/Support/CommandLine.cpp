@@ -277,10 +277,11 @@ public:
       OptionNames.push_back(O->ArgStr);
 
     SubCommand &Sub = *SC;
-    auto End = Sub.OptionsMap.end();
     for (auto Name : OptionNames) {
       auto I = Sub.OptionsMap.find(Name);
-      if (I != End && I->second == O)
+      // Re-query end() each iteration: a prior erase invalidates iterators
+      // (including a cached end()) under backward-shift deletion.
+      if (I != Sub.OptionsMap.end() && I->second == O)
         Sub.OptionsMap.erase(I);
     }
 
@@ -839,9 +840,10 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
                                 SmallVectorImpl<const char *> &NewArgv,
                                 bool MarkEOLs) {
   SmallString<128> Token;
+  bool InToken = false;
   for (size_t I = 0, E = Src.size(); I != E; ++I) {
     // Consume runs of whitespace.
-    if (Token.empty()) {
+    if (!InToken) {
       while (I != E && isWhitespace(Src[I])) {
         // Mark the end of lines in response files.
         if (MarkEOLs && Src[I] == '\n')
@@ -850,6 +852,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
       }
       if (I == E)
         break;
+      InToken = true;
     }
 
     char C = Src[I];
@@ -878,12 +881,12 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
 
     // End the token if this is whitespace.
     if (isWhitespace(C)) {
-      if (!Token.empty())
-        NewArgv.push_back(Saver.save(Token.str()).data());
+      NewArgv.push_back(Saver.save(Token.str()).data());
       // Mark the end of lines in response files.
       if (MarkEOLs && C == '\n')
         NewArgv.push_back(nullptr);
       Token.clear();
+      InToken = false;
       continue;
     }
 
@@ -892,7 +895,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
   }
 
   // Append the last token after hitting EOF with no whitespace.
-  if (!Token.empty())
+  if (InToken)
     NewArgv.push_back(Saver.save(Token.str()).data());
 }
 
@@ -1492,8 +1495,14 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   // Options might be reset twice (they can be reference in both OptionsMap
   // and one of the other members), but that does not harm.
   for (auto *SC : RegisteredSubCommands) {
+    // reset() removes default options from OptionsMap (via removeArgument), so
+    // collect the options first to avoid invalidating the map iterator.
+    SmallVector<Option *, 0> Opts;
+    Opts.reserve(SC->OptionsMap.size());
     for (auto &O : SC->OptionsMap)
-      O.second->reset();
+      Opts.push_back(O.second);
+    for (Option *O : Opts)
+      O->reset();
     for (Option *O : SC->PositionalOpts)
       O->reset();
     for (Option *O : SC->SinkOpts)

@@ -56,8 +56,7 @@ public:
   using ClassDefId = std::pair<SourceLocation, std::string>;
 
   using ClassDefiningSpecialMembersMap =
-      llvm::DenseMap<ClassDefId,
-                     llvm::SmallVector<SpecialMemberFunctionData, 5>>;
+      llvm::DenseMap<ClassDefId, SmallVector<SpecialMemberFunctionData, 5>>;
 
 private:
   void checkForMissingMembers(
@@ -88,14 +87,8 @@ struct DenseMapInfo<
     return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
-  static ClassDefId getTombstoneKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-            "TOMBSTONE"};
-  }
-
   static unsigned getHashValue(const ClassDefId &Val) {
     assert(Val != getEmptyKey() && "Cannot hash the empty key!");
-    assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
     const std::hash<ClassDefId::second_type> SecondHash;
     return Val.first.getHashValue() + SecondHash(Val.second);
@@ -104,8 +97,6 @@ struct DenseMapInfo<
   static bool isEqual(const ClassDefId &LHS, const ClassDefId &RHS) {
     if (RHS == getEmptyKey())
       return LHS == getEmptyKey();
-    if (RHS == getTombstoneKey())
-      return LHS == getTombstoneKey();
     return LHS == RHS;
   }
 };
