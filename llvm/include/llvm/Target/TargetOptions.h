@@ -123,15 +123,15 @@ public:
         EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-        EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-        DisableIntegratedAS(false), FunctionSections(false),
-        DataSections(false), IgnoreXCOFFVisibility(false),
-        XCOFFTracebackTable(true), UniqueSectionNames(true),
-        UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
-        TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-        EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
-        EmitStackSizeSection(false), EnableMachineOutliner(false),
-        EnableMachineFunctionSplitter(false),
+        EnableFastISel(false), EnableGlobalISel(false), FastRA(false),
+        UseInitArray(false), DisableIntegratedAS(false),
+        FunctionSections(false), DataSections(false),
+        IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
+        UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+        SeparateNamedSections(false), TrapUnreachable(false),
+        NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+        EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
+        EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
         EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
         EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
@@ -208,6 +208,9 @@ public:
 
   /// EnableGlobalISel - This flag enables global instruction selection.
   unsigned EnableGlobalISel : 1;
+
+  /// FastRA - When true, code gen is using the the Fast Register Allocator.
+  unsigned FastRA : 1;
 
   /// EnableGlobalISelAbort - Control abort behaviour when global instruction
   /// selection fails to lower/select an instruction.

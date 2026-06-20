@@ -259,7 +259,7 @@ static bool processAsmConstraintBrInst(CallBrInst &CBR, bool IsOptLevelNone,
   return true;
 }
 
-static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU) {
+static bool runImpl(Function &F, bool SelectMemPath, DomTreeUpdater &DTU) {
   bool Changed = false;
   SmallVector<CallBrInst *, 4> AsmConstraintBrs;
 
@@ -274,7 +274,7 @@ static bool runImpl(Function &F, bool IsOptLevelNone, DomTreeUpdater &DTU) {
   // removes it from the function's block list. Collect OtherCallBrs only
   // after this loop to avoid holding dangling pointers into deleted blocks.
   for (auto *CBR : AsmConstraintBrs)
-    Changed |= processAsmConstraintBrInst(*CBR, IsOptLevelNone, DTU);
+    Changed |= processAsmConstraintBrInst(*CBR, SelectMemPath, DTU);
 
   // Collect and process the remaining 'callbr' instructions.
   SmallVector<CallBrInst *, 4> OtherCallBrs;
@@ -294,20 +294,23 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  bool IsOptLevelNone =
-      skipFunction(F) ? true : TM->getOptLevel() == CodeGenOptLevel::None;
+  // Note: TM->Options.EnableGlobalISel == !TM->Options.EnableFastISel
+  bool SelectMemPath =
+      skipFunction(F) || TM->Options.FastRA || TM->Options.EnableFastISel;
 
-  return runImpl(F, IsOptLevelNone, DTU);
+  return runImpl(F, SelectMemPath, DTU);
 }
 
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  bool IsOptLevelNone =
-      F.hasOptNone() ? true : TM->getOptLevel() == CodeGenOptLevel::None;
 
-  if (runImpl(F, IsOptLevelNone, DTU)) {
+  // Note: TM->Options.EnableGlobalISel == !TM->Options.EnableFastISel
+  bool SelectMemPath =
+      F.hasOptNone() || TM->Options.FastRA || TM->Options.EnableFastISel;
+
+  if (runImpl(F, SelectMemPath, DTU)) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
     return PA;

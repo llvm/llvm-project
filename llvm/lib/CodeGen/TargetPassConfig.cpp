@@ -1461,6 +1461,8 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// Add the minimum set of target-independent passes that are required for
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
+  TM->Options.FastRA = true;
+
   addPass(&PHIEliminationID);
   addPass(&TwoAddressInstructionPassID);
 
