@@ -1668,10 +1668,6 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // zext(trunc(X) & C) -> (X & zext(C)).
   Constant *C;
   Value *X;
-  if (match(Src, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Constant(C)))) &&
-      X->getType() == DestTy)
-    return BinaryOperator::CreateAnd(X, Builder.CreateZExt(C, DestTy));
-
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
   if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
