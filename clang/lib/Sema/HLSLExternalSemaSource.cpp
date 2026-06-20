@@ -760,8 +760,26 @@ static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
                             ThreeArg);
 }
 
+// Synthesize the InterlockedOr overload set: {int, uint, int64_t, uint64_t}
+// x {groupshared, device} x {2-arg, 3-arg}.
+static void defineHLSLInterlockedOr(Sema &S, NamespaceDecl *NS) {
+  ASTContext &AST = S.getASTContext();
+  // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
+  LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
+
+  for (QualType ElemTy : Elems)
+    for (LangAS AS : AddrSpaces)
+      for (bool ThreeArg : {false, true})
+        buildAtomicOverload(S, NS, "InterlockedOr",
+                            "__builtin_hlsl_interlocked_or", ElemTy, AS,
+                            ThreeArg);
+}
+
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
   defineHLSLInterlockedAdd(*SemaPtr, HLSLNamespace);
+  defineHLSLInterlockedOr(*SemaPtr, HLSLNamespace);
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
