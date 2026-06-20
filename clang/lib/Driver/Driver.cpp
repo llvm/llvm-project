@@ -552,11 +552,9 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
                                 StringRef ArgTarget) {
 
   static bool BeSilent = false;
-  auto IsTooOldToBeSupported = [](int v, int r) -> bool {
-    return ((v < 2) || ((v == 2) && (r < 4)));
-  };
+  auto IsTooOldToBeSupported = [](int v, int r) -> bool { return v < 3; };
 
-  /* expect CURRENT, zOSV2R[45], or 0xnnnnnnnn */
+  /* expect CURRENT, zOSVnRn, or 0xnnnnnnnn */
   if (ArgTarget.equals_insensitive("CURRENT")) {
     /* If the user gives CURRENT, then we rely on the LE to set   */
     /* __TARGET_LIB__.  There's nothing more we need to do.       */
@@ -6505,7 +6503,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     StringRef FcValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fc);
     // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
     // handle this as part of the SLASH_Fa handling below.
-    return C.addResultFile(C.getArgs().MakeArgString(FcValue.str()), &JA);
+    return C.addResultFile(C.getArgs().MakeArgString(FcValue), &JA);
   }
 
   if ((JA.getType() == types::TY_Object &&
@@ -6521,7 +6519,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     // that is using Fc or just printing disassembly.
     if (TC.isLastOutputProducingJob(C.getArgs(), JA.getKind()) &&
         !FoValue.empty())
-      return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+      return C.addResultFile(C.getArgs().MakeArgString(FoValue), &JA);
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
     const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
