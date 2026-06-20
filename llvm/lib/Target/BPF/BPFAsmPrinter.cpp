@@ -82,10 +82,9 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
       if (!CA)
         continue;
 
-      for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
-        if (!dyn_cast<BlockAddress>(CA->getOperand(i)))
-          continue;
-      }
+      if (!all_of(CA->operands(),
+                  [](const Use &Op) { return isa<BlockAddress>(Op); }))
+        continue;
       Targets.push_back(&Global);
     }
 
