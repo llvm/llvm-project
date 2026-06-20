@@ -100,7 +100,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   if (T == PT_IntAPS) {
     unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
-    Result.copy(Val);
+    Result.copy(Val.extOrTrunc(BitWidth));
     S.Stk.push<IntegralAP<true>>(Result);
     return;
   }
@@ -108,7 +108,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   if (T == PT_IntAP) {
     unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
-    Result.copy(Val);
+    Result.copy(Val.extOrTrunc(BitWidth));
     S.Stk.push<IntegralAP<false>>(Result);
     return;
   }

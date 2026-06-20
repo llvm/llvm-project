@@ -4,7 +4,7 @@
 //
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir
-// RUN: cp -r %S/Inputs/identifier-naming/symlink %t.dir/symlink
+// RUN: cp -R %S/Inputs/identifier-naming/symlink %t.dir/symlink
 // RUN: mkdir -p %t.dir/symlink/build
 // RUN: ln -s %t.dir/symlink/include/test.h %t.dir/symlink/build/test.h
 // RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t.dir -- --header-filter="test.h" --config-file=%S/Inputs/identifier-naming/symlink/include/.clang-tidy -- -I %t.dir/symlink/build

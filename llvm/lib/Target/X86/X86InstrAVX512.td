@@ -3356,8 +3356,9 @@ multiclass avx512_load_vl<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_store<bits<8> opc, string OpcodeStr, string BaseName,
-                        X86VectorVTInfo _, PatFrag st_frag, PatFrag mstore,
-                        X86SchedWriteMoveLS Sched, bit NoMRPattern = 0> {
+                        X86VectorVTInfo _, SDPatternOperator st_frag,
+                        PatFrag mstore, X86SchedWriteMoveLS Sched,
+                        bit NoMRPattern = 0> {
   let hasSideEffects = 0, isCodeGenOnly = 1, ForceDisassemble = 1 in {
   let isMoveReg = 1 in
   def rr_REV  : AVX512PI<opc, MRMDestReg, (outs _.RC:$dst), (ins _.RC:$src),
