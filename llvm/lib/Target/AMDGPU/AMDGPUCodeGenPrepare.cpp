@@ -1361,7 +1361,11 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
   if (NumDivBits <= (IsSigned ? 23 : 22)) {
     Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
                                        IsSigned);
-  } else if (NumDivBits <= 32) {
+  } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
+    // Do not use 32-bit division if dividend may be -2147483648.
+    // Otherwise 32-bit division cannot be used safely.
+    // -2147483648/1 and -2147483648/-1 are not equal,
+    // but they produce the same lower 32-bit result.
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
 
