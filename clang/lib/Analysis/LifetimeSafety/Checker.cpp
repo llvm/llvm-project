@@ -279,32 +279,28 @@ public:
             // Invalidated object escapes to a field.
             if (IssueExpr)
               // Invalidated object on stack escapes to a field.
-              SemaHelper->reportInvalidatedField(IssueExpr,
-                                                 FieldEscape->getFieldDecl(),
-                                                 Warning.InvalidatedByExpr,
-                                                 L->getAccessPath());
+              SemaHelper->reportInvalidatedField(
+                  IssueExpr, FieldEscape->getFieldDecl(),
+                  Warning.InvalidatedByExpr, L->getAccessPath());
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to a field.
-              SemaHelper->reportInvalidatedField(InvalidatedPVD,
-                                                 FieldEscape->getFieldDecl(),
-                                                 Warning.InvalidatedByExpr,
-                                                 L->getAccessPath());
+              SemaHelper->reportInvalidatedField(
+                  InvalidatedPVD, FieldEscape->getFieldDecl(),
+                  Warning.InvalidatedByExpr, L->getAccessPath());
           } else if (const auto *GlobalEscape =
                          dyn_cast<GlobalEscapeFact>(OEF)) {
             // Invalidated object escapes to global or static storage.
             if (IssueExpr)
               // Invalidated object on stack escapes to global or static
               // storage.
-              SemaHelper->reportInvalidatedGlobal(IssueExpr,
-                                                  GlobalEscape->getGlobal(),
-                                                  Warning.InvalidatedByExpr,
-                                                  L->getAccessPath());
+              SemaHelper->reportInvalidatedGlobal(
+                  IssueExpr, GlobalEscape->getGlobal(),
+                  Warning.InvalidatedByExpr, L->getAccessPath());
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to global or static storage.
-              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
-                                                  GlobalEscape->getGlobal(),
-                                                  Warning.InvalidatedByExpr,
-                                                  L->getAccessPath());
+              SemaHelper->reportInvalidatedGlobal(
+                  InvalidatedPVD, GlobalEscape->getGlobal(),
+                  Warning.InvalidatedByExpr, L->getAccessPath());
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
           } else
