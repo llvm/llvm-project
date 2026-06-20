@@ -251,7 +251,7 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
-        int alignment = ComputeLongestRegisterName(
+        int reg_name_right_align_at = ComputeLongestRegisterName(
             command, reg_ctx,
             !static_cast<bool>(m_command_options.alternate_name));
         // Extra ident to be consistent with register sets dumping.
@@ -272,7 +272,7 @@ protected:
             bool print_flags =
                 !m_format_options.GetFormatValue().OptionWasSet();
             if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_flags,
-                              alignment))
+                              reg_name_right_align_at))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'",
