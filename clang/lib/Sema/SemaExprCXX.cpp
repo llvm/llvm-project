@@ -3052,11 +3052,6 @@ bool Sema::FindAllocationFunctions(
       IAP.PassAlignment = OriginalAlignedAllocationMode;
       auto AllocArgs = FillAllocArgs(TypeAwareAllocationMode::No,
                                      OriginalAlignedAllocationMode);
-      // C++17 [expr.new]p13:
-      //   If no matching function is found and the allocated object type has
-      //   new-extended alignment, the alignment argument is removed from the
-      //   argument list, and overload resolution is performed again.
-      //
       // C++20 [expr.new]p18:
       //   If no matching function is found then
       //     — if the allocated object type has new-extended alignment, the
@@ -3066,7 +3061,7 @@ bool Sema::FindAllocationFunctions(
       //       after the first argument;
       //   and then overload resolution is performed again.
       bool UseFallback = isAlignedAllocation(OriginalAlignedAllocationMode) ||
-                         (getLangOpts().CPlusPlus20 && getStdAlignValT());
+                         (getLangOpts().AlignedAllocation && getStdAlignValT());
       auto FallbackAlignedAllocationMode = alignedAllocationModeFromBool(
           !isAlignedAllocation(OriginalAlignedAllocationMode));
       auto FallbackAllocArgs =
