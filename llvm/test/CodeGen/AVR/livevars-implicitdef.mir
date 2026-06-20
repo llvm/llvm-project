@@ -1,0 +1,110 @@
+# RUN: llc -mtriple=avr --run-pass=livevars -o - %s | FileCheck %s
+
+# Regression test for #156428.
+# When a use of a register pair is fed by separate writes to each half
+# (typical of K&R-style 8-bit code on AVR/Z80-style targets), the previous
+# code dropped implicit operands that kept the earlier half's writer live.
+# DeadMachineInstrElim then deleted it; the resulting code read an
+# undefined register.
+#
+# After the fix, the LastPartialDef instruction must carry an
+# `implicit $r25` (the half written by the earlier instruction) so that
+# downstream passes see the earlier writer as consumed at this point.
+
+--- |
+  target triple = "avr"
+  declare void @use()
+  define void @pair_two_halves_eqv_dist() { unreachable }
+  define void @pair_two_halves_hole() { unreachable }
+  define void @pair_partial_def_subreg_of_use() { unreachable }
+  define void @one_half_no_prior_def() { unreachable }
+...
+
+---
+# The repro from the bug. $r25 and $r24 are defined by independent
+# instructions, then $r25r24 is used. Pre-fix: LDIRdK $r24 gets only
+# implicit-def $r25r24, $r25 = MOVRdRr gets eliminated. Post-fix:
+# implicit $r25 is also added, keeping the prior MOVRdRr live.
+name: pair_two_halves_eqv_dist
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r22
+
+    ; CHECK-LABEL: name: pair_two_halves_eqv_dist
+    ; CHECK: $r25 = MOVRdRr killed $r22
+    ; CHECK-NEXT: $r24 = LDIRdK 42, implicit-def $r25r24, implicit $r25
+    ; CHECK-NEXT: $r20 = MOVRdRr $r25
+    ; CHECK-NEXT: RCALLk @use, implicit killed $r25r24, implicit killed $r20
+
+    $r25 = MOVRdRr $r22
+    $r24 = LDIRdK 42
+    $r20 = MOVRdRr $r25
+    RCALLk @use, implicit $r25r24, implicit $r20
+...
+
+---
+# Same shape with an unrelated instruction between the two partial defs.
+# The implicit-use must still cover $r25.
+name: pair_two_halves_hole
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r22
+
+    ; CHECK-LABEL: name: pair_two_halves_hole
+    ; CHECK: $r25 = MOVRdRr killed $r22
+    ; CHECK-NEXT: $r18 = LDIRdK 7
+    ; CHECK-NEXT: $r24 = LDIRdK 42, implicit-def $r25r24, implicit $r25
+    ; CHECK-NEXT: RCALLk @use, implicit killed $r25r24, implicit killed $r18
+
+    $r25 = MOVRdRr $r22
+    $r18 = LDIRdK 7
+    $r24 = LDIRdK 42
+    RCALLk @use, implicit $r25r24, implicit $r18
+...
+
+---
+# Guard test for PR #119446's original case. Here LastPartialDef's
+# EXPLICIT def is a subreg of the super-reg that the implicit-use
+# iteration is considering. That subreg must not be re-added as an
+# implicit operand (it's already in the operand list explicitly).
+# This case should already work pre-fix — included to guard against
+# regressing PR #119446's intent.
+name: pair_partial_def_subreg_of_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r22, $r23
+
+    ; CHECK-LABEL: name: pair_partial_def_subreg_of_use
+    ; CHECK: $r25 = MOVRdRr killed $r22
+    ; CHECK-NEXT: $r24 = MOVRdRr killed $r23, implicit-def $r25r24, implicit $r25
+    ; CHECK-NEXT: RCALLk @use, implicit killed $r25r24
+
+    $r25 = MOVRdRr $r22
+    $r24 = MOVRdRr $r23
+    RCALLk @use, implicit $r25r24
+...
+
+---
+# Safety guard: only one half ($r24) is defined in this block; $r25 has no
+# prior def anywhere.  The fix must NOT add "implicit $r25" — doing so would
+# extend a live range into a region with no reaching def and crash
+# LiveIntervals.  The {{$}} anchors the CHECK-NEXT at end-of-line so that
+# an accidentally-added operand (e.g. ", implicit $r25") would be caught.
+name: one_half_no_prior_def
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; $r18 at dist 0 displaces $r24 to dist 1, keeping FindLastPartialDef
+    ; away from the Dist=0 edge case that is orthogonal to this fix.
+    $r18 = LDIRdK 0
+    $r24 = LDIRdK 42
+    RCALLk @use, implicit $r25r24, implicit $r18
+
+    ; CHECK-LABEL: name: one_half_no_prior_def
+    ; CHECK: $r18 = LDIRdK 0
+    ; CHECK-NEXT: $r24 = LDIRdK 42, implicit-def $r25r24{{$}}
+    ; CHECK-NEXT: RCALLk @use, implicit killed $r25r24, implicit killed $r18
+...

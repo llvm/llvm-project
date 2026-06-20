@@ -252,8 +252,63 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     MachineInstr *LastPartialDef = FindLastPartialDef(Reg);
     // If LastPartialDef is NULL, it must be using a livein register.
     if (LastPartialDef) {
+      // Sub-registers that LastPartialDef already writes (explicitly or via
+      // an overlap) need no additional implicit operand from us — they're
+      // already covered. Record them here so the loop further down can skip
+      // them when deciding where to add implicit-uses.
+      //
+      // Example, Reg = $r25r24 on AVR:
+      //   $r25 = MOVRdRr $r22     ; earlier partial def of $r25
+      //   $r24 = LDIRdK 42        ; LastPartialDef
+      //   ... use $r25r24 ...
+      // LDIRdK already writes $r24 explicitly but not $r25, so
+      // AlreadyDefined = {$r24}. The loop below adds `implicit $r25`
+      // (kept-live via the MOVRdRr) and skips $r24 (which is already in
+      // the operand list).
+      //
+      // This snapshot must be taken *before* the `implicit-def Reg` added
+      // below: once Reg is in the operand list it overlaps every
+      // sub-register of Reg, so `modifiesRegister(SubReg, TRI)` would
+      // return true for all of them and the snapshot would collapse to
+      // "every sub-register".
+      SmallSet<MCPhysReg, 4> AlreadyDefined;
+      for (MCPhysReg SubReg : TRI->subregs(Reg))
+        if (LastPartialDef->modifiesRegister(SubReg, TRI))
+          AlreadyDefined.insert(SubReg);
+
       LastPartialDef->addOperand(
           MachineOperand::CreateReg(Reg, /*IsDef=*/true, /*IsImp=*/true));
+      PhysRegDef[Reg.id()] = LastPartialDef;
+
+      // For each remaining sub-register of Reg with a prior partial def in
+      // this block, add an implicit-use so live analysis (and
+      // DeadMachineInstrElim) sees that earlier def as still consumed at
+      // this point. Skip sub-registers with no prior def — adding an
+      // implicit-use there would extend a live range into a region with
+      // no reaching def.
+      //
+      // Continuing the example above (Reg = $r25r24, AlreadyDefined =
+      // {$r24}, PhysRegDef[$r25] = the earlier `$r25 = MOVRdRr`):
+      //   - $r24 → in AlreadyDefined → skip.
+      //   - $r25 → not in AlreadyDefined and has a prior def → add
+      //     `implicit $r25` to LDIRdK. The earlier `$r25 = MOVRdRr`
+      //     now has a consumer and won't be deleted as dead.
+      SmallSet<MCPhysReg, 8> Processed;
+      for (MCPhysReg SubReg : TRI->subregs(Reg)) {
+        // Already covered by a super-reg handled earlier in this loop.
+        if (!Processed.insert(SubReg).second)
+          continue;
+        // Already written by LastPartialDef's existing explicit defs.
+        if (AlreadyDefined.count(SubReg))
+          continue;
+        // No earlier writer in this block, so nothing to keep alive.
+        if (!PhysRegDef[SubReg])
+          continue;
+        LastPartialDef->addOperand(MachineOperand::CreateReg(
+            SubReg, /*IsDef=*/false, /*IsImp=*/true));
+        PhysRegDef[SubReg] = LastPartialDef;
+        Processed.insert_range(TRI->subregs(SubReg));
+      }
     }
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
