@@ -17,30 +17,36 @@ internal_x_seg:
 .globl  foo
 foo:
   .int32 internal_x_seg - foo
-  .size foo, 4
+  .int64 internal_x_seg - foo
+  .size foo, 12
 foo_addend:
   .int32 internal_x_seg - foo
-  .size foo_addend, 4
+  .int64 internal_x_seg - foo
+  .size foo_addend, 12
 
 # external cross segment subtraction
 .section .bar,"",@
 .globl  bar
 bar:
   .int32 hello_str - bar
-  .size bar, 4
+  .int64 hello_str - bar
+  .size bar, 12
 bar_addend:
   .int32 hello_str - bar
-  .size bar_addend, 4
+  .int64 hello_str - bar
+  .size bar_addend, 12
 
 # positive calc result
 .section .fizz,"",@
 .globl  fizz
 fizz:
   .int32 far - fizz
-  .size fizz, 4
+  .int64 far - fizz
+  .size fizz, 12
 fizz_addend:
   .int32 far - fizz
-  .size fizz_addend, 4
+  .int64 far - fizz
+  .size fizz_addend, 12
 
 .section .far,"",@
 .globl  far
@@ -67,23 +73,22 @@ far:
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           65551
-# CHECK-NEXT:        Content:         FCFFFFFFFCFFFFFF
-# CHECK-NEXT:      - SectionOffset:   52
-# CHECK-NEXT:        InitFlags:       0
-# CHECK-NEXT:        Offset:
-# CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           65559
-# CHECK-NEXT:        Content:         E9FFFFFFE9FFFFFF
-# CHECK-NEXT:      - SectionOffset:   67
-# CHECK-NEXT:        InitFlags:       0
-# CHECK-NEXT:        Offset:
-# CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           65567
-# CHECK-NEXT:        Content:         '0800000008000000'
-# CHECK-NEXT:      - SectionOffset:   82
+# CHECK-NEXT:        Content:         FCFFFFFFFCFFFFFFFFFFFFFFFCFFFFFFFCFFFFFFFFFFFFFF
+# CHECK-NEXT:      - SectionOffset:   68
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           65575
+# CHECK-NEXT:        Content:         D9FFFFFFD9FFFFFFFFFFFFFFD9FFFFFFD9FFFFFFFFFFFFFF
+# CHECK-NEXT:      - SectionOffset:   99
+# CHECK-NEXT:        InitFlags:       0
+# CHECK-NEXT:        Offset:
+# CHECK-NEXT:          Opcode:          I32_CONST
+# CHECK-NEXT:          Value:           65599
+# CHECK-NEXT:        Content:         '180000001800000000000000180000001800000000000000'
+# CHECK-NEXT:      - SectionOffset:   130
+# CHECK-NEXT:        InitFlags:       0
+# CHECK-NEXT:        Offset:
+# CHECK-NEXT:          Opcode:          I32_CONST
+# CHECK-NEXT:          Value:           65623
 # CHECK-NEXT:        Content:         '15000000'
-
