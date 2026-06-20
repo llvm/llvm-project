@@ -3722,8 +3722,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         Value *BasePtr;
         const APInt *PtrOffset;
-        if (match(Ptr.get(),
-                  m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
+        if (match(Ptr.get(), m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
           auto PtrOffsetVal =
               PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
                   .trySExtValue();
