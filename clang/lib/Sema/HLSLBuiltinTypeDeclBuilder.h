@@ -130,9 +130,6 @@ public:
   BuiltinTypeDeclBuilder &addGetDimensionsMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addMipsMember(ResourceDimension Dim);
 
-  BuiltinTypeDeclBuilder &addInterlockedMethodsForBuffer();
-  BuiltinTypeDeclBuilder &addInterlocked64MethodsForBuffer();
-
 private:
   BuiltinTypeDeclBuilder &addCreateFromBinding();
   BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();

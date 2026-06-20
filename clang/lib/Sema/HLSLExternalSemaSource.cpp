@@ -645,8 +645,6 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addByteAddressBufferLoadMethods()
         .addByteAddressBufferStoreMethods()
         .addGetDimensionsMethodForBuffer()
-        .addInterlockedMethodsForBuffer()
-        .addInterlocked64MethodsForBuffer()
         .completeDefinition();
   });
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
@@ -745,9 +743,11 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
   NS->addDecl(FD);
 }
 
-// Synthesize the InterlockedAdd overload set: {int, uint, int64_t, uint64_t}
+// Synthesize the InterlockedFunc overload set: {int, uint, int64_t, uint64_t}
 // x {groupshared, device} x {2-arg, 3-arg}.
-static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
+static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
+                                      StringRef FuncName,
+                                      StringRef BuiltinName) {
   ASTContext &AST = S.getASTContext();
   // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
   QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
@@ -757,13 +757,14 @@ static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
   for (QualType ElemTy : Elems)
     for (LangAS AS : AddrSpaces)
       for (bool ThreeArg : {false, true})
-        buildAtomicOverload(S, NS, "InterlockedAdd",
-                            "__builtin_hlsl_interlocked_add", ElemTy, AS,
-                            ThreeArg);
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
 }
 
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
-  defineHLSLInterlockedAdd(*SemaPtr, HLSLNamespace);
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
+                            "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
+                            "__builtin_hlsl_interlocked_or");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

@@ -13811,9 +13811,6 @@ def err_hlsl_gathercmp_invalid_component
 def err_hlsl_resource_member_array_access_not_constant
     : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;
 
-def err_hlsl_intrinsic_in_wrong_shader_model: Error<
-  "intrinsic %0 requires shader model %1 or greater">;
-
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

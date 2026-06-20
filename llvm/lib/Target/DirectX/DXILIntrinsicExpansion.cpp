@@ -228,6 +228,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
   case Intrinsic::dx_interlocked_add:
+  case Intrinsic::dx_interlocked_or:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
@@ -783,6 +784,18 @@ static Value *expandInterlockedAddIntrinsic(CallInst *Orig) {
                                  AtomicOrdering::Monotonic);
 }
 
+static Value *expandInterlockedOrIntrinsic(CallInst *Orig) {
+  // Lower @llvm.dx.interlocked.or(ptr, val) to `atomicrmw or ptr, val
+  // monotonic`. HLSL Interlocked operations imply no fence/barrier, which maps
+  // to monotonic ordering. The instruction's result is the old value, matching
+  // the intrinsic's return value.
+  Value *Ptr = Orig->getArgOperand(0);
+  Value *Val = Orig->getArgOperand(1);
+  IRBuilder<> Builder(Orig);
+  return Builder.CreateAtomicRMW(AtomicRMWInst::Or, Ptr, Val, MaybeAlign(),
+                                 AtomicOrdering::Monotonic);
+}
+
 static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
   IRBuilder<> Builder(Orig);
 
@@ -1246,6 +1259,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_interlocked_add:
     Result = expandInterlockedAddIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_interlocked_or:
+    Result = expandInterlockedOrIntrinsic(Orig);
     break;
   case Intrinsic::dx_resource_load_rawbuffer:
     if (expandBufferLoadIntrinsic(Orig, /*IsRaw*/ true))
