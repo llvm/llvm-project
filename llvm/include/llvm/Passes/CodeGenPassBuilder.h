@@ -194,8 +194,9 @@ public:
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
-    if (!Opt.OptimizeRegAlloc)
-      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None;
+    if (Opt.OptimizeRegAlloc == cl::BOU_UNSET)
+      Opt.OptimizeRegAlloc =
+          getOptLevel() != CodeGenOptLevel::None ? cl::BOU_TRUE : cl::BOU_FALSE;
   }
 
   Error buildPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
@@ -875,19 +876,17 @@ template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addCoreISelPasses(
     PassManagerWrapper &PMW) const {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
-  TM.setO0WantsFastISel(Opt.EnableFastISelOption.value_or(true));
+  TM.setO0WantsFastISel(Opt.EnableFastISelOption != cl::BOU_FALSE);
 
   // Determine an instruction selector.
   enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
   SelectorType Selector;
 
-  if (Opt.EnableFastISelOption && *Opt.EnableFastISelOption == true)
+  if (Opt.EnableFastISelOption == cl::BOU_TRUE)
     Selector = SelectorType::FastISel;
-  else if ((Opt.EnableGlobalISelOption &&
-            *Opt.EnableGlobalISelOption == true) ||
+  else if (Opt.EnableGlobalISelOption == cl::BOU_TRUE ||
            (TM.Options.EnableGlobalISel &&
-            (!Opt.EnableGlobalISelOption ||
-             *Opt.EnableGlobalISelOption == false)))
+            Opt.EnableGlobalISelOption != cl::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
   else if (TM.getOptLevel() == CodeGenOptLevel::None && TM.getO0WantsFastISel())
     Selector = SelectorType::FastISel;
@@ -989,8 +988,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
-  if (auto Err = *Opt.OptimizeRegAlloc ? derived().addOptimizedRegAlloc(PMW)
-                                       : derived().addFastRegAlloc(PMW))
+  if (auto Err = Opt.OptimizeRegAlloc == cl::BOU_TRUE
+                     ? derived().addOptimizedRegAlloc(PMW)
+                     : derived().addFastRegAlloc(PMW))
     return std::move(Err);
 
   // Run post-ra passes.
