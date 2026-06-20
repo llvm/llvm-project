@@ -1084,17 +1084,9 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
     VersionedClause<OMPC_UnifiedAddress>,
     VersionedClause<OMPC_UnifiedSharedMemory>,
     VersionedClause<OMPC_DeviceSafesync, 60>,
-    // OpenMP 5.2 Spec: If an implementation is not supporting a requirement
-    // (reverse offload in this case) then it should give compile-time error
-    // termination.
-    // Seeting supported version for reverse_offload to a distant future version
-    // 9.9 so that its partial support can be tested in the meantime.
-    //
-    // TODO: Correct this supprted version number whenever complete
-    // implementation of reverse_offload is available.
     VersionedClause<OMPC_AtomicDefaultMemOrder>,
     VersionedClause<OMPC_DynamicAllocators>, VersionedClause<OMPC_SelfMaps>,
-    VersionedClause<OMPC_ReverseOffload, 99>,
+    VersionedClause<OMPC_ReverseOffload>,
   ];
   let association = AS_None;
   let category = CA_Informational;
