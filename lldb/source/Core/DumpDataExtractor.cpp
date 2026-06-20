@@ -347,6 +347,339 @@ static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
   return llvm::APFloat::Bogus();
 }
 
+static offset_t FormatOCamlValue(const DataExtractor &DE, Stream *s,
+                                 offset_t start_offset, uint64_t base_addr,
+                                 ExecutionContextScope *exe_ctx_scope,
+                                 llvm::DenseSet<lldb::addr_t> pointers_seen,
+                                 int depth, bool is_lazy_closure = false) {
+  offset_t offset = start_offset;
+  uint64_t value = DE.GetU64(&offset);
+  if (offset == start_offset) {
+    s->Printf("<could not read value>");
+    return offset;
+  }
+
+  if ((value & 0x1) == 1) {
+    /* Tagged immediate */
+    s->Printf("%" PRId64, value >> 1);
+  } else if (pointers_seen.contains(value)) {
+    s->Printf("<cyclic value>@");
+  } else {
+    bool print_default = true;
+    ExecutionContext exe_ctx;
+
+    pointers_seen.insert(value);
+
+    if (exe_ctx_scope)
+      exe_ctx_scope->CalculateExecutionContext(exe_ctx);
+    Process *process = exe_ctx.GetProcessPtr();
+
+    if (process) {
+      Status error;
+      lldb::addr_t header = process->ReadPointerFromMemory(value - 8, error);
+
+      if (error.Fail()) {
+        s->Printf("<could not read header>@");
+      } else {
+        uint8_t tag = header & 0xff;
+        uint64_t wosize = header >> 10;
+
+        switch (tag) {
+        case 246: { // Lazy_tag
+          lldb::addr_t computation_ptr =
+              process->ReadPointerFromMemory(value, error);
+          if (error.Fail()) {
+            s->Printf("<lazy, could not read computation pointer>@");
+          } else {
+            offset_t offset = 0;
+            DataExtractor field_data(&computation_ptr, 8,
+                                     process->GetByteOrder(), 8);
+            s->Printf("<lazy|");
+            (void)FormatOCamlValue(field_data, s, offset, base_addr,
+                                   exe_ctx_scope, pointers_seen, depth, true);
+            s->Printf(">");
+            print_default = false;
+          }
+          break;
+        }
+
+        case 247:   // Closure_tag
+        case 249: { // Infix_tag
+          uint64_t closinfo =
+              process->ReadUnsignedIntegerFromMemory(value + 8, 8, 0, error);
+          if (error.Fail()) {
+            s->Printf("<could not read closinfo word from closure>@");
+          } else {
+            uint8_t arity = closinfo >> 56;
+            int offset = (arity == 0 || arity == 1) ? 0 : 2;
+            lldb::addr_t full_app_code_ptr =
+                process->ReadPointerFromMemory(value + offset * 8, error);
+            if (error.Fail()) {
+              s->Printf("<could not read full application code pointer from "
+                        "closure>@");
+            } else {
+              Target *target = exe_ctx.GetTargetPtr();
+              Address addr;
+              if (addr.SetLoadAddress(full_app_code_ptr, target)) {
+                addr.Dump(s, exe_ctx_scope,
+                          is_lazy_closure
+                              ? Address::DumpStyleNoFunctionName
+                              : Address::DumpStyleResolvedDescription,
+                          Address::DumpStyleFileAddress, 8, false);
+                print_default = false;
+              } else {
+                s->Printf("<%sclosure, code ptr %p unresolved>",
+                          tag == 247 ? "" : "infix ",
+                          (void *)full_app_code_ptr);
+              }
+            }
+          }
+          break;
+        }
+
+        case 248: // Object_tag
+          s->Printf("<object>@");
+          break;
+
+        case 250: { // Forward_tag
+          lldb::addr_t forward_ptr =
+              process->ReadPointerFromMemory(value, error);
+          if (error.Fail()) {
+            s->Printf("<could not read forwarding pointer>@");
+          } else {
+            offset_t offset = 0;
+            DataExtractor field_data(&forward_ptr, 8, process->GetByteOrder(),
+                                     8);
+            (void)FormatOCamlValue(field_data, s, offset, base_addr,
+                                   exe_ctx_scope, pointers_seen, depth);
+            print_default = false;
+          }
+          break;
+        }
+
+        case 251: // Abstract_tag
+          s->Printf("<abstract|%" PRIu64 " words>@", wosize);
+          break;
+
+        case 252: { // String_tag
+          uint64_t last_word = process->ReadUnsignedIntegerFromMemory(
+              value + (wosize - 1) * 8, 8, 0, error);
+          if (error.Fail()) {
+            s->Printf("<could not read string length>@");
+          } else {
+            // CR mshinwell: endianness!
+            uint8_t last_byte = last_word >> 56;
+            uint64_t string_length = wosize * 8 - last_byte - 1;
+
+            if (string_length > 100) {
+              s->Printf("<long string>@");
+            } else {
+              std::vector<uint8_t> str;
+              size_t bytes_read;
+
+              str.resize(string_length + 1);
+
+              bytes_read =
+                  process->ReadMemory(value, &str.front(), str.size(), error);
+
+              if (error.Fail() || bytes_read < string_length) {
+                s->Printf("<could not read string>@");
+              } else {
+                const char *c_str = (const char *)&str.front();
+                if (strlen(c_str) == string_length) {
+                  /* String does not contain NUL characters */
+                  s->Printf("\"%s\"", c_str);
+                } else {
+                  s->Printf("\"");
+                  DataExtractor cstr_data(&str.front(), str.size(),
+                                          process->GetByteOrder(), 8);
+                  DumpDataExtractor(cstr_data, s, 0, lldb::eFormatChar, 1,
+                                    string_length, UINT32_MAX,
+                                    LLDB_INVALID_ADDRESS, 0, 0);
+                  s->Printf("\"");
+                }
+                print_default = false;
+              }
+            }
+          }
+          break;
+        }
+
+        case 253: { // Double_tag
+          union {
+            double f;
+            uint64_t i;
+          } u;
+          u.i = process->ReadUnsignedIntegerFromMemory(value, 8, 0, error);
+          if (error.Fail()) {
+            s->Printf("<could not read float>@");
+          } else {
+            // CR mshinwell: should probably use proper float printing code
+            // elsewhere in this file
+            s->Printf("%g", u.f);
+            print_default = false;
+          }
+          break;
+        }
+
+        case 254: { // Double_array_tag
+          // N.B. Empty float arrays have tag zero
+          uint64_t wosize_to_print = wosize <= 10 ? wosize : 10;
+          s->Printf("[|");
+          for (uint64_t field = 0; field < wosize_to_print; field++) {
+            union {
+              double f;
+              uint64_t i;
+            } u;
+            u.i = process->ReadUnsignedIntegerFromMemory(value, 8, 0, error);
+            if (error.Fail()) {
+              s->Printf("<could not read floatarray field %" PRIu64 ">", field);
+            } else {
+              // CR mshinwell: should probably use proper float printing code
+              // elsewhere in this file
+              s->Printf("%g", u.f);
+            }
+
+            if (field < wosize_to_print - 1)
+              s->Printf(", ");
+          }
+          if (wosize_to_print < wosize) {
+            s->Printf(", <%" PRIu64 " more elements in floatarray>",
+                      wosize - wosize_to_print);
+          }
+          s->Printf("|]");
+
+          if (!error.Fail())
+            print_default = false;
+          break;
+        }
+
+        case 255: { // Custom_tag
+          lldb::addr_t struct_custom_operations =
+              process->ReadPointerFromMemory(value, error);
+          if (error.Fail()) {
+            s->Printf("<could not read struct custom_operations pointer from "
+                      "custom block>@");
+          } else {
+            lldb::addr_t identifier =
+                process->ReadPointerFromMemory(struct_custom_operations, error);
+            if (error.Fail()) {
+              s->Printf("<could not read identifier pointer from struct "
+                        "custom_operations in custom block>@");
+            } else {
+              std::string identifier_str;
+              (void)process->ReadCStringFromMemory(identifier, identifier_str,
+                                                   error);
+              if (error.Fail()) {
+                s->Printf(
+                    "<could not read identifier string from pointer in struct "
+                    "custom_operations in custom block>@");
+              } else {
+                int int_size = 0;
+                std::string suffix;
+
+                if (identifier_str == "_i") {
+                  /* Int32.t */
+                  int_size = 32;
+                  suffix = "l";
+                } else if (identifier_str == "_j") {
+                  /* Int64.t */
+                  int_size = 64;
+                  suffix = "L";
+                } else if (identifier_str == "_n") {
+                  /* Nativeint.t */
+                  int_size = 64;
+                  suffix = "n";
+                }
+
+                if (int_size != 0) {
+                  uint64_t i = process->ReadUnsignedIntegerFromMemory(
+                      value + 8, 8, 0, error);
+                  if (error.Fail()) {
+                    s->Printf("<custom \"%s\" (could not read data field for "
+                              "integer of kind '%s')>@",
+                              identifier_str.c_str(), suffix.c_str());
+                  } else {
+                    if (int_size == 32)
+                      s->Printf("%ld", (long)i);
+                    else
+                      s->Printf("%lld", (int64_t)i);
+                    s->Printf("%s", suffix.c_str());
+                    print_default = false;
+                  }
+                } else {
+                  if (identifier_str == "_bigarr02") {
+                    lldb::addr_t bigarray_data_ptr =
+                        process->ReadPointerFromMemory(value + 8, error);
+                    uint64_t num_dims = process->ReadUnsignedIntegerFromMemory(
+                        value + 16, 8, 0, error);
+                    if (error.Fail()) {
+                      s->Printf("<bigarray (could not read data and "
+                                "num-dimensions)>@");
+                    } else {
+                      s->Printf("<bigarray%" PRIu64 "|data=%p>", num_dims,
+                                (void *)bigarray_data_ptr);
+                      print_default = false;
+                    }
+                  } else {
+                    // CR mshinwell: check about converting Address.t to (void*)
+                    s->Printf("<custom|\"%s\")>@", identifier_str.c_str());
+                  }
+                }
+              }
+            }
+          }
+          break;
+        }
+
+        default: { // Less than No_scan_tag
+          std::string tag_str;
+          if (tag != 0)
+            tag_str = std::to_string(tag) + ":";
+          if (wosize == 0) {
+            // CR mshinwell: not entirely accurate, but seems likely that the
+            // common case is for this to be an array
+            s->Printf("[| |]");
+            print_default = false;
+          } else if (wosize > 20 || depth >= 2) {
+            s->Printf("%s[...]@", tag_str.c_str());
+          } else {
+            bool failed = false;
+            s->Printf("%s[", tag_str.c_str());
+            for (uint64_t field = 0; field < wosize; field++) {
+              uint64_t field_value = process->ReadUnsignedIntegerFromMemory(
+                  value + field * 8, 8, 0, error);
+              if (error.Fail()) {
+                s->Printf("<could not read field %" PRIu64 ">", field);
+                failed = true;
+              } else {
+                offset_t offset = 0;
+                DataExtractor field_data(&field_value, 8,
+                                         process->GetByteOrder(), 8);
+                (void)FormatOCamlValue(field_data, s, offset, base_addr,
+                                       exe_ctx_scope, pointers_seen, depth + 1);
+                if (field < wosize - 1)
+                  s->Printf(", ");
+              }
+            }
+            s->Printf("]");
+            if (!failed)
+              print_default = false;
+          }
+          break;
+        }
+        }
+      }
+
+      if (print_default)
+        offset = DumpDataExtractor(DE, s, start_offset, eFormatPointer, 8, 1, 1,
+                                   base_addr, 0, 0);
+    }
+  }
+
+  return offset;
+}
+
 lldb::offset_t lldb_private::DumpDataExtractor(
     const DataExtractor &DE, Stream *s, offset_t start_offset,
     lldb::Format item_format, size_t item_byte_size, size_t item_count,
@@ -878,6 +1211,13 @@ lldb::offset_t lldb_private::DumpDataExtractor(
                             item_byte_size / 16, LLDB_INVALID_ADDRESS, 0, 0);
       s->PutChar('}');
       break;
+
+    case eFormatOCamlValue: {
+      llvm::DenseSet<lldb::addr_t> pointers_seen;
+      offset = FormatOCamlValue(DE, s, offset, base_addr, exe_scope,
+                                pointers_seen, 0);
+      break;
+    }
     }
   }
 

@@ -28,7 +28,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -2916,6 +2918,15 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 }
 
 // Open a result file.
+static StringRef parentPathOrDot(StringRef path) {
+  auto parent_path = sys::path::parent_path(path);
+  if (parent_path.empty() && !path.empty() && !sys::path::is_absolute(path)) {
+    return ".";
+  } else {
+    return parent_path;
+  }
+}
+
 template <class ELFT> void Writer<ELFT>::openFile() {
   uint64_t maxSize = ctx.arg.is64 ? INT64_MAX : UINT32_MAX;
   if (fileSize != size_t(fileSize) || maxSize < fileSize) {
@@ -2935,6 +2946,19 @@ template <class ELFT> void Writer<ELFT>::openFile() {
     flags |= FileOutputBuffer::F_executable;
   if (ctx.arg.mmapOutputFile)
     flags |= FileOutputBuffer::F_mmap;
+  if (ctx.arg.mmapOutputFile) {
+    // LLD relies on [fallocate] to mmap the output.
+    // In case there's no space left on the device
+    // it will error with SIGBUS, which is confusing
+    // for users
+    auto ErrOrSpaceInfo =
+        sys::fs::disk_space(parentPathOrDot(ctx.arg.outputFile));
+    if (!ErrOrSpaceInfo)
+      ErrAlways(ctx) << "Can't get remaining size on disk";
+    if (ErrOrSpaceInfo.get().free < fileSize)
+      ErrAlways(ctx) << "failed to open " << ctx.arg.outputFile << ": "
+                     << "No Space Left on Device";
+  }
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.outputFile, fileSize, flags);
 

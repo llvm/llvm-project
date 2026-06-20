@@ -393,6 +393,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::UnknownAny:
   case BuiltinType::ARCUnbridgedCast:
   case BuiltinType::PseudoObject:
+  case BuiltinType::OCamlValue:
   case BuiltinType::ObjCId:
   case BuiltinType::ObjCClass:
   case BuiltinType::ObjCSel:

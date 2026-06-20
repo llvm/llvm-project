@@ -579,7 +579,7 @@ public:
   void emitGlobalGOTEquivs();
 
   /// Emit the stack maps.
-  void emitStackMaps();
+  void emitStackMaps(Module &M);
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks

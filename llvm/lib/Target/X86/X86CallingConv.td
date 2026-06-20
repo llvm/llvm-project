@@ -438,6 +438,25 @@ def RetCC_X86_64_AnyReg : CallingConv<[
   CCCustom<"CC_X86_AnyReg_Error">
 ]>;
 
+def RetCC_X86_64_OCaml : CallingConv<[
+  // Promote all types to i64
+  CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
+
+  // Runtime registers (R14, R15) are threaded through function calls
+  // See the argument calling conventions for OCaml for more details
+  CCIfType<[i64], CCAssignToReg<[R14, R15, RAX, RBX, RDI, RSI, RDX, RCX, R8, R9, R12, R13]>>,
+
+  CCIfType<[f32, f64], CCAssignToReg<[
+    XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+    XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15
+  ]>>
+]>;
+
+def RetCC_X86_64_OCaml_C_Call : CallingConv<[
+  CCIfType<[i64], CCAssignToReg<[R14, R15]>>,
+
+  CCDelegateTo<RetCC_X86_64_C>
+]>;
 
 defm X86_32_RegCall :
 	 X86_RegCall_base<RC_X86_32_RegCall>;
@@ -499,6 +518,10 @@ def RetCC_X86_64 : CallingConv<[
 
   // UEFI64 uses Win64 CC
   CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<RetCC_X86_Win64_C>>,
+
+  // Handle OCaml calls
+  CCIfCC<"CallingConv::OCaml", CCDelegateTo<RetCC_X86_64_OCaml>>,
+  CCIfCC<"CallingConv::OCaml_C_Call", CCDelegateTo<RetCC_X86_64_OCaml_C_Call>>,
 
   // Otherwise, drop to normal X86-64 CC
   CCDelegateTo<RetCC_X86_64_C>
@@ -687,6 +710,33 @@ def CC_X86_Win64_VectorCall : CallingConv<[
   CCDelegateTo<CC_X86_Win64_C>
 ]>;
 
+
+def CC_X86_64_OCaml : CallingConv<[
+  // Promote i8/i16/i32 arguments to i64.
+  CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
+
+  // See https://github.com/oxcaml/oxcaml/blob/main/backend/amd64/proc.ml#L34
+  // for further details on the registers and their meaning. Runtime registers
+  // (registers containing pointers to data structures maintained by the
+  // runtime) must be preserved through the run of the program. To ensure LLVM
+  // doesn't mess with them, they are explicitly threaded through function calls
+  // and returns. These are R14 and R15.
+  CCIfType<[i64], CCAssignToReg<[R14, R15, RAX, RBX, RDI, RSI, RDX, RCX, R8, R9, R12, R13]>>,
+
+  CCIfType<[f32, f64], CCAssignToReg<[
+    XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+    XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15
+  ]>>
+]>;
+
+def CC_X86_64_OCaml_C_Call : CallingConv<[
+  // OCaml wraps C calls with another function that transfers stack arguments.
+  // RAX contains the function address, and R12 contains the size of the stack arguments.
+  CCIfType<[i64], CCAssignToReg<[R14, R15, RAX, R12]>>,
+
+  // Follow C convention normally otherwise
+  CCDelegateTo<CC_X86_64_C>
+]>;
 
 def CC_X86_64_GHC : CallingConv<[
   // Promote i8/i16/i32 arguments to i64.
@@ -1092,6 +1142,8 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
   CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
+  CCIfCC<"CallingConv::OCaml", CCDelegateTo<CC_X86_64_OCaml>>,
+  CCIfCC<"CallingConv::OCaml_C_Call", CCDelegateTo<CC_X86_64_OCaml_C_Call>>,
 
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
@@ -1122,6 +1174,12 @@ def CSR_IPRA_64 : CalleeSavedRegs<(add RBP, RBX)>;
 
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;
+
+// R14 and R15 are used as return registers, so they aren't callee saved.
+def CSR_64_OCaml_C_Call : CalleeSavedRegs<(sub CSR_64, R14, R15)>;
+
+// Enable frametables?
+def CSR_64_OCaml : CalleeSavedRegs<(add RBP)>;
 
 def CSR_64_SwiftError : CalleeSavedRegs<(sub CSR_64, R12)>;
 def CSR_64_SwiftTail : CalleeSavedRegs<(sub CSR_64, R13, R14)>;

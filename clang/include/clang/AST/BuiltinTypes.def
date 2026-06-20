@@ -226,6 +226,9 @@ FLOATING_TYPE(Ibm128, Ibm128Ty)
 // This is the type of C++0x 'nullptr'.
 BUILTIN_TYPE(NullPtr, NullPtrTy)
 
+// OCaml values
+BUILTIN_TYPE(OCamlValue, OCamlValueTy)
+
 // The primitive Objective C 'id' type.  The user-visible 'id'
 // type is a typedef of an ObjCObjectPointerType to an
 // ObjCObjectType with this as its base.  In fact, this only ever

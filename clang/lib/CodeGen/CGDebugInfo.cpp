@@ -1127,6 +1127,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Long:
   case BuiltinType::WChar_S:
   case BuiltinType::LongLong:
+  case BuiltinType::OCamlValue:
     Encoding = llvm::dwarf::DW_ATE_signed;
     break;
   case BuiltinType::Bool:

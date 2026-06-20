@@ -2751,6 +2751,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::Dependent:
     llvm_unreachable("placeholder types shouldn't get to name mangling");
 
+  case BuiltinType::OCamlValue:
+    llvm_unreachable("cannot mangle OCaml value types");
+
   case BuiltinType::ObjCId:
     mangleArtificialTagType(TagTypeKind::Struct, "objc_object");
     break;

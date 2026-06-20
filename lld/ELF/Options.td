@@ -829,6 +829,8 @@ def: F<"stats">;
 def: F<"warn-execstack">;
 def: F<"warn-once">;
 def: F<"warn-shared-textrel">;
+def: F<"no-keep-files-mapped">;
+def: F<"no-warn-search-mismatch">;
 def: JoinedOrSeparate<["-"], "G">;
 
 // Hidden option used for testing MIPS multi-GOT implementation.

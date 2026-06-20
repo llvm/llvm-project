@@ -45,6 +45,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include <algorithm>
 #include <string>
 #ifdef HAVE_BACKTRACE
@@ -396,6 +397,12 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
       if (auto OldOneShotPipeFunction =
               OneShotPipeSignalFunction.exchange(nullptr))
         return OldOneShotPipeFunction();
+
+    if (Sig == SIGBUS) {
+      llvm::setBugReportMsg("Linker received SIGBUG which most likely means that there "
+                            "is insufficient disk space available. If you think this is "
+                            "not the case, please reach out internally for assistance.\n");
+    }
 
     bool IsIntSig = llvm::is_contained(IntSigs, Sig);
     if (IsIntSig)

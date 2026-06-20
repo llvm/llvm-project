@@ -73,6 +73,7 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatVoid, 'v', "void"},
     {eFormatUnicode8, 'u', "unicode8"},
     {eFormatFloat128, '\0', "float128"},
+    {eFormatOCamlValue, '\0', "ocaml_value"},
 };
 
 static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
@@ -437,6 +438,7 @@ lldb::Format FormatManager::GetSingleItemFormat(lldb::Format vector_format) {
   case eFormatVectorOfSInt16:
   case eFormatVectorOfSInt32:
   case eFormatVectorOfSInt64:
+  case eFormatOCamlValue: /* mshinwell: unsure what this is for */
     return eFormatDecimal;
 
   case eFormatVectorOfUInt8:

@@ -23,6 +23,7 @@
 namespace llvm {
 
 class AsmPrinter;
+class Module;
 class MCSymbol;
 class MCExpr;
 class MCStreamer;
@@ -319,15 +320,19 @@ public:
   };
 
   struct CallsiteInfo {
+    const MCSymbol *CSLabel = nullptr;
     const MCExpr *CSOffsetExpr = nullptr;
+    const FunctionInfo CSFunctionInfo;
     uint64_t ID = 0;
     LocationVec Locations;
     LiveOutVec LiveOuts;
 
     CallsiteInfo() = default;
-    CallsiteInfo(const MCExpr *CSOffsetExpr, uint64_t ID,
+    CallsiteInfo(const MCSymbol *CSLabel, const MCExpr *CSOffsetExpr,
+                 const FunctionInfo CSFunctionInfo, uint64_t ID,
                  LocationVec &&Locations, LiveOutVec &&LiveOuts)
-        : CSOffsetExpr(CSOffsetExpr), ID(ID), Locations(std::move(Locations)),
+        : CSLabel(CSLabel), CSOffsetExpr(CSOffsetExpr),
+          CSFunctionInfo(CSFunctionInfo), ID(ID), Locations(std::move(Locations)),
           LiveOuts(std::move(LiveOuts)) {}
   };
 
@@ -355,6 +360,9 @@ public:
 
   /// Get function info.
   FnInfoMap &getFnInfos() { return FnInfos; }
+
+  /// Emit OCaml frametable using stackmap data.
+  void emitOCamlFrametable(Module &M);
 
 private:
   static const char *WSMP;

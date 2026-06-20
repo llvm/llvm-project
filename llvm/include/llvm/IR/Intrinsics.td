@@ -1550,6 +1550,8 @@ def int_eh_sjlj_setjmp          : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty]>;
 def int_eh_sjlj_longjmp         : Intrinsic<[], [llvm_ptr_ty], [IntrNoReturn]>;
 def int_eh_sjlj_setup_dispatch  : Intrinsic<[], []>;
 
+def int_eh_ocaml_try : Intrinsic<[llvm_i32_ty], []>;
+
 //===---------------- Generic Variable Attribute Intrinsics----------------===//
 //
 def int_var_annotation : DefaultAttrsIntrinsic<

@@ -2867,7 +2867,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // text sections come after debug info has been emitted. This matters for
   // stack maps as they are arbitrary data, and may even have a custom format
   // through user plugins.
-  emitStackMaps();
+  emitStackMaps(M);
 
   // Print aliases in topological order, that is, for each alias a = b,
   // b must be printed before a.
@@ -4769,7 +4769,7 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
 }
 
-void AsmPrinter::emitStackMaps() {
+void AsmPrinter::emitStackMaps(Module &M) {
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
   bool NeedsDefault = false;
@@ -4786,8 +4786,13 @@ void AsmPrinter::emitStackMaps() {
       NeedsDefault = true;
     }
 
-  if (NeedsDefault)
-    SM.serializeToStackMapSection();
+  if (NeedsDefault) {
+    OutStreamer->switchSection(getObjFileLowering().getDataSection());
+    SM.emitOCamlFrametable(M);
+  }
+    // This LLVM will only be used for OCaml's LLVM backend, so this should
+    // be fine...
+    // SM.serializeToStackMapSection();
 }
 
 void AsmPrinter::addAsmPrinterHandler(

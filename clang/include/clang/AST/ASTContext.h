@@ -1303,6 +1303,7 @@ public:
   CanQualType PseudoObjectTy, ARCUnbridgedCastTy;
   CanQualType ObjCBuiltinIdTy, ObjCBuiltinClassTy, ObjCBuiltinSelTy;
   CanQualType ObjCBuiltinBoolTy;
+  CanQualType OCamlValueTy;
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   CanQualType SingletonId;
 #include "clang/Basic/OpenCLImageTypes.def"

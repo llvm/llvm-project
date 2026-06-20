@@ -297,6 +297,12 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Calling convention for OCaml
+    OCaml = 128,
+
+    /// Special case of the C calling convention for calling from OCaml
+    OCaml_C_Call = 129,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

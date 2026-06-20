@@ -559,6 +559,7 @@ static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
   case eFormatCString:
     return "cstring";
   case eFormatDecimal:
+  case eFormatOCamlValue:
     return "decimal";
   case eFormatEnum:
     return "enum";

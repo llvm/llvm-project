@@ -89,6 +89,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Scalar/RewriteStatepointsForGC.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
@@ -1052,6 +1053,15 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                 /*ImportSummary=*/nullptr,
                 /*DropTypeTests=*/lowertypetests::DropTestKind::Assume));
           });
+
+    // Add RewriteStatepointsForGC after optimization is complete
+    PB.registerOptimizerLastEPCallback(
+        [](ModulePassManager &MPM, OptimizationLevel Level,
+           ThinOrFullLTOPhase) {
+          if (Level != OptimizationLevel::O0) {
+            MPM.addPass(RewriteStatepointsForGC());
+          }
+        });
 
     // Register callbacks to schedule sanitizer passes at the appropriate part
     // of the pipeline.

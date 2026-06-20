@@ -19,6 +19,9 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -511,19 +514,20 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
       MCSymbolRefExpr::create(&MILabel, OutContext),
       MCSymbolRefExpr::create(AP.CurrentFnSymForSize, OutContext), OutContext);
 
-  CSInfos.emplace_back(CSOffsetExpr, ID, std::move(Locations),
-                       std::move(LiveOuts));
-
   // Record the stack size of the current function and update callsite count.
   const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
       MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
-  uint64_t FrameSize = HasDynamicFrameSize ? UINT64_MAX : MFI.getStackSize();
+  uint64_t FrameSize = /* HasDynamicFrameSize ? UINT64_MAX : */ MFI.getStackSize();
+  (void)HasDynamicFrameSize;
 
   auto [CurrentIt, Inserted] = FnInfos.try_emplace(AP.CurrentFnSym, FrameSize);
   if (!Inserted)
     CurrentIt->second.RecordCount++;
+
+  CSInfos.emplace_back(&MILabel, CSOffsetExpr, FunctionInfo(FrameSize),
+                       ID, std::move(Locations), std::move(LiveOuts));
 }
 
 void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {
@@ -707,6 +711,188 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
     // Emit alignment to 8 byte.
     OS.emitValueToAlignment(Align(8));
   }
+}
+
+/// Map LLVM DWARF register numbers to OCaml register map.
+/// * See llvm/lib/Target/X86/X86RegisterInfo.td for DWARF register numbers.
+/// * See proc.ml under backend/amd64 for the OCaml register map.
+/// CR yusumez: This is target-specific and should probably live in a
+/// target-specific location.
+static unsigned mapLLVMDwarfRegToOCamlIndex(unsigned DwarfRegNum) {
+  switch (DwarfRegNum) {
+    // General purpose registers - see X86RegisterInfo.td DwarfRegNum definitions
+    case 0: return 0;   // RAX
+    case 1: return 4;   // RDX
+    case 2: return 5;   // RCX
+    case 3: return 1;   // RBX
+    case 4: return 3;   // RSI
+    case 5: return 2;   // RDI
+    case 6: return 12;  // RBP
+    case 8: return 6;   // R8
+    case 9: return 7;   // R9
+    case 10: return 10; // R10
+    case 11: return 11; // R11
+    case 12: return 8;  // R12
+    case 13: return 9;  // R13
+    // R14 and R15 are special (domain state pointer and allocation pointer)
+    // but we include them for completeness
+    case 14: return 13; // R14 (domain state pointer)
+    case 15: return 14; // R15 (allocation pointer)
+
+    // XMM registers
+    case 17: return 100; // XMM0
+    case 18: return 101; // XMM1
+    case 19: return 102; // XMM2
+    case 20: return 103; // XMM3
+    case 21: return 104; // XMM4
+    case 22: return 105; // XMM5
+    case 23: return 106; // XMM6
+    case 24: return 107; // XMM7
+    case 25: return 108; // XMM8
+    case 26: return 109; // XMM9
+    case 27: return 110; // XMM10
+    case 28: return 111; // XMM11
+    case 29: return 112; // XMM12
+    case 30: return 113; // XMM13
+    case 31: return 114; // XMM14
+    case 32: return 115; // XMM15
+
+    default:
+      report_fatal_error("Unsupported register for OCaml GC: DWARF reg " +
+                        Twine(DwarfRegNum));
+  }
+}
+
+static std::string camlGlobalSymName(const Module &M, const char *Id) {
+  const std::string &MId = M.getModuleIdentifier();
+
+  std::string SymName;
+  SymName += "caml";
+  size_t Letter = SymName.size();
+  SymName.append(MId.begin(), llvm::find(MId, '.'));
+  SymName += "__";
+  SymName += Id;
+
+  // Capitalize the first letter of the module name.
+  SymName[Letter] = toupper(SymName[Letter]);
+
+  return SymName;
+}
+
+static void emitCamlGlobal(const Module &M, MCStreamer &OS, const char *Id) {
+  std::string SymName = camlGlobalSymName(M, Id);
+
+  SmallString<128> TmpStr;
+  Mangler::getNameWithPrefix(TmpStr, SymName, M.getDataLayout());
+
+  MCSymbol *Sym = OS.getContext().getOrCreateSymbol(TmpStr);
+
+  OS.emitSymbolAttribute(Sym, MCSA_Global);
+  OS.emitLabel(Sym);
+}
+
+void StackMaps::emitOCamlFrametable(Module &M) {
+  // Print even if empty
+
+  MCStreamer &OS = *AP.OutStreamer;
+  emitCamlGlobal(M, OS, "frametable");
+
+  // Number of records
+  OS.emitInt64(CSInfos.size());
+
+  for (const auto &CSI : CSInfos) {
+    // typedef struct {
+    //   int32_t retaddr_rel; /* offset of return address from &retaddr_rel */
+    //   uint16_t frame_data; /* frame size and various flags */
+    //   uint16_t num_live;
+    //   uint16_t live_ofs[num_live];
+    // } frame_descr;
+
+    // retaddr_rel
+    MCSymbol *Here = OS.getContext().createTempSymbol();
+    OS.emitLabel(Here);
+    const MCExpr *RelativeAddr = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(CSI.CSLabel, OS.getContext()),
+        MCSymbolRefExpr::create(Here, OS.getContext()),
+        OS.getContext());
+    OS.emitValue(RelativeAddr, 4);
+
+    // frame_data
+    uint64_t FrameSize = CSI.CSFunctionInfo.StackSize; // static size
+    if (CSI.ID != StatepointDirectives::DefaultStatepointID)
+      FrameSize += CSI.ID; // adjustments from ocaml if needed
+    FrameSize += 8; // return address
+
+    if (FrameSize >= 1 << 16) {
+      report_fatal_error(
+        "Frame size too large for OCaml GC (or frame size not statically known): "
+        + Twine(FrameSize));
+    }
+    OS.emitInt16(FrameSize);
+
+    // num_live
+    uint64_t LiveCount = 0;
+    for (const auto &Loc : CSI.Locations) {
+      if (Loc.Type == Location::Register || Loc.Type == Location::Direct ||
+          Loc.Type == Location::Indirect) {
+        LiveCount++;
+      }
+    }
+
+    LiveCount += CSI.LiveOuts.size();
+
+    if (LiveCount >= 1 << 16) {
+      report_fatal_error("Too many live locations for OCaml GC: " + Twine(LiveCount));
+    }
+    OS.emitInt16(LiveCount);
+
+    // live_ofs
+    for (const auto &Loc : CSI.Locations) {
+
+      if (Loc.Type == Location::Register) {
+        // Register indices are tagged (2n+1) and follow the OCaml register
+        // map (see `mapLLVMDwarfRegToOCamlIndex`)
+        unsigned DwarfRegNum = Loc.Reg;
+        unsigned OCamlIndex = mapLLVMDwarfRegToOCamlIndex(DwarfRegNum);
+        uint16_t EncodedReg = (OCamlIndex << 1) + 1;
+        OS.emitInt16(EncodedReg);
+      } else if (Loc.Type == Location::Direct || Loc.Type == Location::Indirect) {
+        // For stack locations (Direct/Indirect): emit offset directly
+        int64_t Offset = Loc.Offset;
+
+        // BP-relative addressing -> SP
+        if (Offset < 0) {
+          int64_t TempFrameSize =
+            FrameSize - 8 /* return address */ - 8 /* pushed rbp */;
+
+          Offset += TempFrameSize;
+        }
+
+        if (Offset < -(1 << 15) || Offset >= (1 << 15)) {
+          report_fatal_error("Stack offset too large for OCaml GC: " + Twine(Offset));
+        }
+        OS.emitInt16(static_cast<uint16_t>(Offset));
+      } else {
+        // CR yusumez: Do we need anything else?
+      }
+
+    }
+
+    for (const auto &LO : CSI.LiveOuts) {
+      unsigned OCamlIndex = mapLLVMDwarfRegToOCamlIndex(LO.DwarfRegNum);
+      uint16_t EncodedReg = (OCamlIndex << 1) + 1;
+      OS.emitInt16(EncodedReg);
+    }
+
+    // Align to pointer size
+    OS.emitValueToAlignment(Align(8));
+  }
+
+  OS.addBlankLine();
+
+  // Clean up.
+  CSInfos.clear();
+  ConstPool.clear();
 }
 
 /// Serialize the stackmap data.

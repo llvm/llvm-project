@@ -1379,6 +1379,7 @@ protected:
       case eFormatVectorOfFloat32:
       case eFormatVectorOfFloat64:
       case eFormatVectorOfUInt128:
+      case eFormatOCamlValue:
       case eFormatOSType:
       case eFormatComplexInteger:
       case eFormatAddressInfo:

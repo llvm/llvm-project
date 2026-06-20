@@ -286,6 +286,8 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::BFloat16:
     ID = PREDEF_TYPE_BFLOAT16_ID;
     break;
+  case BuiltinType::OCamlValue:
+    llvm_unreachable("not implemented");
   }
 
   return TypeIdx(0, ID);

@@ -285,9 +285,14 @@ static bool containsGCPtrType(Type *Ty, GCStrategy *GC) {
     return isGCPointerType(VT->getScalarType(), GC);
   if (ArrayType *AT = dyn_cast<ArrayType>(Ty))
     return containsGCPtrType(AT->getElementType(), GC);
+
+  // Don't scan structs - in our use case, we extract all its elements right
+  // after they get created. Make sure to check this assumption still holds
+  // with new changes.
   if (StructType *ST = dyn_cast<StructType>(Ty))
-    return llvm::any_of(ST->elements(),
-                        [GC](Type *Ty) { return containsGCPtrType(Ty, GC); });
+    return false; // llvm::any_of(ST->elements(),
+                  //   [GC](Type *Ty) { return containsGCPtrType(Ty, GC); });
+
   return false;
 }
 
@@ -3052,6 +3057,13 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
                "Don't expect any other calls here!");
         return false;
       }
+
+      if (Call->isMustTailCall())
+        return false;
+
+      if (isa<CallInst>(Call) && cast<CallInst>(Call)->isInlineAsm())
+        return false;
+
       return true;
     }
     return false;

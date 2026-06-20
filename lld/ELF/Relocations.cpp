@@ -99,6 +99,9 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
   if (errPlace.isec && errPlace.isec->name.starts_with(".debug"))
     diag << "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
+
+  diag << "; this likely happened because your binary is too big, see "
+          "https://wiki/x/EQbxK for more info";
 }
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
