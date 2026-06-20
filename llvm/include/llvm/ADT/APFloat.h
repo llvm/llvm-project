@@ -1023,6 +1023,11 @@ struct fltSemantics {
 
   /* Whether the sign bit of this semantics is the most significant bit */
   bool hasSignBitInMSB = true;
+
+  /* Whether the format supports IEEE754 denormal representation.
+     If both hasDenormals and hasZero are false exponent 0 is assumed to be a
+     regular exponent instead of being reserved. This changes the bias by +1. */
+  bool hasDenormals = true;
 };
 
 // This is a interface class that is currently forwarding functionalities from
