@@ -254,8 +254,8 @@ protected:
         int alignment = ComputeLongestRegisterName(
             command, reg_ctx,
             !static_cast<bool>(m_command_options.alternate_name));
-        strm.IndentMore(); // Extra ident to be consistent with register sets
-                           // dumping
+        // Extra ident to be consistent with register sets dumping.
+        strm.IndentMore();
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
