@@ -7,6 +7,7 @@ set(link_libs
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangBasic
   clangCodeGen
   clangDriver
