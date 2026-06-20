@@ -4,7 +4,7 @@ declare float @func()
 
 %struct = type { i32, float }
 
-define void @md_missing_value(ptr %ptr) {
+define void @test(ptr %ptr) {
   ; CHECK: nofpclass is only for loads
   call float @func(), !nofpclass !{i32 3}
 
@@ -33,7 +33,7 @@ define void @md_missing_value(ptr %ptr) {
   load float, ptr %ptr, align 4, !nofpclass !{!"foo"}
 
   ; CHECK: nofpclass entry must be a constant i32
-  load float, ptr %ptr, align 4, !nofpclass !{ptr @md_is_ptr}
+  load float, ptr %ptr, align 4, !nofpclass !{ptr @test}
 
   ; CHECK: 'nofpclass' must have at least one test bit set
   load float, ptr %ptr, align 4, !nofpclass !{i32 0}

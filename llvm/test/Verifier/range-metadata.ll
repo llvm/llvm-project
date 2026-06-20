@@ -1,6 +1,8 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
-define void @f1(ptr %x) {
+declare i8 @func()
+
+define void @test(ptr %x) {
 entry:
   ; CHECK: Ranges are only for loads, calls and invokes!
   store i8 0, ptr %x, align 1, !range !{i8 0, i8 1}
@@ -18,7 +20,7 @@ entry:
   load i8, ptr %x, align 1, !range !{i8 0, double 0.0}
 
   ; CHECK: Range pair types must match!
-  load i8, ptr %x, align 1, !range !5
+  load i8, ptr %x, align 1, !range !{i32 0, i8 0}
 
   ; CHECK: Range pair types must match!
   load i8, ptr %x, align 1, !range !{i8 0, i32 0}
@@ -54,7 +56,7 @@ entry:
   load i8, ptr %x, align 1, !range !{i8 1, i8 2, i8 -1, i8 0}
 
   ; CHECK: It should have at least one range!
-  call i8 undef(), !range !{}
+  call i8 @func(), !range !{}
 
   ; CHECK: Range types must match instruction type!
   load <2 x i8>, ptr %x, !range !{i16 0, i16 10}
