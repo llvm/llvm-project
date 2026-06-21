@@ -16,8 +16,12 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ConvertEBCDIC.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/RWMutex.h"
 #include <system_error>
+#include <utility>
 
 #if HAVE_ICU
 #if HAVE_WINDOWS_ICU
@@ -355,4 +359,60 @@ ErrorOr<TextEncodingConverter> TextEncodingConverter::create(StringRef From,
 #else
   return std::make_error_code(std::errc::invalid_argument);
 #endif
+}
+
+namespace {
+// Global cache for TextEncodingConverter instances
+// Use StringMap which is designed for string keys
+using ConverterCache = StringMap<std::unique_ptr<TextEncodingConverter>>;
+
+struct ConverterCacheData {
+  ConverterCache Cache;
+  llvm::sys::RWMutex Mutex;
+};
+
+static ManagedStatic<ConverterCacheData> GlobalConverterCache;
+} // namespace
+
+ErrorOr<TextEncodingConverter *>
+TextEncodingConverterCache::getOrCreateConverter(StringRef SourceEncoding,
+                                                 StringRef TargetEncoding) {
+  // Don't create a converter if source and target are the same
+  if (SourceEncoding == TargetEncoding)
+    return nullptr;
+
+  // Create cache key by concatenating source and target with a separator
+  SmallString<64> Key;
+  Key = SourceEncoding;
+  Key += " -> ";
+  Key += TargetEncoding;
+
+  // First, try to find existing converter with shared lock (allows concurrent reads)
+  {
+    llvm::sys::ScopedReader ReadLock(GlobalConverterCache->Mutex);
+    auto Iter = GlobalConverterCache->Cache.find(Key);
+    if (Iter != GlobalConverterCache->Cache.end())
+      return Iter->second.get();
+  }
+
+  // Not found, need to create - acquire unique lock for writing
+  llvm::sys::ScopedWriter WriteLock(GlobalConverterCache->Mutex);
+  
+  // Double-check: another thread might have created it while we were waiting
+  auto Iter = GlobalConverterCache->Cache.find(Key);
+  if (Iter != GlobalConverterCache->Cache.end())
+    return Iter->second.get();
+
+  // Create a new converter
+  ErrorOr<TextEncodingConverter> ErrorOrConverter =
+      TextEncodingConverter::create(SourceEncoding, TargetEncoding);
+  if (!ErrorOrConverter)
+    return ErrorOrConverter.getError();
+
+  // Insert into cache and return pointer
+  auto NewConverter =
+      std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
+  TextEncodingConverter *Result = NewConverter.get();
+  GlobalConverterCache->Cache.try_emplace(Key, std::move(NewConverter));
+  return Result;
 }
