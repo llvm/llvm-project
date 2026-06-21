@@ -81,11 +81,11 @@ constexpr void test(const Data& data) {
     std::__unicode::__extended_grapheme_cluster_view view{d.input.begin(), d.input.end()};
     for (std::size_t i = 0; i < d.breaks.size(); ++i) {
       auto r = view.__consume();
-      // XXX: remove after libcxx tetss pass
-      std::cerr.setf(std::ios_base::hex | std::ios_base::showbase);
-      std::cerr << "r.__code__point: " << (unsigned long long)r.__code_point_ <<
-        ", d.code_points[" << i << "]: " << (unsigned long long)d.code_points[i] << '\n'; 
       assert(r.__code_point_ == d.code_points[i]);
+      // XXX: remove after libcxx tests pass
+      std::cerr << "r.__last_: " << (unsigned long long)r.__last_ <<
+        ", d.input.begin(): " << (unsigned long long)d.input.begin() << 
+        ", d.breaks[" << i << "]: " << (unsigned long long)d.breaks[i] << '\n'; 
       assert(r.__last_ == d.input.begin() + d.breaks[i]);
     }
   }
