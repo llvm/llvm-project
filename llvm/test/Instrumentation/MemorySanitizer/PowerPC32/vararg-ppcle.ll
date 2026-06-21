@@ -7,7 +7,17 @@ target triple = "powerpcle--linux"
 define i32 @foo(i32 %guard, ...) {
 ; CHECK-LABEL: define i32 @foo(
 ; CHECK-SAME: i32 [[GUARD:%.*]], ...) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = and i32 [[TMP12]], 15
+; CHECK-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP12]], 4
+; CHECK-NEXT:    [[TMP38:%.*]] = and i32 [[TMP19]], 15
+; CHECK-NEXT:    [[TMP39:%.*]] = lshr i32 [[TMP12]], 8
+; CHECK-NEXT:    [[TMP40:%.*]] = and i32 [[TMP39]], 15
+; CHECK-NEXT:    [[TMP42:%.*]] = lshr i32 [[TMP12]], 12
+; CHECK-NEXT:    [[TMP43:%.*]] = and i32 [[TMP42]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP12]], 16
+; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP21]], 96
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i32 [[TMP1]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP2]], i8 0, i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 800)
@@ -26,18 +36,28 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[VL]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[VL]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP25]], 8
-; CHECK-NEXT:    [[TMP26:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 32)
 ; CHECK-NEXT:    [[TMP27:%.*]] = inttoptr i32 [[TMP11]] to ptr
 ; CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP27]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i32
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i8, ptr [[TMP14]], i32 32
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr i32, ptr [[TMP14]], i32 [[TMP18]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr null, i32 [[TMP38]]
+; CHECK-NEXT:    [[TMP46:%.*]] = ptrtoint ptr [[TMP26]] to i32
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr double, ptr [[TMP44]], i32 [[TMP40]]
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr double, ptr null, i32 [[TMP43]]
+; CHECK-NEXT:    [[TMP49:%.*]] = ptrtoint ptr [[TMP48]] to i32
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP45]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 2147483647
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i32 [[TMP16]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP13]], ptr align 4 [[TMP2]], i32 [[TMP26]], i1 false)
-; CHECK-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[TMP13]] to i32
+; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr i32, ptr [[TMP2]], i32 [[TMP18]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP13]], ptr align 4 [[TMP50]], i32 [[TMP46]], i1 false)
+; CHECK-NEXT:    [[TMP51:%.*]] = ptrtoint ptr [[TMP47]] to i32
+; CHECK-NEXT:    [[TMP36:%.*]] = and i32 [[TMP51]], 2147483647
+; CHECK-NEXT:    [[TMP37:%.*]] = inttoptr i32 [[TMP36]] to ptr
+; CHECK-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP34:%.*]] = add i32 [[TMP33]], 32
 ; CHECK-NEXT:    [[TMP20:%.*]] = inttoptr i32 [[TMP34]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[TMP20]], i8 0, i32 32, i1 false)
-; CHECK-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP1]], [[TMP26]]
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[TMP20]], i32 [[TMP40]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP37]], ptr align 4 [[TMP41]], i32 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[VL]] to i32
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP22]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = inttoptr i32 [[TMP23]] to ptr
@@ -46,7 +66,7 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK-NEXT:    [[TMP35:%.*]] = and i32 [[TMP32]], 2147483647
 ; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i32 [[TMP35]] to ptr
 ; CHECK-NEXT:    [[TMP29:%.*]] = ptrtoint ptr [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP29]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP29]], 96
 ; CHECK-NEXT:    [[TMP31:%.*]] = inttoptr i32 [[TMP30]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP17]], ptr align 4 [[TMP31]], i32 [[TMP21]], i1 false)
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VL]])
@@ -75,6 +95,15 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 define i32 @bar() {
 ; CHECK-LABEL: define i32 @bar() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP11]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
@@ -82,7 +111,8 @@ define i32 @bar() {
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 24), align 8
 ; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 4), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
-; CHECK-NEXT:    store i32 16, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 32), align 8
+; CHECK-NEXT:    store i32 8241, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, i32 1, i64 2, double 3.000000e+00)
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
@@ -100,11 +130,20 @@ define i32 @bar() {
 define i32 @bar2() {
 ; CHECK-LABEL: define i32 @bar2() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP11]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
-; CHECK-NEXT:    store i32 24, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 96), align 8
+; CHECK-NEXT:    store i32 1048577, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, <2 x i64> <i64 1, i64 2>)
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
@@ -123,11 +162,20 @@ define i32 @bar2() {
 define i32 @bar4() {
 ; CHECK-LABEL: define i32 @bar4() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP11]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
-; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
-; CHECK-NEXT:    store i32 24, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store [2 x i64] zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 96), align 8
+; CHECK-NEXT:    store i32 1048577, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, [2 x i64] [i64 1, i64 2])
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
@@ -143,11 +191,20 @@ define i32 @bar4() {
 define i32 @bar5() {
 ; CHECK-LABEL: define i32 @bar5() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP11]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
-; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
-; CHECK-NEXT:    store i32 40, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store [2 x i128] zeroinitializer, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 96), align 8
+; CHECK-NEXT:    store i32 2097153, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 (i32, ...) @foo(i32 0, [2 x i128] [i128 1, i128 2])
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
@@ -164,17 +221,22 @@ define i32 @bar6(ptr %arg) {
 ; CHECK-LABEL: define i32 @bar6(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = and i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = and i32 [[TMP12]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 2147483647
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP3]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_param_tls, i32 8), i8 0, i64 16, i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[ARG]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 2147483647
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i32 [[TMP6]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), ptr align 8 [[TMP7]], i64 16, i1 false)
-; CHECK-NEXT:    store i32 24, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store i32 1, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 (i32, ...) @foo(i32 0, ptr byval([2 x i64]) align 8 [[ARG]])
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
@@ -191,17 +253,22 @@ define i32 @bar7(ptr %arg) {
 ; CHECK-LABEL: define i32 @bar7(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = and i32 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = and i32 [[TMP12]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP9]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i32 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 2147483647
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[TMP3]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_param_tls, i32 8), i8 0, i64 32, i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[ARG]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 2147483647
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i32 [[TMP6]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), ptr align 8 [[TMP7]], i64 32, i1 false)
-; CHECK-NEXT:    store i32 40, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store i32 1, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 (i32, ...) @foo(i32 0, ptr byval([4 x i64]) align 16 [[ARG]])
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
@@ -219,6 +286,15 @@ define dso_local i64 @many_args() {
 ; CHECK-LABEL: define dso_local i64 @many_args() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 15
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 15
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP0]], 12
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 15
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP8]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_param_tls, i32 8), align 8
@@ -323,14 +399,6 @@ define dso_local i64 @many_args() {
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 8), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 16), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 24), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 32), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 40), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 48), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 56), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 64), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 72), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 80), align 8
-; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 88), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 96), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 104), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 112), align 8
@@ -419,7 +487,7 @@ define dso_local i64 @many_args() {
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 776), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 784), align 8
 ; CHECK-NEXT:    store i64 0, ptr getelementptr (i8, ptr @__msan_va_arg_tls, i32 792), align 8
-; CHECK-NEXT:    store i32 968, ptr @__msan_va_arg_overflow_size_tls, align 4
+; CHECK-NEXT:    store i32 61341794, ptr @__msan_va_arg_overflow_size_tls, align 4
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    [[RET:%.*]] = call i64 (i64, ...) @sum(i64 120, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1)
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i64, ptr @__msan_retval_tls, align 8

@@ -21,6 +21,15 @@ define void @Store1(ptr %p, i8 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP13]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP11]], i32 704)
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
@@ -29,7 +38,7 @@ define void @Store1(ptr %p, i8 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label %[[BB7]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[P]])
@@ -69,6 +78,15 @@ define void @Store2(ptr %p, i16 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP13]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP11]], i32 704)
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
@@ -77,7 +95,7 @@ define void @Store2(ptr %p, i16 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB7]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_2(ptr [[P]])
@@ -117,6 +135,15 @@ define void @Store4(ptr %p, i32 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP13]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP11]], i32 704)
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
@@ -125,7 +152,7 @@ define void @Store4(ptr %p, i32 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB7]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_4(ptr [[P]])
@@ -165,6 +192,15 @@ define void @Store8(ptr %p, i64 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP13]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP11]], i32 704)
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
@@ -173,7 +209,7 @@ define void @Store8(ptr %p, i64 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB7]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_8(ptr [[P]])
@@ -215,6 +251,15 @@ define void @Store16(ptr %p, i128 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP13]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP11]], i32 704)
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i32 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i128, ptr [[_MSARG1]], align 8
 ; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 8
@@ -223,7 +268,7 @@ define void @Store16(ptr %p, i128 %x) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB7]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_n(ptr [[P]], i32 16)
@@ -269,11 +314,20 @@ define i8 @Load1(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 15
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP17]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB5]]
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[P]], align 1
@@ -309,11 +363,20 @@ define i16 @Load2(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 15
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP17]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB5]]
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[P]], align 2
@@ -349,11 +412,20 @@ define i32 @Load4(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 15
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP17]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB5]]
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[P]], align 4
@@ -389,11 +461,20 @@ define i64 @Load8(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 15
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP17]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB5]]
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[P]], align 8
@@ -429,11 +510,20 @@ define i128 @Load16(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP5]], 15
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i32 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP14]], 15
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 15
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr i32 [[TMP5]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 15
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP17]], i32 704)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[BB5]]
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i128, ptr [[P]], align 8
