@@ -1675,13 +1675,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))
     return transformZExtICmp(Cmp, Zext);
 
-  // zext(trunc(X) & C) -> (X & zext(C)).
   Constant *C;
   Value *X;
-  if (match(Src, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Constant(C)))) &&
-      X->getType() == DestTy)
-    return BinaryOperator::CreateAnd(X, Builder.CreateZExt(C, DestTy));
-
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
   if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
@@ -1700,6 +1695,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
       X->getType() == DestTy) {
     Value *ZextC = Builder.CreateZExt(C, DestTy);
     return BinaryOperator::CreateAnd(X, ZextC);
+  }
+
+  Value *Y;
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(m_NUWTrunc(m_Value(X)), m_Value(Y)))) &&
+      X->getType() == DestTy) {
+    Value *ZextY = Builder.CreateZExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  ZextY);
   }
 
   if (match(Src, m_VScale())) {
@@ -2032,6 +2036,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return replaceInstUsesWith(
         Sext, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
                                       {CI->getLHS(), CI->getRHS()}));
+
+  Value *Y;
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(m_NSWTrunc(m_Value(X)), m_Value(Y)))) &&
+      X->getType() == DestTy) {
+    Value *SextY = Builder.CreateSExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  SextY);
+  }
 
   return nullptr;
 }

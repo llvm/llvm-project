@@ -12,7 +12,7 @@
 
 #include "orc-rt/BootstrapInfo.h"
 #include "orc-rt/Session.h"
-#include "orc-rt/TaskDispatcher.h"
+#include "orc-rt/move_only_function.h"
 #include "gtest/gtest.h"
 
 #include "CommonTestUtils.h"
@@ -20,8 +20,7 @@
 using namespace orc_rt;
 
 TEST(BootstrapInfoTest, ExplicitConstruction) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   BootstrapInfo BI(S);
   EXPECT_EQ(&BI.session(), &S);
   EXPECT_TRUE(BI.symbols().empty());
@@ -29,8 +28,7 @@ TEST(BootstrapInfoTest, ExplicitConstruction) {
 }
 
 TEST(BootstrapInfoTest, ExplicitConstructionWithSymbolsAndValues) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   int X = 0;
   SimpleSymbolTable Symbols;
   std::pair<const char *, void *> Syms[] = {{"orc_rt_X", &X}};
@@ -48,22 +46,19 @@ TEST(BootstrapInfoTest, ExplicitConstructionWithSymbolsAndValues) {
 }
 
 TEST(BootstrapInfoTest, ProcessInfoDelegates) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   BootstrapInfo BI(S);
   EXPECT_EQ(&BI.processInfo(), &S.processInfo());
 }
 
 TEST(BootstrapInfoTest, CreateDefaultSucceeds) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S));
   EXPECT_EQ(&BI.session(), &S);
 }
 
 TEST(BootstrapInfoTest, CreateDefaultContainsSessionSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S));
   ASSERT_TRUE(BI.symbols().count("orc_rt_Session_Instance"));
   EXPECT_EQ(BI.symbols().at("orc_rt_Session_Instance"),
@@ -71,8 +66,7 @@ TEST(BootstrapInfoTest, CreateDefaultContainsSessionSymbol) {
 }
 
 TEST(BootstrapInfoTest, CreateDefaultContainsSPSCISymbols) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S));
   // The default addAll should have registered SPS CI symbols.
   EXPECT_TRUE(
@@ -80,8 +74,7 @@ TEST(BootstrapInfoTest, CreateDefaultContainsSPSCISymbols) {
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S, /*AddInitialSymbols=*/{},
                                                   /*AddInitialValues=*/{}));
   // Should still contain the session symbol (added unconditionally).
@@ -92,8 +85,7 @@ TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithCustomValuesBuilder) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(
       S, sps_ci::addAll, [](BootstrapInfo::ValueMap &Values) -> Error {
         Values["test_key"] = "test_value";
@@ -103,8 +95,7 @@ TEST(BootstrapInfoTest, CreateDefaultWithCustomValuesBuilder) {
 }
 
 TEST(BootstrapInfoTest, CreateDefaultSymbolsBuilderError) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = BootstrapInfo::CreateDefault(S, [](SimpleSymbolTable &) -> Error {
     return make_error<StringError>("symbols builder failed");
   });
@@ -114,8 +105,7 @@ TEST(BootstrapInfoTest, CreateDefaultSymbolsBuilderError) {
 }
 
 TEST(BootstrapInfoTest, CreateDefaultValuesBuilderError) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = BootstrapInfo::CreateDefault(
       S, sps_ci::addAll, [](BootstrapInfo::ValueMap &) -> Error {
         return make_error<StringError>("values builder failed");
@@ -126,8 +116,7 @@ TEST(BootstrapInfoTest, CreateDefaultValuesBuilderError) {
 }
 
 TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   BootstrapInfo BI(S);
 
   int X = 0;
