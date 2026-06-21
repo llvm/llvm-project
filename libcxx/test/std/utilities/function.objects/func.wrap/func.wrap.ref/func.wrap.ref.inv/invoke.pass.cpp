@@ -384,7 +384,7 @@ void test_noexcept() {
   {
     // Arg type is an rvalue reference, we should not copy or move the object
     TrackCopyMove t;
-    auto lambda = [&t](TrackCopyMove&& tm) noexcept{
+    auto lambda = [&t](TrackCopyMove&& tm) noexcept {
       assert(&tm == &t);
       assert(tm.copy_count == 0);
       assert(tm.move_count == 0);
@@ -397,7 +397,7 @@ void test_noexcept() {
     // In libc++, where the type is not trivially copyable, the object should be
     // moved exactly once when passing into the lambda. The internal functions
     // of function_ref should forward the argument without copying or moving it
-    auto lambda = [](TrackCopyMove tm) noexcept{
+    auto lambda = [](TrackCopyMove tm) noexcept {
       assert(tm.copy_count == 0);
       LIBCPP_ASSERT(tm.move_count == 1);
     };
@@ -489,7 +489,7 @@ void test_const_noexcept() {
   {
     // Arg type is an rvalue reference, we should not copy or move the object
     TrackCopyMove t;
-    auto lambda = [&t](TrackCopyMove&& tm) noexcept{
+    auto lambda = [&t](TrackCopyMove&& tm) noexcept {
       assert(&tm == &t);
       assert(tm.copy_count == 0);
       assert(tm.move_count == 0);
@@ -502,7 +502,7 @@ void test_const_noexcept() {
     // In libc++, where the type is not trivially copyable, the object should be
     // moved exactly once when passing into the lambda. The internal functions
     // of function_ref should forward the argument without copying or moving it
-    auto lambda = [](TrackCopyMove tm) noexcept{
+    auto lambda = [](TrackCopyMove tm) noexcept {
       assert(tm.copy_count == 0);
       LIBCPP_ASSERT(tm.move_count == 1);
     };
