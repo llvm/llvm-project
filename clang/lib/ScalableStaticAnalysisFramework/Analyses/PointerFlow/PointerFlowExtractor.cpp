@@ -311,8 +311,9 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {
 public:
-  PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
-      : TUSummaryExtractor(Builder) {}
+  PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder,
+                                const TUSummaryExtractorOptions &Options)
+      : TUSummaryExtractor(Builder, Options) {}
 
   /// \return a non-null unique pointer to a PointerFlowEntitySummary
   std::unique_ptr<PointerFlowEntitySummary>
@@ -334,7 +335,7 @@ public:
   void HandleTranslationUnit(ASTContext &Ctx) override {
     std::vector<const NamedDecl *> Contributors;
 
-    findContributors(Ctx, Contributors);
+    findContributors(Ctx, getOptions(), Contributors);
     for (auto *CD : Contributors) {
       auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
 

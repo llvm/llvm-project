@@ -24,10 +24,11 @@ bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
 
 std::unique_ptr<TUSummaryExtractor>
 ssaf::makeTUSummaryExtractor(llvm::StringRef SummaryName,
-                             TUSummaryBuilder &Builder) {
+                             TUSummaryBuilder &Builder,
+                             const TUSummaryExtractorOptions &Options) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries())
     if (Entry.getName() == SummaryName)
-      return Entry.instantiate(Builder);
+      return Entry.instantiate(Builder, Options);
   assert(false && "Unknown SummaryExtractor name");
   return nullptr;
 }

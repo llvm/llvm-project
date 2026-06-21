@@ -50,7 +50,8 @@ protected:
         Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
     Extractor =
-        makeTUSummaryExtractor(UnsafeBufferUsageEntitySummary::Name, Builder);
+        makeTUSummaryExtractor(UnsafeBufferUsageEntitySummary::Name, Builder,
+                               TUSummaryExtractorOptions{});
 
     if (!Extractor) {
       ADD_FAILURE() << "failed to find UnsafeBufferUsageTUSummaryExtractor";

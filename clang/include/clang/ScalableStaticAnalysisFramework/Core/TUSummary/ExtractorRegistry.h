@@ -40,14 +40,16 @@ bool isTUSummaryExtractorRegistered(llvm::StringRef SummaryName);
 /// failed.
 /// It's a fatal error if there is no extractor registered with the name.
 std::unique_ptr<TUSummaryExtractor>
-makeTUSummaryExtractor(llvm::StringRef SummaryName, TUSummaryBuilder &Builder);
+makeTUSummaryExtractor(llvm::StringRef SummaryName, TUSummaryBuilder &Builder,
+                       const TUSummaryExtractorOptions &Options);
 
 /// Print the list of available TUSummaryExtractors.
 void printAvailableTUSummaryExtractors(llvm::raw_ostream &OS);
 
 // Registry for adding new TUSummaryExtractor implementations.
 using TUSummaryExtractorRegistry =
-    llvm::Registry<TUSummaryExtractor, TUSummaryBuilder &>;
+    llvm::Registry<TUSummaryExtractor, TUSummaryBuilder &,
+                   const TUSummaryExtractorOptions &>;
 
 } // namespace clang::ssaf
 

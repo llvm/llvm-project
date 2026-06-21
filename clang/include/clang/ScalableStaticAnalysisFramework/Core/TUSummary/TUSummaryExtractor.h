@@ -12,6 +12,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractorOptions.h"
 #include <optional>
 
 namespace clang::ssaf {
@@ -19,8 +20,9 @@ class TUSummaryBuilder;
 
 class TUSummaryExtractor : public ASTConsumer {
 public:
-  explicit TUSummaryExtractor(TUSummaryBuilder &Builder)
-      : SummaryBuilder(Builder) {}
+  explicit TUSummaryExtractor(TUSummaryBuilder &Builder,
+                              const TUSummaryExtractorOptions &Options)
+      : SummaryBuilder(Builder), Options(Options) {}
 
   /// Creates EntityName from the Decl, registers the entity, and sets its
   /// linkage atomically.
@@ -32,8 +34,14 @@ public:
   /// \returns the EntityId, or std::nullopt if EntityName creation fails.
   std::optional<EntityId> addEntityForReturn(const FunctionDecl *FD);
 
+  /// Framework-wide configuration that was active when this extractor was
+  /// constructed. The referenced object must outlive the extractor (it is
+  /// held by \c TUSummaryRunner).
+  const TUSummaryExtractorOptions &getOptions() const { return Options; }
+
 protected:
   TUSummaryBuilder &SummaryBuilder;
+  const TUSummaryExtractorOptions &Options;
 };
 
 } // namespace clang::ssaf

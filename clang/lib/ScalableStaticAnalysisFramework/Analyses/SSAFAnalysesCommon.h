@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractorOptions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -68,6 +69,7 @@ inline void logWarningFromError(llvm::Error Err) {
 
 /// Find all contributors in an AST.
 void findContributors(ASTContext &Ctx,
+                      const TUSummaryExtractorOptions &Options,
                       std::vector<const NamedDecl *> &Contributors);
 
 /// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.

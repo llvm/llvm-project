@@ -50,7 +50,8 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
   MockTUSummaryBuilder FakeBuilder(Summary);
   {
     auto Consumer =
-        makeTUSummaryExtractor("MockSummaryExtractor1", FakeBuilder);
+        makeTUSummaryExtractor("MockSummaryExtractor1", FakeBuilder,
+                               TUSummaryExtractorOptions{});
     EXPECT_TRUE(Consumer);
     EXPECT_EQ(FakeBuilder.consumeMessages(),
               "MockSummaryExtractor1 constructor was invoked\n");
@@ -63,8 +64,8 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
   TUSummary Summary = makeFakeSummary();
   MockTUSummaryBuilder FakeBuilder(Summary);
   {
-    auto Consumer =
-        makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder);
+    auto Consumer = makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder,
+                                           TUSummaryExtractorOptions{});
     EXPECT_TRUE(Consumer);
     EXPECT_EQ(FakeBuilder.consumeMessages(),
               "MockSummaryExtractor2 constructor was invoked\n");
@@ -78,7 +79,8 @@ TEST(SummaryExtractorRegistryTest, InvokingExtractors) {
   MockTUSummaryBuilder FakeBuilder(Summary);
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   for (std::string Name : {"MockSummaryExtractor1", "MockSummaryExtractor2"}) {
-    auto Consumer = makeTUSummaryExtractor(Name, FakeBuilder);
+    auto Consumer =
+        makeTUSummaryExtractor(Name, FakeBuilder, TUSummaryExtractorOptions{});
     ASSERT_TRUE(Consumer);
     Consumers.push_back(std::move(Consumer));
   }
