@@ -30433,8 +30433,9 @@ public:
     // Emit ordered reduction for the vectorized window.
     Builder.SetCurrentDebugLocation(
         cast<Instruction>(ReductionRoot)->getDebugLoc());
-    VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, 1, false,
-                                    DestTy, false, VectorizedTree);
+    VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
+                                    /*IsSigned=*/false, DestTy,
+                                    /*ReducedInTree=*/false, VectorizedTree);
 
     // Fold trailing scalars [SuccessStart+SuccessWidth, N).
     for (Value *RdxVal :
@@ -30505,7 +30506,7 @@ private:
       // %add0 = add <4 x i32> zeroinitializer, %A
       // %add1 = add <4 x i32> %add0, %B
       // clang-format on
-      Rdx = nullptr;
+      Rdx = Start;
       for (auto I : seq<unsigned>(VF)) {
         auto Position = I * DestTyNumElements;
         Value *SubVec =
