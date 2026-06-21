@@ -17,16 +17,12 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
-#include <optional>
-
-#include <algorithm>
 #include <optional>
 
 using namespace mlir;
@@ -136,12 +132,6 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     bool isSynthetic =
         profName == llvm::MDProfLabels::SyntheticFunctionEntryCount;
 
-    // LLVM's semantic import-GUID API only reads trailing GUID operands from
-    // "function_entry_count" metadata. Do not model trailing operands on
-    // "synthetic_function_entry_count" as import GUIDs in MLIR.
-    if (isSynthetic && node->getNumOperands() > 2)
-      return failure();
-
     std::optional<uint64_t> entryCountValue =
         getUInt64Metadata(node->getOperand(1));
     if (!entryCountValue)
@@ -157,25 +147,11 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
       importGUIDValues.push_back(*guidValue);
     }
 
-    // Import GUIDs are semantically a set in LLVM. Canonicalize them as
-    // unsigned sorted-unique values before storing the bit patterns in MLIR.
-    llvm::sort(importGUIDValues);
-    importGUIDValues.erase(
-        std::unique(importGUIDValues.begin(), importGUIDValues.end()),
-        importGUIDValues.end());
-
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
-      funcOp.setFunctionEntryCount(*entryCountValue);
-      if (isSynthetic)
-        funcOp.setFunctionEntryCountSynthetic(true);
-      if (!importGUIDValues.empty()) {
-        SmallVector<int64_t> importGUIDs;
-        importGUIDs.reserve(importGUIDValues.size());
-        for (uint64_t guid : importGUIDValues)
-          importGUIDs.push_back(static_cast<int64_t>(guid));
-        funcOp.setFunctionEntryCountImportsAttr(
-            DenseI64ArrayAttr::get(builder.getContext(), importGUIDs));
-      }
+      funcOp.setFunctionEntryCountAttr(FunctionEntryCountAttr::get(
+          builder.getContext(), *entryCountValue,
+          isSynthetic ? ProfileCountType::Synthetic : ProfileCountType::Real,
+          importGUIDValues));
       return success();
     }
     return op->emitWarning()

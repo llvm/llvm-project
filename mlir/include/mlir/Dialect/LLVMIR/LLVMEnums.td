@@ -84,6 +84,24 @@ def AsmATTOrIntel : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// ProfileCountType
+//===----------------------------------------------------------------------===//
+
+def ProfileCountReal : LLVM_EnumAttrCase<
+  /*string cppSym=*/"Real", /*string irSym=*/"real",
+  /*string llvmSym=*/"PCT_Real", /*int val=*/0>;
+def ProfileCountSynthetic : LLVM_EnumAttrCase<
+  /*string cppSym=*/"Synthetic", /*string irSym=*/"synthetic",
+  /*string llvmSym=*/"PCT_Synthetic", /*int val=*/1>;
+def ProfileCountType : LLVM_EnumAttr<
+  /*string name=*/"ProfileCountType",
+  /*string llvmName=*/"::llvm::Function::ProfileCountType",
+  /*string description=*/"real or synthetic function entry count",
+  /*list<LLVM_EnumAttrCase> cases=*/[ProfileCountReal, ProfileCountSynthetic]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic Operations
 //===----------------------------------------------------------------------===//
 

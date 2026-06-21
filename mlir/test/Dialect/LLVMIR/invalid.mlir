@@ -44,61 +44,6 @@ llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [0 : i32]
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// expected-error@+1{{requires function_entry_count when function_entry_count_synthetic is set}}
-llvm.func @function_entry_count_synthetic_requires_count() attributes {
-  function_entry_count_synthetic
-}
-
-// -----
-
-// expected-error@+1{{requires function_entry_count when function_entry_count_imports is set}}
-llvm.func @function_entry_count_imports_requires_count() attributes {
-  function_entry_count_imports = array<i64: 1234>
-}
-
-// -----
-
-// expected-error@+1{{does not support function_entry_count_imports with function_entry_count_synthetic}}
-llvm.func @function_entry_count_imports_requires_real_count() attributes {
-  function_entry_count = 7 : i64,
-  function_entry_count_imports = array<i64: 1234>,
-  function_entry_count_synthetic
-}
-
-// -----
-
-// expected-error@+1{{requires function_entry_count_imports to be non-empty when set}}
-llvm.func @function_entry_count_imports_non_empty() attributes {
-  function_entry_count = 7 : i64,
-  function_entry_count_imports = array<i64>
-}
-
-// -----
-
-// expected-error@+1{{requires function_entry_count_imports to be sorted and unique by unsigned GUID value}}
-llvm.func @function_entry_count_imports_sorted() attributes {
-  function_entry_count = 7 : i64,
-  function_entry_count_imports = array<i64: 9, 4>
-}
-
-// -----
-
-// expected-error@+1{{requires function_entry_count_imports to be sorted and unique by unsigned GUID value}}
-llvm.func @function_entry_count_imports_unique() attributes {
-  function_entry_count = 7 : i64,
-  function_entry_count_imports = array<i64: 4, 4>
-}
-
-// -----
-
-// expected-error@+1{{requires function_entry_count_imports to be sorted and unique by unsigned GUID value}}
-llvm.func @function_entry_count_imports_unsigned_order() attributes {
-  function_entry_count = 7 : i64,
-  function_entry_count_imports = array<i64: -1, 4>
-}
-
-// -----
-
 // Check that parser errors are properly produced and do not crash the compiler.
 
 // -----
