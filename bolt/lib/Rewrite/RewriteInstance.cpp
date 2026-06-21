@@ -5214,12 +5214,10 @@ void RewriteInstance::finalizeSectionStringTable(ELFObjectFile<ELFT> *File) {
   uint8_t *DataCopy = new uint8_t[SHStrTabSize];
   memset(DataCopy, 0, SHStrTabSize);
   SHStrTab.write(DataCopy);
-  BC->registerOrUpdateNoteSection(".shstrtab",
-                                  DataCopy,
-                                  SHStrTabSize,
+  BinarySection &ShStrTabSec = BC->registerOrUpdateNoteSection(".shstrtab", DataCopy, SHStrTabSize,
                                   /*Alignment=*/1,
-                                  /*IsReadOnly=*/true,
-                                  ELF::SHT_STRTAB);
+                                  /*IsReadOnly=*/true, ELF::SHT_STRTAB);
+  ShStrTabSec.setOwnedContents();
 }
 
 void RewriteInstance::addBoltInfoSection() {
@@ -5234,10 +5232,12 @@ void RewriteInstance::addBoltInfoSection() {
   // Encode as GNU GOLD VERSION so it is easily printable by 'readelf -n'
   const std::string BoltInfo =
       BinarySection::encodeELFNote("GNU", DescStr, 4 /*NT_GNU_GOLD_VERSION*/);
-  BC->registerOrUpdateNoteSection(".note.bolt_info", copyByteArray(BoltInfo),
+  BinarySection &BoltInfoSec = BC->registerOrUpdateNoteSection(
+    ".note.bolt_info", copyByteArray(BoltInfo),
                                   BoltInfo.size(),
                                   /*Alignment=*/1,
                                   /*IsReadOnly=*/true, ELF::SHT_NOTE);
+  BoltInfoSec.setOwnedContents();
 }
 
 void RewriteInstance::addBATSection() {
@@ -6071,19 +6071,19 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
         return Idx;
       });
 
-  BC->registerOrUpdateNoteSection(SecName,
-                                  copyByteArray(NewContents),
+  BinarySection &SymTabSec = BC->registerOrUpdateNoteSection(
+    SecName, copyByteArray(NewContents),
                                   NewContents.size(),
                                   /*Alignment=*/1,
-                                  /*IsReadOnly=*/true,
-                                  ELF::SHT_SYMTAB);
+                                  /*IsReadOnly=*/true, ELF::SHT_SYMTAB);
+  SymTabSec.setOwnedContents();
 
-  BC->registerOrUpdateNoteSection(StrSecName,
-                                  copyByteArray(NewStrTab),
+  BinarySection &StrTabSec = BC->registerOrUpdateNoteSection(
+    StrSecName, copyByteArray(NewStrTab),
                                   NewStrTab.size(),
                                   /*Alignment=*/1,
-                                  /*IsReadOnly=*/true,
-                                  ELF::SHT_STRTAB);
+                                  /*IsReadOnly=*/true, ELF::SHT_STRTAB);
+  StrTabSec.setOwnedContents();
 }
 
 template <typename ELFT>
