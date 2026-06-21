@@ -540,8 +540,10 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 
   ObjectKind OK = classifyObject(State, ContainerRegion, RD);
 
-  // FIXME: Also apply getIteratorPosition from IteratorModeling to recover the
-  // destination region instead of doing AST pattern matching.
+  // FIXME: IteratorModeling does not handle output iterators like std::back_inserter.
+  // For this reason, we fall back to AST pattern matching for destination recovery. Once
+  // IteratorModeling handles output iterators like std::back_inserter, this can be replaced
+  // with getIteratorPosition().
   const auto *BackInsCall = dyn_cast<CallExpr>(CE->getArg(2)->IgnoreImpCasts());
   if (!BackInsCall)
     return false;
