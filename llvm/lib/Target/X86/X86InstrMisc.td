@@ -1284,6 +1284,17 @@ let Predicates = [HasBMI, NoEGPR] in
 let Predicates = [HasBMI, HasEGPR] in
   defm : Bls_Pats<"_EVEX">;
 
+// BLSI only has GR32/GR64 forms. For an i8 operand we any-extend into a
+// 32-bit register, isolate the lowest set bit with BLSI32, and extract
+// the low byte. Any-extend is safe because BLSI keeps only the lowest
+// set bit, so upper-bit garbage cannot affect the extracted byte.
+let Predicates = [HasBMI] in
+  def : Pat<(and GR8:$src, (ineg_su GR8:$src)),
+            (EXTRACT_SUBREG
+              (BLSI32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                       GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
 multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     X86FoldableSchedWrite sched, string Suffix = ""> {
   let SchedRW = [sched], Form = MRMSrcReg4VOp3 in
