@@ -45,6 +45,7 @@ add_llvm_target(AIRCodeGen
   CodeGenTypes
   Core
   MC
+  Object
   Passes
   ScalarOpts
   AIRWriter

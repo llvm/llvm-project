@@ -52,7 +52,7 @@ struct AIRVersion {
   static constexpr unsigned AIRMajor = 2;
 
   static AIRVersion fromOSMajor(unsigned OS) {
-    unsigned TripleOS = (OS >= 16) ? 26 : OS;
+    unsigned TripleOS = (OS >= 16) ? OS + 10 : OS;
     unsigned MSLMaj = (OS >= 16) ? 4 : 3;
     unsigned MSLMin = (OS >= 16) ? 0 : (OS - 13);
     // MTLB container format byte (header byte 8), from `xcrun metal`:
@@ -81,8 +81,7 @@ struct AIRVersion {
     if (I == 0)
       return fromOSMajor(16); // no digits -> fallback
 
-    // Apple renumbered the macOS-16 era as macOS 26; map it back.
-    unsigned OS = (Num == 26) ? 16 : Num;
+    unsigned OS = (Num >= 26) ? Num - 10 : Num;
     return fromOSMajor(OS);
   }
 

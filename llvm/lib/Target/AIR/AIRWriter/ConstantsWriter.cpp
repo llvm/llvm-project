@@ -10,25 +10,37 @@
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
 namespace llvm {
 namespace metal {
 
-void emitConstantsBlock(BitstreamWriter &W, ValueEnumerator &E,
-                        ArrayRef<const Constant *> Constants,
-                        unsigned CodeSize) {
+void emitConstantsBlock(
+    BitstreamWriter &W, ValueEnumerator &E,
+    ArrayRef<const Constant *> Constants, unsigned CodeSize,
+    const DenseMap<const Constant *, unsigned> *PoisonPtrTypeIdx = nullptr) {
   if (Constants.empty())
     return;
   W.EnterSubblock(bitc::CONSTANTS_BLOCK_ID, CodeSize);
 
   Type *LastType = nullptr;
+  unsigned LastTypeIdx = ~0u;
   for (auto *C : Constants) {
     SmallVector<uint64_t, 8> V;
-    if (C->getType() != LastType) {
+    unsigned TyIdx = ~0u;
+    if (PoisonPtrTypeIdx) {
+      auto PIt = PoisonPtrTypeIdx->find(C);
+      if (PIt != PoisonPtrTypeIdx->end())
+        TyIdx = PIt->second;
+    }
+    if (TyIdx == ~0u)
+      TyIdx = E.typeIdx(C->getType());
+    if (C->getType() != LastType || TyIdx != LastTypeIdx) {
       LastType = C->getType();
-      V.push_back(E.typeIdx(LastType));
+      LastTypeIdx = TyIdx;
+      V.push_back(TyIdx);
       W.EmitRecord(bitc::CST_CODE_SETTYPE, V);
       V.clear();
     }
@@ -50,14 +62,15 @@ void emitConstantsBlock(BitstreamWriter &W, ValueEnumerator &E,
       for (unsigned I = 0; I < VT->getNumElements(); I++)
         V.push_back(Bits);
       W.EmitRecord(bitc::CST_CODE_DATA, V);
+    } else if (isa<PoisonValue>(C)) {
+      W.EmitRecord(bitc::CST_CODE_POISON, V);
     } else if (isa<UndefValue>(C)) {
       W.EmitRecord(bitc::CST_CODE_UNDEF, V);
     } else if (auto *CI = dyn_cast<ConstantInt>(C)) {
       // Always use INTEGER for ints (even zero) - AIR doesn't
       // accept NULL for integer types in some contexts.
       int64_t Val = CI->getSExtValue();
-      V.push_back(Val >= 0 ? uint64_t(Val) << 1
-                           : (uint64_t(-Val) << 1) | 1);
+      V.push_back(Val >= 0 ? uint64_t(Val) << 1 : (uint64_t(-Val) << 1) | 1);
       W.EmitRecord(bitc::CST_CODE_INTEGER, V);
     } else if (auto *CF = dyn_cast<ConstantFP>(C)) {
       V.push_back(CF->getValueAPF().bitcastToAPInt().getZExtValue());

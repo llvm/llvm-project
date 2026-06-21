@@ -67,7 +67,7 @@ void MetadataEnumerator::visitNode(const MDNode *N, ValueEnumerator &E) {
     } else if (auto *VAM = dyn_cast<ValueAsMetadata>(Op)) {
       if (!valueMap.count(VAM)) {
         ValEntry VE;
-        VE.typeIdx = E.typeIdx(VAM->getValue()->getType());
+        VE.typeIdx = E.typeIdxForValue(VAM->getValue());
         if (E.globalValueMap.count(VAM->getValue()))
           VE.valueID = E.globalIdx(VAM->getValue());
         else if (auto *C = dyn_cast<Constant>(VAM->getValue()))

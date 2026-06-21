@@ -13,9 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AIRConstraints.h"
 #include "BitcodeEncoding.h"
 #include "MetadataWriter.h"
-#include "AIRConstraints.h"
 #include "ValueEnumerator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -31,9 +31,10 @@ namespace llvm {
 namespace metal {
 
 // Forward declaration
-void emitConstantsBlock(BitstreamWriter &W, ValueEnumerator &E,
-                        ArrayRef<const Constant *> Constants,
-                        unsigned CodeSize);
+void emitConstantsBlock(
+    BitstreamWriter &W, ValueEnumerator &E,
+    ArrayRef<const Constant *> Constants, unsigned CodeSize,
+    const DenseMap<const Constant *, unsigned> *PoisonPtrTypeIdx = nullptr);
 
 void emitFunctionBlock(BitstreamWriter &W, const Function &F,
                        ValueEnumerator &E, const MetadataEnumerator &MD) {
@@ -43,7 +44,8 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
   {
     SmallPtrSet<const BasicBlock *, 8> Seen;
     if (!F.isDeclaration()) {
-      for (const BasicBlock *BB : ReversePostOrderTraversal<const Function *>(&F))
+      for (const BasicBlock *BB :
+           ReversePostOrderTraversal<const Function *>(&F))
         if (Seen.insert(BB).second)
           BBOrder.push_back(BB);
       for (const BasicBlock &BB : F)
@@ -72,6 +74,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         FuncConsts.push_back(C);
       }
   };
+  DenseMap<const Constant *, unsigned> PoisonPtrTypeIdx;
   for (const BasicBlock *BB : BBOrder)
     for (auto &I : *BB) {
       for (auto &Op : I.operands())
@@ -80,6 +83,33 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
       // the INST_SHUFFLEVEC record like one.
       if (auto *SV = dyn_cast<ShuffleVectorInst>(&I))
         CollectConst(SV->getShuffleMaskForBitcode());
+      if (auto *CI = dyn_cast<CallInst>(&I)) {
+        auto It = E.funcTypeParamIndices.find(CI->getFunctionType());
+        if (It != E.funcTypeParamIndices.end())
+          for (unsigned J = 0; J < CI->arg_size() && J < It->second.size(); J++)
+            if (auto *AC = dyn_cast<Constant>(CI->getArgOperand(J)))
+              if (isa<UndefValue>(AC) && AC->getType()->isPointerTy())
+                PoisonPtrTypeIdx.try_emplace(AC, It->second[J]);
+      }
+      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        if (auto *PC = dyn_cast<Constant>(SI->getPointerOperand()))
+          if (isa<UndefValue>(PC))
+            PoisonPtrTypeIdx.try_emplace(
+                PC,
+                E.ptrTypeIdx(PC->getType(), SI->getValueOperand()->getType()));
+      }
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (auto *PC = dyn_cast<Constant>(LI->getPointerOperand()))
+          if (isa<UndefValue>(PC))
+            PoisonPtrTypeIdx.try_emplace(
+                PC, E.ptrTypeIdx(PC->getType(), LI->getType()));
+      }
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+        if (auto *PC = dyn_cast<Constant>(GEP->getPointerOperand()))
+          if (isa<UndefValue>(PC))
+            PoisonPtrTypeIdx.try_emplace(
+                PC, E.ptrTypeIdx(PC->getType(), GEP->getSourceElementType()));
+      }
     }
 
   // Instruction results
@@ -112,7 +142,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
   W.EmitRecord(bitc::FUNC_CODE_DECLAREBLOCKS, DV);
 
   // Function constants
-  emitConstantsBlock(W, E, FuncConsts, 5);
+  emitConstantsBlock(W, E, FuncConsts, 5, &PoisonPtrTypeIdx);
 
   // BB index helper
   SmallVector<const BasicBlock *, 8> BBList(BBOrder.begin(), BBOrder.end());

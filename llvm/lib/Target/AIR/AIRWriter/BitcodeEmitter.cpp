@@ -13,24 +13,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeEmitter.h"
+#include "AIRConstraints.h"
+#include "AIRVersion.h"
 #include "BitcodeEncoding.h"
 #include "LowerVectorSelect.h"
 #include "MetadataWriter.h"
-#include "AIRConstraints.h"
-#include "AIRVersion.h"
 #include "ValueEnumerator.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/IRSymtab.h"
+#include "llvm/Support/Allocator.h"
 #include <functional>
+#include <map>
 
 using namespace llvm;
 
@@ -356,6 +360,10 @@ static void normalizeGEPs(Module &M, PointeeTypeMap &PTM) {
     Type *SrcTy = GEP->getSourceElementType();
     if (SrcTy == FloatTy || GEP->getNumIndices() != 1)
       return false;
+    if (auto *AT = dyn_cast<ArrayType>(SrcTy))
+      return AT->getElementType()->isIntegerTy(8) &&
+             (GEP->getPointerAddressSpace() == metal::AS::Device ||
+              GEP->getPointerAddressSpace() == metal::AS::Threadgroup);
     if (!SrcTy->isIntegerTy() && !SrcTy->isHalfTy() && !SrcTy->isBFloatTy())
       return false;
     unsigned AS = GEP->getPointerAddressSpace();
@@ -409,9 +417,9 @@ static void normalizeGEPs(Module &M, PointeeTypeMap &PTM) {
       for (auto *GEP : ToFix) {
         Type *SrcTy = GEP->getSourceElementType();
         Value *Ptr = GEP->getPointerOperand();
-        // Same-size types (i32 vs float, both 4 bytes): retype the GEP source
-        // to float. Stride is identical so the arithmetic is unchanged.
-        if (SrcTy->getPrimitiveSizeInBits() == 32) {
+        bool SameSize = SrcTy->getPrimitiveSizeInBits() == 32 ||
+                        (SrcTy->isArrayTy() && DL.getTypeAllocSize(SrcTy) == 4);
+        if (SameSize) {
           GEP->setSourceElementType(FloatTy);
           GEP->setResultElementType(FloatTy);
           continue;
@@ -829,6 +837,31 @@ static bool isI1VecToSubByteVecBitcast(BitCastInst *BC) {
   return SV->getNumElements() == DV->getNumElements() * K;
 }
 
+static void stripLifetimeIntrinsics(Module &M) {
+  SmallVector<Instruction *, 16> Dead;
+  for (auto &F : M)
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CI = dyn_cast<CallInst>(&I))
+          if (auto *Callee = CI->getCalledFunction()) {
+            Intrinsic::ID ID = Callee->getIntrinsicID();
+            if (ID == Intrinsic::lifetime_start ||
+                ID == Intrinsic::lifetime_end)
+              Dead.push_back(CI);
+          }
+  for (auto *I : Dead)
+    I->eraseFromParent();
+  SmallVector<Function *, 4> DeadDecls;
+  for (auto &F : M) {
+    Intrinsic::ID ID = F.getIntrinsicID();
+    if ((ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end) &&
+        F.use_empty())
+      DeadDecls.push_back(&F);
+  }
+  for (auto *F : DeadDecls)
+    F->eraseFromParent();
+}
+
 static void scalarizeBoolVectorCasts(Module &M) {
   auto Casts = collectInsts<BitCastInst>(M, [](BitCastInst *BC) {
     return isI1VecScalarBitcast(BC) || isI1VecToSubByteVecBitcast(BC);
@@ -959,6 +992,99 @@ static void scalarizeAggregateStores(Module &M, PointeeTypeMap &PTM) {
     }
     SI->eraseFromParent();
   }
+
+  auto VecAggs = collectInsts<StoreInst>(M, [&](StoreInst *SI) {
+    auto *VT = dyn_cast<FixedVectorType>(SI->getValueOperand()->getType());
+    if (!VT)
+      return false;
+    auto *AI =
+        dyn_cast<AllocaInst>(SI->getPointerOperand()->stripPointerCasts());
+    return AI && AI->getAllocatedType()->isAggregateType();
+  });
+  for (StoreInst *SI : VecAggs) {
+    auto *VT = cast<FixedVectorType>(SI->getValueOperand()->getType());
+    Type *ElemTy = VT->getElementType();
+    auto *AI = cast<AllocaInst>(SI->getPointerOperand()->stripPointerCasts());
+    Value *Val = SI->getValueOperand();
+    IRBuilder<> B(SI);
+    Value *Base = retypePointerVia(AI, ElemTy, SI, PTM);
+    for (uint64_t E = 0; E < VT->getNumElements(); ++E) {
+      Value *EP = B.CreateGEP(ElemTy, Base, B.getInt64(E));
+      Value *EV = B.CreateExtractElement(Val, B.getInt64(E));
+      B.CreateStore(EV, EP);
+    }
+    SI->eraseFromParent();
+  }
+}
+
+static void fixTensorRuntimeArgTypes(Module &M, PointeeTypeMap &PTM) {
+  auto &Ctx = M.getContext();
+  Type *I8 = Type::getInt8Ty(Ctx);
+  StructType *TT = StructType::getTypeByName(Ctx, "struct._tensor_t");
+  if (!TT)
+    TT = StructType::create(Ctx, "struct._tensor_t");
+  auto requiredPointee = [&](StringRef Name, unsigned ArgNo) -> Type * {
+    if (Name.starts_with("air.init_strided_private_tensor")) {
+      if (ArgNo == 0)
+        return TT;
+      if (ArgNo == 2 || ArgNo == 3 || ArgNo == 4)
+        return I8;
+    } else if (Name.starts_with("air.slice_private_tensor")) {
+      if (ArgNo == 0 || ArgNo == 1)
+        return TT;
+      if (ArgNo == 3 || ArgNo == 4)
+        return I8;
+    } else if (Name.starts_with("air.get_extent_private_tensor")) {
+      if (ArgNo == 0)
+        return TT;
+    } else if (Name.starts_with("__tensorops_impl_matmul2d")) {
+      if (ArgNo == 1 || ArgNo == 3 || ArgNo == 5)
+        return I8;
+    }
+    return nullptr;
+  };
+  auto Calls = collectInsts<CallInst>(M, [](CallInst *) { return true; });
+  for (auto *CI : Calls) {
+    Function *Callee = CI->getCalledFunction();
+    if (!Callee)
+      continue;
+    StringRef Name = Callee->getName();
+    for (unsigned J = 0; J < CI->arg_size(); ++J) {
+      Type *Want = requiredPointee(Name, J);
+      if (!Want)
+        continue;
+      Value *Arg = CI->getArgOperand(J);
+      if (!Arg->getType()->isPointerTy() || isa<BitCastInst>(Arg))
+        continue;
+      Type *Pointee = nullptr;
+      if (auto *AI = dyn_cast<AllocaInst>(Arg->stripPointerCasts()))
+        Pointee = AI->getAllocatedType();
+      else
+        Pointee = effectivePointee(Arg, PTM);
+      if (Pointee && Pointee != Want) {
+        auto *BC = cast<BitCastInst>(CastInst::Create(
+            Instruction::BitCast, Arg, Arg->getType(), "", CI->getIterator()));
+        PTM.set(BC, Want);
+        CI->setArgOperand(J, BC);
+      }
+    }
+  }
+}
+
+static void fixGEPBaseTypeMismatch(Module &M, PointeeTypeMap &PTM) {
+  auto GEPs = collectInsts<GetElementPtrInst>(M, [&](GetElementPtrInst *GEP) {
+    Value *Base = GEP->getPointerOperand();
+    if (isa<GlobalVariable>(Base) || isa<BitCastInst>(Base))
+      return false;
+    Type *SrcTy = GEP->getSourceElementType();
+    if (auto *AI = dyn_cast<AllocaInst>(Base))
+      return AI->getAllocatedType() != SrcTy;
+    Type *Pointee = effectivePointee(Base, PTM);
+    return Pointee && Pointee != SrcTy;
+  });
+  for (auto *GEP : GEPs)
+    GEP->setOperand(0, retypePointerVia(GEP->getPointerOperand(),
+                                        GEP->getSourceElementType(), GEP, PTM));
 }
 
 static void fixSelectPointerArms(Module &M, PointeeTypeMap &PTM) {
@@ -1230,8 +1356,6 @@ static void fixKernelArgMetadata(Module &M, const PointeeTypeMap &PTM) {
         continue; // Unknown type, don't change
       }
 
-      // Device-atomic arg: type as metal::_atomic { i32 } + air.struct_type_info,
-      // matching Apple's front end. The 8-arg cmpxchg PSO-crashes without it.
       bool IsAtomic = AllowAtomicStruct && Pointee->isIntegerTy(32) &&
                       isAtomicDeviceArg(Arg);
       Metadata *StructTypeInfo = nullptr;
@@ -1392,9 +1516,10 @@ static bool hasAirAttrs(const AttributeSet &AS) {
 
 // Forward declarations (defined in separate .cpp files)
 void emitTypeBlock(BitstreamWriter &W, ValueEnumerator &E);
-void emitConstantsBlock(BitstreamWriter &W, ValueEnumerator &E,
-                        ArrayRef<const Constant *> Constants,
-                        unsigned CodeSize);
+void emitConstantsBlock(
+    BitstreamWriter &W, ValueEnumerator &E,
+    ArrayRef<const Constant *> Constants, unsigned CodeSize,
+    const DenseMap<const Constant *, unsigned> *PoisonPtrTypeIdx = nullptr);
 void emitMetadataKindBlock(BitstreamWriter &W);
 void emitMetadataBlock(BitstreamWriter &W, Module &M, ValueEnumerator &E,
                        MetadataEnumerator &MD);
@@ -1559,6 +1684,11 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     //      kernel-arg metadata.
     //
     // --- Stage A: legalize / lower ---
+    for (auto &F : M)
+      if (F.isDeclaration() && F.getName().starts_with("__tensorops_impl_") &&
+          F.getSection().empty())
+        F.setSection("air.externally_defined");
+    stripLifetimeIntrinsics(M);
     expandWideIntegers(M);
     lowerFreezeInsts(M);
     canonicalizeNNegZExt(M);
@@ -1577,6 +1707,8 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     fixSelectPointerArms(M, PTM);
     scalarizeAggregateLoads(M, PTM);
     scalarizeAggregateStores(M, PTM);
+    fixTensorRuntimeArgTypes(M, PTM);
+    fixGEPBaseTypeMismatch(M, PTM);
     fixAccessTypeMismatch(M, PTM);
 
     // --- Stage D: materialize constexprs, then post-constexpr fixups ---
@@ -1643,11 +1775,6 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     DenseMap<const Function *, unsigned> FnAttrListID;
     SmallVector<SmallVector<unsigned, 4>, 8> AttrLists;
 
-    // Synthesize attribute groups on the simdgroup-matrix intrinsic declarations
-    // to match Apple's `xcrun metal` AIR — the macOS 13/14/15 AIR driver
-    // rejects the metallib otherwise. The groups must be encoded with bitcode
-    // ATTR_KIND_* values, which do NOT match LLVM's in-memory Attribute::AttrKind
-    // enum (e.g. convergent is 6 in-memory but 43 in bitcode).
     enum : uint64_t {
       BK_NO_CAPTURE = 11,
       BK_NO_UNWIND = 18,
@@ -1790,9 +1917,6 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
         }
         W.EmitRecord(bitc::PARAMATTR_GRP_CODE_ENTRY, Grp);
       }
-      // Synthesized declaration groups (simdgroup-matrix intrinsics). Each entry
-      // is (ID, Index, [0, kind]...) — every attr here is a plain bitcode enum
-      // (record-code 0), with the bitcode ATTR_KIND_* values set above.
       for (auto &IDG : SynthGroups) {
         SmallVector<uint64_t, 16> Grp;
         Grp.push_back(IDG.first);        // group ID
@@ -1851,6 +1975,27 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     if (!M.getSourceFileName().empty())
       emitString(W, bitc::MODULE_CODE_SOURCE_FILENAME, M.getSourceFileName());
 
+    std::map<std::string, unsigned> SectionMap;
+    auto sectionIndex = [&](StringRef Sec) -> unsigned {
+      if (Sec.empty())
+        return 0;
+      unsigned &Entry = SectionMap[std::string(Sec)];
+      if (!Entry) {
+        emitString(W, bitc::MODULE_CODE_SECTIONNAME, Sec);
+        Entry = SectionMap.size();
+      }
+      return Entry;
+    };
+    for (auto *V : E.globalValues) {
+      if (auto *G = dyn_cast<GlobalVariable>(V)) {
+        if (G->hasSection())
+          sectionIndex(G->getSection());
+      } else if (auto *Fn = dyn_cast<Function>(V)) {
+        if (Fn->hasSection())
+          sectionIndex(Fn->getSection());
+      }
+    }
+
     // GLOBALVAR and FUNCTION records - emit in globalValues order
     // (globals first, then functions, matching value ID assignment)
     for (auto *V : E.globalValues) {
@@ -1858,11 +2003,13 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
         SmallVector<uint64_t, 14> Ops;
         Ops.push_back(E.globalPtrTypeIdx(G)); // ptr-to-valueType
         Ops.push_back(G->isConstant() ? 1 : 0);
-        Ops.push_back(
-            G->hasInitializer() ? E.moduleConstIdx(G->getInitializer()) + 1 : 0);
+        Ops.push_back(G->hasInitializer()
+                          ? E.moduleConstIdx(G->getInitializer()) + 1
+                          : 0);
         Ops.push_back(encodeLinkage(G->getLinkage()));
         Ops.push_back(G->getAlign() ? Log2_32(G->getAlign()->value()) + 1 : 0);
-        for (int J = 0; J < 3; J++)
+        Ops.push_back(G->hasSection() ? sectionIndex(G->getSection()) : 0);
+        for (int J = 0; J < 2; J++)
           Ops.push_back(0);
         Ops.push_back(G->hasGlobalUnnamedAddr() ? 1 : 0);
         Ops.push_back(G->isExternallyInitialized() ? 1 : 0);
@@ -1891,10 +2038,10 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
         // Field 9 is unnamed_addr. Bitcode encoding (getEncodedUnnamedAddr):
         // None=0, Global=1, Local=2. Apple's simdgroup intrinsic decls are
         // `local_unnamed_addr` (=2); the macOS-14 driver expects this to match.
-        Ops.push_back(0);                                      // 6: section
-        Ops.push_back(0);                                      // 7: visibility
-        Ops.push_back(0);                                      // 8: gc
-        Ops.push_back(LocalUnnamedFns.contains(Fn) ? 2u : 0u); // 9: unnamed_addr
+        Ops.push_back(Fn->hasSection() ? sectionIndex(Fn->getSection()) : 0);
+        Ops.push_back(0);
+        Ops.push_back(0);
+        Ops.push_back(LocalUnnamedFns.contains(Fn) ? 2u : 0u);
         for (int J = 10; J < 16; J++)
           Ops.push_back(0);
         Ops.push_back(Fn->getAddressSpace());
@@ -1933,6 +2080,38 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     W.ExitBlock();
 
     W.ExitBlock(); // MODULE_BLOCK
+
+    bool HasExternallyDefined = false;
+    for (auto &GO : M.global_objects())
+      if (GO.getSection() == "air.externally_defined") {
+        HasExternallyDefined = true;
+        break;
+      }
+    if (HasExternallyDefined) {
+      SmallVector<char, 0> Symtab;
+      StringTableBuilder StrtabBuilder(StringTableBuilder::RAW);
+      BumpPtrAllocator Alloc;
+      Module *Mods[] = {&M};
+      if (!irsymtab::build(Mods, Symtab, StrtabBuilder, Alloc)) {
+        StrtabBuilder.finalizeInOrder();
+        std::vector<char> Strtab(StrtabBuilder.getSize());
+        StrtabBuilder.write((uint8_t *)Strtab.data());
+
+        auto emitBlob = [&](unsigned Block, unsigned Record, StringRef Blob) {
+          W.EnterSubblock(Block, 3);
+          auto Abbv = std::make_shared<BitCodeAbbrev>();
+          Abbv->Add(BitCodeAbbrevOp(Record));
+          Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+          unsigned AbbrevNo = W.EmitAbbrev(std::move(Abbv));
+          W.EmitRecordWithBlob(AbbrevNo, ArrayRef<uint64_t>{Record}, Blob);
+          W.ExitBlock();
+        };
+        emitBlob(bitc::SYMTAB_BLOCK_ID, bitc::SYMTAB_BLOB,
+                 {Symtab.data(), Symtab.size()});
+        emitBlob(bitc::STRTAB_BLOCK_ID, bitc::STRTAB_BLOB,
+                 {Strtab.data(), Strtab.size()});
+      }
+    }
   }
 
   return std::vector<uint8_t>(Buf.begin(), Buf.end());

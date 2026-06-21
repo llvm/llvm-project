@@ -60,6 +60,8 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr,
                                      SmallPtrSetImpl<Value *> &Visited) {
   if (!Visited.insert(Ptr).second)
     return nullptr;
+  if (!Ptr->hasUseList())
+    return nullptr;
   // Prioritize load/store types over GEP source types.
   // Recurse through GEP chains to find the ultimate store/load type.
   // NOTE: Do NOT follow atomic intrinsic calls through GEP chains.
@@ -140,6 +142,36 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr,
             return Type::getInt8Ty(Ctx);
           if (Name.contains("p1f32") || Name.contains("p3f32"))
             return Type::getFloatTy(Ctx);
+        }
+        if (Name.starts_with("air.init_strided_private_tensor") ||
+            Name.starts_with("air.slice_private_tensor") ||
+            Name.starts_with("air.get_extent_private_tensor")) {
+          unsigned ArgNo = ~0u;
+          for (unsigned J = 0; J < CI->arg_size(); ++J)
+            if (CI->getArgOperand(J) == Ptr) {
+              ArgNo = J;
+              break;
+            }
+          bool IsHandle =
+              (ArgNo == 0) ||
+              (ArgNo == 1 && Name.starts_with("air.slice_private_tensor"));
+          if (IsHandle) {
+            auto &Ctx = Ptr->getContext();
+            StructType *TT = StructType::getTypeByName(Ctx, "struct._tensor_t");
+            if (!TT)
+              TT = StructType::create(Ctx, "struct._tensor_t");
+            return TT;
+          }
+          return Type::getInt8Ty(Ptr->getContext());
+        }
+        if (Name.starts_with("air.get_descriptor_size_tensor"))
+          return Type::getInt8Ty(Ptr->getContext());
+        if (Name.starts_with("__tensorops_impl_matmul2d")) {
+          if (CI->arg_size() && CI->getArgOperand(0) == Ptr) {
+            if (auto *AI = dyn_cast<AllocaInst>(Ptr->stripPointerCasts()))
+              return AI->getAllocatedType();
+          }
+          return Type::getInt8Ty(Ptr->getContext());
         }
         // Only use atomic type if the pointer is NOT a GEP result.
         // GEP results must keep their source element type for consistency;
@@ -324,6 +356,8 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
             PTM.set(&I, Ty);
         if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
           PTM.set(&I, GEP->getResultElementType());
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          PTM.set(&I, AI->getAllocatedType());
       }
 
   // Phase 5: i1* → i8*

@@ -216,6 +216,8 @@ private:
       Type *DstTy = demoteTy(BC->getType());
       if (Src->getType() == DstTy)
         record(BC, Src);
+      else if (BC->getType()->isDoubleTy() && Src->getType()->isIntegerTy(64))
+        record(BC, narrowDoubleBitsToFloat(Src, B));
       else
         record(BC, B.CreateBitCast(Src, DstTy, BC->getName()));
       return;
@@ -304,6 +306,70 @@ private:
     }
 
     LLVM_DEBUG(dbgs() << "air-demote-f64: unhandled f64 instr: " << *I << "\n");
+  }
+
+  Value *narrowDoubleBitsToFloat(Value *Bits64, IRBuilder<> &B) {
+    LLVMContext &C = B.getContext();
+    Type *I32 = Type::getInt32Ty(C);
+    Type *I64 = Type::getInt64Ty(C);
+    auto i64 = [&](uint64_t v) { return ConstantInt::get(I64, v); };
+    auto i32 = [&](uint32_t v) { return ConstantInt::get(I32, v); };
+
+    Value *Sign = B.CreateTrunc(
+        B.CreateLShr(B.CreateAnd(Bits64, i64(0x8000000000000000ULL)), i64(32)),
+        I32);
+    Value *Exp = B.CreateTrunc(
+        B.CreateAnd(B.CreateLShr(Bits64, i64(52)), i64(0x7FF)), I32);
+    Value *Mant = B.CreateAnd(Bits64, i64(0xFFFFFFFFFFFFFULL));
+
+    Value *NewExp = B.CreateAdd(B.CreateSub(Exp, i32(1023)), i32(127));
+    Value *FullMant = B.CreateOr(Mant, i64(0x10000000000000ULL));
+
+    Value *Subnormal = B.CreateICmpSLE(NewExp, i32(0));
+    Value *Sh = B.CreateSelect(
+        Subnormal, B.CreateAdd(i32(29), B.CreateSub(i32(1), NewExp)), i32(29));
+    Value *Sh64 = B.CreateZExt(Sh, I64);
+
+    Value *Shifted = B.CreateLShr(FullMant, Sh64);
+    Value *RoundBit =
+        B.CreateAnd(B.CreateLShr(FullMant, B.CreateSub(Sh64, i64(1))), i64(1));
+    Value *StickyMask =
+        B.CreateSub(B.CreateShl(i64(1), B.CreateSub(Sh64, i64(1))), i64(1));
+    Value *Sticky = B.CreateICmpNE(B.CreateAnd(FullMant, StickyMask), i64(0));
+    Value *RoundUp = B.CreateAnd(
+        B.CreateICmpNE(RoundBit, i64(0)),
+        B.CreateOr(Sticky,
+                   B.CreateICmpNE(B.CreateAnd(Shifted, i64(1)), i64(0))));
+    Value *RoundInc = B.CreateSelect(RoundUp, i64(1), i64(0));
+
+    Value *SubRes =
+        B.CreateOr(Sign, B.CreateTrunc(B.CreateAdd(Shifted, RoundInc), I32));
+
+    Value *MantLow = B.CreateAnd(B.CreateTrunc(Shifted, I32), i32(0x7FFFFF));
+    Value *NormBase =
+        B.CreateOr(Sign, B.CreateOr(B.CreateShl(NewExp, i32(23)), MantLow));
+    Value *NormRes = B.CreateAdd(NormBase, B.CreateTrunc(RoundInc, I32));
+
+    Value *IsInfNan = B.CreateICmpEQ(Exp, i32(0x7FF));
+    Value *MantNonZero = B.CreateICmpNE(Mant, i64(0));
+    Value *InfNanMant = B.CreateSelect(
+        MantNonZero,
+        B.CreateOr(B.CreateTrunc(B.CreateLShr(Mant, i64(29)), I32),
+                   i32(0x400000)),
+        i32(0));
+    Value *InfNanRes =
+        B.CreateOr(Sign, B.CreateOr(i32(0x7F800000), InfNanMant));
+
+    Value *Overflow = B.CreateICmpSGE(NewExp, i32(255));
+    Value *OverflowRes = B.CreateOr(Sign, i32(0x7F800000));
+    Value *FlushZero =
+        B.CreateOr(B.CreateICmpEQ(Exp, i32(0)), B.CreateICmpSGE(Sh, i32(64)));
+
+    Value *Res = B.CreateSelect(Subnormal, SubRes, NormRes);
+    Res = B.CreateSelect(FlushZero, Sign, Res);
+    Res = B.CreateSelect(Overflow, OverflowRes, Res);
+    Res = B.CreateSelect(IsInfNan, InfNanRes, Res);
+    return B.CreateBitCast(Res, Type::getFloatTy(C));
   }
 
   void processCall(CallInst *CB, IRBuilder<> &B) {

@@ -94,6 +94,8 @@ public:
   /// Get typed pointer index for a Value using PTM inference.
   unsigned ptrTypeIdxForValue(const llvm::Value *V);
 
+  unsigned typeIdxForValue(const llvm::Value *V);
+
   /// Get type index for a global variable's pointer type (uses value type as
   /// pointee).
   unsigned globalPtrTypeIdx(const llvm::GlobalVariable *GV);
@@ -118,6 +120,9 @@ private:
   unsigned addFunctionType(llvm::FunctionType *FT, const llvm::Function *F);
   unsigned addEntry(TypeEntry E);
   void collectMetadataConstants(const llvm::MDNode *N);
+  void
+  collectMetadataConstants(const llvm::MDNode *N,
+                           llvm::SmallPtrSetImpl<const llvm::MDNode *> &Seen);
 };
 
 } // namespace metal

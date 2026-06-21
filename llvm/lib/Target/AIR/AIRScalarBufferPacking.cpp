@@ -79,10 +79,28 @@ static bool scalarBufferPacking(Module &M) {
     if (!F.isDeclaration() && !CalledFns.count(&F))
       Funcs.push_back(&F);
 
+  auto hasPrebakedArgMD = [&](Function &F) -> bool {
+    auto *KMD = M.getNamedMetadata("air.kernel");
+    if (!KMD)
+      return false;
+    for (unsigned k = 0; k < KMD->getNumOperands(); k++) {
+      auto *Node = KMD->getOperand(k);
+      if (Node->getNumOperands() < 1)
+        continue;
+      auto *FnMD = dyn_cast_if_present<ValueAsMetadata>(Node->getOperand(0));
+      if (FnMD && FnMD->getValue() == &F)
+        return true;
+    }
+    return false;
+  };
+
   for (Function *FPtr : Funcs) {
     Function &F = *FPtr;
 
     if (F.getMetadata("air.argbuf.member_as"))
+      continue;
+
+    if (hasPrebakedArgMD(F))
       continue;
 
     // Collect system value param indices from pre-baked metadata
@@ -241,7 +259,8 @@ static bool scalarBufferPacking(Module &M) {
       Ni++;
     }
     BufNewIdx = Ni;
-    NewParamTypes.push_back(PointerType::get(M.getContext(), metal::AS::Device));
+    NewParamTypes.push_back(
+        PointerType::get(M.getContext(), metal::AS::Device));
     Ni++;
 
     SmallVector<std::string, 8> OldArgNames;
@@ -255,6 +274,21 @@ static bool scalarBufferPacking(Module &M) {
     NewF->copyAttributesFrom(&F);
     NewF->copyMetadata(&F, 0);
     NewF->splice(NewF->begin(), &F);
+
+    {
+      const AttributeList &OldAL = F.getAttributes();
+      AttributeList NewAL = AttributeList::get(
+          M.getContext(), OldAL.getFnAttrs(), OldAL.getRetAttrs(), {});
+      for (unsigned i = 0; i < F.arg_size(); i++) {
+        if (ScalarIdxSet.count(i))
+          continue;
+        AttributeSet AS = OldAL.getParamAttrs(i);
+        if (AS.hasAttributes())
+          NewAL = NewAL.addParamAttributes(M.getContext(), OldToNew[i],
+                                           AttrBuilder(M.getContext(), AS));
+      }
+      NewF->setAttributes(NewAL);
+    }
 
     for (unsigned i = 0; i < F.arg_size(); i++) {
       if (ScalarIdxSet.count(i))
@@ -424,8 +458,8 @@ static bool scalarBufferPacking(Module &M) {
                 ConstantInt::get(Type::getInt64Ty(M.getContext()), GepIdx + 1),
                 Name + "_gep_hi");
             Preamble.push_back(GepHi);
-            auto *HiRaw = new LoadInst(BufElemTy, GepHi, Name + "_hi_raw", false,
-                                       Align(4));
+            auto *HiRaw = new LoadInst(BufElemTy, GepHi, Name + "_hi_raw",
+                                       false, Align(4));
             Preamble.push_back(HiRaw);
             auto *HiI32 = CastInst::Create(Instruction::BitCast, HiRaw,
                                            Type::getInt32Ty(M.getContext()),
@@ -499,7 +533,7 @@ static bool scalarBufferPacking(Module &M) {
 }
 
 PreservedAnalyses AIRScalarBufferPackingPass::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
+                                                  ModuleAnalysisManager &AM) {
   return scalarBufferPacking(M) ? PreservedAnalyses::none()
                                 : PreservedAnalyses::all();
 }

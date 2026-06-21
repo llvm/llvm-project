@@ -153,6 +153,20 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
           ptrTypeIdx(PointerType::get(M.getContext(), 0),
                      AI->getAllocatedType());
         }
+        if (auto *SI = dyn_cast<StoreInst>(&I)) {
+          if (isa<UndefValue>(SI->getPointerOperand()))
+            ptrTypeIdx(SI->getPointerOperand()->getType(),
+                       SI->getValueOperand()->getType());
+        }
+        if (auto *LI = dyn_cast<LoadInst>(&I)) {
+          if (isa<UndefValue>(LI->getPointerOperand()))
+            ptrTypeIdx(LI->getPointerOperand()->getType(), LI->getType());
+        }
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          if (isa<UndefValue>(GEP->getPointerOperand()))
+            ptrTypeIdx(GEP->getPointerOperand()->getType(),
+                       GEP->getSourceElementType());
+        }
         // GEP result: create ptr(elementType, addrspace) entry
         // Use PTM override for device (AS 1) pointers (e.g., store float
         // through i8* GEP should produce float*, not i8*).
@@ -222,6 +236,15 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
     for (unsigned I = 0; I < NMD.getNumOperands(); I++)
       collectMetadataConstants(NMD.getOperand(I));
 
+  for (auto &F : M)
+    for (auto &BB : F)
+      for (auto &I : BB) {
+        SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+        I.getAllMetadataOtherThanDebugLoc(MDs);
+        for (auto &P : MDs)
+          collectMetadataConstants(P.second);
+      }
+
   for (auto &GV : M.globals())
     if (GV.hasInitializer())
       addModuleConstant(GV.getInitializer());
@@ -280,6 +303,16 @@ unsigned ValueEnumerator::ptrTypeIdxForValue(const Value *V) {
   if (!Pointee)
     Pointee = pointeeType(V->getType());
   return ptrTypeIdx(V->getType(), Pointee);
+}
+
+unsigned ValueEnumerator::typeIdxForValue(const Value *V) {
+  if (auto *F = dyn_cast<Function>(V))
+    return ptrTypeIdx(F->getType(), F->getFunctionType());
+  if (auto *GV = dyn_cast<GlobalVariable>(V))
+    return globalPtrTypeIdx(GV);
+  if (V->getType()->isPointerTy())
+    return ptrTypeIdxForValue(V);
+  return typeIdx(V->getType());
 }
 
 unsigned ValueEnumerator::ptrTypeIdx(Type *PtrTy, Type *Pointee) {
@@ -477,14 +510,22 @@ unsigned ValueEnumerator::addFunctionType(FunctionType *FT, const Function *F) {
       Pointee = pointeeTypeForValue(F->getArg(I));
     // For declarations, infer from call site arguments
     if (!Pointee && F && F->isDeclaration()) {
-      for (auto *U : F->users()) {
-        if (auto *CI = dyn_cast<CallInst>(U)) {
-          if (I < CI->arg_size()) {
-            Pointee = pointeeTypeForValue(CI->getArgOperand(I));
-            if (Pointee)
-              break;
+      for (auto &Sib : *F->getParent()) {
+        if (Sib.getFunctionType() != FT)
+          continue;
+        for (auto *U : Sib.users()) {
+          if (auto *CI = dyn_cast<CallInst>(U)) {
+            if (CI->getCalledFunction() == &Sib && I < CI->arg_size()) {
+              if (isa<UndefValue>(CI->getArgOperand(I)))
+                continue;
+              Pointee = pointeeTypeForValue(CI->getArgOperand(I));
+              if (Pointee)
+                break;
+            }
           }
         }
+        if (Pointee)
+          break;
       }
     }
     if (!Pointee)
@@ -522,12 +563,20 @@ void ValueEnumerator::addModuleConstant(const Constant *C) {
 }
 
 void ValueEnumerator::collectMetadataConstants(const MDNode *N) {
+  SmallPtrSet<const MDNode *, 16> Seen;
+  collectMetadataConstants(N, Seen);
+}
+
+void ValueEnumerator::collectMetadataConstants(
+    const MDNode *N, SmallPtrSetImpl<const MDNode *> &Seen) {
+  if (!N || !Seen.insert(N).second)
+    return;
   for (unsigned I = 0; I < N->getNumOperands(); I++) {
     if (auto *VAM = dyn_cast_or_null<ValueAsMetadata>(N->getOperand(I)))
       if (auto *C = dyn_cast<Constant>(VAM->getValue()))
         addModuleConstant(C);
     if (auto *Sub = dyn_cast_or_null<MDNode>(N->getOperand(I)))
-      collectMetadataConstants(Sub);
+      collectMetadataConstants(Sub, Seen);
   }
 }
 
