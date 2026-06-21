@@ -1603,6 +1603,10 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
 
+#  if _LIBCPP_STD_VER >= 29 
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
+#  endif
+
   _LIBCPP_HIDE_FROM_ABI constexpr void operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");

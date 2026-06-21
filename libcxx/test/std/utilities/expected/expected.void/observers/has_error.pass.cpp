@@ -18,16 +18,16 @@
 
 #include "../../types.h"
 
-static_assert(noexcept(std::expected<int, int>().has_error()));
+static_assert(noexcept(std::expected<void, int>().has_error()));
 
 constexpr bool test() {
   {
-    const std::expected<int, int> e(std::unexpect, 5);
+    const std::expected<void, int> e(std::unexpect, 5);
     assert(e.has_error());
   }
 
   {
-    const std::expected<int, int> e(5);
+    const std::expected<void, int> e;
     assert(!e.has_error());
   }
 
@@ -35,7 +35,7 @@ constexpr bool test() {
 }
 
 constexpr bool test_nodiscard() {
-  std::expected<int, int> e;
+  std::expected<void, int> e;
   e.has_error(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   return true;
