@@ -966,7 +966,9 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                       FMFSource FMFSource, const Twine &Name,
                                       ArrayRef<OperandBundleDef> OpBundles,
                                       function_ref<void(CallInst *)> SetFn) {
-  // TODO: Try to constant-fold.
+  Type *RetTy = Intrinsic::getType(Context, ID, OverloadTypes)->getReturnType();
+  if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF)))
+    return V;
   CallInst *CI = CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args,
                                                FMFSource, Name, OpBundles);
   SetFn(CI);
@@ -977,7 +979,8 @@ Value *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                       ArrayRef<Value *> Args,
                                       FMFSource FMFSource, const Twine &Name,
                                       function_ref<void(CallInst *)> SetFn) {
-  // TODO: Try to constant-fold.
+  if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF)))
+    return V;
   CallInst *CI =
       CreateIntrinsicWithoutFolding(RetTy, ID, Args, FMFSource, Name);
   SetFn(CI);

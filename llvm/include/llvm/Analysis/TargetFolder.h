@@ -19,6 +19,7 @@
 #define LLVM_ANALYSIS_TARGETFOLDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
@@ -204,6 +205,15 @@ public:
     auto *C2 = dyn_cast<Constant>(RHS);
     if (C1 && C2)
       return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty);
+    return nullptr;
+  }
+
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF) const override {
+    auto COps =
+        map_to_vector(Ops, [](Value *Op) { return dyn_cast<Constant>(Op); });
+    if (none_of(COps, equal_to(nullptr)))
+      return ConstantFoldIntrinsic(ID, COps, Ty);
     return nullptr;
   }
 
