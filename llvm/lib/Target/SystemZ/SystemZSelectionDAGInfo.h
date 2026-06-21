@@ -53,7 +53,7 @@ public:
 
   SDValue EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &DL,
                                    SDValue Chain, SDValue Dst, SDValue Src,
-                                   SDValue Size, Align Alignment,
+                                   SDValue Size, Align DstAlign, Align SrcAlign,
                                    bool IsVolatile,
                                    MachinePointerInfo DstPtrInfo,
                                    MachinePointerInfo SrcPtrInfo) const override;

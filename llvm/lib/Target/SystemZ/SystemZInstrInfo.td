@@ -590,8 +590,6 @@ def MemsetRegReg : MemsetPseudo<ADDR64, GR32>;
 let Predicates = [FeatureMiscellaneousExtensions3],
     mayLoad = 1, mayStore = 1, Uses = [R0L] in
   def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
-def : Pat<(z_mvcrl bdaddr12only:$dest, bdaddr12only:$src),
-          (MVCRL bdaddr12only:$dest, bdaddr12only:$src)>;
 
 let usesCustomInserter = 1, hasNoSchedulingInfo = 1, mayLoad = 1, mayStore = 1,
     Defs = [CC, R0L] in
