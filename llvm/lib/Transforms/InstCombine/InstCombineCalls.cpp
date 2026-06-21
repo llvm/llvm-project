@@ -2678,6 +2678,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::pext: {
+    Value *X;
+    if (match(II->getArgOperand(0),
+              m_c_And(m_Value(X), m_Specific(II->getArgOperand(1)))))
+      return replaceOperand(*II, 0, X);
+
     const APInt *MaskC;
     if (match(II->getArgOperand(1), m_APInt(MaskC))) {
       unsigned MaskIdx, MaskLen;
