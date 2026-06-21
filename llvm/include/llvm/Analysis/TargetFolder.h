@@ -19,7 +19,6 @@
 #define LLVM_ANALYSIS_TARGETFOLDER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
@@ -195,11 +194,9 @@ public:
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
                        FastMathFlags FMF = {},
                        Function *CtxF = nullptr) const override {
-    if (all_of(Ops, IsaPred<Constant>)) {
-      auto COps =
-          map_to_vector(Ops, [](Value *Op) { return cast<Constant>(Op); });
-      return ConstantFoldIntrinsic(ID, COps, Ty);
-    }
+    if (all_of(Ops, IsaPred<Constant>))
+      return ConstantFoldIntrinsic(
+          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty);
     return nullptr;
   }
 
