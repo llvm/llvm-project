@@ -219,12 +219,9 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       // as dead. We clear the dead flags here so that LiveVariables will
       // compute liveness correctly, avoiding MachineDeadInstrElim from deleting
       // the definitions.
-      for (MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical() &&
-            isDSPControlReg(MO.getReg())) {
+      for (MachineOperand &MO : MI.operands())
+        if (MO.isReg() && MO.isDef() && isDSPControlReg(MO.getReg()))
           MO.setIsDead(false);
-        }
-      }
     }
   }
 }
