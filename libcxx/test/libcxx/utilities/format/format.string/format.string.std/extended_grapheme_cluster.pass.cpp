@@ -21,6 +21,7 @@
 #include <cassert>
 #include <format>
 #include <functional>
+#include <iostream>
 #include <numeric>
 
 #include "extended_grapheme_cluster.h"
@@ -80,6 +81,8 @@ constexpr void test(const Data& data) {
     std::__unicode::__extended_grapheme_cluster_view view{d.input.begin(), d.input.end()};
     for (std::size_t i = 0; i < d.breaks.size(); ++i) {
       auto r = view.__consume();
+      // XXX: remove after libcxx tetss pass
+      std::cerr << "r.__code__point: " << r.__code_point_ << ", d.code_points[" << i << "]: " << d.code_points[i] << '\n'; 
       assert(r.__code_point_ == d.code_points[i]);
       assert(r.__last_ == d.input.begin() + d.breaks[i]);
     }
