@@ -3650,7 +3650,16 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
-  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, EVL1);
+  // EVL1 may equal NElts (V2 starts just past V1), so clamp to NElts.
+  unsigned EltSize = VT.getScalarSizeInBits() / 8;
+  SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
+  SDValue MaxElts = DAG.getElementCount(DL, PtrVT, VT.getVectorElementCount());
+  EVL1Ptr = DAG.getNode(ISD::UMIN, DL, PtrVT, EVL1Ptr, MaxElts);
+  SDValue StackPtr2 =
+      DAG.getMemBasePlusOffset(StackPtr,
+                               DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr,
+                                           DAG.getConstant(EltSize, DL, PtrVT)),
+                               DL);
   SDValue PoisonPtr = DAG.getPOISON(PtrVT);
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
