@@ -1,33 +1,5 @@
 # RUN: llc -mtriple=aarch64 -passes="print<gisel-value-tracking>" %s -filetype=null 2>&1 | FileCheck %s
 
---- |
-  declare i32 @llvm.ctpop.i32(i32)
-  declare i64 @llvm.ctpop.i64(i64)
-
-  define i32 @parity(i32 %x) {
-  entry:
-    %0 = call i32 @llvm.ctpop.i32(i32 %x)
-    %1 = and i32 %0, 1
-    ret i32 %1
-  }
-
-  define i1 @parity_bool(i32 %x) {
-  entry:
-    %0 = call i32 @llvm.ctpop.i32(i32 %x)
-    %1 = and i32 %0, 1
-    %2 = icmp ne i32 %1, 0
-    ret i1 %2
-  }
-
-  define i32 @parity_const() {
-  entry:
-    %0 = call i32 @llvm.ctpop.i32(i32 5)
-    %1 = and i32 %0, 1
-    ret i32 %1
-  }
-
-...
-
 # CHECK-LABEL: name: @parity
 # CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
 # CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000?????? SignBits:26

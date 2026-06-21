@@ -2154,16 +2154,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register Op0 = MI.getOperand(1).getReg();
     Register Op1 = MI.getOperand(2).getReg();
 
-    auto IsConstOne = [&](Register R) {
-      return mi_match(R, MRI, m_SpecificICst(1));
-    };
-
-    auto IsCTPOP = [&](Register R) {
-      return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_CTPOP;
-    };
-
-    if ((IsCTPOP(Op0) && IsConstOne(Op1)) ||
-        (IsCTPOP(Op1) && IsConstOne(Op0))) {
+    if ((MRI.getVRegDef(Op0)->getOpcode() == TargetOpcode::G_CTPOP &&
+         mi_match(Op1, MRI, m_SpecificICst(1))) ||
+        (MRI.getVRegDef(Op1)->getOpcode() == TargetOpcode::G_CTPOP &&
+         mi_match(Op0, MRI, m_SpecificICst(1)))) {
       FirstAnswer = MRI.getType(R).getScalarSizeInBits();
       break;
     }
