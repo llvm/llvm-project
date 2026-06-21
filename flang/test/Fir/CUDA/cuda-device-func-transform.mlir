@@ -151,7 +151,7 @@ func.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>> {cuf.data_
 }
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: gpu.func @_QPpartialsumshflshflr8({{.*}}) kernel
+// CHECK: gpu.func @_QPpartialsumshflshflr8(%{{.*}}) kernel
       
 // CHECK: func.func @_QPpartialsumshflshflr8
 
@@ -168,6 +168,19 @@ func.func @_QPldg_attrs(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: gpu.func @_QPldg_attrs(%{{.*}}: !fir.ref<!fir.array<?xf32>>{{.*}}, %{{.*}}: !fir.ref<!fir.array<?xf32>> {{{.*}}llvm.noalias, llvm.readonly}) kernel
+
+// -----
+
+func.func @_QPvalue_in(%arg0: i32 {fir.bindc_name = "n"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %scope = fir.dummy_scope : !fir.dscope
+  %0 = fir.alloca i32
+  fir.store %arg0 to %0 : !fir.ref<i32>
+  %1 = fir.declare %0 dummy_scope %scope {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QPvalue_inEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK: gpu.func @_QPvalue_in(%{{.*}}: i32 {fir.bindc_name = "n"}) kernel
 
 // -----
 

@@ -465,12 +465,6 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_neon_ursqrte : AdvSIMD_1VectorArg_Intrinsic;
   def int_aarch64_neon_frsqrte : AdvSIMD_1FloatArg_Intrinsic;
 
-  // Vector Conversions Between Half-Precision and Single-Precision.
-  def int_aarch64_neon_vcvtfp2hf
-    : DefaultAttrsIntrinsic<[llvm_v4i16_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_aarch64_neon_vcvthf2fp
-    : DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4i16_ty], [IntrNoMem]>;
-
   // Vector Conversions Between Floating-point and Fixed-point.
   def int_aarch64_neon_vcvtfp2fxs : AdvSIMD_CvtFPToFx_Intrinsic;
   def int_aarch64_neon_vcvtfp2fxu : AdvSIMD_CvtFPToFx_Intrinsic;
@@ -3153,6 +3147,20 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_utmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_sutmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_ustmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+
+  class SME_FP8_OuterProduct_TMOP_Intrinsic
+     : DefaultAttrsIntrinsic<[],
+         [llvm_i32_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_i32_ty],
+         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
+          IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_sme_fp8_ftmopa_za16 : SME_FP8_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_fp8_ftmopa_za32 : SME_FP8_OuterProduct_TMOP_Intrinsic;
 
   // 16 and 32 bit multi-vector floating point 8 Quarter Tile Quarter Product
   foreach za = ["za16", "za32"] in {

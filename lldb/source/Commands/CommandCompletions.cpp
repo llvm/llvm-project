@@ -722,7 +722,7 @@ void CommandCompletions::ProcessIDs(CommandInterpreter &interpreter,
   platform_sp->FindProcesses(match_info, process_infos);
   for (const ProcessInstanceInfo &info : process_infos)
     request.TryCompleteCurrentArg(std::to_string(info.GetProcessID()),
-                                  info.GetNameAsStringRef());
+                                  info.GetName());
 }
 
 void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
@@ -735,7 +735,7 @@ void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
   ProcessInstanceInfoMatch match_info;
   platform_sp->FindProcesses(match_info, process_infos);
   for (const ProcessInstanceInfo &info : process_infos)
-    request.TryCompleteCurrentArg(info.GetNameAsStringRef());
+    request.TryCompleteCurrentArg(info.GetName());
 }
 
 void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,

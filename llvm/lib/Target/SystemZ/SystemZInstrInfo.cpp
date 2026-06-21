@@ -1821,10 +1821,8 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
     // Emit a load of the global stack guard's address
     BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
   } else {
-    report_fatal_error(
-        (Twine("unknown stack protector type \"") + GuardType + "\".")
-            .str()
-            .c_str());
+    report_fatal_error(Twine("unknown stack protector type \"") + GuardType +
+                       "\".");
   }
 
   // Construct the appropriate move or compare instruction using the

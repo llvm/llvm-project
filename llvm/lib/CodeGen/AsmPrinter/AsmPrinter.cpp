@@ -4163,6 +4163,11 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP);
 static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
                                      AsmPrinter &AP,
                                      AsmPrinter::AliasMapTy *AliasList) {
+  uint64_t AllocSize = DL.getTypeAllocSize(CV->getType());
+
+  if (CV->isNullValue())
+    return AP.OutStreamer->emitZeros(AllocSize);
+
   auto *VTy = cast<FixedVectorType>(CV->getType());
   Type *ElementType = VTy->getElementType();
   uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
@@ -4187,14 +4192,13 @@ static void emitGlobalConstantVector(const DataLayout &DL, const Constant *CV,
     EmittedSize = DL.getTypeStoreSize(CV->getType());
   } else {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      emitGlobalAliasInline(AP, DL.getTypeAllocSize(CV->getType()) * I, AliasList);
+      emitGlobalAliasInline(AP, AllocSize * I, AliasList);
       emitGlobalConstantImpl(DL, CV->getAggregateElement(I), AP);
     }
     EmittedSize = DL.getTypeAllocSize(ElementType) * VTy->getNumElements();
   }
 
-  unsigned Size = DL.getTypeAllocSize(CV->getType());
-  if (unsigned Padding = Size - EmittedSize)
+  if (unsigned Padding = AllocSize - EmittedSize)
     AP.OutStreamer->emitZeros(Padding);
 }
 
