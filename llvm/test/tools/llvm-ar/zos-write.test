@@ -1,7 +1,9 @@
 ## Test writing a z/OS archive.
 
-## Create a z/OS archive from a plain text file, without a symbol table.
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: split-file %s %t.dir
+
+## Create a z/OS archive from a plain text file with symbol table writing disabled.
 # RUN: printf 'abcd' > %t.dir/test.txt
 # RUN: llvm-ar rcSD --format=zos %t.a %t.dir/test.txt
 
@@ -11,7 +13,7 @@
 
 ## Check raw bytes:
 ## - The first 8 bytes are the z/OS archive magic in EBCDIC.
-## - Bytes 66..67 are the first member header terminator (`\n in EBCDIC => 79 15)
+## - Bytes 66..67 are the first member header terminator (`\n in EBCDIC => 79 15).
 # RUN: %python -c "d=open(r'%t.a','rb').read(); print(d[:8].hex()); print(d[66:68].hex())" | FileCheck %s --check-prefix=BYTES
 
 # LIST: test.txt
@@ -35,20 +37,31 @@
 # LONG-LIST: very_long_member_name.txt
 # LONG-CONTENT: xyz
 
+## Use LLVM bitcode here so the test remains target-independent. The archive
+## writer only needs a symbolic input in order to emit the archive symbol table.
 ## A z/OS archive with real symbols should write a readable symbol table.
-# RUN: printf 'define i32 @mytest() {\nentry:\n  ret i32 87\n}\n' > %t.dir/mytest.ll
 # RUN: llvm-as %t.dir/mytest.ll -o %t.dir/mytest.bc
 # RUN: llvm-ar rcD --format=zos %t.sym.a %t.dir/mytest.bc
 # RUN: llvm-nm --print-armap %t.sym.a | FileCheck %s --check-prefix=SYMTAB
 
 # SYMTAB: Archive map
 # SYMTAB-NEXT: mytest in mytest.bc
+# SYMTAB-NOT: {{^  in mytest.bc$}}
 
 ## A z/OS archive with no real symbols should still write the dummy blank symbol.
-# RUN: printf 'source_filename = "blank.ll"\n' > %t.dir/blank.ll
 # RUN: llvm-as %t.dir/blank.ll -o %t.dir/blank.bc
 # RUN: llvm-ar rcD --format=zos %t.blank-sym.a %t.dir/blank.bc
 # RUN: llvm-nm --print-armap %t.blank-sym.a | FileCheck %s --check-prefix=EMPTY-SYMTAB
 
 # EMPTY-SYMTAB: Archive map
 # EMPTY-SYMTAB-NEXT: {{^  in blank.bc$}}
+# EMPTY-SYMTAB-NOT: {{^.+ in blank.bc$}}
+
+#--- mytest.ll
+define i32 @mytest() {
+entry:
+  ret i32 87
+}
+
+#--- blank.ll
+source_filename = "blank.ll"
