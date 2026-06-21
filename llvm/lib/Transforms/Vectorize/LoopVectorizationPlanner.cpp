@@ -807,7 +807,7 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
                        : TargetTransformInfo::RGK_FixedWidthVector;
 
     TypeSize RegSize = TTI.getRegisterBitWidth(RegKind);
-    unsigned N = RegSize.getKnownMinValue() / WidestType;
+    unsigned N = std::max<uint64_t>(1, RegSize.getKnownMinValue() / WidestType);
     VF = ElementCount::get(N, RegSize.isScalable());
     LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 
