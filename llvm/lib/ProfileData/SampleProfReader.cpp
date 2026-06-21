@@ -57,6 +57,11 @@ static cl::opt<bool> ProfileIsFSDisciminator(
     "profile-isfs", cl::Hidden, cl::init(false),
     cl::desc("Profile uses flow sensitive discriminators"));
 
+static cl::opt<bool>
+    LazyLoadNameTable("sample-profile-lazy-load-name-table", cl::init(true),
+                      cl::Hidden,
+                      cl::desc("Lazy load the name table from the profile."));
+
 /// Dump the function profile for \p FName.
 ///
 /// \param FContext Name + context of the function to print.
@@ -1286,7 +1291,18 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (Data + (*Size) * sizeof(uint64_t) > End)
       return sampleprof_error::truncated;
 
-    NameTable.setLazy(Data, *Size);
+    if (LazyLoadNameTable) {
+      NameTable.setLazy(Data, *Size);
+    } else {
+      auto &TableVec = NameTable.setToEager();
+      TableVec.reserve(*Size);
+      for (size_t I = 0; I < *Size; ++I) {
+        using namespace support;
+        uint64_t FID = endian::read<uint64_t, unaligned>(
+            Data + I * sizeof(uint64_t), endianness::little);
+        TableVec.emplace_back(FunctionId(FID));
+      }
+    }
     if (!ProfileIsCS)
       MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
     Data = Data + (*Size) * sizeof(uint64_t);
