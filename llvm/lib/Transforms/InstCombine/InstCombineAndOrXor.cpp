@@ -4670,6 +4670,23 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
 
+  // signum: or (ashr X, BW-1), zext (icmp ne|sgt X, 0) --> scmp(X, 0)
+  // The ashr already supplies -1 for negative X, so any predicate that
+  // produces 1 for positive X and 0 for X == 0 yields the same result here.
+  {
+    Value *X;
+    CmpPredicate SignPred;
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    if (match(&I,
+              m_c_Or(m_AShr(m_Value(X), m_SpecificIntAllowPoison(BitWidth - 1)),
+                     m_ZExt(m_ICmp(SignPred, m_Deferred(X), m_ZeroInt())))) &&
+        (SignPred == ICmpInst::ICMP_NE || SignPred == ICmpInst::ICMP_SGT) &&
+        (Op0->hasOneUse() || Op1->hasOneUse()))
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(Ty, Intrinsic::scmp,
+                                     {X, Constant::getNullValue(Ty)}));
+  }
+
   return nullptr;
 }
 
