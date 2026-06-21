@@ -361,6 +361,13 @@ void Session::completeShutdown() {
   CV.notify_all();
 }
 
+void Session::sendWrapperResult(uint64_t CallId,
+                                WrapperFunctionBuffer ResultBytes) {
+  if (auto TmpCA = std::atomic_load(&CA))
+    TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
+  ManagedCodeTaskGroup->releaseToken();
+}
+
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes) {
   unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));

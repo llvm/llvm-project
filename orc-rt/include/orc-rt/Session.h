@@ -469,12 +469,7 @@ private:
     }));
   }
 
-  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
-    if (auto TmpCA = std::atomic_load(&CA))
-      TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-    ManagedCodeTaskGroup->releaseToken();
-  }
-
+  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
