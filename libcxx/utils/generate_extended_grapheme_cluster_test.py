@@ -157,6 +157,8 @@ cpp_template = """// -*- C++ -*-
 
 #include "test_macros.h"
 
+using namespace std::literals;
+
 template <class CharT>
 struct data {{
   /// The input to parse.
@@ -200,7 +202,7 @@ cpp_test_data_line_template = "     {{{}, {{{}}}, {{{}}}}}"
 
 def lineToCppDataLineUtf8(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
-        f'"{line.encoded}"',
+        f'"{line.encoded}"sv',
         ", ".join([str(x) for x in line.code_points]),
         ", ".join([str(x) for x in line.breaks_utf8]),
     )
@@ -208,7 +210,7 @@ def lineToCppDataLineUtf8(line: BreakTestItem) -> str:
 
 def lineToCppDataLineUtf16(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
-        f'L"{line.encoded}"',
+        f'L"{line.encoded}"sv',
         ", ".join([str(x) for x in line.code_points]),
         ", ".join([str(x) for x in line.breaks_utf16]),
     )
@@ -216,7 +218,7 @@ def lineToCppDataLineUtf16(line: BreakTestItem) -> str:
 
 def lineToCppDataLineUtf32(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
-        f'L"{line.encoded}"',
+        f'L"{line.encoded}"sv',
         ", ".join([str(x) for x in line.code_points]),
         ", ".join([str(x) for x in line.breaks_utf32]),
     )
