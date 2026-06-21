@@ -53,24 +53,18 @@ static BoolAttr convertBoolAttr(Attribute srcAttr, Builder builder) {
 /// Returns null attribute if conversion fails.
 static IntegerAttr convertIntegerAttr(IntegerAttr srcAttr, IntegerType dstType,
                                       Builder builder) {
-  unsigned dstWidth = dstType.getWidth();
-  APInt srcValue = srcAttr.getValue();
-  bool isUnsigned = srcAttr.getType().isUnsignedInteger();
-  APInt dstValue = isUnsigned ? srcValue.zextOrTrunc(dstWidth)
-                              : srcValue.sextOrTrunc(dstWidth);
-
   // If the source number uses less active bits than the target bitwidth, then
   // it should be safe to convert.
-  if (srcValue.isIntN(dstWidth))
-    return builder.getIntegerAttr(dstType, dstValue);
+  if (srcAttr.getValue().isIntN(dstType.getWidth()))
+    return builder.getIntegerAttr(dstType, srcAttr.getInt());
 
   // XXX: Try again by interpreting the source number as a signed value.
   // Although integers in the standard dialect are signless, they can represent
   // a signed number. It's the operation decides how to interpret. This is
   // dangerous, but it seems there is no good way of handling this if we still
   // want to change the bitwidth. Emit a message at least.
-  if (!isUnsigned && srcValue.isSignedIntN(dstWidth)) {
-    auto dstAttr = builder.getIntegerAttr(dstType, dstValue);
+  if (srcAttr.getValue().isSignedIntN(dstType.getWidth())) {
+    auto dstAttr = builder.getIntegerAttr(dstType, srcAttr.getInt());
     LLVM_DEBUG(llvm::dbgs() << "attribute '" << srcAttr << "' converted to '"
                             << dstAttr << "' for type '" << dstType << "'\n");
     return dstAttr;
