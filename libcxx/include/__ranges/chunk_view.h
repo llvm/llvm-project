@@ -36,6 +36,7 @@
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
+#include <__utility/div_ceil.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 
@@ -51,14 +52,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
-
-template <class _Integral>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __div_ceil(_Integral __num, _Integral __denom) {
-  _Integral __r = __num / __denom;
-  if (__num % __denom)
-    ++__r;
-  return __r;
-}
 
 template <view _View>
   requires input_range<_View>
@@ -98,13 +91,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
-    return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
-    return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
   }
 };
 
@@ -153,7 +146,7 @@ public:
     const auto __dist = ranges::end(__i.__parent_->__base_) - *__i.__parent_->__current_;
     if (__dist < __i.__parent_->__remainder_)
       return __dist == 0 ? 0 : 1;
-    return ranges::__div_ceil(__dist - __i.__parent_->__remainder_, __i.__parent_->__n_) + 1;
+    return __div_ceil(__dist - __i.__parent_->__remainder_, __i.__parent_->__n_) + 1;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
@@ -321,13 +314,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
-    return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
-    return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
   }
 };
 
@@ -510,7 +503,7 @@ public:
   operator-(default_sentinel_t, const __iterator& __i)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
-    return ranges::__div_ceil(__i.__end_ - __i.__current_, __i.__n_);
+    return __div_ceil(__i.__end_ - __i.__current_, __i.__n_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type

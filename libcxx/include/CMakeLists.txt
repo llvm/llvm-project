@@ -935,6 +935,7 @@ set(files
   __utility/convert_to_integral.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
+  __utility/div_ceil.h
   __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h

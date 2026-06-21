@@ -32,6 +32,7 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/make_unsigned.h>
+#include <__utility/div_ceil.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,15 +46,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
-
-template <class _Value>
-_LIBCPP_HIDE_FROM_ABI constexpr _Value __div_ceil(_Value __left, _Value __right) {
-  _Value __r = __left / __right;
-  if (__left % __right) {
-    ++__r;
-  }
-  return __r;
-}
 
 template <input_range _View>
   requires view<_View>
@@ -121,13 +113,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
-    return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
+    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __stride_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
-    return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
+    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __stride_));
   }
 }; // class stride_view
 
@@ -340,16 +332,16 @@ public:
     }
     auto __n = __x.__current_ - __y.__current_;
     if (__n < 0) {
-      return -ranges::__div_ceil(-__n, __x.__stride_);
+      return -__div_ceil(-__n, __x.__stride_);
     }
-    return ranges::__div_ceil(__n, __x.__stride_);
+    return __div_ceil(__n, __x.__stride_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(default_sentinel_t, __iterator const& __x)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
-    return ranges::__div_ceil(__x.__end_ - __x.__current_, __x.__stride_);
+    return __div_ceil(__x.__end_ - __x.__current_, __x.__stride_);
   }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(__iterator const& __x, default_sentinel_t __y)
