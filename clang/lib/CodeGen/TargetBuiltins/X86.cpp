@@ -976,16 +976,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, Ops[0]->getType());
     return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
   }
-  case X86::BI__builtin_ia32_pdep_si:
-  case X86::BI__builtin_ia32_pdep_di: {
-    Function *F = CGM.getIntrinsic(Intrinsic::pdep, Ops[0]->getType());
-    return Builder.CreateCall(F, Ops);
-  }
-  case X86::BI__builtin_ia32_pext_si:
-  case X86::BI__builtin_ia32_pext_di: {
-    Function *F = CGM.getIntrinsic(Intrinsic::pext, Ops[0]->getType());
-    return Builder.CreateCall(F, Ops);
-  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:

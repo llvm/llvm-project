@@ -18029,8 +18029,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val.countTrailingZeros(), E);
   }
 
-  case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di:
   case Builtin::BI__builtin_elementwise_pdep: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
@@ -18039,8 +18037,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(llvm::APIntOps::pdep(Val, Msk), E);
   }
 
-  case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di:
   case Builtin::BI__builtin_elementwise_pext: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
@@ -18048,6 +18044,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     return Success(llvm::APIntOps::pext(Val, Msk), E);
   }
+
   case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256:
   case X86::BI__builtin_ia32_vtestzps:

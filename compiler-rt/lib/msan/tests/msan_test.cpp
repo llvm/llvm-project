@@ -4827,57 +4827,58 @@ static void TestBEXTR() {
       0xABCDABCD, Poisoned<U8>(bextr_imm(7, 800), 0x80000000)));
 }
 
-__attribute__((target("bmi,bmi2")))
-static void TestPDEP() {
-  U4 x = Poisoned<U4>(0, 0xFF00);
-  EXPECT_NOT_POISONED(__builtin_ia32_pdep_si(x, 0xFF));
-  EXPECT_POISONED(__builtin_ia32_pdep_si(x, 0x1FF));
-  EXPECT_NOT_POISONED(__builtin_ia32_pdep_si(x, 0xFF00));
-  EXPECT_POISONED(__builtin_ia32_pdep_si(x, 0x1FF00));
-
-  EXPECT_NOT_POISONED(__builtin_ia32_pdep_si(x, 0x1FF00) & 0xFF);
-  EXPECT_POISONED(__builtin_ia32_pdep_si(0, Poisoned<U4>(0xF, 1)));
-
-  U8 y = Poisoned<U8>(0, 0xFF00);
-  EXPECT_NOT_POISONED(__builtin_ia32_pdep_di(y, 0xFF));
-  EXPECT_POISONED(__builtin_ia32_pdep_di(y, 0x1FF));
-  EXPECT_NOT_POISONED(__builtin_ia32_pdep_di(y, 0xFF0000000000));
-  EXPECT_POISONED(__builtin_ia32_pdep_di(y, 0x1FF000000000000));
-
-  EXPECT_NOT_POISONED(__builtin_ia32_pdep_di(y, 0x1FF00) & 0xFF);
-  EXPECT_POISONED(__builtin_ia32_pdep_di(0, Poisoned<U4>(0xF, 1)));
-}
-
-__attribute__((target("bmi,bmi2")))
-static void TestPEXT() {
-  U4 x = Poisoned<U4>(0, 0xFF00);
-  EXPECT_NOT_POISONED(__builtin_ia32_pext_si(x, 0xFF));
-  EXPECT_POISONED(__builtin_ia32_pext_si(x, 0x1FF));
-  EXPECT_POISONED(__builtin_ia32_pext_si(x, 0x100));
-  EXPECT_POISONED(__builtin_ia32_pext_si(x, 0x1000));
-  EXPECT_NOT_POISONED(__builtin_ia32_pext_si(x, 0x10000));
-
-  EXPECT_POISONED(__builtin_ia32_pext_si(0xFF00, Poisoned<U4>(0xFF, 1)));
-
-  U8 y = Poisoned<U8>(0, 0xFF0000000000);
-  EXPECT_NOT_POISONED(__builtin_ia32_pext_di(y, 0xFF00000000));
-  EXPECT_POISONED(__builtin_ia32_pext_di(y, 0x1FF00000000));
-  EXPECT_POISONED(__builtin_ia32_pext_di(y, 0x10000000000));
-  EXPECT_POISONED(__builtin_ia32_pext_di(y, 0x100000000000));
-  EXPECT_NOT_POISONED(__builtin_ia32_pext_di(y, 0x1000000000000));
-
-  EXPECT_POISONED(__builtin_ia32_pext_di(0xFF00, Poisoned<U8>(0xFF, 1)));
-}
-
 TEST(MemorySanitizer, Bmi) {
   if (HaveBmi()) {
     TestBZHI();
     TestBEXTR();
-    TestPDEP();
-    TestPEXT();
   }
 }
-#endif // defined(__x86_64__)
+#endif  // defined(__x86_64__)
+
+static void TestPDEP() {
+  U4 x = Poisoned<U4>(0, 0xFF00);
+  EXPECT_NOT_POISONED(__builtin_elementwise_pdep(x, 0xFFu));
+  EXPECT_POISONED(__builtin_elementwise_pdep(x, 0x1FFu));
+  EXPECT_NOT_POISONED(__builtin_elementwise_pdep(x, 0xFF00u));
+  EXPECT_POISONED(__builtin_elementwise_pdep(x, 0x1FF00u));
+
+  EXPECT_NOT_POISONED(__builtin_elementwise_pdep(x, 0x1FF00u) & 0xFFu);
+  EXPECT_POISONED(__builtin_elementwise_pdep(0u, Poisoned<U4>(0xF, 1)));
+
+  U8 y = Poisoned<U8>(0, 0xFF00);
+  EXPECT_NOT_POISONED(__builtin_elementwise_pdep(y, 0xFFull));
+  EXPECT_POISONED(__builtin_elementwise_pdep(y, 0x1FFull));
+  EXPECT_NOT_POISONED(__builtin_elementwise_pdep(y, 0xFF0000000000ull));
+  EXPECT_POISONED(__builtin_elementwise_pdep(y, 0x1FF000000000000ull));
+
+  EXPECT_NOT_POISONED(__builtin_elementwise_pdep(y, 0x1FF00ull) & 0xFF);
+  EXPECT_POISONED(__builtin_elementwise_pdep(0u, Poisoned<U4>(0xF, 1ull)));
+}
+
+static void TestPEXT() {
+  U4 x = Poisoned<U4>(0, 0xFF00);
+  EXPECT_NOT_POISONED(__builtin_elementwise_pext(x, 0xFFu));
+  EXPECT_POISONED(__builtin_elementwise_pext(x, 0x1FFu));
+  EXPECT_POISONED(__builtin_elementwise_pext(x, 0x100u));
+  EXPECT_POISONED(__builtin_elementwise_pext(x, 0x1000u));
+  EXPECT_NOT_POISONED(__builtin_elementwise_pext(x, 0x10000u));
+
+  EXPECT_POISONED(__builtin_elementwise_pext(0xFF00u, Poisoned<U4>(0xFF, 1)));
+
+  U8 y = Poisoned<U8>(0, 0xFF0000000000ull);
+  EXPECT_NOT_POISONED(__builtin_elementwise_pext(y, 0xFF00000000ull));
+  EXPECT_POISONED(__builtin_elementwise_pext(y, 0x1FF00000000ull));
+  EXPECT_POISONED(__builtin_elementwise_pext(y, 0x10000000000ull));
+  EXPECT_POISONED(__builtin_elementwise_pext(y, 0x100000000000ull));
+  EXPECT_NOT_POISONED(__builtin_elementwise_pext(y, 0x1000000000000ull));
+
+  EXPECT_POISONED(__builtin_elementwise_pext(0xFF00ull, Poisoned<U8>(0xFF, 1ull)));
+}
+
+TEST(MemorySanitizer, PackedBits) {
+  TestPDEP();
+  TestPEXT();
+}
 
 namespace {
 volatile long z;

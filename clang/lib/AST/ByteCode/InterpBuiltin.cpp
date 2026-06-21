@@ -5224,18 +5224,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(Src.getBitWidth(), Src.countTrailingZeros());
         });
 
-  case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di:
-  case Builtin::BI__builtin_elementwise_pdep:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::pdep);
-
-  case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di:
-  case Builtin::BI__builtin_elementwise_pext:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::pext);
-
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
     return interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, Call,
@@ -5336,6 +5324,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+
+  case Builtin::BI__builtin_elementwise_pdep:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::pdep);
+
+  case Builtin::BI__builtin_elementwise_pext:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::pext);
+
   case X86::BI__builtin_ia32_extract128i256:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
