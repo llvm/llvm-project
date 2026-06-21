@@ -3713,7 +3713,10 @@ bool SimplifyCFGOpt::foldCondBranchOnValueKnownInPredecessor(CondBrInst *BI) {
   // Note: If BB is a loop header then there is a risk that threading introduces
   // a non-canonical loop by moving a back edge. So we avoid this optimization
   // for loop headers if NeedCanonicalLoop is set.
-  if (Options.NeedCanonicalLoop && is_contained(LoopHeaders, BI->getParent()))
+  // Also avoid threading loop headers in convergent functions, since changing
+  // the branch structure can change the dynamic instances of convergent ops.
+  if ((Options.NeedCanonicalLoop || BI->getFunction()->isConvergent()) &&
+      is_contained(LoopHeaders, BI->getParent()))
     return false;
 
   std::optional<bool> Result;
