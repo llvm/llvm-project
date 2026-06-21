@@ -262,6 +262,28 @@ void test_builtin_elementwise_cos(float f, double d, vfloat4 vf4,
   vd4 = __builtin_elementwise_cos(vd4);
 }
 
+void test_builtin_elementwise_ceil(float f, double d, vfloat4 vf4,
+                   vdouble4 vd4) {
+  // CIR-LABEL: test_builtin_elementwise_ceil
+  // LLVM-LABEL: test_builtin_elementwise_ceil
+
+  // CIR: cir.ceil %{{.*}} : !cir.float
+  // LLVM: call float @llvm.ceil.f32(float %{{.*}})
+  f = __builtin_elementwise_ceil(f);
+
+  // CIR: cir.ceil %{{.*}} : !cir.double
+  // LLVM: call double @llvm.ceil.f64(double %{{.*}})
+  d = __builtin_elementwise_ceil(d);
+
+  // CIR: cir.ceil %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{.*}})
+  vf4 = __builtin_elementwise_ceil(vf4);
+
+  // CIR: cir.ceil %{{.*}} : !cir.vector<4 x !cir.double>
+  // LLVM: call <4 x double> @llvm.ceil.v4f64(<4 x double> %{{.*}})
+  vd4 = __builtin_elementwise_ceil(vd4);
+}
+
 void test_builtin_elementwise_floor(float f, double d, vfloat4 vf4,
                    vdouble4 vd4) {
   // CIR-LABEL: test_builtin_elementwise_floor
