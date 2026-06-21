@@ -16,15 +16,18 @@
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <map>
 #include <memory>
-#include <unordered_map>
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
@@ -76,6 +79,7 @@ FunctionPass *createSMEPeepholeOptPass();
 FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
 FunctionPass *createAArch64SRLTDefineSuperRegsPass();
 ModulePass *createSVEIntrinsicOptsPass();
+Pass *createSVEShuffleOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
                                  const AArch64Subtarget &,
@@ -199,7 +203,18 @@ void initializeSMEPeepholeOptPass(PassRegistry &);
 void initializeMachineSMEABIPass(PassRegistry &);
 void initializeAArch64SRLTDefineSuperRegsPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
+void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
+
+class SVEShuffleOptsPass : public PassInfoMixin<SVEShuffleOptsPass> {
+  const AArch64TargetMachine &TM;
+
+public:
+  explicit SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
+};
 
 class AArch64StackTaggingPreRAPass
     : public OptionalPassInfoMixin<AArch64StackTaggingPreRAPass> {
@@ -264,6 +279,12 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+// SelectionDAGISelPass is already a NewPM interface.
+class AArch64DAGToDAGISelPass : public SelectionDAGISelPass {
+public:
+  AArch64DAGToDAGISelPass(AArch64TargetMachine &TM);
+};
+
 class AArch64DeadRegisterDefinitionsPass
     : public OptionalPassInfoMixin<AArch64DeadRegisterDefinitionsPass> {
 public:
@@ -295,7 +316,7 @@ public:
 class AArch64SIMDInstrOptPass
     : public OptionalPassInfoMixin<AArch64SIMDInstrOptPass> {
   std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-  std::unordered_map<std::string, bool> InterlEarlyExit;
+  StringMap<bool> InterlEarlyExit;
 
 public:
   PreservedAnalyses run(MachineFunction &MF,
