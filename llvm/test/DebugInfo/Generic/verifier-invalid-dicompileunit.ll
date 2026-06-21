@@ -44,7 +44,7 @@
 !14 = distinct !DICompileUnit(language: 0, file: !1, macros: !{!1})
 
 define void @foo() !dbg !15 { ret void }
-!15 = distinct !DISubprogram(file: !1)
+!15 = distinct !DISubprogram(file: !1, type: !23)
 
 ; CHECK: function-local imports are not allowed in a DICompileUnit's imported entities list
 !16 = distinct !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !15, entity: !15)
@@ -60,3 +60,6 @@ define void @foo() !dbg !15 { ret void }
 !22 = distinct !DICompileUnit(language: 0, file: !1, enums: !{!21})
 
 ; CHECK: warning: ignoring invalid debug info{{.*}}
+
+!23 = !DISubroutineType(types: !24)
+!24 = !{null}
