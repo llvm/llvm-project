@@ -660,6 +660,7 @@ private:
     if (const auto *CE = dyn_cast<CallExpr>(E)) {
       if (const auto *FE = CE->getDirectCallee())
         return FE->isImplicit();
+      return false;
     }
 
     return true;
