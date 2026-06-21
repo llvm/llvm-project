@@ -84,3 +84,25 @@ void proc_bind_parallel() {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }
+
+void if_parallel() {
+  // CHECK: omp.parallel if(%{{.*}}) {
+#pragma omp parallel if (1)
+  {}
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+int validCondition = 10;
+  // CHECK: omp.parallel if(%{{.*}}) {
+#pragma omp parallel if (validCondition)
+  {}
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+void *nullPtr = ((void *)0);
+  // CHECK: omp.parallel if(%{{.*}}) {
+#pragma omp parallel if (nullPtr)
+  {}
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+}
