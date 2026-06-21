@@ -4,7 +4,8 @@ declare float @func()
 
 %struct = type { i32, float }
 
-define void @test(ptr %ptr) {
+define void @test(ptr %ptr, float %f) {
+entry:
   ; CHECK: nofpclass is only for loads
   call float @func(), !nofpclass !{i32 3}
 
@@ -40,6 +41,15 @@ define void @test(ptr %ptr) {
 
   ; CHECK: Invalid value for 'nofpclass' test mask
   load float, ptr %ptr, align 4, !nofpclass !{i32 1024}
+
+  ret void
+
+bb:
+  ; This one is valid
+  phi float [%f, %entry], !nofpclass !{i32 3}
+
+  ; CHECK: nofpclass must have exactly one entry
+  phi float [%f, %entry], !nofpclass !{}
 
   ret void
 }
