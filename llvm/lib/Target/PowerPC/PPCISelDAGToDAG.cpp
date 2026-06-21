@@ -5276,6 +5276,17 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   default: break;
 
+  case ISD::UCMP:
+  case ISD::SCMP: {
+    bool IsUnsigned = N->getOpcode() == ISD::UCMP;
+    ISD::CondCode CC = IsUnsigned ? ISD::SETUGT : ISD::SETGT;
+    SDValue CRVal = SelectCC(N->getOperand(0), N->getOperand(1), CC, dl);
+    unsigned SetBOpc =
+        N->getSimpleValueType(0) == MVT::i64 ? PPC::SETB8 : PPC::SETB;
+    CurDAG->SelectNodeTo(N, SetBOpc, N->getValueType(0), CRVal);
+    return;
+  }
+
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
       ReplaceNode(N, selectI64Imm(CurDAG, N));
