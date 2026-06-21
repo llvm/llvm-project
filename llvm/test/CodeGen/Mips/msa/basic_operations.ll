@@ -48,11 +48,11 @@ define void @const_v16i8() nounwind {
 ; O32-BE-NEXT:    ldi.h $w0, 256
 ; O32-BE-NEXT:    st.b $w0, 0($2)
 ; O32-BE-NEXT:    lui $1, 258
-; O32-BE-NEXT:    ori $1, $1, 772
+; O32-BE-NEXT:    addiu $1, $1, 772
 ; O32-BE-NEXT:    fill.w $w0, $1
 ; O32-BE-NEXT:    st.b $w0, 0($2)
 ; O32-BE-NEXT:    lui $3, 1286
-; O32-BE-NEXT:    ori $3, $3, 1800
+; O32-BE-NEXT:    addiu $3, $3, 1800
 ; O32-BE-NEXT:    fill.w $w0, $3
 ; O32-BE-NEXT:    insert.w $w0[1], $1
 ; O32-BE-NEXT:    splati.d $w0, $w0[0]
@@ -80,11 +80,11 @@ define void @const_v16i8() nounwind {
 ; O32-LE-NEXT:    ldi.h $w0, 1
 ; O32-LE-NEXT:    st.b $w0, 0($2)
 ; O32-LE-NEXT:    lui $1, 1027
-; O32-LE-NEXT:    ori $1, $1, 513
+; O32-LE-NEXT:    addiu $1, $1, 513
 ; O32-LE-NEXT:    fill.w $w0, $1
 ; O32-LE-NEXT:    st.b $w0, 0($2)
 ; O32-LE-NEXT:    lui $1, 2055
-; O32-LE-NEXT:    ori $1, $1, 1541
+; O32-LE-NEXT:    addiu $1, $1, 1541
 ; O32-LE-NEXT:    insert.w $w0[1], $1
 ; O32-LE-NEXT:    splati.d $w0, $w0[0]
 ; O32-LE-NEXT:    jr $ra
@@ -111,11 +111,11 @@ define void @const_v16i8() nounwind {
 ; N32-BE-NEXT:    ldi.h $w0, 256
 ; N32-BE-NEXT:    st.b $w0, 0($2)
 ; N32-BE-NEXT:    lui $1, 258
-; N32-BE-NEXT:    ori $1, $1, 772
+; N32-BE-NEXT:    addiu $1, $1, 772
 ; N32-BE-NEXT:    fill.w $w0, $1
 ; N32-BE-NEXT:    st.b $w0, 0($2)
 ; N32-BE-NEXT:    lui $3, 1286
-; N32-BE-NEXT:    ori $3, $3, 1800
+; N32-BE-NEXT:    addiu $3, $3, 1800
 ; N32-BE-NEXT:    dinsu $3, $1, 32, 32
 ; N32-BE-NEXT:    fill.d $w0, $3
 ; N32-BE-NEXT:    jr $ra
@@ -142,11 +142,11 @@ define void @const_v16i8() nounwind {
 ; N32-LE-NEXT:    ldi.h $w0, 1
 ; N32-LE-NEXT:    st.b $w0, 0($2)
 ; N32-LE-NEXT:    lui $1, 1027
-; N32-LE-NEXT:    ori $1, $1, 513
+; N32-LE-NEXT:    addiu $1, $1, 513
 ; N32-LE-NEXT:    fill.w $w0, $1
 ; N32-LE-NEXT:    st.b $w0, 0($2)
 ; N32-LE-NEXT:    lui $3, 2055
-; N32-LE-NEXT:    ori $3, $3, 1541
+; N32-LE-NEXT:    addiu $3, $3, 1541
 ; N32-LE-NEXT:    dinsu $1, $3, 32, 32
 ; N32-LE-NEXT:    fill.d $w0, $1
 ; N32-LE-NEXT:    jr $ra
@@ -173,11 +173,11 @@ define void @const_v16i8() nounwind {
 ; N64-BE-NEXT:    ldi.h $w0, 256
 ; N64-BE-NEXT:    st.b $w0, 0($2)
 ; N64-BE-NEXT:    lui $1, 258
-; N64-BE-NEXT:    ori $1, $1, 772
+; N64-BE-NEXT:    addiu $1, $1, 772
 ; N64-BE-NEXT:    fill.w $w0, $1
 ; N64-BE-NEXT:    st.b $w0, 0($2)
 ; N64-BE-NEXT:    lui $3, 1286
-; N64-BE-NEXT:    ori $3, $3, 1800
+; N64-BE-NEXT:    addiu $3, $3, 1800
 ; N64-BE-NEXT:    dinsu $3, $1, 32, 32
 ; N64-BE-NEXT:    fill.d $w0, $3
 ; N64-BE-NEXT:    jr $ra
@@ -204,11 +204,11 @@ define void @const_v16i8() nounwind {
 ; N64-LE-NEXT:    ldi.h $w0, 1
 ; N64-LE-NEXT:    st.b $w0, 0($2)
 ; N64-LE-NEXT:    lui $1, 1027
-; N64-LE-NEXT:    ori $1, $1, 513
+; N64-LE-NEXT:    addiu $1, $1, 513
 ; N64-LE-NEXT:    fill.w $w0, $1
 ; N64-LE-NEXT:    st.b $w0, 0($2)
 ; N64-LE-NEXT:    lui $3, 2055
-; N64-LE-NEXT:    ori $3, $3, 1541
+; N64-LE-NEXT:    addiu $3, $3, 1541
 ; N64-LE-NEXT:    dinsu $1, $3, 32, 32
 ; N64-LE-NEXT:    fill.d $w0, $1
 ; N64-LE-NEXT:    jr $ra
@@ -241,11 +241,11 @@ define void @const_v8i16() nounwind {
 ; O32-BE-NEXT:    ldi.b $w0, 4
 ; O32-BE-NEXT:    st.h $w0, 0($2)
 ; O32-BE-NEXT:    lui $1, 1
-; O32-BE-NEXT:    ori $1, $1, 2
+; O32-BE-NEXT:    addiu $1, $1, 2
 ; O32-BE-NEXT:    fill.w $w0, $1
 ; O32-BE-NEXT:    st.h $w0, 0($2)
 ; O32-BE-NEXT:    lui $3, 3
-; O32-BE-NEXT:    ori $3, $3, 4
+; O32-BE-NEXT:    addiu $3, $3, 4
 ; O32-BE-NEXT:    fill.w $w0, $3
 ; O32-BE-NEXT:    insert.w $w0[1], $1
 ; O32-BE-NEXT:    splati.d $w0, $w0[0]
@@ -269,11 +269,11 @@ define void @const_v8i16() nounwind {
 ; O32-LE-NEXT:    ldi.b $w0, 4
 ; O32-LE-NEXT:    st.h $w0, 0($2)
 ; O32-LE-NEXT:    lui $1, 2
-; O32-LE-NEXT:    ori $1, $1, 1
+; O32-LE-NEXT:    addiu $1, $1, 1
 ; O32-LE-NEXT:    fill.w $w0, $1
 ; O32-LE-NEXT:    st.h $w0, 0($2)
 ; O32-LE-NEXT:    lui $1, 4
-; O32-LE-NEXT:    ori $1, $1, 3
+; O32-LE-NEXT:    addiu $1, $1, 3
 ; O32-LE-NEXT:    insert.w $w0[1], $1
 ; O32-LE-NEXT:    splati.d $w0, $w0[0]
 ; O32-LE-NEXT:    jr $ra
@@ -296,11 +296,11 @@ define void @const_v8i16() nounwind {
 ; N32-BE-NEXT:    ldi.b $w0, 4
 ; N32-BE-NEXT:    st.h $w0, 0($2)
 ; N32-BE-NEXT:    lui $1, 1
-; N32-BE-NEXT:    ori $1, $1, 2
+; N32-BE-NEXT:    addiu $1, $1, 2
 ; N32-BE-NEXT:    fill.w $w0, $1
 ; N32-BE-NEXT:    st.h $w0, 0($2)
 ; N32-BE-NEXT:    lui $3, 3
-; N32-BE-NEXT:    ori $3, $3, 4
+; N32-BE-NEXT:    addiu $3, $3, 4
 ; N32-BE-NEXT:    dinsu $3, $1, 32, 32
 ; N32-BE-NEXT:    fill.d $w0, $3
 ; N32-BE-NEXT:    jr $ra
@@ -323,11 +323,11 @@ define void @const_v8i16() nounwind {
 ; N32-LE-NEXT:    ldi.b $w0, 4
 ; N32-LE-NEXT:    st.h $w0, 0($2)
 ; N32-LE-NEXT:    lui $1, 2
-; N32-LE-NEXT:    ori $1, $1, 1
+; N32-LE-NEXT:    addiu $1, $1, 1
 ; N32-LE-NEXT:    fill.w $w0, $1
 ; N32-LE-NEXT:    st.h $w0, 0($2)
 ; N32-LE-NEXT:    lui $3, 4
-; N32-LE-NEXT:    ori $3, $3, 3
+; N32-LE-NEXT:    addiu $3, $3, 3
 ; N32-LE-NEXT:    dinsu $1, $3, 32, 32
 ; N32-LE-NEXT:    fill.d $w0, $1
 ; N32-LE-NEXT:    jr $ra
@@ -350,11 +350,11 @@ define void @const_v8i16() nounwind {
 ; N64-BE-NEXT:    ldi.b $w0, 4
 ; N64-BE-NEXT:    st.h $w0, 0($2)
 ; N64-BE-NEXT:    lui $1, 1
-; N64-BE-NEXT:    ori $1, $1, 2
+; N64-BE-NEXT:    addiu $1, $1, 2
 ; N64-BE-NEXT:    fill.w $w0, $1
 ; N64-BE-NEXT:    st.h $w0, 0($2)
 ; N64-BE-NEXT:    lui $3, 3
-; N64-BE-NEXT:    ori $3, $3, 4
+; N64-BE-NEXT:    addiu $3, $3, 4
 ; N64-BE-NEXT:    dinsu $3, $1, 32, 32
 ; N64-BE-NEXT:    fill.d $w0, $3
 ; N64-BE-NEXT:    jr $ra
@@ -377,11 +377,11 @@ define void @const_v8i16() nounwind {
 ; N64-LE-NEXT:    ldi.b $w0, 4
 ; N64-LE-NEXT:    st.h $w0, 0($2)
 ; N64-LE-NEXT:    lui $1, 2
-; N64-LE-NEXT:    ori $1, $1, 1
+; N64-LE-NEXT:    addiu $1, $1, 1
 ; N64-LE-NEXT:    fill.w $w0, $1
 ; N64-LE-NEXT:    st.h $w0, 0($2)
 ; N64-LE-NEXT:    lui $3, 4
-; N64-LE-NEXT:    ori $3, $3, 3
+; N64-LE-NEXT:    addiu $3, $3, 3
 ; N64-LE-NEXT:    dinsu $1, $3, 32, 32
 ; N64-LE-NEXT:    fill.d $w0, $1
 ; N64-LE-NEXT:    jr $ra
@@ -414,8 +414,8 @@ define void @const_v4i32() nounwind {
 ; O32-BE-NEXT:    st.w $w0, 0($2)
 ; O32-BE-NEXT:    ldi.h $w0, 1
 ; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    ori $3, $zero, 1
-; O32-BE-NEXT:    ori $4, $zero, 2
+; O32-BE-NEXT:    addiu $3, $zero, 1
+; O32-BE-NEXT:    addiu $4, $zero, 2
 ; O32-BE-NEXT:    fill.w $w0, $4
 ; O32-BE-NEXT:    insert.w $w0[1], $3
 ; O32-BE-NEXT:    splati.d $w0, $w0[0]
@@ -444,8 +444,8 @@ define void @const_v4i32() nounwind {
 ; O32-LE-NEXT:    st.w $w0, 0($2)
 ; O32-LE-NEXT:    ldi.h $w0, 1
 ; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    ori $3, $zero, 2
-; O32-LE-NEXT:    ori $4, $zero, 1
+; O32-LE-NEXT:    addiu $3, $zero, 2
+; O32-LE-NEXT:    addiu $4, $zero, 1
 ; O32-LE-NEXT:    fill.w $w0, $4
 ; O32-LE-NEXT:    insert.w $w0[1], $3
 ; O32-LE-NEXT:    splati.d $w0, $w0[0]
@@ -474,8 +474,8 @@ define void @const_v4i32() nounwind {
 ; N32-BE-NEXT:    st.w $w0, 0($2)
 ; N32-BE-NEXT:    ldi.h $w0, 1
 ; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    ori $3, $zero, 2
-; N32-BE-NEXT:    ori $4, $zero, 1
+; N32-BE-NEXT:    addiu $3, $zero, 2
+; N32-BE-NEXT:    addiu $4, $zero, 1
 ; N32-BE-NEXT:    dinsu $3, $4, 32, 32
 ; N32-BE-NEXT:    fill.d $w0, $3
 ; N32-BE-NEXT:    st.w $w0, 0($2)
@@ -503,8 +503,8 @@ define void @const_v4i32() nounwind {
 ; N32-LE-NEXT:    st.w $w0, 0($2)
 ; N32-LE-NEXT:    ldi.h $w0, 1
 ; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    ori $3, $zero, 1
-; N32-LE-NEXT:    ori $4, $zero, 2
+; N32-LE-NEXT:    addiu $3, $zero, 1
+; N32-LE-NEXT:    addiu $4, $zero, 2
 ; N32-LE-NEXT:    dinsu $3, $4, 32, 32
 ; N32-LE-NEXT:    fill.d $w0, $3
 ; N32-LE-NEXT:    st.w $w0, 0($2)
@@ -532,8 +532,8 @@ define void @const_v4i32() nounwind {
 ; N64-BE-NEXT:    st.w $w0, 0($2)
 ; N64-BE-NEXT:    ldi.h $w0, 1
 ; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ori $3, $zero, 2
-; N64-BE-NEXT:    ori $4, $zero, 1
+; N64-BE-NEXT:    addiu $3, $zero, 2
+; N64-BE-NEXT:    addiu $4, $zero, 1
 ; N64-BE-NEXT:    dinsu $3, $4, 32, 32
 ; N64-BE-NEXT:    fill.d $w0, $3
 ; N64-BE-NEXT:    st.w $w0, 0($2)
@@ -561,8 +561,8 @@ define void @const_v4i32() nounwind {
 ; N64-LE-NEXT:    st.w $w0, 0($2)
 ; N64-LE-NEXT:    ldi.h $w0, 1
 ; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ori $3, $zero, 1
-; N64-LE-NEXT:    ori $4, $zero, 2
+; N64-LE-NEXT:    addiu $3, $zero, 1
+; N64-LE-NEXT:    addiu $4, $zero, 2
 ; N64-LE-NEXT:    dinsu $3, $4, 32, 32
 ; N64-LE-NEXT:    fill.d $w0, $3
 ; N64-LE-NEXT:    st.w $w0, 0($2)

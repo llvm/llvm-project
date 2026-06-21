@@ -113,6 +113,8 @@ private:
 
   bool trySelect(SDNode *Node) override;
 
+  SDNode *materialize32BitImm(uint64_t Imm, const SDLoc &DL);
+
   // Emits proper ABI for _mcount profiling calls.
   void emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
                      MachineFunction &MF);

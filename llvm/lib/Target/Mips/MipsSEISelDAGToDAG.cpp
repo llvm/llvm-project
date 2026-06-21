@@ -70,6 +70,31 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
     MIB.addReg(Mips::DSPEFI, Flag);
 }
 
+SDNode *MipsSEDAGToDAGISel::materialize32BitImm(uint64_t Imm, const SDLoc &DL) {
+  MipsAnalyzeImmediate AnalyzeImm;
+  const MipsAnalyzeImmediate::InstSeq &Seq = AnalyzeImm.Analyze(Imm, 32, false);
+  MipsAnalyzeImmediate::InstSeq::const_iterator Inst = Seq.begin();
+
+  SDNode *RegOpnd;
+  SDValue ImmOpnd =
+      CurDAG->getTargetConstant(SignExtend64<16>(Inst->ImmOpnd), DL, MVT::i64);
+
+  if (Inst->Opc == Mips::LUi)
+    RegOpnd = CurDAG->getMachineNode(Inst->Opc, DL, MVT::i32, ImmOpnd);
+  else
+    RegOpnd = CurDAG->getMachineNode(Inst->Opc, DL, MVT::i32,
+                                     CurDAG->getRegister(Mips::ZERO, MVT::i32),
+                                     ImmOpnd);
+
+  for (++Inst; Inst != Seq.end(); ++Inst) {
+    ImmOpnd = CurDAG->getTargetConstant(SignExtend64<16>(Inst->ImmOpnd), DL,
+                                        MVT::i64);
+    RegOpnd = CurDAG->getMachineNode(Inst->Opc, DL, MVT::i32,
+                                     SDValue(RegOpnd, 0), ImmOpnd);
+  }
+  return RegOpnd;
+}
+
 MCRegister MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
   uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
@@ -1121,45 +1146,21 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     } else if (SplatValue.isSignedIntN(32) && SplatBitSize == 32) {
       // Only handle the cases where the splat size agrees with the size
       // of the SplatValue here.
-      const unsigned Lo = SplatValue.getLoBits(16).getZExtValue();
-      const unsigned Hi = SplatValue.lshr(16).getLoBits(16).getZExtValue();
-      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
-
-      SDValue LoVal = CurDAG->getTargetConstant(Lo, DL, MVT::i32);
-      SDValue HiVal = CurDAG->getTargetConstant(Hi, DL, MVT::i32);
-
-      if (Hi)
-        Res = CurDAG->getMachineNode(Mips::LUi, DL, MVT::i32, HiVal);
-
-      if (Lo)
-        Res = CurDAG->getMachineNode(Mips::ORi, DL, MVT::i32,
-                                     Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
-
-      assert((Hi || Lo) && "Zero case reached 32 bit case splat synthesis!");
-      Res =
-          CurDAG->getMachineNode(Mips::FILL_W, DL, MVT::v4i32, SDValue(Res, 0));
+      uint32_t Val = SplatValue.getLoBits(32).getZExtValue();
+      SDNode *ResNode = materialize32BitImm(Val, DL);
+      Res = CurDAG->getMachineNode(Mips::FILL_W, DL, MVT::v4i32,
+                                   SDValue(ResNode, 0));
 
     } else if (SplatValue.isSignedIntN(32) && SplatBitSize == 64 &&
                (ABI.IsN32() || ABI.IsN64())) {
       // N32 and N64 can perform some tricks that O32 can't for signed 32 bit
       // integers due to having 64bit registers. lui will cause the necessary
       // zero/sign extension.
-      const unsigned Lo = SplatValue.getLoBits(16).getZExtValue();
-      const unsigned Hi = SplatValue.lshr(16).getLoBits(16).getZExtValue();
-      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
-
-      SDValue LoVal = CurDAG->getTargetConstant(Lo, DL, MVT::i32);
-      SDValue HiVal = CurDAG->getTargetConstant(Hi, DL, MVT::i32);
-
-      if (Hi)
-        Res = CurDAG->getMachineNode(Mips::LUi, DL, MVT::i32, HiVal);
-
-      if (Lo)
-        Res = CurDAG->getMachineNode(Mips::ORi, DL, MVT::i32,
-                                     Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
+      uint32_t Val = SplatValue.getLoBits(32).getZExtValue();
+      SDNode *ResNode = materialize32BitImm(Val, DL);
 
       Res = CurDAG->getMachineNode(
-          Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
+          Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(ResNode, 0),
           CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
       Res =
@@ -1191,17 +1192,6 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       //   fill.d $res
       //
 
-      const unsigned Lo = SplatValue.getLoBits(16).getZExtValue();
-      const unsigned Hi = SplatValue.lshr(16).getLoBits(16).getZExtValue();
-      const unsigned Higher = SplatValue.lshr(32).getLoBits(16).getZExtValue();
-      const unsigned Highest = SplatValue.lshr(48).getLoBits(16).getZExtValue();
-
-      SDValue LoVal = CurDAG->getTargetConstant(Lo, DL, MVT::i32);
-      SDValue HiVal = CurDAG->getTargetConstant(Hi, DL, MVT::i32);
-      SDValue HigherVal = CurDAG->getTargetConstant(Higher, DL, MVT::i32);
-      SDValue HighestVal = CurDAG->getTargetConstant(Highest, DL, MVT::i32);
-      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
-
       // Independent of whether we're targeting MIPS64 or not, the basic
       // operations are the same. Also, directly use the $zero register if
       // the 16 bit chunk is zero.
@@ -1211,37 +1201,19 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       // just before combining the values with dinsu to produce an i64. This
       // enables SelectionDAG to aggressively share components of splat values
       // where possible.
-      //
-      // FIXME: This is the general constant synthesis problem. This code
-      //        should be factored out into a class shared between all the
-      //        classes that need it. Specifically, for a splat size of 64
-      //        bits that's a negative number we can do better than LUi/ORi
-      //        for the upper 32bits.
-
-      if (Hi)
-        Res = CurDAG->getMachineNode(Mips::LUi, DL, MVT::i32, HiVal);
-
-      if (Lo)
-        Res = CurDAG->getMachineNode(Mips::ORi, DL, MVT::i32,
-                                     Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
-
-      SDNode *HiRes;
-      if (Highest)
-        HiRes = CurDAG->getMachineNode(Mips::LUi, DL, MVT::i32, HighestVal);
-
-      if (Higher)
-        HiRes = CurDAG->getMachineNode(Mips::ORi, DL, MVT::i32,
-                                       Highest ? SDValue(HiRes, 0) : ZeroVal,
-                                       HigherVal);
-
+      uint32_t Lo32 = SplatValue.getLoBits(32).getZExtValue();
+      uint32_t Hi32 = SplatValue.lshr(32).getLoBits(32).getZExtValue();
+      SDNode *ResNode = Lo32 ? materialize32BitImm(Lo32, DL) : nullptr;
+      SDNode *HiResNode = Hi32 ? materialize32BitImm(Hi32, DL) : nullptr;
+      SDValue ZeroVal = CurDAG->getRegister(Mips::ZERO, MVT::i32);
 
       if (ABI.IsO32()) {
         Res = CurDAG->getMachineNode(Mips::FILL_W, DL, MVT::v4i32,
-                                     (Hi || Lo) ? SDValue(Res, 0) : ZeroVal);
+                                     ResNode ? SDValue(ResNode, 0) : ZeroVal);
 
         Res = CurDAG->getMachineNode(
             Mips::INSERT_W, DL, MVT::v4i32, SDValue(Res, 0),
-            (Highest || Higher) ? SDValue(HiRes, 0) : ZeroVal,
+            HiResNode ? SDValue(HiResNode, 0) : ZeroVal,
             CurDAG->getTargetConstant(1, DL, MVT::i32));
 
         const TargetLowering *TLI = getTargetLowering();
@@ -1258,17 +1230,17 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       } else if (ABI.IsN64() || ABI.IsN32()) {
 
         SDValue Zero64Val = CurDAG->getRegister(Mips::ZERO_64, MVT::i64);
-        const bool HiResNonZero = Highest || Higher;
-        const bool ResNonZero = Hi || Lo;
+        SDNode *HiRes64 = nullptr;
+        SDNode *Res64 = nullptr;
 
-        if (HiResNonZero)
-          HiRes = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(HiRes, 0),
+        if (HiResNode)
+          HiRes64 = CurDAG->getMachineNode(
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(HiResNode, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
-        if (ResNonZero)
-          Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
+        if (ResNode)
+          Res64 = CurDAG->getMachineNode(
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(ResNode, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         // We have 3 cases:
@@ -1278,19 +1250,19 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
         //
         // The obvious "missing" case is when both are zero, but that case is
         // handled by the ldi case.
-        if (ResNonZero) {
+        if (Res64) {
           IntegerType *Int32Ty =
               IntegerType::get(MF->getFunction().getContext(), 32);
           const ConstantInt *Const32 = ConstantInt::get(Int32Ty, 32);
-          SDValue Ops[4] = {HiResNonZero ? SDValue(HiRes, 0) : Zero64Val,
+          SDValue Ops[4] = {HiRes64 ? SDValue(HiRes64, 0) : Zero64Val,
                             CurDAG->getConstant(*Const32, DL, MVT::i32),
                             CurDAG->getConstant(*Const32, DL, MVT::i32),
-                            SDValue(Res, 0)};
+                            SDValue(Res64, 0)};
 
           Res = CurDAG->getMachineNode(Mips::DINSU, DL, MVT::i64, Ops);
-        } else if (HiResNonZero) {
+        } else if (HiRes64) {
           Res = CurDAG->getMachineNode(
-              Mips::DSLL32, DL, MVT::i64, SDValue(HiRes, 0),
+              Mips::DSLL32, DL, MVT::i64, SDValue(HiRes64, 0),
               CurDAG->getTargetConstant(0, DL, MVT::i32));
         } else
           llvm_unreachable(
