@@ -418,7 +418,7 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
   uint64_t Size = OffsetSize; // Number of entries
   // Each symbol table entry consists of a member offset.
   // For BSD, each entry also includes a string table offset.
-  // For z/OS, each entry also includes a flag field.
+  // For z/OS, each entry instead also includes a flag field.
   if (isBSDLike(Kind) || isZOSArchive(Kind))
     Size += NumSyms * OffsetSize * 2; // Table
   else
