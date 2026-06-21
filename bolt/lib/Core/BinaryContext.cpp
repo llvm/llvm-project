@@ -2335,45 +2335,24 @@ BinarySection &
 BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
                                        unsigned ELFFlags, uint8_t *Data,
                                        uint64_t Size, unsigned Alignment) {
- // --- Common locals
- std::string NameStorage = Name.str();
- llvm::StringRef NameRef(NameStorage);
- static constexpr char kOrgPrefix[] = ".bolt.org";
-
- // --- EARLY SANITIZATION for backups ("org") ---
- // Ensure .bolt.org.* is non-alloc, non-exec, data-like, and excluded.
- if (isPPC64() && NameRef.starts_with(kOrgPrefix)) {
-   ELFFlags &= ~(ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-   ELFFlags |=  (ELF::SHF_EXCLUDE);
-   ELFType    =  ELF::SHT_PROGBITS;
-   LLVM_DEBUG(llvm::dbgs()
-     << "[reg] ORG-SANITIZE name=" << NameRef
-     << " flags(out)=0x" << llvm::format_hex(ELFFlags, 8) << "\n");
- }
-
   auto NamedSections = getSectionByName(Name);
-
   if (NamedSections.begin() != NamedSections.end()) {
-
     assert(std::next(NamedSections.begin()) == NamedSections.end() &&
            "can only update unique sections");
-
     BinarySection *Section = NamedSections.begin()->second;
 
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: updating " << *Section << " -> ");
-    const bool WasAlloc = Section->isAllocatable();
+    const bool Flag = Section->isAllocatable();
+    (void)Flag;
     Section->update(Data, Size, Alignment, ELFType, ELFFlags);
     LLVM_DEBUG(dbgs() << *Section << "\n");
-
-
+    // FIXME: Fix section flags/attributes for MachO.
     if (isELF())
-      assert(WasAlloc == Section->isAllocatable() &&
+      assert(Flag == Section->isAllocatable() &&
              "can't change section allocation status");
     return *Section;
   }
 
-  // Creation path (keep quiet, or add one-liner if you want):
-  // LLVM_DEBUG(dbgs() << "[sect] create " << Name << "\n");
   return registerSection(
       new BinarySection(*this, Name, Data, Size, Alignment, ELFType, ELFFlags));
 }
