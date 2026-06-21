@@ -35,8 +35,8 @@ public:
 
   template <typename MapTy, typename KeyTy>
   void checkReturnedBorrower(const MapTy &Map, const KeyTy RetKey,
-                             ProgramStateRef State, ExplodedNode *N,
-                             CheckerContext &C) const;
+                             ProgramStateRef State, CheckerContext &C) const;
+  void reportDanglingBorrower(const LifetimeSourceSet *Sources, CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkLifetimeEnd(const VarDecl *VD, CheckerContext &C) const;
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
@@ -122,13 +122,13 @@ template <typename MapTy, typename KeyTy>
 void LifetimeAnnotations::checkReturnedBorrower(const MapTy &Map,
                                                 const KeyTy RetKey,
                                                 ProgramStateRef State,
-                                                ExplodedNode *N,
                                                 CheckerContext &C) const {
   for (auto &&[Origin, SourceSet] : Map) {
     if (Origin == RetKey) {
       for (const MemRegion *Region : SourceSet) {
         if (hasDanglingSource(Region, State, C))
-          reportDanglingSource(Region, N, C);
+          if (ExplodedNode *N = C.generateNonFatalErrorNode())
+            reportDanglingSource(Region, N, C);
       }
     }
   }
@@ -158,15 +158,11 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS,
   if (!RetValSym && !RetValRegion)
     return;
 
-  ExplodedNode *N = C.generateNonFatalErrorNode();
-  if (!N)
-    return;
-
   if (RetValSym)
-    checkReturnedBorrower(LBMap, RetValSym, State, N, C);
+    checkReturnedBorrower(LBMap, RetValSym, State, C);
 
   if (RetValRegion)
-    checkReturnedBorrower(LBMapVal, RetValRegion, State, N, C);
+    checkReturnedBorrower(LBMapVal, RetValRegion, State, C);
 }
 
 void LifetimeAnnotations::checkLifetimeEnd(const VarDecl *VD,
@@ -182,7 +178,17 @@ void LifetimeAnnotations::checkLifetimeEnd(const VarDecl *VD,
   }
 }
 
-// FIXME: Use helper functions for checkLocation
+void LifetimeAnnotations::reportDanglingBorrower(const LifetimeSourceSet *Sources, CheckerContext &C) const {
+    ProgramStateRef State = C.getState();
+
+    for (const MemRegion *Source : *Sources) {
+      if (State->contains<DeadSourceSet>(Source)) {
+        if (ExplodedNode *N = C.generateNonFatalErrorNode())
+          reportUseAfterScope(Source, N, C);
+      }
+    }
+}
+
 void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -191,7 +197,8 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
 
   // FIXME: Because of the CFG::LifetimeEnd elements now the analyzer can
   // reason about out-of-scope dangling pointer deref even if there is
-  // no annotations in the source code.
+  // no annotations in the source code. This detection part of the detection
+  // should live in a separate checker.
   if (const MemRegion *R = Loc.getAsRegion()) {
     if (State->contains<DeadSourceSet>(R)) {
       if (ExplodedNode *N = C.generateNonFatalErrorNode())
@@ -206,26 +213,13 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   // if any source has died. The callback should track which source the
   // borrower actually points.
   if (SymbolRef LocSym = Loc.getAsSymbol(true)) {
-    if (auto *SourceSet = State->get<LifetimeBoundMap>(LocSym)) {
-      for (const MemRegion *Source : *SourceSet) {
-        if (State->contains<DeadSourceSet>(Source)) {
-          if (ExplodedNode *N = C.generateNonFatalErrorNode())
-            reportUseAfterScope(Source, N, C);
-        }
-      }
-    }
+    if (auto *SourceSet = State->get<LifetimeBoundMap>(LocSym))
+      reportDanglingBorrower(SourceSet, C);
   }
 
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
-    if (auto *SourceSet = State->get<LifetimeBoundMapVal>(LocRegion)) {
-      for (const MemRegion *Source : *SourceSet) {
-        if (State->contains<DeadSourceSet>(Source)) {
-          if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-            reportUseAfterScope(Source, N, C);
-          }
-        }
-      }
-    }
+    if (auto *SourceSet = State->get<LifetimeBoundMapVal>(LocRegion))
+      reportDanglingBorrower(SourceSet, C);
   }
 }
 
@@ -233,7 +227,7 @@ void LifetimeAnnotations::reportDanglingSource(const MemRegion *Region,
                                                ExplodedNode *N,
                                                CheckerContext &C) const {
   std::string ErrorMessage =
-      (llvm::Twine("Returning value bound to a local '") + Region->getString() +
+      (llvm::Twine("Returning value bound to '") + Region->getString() +
        "' that will go out of scope")
           .str();
   auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, ErrorMessage, N);

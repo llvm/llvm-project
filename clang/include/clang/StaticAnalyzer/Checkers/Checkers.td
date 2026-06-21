@@ -789,7 +789,8 @@ def SmartPtrChecker: Checker<"SmartPtr">,
   Documentation<HasDocumentation>;
 
 def LifetimeAnnotations : Checker<"LifetimeAnnotations">,
-  HelpText<"Check for lifetime violations using lifetime annotations">,
+  HelpText<"Check for lifetime violations by incorporating lifetime "
+           "annotations into the analysis">,
   Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
@@ -1582,6 +1583,7 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
 
 def DebugLifetimeAnnotations : Checker<"DebugLifetimeAnnotations">,
   HelpText<"Prints the bindings recorded by the LifetimeAnnotations checker. Use with clang_analyzer_lifetime_bound().">,
+  WeakDependencies<[LifetimeAnnotations]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
