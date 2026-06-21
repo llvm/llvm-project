@@ -17,6 +17,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 11
+
 // __div_ceil computes the ceiling of the division of two integers. It is mainly used by
 // range adaptors like chunk_view and stride_view.
 
@@ -27,6 +29,8 @@ template <class _Integral>
     ++__r;
   return __r;
 }
+
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
