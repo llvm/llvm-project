@@ -11123,6 +11123,41 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
     Changed = true;
   }
 
+  // (K + A) pred (K + B) --> A pred B
+  // when both adds have the appropriate no-wrap flag.
+  {
+    const SCEVConstant *C = nullptr;
+    if ((ICmpInst::isSigned(Pred) &&
+         match(LHS, m_scev_c_NSWAdd(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+         match(RHS, m_scev_c_NSWAdd(m_scev_Specific(C), m_SCEV(NewRHS)))) ||
+        (ICmpInst::isUnsigned(Pred) &&
+         match(LHS, m_scev_c_NUWAdd(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+         match(RHS, m_scev_c_NUWAdd(m_scev_Specific(C), m_SCEV(NewRHS))))) {
+      LHS = NewLHS;
+      RHS = NewRHS;
+      Changed = true;
+    }
+  }
+
+  // (C * A) pred (C * B) --> A pred B
+  // For signed predicates, C must be positive and both muls must be NSW.
+  // For unsigned predicates, C must be non-zero and both muls must be NUW.
+  {
+    const SCEVConstant *C = nullptr;
+    if ((ICmpInst::isSigned(Pred) &&
+         match(LHS, m_scev_c_NSWMul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+         match(RHS, m_scev_c_NSWMul(m_scev_Specific(C), m_SCEV(NewRHS))) &&
+         C->getAPInt().isStrictlyPositive()) ||
+        (ICmpInst::isUnsigned(Pred) &&
+         match(LHS, m_scev_c_NUWMul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+         match(RHS, m_scev_c_NUWMul(m_scev_Specific(C), m_SCEV(NewRHS))) &&
+         !C->getAPInt().isZero())) {
+      LHS = NewLHS;
+      RHS = NewRHS;
+      Changed = true;
+    }
+  }
+
   // If we're comparing an addrec with a value which is loop-invariant in the
   // addrec's loop, put the addrec on the left. Also make a dominance check,
   // as both operands could be addrecs loop-invariant in each other's loop.
