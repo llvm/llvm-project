@@ -6546,7 +6546,6 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     // to use or standardizing/canonicalizing the order of the bounds to compute
     // the offset may be useful in the future when there's other frontends with
     // different formats.
-    std::vector<llvm::Value *> dimensionIndexSizeOffset;
     for (int i = bounds.size() - 1; i >= 0; --i) {
       if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
               bounds[i].getDefiningOp())) {

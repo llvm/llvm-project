@@ -59,9 +59,9 @@ public:
 /// Generic task implementation.
 template <typename FnT> class GenericNamedTaskImpl : public GenericNamedTask {
 public:
-  GenericNamedTaskImpl(FnT &&Fn, std::string DescBuffer)
+  GenericNamedTaskImpl(FnT &&Fn, std::string InDescBuffer)
       : Fn(std::forward<FnT>(Fn)), Desc(DescBuffer.c_str()),
-        DescBuffer(std::move(DescBuffer)) {}
+        DescBuffer(std::move(InDescBuffer)) {}
   GenericNamedTaskImpl(FnT &&Fn, const char *Desc)
       : Fn(std::forward<FnT>(Fn)), Desc(Desc) {
     assert(Desc && "Description cannot be null");

@@ -218,7 +218,6 @@ TEST_F(PassManagerTest, Basic) {
 
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
-  std::string Output = testing::internal::GetCapturedStderr();
 
   EXPECT_EQ((std::vector<int>{10, 16, 18, 20, 30, 36, 38, 40}), Counts);
   EXPECT_EQ(40, Count);
