@@ -44,6 +44,7 @@ define protected amdgpu_kernel void @test_salu(ptr addrspace(1) noalias noundef 
 ; CHECK: %bb.1
 ; CHECK-NEXT: s_load
 ; CHECK-NEXT: s_load
+; CHECK: killed
 ; CHECK-NEXT: s_waitcnt
 ; CHECK-NEXT: ASMSTART
 entry:

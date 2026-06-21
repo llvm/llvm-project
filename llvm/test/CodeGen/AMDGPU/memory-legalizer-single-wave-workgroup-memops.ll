@@ -586,33 +586,30 @@ define amdgpu_kernel void @wg_st_seq_cst_single32(ptr addrspace(1) %p, i32 %x) #
   ; GFX9: bb.0 (%ir-block.0):
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_st_seq_cst_single32
   ; GFX942: bb.0 (%ir-block.0):
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-LABEL: name: wg_st_seq_cst_single32
   ; GFX10: bb.0 (%ir-block.0):
   ; GFX10-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX10-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_st_seq_cst_single32
@@ -621,7 +618,7 @@ define amdgpu_kernel void @wg_st_seq_cst_single32(ptr addrspace(1) %p, i32 %x) #
   ; GFX12-W32-NEXT: {{  $}}
   ; GFX12-W32-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX12-W32-NEXT:   renamable $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
-  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W64-LABEL: name: wg_st_seq_cst_single32
@@ -631,7 +628,7 @@ define amdgpu_kernel void @wg_st_seq_cst_single32(ptr addrspace(1) %p, i32 %x) #
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX12-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_st_seq_cst_single32
@@ -642,7 +639,7 @@ define amdgpu_kernel void @wg_st_seq_cst_single32(ptr addrspace(1) %p, i32 %x) #
   ; GFX1250-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX1250-NEXT:   renamable $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   store atomic i32 %x, ptr addrspace(1) %p syncscope("workgroup") seq_cst, align 4
   ret void
@@ -653,47 +650,43 @@ define amdgpu_kernel void @wg_st_seq_cst_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX9: bb.0 (%ir-block.0):
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_st_seq_cst_single64
   ; GFX942: bb.0 (%ir-block.0):
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: wg_st_seq_cst_single64
   ; GFX10-W32: bb.0 (%ir-block.0):
   ; GFX10-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W32-NEXT: {{  $}}
-  ; GFX10-W32-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W32-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W32-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX10-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX10-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W64-LABEL: name: wg_st_seq_cst_single64
   ; GFX10-W64: bb.0 (%ir-block.0):
   ; GFX10-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W64-NEXT: {{  $}}
-  ; GFX10-W64-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX10-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_st_seq_cst_single64
@@ -707,7 +700,7 @@ define amdgpu_kernel void @wg_st_seq_cst_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W64-LABEL: name: wg_st_seq_cst_single64
@@ -717,7 +710,7 @@ define amdgpu_kernel void @wg_st_seq_cst_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX12-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_st_seq_cst_single64
@@ -731,7 +724,7 @@ define amdgpu_kernel void @wg_st_seq_cst_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   store atomic i32 %x, ptr addrspace(1) %p syncscope("workgroup") seq_cst, align 4
   ret void
@@ -742,40 +735,37 @@ define amdgpu_kernel void @wg_st_seq_cst_multi(ptr addrspace(1) %p, i32 %x) #2 {
   ; GFX9: bb.0 (%ir-block.0):
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
   ; GFX9-NEXT:   S_WAITCNT_lds_direct
-  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_st_seq_cst_multi
   ; GFX942: bb.0 (%ir-block.0):
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
   ; GFX942-NEXT:   S_WAITCNT_lds_direct
-  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 1, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-LABEL: name: wg_st_seq_cst_multi
   ; GFX10: bb.0 (%ir-block.0):
   ; GFX10-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX10-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX10-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_st_seq_cst_multi
@@ -789,7 +779,7 @@ define amdgpu_kernel void @wg_st_seq_cst_multi(ptr addrspace(1) %p, i32 %x) #2 {
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W64-LABEL: name: wg_st_seq_cst_multi
@@ -804,7 +794,7 @@ define amdgpu_kernel void @wg_st_seq_cst_multi(ptr addrspace(1) %p, i32 %x) #2 {
   ; GFX12-W64-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_st_seq_cst_multi
@@ -818,7 +808,7 @@ define amdgpu_kernel void @wg_st_seq_cst_multi(ptr addrspace(1) %p, i32 %x) #2 {
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") seq_cst (s32) into %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   store atomic i32 %x, ptr addrspace(1) %p syncscope("workgroup") seq_cst, align 4
   ret void
@@ -829,47 +819,43 @@ define amdgpu_kernel void @wg_st_release_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX9: bb.0 (%ir-block.0):
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_st_release_single64
   ; GFX942: bb.0 (%ir-block.0):
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: wg_st_release_single64
   ; GFX10-W32: bb.0 (%ir-block.0):
   ; GFX10-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W32-NEXT: {{  $}}
-  ; GFX10-W32-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W32-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W32-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX10-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX10-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W64-LABEL: name: wg_st_release_single64
   ; GFX10-W64: bb.0 (%ir-block.0):
   ; GFX10-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W64-NEXT: {{  $}}
-  ; GFX10-W64-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX10-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_st_release_single64
@@ -883,7 +869,7 @@ define amdgpu_kernel void @wg_st_release_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W64-LABEL: name: wg_st_release_single64
@@ -893,7 +879,7 @@ define amdgpu_kernel void @wg_st_release_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX12-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_st_release_single64
@@ -907,7 +893,7 @@ define amdgpu_kernel void @wg_st_release_single64(ptr addrspace(1) %p, i32 %x) #
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store syncscope("workgroup") release (s32) into %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   store atomic i32 %x, ptr addrspace(1) %p syncscope("workgroup") release, align 4
   ret void
@@ -1515,36 +1501,33 @@ define amdgpu_kernel void @wg_rmw_xchg_acq_rel_single64(ptr addrspace(1) %p, i32
   ; GFX9: bb.0 (%ir-block.0):
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX9-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_rmw_xchg_acq_rel_single64
   ; GFX942: bb.0 (%ir-block.0):
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX942-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: wg_rmw_xchg_acq_rel_single64
   ; GFX10-W32: bb.0 (%ir-block.0):
   ; GFX10-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W32-NEXT: {{  $}}
-  ; GFX10-W32-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W32-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W32-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-W32-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-W32-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W32-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10-W32-NEXT:   S_ENDPGM 0
@@ -1553,11 +1536,10 @@ define amdgpu_kernel void @wg_rmw_xchg_acq_rel_single64(ptr addrspace(1) %p, i32
   ; GFX10-W64: bb.0 (%ir-block.0):
   ; GFX10-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-W64-NEXT: {{  $}}
-  ; GFX10-W64-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-W64-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-W64-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_rmw_xchg_acq_rel_single64
@@ -1571,7 +1553,7 @@ define amdgpu_kernel void @wg_rmw_xchg_acq_rel_single64(ptr addrspace(1) %p, i32
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   GLOBAL_INV 8, implicit $exec
   ; GFX12-W32-NEXT:   S_ENDPGM 0
@@ -1583,7 +1565,7 @@ define amdgpu_kernel void @wg_rmw_xchg_acq_rel_single64(ptr addrspace(1) %p, i32
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX12-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_rmw_xchg_acq_rel_single64
@@ -1597,7 +1579,7 @@ define amdgpu_kernel void @wg_rmw_xchg_acq_rel_single64(ptr addrspace(1) %p, i32
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_ATOMIC_SWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel (s32) on %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_ENDPGM 0
   %r = atomicrmw xchg ptr addrspace(1) %p, i32 %x syncscope("workgroup") acq_rel
@@ -1613,7 +1595,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX9-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX9-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_cmpxchg_acq_rel_monotonic_single64
@@ -1624,7 +1606,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX942-NEXT:   $vgpr3 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX942-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: wg_cmpxchg_acq_rel_monotonic_single64
@@ -1638,7 +1620,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W32-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10-W32-NEXT:   S_ENDPGM 0
@@ -1651,7 +1633,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX10-W64-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_cmpxchg_acq_rel_monotonic_single64
@@ -1666,7 +1648,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   GLOBAL_INV 8, implicit $exec
   ; GFX12-W32-NEXT:   S_ENDPGM 0
@@ -1679,7 +1661,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX12-W64-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_cmpxchg_acq_rel_monotonic_single64
@@ -1694,7 +1676,7 @@ define amdgpu_kernel void @wg_cmpxchg_acq_rel_monotonic_single64(ptr addrspace(1
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acq_rel monotonic (s32) on %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_ENDPGM 0
   %r = cmpxchg ptr addrspace(1) %p, i32 %cmp, i32 %new syncscope("workgroup") acq_rel monotonic
@@ -1712,7 +1694,7 @@ define amdgpu_kernel void @wg_cmpxchg_seq_cst_seq_cst_multi(ptr addrspace(1) %p,
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
   ; GFX9-NEXT:   S_WAITCNT_lds_direct
-  ; GFX9-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_cmpxchg_seq_cst_seq_cst_multi
@@ -1725,7 +1707,7 @@ define amdgpu_kernel void @wg_cmpxchg_seq_cst_seq_cst_multi(ptr addrspace(1) %p,
   ; GFX942-NEXT:   $vgpr3 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
   ; GFX942-NEXT:   S_WAITCNT_lds_direct
-  ; GFX942-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-LABEL: name: wg_cmpxchg_seq_cst_seq_cst_multi
@@ -1739,7 +1721,7 @@ define amdgpu_kernel void @wg_cmpxchg_seq_cst_seq_cst_multi(ptr addrspace(1) %p,
   ; GFX10-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.2, addrspace 1)
   ; GFX10-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10-NEXT:   S_ENDPGM 0
@@ -1756,7 +1738,7 @@ define amdgpu_kernel void @wg_cmpxchg_seq_cst_seq_cst_multi(ptr addrspace(1) %p,
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   GLOBAL_INV 8, implicit $exec
   ; GFX12-W32-NEXT:   S_ENDPGM 0
@@ -1774,7 +1756,7 @@ define amdgpu_kernel void @wg_cmpxchg_seq_cst_seq_cst_multi(ptr addrspace(1) %p,
   ; GFX12-W64-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W64-NEXT:   GLOBAL_INV 8, implicit $exec
   ; GFX12-W64-NEXT:   S_ENDPGM 0
@@ -1791,7 +1773,7 @@ define amdgpu_kernel void @wg_cmpxchg_seq_cst_seq_cst_multi(ptr addrspace(1) %p,
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") seq_cst seq_cst (s32) on %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_ENDPGM 0
   %r = cmpxchg ptr addrspace(1) %p, i32 %cmp, i32 %new syncscope("workgroup") seq_cst seq_cst
@@ -1807,7 +1789,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX9-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX9-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX9-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: wg_cmpxchg_acquire_acquire_single64
@@ -1818,7 +1800,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX942-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX942-NEXT:   $vgpr3 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX942-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX942-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: wg_cmpxchg_acquire_acquire_single64
@@ -1829,7 +1811,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX10-W32-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W32-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX10-W32-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W32-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10-W32-NEXT:   S_ENDPGM 0
@@ -1842,7 +1824,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX10-W64-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX10-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX10-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: wg_cmpxchg_acquire_acquire_single64
@@ -1852,7 +1834,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX12-W32-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
   ; GFX12-W32-NEXT:   renamable $vgpr2, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
   ; GFX12-W32-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
-  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W32-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 8, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   GLOBAL_INV 8, implicit $exec
   ; GFX12-W32-NEXT:   S_ENDPGM 0
@@ -1865,7 +1847,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX12-W64-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr3, implicit $exec, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
-  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX12-W64-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: wg_cmpxchg_acquire_acquire_single64
@@ -1877,7 +1859,7 @@ define amdgpu_kernel void @wg_cmpxchg_acquire_acquire_single64(ptr addrspace(1) 
   ; GFX1250-NEXT:   renamable $vgpr2, $vgpr0 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 0, killed $sgpr3, implicit $exec, implicit $exec, implicit $exec, implicit $exec
   ; GFX1250-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.p.load, addrspace 1)
+  ; GFX1250-NEXT:   GLOBAL_ATOMIC_CMPSWAP_SADDR killed renamable $vgpr2, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (load store syncscope("workgroup") acquire acquire (s32) on %ir.2, addrspace 1)
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_ENDPGM 0
   %r = cmpxchg ptr addrspace(1) %p, i32 %cmp, i32 %new syncscope("workgroup") acquire acquire
@@ -2668,42 +2650,40 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX9: bb.0 (%ir-block.0):
   ; GFX9-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX9-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
-  ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
+  ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX9-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+  ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
   ; GFX9-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
   ; GFX9-NEXT:   S_WAITCNT_lds_direct
-  ; GFX9-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load)
+  ; GFX9-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.2)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: flat_wg_st_seq_cst_multi
   ; GFX942: bb.0 (%ir-block.0):
   ; GFX942-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX942-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX942-NEXT:   $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr0_sgpr1, implicit $exec, implicit $exec
+  ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX942-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+  ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
   ; GFX942-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
   ; GFX942-NEXT:   S_WAITCNT_lds_direct
-  ; GFX942-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 1, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load)
+  ; GFX942-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 1, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.2)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-LABEL: name: flat_wg_st_seq_cst_multi
   ; GFX10: bb.0 (%ir-block.0):
   ; GFX10-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX10-NEXT:   renamable $sgpr2 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 44, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
-  ; GFX10-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
-  ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
+  ; GFX10-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.p.kernarg.offset, align 4, addrspace 4)
+  ; GFX10-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+  ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
   ; GFX10-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX10-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
   ; GFX10-NEXT:   S_WAITCNT_lds_direct
   ; GFX10-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load)
+  ; GFX10-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.2)
   ; GFX10-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W32-LABEL: name: flat_wg_st_seq_cst_multi
@@ -2711,14 +2691,14 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX12-W32-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX12-W32-NEXT: {{  $}}
   ; GFX12-W32-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX12-W32-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 $sgpr0, killed $sgpr1, implicit $exec, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
+  ; GFX12-W32-NEXT:   $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 killed $sgpr0, killed $sgpr1, implicit $exec, implicit $exec, implicit $exec, implicit $exec, implicit $exec
   ; GFX12-W32-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX12-W32-NEXT:   S_WAIT_BVHCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_SAMPLECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W32-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W32-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 8, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load)
+  ; GFX12-W32-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 8, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.2)
   ; GFX12-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-W64-LABEL: name: flat_wg_st_seq_cst_multi
@@ -2726,15 +2706,15 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX12-W64-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX12-W64-NEXT: {{  $}}
   ; GFX12-W64-NEXT:   renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s96) from %ir.p.kernarg.offset, align 4, addrspace 4)
-  ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
-  ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
+  ; GFX12-W64-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+  ; GFX12-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
   ; GFX12-W64-NEXT:   $vgpr2 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
   ; GFX12-W64-NEXT:   S_WAIT_BVHCNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_SAMPLECNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_LOADCNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX12-W64-NEXT:   S_WAIT_DSCNT_soft 0
-  ; GFX12-W64-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 8, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load)
+  ; GFX12-W64-NEXT:   FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 8, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.2)
   ; GFX12-W64-NEXT:   S_ENDPGM 0
   ;
   ; GFX1250-LABEL: name: flat_wg_st_seq_cst_multi
@@ -2748,7 +2728,7 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_WAIT_XCNT_soft 0
-  ; GFX1250-NEXT:   FLAT_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.p.load)
+  ; GFX1250-NEXT:   FLAT_STORE_DWORD_SADDR killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("workgroup") seq_cst (s32) into %ir.2)
   ; GFX1250-NEXT:   S_ENDPGM 0
   store atomic i32 %x, ptr addrspace(0) %p syncscope("workgroup") seq_cst, align 4
   ret void

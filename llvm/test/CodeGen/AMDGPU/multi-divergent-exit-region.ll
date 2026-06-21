@@ -85,18 +85,22 @@
 ; GCN-DAG:  s_or_b64            [[EXIT0]], [[EXIT0]], [[TMP0]]
 ; GCN-DAG:  s_or_b64            [[EXIT1]], [[EXIT1]], [[TMP1]]
 
-; GCN: ; %Flow4
-; GCN-NEXT: s_or_b64            exec, exec,
-; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT1]]
+; GCN: ; %Flow3
+; GCN-NEXT: s_or_b64            exec, exec, {{s\[[0-9]+:[0-9]+\]}}
+; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
 ; GCN-NEXT: s_xor_b64
+; GCN-NEXT: s_cbranch_execz
 
 ; GCN: ; %exit1
+; GCN-DAG:  v_mov_b32_e32
+; GCN-DAG:  s_mov_b32 m0
 ; GCN-DAG:  ds_write_b32
 ; GCN-DAG:  s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
 
-; GCN: ; %Flow5
-; GCN-NEXT: s_or_b64            exec, exec,
-; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
+; GCN: ; %Flow4
+; GCN-NEXT: s_or_b64            exec, exec, {{s\[[0-9]+:[0-9]+\]}}
+; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+; GCN-NEXT: s_cbranch_execz
 
 ; GCN: ; %exit0
 ; GCN:      buffer_store_dword

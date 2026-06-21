@@ -8,7 +8,8 @@ declare float @llvm.amdgcn.div.fixup.f32(float, float, float) #1
 
 
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_binop:
-; GCN: s_load_dword [[SGPR:s[0-9]+]],
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: s_mov_b32 [[SGPR:s[0-9]+]], s{{[0-9]+}}
 ; GCN: v_add_f32_e64 [[RESULT:v[0-9]+]], [[SGPR]], [[SGPR]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_twice_binop(ptr addrspace(1) %out, float %a) #0 {
@@ -18,7 +19,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_binop(ptr addrspace(1) %out, floa
 }
 
 ; GCN-LABEL: {{^}}test_sgpr_use_three_ternary_op:
-; GCN: s_load_dword [[SGPR:s[0-9]+]],
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: s_mov_b32 [[SGPR:s[0-9]+]], s{{[0-9]+}}
 ; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[SGPR]], [[SGPR]], [[SGPR]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_three_ternary_op(ptr addrspace(1) %out, float %a) #0 {
@@ -97,7 +99,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_b_a_a(ptr addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_ternary_op_a_a_imm:
-; GCN: s_load_dword [[SGPR:s[0-9]+]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: s_mov_b32 [[SGPR:s[0-9]+]], s{{[0-9]+}}
 ; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[SGPR]], [[SGPR]], 2.0
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_a_imm(ptr addrspace(1) %out, float %a) #0 {
@@ -107,7 +110,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_a_imm(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_ternary_op_a_imm_a:
-; GCN: s_load_dword [[SGPR:s[0-9]+]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: s_mov_b32 [[SGPR:s[0-9]+]], s{{[0-9]+}}
 ; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[SGPR]], 2.0, [[SGPR]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_imm_a(ptr addrspace(1) %out, float %a) #0 {
@@ -118,7 +122,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_imm_a(ptr addrspace(
 
 ; Don't use fma since fma c, x, y is canonicalized to fma x, c, y
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_ternary_op_imm_a_a:
-; GCN: s_load_dword [[SGPR:s[0-9]+]]
+; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN: s_mov_b32 [[SGPR:s[0-9]+]], s{{[0-9]+}}
 ; GCN: v_div_fixup_f32 [[RESULT:v[0-9]+]], 2.0, [[SGPR]], [[SGPR]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_imm_a_a(ptr addrspace(1) %out, float %a) #0 {
@@ -128,7 +133,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_imm_a_a(ptr addrspace(
 }
 
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_ternary_op_a_a_kimm:
-; GCN-DAG: s_load_dword [[SGPR:s[0-9]+]]
+; GCN-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN-DAG: s_mov_b32 [[SGPR:s[0-9]+]], s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x44800000
 ; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[SGPR]], [[SGPR]], [[VK]]
 ; GCN: buffer_store_dword [[RESULT]]
@@ -139,8 +145,8 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_a_kimm(ptr addrspace
 }
 
 ; GCN-LABEL: {{^}}test_literal_use_twice_ternary_op_k_k_s:
-; GCN-DAG: s_load_dword [[SGPR:s[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 [[VGPR:v[0-9]+]], [[SGPR]]
+; GCN-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN-DAG: v_mov_b32_e32 [[VGPR:v[0-9]+]], [[SGPR:s[0-9]+]]
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x44800000
 ; GCN: v_fma_f32 [[RESULT0:v[0-9]+]], [[SK]], [[SK]], [[VGPR]]
 ; GCN: buffer_store_dword [[RESULT0]]
@@ -169,8 +175,8 @@ define amdgpu_kernel void @test_literal_use_twice_ternary_op_k_k_s_x2(ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_literal_use_twice_ternary_op_k_s_k:
-; GCN-DAG: s_load_dword [[SGPR:s[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 [[VGPR:v[0-9]+]], [[SGPR]]
+; GCN-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN-DAG: v_mov_b32_e32 [[VGPR:v[0-9]+]], [[SGPR:s[0-9]+]]
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x44800000
 ; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[VGPR]], [[SK]], [[SK]]
 ; GCN: buffer_store_dword [[RESULT]]
@@ -199,8 +205,8 @@ define amdgpu_kernel void @test_literal_use_twice_ternary_op_k_s_k_x2(ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_literal_use_twice_ternary_op_s_k_k:
-; GCN-DAG: s_load_dword [[SGPR:s[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 [[VGPR:v[0-9]+]], [[SGPR]]
+; GCN-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x0|0x9|0x24}}
+; GCN-DAG: v_mov_b32_e32 [[VGPR:v[0-9]+]], [[SGPR:s[0-9]+]]
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x44800000
 ; GCN: v_fma_f32 [[RESULT:v[0-9]+]], [[VGPR]], [[SK]], [[SK]]
 ; GCN: buffer_store_dword [[RESULT]]

@@ -22,10 +22,9 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 define amdgpu_kernel void @s_cttz_i32(ptr addrspace(1) noalias %out, i32 %val) nounwind {
 ; SI-LABEL: s_cttz_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_ff1_i32_b32 s2, s2
 ; SI-NEXT:    s_min_u32 s4, s2, 32
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -35,15 +34,16 @@ define amdgpu_kernel void @s_cttz_i32(ptr addrspace(1) noalias %out, i32 %val) n
 ;
 ; VI-LABEL: s_cttz_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s6, s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_ff1_i32_b32 s4, s6
-; VI-NEXT:    s_min_u32 s4, s4, 32
-; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_ff1_i32_b32 s0, s2
+; VI-NEXT:    s_min_u32 s0, s0, 32
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: s_cttz_i32:
@@ -60,9 +60,7 @@ define amdgpu_kernel void @s_cttz_i32(ptr addrspace(1) noalias %out, i32 %val) n
 ;
 ; GFX10-LABEL: s_cttz_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_ff1_i32_b32 s2, s2

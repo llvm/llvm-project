@@ -8,18 +8,18 @@ declare void @llvm.sideeffect()
 
 define void @test_sideeffect(ptr %p) {
 ; CHECK-LABEL: @test_sideeffect(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
 ; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    call void @llvm.sideeffect()
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L01]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L12]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L23]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[L34]], i32 3
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[L01]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[L12]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L23]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L34]], i32 3
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr float, ptr %p, i64 1
@@ -42,18 +42,18 @@ declare void @foo()
 
 define void @test_inaccessiblememonly_nounwind_willreturn(ptr %p) {
 ; CHECK-LABEL: @test_inaccessiblememonly_nounwind_willreturn(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[L23:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[L34:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @foo() #[[ATTR1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L01]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L12]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L23]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[L34]], i32 3
-; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[L01]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[L12]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L23]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[L34]], i32 3
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr float, ptr %p, i64 1

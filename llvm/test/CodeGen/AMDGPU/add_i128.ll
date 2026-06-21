@@ -90,15 +90,17 @@ define amdgpu_kernel void @sgpr_operand_reversed(ptr addrspace(1) noalias %out, 
 define amdgpu_kernel void @test_sreg(ptr addrspace(1) noalias %out, i128 %a, i128 %b) {
 ; GCN-LABEL: test_sreg:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0xb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x11
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_u32 s4, s8, s12
-; GCN-NEXT:    s_addc_u32 s5, s9, s13
-; GCN-NEXT:    s_addc_u32 s6, s10, s14
-; GCN-NEXT:    s_addc_u32 s7, s11, s15
+; GCN-NEXT:    s_add_u32 s4, s10, s14
+; GCN-NEXT:    s_addc_u32 s5, s11, s15
+; GCN-NEXT:    s_addc_u32 s6, s12, s0
+; GCN-NEXT:    s_addc_u32 s7, s13, s1
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s0, s8
+; GCN-NEXT:    s_mov_b32 s1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6

@@ -139,8 +139,31 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
     return CreateBitCast(In, Ty);
   };
 
+  // Unlike plain integers, a byte (or vector of bytes) of the same size as a
+  // pointer can be reinterpreted as that pointer with a direct bitcast. This
+  // preserves pointer provenance (the bitcast result is *based on* its
+  // operand), whereas routing through inttoptr/ptrtoint would discard it.
+  // Prefer the direct bitcast whenever the sizes line up; size-mismatched cases
+  // fall through to the integer-based handling below.
+  if (OldTy->isByteOrByteVectorTy() && NewTy->isPtrOrPtrVectorTy() &&
+      DL.getTypeSizeInBits(OldTy) == DL.getTypeSizeInBits(NewTy))
+    return CreateBitCastLike(V, NewTy);
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isByteOrByteVectorTy() &&
+      DL.getTypeSizeInBits(OldTy) == DL.getTypeSizeInBits(NewTy))
+    return CreateBitCastLike(V, NewTy);
+
+  // Byte (and byte-vector) types are not integers, but like integers they can
+  // be reinterpreted as a pointer-sized integer before/after an inttoptr or
+  // ptrtoint step.  Treat them the same as integers here so we never attempt a
+  // direct (and invalid) bitcast between a byte/integer aggregate and a
+  // pointer.
+  bool OldIsIntLike =
+      OldTy->isIntOrIntVectorTy() || OldTy->isByteOrByteVectorTy();
+  bool NewIsIntLike =
+      NewTy->isIntOrIntVectorTy() || NewTy->isByteOrByteVectorTy();
+
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+  if (OldIsIntLike && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
@@ -149,7 +172,7 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntLike) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>

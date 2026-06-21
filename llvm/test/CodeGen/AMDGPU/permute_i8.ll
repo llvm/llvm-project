@@ -3902,19 +3902,19 @@ define amdgpu_kernel void @more_any_extend_to_perm(i8 %arg, <4 x i8> %arg1, i8 %
 ; GFX10-LABEL: more_any_extend_to_perm:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dword s6, s[4:5], 0x34
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0xc0c0304
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0xc0c0104
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v2, s6, s7, v0
-; GFX10-NEXT:    v_perm_b32 v0, s0, s7, v0
-; GFX10-NEXT:    v_perm_b32 v3, s0, s7, v1
-; GFX10-NEXT:    v_perm_b32 v1, s6, s7, v1
-; GFX10-NEXT:    v_mov_b32_e32 v4, s1
+; GFX10-NEXT:    v_perm_b32 v2, s0, s1, v0
+; GFX10-NEXT:    v_perm_b32 v0, s2, s1, v0
+; GFX10-NEXT:    v_perm_b32 v3, s2, s1, v1
+; GFX10-NEXT:    v_perm_b32 v1, s0, s1, v1
+; GFX10-NEXT:    v_mov_b32_e32 v4, s3
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX10-NEXT:    v_mov_b32_e32 v5, s2
+; GFX10-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX10-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    ds_write_b32 v4, v2
@@ -3923,22 +3923,22 @@ define amdgpu_kernel void @more_any_extend_to_perm(i8 %arg, <4 x i8> %arg1, i8 %
 ;
 ; GFX9-LABEL: more_any_extend_to_perm:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xc0c0304
+; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0xc0c0104
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v2, s7
-; GFX9-NEXT:    v_perm_b32 v4, s6, v2, v1
-; GFX9-NEXT:    v_perm_b32 v1, s0, v2, v1
-; GFX9-NEXT:    v_perm_b32 v3, s0, v2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s1
+; GFX9-NEXT:    v_perm_b32 v4, s0, v2, v1
+; GFX9-NEXT:    v_perm_b32 v1, s2, v2, v1
+; GFX9-NEXT:    v_perm_b32 v3, s2, v2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX9-NEXT:    v_perm_b32 v0, s6, v2, v0
+; GFX9-NEXT:    v_perm_b32 v0, s0, v2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v4
-; GFX9-NEXT:    v_mov_b32_e32 v4, s1
+; GFX9-NEXT:    v_mov_b32_e32 v4, s3
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    ds_write_b32 v4, v3
 ; GFX9-NEXT:    ds_write_b32 v1, v0
 ; GFX9-NEXT:    s_endpgm

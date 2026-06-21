@@ -64,10 +64,9 @@ define amdgpu_kernel void @rsq_f32(ptr addrspace(1) noalias %out, ptr addrspace(
 define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %val) {
 ; GCN-DAZ-LABEL: rsq_f32_sgpr:
 ; GCN-DAZ:       ; %bb.0:
-; GCN-DAZ-NEXT:    s_load_dword s2, s[4:5], 0xb
-; GCN-DAZ-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GCN-DAZ-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DAZ-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
 ; GCN-DAZ-NEXT:    s_mov_b32 s2, -1
 ; GCN-DAZ-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -75,21 +74,22 @@ define amdgpu_kernel void @rsq_f32_sgpr(ptr addrspace(1) noalias %out, float %va
 ;
 ; GCN-IEEE-LABEL: rsq_f32_sgpr:
 ; GCN-IEEE:       ; %bb.0:
-; GCN-IEEE-NEXT:    s_load_dword s6, s[4:5], 0xb
-; GCN-IEEE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-IEEE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-IEEE-NEXT:    v_mov_b32_e32 v0, 0x800000
+; GCN-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-IEEE-NEXT:    s_mov_b32 s6, -1
 ; GCN-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; GCN-IEEE-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GCN-IEEE-NEXT:    s_cselect_b32 s2, 24, 0
-; GCN-IEEE-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-IEEE-NEXT:    v_ldexp_f32_e32 v0, s6, v0
+; GCN-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GCN-IEEE-NEXT:    s_and_b64 s[4:5], vcc, exec
+; GCN-IEEE-NEXT:    s_cselect_b32 s3, 24, 0
+; GCN-IEEE-NEXT:    v_mov_b32_e32 v0, s3
+; GCN-IEEE-NEXT:    v_ldexp_f32_e32 v0, s2, v0
 ; GCN-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
-; GCN-IEEE-NEXT:    s_cselect_b32 s4, 12, 0
-; GCN-IEEE-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-IEEE-NEXT:    s_mov_b32 s2, -1
-; GCN-IEEE-NEXT:    v_ldexp_f32_e64 v0, v0, s4
-; GCN-IEEE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-IEEE-NEXT:    s_mov_b32 s4, s0
+; GCN-IEEE-NEXT:    s_cselect_b32 s0, 12, 0
+; GCN-IEEE-NEXT:    s_mov_b32 s5, s1
+; GCN-IEEE-NEXT:    v_ldexp_f32_e64 v0, v0, s0
+; GCN-IEEE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-IEEE-NEXT:    s_endpgm
   %sqrt = call contract float @llvm.sqrt.f32(float %val) nounwind readnone
   %div = fdiv contract float 1.0, %sqrt, !fpmath !0

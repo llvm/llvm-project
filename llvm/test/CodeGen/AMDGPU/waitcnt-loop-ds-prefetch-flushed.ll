@@ -9,8 +9,8 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    s_load_b32 s1, s[4:5], 0x0 nv
-; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x10 nv
+; CHECK-NEXT:    s_load_b32 s3, s[4:5], 0x0 nv
+; CHECK-NEXT:    s_load_b96 s[0:2], s[4:5], 0x8 nv
 ; CHECK-NEXT:    v_and_b32_e32 v10, 0x3ff, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -18,11 +18,11 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    v_dual_mov_b32 v7, v4 :: v_dual_mov_b32 v8, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v4
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_lshl_add_u32 v11, v10, 6, s1
-; CHECK-NEXT:    v_lshl_add_u32 v12, v10, 5, s1
-; CHECK-NEXT:    v_lshl_add_u32 v13, v10, 8, s1
-; CHECK-NEXT:    v_lshl_add_u32 v14, v10, 7, s1
-; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_lshl_add_u32 v11, v10, 6, s3
+; CHECK-NEXT:    v_lshl_add_u32 v12, v10, 5, s3
+; CHECK-NEXT:    v_lshl_add_u32 v13, v10, 8, s3
+; CHECK-NEXT:    v_lshl_add_u32 v14, v10, 7, s3
+; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    ds_load_b64 v[0:1], v11 offset:4
 ; CHECK-NEXT:    ds_load_b64 v[2:3], v12
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -31,8 +31,8 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[2:3]
-; CHECK-NEXT:    s_add_co_i32 s1, s1, 1
-; CHECK-NEXT:    s_cmp_lt_i32 s1, s0
+; CHECK-NEXT:    s_add_co_i32 s3, s3, 1
+; CHECK-NEXT:    s_cmp_lt_i32 s3, s2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[0:1]
 ; CHECK-NEXT:    s_wait_dscnt 0x1
@@ -53,8 +53,6 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[16:17]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b64 v10, v[8:9], s[0:1] scale_offset
 ; CHECK-NEXT:    s_endpgm
 entry:

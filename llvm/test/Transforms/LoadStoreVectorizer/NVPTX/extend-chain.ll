@@ -63,14 +63,14 @@ define void @load6to8(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[P_0:%.*]] = getelementptr i16, ptr [[P]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 16 [[P_0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x i16> poison)
-; CHECK-NEXT:    [[V05:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[V16:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
-; CHECK-NEXT:    [[V27:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
-; CHECK-NEXT:    [[V38:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
-; CHECK-NEXT:    [[V49:%.*]] = extractelement <8 x i16> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x i16> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x i16> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
+; CHECK-NEXT:    [[V03:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V14:%.*]] = extractelement <8 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[V25:%.*]] = extractelement <8 x i16> [[TMP1]], i32 2
+; CHECK-NEXT:    [[V36:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
+; CHECK-NEXT:    [[V47:%.*]] = extractelement <8 x i16> [[TMP1]], i32 4
+; CHECK-NEXT:    [[V58:%.*]] = extractelement <8 x i16> [[TMP1]], i32 5
+; CHECK-NEXT:    [[EXTEND9:%.*]] = extractelement <8 x i16> [[TMP1]], i32 6
+; CHECK-NEXT:    [[EXTEND210:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
 ; CHECK-NEXT:    ret void
 ;
   %p.0 = getelementptr i16, ptr %p, i32 0

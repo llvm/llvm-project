@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; using a buffer_load instruction.
 
 ; FUNC-LABEL: {{^}}truncate_kernarg_i32_to_i16:
-; SI: s_load_dword s
+; SI: s_load_dwordx4
 ; SI: buffer_store_short v
 define amdgpu_kernel void @truncate_kernarg_i32_to_i16(ptr addrspace(1) %out, i32 %arg) nounwind {
   %trunc = trunc i32 %arg to i16
@@ -32,7 +32,7 @@ define amdgpu_kernel void @truncate_buffer_load_i32_to_i16(ptr addrspace(1) %out
 }
 
 ; FUNC-LABEL: {{^}}truncate_kernarg_i32_to_i8:
-; SI: s_load_dword s
+; SI: s_load_dwordx4
 ; SI: buffer_store_byte v
 define amdgpu_kernel void @truncate_kernarg_i32_to_i8(ptr addrspace(1) %out, i32 %arg) nounwind {
   %trunc = trunc i32 %arg to i8
@@ -54,7 +54,7 @@ define amdgpu_kernel void @truncate_buffer_load_i32_to_i8(ptr addrspace(1) %out,
 }
 
 ; FUNC-LABEL: {{^}}truncate_kernarg_i32_to_i1:
-; SI: s_load_dword s
+; SI: s_load_dwordx4
 ; SI: buffer_store_byte v
 define amdgpu_kernel void @truncate_kernarg_i32_to_i1(ptr addrspace(1) %out, i32 %arg) nounwind {
   %trunc = trunc i32 %arg to i1
@@ -76,7 +76,8 @@ define amdgpu_kernel void @truncate_buffer_load_i32_to_i1(ptr addrspace(1) %out,
 }
 
 ; FUNC-LABEL: {{^}}truncate_kernarg_i64_to_i32:
-; SI: s_load_dword s
+; SI-DAG: s_load_dword s{{[0-9]+}},
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}
 ; SI: buffer_store_dword v
 define amdgpu_kernel void @truncate_kernarg_i64_to_i32(ptr addrspace(1) %out, [8 x i32], i64 %arg) nounwind {
   %trunc = trunc i64 %arg to i32
@@ -98,7 +99,8 @@ define amdgpu_kernel void @truncate_buffer_load_i64_to_i32(ptr addrspace(1) %out
 }
 
 ; FUNC-LABEL: {{^}}srl_kernarg_i64_to_i32:
-; SI: s_load_dword s
+; SI-DAG: s_load_dword s{{[0-9]+}},
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}
 ; SI: buffer_store_dword v
 define amdgpu_kernel void @srl_kernarg_i64_to_i32(ptr addrspace(1) %out, [8 x i32], i64 %arg) nounwind {
   %srl = lshr i64 %arg, 32
@@ -123,7 +125,7 @@ define amdgpu_kernel void @srl_buffer_load_i64_to_i32(ptr addrspace(1) %out, ptr
 
 ; Might as well reduce to 8-bit loads.
 ; FUNC-LABEL: {{^}}truncate_kernarg_i16_to_i8:
-; SI: s_load_dword s
+; SI: s_load_dwordx4
 ; SI: buffer_store_byte v
 define amdgpu_kernel void @truncate_kernarg_i16_to_i8(ptr addrspace(1) %out, i16 %arg) nounwind {
   %trunc = trunc i16 %arg to i8
@@ -145,7 +147,8 @@ define amdgpu_kernel void @truncate_buffer_load_i16_to_i8(ptr addrspace(1) %out,
 }
 
 ; FUNC-LABEL: {{^}}srl_kernarg_i64_to_i8:
-; SI: s_load_dword s
+; SI-DAG: s_load_dword s{{[0-9]+}},
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}
 ; SI: buffer_store_byte v
 define amdgpu_kernel void @srl_kernarg_i64_to_i8(ptr addrspace(1) %out, [8 x i32], i64 %arg) nounwind {
   %srl = lshr i64 %arg, 32
@@ -169,7 +172,8 @@ define amdgpu_kernel void @srl_buffer_load_i64_to_i8(ptr addrspace(1) %out, ptr 
 }
 
 ; FUNC-LABEL: {{^}}truncate_kernarg_i64_to_i8:
-; SI: s_load_dword s
+; SI-DAG: s_load_dword s{{[0-9]+}},
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}
 ; SI: buffer_store_byte v
 define amdgpu_kernel void @truncate_kernarg_i64_to_i8(ptr addrspace(1) %out, [8 x i32], i64 %arg) nounwind {
   %trunc = trunc i64 %arg to i8
@@ -191,7 +195,9 @@ define amdgpu_kernel void @truncate_buffer_load_i64_to_i8(ptr addrspace(1) %out,
 }
 
 ; FUNC-LABEL: {{^}}smrd_mask_i32_to_i16
-; SI: s_load_dword [[LOAD:s[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], 0x0
+; SI: s_load_dwordx4
+; SI: s_waitcnt lgkmcnt(0)
+; SI: s_load_dword [[LOAD:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 ; SI: s_waitcnt lgkmcnt(0)
 ; SI: s_and_b32 s{{[0-9]+}}, [[LOAD]], 0xffff
 define amdgpu_kernel void @smrd_mask_i32_to_i16(ptr addrspace(1) %out, ptr addrspace(4) %in) {

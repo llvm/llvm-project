@@ -5,10 +5,10 @@ define void @test_redundant_no_gap(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @test_redundant_no_gap(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr addrspace(1) [[PTR]], align 32
-; CHECK-NEXT:    [[LD03:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LD14:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LD25:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[LD37:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[LD01:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LD12:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LD23:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[LD34:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[LD45:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    ret void
 ;

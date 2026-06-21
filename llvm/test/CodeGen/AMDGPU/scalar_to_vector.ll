@@ -393,33 +393,33 @@ bb:
 define amdgpu_kernel void @scalar_to_vector_test6(ptr addrspace(1) %out, i8 zeroext %val) nounwind {
 ; SI-LABEL: scalar_to_vector_test6:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s6, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX89-LABEL: scalar_to_vector_test6:
 ; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_load_dword s6, s[4:5], 0x2c
-; GFX89-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX89-NEXT:    s_mov_b32 s3, 0xf000
-; GFX89-NEXT:    s_mov_b32 s2, -1
+; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX89-NEXT:    s_mov_b32 s7, 0xf000
+; GFX89-NEXT:    s_mov_b32 s6, -1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX89-NEXT:    v_mov_b32_e32 v0, s6
-; GFX89-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX89-NEXT:    s_mov_b32 s4, s0
+; GFX89-NEXT:    s_mov_b32 s5, s1
+; GFX89-NEXT:    v_mov_b32_e32 v0, s2
+; GFX89-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX89-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: scalar_to_vector_test6:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0

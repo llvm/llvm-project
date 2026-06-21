@@ -7,18 +7,18 @@
 define amdgpu_kernel void @vectorize_alias_scope(ptr addrspace(1) nocapture %a, ptr addrspace(1) nocapture %b, ptr addrspace(1) nocapture readonly %c) #0 {
 ; SCOPE-LABEL: @vectorize_alias_scope(
 ; SCOPE-NEXT:  entry:
-; SCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope !0
-; SCOPE-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A:%.*]], align 4, !noalias !0
-; SCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias !0
+; SCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope [[META0:![0-9]+]]
+; SCOPE-NEXT:    store <2 x float> zeroinitializer, ptr addrspace(1) [[A:%.*]], align 4, !noalias [[META0]]
+; SCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias [[META0]]
 ; SCOPE-NEXT:    ret void
 ;
 ; NOSCOPE-LABEL: @vectorize_alias_scope(
 ; NOSCOPE-NEXT:  entry:
 ; NOSCOPE-NEXT:    [[A_IDX_1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A:%.*]], i64 1
-; NOSCOPE-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A]], align 4, !noalias !0
-; NOSCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope !0
-; NOSCOPE-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A_IDX_1]], align 4, !noalias !0
-; NOSCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias !0
+; NOSCOPE-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A]], align 4, !noalias [[META0:![0-9]+]]
+; NOSCOPE-NEXT:    [[LD_C:%.*]] = load float, ptr addrspace(1) [[C:%.*]], align 4, !alias.scope [[META0]]
+; NOSCOPE-NEXT:    store float 0.000000e+00, ptr addrspace(1) [[A_IDX_1]], align 4, !noalias [[META0]]
+; NOSCOPE-NEXT:    store float [[LD_C]], ptr addrspace(1) [[B:%.*]], align 4, !noalias [[META0]]
 ; NOSCOPE-NEXT:    ret void
 ;
 entry:

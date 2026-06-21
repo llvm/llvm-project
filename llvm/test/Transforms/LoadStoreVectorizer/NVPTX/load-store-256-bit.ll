@@ -696,6 +696,7 @@ define void @int32x8_non_global(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[L01]], i32 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[PTR4]], align 16
 ; CHECK-NEXT:    ret void
+;
 
   %ptr0 = getelementptr i32, ptr %ptr, i64 0
   %ptr1 = getelementptr i32, ptr %ptr, i64 1

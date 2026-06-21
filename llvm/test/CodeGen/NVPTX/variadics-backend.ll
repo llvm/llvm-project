@@ -142,7 +142,7 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
 ; CHECK-PTX-NEXT:    .reg .b16 %rs<4>;
-; CHECK-PTX-NEXT:    .reg .b32 %r<6>;
+; CHECK-PTX-NEXT:    .reg .b32 %r<7>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
@@ -152,8 +152,7 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-PTX-NEXT:    add.s64 %rd3, %rd1, 7;
 ; CHECK-PTX-NEXT:    and.b64 %rd4, %rd3, -8;
-; CHECK-PTX-NEXT:    ld.local.b32 %r2, [%rd4];
-; CHECK-PTX-NEXT:    ld.local.s8 %r3, [%rd4+4];
+; CHECK-PTX-NEXT:    ld.local.v2.b32 {%r2, %r3}, [%rd4];
 ; CHECK-PTX-NEXT:    ld.local.b8 %rs1, [%rd4+7];
 ; CHECK-PTX-NEXT:    st.local.b8 [%rd2+2], %rs1;
 ; CHECK-PTX-NEXT:    ld.local.b8 %rs2, [%rd4+6];
@@ -162,8 +161,9 @@ define dso_local i32 @variadics2(i32 noundef %first, ...) {
 ; CHECK-PTX-NEXT:    st.local.b8 [%rd2], %rs3;
 ; CHECK-PTX-NEXT:    ld.local.b64 %rd5, [%rd4+8];
 ; CHECK-PTX-NEXT:    add.s32 %r4, %r1, %r2;
-; CHECK-PTX-NEXT:    add.s32 %r5, %r4, %r3;
-; CHECK-PTX-NEXT:    cvt.u64.u32 %rd6, %r5;
+; CHECK-PTX-NEXT:    cvt.s32.s8 %r5, %r3;
+; CHECK-PTX-NEXT:    add.s32 %r6, %r4, %r5;
+; CHECK-PTX-NEXT:    cvt.u64.u32 %rd6, %r6;
 ; CHECK-PTX-NEXT:    add.s64 %rd7, %rd6, %rd5;
 ; CHECK-PTX-NEXT:    st.param.b32 [func_retval0], %rd7;
 ; CHECK-PTX-NEXT:    ret;

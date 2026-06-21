@@ -7,13 +7,12 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,GFX10PLUS,GFX11-FAKE16 %s
 
 ; GCN-LABEL: {{^}}store_flat_i32:
-; GCN-DAG: s_load_{{dwordx2|b64}} s[[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],
-; GCN-DAG: s_load_{{dword|b32}} s[[SDATA:[0-9]+]],
+; GCN-DAG: s_load_{{dwordx4|b128}}
 ; GCN: s_waitcnt lgkmcnt(0)
-; GCN-DAG: v_mov_b32_e32 v[[DATA:[0-9]+]], s[[SDATA]]
-; GCN-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], s[[LO_SREG]]
-; GCN-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], s[[HI_SREG]]
-; GCN: flat_store_{{dword|b32}} v[[[LO_VREG]]:[[HI_VREG]]], v[[DATA]]
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 define amdgpu_kernel void @store_flat_i32(ptr addrspace(1) %gptr, i32 %x) #0 {
   %fptr = addrspacecast ptr addrspace(1) %gptr to ptr
   store volatile i32 %x, ptr %fptr, align 4

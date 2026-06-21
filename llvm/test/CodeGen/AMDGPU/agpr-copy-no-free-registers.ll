@@ -556,7 +556,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_add_i32 s3, s5, s3
 ; GFX908-NEXT:    s_lshl_b64 s[4:5], s[2:3], 5
 ; GFX908-NEXT:    s_branch .LBB3_2
-; GFX908-NEXT:  .LBB3_1: ; %Flow20
+; GFX908-NEXT:  .LBB3_1: ; %Flow22
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_12
@@ -655,7 +655,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:  .LBB3_9: ; %loop.exit.guard
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX908-NEXT:    s_xor_b64 s[18:19], s[22:23], -1
-; GFX908-NEXT:  .LBB3_10: ; %Flow19
+; GFX908-NEXT:  .LBB3_10: ; %Flow21
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX908-NEXT:    s_mov_b64 s[2:3], -1
 ; GFX908-NEXT:    s_and_b64 vcc, exec, s[18:19]
@@ -718,7 +718,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    s_add_i32 s3, s5, s3
 ; GFX90A-NEXT:    s_lshl_b64 s[4:5], s[2:3], 5
 ; GFX90A-NEXT:    s_branch .LBB3_2
-; GFX90A-NEXT:  .LBB3_1: ; %Flow20
+; GFX90A-NEXT:  .LBB3_1: ; %Flow22
 ; GFX90A-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX90A-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB3_12
@@ -810,7 +810,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:  .LBB3_9: ; %loop.exit.guard
 ; GFX90A-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX90A-NEXT:    s_xor_b64 s[18:19], s[22:23], -1
-; GFX90A-NEXT:  .LBB3_10: ; %Flow19
+; GFX90A-NEXT:  .LBB3_10: ; %Flow21
 ; GFX90A-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX90A-NEXT:    s_mov_b64 s[2:3], -1
 ; GFX90A-NEXT:    s_and_b64 vcc, exec, s[18:19]
