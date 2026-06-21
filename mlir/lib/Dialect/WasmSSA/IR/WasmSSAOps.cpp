@@ -246,6 +246,16 @@ void FuncImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 //===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+namespace {
+Operation *getGlobalOpTerminatorOp(GlobalOp gop) {
+  return gop.getInitializer().begin()->getTerminator();
+}
+} // namespace
+
+ReturnOp GlobalOp::getInitTerminator() {
+  return llvm::cast<wasmssa::ReturnOp>(getGlobalOpTerminatorOp(*this));
+}
+
 // Custom formats
 ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr symbolName;
@@ -290,6 +300,10 @@ void GlobalOp::print(OpAsmPrinter &printer) {
     printer.printRegion(body, /*printEntryBlockArgs=*/false,
                         /*printBlockTerminators=*/true);
   }
+}
+
+LogicalResult GlobalOp::verify() {
+  return success(llvm::isa<ReturnOp>(getGlobalOpTerminatorOp(*this)));
 }
 
 //===----------------------------------------------------------------------===//
