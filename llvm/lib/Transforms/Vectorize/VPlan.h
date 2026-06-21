@@ -3482,6 +3482,12 @@ public:
     return isPredicated() ? drop_end(operands()) : operands();
   }
 
+  /// Returns the number of operands, excluding the mask if the recipe is
+  /// predicated.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isPredicated();
+  }
+
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
 protected:
