@@ -40,20 +40,20 @@ constexpr int count_entries(cluster::__property property) {
       });
 }
 
-static_assert(count_entries(cluster::__property::__Prepend) == 28);
+static_assert(count_entries(cluster::__property::__Prepend) == 27);
 static_assert(count_entries(cluster::__property::__CR) == 1);
 static_assert(count_entries(cluster::__property::__LF) == 1);
 static_assert(count_entries(cluster::__property::__Control) == 3893);
-static_assert(count_entries(cluster::__property::__Extend) == 2198);
+static_assert(count_entries(cluster::__property::__Extend) == 2276);
 static_assert(count_entries(cluster::__property::__Regional_Indicator) == 26);
-static_assert(count_entries(cluster::__property::__SpacingMark) == 378);
+static_assert(count_entries(cluster::__property::__SpacingMark) == 381);
 static_assert(count_entries(cluster::__property::__L) == 125);
 static_assert(count_entries(cluster::__property::__V) == 100);
 static_assert(count_entries(cluster::__property::__T) == 137);
 static_assert(count_entries(cluster::__property::__LV) == 399);
 static_assert(count_entries(cluster::__property::__LVT) == 10773);
 static_assert(count_entries(cluster::__property::__ZWJ) == 1);
-static_assert(count_entries(cluster::__property::__Extended_Pictographic) == 3537);
+static_assert(count_entries(cluster::__property::__Extended_Pictographic) == 2830);
 
 namespace inCB = std::__indic_conjunct_break;
 constexpr int count_entries(inCB::__property property) {
@@ -66,9 +66,9 @@ constexpr int count_entries(inCB::__property property) {
       });
 }
 
-static_assert(count_entries(inCB::__property::__Linker) == 6);
-static_assert(count_entries(inCB::__property::__Consonant) == 240);
-static_assert(count_entries(inCB::__property::__Extend) == 2192);
+static_assert(count_entries(inCB::__property::__Linker) == 23);
+static_assert(count_entries(inCB::__property::__Consonant) == 913);
+static_assert(count_entries(inCB::__property::__Extend) == 2256);
 
 } // namespace
 
