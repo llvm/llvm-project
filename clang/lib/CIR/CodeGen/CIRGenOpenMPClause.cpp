@@ -74,6 +74,12 @@ static mlir::Value emitMapInfoForVar(CIRGenFunction &cgf,
       /*partial_map=*/builder.getBoolAttr(false));
 }
 
+bool isDirectiveNameUnknown(llvm::omp::Directive directiveName) {
+  if (directiveName == llvm::omp::Directive::OMPD_unknown)
+    return true;
+  return false;
+}
+
 bool OpenMPClauseEmitter::emitProcBind(
     mlir::omp::ProcBindClauseOps &result) const {
   for (const OMPClause *clause : clauses) {
@@ -93,10 +99,15 @@ bool OpenMPClauseEmitter::emitProcBind(
   return false;
 }
 
-bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result) const {
+bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result,
+                                 llvm::omp::Directive directiveName) const {
   for (const OMPClause *clause : clauses) {
     const auto *ic = dyn_cast<OMPIfClause>(clause);
     if (!ic)
+      continue;
+
+    if (!isDirectiveNameUnknown(ic->getNameModifier()) &&
+        ic->getNameModifier() != directiveName)
       continue;
 
     Expr *ifCondition = ic->getCondition();

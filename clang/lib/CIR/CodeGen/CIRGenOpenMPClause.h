@@ -42,7 +42,8 @@ public:
 
   bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
 
-  bool emitIf(mlir::omp::IfClauseOps &result) const;
+  bool emitIf(mlir::omp::IfClauseOps &result,
+              llvm::omp::Directive directiveName) const;
 
   /// Emit map clauses. The optional \p mapSyms parameter collects the
   /// VarDecls corresponding to each map operand.
