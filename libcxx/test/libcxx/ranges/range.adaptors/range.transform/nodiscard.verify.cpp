@@ -71,7 +71,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::transform(range, f);
 
-
+// expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   const_it[0];
 
   {
