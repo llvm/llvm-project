@@ -421,25 +421,25 @@ add_libc_test(
 #     libc.src.math.issignalingl
 # )
 
-# add_libc_test(
-#   iscanonical_c_test
-#   C_TEST
-#   UNIT_TEST_ONLY
-#   SUITE
-#     libc_include_tests
-#   SRCS
-#     iscanonical_test.c
-#   COMPILE_OPTIONS
-#     -Wall
-#     -Werror
-#   DEPENDS
-#     libc.include.llvm-libc-macros.math_function_macros
-#     libc.src.math.iscanonical
-#     libc.src.math.iscanonicalf
-#     libc.src.math.iscanonicall
-#     libc.src.math.iscanonicalf16
-#     libc.src.math.iscanonicalf128
-# )
+add_libc_test(
+  iscanonical_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    iscanonical_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.src.math.iscanonical
+    libc.src.math.iscanonicalf
+    libc.src.math.iscanonicall
+    libc.src.math.iscanonicalf16
+    libc.src.math.iscanonicalf128
+)
 
 add_libc_test(
   isinf_c_test
