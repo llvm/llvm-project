@@ -948,6 +948,10 @@
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++20"
+#  endif
+
 #  ifdef __cpp_lib_void_t
 #    error "__cpp_lib_void_t should not be defined before c++17"
 #  endif
@@ -1952,6 +1956,10 @@
 
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++20"
 #  endif
 
 #  ifdef __cpp_lib_void_t
@@ -3147,6 +3155,10 @@
 #  endif
 #  if __cpp_lib_variant != 202102L
 #    error "__cpp_lib_variant should have the value 202102L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_void_t
@@ -4609,6 +4621,13 @@
 #  endif
 #  if __cpp_lib_variant != 202106L
 #    error "__cpp_lib_variant should have the value 202106L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should be defined in c++20"
+#  endif
+#  if __cpp_lib_view_interface != 202606L
+#    error "__cpp_lib_view_interface should have the value 202606L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_void_t
@@ -6299,6 +6318,13 @@
 #  endif
 #  if __cpp_lib_variant != 202106L
 #    error "__cpp_lib_variant should have the value 202106L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should be defined in c++23"
+#  endif
+#  if __cpp_lib_view_interface != 202606L
+#    error "__cpp_lib_view_interface should have the value 202606L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_void_t
@@ -8322,6 +8348,13 @@
 #  endif
 #  if __cpp_lib_variant != 202306L
 #    error "__cpp_lib_variant should have the value 202306L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should be defined in c++26"
+#  endif
+#  if __cpp_lib_view_interface != 202606L
+#    error "__cpp_lib_view_interface should have the value 202606L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_void_t
