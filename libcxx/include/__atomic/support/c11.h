@@ -47,7 +47,9 @@ struct __cxx_atomic_base_impl {
   }
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
+#if _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
     std::__clear_padding_if_needed(__a_value);
+#endif
   }
   _Atomic(_Tp) __a_value;
 };
