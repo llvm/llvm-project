@@ -686,7 +686,7 @@ static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
   unsigned EllipsisLines = 3;
   if (EllipsisLines < StringRef(ElidedLines).count('\n')) {
     for (unsigned i = 0; i < EllipsisLines; ++i) {
-      WithColor(OS, raw_ostream::SAVEDCOLOR, /*Bold=*/true)
+      WithColor(OS, raw_ostream::BRIGHT_BLACK, /*Bold=*/true)
           << right_justify(".", LabelWidthGlobal);
       OS << '\n';
     }
@@ -810,7 +810,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
     }
 
     // Print right-aligned line number.
-    WithColor(*LineOS, raw_ostream::SAVEDCOLOR, /*Bold=*/true, /*BG=*/false,
+    WithColor(*LineOS, raw_ostream::BRIGHT_BLACK, /*Bold=*/true, /*BG=*/false,
               TheColorMode)
         << format_decimal(Line, LabelWidthGlobal) << ": ";
 
