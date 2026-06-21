@@ -118,7 +118,7 @@ void test() {
   }
 
   {
-    // ===== Non-const sentinels =====
+    // Non-const sentinels
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     transformed_range_sent.base();
 
