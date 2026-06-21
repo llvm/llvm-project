@@ -1157,6 +1157,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
 
+  // Forward the SLP vectorization preference to the LTO backend by toggling
+  // the existing -vectorize-slp cl::opt, which the pass honors directly. This
+  // avoids minting dedicated linker options for what is only pipeline tuning.
+  if (Arg *A = Args.getLastArg(options::OPT_fslp_vectorize,
+                               options::OPT_fno_slp_vectorize))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-vectorize-slp=" +
+        (A->getOption().matches(options::OPT_fslp_vectorize) ? "1" : "0")));
+
   // Pass down GlobalISel options.
   if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
                                options::OPT_fno_global_isel)) {

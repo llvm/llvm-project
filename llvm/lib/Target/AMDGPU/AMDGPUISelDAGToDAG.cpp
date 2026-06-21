@@ -706,6 +706,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
+    if (N->getValueType(0) == MVT::i64) {
+      SelectAddcSubbI64(N);
+      return;
+    }
+
     if (N->getValueType(0) != MVT::i32)
       break;
 
@@ -713,6 +718,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     return;
   case ISD::UADDO:
   case ISD::USUBO: {
+    if (N->getValueType(0) == MVT::i64) {
+      SelectAddcSubbI64(N);
+      return;
+    }
+
     SelectUADDO_USUBO(N);
     return;
   }
@@ -1047,7 +1057,9 @@ SDValue AMDGPUDAGToDAGISel::getMaterializedScalarImm32(int64_t Val,
   return SDValue(Mov, 0);
 }
 
-// FIXME: Should only handle uaddo_carry/usubo_carry
+// Keep this as a fallback for i64 ADDC/ADDE/SUBC/SUBE glue nodes. Wide integer
+// add/sub should normally expand through the explicit carry nodes handled in
+// SelectAddcSubbI64.
 void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
@@ -1134,6 +1146,84 @@ void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
                                                       : AMDGPU::S_SUB_CO_PSEUDO;
     CurDAG->SelectNodeTo(N, Opc, N->getVTList(), {LHS, RHS, CI});
   }
+}
+
+void AMDGPUDAGToDAGISel::SelectAddcSubbI64(SDNode *N) {
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  unsigned Opcode = N->getOpcode();
+  bool ConsumeCarry = Opcode == ISD::UADDO_CARRY || Opcode == ISD::USUBO_CARRY;
+  bool IsAdd = Opcode == ISD::UADDO || Opcode == ISD::UADDO_CARRY;
+
+  SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
+  SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
+
+  SDNode *Lo0 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, LHS, Sub0);
+  SDNode *Hi0 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, LHS, Sub1);
+
+  SDNode *Lo1 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, RHS, Sub0);
+  SDNode *Hi1 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, RHS, Sub1);
+
+  SDVTList VTList = CurDAG->getVTList(MVT::i32, N->getValueType(1));
+
+  static const unsigned NoCarryOpcMap[2][2] = {
+      {AMDGPU::S_USUBO_PSEUDO, AMDGPU::S_UADDO_PSEUDO},
+      {AMDGPU::V_SUB_CO_U32_e64, AMDGPU::V_ADD_CO_U32_e64}};
+  static const unsigned CarryOpcMap[2][2] = {
+      {AMDGPU::S_SUB_CO_PSEUDO, AMDGPU::S_ADD_CO_PSEUDO},
+      {AMDGPU::V_SUBB_U32_e64, AMDGPU::V_ADDC_U32_e64}};
+
+  bool IsVALU = N->isDivergent();
+
+  unsigned NoCarryOpc = NoCarryOpcMap[IsVALU][IsAdd];
+  unsigned CarryOpc = CarryOpcMap[IsVALU][IsAdd];
+  SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
+
+  SDNode *AddLo;
+  if (!ConsumeCarry) {
+    if (IsVALU) {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0), Clamp};
+      AddLo = CurDAG->getMachineNode(NoCarryOpc, DL, VTList, Args);
+    } else {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0)};
+      AddLo = CurDAG->getMachineNode(NoCarryOpc, DL, VTList, Args);
+    }
+  } else {
+    if (IsVALU) {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0), N->getOperand(2),
+                        Clamp};
+      AddLo = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+    } else {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0), N->getOperand(2)};
+      AddLo = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+    }
+  }
+
+  SDNode *AddHi;
+  if (IsVALU) {
+    SDValue Args[] = {SDValue(Hi0, 0), SDValue(Hi1, 0), SDValue(AddLo, 1),
+                      Clamp};
+    AddHi = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+  } else {
+    SDValue Args[] = {SDValue(Hi0, 0), SDValue(Hi1, 0), SDValue(AddLo, 1)};
+    AddHi = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+  }
+
+  unsigned RC = IsVALU ? AMDGPU::VReg_64RegClassID : AMDGPU::SReg_64RegClassID;
+  SDValue RegSequenceArgs[] = {CurDAG->getTargetConstant(RC, DL, MVT::i32),
+                               SDValue(AddLo, 0), Sub0, SDValue(AddHi, 0),
+                               Sub1};
+  SDNode *RegSequence = CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                               MVT::i64, RegSequenceArgs);
+
+  ReplaceUses(SDValue(N, 1), SDValue(AddHi, 1));
+  ReplaceNode(N, RegSequence);
 }
 
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {

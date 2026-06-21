@@ -449,6 +449,9 @@ struct GenericKernelTy {
   /// Get the size of the static per-block memory consumed by the kernel.
   uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
+  /// Get the maximum number of threads per block that this kernel may use.
+  uint32_t getMaxThreads() const { return MaxNumThreads; }
+
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
     assert(ImagePtr && "Kernel is not initialized!");
@@ -1110,7 +1113,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the number of lanes used for the RPC interface.
   virtual uint32_t getRPCNumLanes() const { return getWarpSize(); }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
-  uint32_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
+  /// Get the maximum number of blocks that can be launched. The \p NumThreads
+  /// argument is the per-block thread count the kernel will be launched with.
+  virtual uint32_t getBlockLimit(uint32_t NumThreads) const {
+    return GridValues.GV_Max_Teams;
+  }
   uint32_t getDefaultNumThreads() const {
     return GridValues.GV_Default_WG_Size;
   }
@@ -1248,6 +1255,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
                          bool IsNative, bool SaveOutput, bool EmitReport,
+                         const char *ReportFilename,
                          const char *OutputDirPath) {
     if (RecordReplay)
       return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
@@ -1263,7 +1271,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
     RecordReplay =
         new NativeRecordReplayTy(Status, OutputDirPath ? OutputDirPath : "",
-                                 SaveOutput, EmitReport, *this);
+                                 SaveOutput, EmitReport, ReportFilename, *this);
     return RecordReplay->init(Size, VAddr);
   }
 
@@ -1583,6 +1591,7 @@ public:
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,
                                    bool SaveOutput, bool EmitReport,
+                                   const char *ReportFilename,
                                    const char *OutputDirPath);
 
   /// Loads the associated binary into the plugin and returns a handle to it.

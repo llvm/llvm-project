@@ -3482,6 +3482,12 @@ public:
     return isPredicated() ? drop_end(operands()) : operands();
   }
 
+  /// Returns the number of operands, excluding the mask if the recipe is
+  /// predicated.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isPredicated();
+  }
+
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
 protected:
@@ -4285,10 +4291,7 @@ public:
 
   /// Return the cost of this VPScalarIVStepsRecipe.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   VPValue *getStepValue() const { return getOperand(1); }
 
