@@ -27,7 +27,7 @@
 ; RUN: %ProtectFileCheckOutput not FileCheck -dump-input=foobar 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefix=BADVAL
 
-BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find option named 'foobar'!
+BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find option named 'foobar'!
 
 ;--------------------------------------------------
 ; Check -dump-input=help.
@@ -228,28 +228,29 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 ; HELP-NOT: {{.}}
 
 ; Trace is sometimes suppressed.
-; TRACE:       {{.*}}remark:{{.*}}
-; NOTRACE-NOT: remark:
+;       TRACE:{{.*}}remark:{{.*}}
+; NOTRACE-NOT:remark:
 
 ; Error diagnostics are never suppressed.
-; ERR: {{.*}}error:{{.*}}
+; ERR:{{.*}}error:{{.*}}
 
-; NODUMP-NOT: <<<<<<
+; NODUMP-NOT:<<<<<<
 
-; DUMP-OK:      Input was:
-; DUMP-OK-NEXT: <<<<<<
-; DUMP-OK-NEXT:          1: hello 
-; DUMP-OK-NEXT: check:1     ^~~~~
-; DUMP-OK-NEXT:          2: world 
-; DUMP-OK-NEXT: next:2      ^~~~~
-; DUMP-OK-NEXT: >>>>>>
+;      DUMP-OK:Input was:
+; DUMP-OK-NEXT:<<<<<<
+; DUMP-OK-NEXT:         1: hello 
+; DUMP-OK-NEXT:check:1     ^~~~~
+; DUMP-OK-NEXT:         2: world 
+; DUMP-OK-NEXT:next:2      ^~~~~
+; DUMP-OK-NEXT:>>>>>>
 
-; DUMP-ERR:        Input was:
-; DUMP-ERR-NEXT:   <<<<<<
-; DUMP-ERR-NEXT:            1: hello 
-; DUMP-ERR-V-NEXT: check:1     ^~~~~
-; DUMP-ERR-NEXT:   next:2'0         X error: no match found
-; DUMP-ERR-NEXT:            2: whirled 
-; DUMP-ERR-NEXT:   next:2'0    ~~~~~~~~
-; DUMP-ERR-NEXT:   next:2'1    ?        possible intended match
-; DUMP-ERR-NEXT:   >>>>>>
+;        DUMP-ERR:Input was:
+;   DUMP-ERR-NEXT:<<<<<<
+;   DUMP-ERR-NEXT:          1: hello 
+; DUMP-ERR-V-NEXT:check:1      ^~~~~
+;   DUMP-ERR-NEXT:next:2'0         {   search range start (exclusive)
+;   DUMP-ERR-NEXT:next:2'1             error: no match found
+;   DUMP-ERR-NEXT:          2: whirled 
+;   DUMP-ERR-NEXT:next:2'2     ?         possible intended match
+;   DUMP-ERR-NEXT:next:2'3             } search range end (exclusive)
+;   DUMP-ERR-NEXT:>>>>>>

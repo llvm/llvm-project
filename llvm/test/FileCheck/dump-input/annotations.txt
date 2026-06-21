@@ -132,12 +132,12 @@
 ;        CHK:<<<<<<
 ;   CHK-NEXT:              1: hello 
 ; CHK-V-NEXT:check:1          ^~~~~
-;   CHK-NEXT:check:2'0             X error: no match found
+;   CHK-NEXT:check:2'0            {   search range start (exclusive)
+;   CHK-NEXT:check:2'1                error: no match found
 ;   CHK-NEXT:              2: again 
-;   CHK-NEXT:check:2'0        ~~~~~~
 ;   CHK-NEXT:              3: whirled 
-;   CHK-NEXT:check:2'0        ~~~~~~~~
-;   CHK-NEXT:check:2'1        ?        possible intended match
+;   CHK-NEXT:check:2'2        ?         possible intended match
+;   CHK-NEXT:check:2'3                } search range end (exclusive)
 ;   CHK-NEXT:>>>>>>
 ;    CHK-NOT:{{.}}
 
@@ -166,25 +166,27 @@
 ; CNT-V-NEXT:count:1'0        ^~~~
 ; CNT-V-NEXT:              2: repete 
 ; CNT-V-NEXT:count:1'1          ^~~~
-; CNT-V-NEXT:count:1'2              X error: no match found
+; CNT-V-NEXT:count:1'2             {   search range start (exclusive)
+; CNT-V-NEXT:count:1'3                 error: no match found
 ; CNT-V-NEXT:              3: repeat 
-; CNT-V-NEXT:count:1'2        ~~~~~~~
-; CNT-V-NEXT:count:1'3        ?       possible intended match
+; CNT-V-NEXT:count:1'4        ?        possible intended match
+; CNT-V-NEXT:count:1'5               } search range end (exclusive)
 ; CNT-V-NEXT:>>>>>>
 ;  CNT-V-NOT:{{.}}
 
 ;      CNT-Q:<<<<<<
 ; CNT-Q-NEXT:              1: pete 
 ; CNT-Q-NEXT:              2: repete 
-; CNT-Q-NEXT:count:1'0              X error: no match found
+; CNT-Q-NEXT:count:1'0             {   search range start (exclusive)
+; CNT-Q-NEXT:count:1'1                 error: no match found
 ; CNT-Q-NEXT:              3: repeat 
-; CNT-Q-NEXT:count:1'0        ~~~~~~~
-; CNT-Q-NEXT:count:1'1        ?       possible intended match
+; CNT-Q-NEXT:count:1'2        ?        possible intended match
+; CNT-Q-NEXT:count:1'3               } search range end (exclusive)
 ; CNT-Q-NEXT:>>>>>>
 ;  CNT-Q-NOT:{{.}}
 
 ;--------------------------------------------------
-; CHECK-NEXT (also: EOF search-range, wrong-line match)
+; CHECK-NEXT (also: EOF search-range, single-char search range, wrong-line match)
 ;--------------------------------------------------
 
 ; Good match and no match.
@@ -209,7 +211,8 @@
 ; NXT-V-NEXT:check:1          ^~~~~
 ;   NXT-NEXT:              2: again 
 ; NXT-V-NEXT:next:2           ^~~~~
-;   NXT-NEXT:next:3                X error: no match found
+;   NXT-NEXT:next:3'0             { } search range (exclusive bounds)
+;   NXT-NEXT:next:3'1                 error: no match found
 ;   NXT-NEXT:>>>>>>
 ;    NXT-NOT:{{.}}
 
@@ -231,15 +234,16 @@
 ; NXT2-V-NEXT:check:1          ^~~~~
 ;   NXT2-NEXT:              2: again 
 ; NXT2-V-NEXT:next:2           ^~~~~
+;   NXT2-NEXT:next:3'0             {   search range start (exclusive)
 ;   NXT2-NEXT:              3: yonder 
 ;   NXT2-NEXT:              4: world 
-;   NXT2-NEXT:next:3           !~~~~  error: match on wrong line
+;   NXT2-NEXT:next:3'1         !~~~~   error: match on wrong line
+;   NXT2-NEXT:next:3'2               } search range end (exclusive)
 ;   NXT2-NEXT:>>>>>>
 ;    NXT2-NOT:{{.}}
 
 ;--------------------------------------------------
-; CHECK-SAME (also: multiple annotations per line, single-char search range,
-; wrong-line match)
+; CHECK-SAME (also: multiple annotations per line, wrong-line match)
 ;--------------------------------------------------
 
 ; Good match and no match.
@@ -262,7 +266,8 @@
 ;   SAM-NEXT:              1: hello world! 
 ; SAM-V-NEXT:check:1          ^~~~~
 ; SAM-V-NEXT:same:2                 ^~~~~
-;   SAM-NEXT:same:3                      X~ error: no match found
+;   SAM-NEXT:same:3'0                   {  } search range (exclusive bounds)
+;   SAM-NEXT:same:3'1                        error: no match found
 ;   SAM-NEXT:>>>>>>
 ;    SAM-NOT:{{.}}
 
@@ -282,13 +287,15 @@
 ;   SAM2-NEXT:              1: hello world! 
 ; SAM2-V-NEXT:check:1          ^~~~~
 ; SAM2-V-NEXT:same:2                 ^~~~~
+;   SAM2-NEXT:same:3'0                   {    search range start (exclusive)
 ;   SAM2-NEXT:              2: again 
-;   SAM2-NEXT:same:3           !~~~~  error: match on wrong line
+;   SAM2-NEXT:same:3'1         !~~~~   error: match on wrong line
+;   SAM2-NEXT:same:3'2               } search range end (exclusive)
 ;   SAM2-NEXT:>>>>>>
 ;    SAM2-NOT:{{.}}
 
 ;--------------------------------------------------
-; CHECK-EMPTY (also: search range ends at label, single-char match, wrong-line
+; CHECK-EMPTY (also: search range ends at label, empty match range, wrong-line
 ; match)
 ;--------------------------------------------------
 
@@ -322,12 +329,12 @@
 ; EMP-V-NEXT:check:1          ^~~~~
 ;   EMP-NEXT:              2:  
 ; EMP-V-NEXT:empty:2          ^
-;   EMP-NEXT:empty:3          X error: no match found
+;   EMP-NEXT:empty:3'0       {   search range start (exclusive)
+;   EMP-NEXT:empty:3'1           error: no match found
 ;   EMP-NEXT:              3: world 
-;   EMP-NEXT:empty:3          ~~~~~~
 ;   EMP-NEXT:              4: label 
 ; EMP-V-NEXT:label:4          ^~~~~
-;   EMP-NEXT:empty:3          ~~~~~
+;   EMP-NEXT:empty:3'2             }  search range end (exclusive)
 ;   EMP-NEXT:>>>>>>
 ;    EMP-NOT:{{.}}
 
@@ -347,12 +354,24 @@
 ; Verbose diagnostics are suppressed but not errors.
 ; EMP2:{{.*}}error:{{.*}}
 
+; TODO: The search range of CHECK-EMPTY logically ends at the last character of
+; the file, as show below.  However, it can actually match the empty string
+; immediately after its search range, as shown below.  That is, -dump-input
+; seems to be doing the right thing: it makes no sense to show the search range
+; including a non-existent character.  If it's worth the effort to change
+; anything here, then CHECK-EMPTY should probably report any match past the end
+; of the file as a failure to match at all.  That would also include cases that
+; are currently successful matches, but that's a strange enough case that it
+; probably wouldn't be backward-incompatible for real test suites.
+
 ;        EMP2:<<<<<<
 ;   EMP2-NEXT:              1: hello 
 ; EMP2-V-NEXT:check:1          ^~~~~
+;   EMP2-NEXT:empty:2'0            {   search range start (exclusive)
 ;   EMP2-NEXT:              2: world 
+;   EMP2-NEXT:empty:2'2              } search range end (exclusive)
 ;   EMP2-NEXT:              3: 
-;   EMP2-NEXT:empty:2          ! error: match on wrong line
+;   EMP2-NEXT:empty:2'1        ! error: match on wrong line
 ;   EMP2-NEXT:>>>>>>
 ;    EMP2-NOT:{{.}}
 
@@ -379,12 +398,13 @@
 
 ;         NOT:<<<<<<
 ;    NOT-NEXT:              1: hello 
-; NOT-VV-NEXT:not:1            X~~~~~
+; NOT-VV-NEXT:not:1'0         {        search range start (exclusive)
+;    NOT-NEXT:not:2'0         {        search range start (exclusive)
 ;    NOT-NEXT:              2: world 
-; NOT-VV-NEXT:not:1            ~~~~~~
-;    NOT-NEXT:not:2            !~~~~  error: no match expected
+;    NOT-NEXT:not:2'1          !~~~~   error: no match expected
 ;    NOT-NEXT:              3: again 
-; NOT-VV-NEXT:not:1            ~~~~~~
+; NOT-VV-NEXT:not:1'1                } search range end (exclusive)
+;    NOT-NEXT:not:2'2                } search range end (exclusive)
 ; NOT-VV-NEXT:              4: 
 ; NOT-VV-NEXT:eof:2            ^
 ;    NOT-NEXT:>>>>>>
@@ -404,13 +424,14 @@
 
 ;         NOT2:<<<<<<
 ;    NOT2-NEXT:              1: hello 
-; NOT2-VV-NEXT:not:1            X~~~~~
+; NOT2-VV-NEXT:not:1'0         {        search range start (exclusive)
+;    NOT2-NEXT:not:2'0         {        search range start (exclusive)
 ;    NOT2-NEXT:              2: world 
-; NOT2-VV-NEXT:not:1            ~~~~~~
-;    NOT2-NEXT:not:2            !~~~~  error: no match expected
+;    NOT2-NEXT:not:2'1          !~~~~   error: no match expected
 ;    NOT2-NEXT:              3: again 
 ;  NOT2-V-NEXT:check:3            ^~~
-; NOT2-VV-NEXT:not:1            ~~
+; NOT2-VV-NEXT:not:1'1            }     search range end (exclusive)
+;    NOT2-NEXT:not:2'2            }     search range end (exclusive)
 ;    NOT2-NEXT:>>>>>>
 ;     NOT2-NOT:{{.}}
 
@@ -440,14 +461,15 @@
 ;      DAG-VV:<<<<<<
 ; DAG-VV-NEXT:              1: abc 
 ; DAG-VV-NEXT:dag:2            ^~~
-; DAG-VV-NEXT:dag:3'0          !~~  discard: overlaps earlier match
+; DAG-VV-NEXT:dag:3'0          !~~   discard: overlaps earlier match
 ; DAG-VV-NEXT:              2: def 
 ; DAG-VV-NEXT:dag:1            ^~~
-; DAG-VV-NEXT:dag:4'0          !~~  discard: overlaps earlier match
-; DAG-VV-NEXT:dag:4'1             X error: no match found
+; DAG-VV-NEXT:dag:4'0          !~~   discard: overlaps earlier match
+; DAG-VV-NEXT:dag:4'1            {   search range start (exclusive)
+; DAG-VV-NEXT:dag:4'2                error: no match found
 ; DAG-VV-NEXT:              3: abc 
 ; DAG-VV-NEXT:dag:3'1          ^~~
-; DAG-VV-NEXT:dag:4'1          ~~~~
+; DAG-VV-NEXT:dag:4'3              } search range end (exclusive)
 ; DAG-VV-NEXT:>>>>>>
 ;  DAG-VV-NOT:{{.}}
 
@@ -456,19 +478,21 @@
 ; DAG-VQ-NEXT:dag:2            ^~~
 ; DAG-VQ-NEXT:              2: def 
 ; DAG-VQ-NEXT:dag:1            ^~~
-; DAG-VQ-NEXT:dag:4               X error: no match found
+; DAG-VQ-NEXT:dag:4'0            {   search range start (exclusive)
+; DAG-VQ-NEXT:dag:4'1                error: no match found
 ; DAG-VQ-NEXT:              3: abc 
 ; DAG-VQ-NEXT:dag:3            ^~~
-; DAG-VQ-NEXT:dag:4            ~~~~
+; DAG-VQ-NEXT:dag:4'2              } search range end (exclusive)
 ; DAG-VQ-NEXT:>>>>>>
 ;  DAG-VQ-NOT:{{.}}
 
 ;      DAG-Q:<<<<<<
 ; DAG-Q-NEXT:              1: abc 
 ; DAG-Q-NEXT:              2: def 
-; DAG-Q-NEXT:dag:4               X error: no match found
+; DAG-Q-NEXT:dag:4'0            {   search range start (exclusive)
+; DAG-Q-NEXT:dag:4'1                error: no match found
 ; DAG-Q-NEXT:              3: abc 
-; DAG-Q-NEXT:dag:4            ~~~~
+; DAG-Q-NEXT:dag:4'2              } search range end (exclusive)
 ; DAG-Q-NEXT:>>>>>>
 ;  DAG-Q-NOT:{{.}}
 
@@ -497,13 +521,14 @@
 ; DAG1L-VV-NEXT:              1: abc def abc def 
 ; DAG1L-VV-NEXT:dag:1                ^~~
 ; DAG1L-VV-NEXT:dag:2             ^~
-; DAG1L-VV-NEXT:dag:3'0          !~~              discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:3'0          !~~               discard: overlaps earlier match
 ; DAG1L-VV-NEXT:dag:3'1                  ^~~
-; DAG1L-VV-NEXT:dag:4'0              !~           discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:4'0              !~            discard: overlaps earlier match
 ; DAG1L-VV-NEXT:dag:4'1                      ^~
-; DAG1L-VV-NEXT:dag:5'0              !~~          discard: overlaps earlier match
-; DAG1L-VV-NEXT:dag:5'1                      !~~  discard: overlaps earlier match
-; DAG1L-VV-NEXT:dag:5'2                        X~ error: no match found
+; DAG1L-VV-NEXT:dag:5'0              !~~           discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:5'1                      !~~   discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:5'2                       {  } search range (exclusive bounds)
+; DAG1L-VV-NEXT:dag:5'3                            error: no match found
 ; DAG1L-VV-NEXT:>>>>>>
 ;  DAG1L-VV-NOT:{{.}}
 
@@ -513,13 +538,15 @@
 ; DAG1L-VQ-NEXT:dag:2             ^~
 ; DAG1L-VQ-NEXT:dag:3                    ^~~
 ; DAG1L-VQ-NEXT:dag:4                        ^~
-; DAG1L-VQ-NEXT:dag:5                          X~ error: no match found
+; DAG1L-VQ-NEXT:dag:5'0                       {  } search range (exclusive bounds)
+; DAG1L-VQ-NEXT:dag:5'1                            error: no match found
 ; DAG1L-VQ-NEXT:>>>>>>
 ;  DAG1L-VQ-NOT:{{.}}
 
 ;      DAG1L-Q:<<<<<<
 ; DAG1L-Q-NEXT:              1: abc def abc def 
-; DAG1L-Q-NEXT:dag:5                          X~ error: no match found
+; DAG1L-Q-NEXT:dag:5'0                       {  } search range (exclusive bounds)
+; DAG1L-Q-NEXT:dag:5'1                            error: no match found
 ; DAG1L-Q-NEXT:>>>>>>
 ;  DAG1L-Q-NOT:{{.}}
 
@@ -585,31 +612,34 @@
 ;  LAB-V-NEXT:              2: labelA 
 ;  LAB-V-NEXT:label:2'0        ^~~~~~
 ;  LAB-V-NEXT:label:2'1        ^~~~~~
-;  LAB-V-NEXT:check:3                X error: no match found
+;  LAB-V-NEXT:check:3'0             {   search range start (exclusive)
+;  LAB-V-NEXT:check:3'1                 error: no match found
 ;  LAB-V-NEXT:              3: textA 
-;  LAB-V-NEXT:check:3          ~~~~~~
 ;  LAB-V-NEXT:              4: labelB 
 ;  LAB-V-NEXT:label:4          ^~~~~~
-;  LAB-V-NEXT:check:3          ~~~~~~
+;  LAB-V-NEXT:check:3'2              }  search range end (exclusive)
 ;  LAB-V-NEXT:              5: textB 
 ;  LAB-V-NEXT:              6: labelC 
 ;  LAB-V-NEXT:label:6'0        ^~~~~~
 ;  LAB-V-NEXT:check:5          ^~~~~~
-;  LAB-V-NEXT:label:6'1              X error: no match found
-; LAB-VV-NEXT:not:7                  X
+;  LAB-V-NEXT:label:6'1             {}  search range (exclusive bounds)
+;  LAB-V-NEXT:label:6'2                 error: no match found
+; LAB-VV-NEXT:not:7'0               {   search range start (exclusive)
 ;  LAB-V-NEXT:              7: textC 
-; LAB-VV-NEXT:not:7            ~~~~~~
+; LAB-VV-NEXT:not:7'1                } search range end (exclusive)
 ;  LAB-V-NEXT:              8: labelD 
 ;  LAB-V-NEXT:label:8'0        ^~~~~~
 ;  LAB-V-NEXT:label:8'1        ^~~~~~
+;  LAB-V-NEXT:not:9'0               {   search range start (exclusive)
 ;  LAB-V-NEXT:              9: textD 
-;  LAB-V-NEXT:not:9            !~~~~  error: no match expected
+;  LAB-V-NEXT:not:9'1          !~~~~   error: no match expected
+;  LAB-V-NEXT:not:9'2                } search range end (exclusive)
 ;  LAB-V-NEXT:             10: labelE 
 ;  LAB-V-NEXT:label:10'0       ^~~~~~
 ;  LAB-V-NEXT:label:10'1       ^~~~~~
-; LAB-VV-NEXT:not:11                 X
+; LAB-VV-NEXT:not:11'0              {   search range start (exclusive)
 ;  LAB-V-NEXT:             11: textE 
-; LAB-VV-NEXT:not:11           ~~~~~~
+; LAB-VV-NEXT:not:11'1               } search range end (exclusive)
 ;  LAB-V-NEXT:             12: labelF 
 ;  LAB-V-NEXT:label:12'0       ^~~~~~
 ;  LAB-V-NEXT:label:12'1       ^~~~~~
@@ -619,18 +649,21 @@
 ;      LAB-Q:<<<<<<
 ; LAB-Q-NEXT:              1: text 
 ; LAB-Q-NEXT:              2: labelA 
-; LAB-Q-NEXT:check:3                X error: no match found
+; LAB-Q-NEXT:check:3'0             {   search range start (exclusive)
+; LAB-Q-NEXT:check:3'1                 error: no match found
 ; LAB-Q-NEXT:              3: textA 
-; LAB-Q-NEXT:check:3          ~~~~~~
 ; LAB-Q-NEXT:              4: labelB 
-; LAB-Q-NEXT:check:3          ~~~~~~
+; LAB-Q-NEXT:check:3'2              }  search range end (exclusive)
 ; LAB-Q-NEXT:              5: textB 
 ; LAB-Q-NEXT:              6: labelC 
-; LAB-Q-NEXT:label:6                X error: no match found
+; LAB-Q-NEXT:label:6'0             {}  search range (exclusive bounds)
+; LAB-Q-NEXT:label:6'1                 error: no match found
 ; LAB-Q-NEXT:              7: textC 
 ; LAB-Q-NEXT:              8: labelD 
+; LAB-Q-NEXT:not:9'0               {   search range start (exclusive)
 ; LAB-Q-NEXT:              9: textD 
-; LAB-Q-NEXT:not:9            !~~~~  error: no match expected
+; LAB-Q-NEXT:not:9'1          !~~~~   error: no match expected
+; LAB-Q-NEXT:not:9'2                } search range end (exclusive)
 ; LAB-Q-NEXT:             10: labelE 
 ; LAB-Q-NEXT:             11: textE 
 ; LAB-Q-NEXT:             12: labelF 
@@ -668,17 +701,18 @@
 ;      IMPNOT-VV:<<<<<<
 ; IMPNOT-VV-NEXT:              1: hello world again! 
 ; IMPNOT-VV-NEXT:check:1          ^~~
-; IMPNOT-VV-NEXT:not:imp1'0       X
-; IMPNOT-VV-NEXT:not:imp2'0       X
-; IMPNOT-VV-NEXT:not:imp3'0       X
+; IMPNOT-VV-NEXT:not:imp1'0      {}                    search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp2'0      {}                    search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp3'0      {}                    search range (exclusive bounds)
 ; IMPNOT-VV-NEXT:check:2                ^~~
-; IMPNOT-VV-NEXT:not:imp1'1          X~~
-; IMPNOT-VV-NEXT:not:imp2'1          X~~
-; IMPNOT-VV-NEXT:not:imp3'1          X~~
+; IMPNOT-VV-NEXT:not:imp1'1         {   }              search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp2'1         {   }              search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp3'1         {   }              search range (exclusive bounds)
 ; IMPNOT-VV-NEXT:check:3                           ^
-; IMPNOT-VV-NEXT:not:imp1'2                X~~~~~~~
-; IMPNOT-VV-NEXT:not:imp2'2                X~~~~~~~
-; IMPNOT-VV-NEXT:not:imp3'2                   !~~~~   error: no match expected
+; IMPNOT-VV-NEXT:not:imp1'2               {        }   search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp2'2               {        }   search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp3'2               {        }   search range (exclusive bounds)
+; IMPNOT-VV-NEXT:not:imp3'3                   !~~~~    error: no match expected
 ; IMPNOT-VV-NEXT:>>>>>>
 ;  IMPNOT-VV-NOT:{{.}}
 
@@ -687,13 +721,15 @@
 ; IMPNOT-VQ-NEXT:check:1          ^~~
 ; IMPNOT-VQ-NEXT:check:2                ^~~
 ; IMPNOT-VQ-NEXT:check:3                           ^
-; IMPNOT-VQ-NEXT:not:imp3                     !~~~~   error: no match expected
+; IMPNOT-VQ-NEXT:not:imp3'0               {        }   search range (exclusive bounds)
+; IMPNOT-VQ-NEXT:not:imp3'1                   !~~~~    error: no match expected
 ; IMPNOT-VQ-NEXT:>>>>>>
 ;  IMPNOT-VQ-NOT:{{.}}
 
 ;      IMPNOT-Q:<<<<<<
 ; IMPNOT-Q-NEXT:              1: hello world again! 
-; IMPNOT-Q-NEXT:not:imp3                     !~~~~   error: no match expected
+; IMPNOT-Q-NEXT:not:imp3'0               {        }   search range (exclusive bounds)
+; IMPNOT-Q-NEXT:not:imp3'1                   !~~~~    error: no match expected
 ; IMPNOT-Q-NEXT:>>>>>>
 ;  IMPNOT-Q-NOT:{{.}}
 
@@ -723,15 +759,16 @@
 ;        SUBST-POS:<<<<<<
 ;   SUBST-POS-NEXT:              1: def-match1 def-match2 
 ; SUBST-POS-V-NEXT:check:1'0        ^~~~~~~~~~~~~~~~~~~~~
-; SUBST-POS-V-NEXT:check:1'1                               with "DEF_MATCH1" equal to "def-match1"
-; SUBST-POS-V-NEXT:check:1'2                               with "DEF_MATCH2" equal to "def-match2"
-;   SUBST-POS-NEXT:check:2'0                             X error: match failed for invalid pattern
-;   SUBST-POS-NEXT:check:2'1                               undefined variable: UNDEF
-;   SUBST-POS-NEXT:check:2'2                               with "DEF_MATCH1" equal to "def-match1"
-;   SUBST-POS-NEXT:check:2'3                               with "DEF_NOMATCH" equal to "foobar"
+; SUBST-POS-V-NEXT:check:1'1                                with "DEF_MATCH1" equal to "def-match1"
+; SUBST-POS-V-NEXT:check:1'2                                with "DEF_MATCH2" equal to "def-match2"
+;   SUBST-POS-NEXT:check:2'0                            {   search range start (exclusive)
+;   SUBST-POS-NEXT:check:2'1                                error: match failed for invalid pattern
+;   SUBST-POS-NEXT:check:2'2                                undefined variable: UNDEF
+;   SUBST-POS-NEXT:check:2'3                                with "DEF_MATCH1" equal to "def-match1"
+;   SUBST-POS-NEXT:check:2'4                                with "DEF_NOMATCH" equal to "foobar"
 ;   SUBST-POS-NEXT:              2: def-match1 def-nomatch 
-;   SUBST-POS-NEXT:check:2'0        ~~~~~~~~~~~~~~~~~~~~~~~
-;   SUBST-POS-NEXT:check:2'4                 ?              possible intended match
+;   SUBST-POS-NEXT:check:2'5                 ?               possible intended match
+;   SUBST-POS-NEXT:check:2'6                               } search range end (exclusive)
 ;   SUBST-POS-NEXT:>>>>>>
 
 ;--------------------------------------------------
@@ -760,15 +797,18 @@
 
 ;        SUBST-NEG:<<<<<<
 ;   SUBST-NEG-NEXT:              1: def-match1 def-nomatch 
-;   SUBST-NEG-NEXT:not:1'0          X~~~~~~~~~~~~~~~~~~~~~~ error: match failed for invalid pattern
-;   SUBST-NEG-NEXT:not:1'1                                  undefined variable: UNDEF
-;   SUBST-NEG-NEXT:not:1'2                                  with "DEF_MATCH1" equal to "def-match1"
-;   SUBST-NEG-NEXT:not:1'3                                  with "DEF_NOMATCH" equal to "foobar"
+;   SUBST-NEG-NEXT:not:1'0         {                         search range start (exclusive)
+;   SUBST-NEG-NEXT:not:1'1                                   error: match failed for invalid pattern
+;   SUBST-NEG-NEXT:not:1'2                                   undefined variable: UNDEF
+;   SUBST-NEG-NEXT:not:1'3                                   with "DEF_MATCH1" equal to "def-match1"
+;   SUBST-NEG-NEXT:not:1'4                                   with "DEF_NOMATCH" equal to "foobar"
+;   SUBST-NEG-NEXT:not:2'0         {                         search range start (exclusive)
 ;   SUBST-NEG-NEXT:              2: def-match1 def-match2 
-;   SUBST-NEG-NEXT:not:1'0          ~~~~~~~~~~~~~~~~~~~~~~
-;   SUBST-NEG-NEXT:not:2'0          !~~~~~~~~~~~~~~~~~~~~  error: no match expected
-;   SUBST-NEG-NEXT:not:2'1                                 with "DEF_MATCH1" equal to "def-match1"
-;   SUBST-NEG-NEXT:not:2'2                                 with "DEF_MATCH2" equal to "def-match2"
+;   SUBST-NEG-NEXT:not:1'5                                } search range end (exclusive)
+;   SUBST-NEG-NEXT:not:2'1          !~~~~~~~~~~~~~~~~~~~~   error: no match expected
+;   SUBST-NEG-NEXT:not:2'2                                  with "DEF_MATCH1" equal to "def-match1"
+;   SUBST-NEG-NEXT:not:2'3                                  with "DEF_MATCH2" equal to "def-match2"
+;   SUBST-NEG-NEXT:not:2'4                                } search range end (exclusive)
 ;   SUBST-NEG-NEXT:              3: END 
 ; SUBST-NEG-V-NEXT:check:3          ^~~
 ;   SUBST-NEG-NEXT:>>>>>>
@@ -807,23 +847,25 @@
 ;        CAPTURE-NEG:<<<<<<
 ;   CAPTURE-NEG-NEXT:              1: strvar: foo 
 ; CAPTURE-NEG-V-NEXT:check:1'0        ^~~~~~~~~~~
-  CAPTURE-NEG-V-NEXT:check:1'1                ^~~  captured var "STRVAR"
+  CAPTURE-NEG-V-NEXT:check:1'1                ^~~   captured var "STRVAR"
 ;   CAPTURE-NEG-NEXT:              2: numvar no expr: 51 
 ; CAPTURE-NEG-V-NEXT:check:2'0        ^~~~~~~~~~~~~~~~~~
-; CAPTURE-NEG-V-NEXT:check:2'1                        ^~  captured var "NUMVAR_NO_EXPR"
+; CAPTURE-NEG-V-NEXT:check:2'1                        ^~   captured var "NUMVAR_NO_EXPR"
 ;   CAPTURE-NEG-NEXT:              3: numvar expr: -49 
 ; CAPTURE-NEG-V-NEXT:check:3'0        ^~~~~~~~~~~~~~~~
-; CAPTURE-NEG-V-NEXT:check:3'1                          with "%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR" equal to "-49"
-; CAPTURE-NEG-V-NEXT:check:3'2                     ^~~  captured var "NUMVAR_EXPR"
+; CAPTURE-NEG-V-NEXT:check:3'1                           with "%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR" equal to "-49"
+; CAPTURE-NEG-V-NEXT:check:3'2                     ^~~   captured var "NUMVAR_EXPR"
 ;   CAPTURE-NEG-NEXT:              4: many: foo 100 8 bar 
 ; CAPTURE-NEG-V-NEXT:check:4'0        ^~~~~~~~~~~~~~~~~~~
-; CAPTURE-NEG-V-NEXT:check:4'1              ^~~            captured var "VAR1"
-; CAPTURE-NEG-V-NEXT:check:4'2                  ^~~        captured var "VAR3"
-; CAPTURE-NEG-V-NEXT:check:4'3                      ^      captured var "VAR2"
-; CAPTURE-NEG-V-NEXT:check:4'4                        ^~~  captured var "VAR4"
+; CAPTURE-NEG-V-NEXT:check:4'1              ^~~             captured var "VAR1"
+; CAPTURE-NEG-V-NEXT:check:4'2                  ^~~         captured var "VAR3"
+; CAPTURE-NEG-V-NEXT:check:4'3                      ^       captured var "VAR2"
+; CAPTURE-NEG-V-NEXT:check:4'4                        ^~~   captured var "VAR4"
+;   CAPTURE-NEG-NEXT:not:5'0                            {   search range start (exclusive)
 ;   CAPTURE-NEG-NEXT:              5: var in neg match: foo 
-;   CAPTURE-NEG-NEXT:not:5'0          !~~~~~~~~~~~~~~~~~~~~  error: no match expected
-;   CAPTURE-NEG-NEXT:not:5'1                            !~~  captured var "VAR"
+;   CAPTURE-NEG-NEXT:not:5'1          !~~~~~~~~~~~~~~~~~~~~   error: no match expected
+;   CAPTURE-NEG-NEXT:not:5'2                            !~~   captured var "VAR"
+;   CAPTURE-NEG-NEXT:not:5'3                                } search range end (exclusive)
 ;   CAPTURE-NEG-NEXT:              6: END 
 ; CAPTURE-NEG-V-NEXT:check:6          ^~~
 ;   CAPTURE-NEG-NEXT:>>>>>>
@@ -857,17 +899,13 @@
 ; Verbose diagnostics are suppressed but not errors.
 ; SUBST_NEXT:{{.*}}error:{{.*}}
 
-;      SUBST_NEXT-V:<<<<<<
-; SUBST_NEXT-V-NEXT:              1: pre var 
+;        SUBST_NEXT:<<<<<<
+;   SUBST_NEXT-NEXT:              1: pre var 
 ; SUBST_NEXT-V-NEXT:check:1          ^~~
-; SUBST_NEXT-V-NEXT:next:2'0             !~~  error: match on wrong line
-; SUBST_NEXT-V-NEXT:next:2'1                  with "VAR" equal to "var"
-; SUBST_NEXT-V-NEXT:>>>>>>
-
-;      SUBST_NEXT-Q:<<<<<<
-; SUBST_NEXT-Q-NEXT:              1: pre var 
-; SUBST_NEXT-Q-NEXT:next:2               !~~  error: match on wrong line
-; SUBST_NEXT-Q-NEXT:>>>>>>
+;   SUBST_NEXT-NEXT:next:2'0           {     } search range (exclusive bounds)
+;   SUBST_NEXT-NEXT:next:2'1             !~~   error: match on wrong line
+; SUBST_NEXT-V-NEXT:next:2'2                   with "VAR" equal to "var"
+;   SUBST_NEXT-NEXT:>>>>>>
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 ; CHECK-SAME.
@@ -892,15 +930,19 @@
 ;      SUBST_SAME-V:<<<<<<
 ; SUBST_SAME-V-NEXT:              1: pre 
 ; SUBST_SAME-V-NEXT:check:1          ^~~
+; SUBST_SAME-V-NEXT:same:2'0           {   search range start (exclusive)
 ; SUBST_SAME-V-NEXT:              2: var 
-; SUBST_SAME-V-NEXT:same:2'0         !~~  error: match on wrong line
-; SUBST_SAME-V-NEXT:same:2'1              with "VAR" equal to "var"
+; SUBST_SAME-V-NEXT:same:2'1         !~~   error: match on wrong line
+; SUBST_SAME-V-NEXT:same:2'2               with "VAR" equal to "var"
+; SUBST_SAME-V-NEXT:same:2'3             } search range end (exclusive)
 ; SUBST_SAME-V-NEXT:>>>>>>
 
 ;      SUBST_SAME-Q:<<<<<<
 ; SUBST_SAME-Q-NEXT:              1: pre 
+; SUBST_SAME-Q-NEXT:same:2'0           {   search range start (exclusive)
 ; SUBST_SAME-Q-NEXT:              2: var 
-; SUBST_SAME-Q-NEXT:same:2           !~~  error: match on wrong line
+; SUBST_SAME-Q-NEXT:same:2'1         !~~   error: match on wrong line
+; SUBST_SAME-Q-NEXT:same:2'2             } search range end (exclusive)
 ; SUBST_SAME-Q-NEXT:>>>>>>
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
@@ -925,11 +967,11 @@
 ;      SUBST_DAG-VV:<<<<<<
 ; SUBST_DAG-VV-NEXT:              1: var 
 ; SUBST_DAG-VV-NEXT:dag:1            ^~~
-; SUBST_DAG-VV-NEXT:dag:2'0          !~~  discard: overlaps earlier match
-; SUBST_DAG-VV-NEXT:dag:2'1               with "VAR" equal to "var"
+; SUBST_DAG-VV-NEXT:dag:2'0          !~~   discard: overlaps earlier match
+; SUBST_DAG-VV-NEXT:dag:2'1                with "VAR" equal to "var"
 ; SUBST_DAG-VV-NEXT:              2: var 
 ; SUBST_DAG-VV-NEXT:dag:2'2          ^~~
-; SUBST_DAG-VV-NEXT:dag:2'3               with "VAR" equal to "var"
+; SUBST_DAG-VV-NEXT:dag:2'3                with "VAR" equal to "var"
 ; SUBST_DAG-VV-NEXT:              3: END 
 ; SUBST_DAG-VV-NEXT:check:3          ^~~
 ; SUBST_DAG-VV-NEXT:>>>>>>
@@ -939,7 +981,7 @@
 ; SUBST_DAG-VQ-NEXT:dag:1            ^~~
 ; SUBST_DAG-VQ-NEXT:              2: var 
 ; SUBST_DAG-VQ-NEXT:dag:2'0          ^~~
-; SUBST_DAG-VQ-NEXT:dag:2'1               with "VAR" equal to "var"
+; SUBST_DAG-VQ-NEXT:dag:2'1                with "VAR" equal to "var"
 ; SUBST_DAG-VQ-NEXT:              3: END 
 ; SUBST_DAG-VQ-NEXT:check:3          ^~~
 ; SUBST_DAG-VQ-NEXT:>>>>>>
@@ -949,3 +991,212 @@
 ; SUBST_DAG-Q-NEXT:              2: var 
 ; SUBST_DAG-Q-NEXT:              3: END 
 ; SUBST_DAG-Q-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check multiline marker where start/end columns vary across lines.
+;--------------------------------------------------
+
+; RUN: echo '<start' >  %t.in
+; RUN: echo ''       >> %t.in
+; RUN: echo '1'      >> %t.in
+; RUN: echo '12'     >> %t.in
+; RUN: echo 'end>'   >> %t.in
+
+; RUN: echo 'CHECK: start{{(.|[[:space:]])*}}end' >  %t.chk
+
+; REDEFINE: %{pre} = MULTILINE-MARKER
+; RUN: %{run-vv}
+; RUN: %{run-v}
+; RUN: %{run}
+
+;        MULTILINE-MARKER:<<<<<<
+;   MULTILINE-MARKER-NEXT:              1: <start 
+; MULTILINE-MARKER-V-NEXT:check:1           ^~~~~~
+;   MULTILINE-MARKER-NEXT:              2:  
+; MULTILINE-MARKER-V-NEXT:check:1          ~
+;   MULTILINE-MARKER-NEXT:              3: 1 
+; MULTILINE-MARKER-V-NEXT:check:1          ~~
+;   MULTILINE-MARKER-NEXT:              4: 12 
+; MULTILINE-MARKER-V-NEXT:check:1          ~~~
+;   MULTILINE-MARKER-NEXT:              5: end> 
+; MULTILINE-MARKER-V-NEXT:check:1          ~~~
+;   MULTILINE-MARKER-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check empty and single-character match ranges.
+;--------------------------------------------------
+
+; RUN: echo '11' >  %t.in
+
+; RUN: echo 'empty  at    bof: CHECK: {{0?}}'           >  %t.chk
+; RUN: echo 'single at    bof: CHECK: {{1?}}'           >> %t.chk
+; RUN: echo 'empty  in middle: CHECK: {{0?}}'           >> %t.chk
+; RUN: echo 'single in middle: CHECK: {{1?}}'           >> %t.chk
+; RUN: echo 'single at    eof: CHECK: {{[[:space:]]?}}' >> %t.chk
+; RUN: echo 'empty  at    eof: CHECK: {{0?}}'           >> %t.chk
+
+; REDEFINE: %{pre} = EMPTY-SINGLE-MATCH
+; RUN: %{run-vv}
+; RUN: %{run-v}
+; RUN: %{run}
+
+;        EMPTY-SINGLE-MATCH:<<<<<<
+;   EMPTY-SINGLE-MATCH-NEXT:              1: 11 
+; EMPTY-SINGLE-MATCH-V-NEXT:check:1          ^
+; EMPTY-SINGLE-MATCH-V-NEXT:check:2          ^
+; EMPTY-SINGLE-MATCH-V-NEXT:check:3           ^
+; EMPTY-SINGLE-MATCH-V-NEXT:check:4           ^
+; EMPTY-SINGLE-MATCH-V-NEXT:check:5            ^
+; EMPTY-SINGLE-MATCH-V-NEXT:              2: 
+; EMPTY-SINGLE-MATCH-V-NEXT:check:6          ^
+;   EMPTY-SINGLE-MATCH-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check search range for empty file and thus empty search range at start/end of
+; file.
+;--------------------------------------------------
+
+; RUN: echo 'CHECK-NOT: foo' > %t.chk
+; REDEFINE: %{opts} = -input-file=/dev/null -allow-empty
+
+; REDEFINE: %{pre} = NEG-SEARCH-EMPTY-FILE
+; RUN: %{run-vv}
+; RUN: %{run-v}
+; RUN: %{run}
+
+;         NEG-SEARCH-EMPTY-FILE:<<<<<<
+; NEG-SEARCH-EMPTY-FILE-VV-NEXT:              1: 
+; NEG-SEARCH-EMPTY-FILE-VV-NEXT:eof:1            ^
+; NEG-SEARCH-EMPTY-FILE-VV-NEXT:not:1           {} search range (exclusive bounds)
+;    NEG-SEARCH-EMPTY-FILE-NEXT:>>>>>>
+
+; RUN: echo 'CHECK: foo' > %t.chk
+
+; REDEFINE: %{pre} = POS-SEARCH-EMPTY-FILE
+; RUN: not %{run-vv}
+; RUN: not %{run-v}
+; RUN: not %{run}
+
+; Verbose diagnostics are suppressed but not errors.
+; POS-SEARCH-EMPTY-FILE:{{.*}}error:{{.*}}
+
+;      POS-SEARCH-EMPTY-FILE:<<<<<<
+; POS-SEARCH-EMPTY-FILE-NEXT:              1: 
+; POS-SEARCH-EMPTY-FILE-NEXT:check:1'0       {} search range (exclusive bounds)
+; POS-SEARCH-EMPTY-FILE-NEXT:check:1'1          error: no match found
+; POS-SEARCH-EMPTY-FILE-NEXT:>>>>>>
+
+; REDEFINE: %{opts} =
+
+;--------------------------------------------------
+; Check non-empty search range at start/end of file.
+;--------------------------------------------------
+
+; RUN: echo 'one line' > %t.in
+
+; RUN: echo 'CHECK-NOT: foo' > %t.chk
+
+; REDEFINE: %{pre} = SEARCH-BOF-EOF-ONE-LINE
+; RUN: %{run-vv}
+; RUN: %{run-v}
+; RUN: %{run}
+
+;         SEARCH-BOF-EOF-ONE-LINE:<<<<<<
+;    SEARCH-BOF-EOF-ONE-LINE-NEXT:              1: one line 
+; SEARCH-BOF-EOF-ONE-LINE-VV-NEXT:not:1           {         } search range (exclusive bounds)
+; SEARCH-BOF-EOF-ONE-LINE-VV-NEXT:              2: 
+; SEARCH-BOF-EOF-ONE-LINE-VV-NEXT:eof:1            ^
+;    SEARCH-BOF-EOF-ONE-LINE-NEXT:>>>>>>
+
+; RUN: echo 'line 1' >  %t.in
+; RUN: echo 'line 2' >> %t.in
+
+; RUN: echo 'CHECK: foo' > %t.chk
+
+; REDEFINE: %{pre} = SEARCH-BOF-EOF-MULTI-LINE
+; RUN: not %{run-vv}
+; RUN: not %{run-v}
+; RUN: not %{run}
+
+; Verbose diagnostics are suppressed but not errors.
+; SEARCH-BOF-EOF-MULTI-LINE:{{.*}}error:{{.*}}
+
+;      SEARCH-BOF-EOF-MULTI-LINE:<<<<<<
+; SEARCH-BOF-EOF-MULTI-LINE-NEXT:              1: line 1 
+; SEARCH-BOF-EOF-MULTI-LINE-NEXT:check:1'0       {         search range start (exclusive)
+; SEARCH-BOF-EOF-MULTI-LINE-NEXT:check:1'1                 error: no match found
+; SEARCH-BOF-EOF-MULTI-LINE-NEXT:              2: line 2 
+; SEARCH-BOF-EOF-MULTI-LINE-NEXT:check:1'2               } search range end (exclusive)
+; SEARCH-BOF-EOF-MULTI-LINE-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check search ranges at line boundaries but not file boundaries.  Also check
+; empty search ranges (for non-empty file) and one-character search ranges.
+;--------------------------------------------------
+
+; RUN: echo 'start'      >  %t.in
+; RUN: echo 'empty'      >> %t.in
+; RUN: echo 'next'       >> %t.in
+; RUN: echo 'one char'   >> %t.in
+; RUN: echo 'next'       >> %t.in
+; RUN: echo 'one line'   >> %t.in
+; RUN: echo 'next'       >> %t.in
+; RUN: echo 'multi'      >> %t.in
+; RUN: echo 'line'       >> %t.in
+; RUN: echo 'next'       >> %t.in
+; RUN: echo 'off by one' >> %t.in
+; RUN: echo ' end'       >> %t.in
+
+; RUN: echo ' 1: CHECK: start{{[[:space:]]}}'               >  %t.chk
+; RUN: echo ' 2: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo ' 3: CHECK: empty'                              >> %t.chk
+; RUN: echo ' 4: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo ' 5: CHECK: {{[[:space:]]}}next{{[[:space:]]}}' >> %t.chk
+; RUN: echo ' 6: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo ' 7: CHECK: ne char'                            >> %t.chk
+; RUN: echo ' 8: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo ' 9: CHECK: next{{[[:space:]]}}'                >> %t.chk
+; RUN: echo '10: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo '11: CHECK: next{{[[:space:]]}}'                >> %t.chk
+; RUN: echo '12: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo '13: CHECK: next'                               >> %t.chk
+; RUN: echo '14: CHECK-NOT: foo'                            >> %t.chk
+; RUN: echo '15: CHECK: end'                                >> %t.chk
+
+; REDEFINE: %{pre} = SEARCH-LINE-BOUNDS
+; RUN: %{run-vv}
+; RUN: %{run-v}
+; RUN: %{run}
+
+;         SEARCH-LINE-BOUNDS:<<<<<<
+;    SEARCH-LINE-BOUNDS-NEXT:              1: start 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:1          ^~~~~~
+;    SEARCH-LINE-BOUNDS-NEXT:              2: empty 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:3          ^~~~~
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:2           {}       search range (exclusive bounds)
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:5               ^
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:4                {}  search range (exclusive bounds)
+;    SEARCH-LINE-BOUNDS-NEXT:              3: next 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:5          ~~~~~
+;    SEARCH-LINE-BOUNDS-NEXT:              4: one char 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:7           ^~~~~~~
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:6           { }         search range (exclusive bounds)
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:8                   { } search range (exclusive bounds)
+;    SEARCH-LINE-BOUNDS-NEXT:              5: next 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:9          ^~~~~
+;    SEARCH-LINE-BOUNDS-NEXT:              6: one line 
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:10          {         } search range (exclusive bounds)
+;    SEARCH-LINE-BOUNDS-NEXT:              7: next 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:11         ^~~~~
+;    SEARCH-LINE-BOUNDS-NEXT:              8: multi 
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:12'0        {        search range start (exclusive)
+;    SEARCH-LINE-BOUNDS-NEXT:              9: line 
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:12'1              } search range end (exclusive)
+;    SEARCH-LINE-BOUNDS-NEXT:             10: next 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:13         ^~~~
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:14'0            {   search range start (exclusive)
+;    SEARCH-LINE-BOUNDS-NEXT:             11: off by one 
+;    SEARCH-LINE-BOUNDS-NEXT:             12:  end 
+;  SEARCH-LINE-BOUNDS-V-NEXT:check:15          ^~~
+; SEARCH-LINE-BOUNDS-VV-NEXT:not:14'1          }     search range end (exclusive)
+;    SEARCH-LINE-BOUNDS-NEXT:>>>>>>
