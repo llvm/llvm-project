@@ -17,16 +17,14 @@ namespace mlir {
 namespace arith {
 namespace {
 
-static bool isProvablyNonNegative(Value value,
-                                  ValueBoundsConstraintSet &cstr) {
+static bool isProvablyNonNegative(Value value, ValueBoundsConstraintSet &cstr) {
   return cstr.populateAndCompare(
       /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GE,
       /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
 }
 
-static bool isProvablyNonPositive(Value value,
-                                  ValueBoundsConstraintSet &cstr) {
- return cstr.populateAndCompare(
+static bool isProvablyNonPositive(Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
       /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LE,
       /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
 }
