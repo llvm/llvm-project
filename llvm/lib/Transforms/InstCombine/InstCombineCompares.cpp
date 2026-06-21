@@ -8889,7 +8889,9 @@ static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
   }
   Constant *NewRHSC = ConstantFoldBinaryOpOperands(Instruction::FDiv, RHSC, C1,
                                                    I.getDataLayout());
-  return new FCmpInst(NewPred, X, NewRHSC);
+  if (!NewRHSC || !cast<ConstantFP>(NewRHSC)->getValueAPF().isFinite())
+    return nullptr;
+  return new FCmpInst(NewPred, X, NewRHSC, "", &I);
 }
 
 /// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
