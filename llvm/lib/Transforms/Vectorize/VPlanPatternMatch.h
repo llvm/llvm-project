@@ -252,7 +252,7 @@ struct Recipe_match {
       assert(((isa<VPInstruction>(R) &&
                cast<VPInstruction>(R)->getNumOperandsForOpcode() == -1u) ||
               (RepR && std::tuple_size_v<Ops_t> ==
-                           RepR->getNumOperands() - RepR->isPredicated())) &&
+                           RepR->getNumOperandsWithoutMask())) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
