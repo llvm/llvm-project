@@ -461,7 +461,7 @@ Expected<uint64_t> materializeAbbrevFromTagImpl(MCCASReader &Reader,
       return LoadedTopRef.takeError();
     Size += reconstructAbbrevSection(
         Reader.OS, LoadedTopRef->AbbrevEntries, MaxDIEAbbrevCount,
-        Reader.getEndian() == endianness::little, Reader.getAddressSize());
+        Reader.getEndian() == endianness::little);
   }
 
   // FIXME: Currently, one DIELevelTopRef corresponds to one Compile Unit, but
@@ -501,8 +501,7 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
                           StringRef FormData, bool) {
     if (Form == dwarf::Form::DW_FORM_ref4_cas ||
         Form == dwarf::Form::DW_FORM_strp_cas) {
-      DataExtractor Extractor(FormData, Reader.isLittleEndian(),
-                              Reader.getAddressSize());
+      DataExtractor Extractor(FormData, Reader.isLittleEndian());
       DataExtractor::Cursor Cursor(0);
       uint64_t Data64 = Extractor.getULEB128(Cursor);
       if (!Cursor)
@@ -2103,8 +2102,7 @@ static Expected<size_t> getSizeFromDwarfHeader(DataExtractor &Extractor,
 static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
     MutableArrayRef<char> CUData, endianness Endian,
     std::optional<uint32_t> NewOffset, uint8_t AddressSize) {
-  DataExtractor Extractor(toStringRef(CUData), Endian == endianness::little,
-                          AddressSize);
+  DataExtractor Extractor(toStringRef(CUData), Endian == endianness::little);
   DataExtractor::Cursor Cursor(0);
   Expected<size_t> Size = getSizeFromDwarfHeader(Extractor, Cursor);
   if (!Size)
@@ -2381,8 +2379,7 @@ Error InMemoryCASDWARFObject::partitionCUData(ArrayRef<char> DebugInfoData,
                                               uint16_t DwarfVersion) {
   StringRef AbbrevSectionContribution =
       getAbbrevSection().drop_front(AbbrevOffset);
-  DataExtractor Data(AbbrevSectionContribution, isLittleEndian(),
-                     Builder.ObjectWriter.getAddressSize());
+  DataExtractor Data(AbbrevSectionContribution, isLittleEndian());
   DWARFDebugAbbrev Abbrev(Data);
   uint64_t OffsetPtr = 0;
   DWARFUnitHeader Header;
@@ -3757,8 +3754,7 @@ static void writeDIEAttrs(DWARFDie &DIE, ArrayRef<char> DebugInfoData,
                             ? static_cast<DataWriter &>(DistinctWriter)
                             : DIEWriter;
     if (Form == dwarf::Form::DW_FORM_ref4 || Form == dwarf::Form::DW_FORM_strp)
-      convertFourByteFormDataToULEB(FormData, WriterToUse, IsLittleEndian,
-                                    AddressSize);
+      convertFourByteFormDataToULEB(FormData, WriterToUse, IsLittleEndian);
     else
       WriterToUse.writeData(FormData);
   }
@@ -3969,11 +3965,10 @@ static Expected<uint64_t> readAbbrevIdx(DataExtractor &Extractor,
 
 static AbbrevEntryReader getAbbrevEntryReader(ArrayRef<StringRef> AbbrevEntries,
                                               unsigned AbbrevIdx,
-                                              bool IsLittleEndian,
-                                              uint8_t AddressSize) {
+                                              bool IsLittleEndian) {
   StringRef AbbrevData =
       AbbrevEntries[decodeAbbrevIndexAsAbbrevSetIdx(AbbrevIdx)];
-  return AbbrevEntryReader(AbbrevData, IsLittleEndian, AddressSize);
+  return AbbrevEntryReader(AbbrevData, IsLittleEndian);
 }
 
 static std::optional<uint8_t> getNonULEBFormSize(dwarf::Form Form,
@@ -4051,9 +4046,8 @@ Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
   auto FormParams =
       dwarf::FormParams{DwarfVersion, AddressSize, dwarf::DwarfFormat::DWARF32};
 
-  AbbrevEntryReader AbbrevReader =
-      getAbbrevEntryReader(AbbrevEntries, AbbrevIdx,
-                           DistinctExtractor.isLittleEndian(), AddressSize);
+  AbbrevEntryReader AbbrevReader = getAbbrevEntryReader(
+      AbbrevEntries, AbbrevIdx, DistinctExtractor.isLittleEndian());
   Expected<dwarf::Tag> MaybeTag = AbbrevReader.readTag();
   if (!MaybeTag)
     return MaybeTag.takeError();
@@ -4088,11 +4082,9 @@ Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
 /// previous stack frame.
 static void popStack(DataExtractor &Extractor, DataExtractor::Cursor &Cursor,
                      StringRef &Data,
-                     std::stack<std::pair<StringRef, unsigned>> &StackOfNodes,
-                     uint8_t AddressSize) {
+                     std::stack<std::pair<StringRef, unsigned>> &StackOfNodes) {
   auto DataAndOffset = StackOfNodes.top();
-  Extractor = DataExtractor(DataAndOffset.first, Extractor.isLittleEndian(),
-                            AddressSize);
+  Extractor = DataExtractor(DataAndOffset.first, Extractor.isLittleEndian());
   Data = DataAndOffset.first;
   Cursor.seek(DataAndOffset.second);
   StackOfNodes.pop();
@@ -4108,8 +4100,7 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
   std::stack<std::pair<StringRef, unsigned>> StackOfNodes;
   auto Data = DIEChildrenStack.empty() ? StringRef()
                                        : DIEChildrenStack.front().getData();
-  DataExtractor Extractor(Data, DistinctExtractor.isLittleEndian(),
-                          AddressSize);
+  DataExtractor Extractor(Data, DistinctExtractor.isLittleEndian());
   DataExtractor::Cursor Cursor(0);
 
   while (!DistinctExtractor.eof(DistinctCursor)) {
@@ -4126,7 +4117,7 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     if (AbbrevIdx == getEndOfDIESiblingsMarker()) {
       EndTagCallback(true /*HadChildren*/);
       if (!StackOfNodes.empty() && Extractor.eof(Cursor))
-        popStack(Extractor, Cursor, Data, StackOfNodes, AddressSize);
+        popStack(Extractor, Cursor, Data, StackOfNodes);
       continue;
     }
 
@@ -4138,8 +4129,7 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
       DIEChildrenStack = DIEChildrenStack.drop_front();
       Data = DIEChildrenStack.front().getData();
       NewBlockCallback(DIEChildrenStack.front().getID().toString());
-      Extractor =
-          DataExtractor(Data, DistinctExtractor.isLittleEndian(), AddressSize);
+      Extractor = DataExtractor(Data, DistinctExtractor.isLittleEndian());
       Cursor.seek(0);
       continue;
     }
@@ -4158,7 +4148,7 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     // parent's siblings that may exist.
     if (!AbbrevEntryCacheVal.HasChildren) {
       if (!StackOfNodes.empty() && Extractor.eof(Cursor))
-        popStack(Extractor, Cursor, Data, StackOfNodes, AddressSize);
+        popStack(Extractor, Cursor, Data, StackOfNodes);
       EndTagCallback(false /*HadChildren*/);
     }
   }
@@ -4216,7 +4206,7 @@ Error mccasformats::v1::visitDebugInfo(
     return E;
   DistinctData = toStringRef(OutBuff);
 #endif
-  DataExtractor DistinctExtractor(DistinctData, IsLittleEndian, AddressSize);
+  DataExtractor DistinctExtractor(DistinctData, IsLittleEndian);
   DataExtractor::Cursor DistinctCursor(0);
 
   auto Size = getSizeFromDwarfHeader(DistinctExtractor, DistinctCursor);

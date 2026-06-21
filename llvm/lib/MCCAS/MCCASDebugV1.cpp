@@ -224,11 +224,10 @@ bool mccasformats::v1::doesntDedup(dwarf::Form Form, dwarf::Attribute Attr) {
 }
 
 uint64_t mccasformats::v1::convertFourByteFormDataToULEB(
-    ArrayRef<char> FormData, DataWriter &Writer, bool IsLittleEndian,
-    uint8_t AddressSize) {
+    ArrayRef<char> FormData, DataWriter &Writer, bool IsLittleEndian) {
   assert(FormData.size() == 4);
   StringRef FormDataStringRef = StringRef(FormData.begin(), FormData.size());
-  DataExtractor Extractor(FormDataStringRef, IsLittleEndian, AddressSize);
+  DataExtractor Extractor(FormDataStringRef, IsLittleEndian);
   DataExtractor::Cursor Cursor(0);
 
   uint32_t IntegerData = Extractor.getU32(Cursor);
@@ -316,7 +315,7 @@ Expected<dwarf::Form> AbbrevEntryReader::readForm() {
 
 uint64_t mccasformats::v1::reconstructAbbrevSection(
     raw_ostream &OS, ArrayRef<StringRef> AbbrevEntries,
-    uint64_t &MaxDIEAbbrevCount, bool IsLittleEndian, uint8_t AddressSize) {
+    uint64_t &MaxDIEAbbrevCount, bool IsLittleEndian) {
   uint64_t WrittenSize = 0;
   for (auto EntryData : AbbrevEntries) {
     // Dwarf 5: Section 7.5.3:
@@ -324,7 +323,7 @@ uint64_t mccasformats::v1::reconstructAbbrevSection(
     // abbreviation code itself. [...] The abbreviation code 0 is reserved for
     // null debugging information entries.
     WrittenSize += encodeULEB128(MaxDIEAbbrevCount, OS);
-    DataExtractor Extractor(EntryData, IsLittleEndian, AddressSize);
+    DataExtractor Extractor(EntryData, IsLittleEndian);
     DataExtractor::Cursor Cursor(0);
     // [uleb(Tag), has_children]
     uint64_t TagAsInt = Extractor.getULEB128(Cursor);

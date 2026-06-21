@@ -132,7 +132,7 @@ Error CASDWARFObject::dump(raw_ostream &OS, int Indent, DWARFContext &DWARFCtx,
     // Dump __debug_str data.
     assert(Data.data()[Data.size()] == 0);
     DataExtractor StrData(StringRef(Data.data(), Data.size() + 1),
-                          isLittleEndian(), 0);
+                          isLittleEndian());
     // This is almost identical with the DumpStrSection lambda in
     // DWARFContext.cpp
     uint64_t Offset = 0;

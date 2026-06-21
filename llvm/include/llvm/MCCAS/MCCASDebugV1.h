@@ -89,8 +89,7 @@ protected:
 
 /// Use a more efficient format for storing 4-byte wide form data.
 uint64_t convertFourByteFormDataToULEB(ArrayRef<char> FormData,
-                                       DataWriter &Writer, bool IsLittleEndian,
-                                       uint8_t AddressSize);
+                                       DataWriter &Writer, bool IsLittleEndian);
 
 // Helper class to write a DIE's abbreviation contents to a buffer.
 struct AbbrevEntryWriter : DataWriter {
@@ -98,8 +97,8 @@ struct AbbrevEntryWriter : DataWriter {
 };
 
 struct AbbrevEntryReader {
-  AbbrevEntryReader(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
-      : Extractor(Data, IsLittleEndian, AddressSize), Cursor(0) {}
+  AbbrevEntryReader(StringRef Data, bool IsLittleEndian)
+      : Extractor(Data, IsLittleEndian), Cursor(0) {}
   Expected<dwarf::Tag> readTag();
   Expected<bool> readHasChildren();
 
@@ -118,7 +117,7 @@ private:
 uint64_t reconstructAbbrevSection(raw_ostream &OS,
                                   ArrayRef<StringRef> AbbrevEntries,
                                   uint64_t &MaxDIEAbbrevCount,
-                                  bool IsLittleEndian, uint8_t AddressSize);
+                                  bool IsLittleEndian);
 } // namespace v1
 } // namespace mccasformats
 } // namespace llvm
