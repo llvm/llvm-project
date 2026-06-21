@@ -8840,6 +8840,58 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   return nullptr;
 }
 
+/// Fold: fcmp (fmul X, C1), C2 --> fcmp X, C2/C1
+static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
+                                         Constant *RHSC) {
+  const CmpInst::Predicate Pred = I.getPredicate();
+  Value *X = LHSI->getOperand(0);
+  Value *Y = LHSI->getOperand(1);
+
+  ConstantFP *C1;
+  if (!match(Y, m_ConstantFP(C1)) || match(C1, m_AnyZeroFP()))
+    return nullptr;
+
+  CmpInst::Predicate NewPred;
+  bool C1IsNegative = C1->isNegative();
+  switch (Pred) {
+  default:
+    return nullptr;
+  case FCmpInst::FCMP_UEQ:
+  case FCmpInst::FCMP_UNE:
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_ONE:
+    NewPred = Pred;
+    break;
+  case FCmpInst::FCMP_OGE:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_OLE : FCmpInst::FCMP_OGE;
+    break;
+  case FCmpInst::FCMP_OGT:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_OLT : FCmpInst::FCMP_OGT;
+    break;
+  case FCmpInst::FCMP_OLE:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_OGE : FCmpInst::FCMP_OLE;
+    break;
+  case FCmpInst::FCMP_OLT:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_OGT : FCmpInst::FCMP_OLT;
+    break;
+  case FCmpInst::FCMP_ULT:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_UGT : FCmpInst::FCMP_ULT;
+    break;
+  case FCmpInst::FCMP_ULE:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_UGE : FCmpInst::FCMP_ULE;
+    break;
+  case FCmpInst::FCMP_UGE:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_ULE : FCmpInst::FCMP_UGE;
+    break;
+  case FCmpInst::FCMP_UGT:
+    NewPred = C1IsNegative ? FCmpInst::FCMP_ULT : FCmpInst::FCMP_UGT;
+    break;
+  }
+  Constant *NewRHSC = ConstantFoldBinaryOpOperands(Instruction::FDiv, RHSC, C1,
+                                                   I.getDataLayout());
+  return new FCmpInst(NewPred, X, NewRHSC);
+}
+
 /// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
 /// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN
 /// float when the uitofp casts are exact and C is in the valid range.
@@ -9199,6 +9251,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     case Instruction::SIToFP:
     case Instruction::UIToFP:
       if (Instruction *NV = foldFCmpIntToFPConst(I, LHSI, RHSC))
+        return NV;
+      break;
+    case Instruction::FMul:
+      if (Instruction *NV = foldFCmpFmulIntoFCmp(I, LHSI, RHSC))
         return NV;
       break;
     case Instruction::FDiv:
