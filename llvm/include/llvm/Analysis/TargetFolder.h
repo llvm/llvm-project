@@ -192,28 +192,14 @@ public:
     return nullptr;
   }
 
-  Value *FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
-                            FastMathFlags FMF) const override {
-    if (auto *OpC = dyn_cast<Constant>(Op))
-      return ConstantFoldUnaryIntrinsic(ID, OpC, Ty);
-    return nullptr;
-  }
-
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             FastMathFlags FMF) const override {
-    auto *C1 = dyn_cast<Constant>(LHS);
-    auto *C2 = dyn_cast<Constant>(RHS);
-    if (C1 && C2)
-      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty);
-    return nullptr;
-  }
-
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
-                       FastMathFlags FMF) const override {
-    auto COps =
-        map_to_vector(Ops, [](Value *Op) { return dyn_cast<Constant>(Op); });
-    if (none_of(COps, equal_to(nullptr)))
+                       FastMathFlags FMF = {},
+                       Function *CtxF = nullptr) const override {
+    if (all_of(Ops, IsaPred<Constant>)) {
+      auto COps =
+          map_to_vector(Ops, [](Value *Op) { return cast<Constant>(Op); });
       return ConstantFoldIntrinsic(ID, COps, Ty);
+    }
     return nullptr;
   }
 

@@ -4707,16 +4707,6 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 
 } // end anonymous namespace
 
-Constant *llvm::ConstantFoldUnaryIntrinsic(Intrinsic::ID ID, Constant *Op,
-                                           Type *Ty) {
-  return ConstantFoldScalarCall1("", ID, Ty, Op);
-}
-
-Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                            Constant *RHS, Type *Ty) {
-  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS});
-}
-
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Constant *> Ops, Type *Ty) {
   return ConstantFoldScalarCall("", ID, Ty, Ops);
