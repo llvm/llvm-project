@@ -57,7 +57,8 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
 
   while (Ptr) {
     if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
-      assert(II->getIntrinsicID() == Intrinsic::dx_resource_getpointer &&
+      assert((II->getIntrinsicID() == Intrinsic::dx_resource_getpointer ||
+              II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer) &&
              "Resource access through unexpected intrinsic");
       return Offset ? Offset : ConstantInt::get(Builder.getInt32Ty(), 0);
     }
@@ -415,7 +416,10 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
 
   IRBuilder<> Builder(LI);
 
-  ConstantInt *GlobalOffset = dyn_cast<ConstantInt>(II->getOperand(1));
+  ConstantInt *GlobalOffset =
+      II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer
+          ? ConstantInt::get(Builder.getInt32Ty(), 0)
+          : dyn_cast<ConstantInt>(II->getOperand(1));
   assert(GlobalOffset && "CBuffer getpointer index must be constant");
 
   uint64_t GlobalOffsetVal = GlobalOffset->getZExtValue();
@@ -797,8 +801,13 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer ||
+            II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer) {
           auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
+          assert(
+              (DRTM[HandleTy].isCBuffer() ||
+               II->getIntrinsicID() != Intrinsic::dx_resource_getbasepointer) &&
+              "dx_resource_getbasepointer should only be used by cbuffers");
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
 

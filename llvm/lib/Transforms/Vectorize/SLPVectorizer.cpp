@@ -5792,7 +5792,8 @@ private:
                  "User is not in the tree entry");
           int Lane = std::distance(P.first->Scalars.begin(), It);
           assert(Lane >= 0 && "Lane is not found");
-          if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
+          if (isa<StoreInst, InsertValueInst>(User) &&
+              !P.first->ReorderIndices.empty())
             Lane = P.first->ReorderIndices[Lane];
           assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
                  "Couldn't find extract lane");
@@ -5875,7 +5876,7 @@ private:
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
             Lane = EI.UserTE->ReorderIndices[Lane];
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
@@ -6078,7 +6079,7 @@ private:
               int Lane =
                   std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
               assert(Lane >= 0 && "Lane not set");
-              if (isa<StoreInst>(In) &&
+              if (isa<StoreInst, InsertValueInst>(In) &&
                   !Bundle->getTreeEntry()->ReorderIndices.empty())
                 Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
               assert(Lane < static_cast<int>(
@@ -25911,7 +25912,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst>(EI.UserTE->Scalars[Lane]) &&
+            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
                 !EI.UserTE->ReorderIndices.empty())
               Lane = EI.UserTE->ReorderIndices[Lane];
             assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
@@ -26118,7 +26119,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
             Lane = EI.UserTE->ReorderIndices[Lane];
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&

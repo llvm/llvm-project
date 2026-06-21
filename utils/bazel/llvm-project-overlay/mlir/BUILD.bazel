@@ -6941,6 +6941,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":PtrDialect",
+        "//llvm:Support",
     ],
 )
 

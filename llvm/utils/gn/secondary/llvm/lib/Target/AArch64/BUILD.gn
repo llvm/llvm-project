@@ -188,6 +188,7 @@ static_library("LLVMAArch64CodeGen") {
     "MachineSMEABIPass.cpp",
     "SMEPeepholeOpt.cpp",
     "SVEIntrinsicOpts.cpp",
+    "SVEShuffleOpts.cpp",
   ]
 }
 

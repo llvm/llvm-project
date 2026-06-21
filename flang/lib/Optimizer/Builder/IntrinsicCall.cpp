@@ -8300,7 +8300,7 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   mlir::Value team = fir::getBase(args[args.size() - 1]);
 
   if (!coarrayIsAbsent)
-    TODO(loc, "this_image with coarray argument.");
+    TODO(loc, "coarray: this_image with coarray argument");
   mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
 }

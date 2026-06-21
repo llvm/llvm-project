@@ -175,6 +175,27 @@ exit:
   ret void
 }
 
+; If a phi arm is the other pointer, the gep may alias it.
+; CHECK-LABEL: phi_and_gep_unknown_size_may
+; CHECK: MayAlias:	i8* %g, i8* %z
+define void @phi_and_gep_unknown_size_may(i1 %c, ptr %x, ptr %z) {
+entry:
+  br i1 %c, label %true, label %false
+
+true:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi ptr [ %x, %true ], [ %z, %false ]
+  %g = getelementptr inbounds i8, ptr %p, i64 1
+  store i8 0, ptr %g
+  store i8 0, ptr %z
+  ret void
+}
+
 declare void @llvm.memset.p0.i32(ptr, i8, i32, i1)
 
 ; CHECK-LABEL: unsound_inequality

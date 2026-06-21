@@ -5781,14 +5781,18 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
 
 static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
   SmallVector<VPValue *> Ops0;
-  auto *WideMember0 = dyn_cast<VPSingleDefRecipe>(Ops[0]);
+  auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
     return false;
   for (VPValue *V : Ops) {
     if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
       return false;
-    auto *R = cast<VPSingleDefRecipe>(V);
+    auto *R = cast<VPRecipeWithIRFlags>(V);
     if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(WideMember0))
+      return false;
+    if (R->getScalarType() != WideMember0->getScalarType())
+      return false;
+    if (R->hasPredicate() && R->getPredicate() != WideMember0->getPredicate())
       return false;
   }
 

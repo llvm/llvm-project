@@ -6618,7 +6618,9 @@ private:
             !Fortran::semantics::IsAllocatable(sym) &&
             Fortran::semantics::IsSaved(sym)) {
           mlir::Location loc = toLocation();
-          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+          TODO(
+              loc,
+              "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
         }
       }
       Fortran::lower::defineModuleVariable(*this, var);

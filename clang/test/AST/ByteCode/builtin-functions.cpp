@@ -1404,6 +1404,46 @@ namespace ElementwiseClmul {
                     (vector4uint){0U, 1U, 3U, 7U})) == 27U);
 }
 
+namespace ElementwisePext {
+  static_assert(__builtin_elementwise_pext(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_pext(0xFFU, 0xFFU) == 0xFFU);
+  static_assert(__builtin_elementwise_pext(0xFFU, 0x0FU) == 0x0FU);
+  static_assert(__builtin_elementwise_pext(0xFFU, 0xF0U) == 0x0FU);
+  static_assert(__builtin_elementwise_pext(0b1010'1010U, 0b1100'1100U) ==
+                0b0000'1010U);
+  static_assert(__builtin_elementwise_pext(0b1111'1111U, 0b1010'1010U) ==
+                0b0000'1111U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_pext((unsigned _BitInt(31))0xFF,
+                                           (unsigned _BitInt(31))0x0F) ==
+                (unsigned _BitInt(31))0x0F);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_pext(
+                    (vector4uint){0xAAU, 0xFFU, 0x55U, 0x00U},
+                    (vector4uint){0xCCU, 0xAAU, 0x0FU, 0x00U})) == 0x1EU);
+}
+
+namespace ElementwisePdep {
+  static_assert(__builtin_elementwise_pdep(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_pdep(0xFFU, 0xFFU) == 0xFFU);
+  static_assert(__builtin_elementwise_pdep(0x0FU, 0xFFU) == 0x0FU);
+  static_assert(__builtin_elementwise_pdep(0x0FU, 0xF0U) == 0xF0U);
+  static_assert(__builtin_elementwise_pdep(0b0000'1010U, 0b1100'1100U) ==
+                0b1000'1000U);
+  static_assert(__builtin_elementwise_pdep(0b0000'1111U, 0b1010'1010U) ==
+                0b1010'1010U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_pdep((unsigned _BitInt(31))0x0F,
+                                           (unsigned _BitInt(31))0xFF) ==
+                (unsigned _BitInt(31))0x0F);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_pdep(
+                    (vector4uint){0x0AU, 0x0FU, 0x05U, 0x00U},
+                    (vector4uint){0xCCU, 0xAAU, 0x0FU, 0x00U})) == 0x137U);
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;

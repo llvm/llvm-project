@@ -51,8 +51,7 @@ read_value_sps_allocaction(const char *ArgData, size_t ArgSize) {
 TEST(SimpleNativeMemoryMapTest, CreateAndDestroy) {
   // Test that we can create and destroy a SimpleNativeMemoryMap instance as
   // expected.
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 }
@@ -60,8 +59,7 @@ TEST(SimpleNativeMemoryMapTest, CreateAndDestroy) {
 TEST(SimpleNativeMemoryMapTest, ReserveAndRelease) {
   // Test that we can reserve and release a slab of address space as expected,
   // without finalizing any memory within it.
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -83,8 +81,7 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
   //    expected.
   // 4. release the address range.
 
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -160,8 +157,7 @@ TEST(SimpleNativeMemoryMapTest, FullPipelineForOneRWSegment) {
 
 TEST(SimpleNativeMemoryMapTest, ReserveRejectsNonPageSizeMultiple) {
   // Verify that reserve rejects sizes that aren't page-size multiples.
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -174,8 +170,7 @@ TEST(SimpleNativeMemoryMapTest, ReserveRejectsNonPageSizeMultiple) {
 
 TEST(SimpleNativeMemoryMapTest, ReserveAcceptsPageSizeMultiple) {
   // Verify that reserve accepts a size that's an exact page-size multiple.
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -192,7 +187,7 @@ TEST(SimpleNativeMemoryMapTest, ReleaseMultipleReportsErrors) {
   // Test that releaseMultiple reports errors via Session::reportError
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+  Session S(mockExecutorProcessInfo(), noDispatch,
             [&](Error Err) { Errors.push_back(toString(std::move(Err))); });
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
@@ -214,7 +209,7 @@ TEST(SimpleNativeMemoryMapTest, DeinitializeMultipleReportsErrors) {
   // Test that deinitializeMultiple reports errors via Session::reportError
   // when some addresses aren't recognized.
   std::vector<std::string> Errors;
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+  Session S(mockExecutorProcessInfo(), noDispatch,
             [&](Error Err) { Errors.push_back(toString(std::move(Err))); });
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
@@ -243,8 +238,7 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeShutdown) {
   // Test that memory is deinitialized in the case where we reserve and
   // initialize some memory, then just shut down the memory manager.
 
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 
@@ -285,8 +279,7 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeDetachShutdown) {
   // Test that memory is deinitialized in the case where we reserve and
   // initialize some memory, then just shut down the memory manager.
 
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ThrowAway;
   auto SNMM = cantFail(SimpleNativeMemoryMap::Create(S, ThrowAway));
 

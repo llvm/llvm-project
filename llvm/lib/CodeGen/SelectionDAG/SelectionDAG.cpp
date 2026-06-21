@@ -3955,19 +3955,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::PDEP: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // Zeros are retained from the mask operand. But not ones.
-    Known.One.clearAllBits();
-    // The result will have at least as many trailing zeros as the non-mask
-    // operand since bits can only map to the same or higher bit position.
-    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+    Known = KnownBits::pdep(Known2, Known);
     break;
   }
   case ISD::PEXT: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    // The result has as many leading zeros as the number of zeroes in the mask.
-    unsigned Count = Known.Zero.popcount();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Count);
-    Known.One.clearAllBits();
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::pext(Known2, Known);
     break;
   }
   case ISD::CLMUL: {

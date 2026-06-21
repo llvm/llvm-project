@@ -165,6 +165,26 @@ Error AlignerPass::runOnFunctions(BinaryContext &BC) {
     else
       alignMaxBytes(BF);
 
+    // Record the function's effective code alignment so layout passes can align
+    // the tentative section base to the eventual section alignment without
+    // re-scanning all functions. AssignSections (run just before this pass) has
+    // assigned the output sections, so route the alignment to whichever of
+    // .text / .text.cold the function actually emits into: a whole cold
+    // function (and its constant island) lands entirely in .text.cold, while a
+    // split function contributes its (duplicated) island and code to both.
+    const uint16_t Align = std::max<uint16_t>(
+        BF.getAlignment(),
+        BF.hasIslandsInfo() ? BF.getConstantIslandAlignment() : uint16_t(0));
+    const SmallString<32> MainSectionName = BF.getCodeSectionName();
+    const bool InMainSection =
+        StringRef(MainSectionName) == BC.getMainCodeSectionName();
+    bool InColdSection =
+        StringRef(MainSectionName) == BC.getColdCodeSectionName();
+    if (!InColdSection && BF.isSplit())
+      InColdSection = StringRef(BF.getCodeSectionName(FragmentNum::cold())) ==
+                      BC.getColdCodeSectionName();
+    BC.updateMaxCodeAlignment(Align, InMainSection, InColdSection);
+
     if (opts::AlignBlocks && !opts::PreserveBlocksAlignment)
       alignBlocks(BF, Emitter.MCE.get());
   };

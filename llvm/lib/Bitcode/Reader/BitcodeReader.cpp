@@ -7756,10 +7756,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   // corresponding function summary.
   const bool MemProfAfterFunctionSummary = Version >= 13;
   if (Version < 1 || Version > ModuleSummaryIndex::BitcodeSummaryVersion)
-    return error("Invalid summary version " + Twine(Version) +
-                 ". Version should be in the range [1-" +
-                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) +
-                 "].");
+    return error("Invalid summary version " + Twine(Version) + " in module '" +
+                 ModulePath + "'. Version should be in the range [1-" +
+                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) + "].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional

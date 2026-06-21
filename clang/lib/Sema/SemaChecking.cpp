@@ -3701,6 +3701,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case Builtin::BI__builtin_elementwise_clmul:
+  case Builtin::BI__builtin_elementwise_pext:
+  case Builtin::BI__builtin_elementwise_pdep:
     if (BuiltinElementwiseMath(TheCall,
                                EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();
