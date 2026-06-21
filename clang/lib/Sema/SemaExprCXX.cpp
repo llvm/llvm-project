@@ -2716,42 +2716,42 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   return false;
 }
 
-enum class ResolveMode { Typed, Untyped };
-static bool resolveAllocationOverload(
-    Sema &S, LookupResult &R, SourceRange Range, ResolveMode Mode,
-    SmallVectorImpl<Expr *> &PrefArgs, SmallVectorImpl<Expr *> &FallbackArgs,
-    AlignedAllocationMode &PassAlignment, FunctionDecl *&Operator,
-    OverloadCandidateSet *PrefCandidates, bool Diagnose) {
-
-  // If PrefCandidates are passed, this is the nested call, and so FallbackArgs
-  // should be used to fill current candidates.
-  auto &Args = PrefCandidates ? FallbackArgs : PrefArgs;
-
-  OverloadCandidateSet Candidates(R.getNameLoc(),
-                                  OverloadCandidateSet::CSK_Normal);
-  for (LookupResult::iterator Alloc = R.begin(), AllocEnd = R.end();
-       Alloc != AllocEnd; ++Alloc) {
+static std::unique_ptr<OverloadCandidateSet> fillNewDeleteOverloadCandidateSet(
+    Sema &S, LookupResult &R, ArrayRef<Expr *> Args,
+    llvm::function_ref<bool(NamedDecl *)> Filter = [](NamedDecl *) {
+      return true;
+    }) {
+  auto Candidates = std::make_unique<OverloadCandidateSet>(
+      R.getNameLoc(), OverloadCandidateSet::CSK_Normal);
+  for (LookupResult::iterator FnOvl = R.begin(), FnOvlEnd = R.end();
+       FnOvl != FnOvlEnd; ++FnOvl) {
     // Even member operator new/delete are implicitly treated as
     // static, so don't use AddMemberCandidate.
-    NamedDecl *D = (*Alloc)->getUnderlyingDecl();
-    bool IsTypeAware = D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
-    if (IsTypeAware == (Mode != ResolveMode::Typed))
+    NamedDecl *D = (*FnOvl)->getUnderlyingDecl();
+    if (!Filter(D))
       continue;
 
     if (FunctionTemplateDecl *FnTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
-      S.AddTemplateOverloadCandidate(FnTemplate, Alloc.getPair(),
+      S.AddTemplateOverloadCandidate(FnTemplate, FnOvl.getPair(),
                                      /*ExplicitTemplateArgs=*/nullptr, Args,
-                                     Candidates,
+                                     *Candidates,
                                      /*SuppressUserConversions=*/false);
       continue;
     }
 
     FunctionDecl *Fn = cast<FunctionDecl>(D);
-    S.AddOverloadCandidate(Fn, Alloc.getPair(), Args, Candidates,
+    S.AddOverloadCandidate(Fn, FnOvl.getPair(), Args, *Candidates,
                            /*SuppressUserConversions=*/false);
   }
 
-  // Do the resolution.
+  return Candidates;
+}
+
+static bool resolveAllocationOverload(Sema &S, LookupResult &R,
+                                      SourceRange Range,
+                                      OverloadCandidateSet &Candidates,
+                                      ArrayRef<Expr *> Args,
+                                      FunctionDecl *&Operator, bool Diagnose) {
   OverloadCandidateSet::iterator Best;
   switch (Candidates.BestViableFunction(S, R.getNameLoc(), Best)) {
   case OR_Success: {
@@ -2766,100 +2766,8 @@ static bool resolveAllocationOverload(
   }
 
   case OR_No_Viable_Function:
-    if (!PrefCandidates && !FallbackArgs.empty()) {
-      PassAlignment = AlignedAllocationMode::No;
-      return resolveAllocationOverload(S, R, Range, Mode, PrefArgs,
-                                       FallbackArgs, PassAlignment, Operator,
-                                       &Candidates, Diagnose);
-    }
-
-    // MSVC will fall back on trying to find a matching global operator new
-    // if operator new[] cannot be found.  Also, MSVC will leak by not
-    // generating a call to operator delete or operator delete[], but we
-    // will not replicate that bug.
-    // FIXME: Find out how this interacts with the std::align_val_t fallback
-    // once MSVC implements it.
-    if (R.getLookupName().getCXXOverloadedOperator() == OO_Array_New &&
-        S.Context.getLangOpts().MSVCCompat && Mode != ResolveMode::Typed) {
-      R.clear();
-      R.setLookupName(S.Context.DeclarationNames.getCXXOperatorName(OO_New));
-      S.LookupQualifiedName(R, S.Context.getTranslationUnitDecl());
-      // Only try this fallback without the alignment argument.
-      assert(!isAlignedAllocation(PassAlignment));
-      auto &Args = FallbackArgs.empty() ? PrefArgs : FallbackArgs;
-      SmallVector<Expr *, 1> EmptyArgs;
-      // FIXME: This will give bad diagnostics pointing at the wrong functions.
-      return resolveAllocationOverload(S, R, Range, Mode, Args, EmptyArgs,
-                                       PassAlignment, Operator,
-                                       /*PrefCandidates=*/nullptr, Diagnose);
-    }
-    if (Mode == ResolveMode::Typed) {
-      // If we can't find a matching type aware operator we don't consider this
-      // a failure.
-      Operator = nullptr;
-      return false;
-    }
-    if (Diagnose) {
-      // If this is an allocation of the form 'new (p) X' for some object
-      // pointer p (or an expression that will decay to such a pointer),
-      // diagnose the reason for the error.
-      if (!R.isClassLookup() && Args.size() == 2 &&
-          (Args[1]->getType()->isObjectPointerType() ||
-           Args[1]->getType()->isArrayType())) {
-        const QualType Arg1Type = Args[1]->getType();
-        QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
-        if (UnderlyingType->isPointerType())
-          UnderlyingType = UnderlyingType->getPointeeType();
-        if (UnderlyingType.isConstQualified()) {
-          S.Diag(Args[1]->getExprLoc(),
-                 diag::err_placement_new_into_const_qualified_storage)
-              << Arg1Type << Args[1]->getSourceRange();
-          return true;
-        }
-        S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
-            << R.getLookupName() << Range;
-        // Listing the candidates is unlikely to be useful; skip it.
-        return true;
-      }
-
-      // Finish checking all candidates before we note any. This checking can
-      // produce additional diagnostics so can't be interleaved with our
-      // emission of notes.
-      //
-      // For an aligned allocation, separately check the aligned and unaligned
-      // candidates with their respective argument lists.
-      SmallVector<OverloadCandidate *, 32> PrefCands;
-      SmallVector<OverloadCandidate *, 32> Cands;
-      if (PrefCandidates) {
-        assert(Mode == ResolveMode::Untyped &&
-               "Typed mode does not issue diagnostics");
-        auto IsAligned = [](OverloadCandidate &C) {
-          const unsigned AlignArgOffset = 1;
-          return C.Function->getNumParams() > AlignArgOffset &&
-                 C.Function->getParamDecl(AlignArgOffset)
-                     ->getType()
-                     ->isAlignValT();
-        };
-        auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
-
-        PrefCands = PrefCandidates->CompleteCandidates(
-            S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsAligned);
-
-        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc(), IsUnaligned);
-      } else {
-        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc());
-      }
-
-      S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
-          << R.getLookupName() << Range;
-      if (PrefCandidates)
-        PrefCandidates->NoteCandidates(S, PrefArgs, PrefCands, "",
-                                       R.getNameLoc());
-      Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
-    }
-    return true;
+    // Let the caller handle fallback logic.
+    return false;
 
   case OR_Ambiguous:
     if (Diagnose) {
@@ -2879,6 +2787,68 @@ static bool resolveAllocationOverload(
   }
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
+}
+
+static void diagnoseNoViableFunctionForAllocationOverloadResolution(
+    Sema &S, LookupResult &R, SourceRange Range, ArrayRef<Expr *> PrefArgs,
+    ArrayRef<Expr *> FallbackArgs, OverloadCandidateSet &PrefCandidates,
+    OverloadCandidateSet *FallbackCandidates) {
+  // If this is an allocation of the form 'new (p) X' for some object
+  // pointer p (or an expression that will decay to such a pointer),
+  // diagnose the reason for the error.
+  auto NonAlignArgs = FallbackArgs.empty() ? PrefArgs : FallbackArgs;
+  if (!R.isClassLookup() && NonAlignArgs.size() == 2 &&
+      (NonAlignArgs[1]->getType()->isObjectPointerType() ||
+       NonAlignArgs[1]->getType()->isArrayType())) {
+    const QualType Arg1Type = NonAlignArgs[1]->getType();
+    QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
+    if (UnderlyingType->isPointerType())
+      UnderlyingType = UnderlyingType->getPointeeType();
+    if (UnderlyingType.isConstQualified()) {
+      S.Diag(NonAlignArgs[1]->getExprLoc(),
+             diag::err_placement_new_into_const_qualified_storage)
+          << Arg1Type << NonAlignArgs[1]->getSourceRange();
+      return;
+    }
+    S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
+        << R.getLookupName() << Range;
+    // Listing the candidates is unlikely to be useful; skip it.
+    return;
+  }
+
+  // Finish checking all candidates before we note any. This checking can
+  // produce additional diagnostics so can't be interleaved with our
+  // emission of notes.
+  //
+  // For an aligned allocation, separately check the aligned and unaligned
+  // candidates with their respective argument lists.
+  SmallVector<OverloadCandidate *, 32> PrefCands;
+  SmallVector<OverloadCandidate *, 32> FallbackCands;
+  if (FallbackCandidates) {
+    assert(!FallbackArgs.empty() && PrefArgs.size() == FallbackArgs.size() + 1);
+    auto IsAligned = [](OverloadCandidate &C) {
+      const unsigned AlignArgOffset = 1;
+      return C.Function->getNumParams() > AlignArgOffset &&
+             C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
+    };
+    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+
+    PrefCands = PrefCandidates.CompleteCandidates(
+        S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsAligned);
+
+    FallbackCands = FallbackCandidates->CompleteCandidates(
+        S, OCD_AllCandidates, FallbackArgs, R.getNameLoc(), IsUnaligned);
+  } else {
+    PrefCands = PrefCandidates.CompleteCandidates(S, OCD_AllCandidates,
+                                                  PrefArgs, R.getNameLoc());
+  }
+
+  S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
+      << R.getLookupName() << Range;
+  PrefCandidates.NoteCandidates(S, PrefArgs, PrefCands, "", R.getNameLoc());
+  if (FallbackCandidates)
+    FallbackCandidates->NoteCandidates(S, FallbackArgs, FallbackCands, "",
+                                       R.getNameLoc());
 }
 
 enum class DeallocLookupMode { Untyped, OptionallyTyped };
@@ -2905,7 +2875,7 @@ bool Sema::FindAllocationFunctions(
     SourceLocation StartLoc, SourceRange Range,
     AllocationFunctionScope NewScope, AllocationFunctionScope DeleteScope,
     QualType AllocType, bool IsArray, ImplicitAllocationParameters &IAP,
-    MultiExprArg PlaceArgs, FunctionDecl *&OperatorNew,
+    ArrayRef<Expr *> PlaceArgs, FunctionDecl *&OperatorNew,
     FunctionDecl *&OperatorDelete, bool Diagnose) {
   // --- Choosing an allocation function ---
   // C++ 5.3.4p8 - 14 & 18
@@ -2950,7 +2920,6 @@ bool Sema::FindAllocationFunctions(
       IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
   }
   TypeAwareAllocationMode OriginalTypeAwareState = IAP.PassTypeIdentity;
-  AlignedAllocationMode OriginalAlignedAllocationMode = IAP.PassAlignment;
 
   CXXScalarValueInitExpr TypeIdentityParam(TypeIdentity, nullptr, StartLoc);
 
@@ -2961,7 +2930,7 @@ bool Sema::FindAllocationFunctions(
 
   QualType AlignValT = Context.VoidTy;
   if (isTypeAwareAllocation(OriginalTypeAwareState) ||
-      isAlignedAllocation(OriginalAlignedAllocationMode)) {
+      isAlignedAllocation(IAP.PassAlignment)) {
     DeclareGlobalNewDelete();
     AlignValT = Context.getCanonicalTagType(getStdAlignValT());
   }
@@ -2982,7 +2951,8 @@ bool Sema::FindAllocationFunctions(
   };
 
   // Find the allocation function.
-  {
+  // Staged allocation function lookup using do-while(false) for early exit.
+  do {
     LookupResult R(*this, NewName, StartLoc, LookupOrdinaryName);
 
     // C++1z [expr.new]p9:
@@ -3024,41 +2994,117 @@ bool Sema::FindAllocationFunctions(
     // We do our own custom access checks below.
     R.suppressDiagnostics();
 
+    auto IsTypeAware = [](NamedDecl *D) {
+      return D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
+    };
+    auto IsNonTypeAware = [](NamedDecl *D) {
+      return !D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
+    };
     OperatorNew = nullptr;
-    if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-      IAP.PassAlignment = AlignedAllocationMode::Yes;
-      auto AllocArgs = FillAllocArgs(TypeAwareAllocationMode::Yes,
-                                     AlignedAllocationMode::Yes);
-      auto FallbackAllocArgs = FillAllocArgs(TypeAwareAllocationMode::Yes,
-                                             AlignedAllocationMode::No);
 
-      if (resolveAllocationOverload(*this, R, Range, ResolveMode::Typed,
-                                    AllocArgs, FallbackAllocArgs,
-                                    IAP.PassAlignment, OperatorNew,
-                                    /*PrefCandidates=*/nullptr, Diagnose))
+    // Step 1. Try type-aware allocation functions first.
+    if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+      auto Args = FillAllocArgs(TypeAwareAllocationMode::Yes,
+                                AlignedAllocationMode::Yes);
+      auto Candidates =
+          fillNewDeleteOverloadCandidateSet(*this, R, Args, IsTypeAware);
+      if (resolveAllocationOverload(*this, R, Range, *Candidates, Args,
+                                    OperatorNew, Diagnose))
         return true;
-    }
-    if (!OperatorNew) {
-      IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
-      IAP.PassAlignment = OriginalAlignedAllocationMode;
-      auto AllocArgs = FillAllocArgs(TypeAwareAllocationMode::No,
-                                     OriginalAlignedAllocationMode);
-      // C++17 [expr.new]p13:
-      //   If no matching function is found and the allocated object type has
-      //   new-extended alignment, the alignment argument is removed from the
-      //   argument list, and overload resolution is performed again.
-      auto FallbackAllocArgs =
-          isAlignedAllocation(OriginalAlignedAllocationMode)
-              ? FillAllocArgs(TypeAwareAllocationMode::No,
-                              AlignedAllocationMode::No)
-              : ArgsVector();
-      if (resolveAllocationOverload(*this, R, Range, ResolveMode::Untyped,
-                                    AllocArgs, FallbackAllocArgs,
-                                    IAP.PassAlignment, OperatorNew,
-                                    /*PrefCandidates=*/nullptr, Diagnose))
+      if (OperatorNew) {
+        IAP.PassAlignment = AlignedAllocationMode::Yes;
+        break;
+      }
+
+      // Step 1a. Try type-aware allocation functions without the alignment
+      // parameter.
+      // FIXME: According to P2719, whether the implicit alignment parameter is
+      // added or not should depend on the type of the first argument in the
+      // placement arguments list.
+      Args = FillAllocArgs(TypeAwareAllocationMode::Yes,
+                           AlignedAllocationMode::No);
+      Candidates =
+          fillNewDeleteOverloadCandidateSet(*this, R, Args, IsTypeAware);
+      if (resolveAllocationOverload(*this, R, Range, *Candidates, Args,
+                                    OperatorNew, Diagnose))
         return true;
+      if (OperatorNew) {
+        IAP.PassAlignment = AlignedAllocationMode::No;
+        break;
+      }
     }
-  }
+
+    // Step 2. Try non-type-aware allocation functions.
+    IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
+    auto PrefArgs =
+        FillAllocArgs(TypeAwareAllocationMode::No, IAP.PassAlignment);
+    auto PrefCandidates =
+        fillNewDeleteOverloadCandidateSet(*this, R, PrefArgs, IsNonTypeAware);
+    if (resolveAllocationOverload(*this, R, Range, *PrefCandidates, PrefArgs,
+                                  OperatorNew, Diagnose))
+      return true;
+    if (OperatorNew)
+      break;
+
+    // Step 3. For overaligned types, try allocation functions without the
+    // alignment parameter.
+    // C++17 [expr.new]p13:
+    //   If no matching function is found and the allocated object type has
+    //   new-extended alignment, the alignment argument is removed from the
+    //   argument list, and overload resolution is performed again.
+    ArgsVector FallbackArgs;
+    std::unique_ptr<OverloadCandidateSet> FallbackCandidates;
+    if (isAlignedAllocation(IAP.PassAlignment)) {
+      FallbackArgs =
+          FillAllocArgs(TypeAwareAllocationMode::No, AlignedAllocationMode::No);
+      FallbackCandidates = fillNewDeleteOverloadCandidateSet(
+          *this, R, FallbackArgs, IsNonTypeAware);
+      if (resolveAllocationOverload(*this, R, Range, *FallbackCandidates,
+                                    FallbackArgs, OperatorNew, Diagnose))
+        return true;
+      if (OperatorNew) {
+        IAP.PassAlignment = AlignedAllocationMode::No;
+        break;
+      }
+    }
+
+    // Step 4. Try MSVC-specific fallback.
+    // MSVC will fall back on trying to find a matching global operator new
+    // if operator new[] cannot be found.  Also, MSVC will leak by not
+    // generating a call to operator delete or operator delete[], but we
+    // will not replicate that bug.
+    // FIXME: Find out how this interacts with the std::align_val_t fallback
+    // once MSVC implements it.
+    if (IsArray && Context.getLangOpts().MSVCCompat) {
+      // Note: R is intentionally shadowed for the MSVC fallback lookup.
+      LookupResult R(*this, Context.DeclarationNames.getCXXOperatorName(OO_New),
+                     StartLoc, LookupOrdinaryName);
+      LookupQualifiedName(R, Context.getTranslationUnitDecl());
+      auto Args =
+          FillAllocArgs(TypeAwareAllocationMode::No, AlignedAllocationMode::No);
+      auto Candidates =
+          fillNewDeleteOverloadCandidateSet(*this, R, Args, IsNonTypeAware);
+      if (resolveAllocationOverload(*this, R, Range, *Candidates, Args,
+                                    OperatorNew, Diagnose))
+        return true;
+      if (OperatorNew) {
+        IAP.PassAlignment = AlignedAllocationMode::No;
+        break;
+      }
+      // FIXME: This will give bad diagnostics pointing at the wrong functions.
+      if (Diagnose)
+        diagnoseNoViableFunctionForAllocationOverloadResolution(
+            *this, R, Range, Args, /*FallbackArgs=*/ArrayRef<Expr *>(),
+            *Candidates, /*FallbackCandidates=*/nullptr);
+      return true;
+    }
+
+    if (Diagnose)
+      diagnoseNoViableFunctionForAllocationOverloadResolution(
+          *this, R, Range, PrefArgs, FallbackArgs, *PrefCandidates,
+          FallbackCandidates.get());
+    return true;
+  } while (false);
 
   // We don't need an operator delete if we're running under -fno-exceptions.
   if (!getLangOpts().Exceptions) {
@@ -4263,32 +4309,13 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
   R.suppressDiagnostics();
 
   SmallVector<Expr *, 8> Args(TheCall->arguments());
-  OverloadCandidateSet Candidates(R.getNameLoc(),
-                                  OverloadCandidateSet::CSK_Normal);
-  for (LookupResult::iterator FnOvl = R.begin(), FnOvlEnd = R.end();
-       FnOvl != FnOvlEnd; ++FnOvl) {
-    // Even member operator new/delete are implicitly treated as
-    // static, so don't use AddMemberCandidate.
-    NamedDecl *D = (*FnOvl)->getUnderlyingDecl();
-
-    if (FunctionTemplateDecl *FnTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
-      S.AddTemplateOverloadCandidate(FnTemplate, FnOvl.getPair(),
-                                     /*ExplicitTemplateArgs=*/nullptr, Args,
-                                     Candidates,
-                                     /*SuppressUserConversions=*/false);
-      continue;
-    }
-
-    FunctionDecl *Fn = cast<FunctionDecl>(D);
-    S.AddOverloadCandidate(Fn, FnOvl.getPair(), Args, Candidates,
-                           /*SuppressUserConversions=*/false);
-  }
-
+  std::unique_ptr<OverloadCandidateSet> Candidates =
+      fillNewDeleteOverloadCandidateSet(S, R, Args);
   SourceRange Range = TheCall->getSourceRange();
 
   // Do the resolution.
   OverloadCandidateSet::iterator Best;
-  switch (Candidates.BestViableFunction(S, R.getNameLoc(), Best)) {
+  switch (Candidates->BestViableFunction(S, R.getNameLoc(), Best)) {
   case OR_Success: {
     // Got one!
     FunctionDecl *FnDecl = Best->Function;
@@ -4308,7 +4335,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
   }
 
   case OR_No_Viable_Function:
-    Candidates.NoteCandidates(
+    Candidates->NoteCandidates(
         PartialDiagnosticAt(R.getNameLoc(),
                             S.PDiag(diag::err_ovl_no_viable_function_in_call)
                                 << R.getLookupName() << Range),
@@ -4316,7 +4343,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
     return true;
 
   case OR_Ambiguous:
-    Candidates.NoteCandidates(
+    Candidates->NoteCandidates(
         PartialDiagnosticAt(R.getNameLoc(),
                             S.PDiag(diag::err_ovl_ambiguous_call)
                                 << R.getLookupName() << Range),
@@ -4325,7 +4352,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
 
   case OR_Deleted:
     S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
-                                   Candidates, Best->Function, Args);
+                                   *Candidates, Best->Function, Args);
     return true;
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
