@@ -8,19 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include <exception>
-#include <stdio.h>
-#include <stdlib.h>
 
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrCreate(void*);
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrDestroy(void*);
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrCopy(void*, const void*);
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrAssign(void*, const void*);
-_LIBCPP_CRT_FUNC bool __cdecl __ExceptionPtrCompare(const void*, const void*);
-_LIBCPP_CRT_FUNC bool __cdecl __ExceptionPtrToBool(const void*);
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrSwap(void*, void*);
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrCurrentException(void*);
-[[noreturn]] _LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrRethrow(const void*);
-_LIBCPP_CRT_FUNC void __cdecl __ExceptionPtrCopyException(void*, const void*, const void*);
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrCreate(void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrDestroy(void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrCopy(void*, const void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrAssign(void*, const void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI bool __cdecl __ExceptionPtrCompare(const void*, const void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI bool __cdecl __ExceptionPtrToBool(const void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrSwap(void*, void*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrCurrentException(void*) noexcept;
+[[noreturn]] _LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrRethrow(const void*);
+_LIBCPP_EXPORTED_FROM_ABI void __cdecl __ExceptionPtrCopyException(void*, const void*, const void*) noexcept;
 
 namespace std {
 
