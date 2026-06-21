@@ -49,10 +49,9 @@ private:
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
-Session::Session(ExecutorProcessInfo EPI,
-                 std::unique_ptr<TaskDispatcher> Dispatcher,
+Session::Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
                  ErrorReporterFn ReportError)
-    : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
+    : EPI(std::move(EPI)), RunCall(std::move(RunCall)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {}
 
@@ -350,8 +349,6 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 }
 
 void Session::completeShutdown() {
-  Dispatcher->shutdown();
-
   {
     std::scoped_lock<std::mutex> Lock(M);
     assert(CurrentState == State::Shutdown);
