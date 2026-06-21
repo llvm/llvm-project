@@ -16,7 +16,6 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOAN_PROPAGATION_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
-#include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/ImmutableMap.h"
@@ -45,14 +44,14 @@ public:
   /// this function traces backwards through OriginFlowFacts to identify the
   /// sequence of origins through which the loan flowed, ending at the origin
   /// where the loan was originally issued.
-  llvm::SmallVector<OriginID>
-  buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
-                       const LoanID TargetLoan,
-                       const PostOrderCFGView *POV) const;
+  llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,
+                                                   const OriginID StartOID,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const;
 
-  llvm::SmallVector<OriginID>
-  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan,
-                       const PostOrderCFGView *POV) const;
+  llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,
+                                                   const LoanID TargetLoan,
+                                                   const CFG *Cfg) const;
 
 private:
   class Impl;
