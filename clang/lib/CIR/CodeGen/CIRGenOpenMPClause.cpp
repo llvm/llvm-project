@@ -93,10 +93,15 @@ bool OpenMPClauseEmitter::emitProcBind(
   return false;
 }
 
-bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result) const {
+bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result,
+                                 llvm::omp::Directive directiveName) const {
   for (const OMPClause *clause : clauses) {
     const auto *ic = dyn_cast<OMPIfClause>(clause);
     if (!ic)
+      continue;
+
+    if (!(ic->getNameModifier() == llvm::omp::Directive::OMPD_unknown) &&
+        ic->getNameModifier() != directiveName)
       continue;
 
     Expr *ifCondition = ic->getCondition();
