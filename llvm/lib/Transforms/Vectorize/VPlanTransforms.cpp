@@ -30,6 +30,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -7129,6 +7130,19 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, Plan, Phi);
 }
 
+/// Check if the pointer operand \p Addr of a memory access is consecutive
+/// w.r.t. \p L, i.e. it is an affine AddRec with unit stride in units of
+/// \p AccessTy.
+static bool isStride1Access(VPValue *Addr, Type *AccessTy,
+                            PredicatedScalarEvolution &PSE, const Loop *L) {
+  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
+  if (!AddRec)
+    return false;
+
+  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE) == 1;
+}
+
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
                                                  PredicatedScalarEvolution &PSE,
@@ -7239,6 +7253,39 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return true;
         });
   }
+
+  // Widen unmasked unit-stride consecutive accesses, matching the legacy CM.
+  VPlanTransforms::runPass(
+      "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+        Instruction *I = VPI->getUnderlyingInstr();
+        if (RecipeBuilder.isPredicatedInst(I))
+          return false;
+
+        bool IsLoad = VPI->getOpcode() == Instruction::Load;
+        VPValue *Ptr = VPI->getOperand(!IsLoad);
+        Type *ScalarTy = getLoadStoreType(I);
+        if (!isStride1Access(Ptr, ScalarTy, PSE, L))
+          return false;
+
+        Type *StrideTy =
+            Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+        VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+        auto *VectorPtr = new VPVectorPointerRecipe(
+            Ptr, ScalarTy, StrideOne, vputils::getGEPFlagsForPtr(Ptr),
+            VPI->getDebugLoc());
+        VectorPtr->insertBefore(VPI);
+        if (IsLoad)
+          return ReplaceWith(
+              VPI, new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr,
+                                         /*Mask=*/nullptr,
+                                         /*Consecutive=*/true, *VPI,
+                                         I->getDebugLoc()));
+        return ReplaceWith(
+            VPI, new VPWidenStoreRecipe(*cast<StoreInst>(I), VectorPtr,
+                                        VPI->getOperand(0),
+                                        /*Mask=*/nullptr, /*Consecutive=*/true,
+                                        *VPI, I->getDebugLoc()));
+      });
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
                            Plan, [&](VPInstruction *VPI) {
