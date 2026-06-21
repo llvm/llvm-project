@@ -317,7 +317,9 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
 uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
     uint64_t DotAddress) {
-  DotAddress = alignTo(DotAddress, llvm::Align(opts::AlignFunctions));
+  DotAddress =
+      alignTo(DotAddress, std::max<uint64_t>(opts::AlignFunctions,
+                                             BC.MaxColdCodeAlignment.load()));
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
@@ -452,8 +454,11 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
     }
   }
 
-  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize)
-    DotAddress = alignTo(BC.LayoutStartAddress, opts::AlignText);
+  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
+    uint64_t TextAlign =
+        std::max<uint64_t>(opts::AlignText, BC.MaxMainCodeAlignment.load());
+    DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
+  }
 
   tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
 }
