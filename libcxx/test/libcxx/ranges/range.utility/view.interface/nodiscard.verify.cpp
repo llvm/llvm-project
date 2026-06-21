@@ -67,4 +67,9 @@ void test() {
   v[Diff{0}];
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v)[Diff{0}];
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.at(Diff{0});
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).at(Diff{0});
 }

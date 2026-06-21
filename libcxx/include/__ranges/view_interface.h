@@ -15,6 +15,7 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/prev.h>
 #include <__memory/pointer_traits.h>
@@ -25,6 +26,7 @@
 #include <__type_traits/is_class.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
+#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -158,6 +160,26 @@ public:
   template <random_access_range _RARange = const _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) const {
     return ranges::begin(__derived())[__index];
+  }
+
+  template <random_access_range _RARange = _Derived>
+    requires sized_range<_RARange> // freestanding-deleted
+  [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) {
+    if (__index < 0 || __index >= ranges::distance(__derived())) {
+      std::__throw_out_of_range(
+          "Precondition `0 <= __index < distance()` not satisfied. `.at(__index)` called with out-of-bounds index.");
+    }
+    return (*this)[__index];
+  }
+
+  template <random_access_range _RARange = const _Derived>
+    requires sized_range<_RARange> // freestanding-deleted
+  [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) const {
+    if (__index < 0 || __index >= ranges::distance(__derived())) {
+      std::__throw_out_of_range(
+          "Precondition `0 <= __index < distance()` not satisfied. `.at(__index)` called with out-of-bounds index.");
+    }
+    return (*this)[__index];
   }
 };
 
