@@ -31,12 +31,14 @@ define i32 @callee2(ptr dereferenceable(32) %t1, i32 noundef %t2) {
 define i32 @caller1(ptr %t1, i32 %t2) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@caller1
 ; NO_ASSUME-SAME: (ptr [[T1:%.*]], i32 [[T2:%.*]]) {
+; NO_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[T2]]) ]
 ; NO_ASSUME-NEXT:    [[V_I:%.*]] = load i32, ptr [[T1]], align 4
 ; NO_ASSUME-NEXT:    ret i32 [[V_I]]
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@caller1
 ; USE_ASSUME-SAME: (ptr [[T1:%.*]], i32 [[T2:%.*]]) {
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[T1]], i64 32), "noundef"(i32 [[T2]]) ]
+; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[T2]]) ]
 ; USE_ASSUME-NEXT:    [[V_I:%.*]] = load i32, ptr [[T1]], align 4
 ; USE_ASSUME-NEXT:    ret i32 [[V_I]]
 ;
@@ -49,14 +51,14 @@ define i32 @caller1(ptr %t1, i32 %t2) {
 
 define i32 @caller2(ptr dereferenceable(31) %t1) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@caller2
-; NO_ASSUME-SAME: (ptr dereferenceable(31) [[T1:%.*]])
-; NO_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]]
+; NO_ASSUME-SAME: (ptr dereferenceable(31) [[T1:%.*]]) {
+; NO_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]], align 4
 ; NO_ASSUME-NEXT:    ret i32 [[T2_I]]
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@caller2
-; USE_ASSUME-SAME: (ptr dereferenceable(31) [[T1:%.*]])
+; USE_ASSUME-SAME: (ptr dereferenceable(31) [[T1:%.*]]) {
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[T1]], i64 32) ]
-; USE_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]]
+; USE_ASSUME-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]], align 4
 ; USE_ASSUME-NEXT:    ret i32 [[T2_I]]
 ;
   %t2 = tail call i32 @callee(ptr dereferenceable(32) %t1)
@@ -68,8 +70,8 @@ define i32 @caller2(ptr dereferenceable(31) %t1) {
 
 define i32 @caller3(ptr dereferenceable(33) %t1) {
 ; CHECK-LABEL: define {{[^@]+}}@caller3
-; CHECK-SAME: (ptr dereferenceable(33) [[T1:%.*]])
-; CHECK-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]]
+; CHECK-SAME: (ptr dereferenceable(33) [[T1:%.*]]) {
+; CHECK-NEXT:    [[T2_I:%.*]] = load i32, ptr [[T1]], align 4
 ; CHECK-NEXT:    ret i32 [[T2_I]]
 ;
   %t2 = tail call i32 @callee(ptr dereferenceable(32) %t1)

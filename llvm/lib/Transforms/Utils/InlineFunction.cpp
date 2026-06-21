@@ -36,6 +36,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
@@ -1630,8 +1631,6 @@ static AttrBuilder IdentifyValidUBGeneratingAttributes(CallBase &CB) {
     Valid.addDereferenceableOrNullAttr(DerefOrNullBytes);
   if (CB.hasRetAttr(Attribute::NoAlias))
     Valid.addAttribute(Attribute::NoAlias);
-  if (CB.hasRetAttr(Attribute::NoUndef))
-    Valid.addAttribute(Attribute::NoUndef);
   return Valid;
 }
 
@@ -1817,6 +1816,32 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
     CallInst *NewAsmp = IRBuilder<>(&CB).CreateAlignmentAssumption(
         DL, ArgVal, Alignment->value());
     AC->registerAssumption(cast<AssumeInst>(NewAsmp));
+  }
+}
+
+static void addAssumesFromFunctionPrototype(CallBase &CB, AssumptionCache& AC) {
+  { // Assumes from Parameters
+    IRBuilder<> Builder(&CB);
+    AssumeBuilder AB(
+        Builder, [&](AssumeInst *AI) { AC.registerAssumption(AI); });
+
+    for (Argument &Arg : CB.getCalledFunction()->args()) {
+      if (Arg.hasAttribute(Attribute::NoUndef))
+        AB.addNoUndef(CB.getArgOperand(Arg.getArgNo()));
+    }
+  }
+
+  // TODO: Keep attributes from terminators around
+  if (CB.isTerminator())
+    return;
+
+  { // Assumes from return attributes
+    IRBuilder<> Builder(CB.getNextNode());
+    AssumeBuilder RetAssumes(
+        Builder, [&](AssumeInst *AI) { AC.registerAssumption(AI); });
+
+    if (CB.hasRetAttr(Attribute::NoUndef))
+      RetAssumes.addNoUndef(&CB);
   }
 }
 
@@ -2838,6 +2863,9 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
     /// Preserve all attributes on of the call and its parameters.
     salvageKnowledge(&CB, AC);
+
+    if (AC)
+      addAssumesFromFunctionPrototype(CB, *AC);
 
     // We want the inliner to prune the code as it copies.  We would LOVE to
     // have no dead or constant instructions leftover after inlining occurs

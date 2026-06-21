@@ -141,12 +141,14 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB_I_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I_I]], [[SUB_PTR_RHS_CAST_I_I]]
 ; CHECK-NEXT:    [[SUB_PTR_DIV_I_I:%.*]] = ashr exact i64 [[SUB_PTR_SUB_I_I]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i64 [[SUB_PTR_DIV_I_I]]) ]
 ; CHECK-NEXT:    [[CMP_NOT9:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT9]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i64 [[I_010]]) ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP1]], i64 [[I_010]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
@@ -280,12 +282,14 @@ define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB_I_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I_I]], [[SUB_PTR_RHS_CAST_I_I]]
 ; CHECK-NEXT:    [[SUB_PTR_DIV_I_I:%.*]] = ashr exact i64 [[SUB_PTR_SUB_I_I]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i64 [[SUB_PTR_DIV_I_I]]) ]
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[SUB_PTR_DIV_I_I]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i64 [[I_010]]) ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP1]], i64 [[I_010]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
@@ -359,6 +363,7 @@ define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY4_PREHEADER]], label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_BODY4]]:
 ; CHECK-NEXT:    [[K_07:%.*]] = phi i32 [ [[DEC:%.*]], %[[FOR_BODY4]] ], [ [[I_09]], %[[FOR_BODY4_PREHEADER]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[K_07]]) ]
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = zext i32 [[K_07]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[IDX_EXT_I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4

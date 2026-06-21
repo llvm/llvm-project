@@ -9,10 +9,11 @@ define void @_Z26recursive_partial_inliningi(i32 noundef %i) local_unnamed_addr 
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[I]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[SUB]]) ]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z26RECURSIVE_PARTIAL_INLININGI_1_EXIT:%.*]], label [[CODEREPL_I:%.*]]
 ; CHECK:       codeRepl.i:
-; CHECK-NEXT:    call void @_Z26recursive_partial_inliningi.1.if.end(i32 [[SUB]])
+; CHECK-NEXT:    call void @_Z26recursive_partial_inliningi.1.if.end(i32 [[SUB]]), !inline_history [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[_Z26RECURSIVE_PARTIAL_INLININGI_1_EXIT]]
 ; CHECK:       _Z26recursive_partial_inliningi.1.exit:
 ; CHECK-NEXT:    br label [[COMMON_RET2]]
