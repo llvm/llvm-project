@@ -8843,55 +8843,29 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 /// Fold: fcmp (fmul X, C1), C2 --> fcmp X, C2/C1
 static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
                                          Constant *RHSC) {
-  const CmpInst::Predicate Pred = I.getPredicate();
-  Value *X = LHSI->getOperand(0);
-  Value *Y = LHSI->getOperand(1);
+  FCmpInst::Predicate Pred = I.getPredicate();
 
-  ConstantFP *C1;
-  if (!match(Y, m_ConstantFP(C1)) || match(C1, m_AnyZeroFP()))
+  if ((Pred != FCmpInst::FCMP_OGE) && (Pred != FCmpInst::FCMP_OGT) &&
+      (Pred != FCmpInst::FCMP_OLE) && (Pred != FCmpInst::FCMP_OLT) &&
+      (Pred != FCmpInst::FCMP_ONE) && (Pred != FCmpInst::FCMP_OEQ) &&
+      (Pred != FCmpInst::FCMP_UGE) && (Pred != FCmpInst::FCMP_UGT) &&
+      (Pred != FCmpInst::FCMP_ULE) && (Pred != FCmpInst::FCMP_ULT) &&
+      (Pred != FCmpInst::FCMP_UNE) && (Pred != FCmpInst::FCMP_UEQ))
     return nullptr;
 
-  CmpInst::Predicate NewPred;
-  bool C1IsNegative = C1->isNegative();
-  switch (Pred) {
-  default:
+  ConstantFP *C;
+  if (!match(LHSI->getOperand(1), m_ConstantFP(C)) || match(C, m_AnyZeroFP()))
     return nullptr;
-  case FCmpInst::FCMP_UEQ:
-  case FCmpInst::FCMP_UNE:
-  case FCmpInst::FCMP_OEQ:
-  case FCmpInst::FCMP_ONE:
-    NewPred = Pred;
-    break;
-  case FCmpInst::FCMP_OGE:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_OLE : FCmpInst::FCMP_OGE;
-    break;
-  case FCmpInst::FCMP_OGT:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_OLT : FCmpInst::FCMP_OGT;
-    break;
-  case FCmpInst::FCMP_OLE:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_OGE : FCmpInst::FCMP_OLE;
-    break;
-  case FCmpInst::FCMP_OLT:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_OGT : FCmpInst::FCMP_OLT;
-    break;
-  case FCmpInst::FCMP_ULT:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_UGT : FCmpInst::FCMP_ULT;
-    break;
-  case FCmpInst::FCMP_ULE:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_UGE : FCmpInst::FCMP_ULE;
-    break;
-  case FCmpInst::FCMP_UGE:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_ULE : FCmpInst::FCMP_UGE;
-    break;
-  case FCmpInst::FCMP_UGT:
-    NewPred = C1IsNegative ? FCmpInst::FCMP_ULT : FCmpInst::FCMP_UGT;
-    break;
-  }
-  Constant *NewRHSC = ConstantFoldBinaryOpOperands(Instruction::FDiv, RHSC, C1,
+
+  if (C->isNegative())
+    Pred = I.getSwappedPredicate();
+
+  Constant *NewRHSC = ConstantFoldBinaryOpOperands(Instruction::FDiv, RHSC, C,
                                                    I.getDataLayout());
-  if (!NewRHSC || !cast<ConstantFP>(NewRHSC)->getValueAPF().isFinite())
+  if (!NewRHSC)
     return nullptr;
-  return new FCmpInst(NewPred, X, NewRHSC, "", &I);
+
+  return new FCmpInst(Pred, LHSI->getOperand(0), NewRHSC, "", &I);
 }
 
 /// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
