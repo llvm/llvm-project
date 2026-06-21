@@ -894,7 +894,7 @@ void Template::registerPartial(std::string Name, std::string Partial) {
   StringRef SavedPartial = Ctx.Saver.save(Partial);
   Parser P(SavedPartial, Ctx);
   AstPtr PartialTree = P.parse();
-  Ctx.Partials.insert(std::make_pair(Name, PartialTree));
+  Ctx.Partials.try_emplace(Name, PartialTree);
 }
 
 void Template::registerLambda(std::string Name, Lambda L) {

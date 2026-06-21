@@ -1424,7 +1424,7 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
     return;
 
   unsigned DestSlot = mdnNext;
-  if (!mdnMap.insert(std::make_pair(N, DestSlot)).second)
+  if (!mdnMap.try_emplace(N, DestSlot).second)
     return;
   ++mdnNext;
 
