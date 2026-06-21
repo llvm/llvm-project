@@ -325,15 +325,19 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *TSTL = Result.Nodes.getNodeAs<TemplateSpecializationTypeLoc>(
           "remove_cvref")) {
-    auto Diag = diag(TSTL->getBeginLoc(), "use c++20 type alias");
-    auto OuterTL = TSTL->getArgLoc(0)
+    auto InnerTL = TSTL->getArgLoc(0)
                        .getTypeSourceInfo()
                        ->getTypeLoc()
                        .castAs<TemplateSpecializationTypeLoc>();
+    if (IgnoreMacros &&
+        (TSTL->getBeginLoc().isMacroID() || InnerTL.getBeginLoc().isMacroID()))
+      return;
+
+    auto Diag = diag(TSTL->getBeginLoc(), "use c++20 type alias");
     Diag << FixItHint::CreateReplacement(
-                SourceRange(TSTL->getBeginLoc(), OuterTL.getLAngleLoc()),
+                SourceRange(TSTL->getBeginLoc(), InnerTL.getLAngleLoc()),
                 "std::remove_cvref_t<")
-         << FixItHint::CreateRemoval(OuterTL.getRAngleLoc());
+         << FixItHint::CreateRemoval(InnerTL.getRAngleLoc());
     return;
   }
 }
