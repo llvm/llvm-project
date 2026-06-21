@@ -94,7 +94,7 @@ list(APPEND CLANG_TEST_DEPS
   clang
   clang-fuzzer-dictionary
   clang-resource-headers
-  clang-format
+  clang-format-check-format
   clang-tblgen
   clang-offload-bundler
   clang-import-test
@@ -256,7 +256,3 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
 endif()
 
 add_subdirectory(Analysis/LifetimeSafety)
-
-if(TARGET check-clang-format)
-  add_dependencies(check-clang-format clang-format-check-format)
-endif()

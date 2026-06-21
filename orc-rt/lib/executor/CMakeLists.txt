@@ -5,13 +5,11 @@ set(files
   Error.cpp
   ExecutorProcessInfo.cpp
   NativeDylibManager.cpp
-  QueueingTaskDispatcher.cpp
   RTTI.cpp
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
-  TaskDispatcher.cpp
-  ThreadPoolTaskDispatcher.cpp
+  ThreadPoolRunner.cpp
   sps-ci/AllSPSCI.cpp
   sps-ci/CallSPSCI.cpp
   sps-ci/MemoryAccessSPSCI.cpp

@@ -4784,16 +4784,43 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
 
 SDValue DAGTypeLegalizer::SplitVecOp_ATOMIC_STORE(AtomicSDNode *N) {
   SDLoc DL(N);
+  LLVMContext &Ctx = *DAG.getContext();
   SDValue StVal = N->getVal();
   EVT VT = StVal.getValueType();
+  EVT MemIntVT = EVT::getIntegerVT(Ctx, N->getMemoryVT().getSizeInBits());
 
-  // Issue a single atomic store of an integer that spans the full memory
-  // width. Bitcasting the (illegal) vector value to that integer lets the
-  // type legalizer further legalize the BITCAST input as needed, while the
+  // The store needs a single value spanning the full memory width. If the
+  // value can be held in a legal vector register, keep it there and extract
+  // the low integer element of the memory width. This lets the store be issued
+  // directly from a vector register (e.g. a single MOVQ/MOVD) instead of
+  // bitcasting the split vector straight to a scalar integer, which would
+  // reassemble the value element by element in GPRs.
+  //
+  // Reinterpret the value as a same-shaped integer vector first: an FP element
+  // type may not have a legal vector form (e.g. bfloat on SSE2) while the
+  // integer-of-element-size form does. Ask the target which legal vector type
+  // it widens to.
+  EVT IntVecVT = VT.changeVectorElementTypeToInteger();
+  EVT IntEltVT = IntVecVT.getVectorElementType();
+  EVT WideVT = TLI.getLegalTypeToTransformTo(Ctx, IntVecVT);
+  if (DAG.getDataLayout().isLittleEndian() && TLI.isTypeLegal(MemIntVT) &&
+      WideVT.isVector() && WideVT.getVectorElementType() == IntEltVT &&
+      IntEltVT.getSizeInBits() <= MemIntVT.getSizeInBits() &&
+      WideVT.getSizeInBits() % MemIntVT.getSizeInBits() == 0) {
+    SDValue Wide = ModifyToType(DAG.getBitcast(IntVecVT, StVal), WideVT);
+    unsigned NumMemElts = WideVT.getSizeInBits() / MemIntVT.getSizeInBits();
+    EVT MemVecVT = EVT::getVectorVT(Ctx, MemIntVT, NumMemElts);
+    SDValue Elt = DAG.getExtractVectorElt(DL, MemIntVT,
+                                          DAG.getBitcast(MemVecVT, Wide), 0);
+    return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MemIntVT, N->getChain(), Elt,
+                         N->getBasePtr(), N->getMemOperand());
+  }
+
+  // Otherwise issue a single atomic store of an integer that spans the full
+  // memory width. Bitcasting the (illegal) vector value to that integer lets
+  // the type legalizer further legalize the BITCAST input as needed, while the
   // ATOMIC_STORE itself uses only the legal integer type.
-  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  EVT MemIntVT =
-      EVT::getIntegerVT(*DAG.getContext(), N->getMemoryVT().getSizeInBits());
+  EVT IntVT = EVT::getIntegerVT(Ctx, VT.getSizeInBits());
   SDValue AsInt = DAG.getBitcast(IntVT, StVal);
   return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MemIntVT, N->getChain(), AsInt,
                        N->getBasePtr(), N->getMemOperand());

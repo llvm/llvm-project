@@ -2,12 +2,12 @@
 # RUN: llc -o - %s -mtriple=thumbv7-unknown-linux-gnu -verify-machineinstrs -run-pass=arm-pseudo | FileCheck %s
 # RUN: llc -o - %s -mtriple=thumbv7eb-unknown-linux-gnu -verify-machineinstrs -run-pass=arm-pseudo | FileCheck %s
 ---
-name: func
+name: func64
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0_r1, $r4_r5, $r3, $lr
-    ; CHECK-LABEL: name: func
+    ; CHECK-LABEL: name: func64
     ; CHECK: successors: %bb.1(0x80000000)
     ; CHECK-NEXT: liveins: $r0_r1, $r4_r5, $r3, $lr
     ; CHECK-NEXT: {{  $}}
@@ -16,8 +16,8 @@ body: |
     ; CHECK-NEXT: liveins: $r4, $r5, $r2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r0, $r1 = t2LDREXD $r2, 14 /* CC::al */, $noreg
-    ; CHECK-NEXT: tCMPhir killed $r0, $r4, 14 /* CC::al */, $noreg, implicit-def $cpsr
-    ; CHECK-NEXT: tCMPhir killed $r1, $r5, 0 /* CC::eq */, killed $cpsr, implicit-def $cpsr
+    ; CHECK-NEXT: tCMPr killed $r0, $r4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: tCMPr killed $r1, $r5, 0 /* CC::eq */, killed $cpsr, implicit-def $cpsr
     ; CHECK-NEXT: tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .2:
@@ -32,12 +32,42 @@ body: |
     dead early-clobber renamable $r0_r1, dead early-clobber renamable $r2_r3 = CMP_SWAP_64 killed renamable $r2_r3, killed renamable $r4_r5, renamable $r4_r5 :: (volatile load store monotonic monotonic (s64))
 ...
 ---
-name: func2
+name: func64_hihi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0_r1, $r8_r9, $r3, $lr
+    ; CHECK-LABEL: name: func64_hihi
+    ; CHECK: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $r0_r1, $r8_r9, $r3, $lr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.2(0x40000000)
+    ; CHECK-NEXT: liveins: $r8, $r9, $r2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $r0, $r1 = t2LDREXD $r2, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tCMPhir killed $r0, $r8, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: tCMPhir killed $r1, $r9, 0 /* CC::eq */, killed $cpsr, implicit-def $cpsr
+    ; CHECK-NEXT: tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2:
+    ; CHECK-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    ; CHECK-NEXT: liveins: $r8, $r9, $r2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: early-clobber $r3 = t2STREXD $r8, $r9, $r2, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: t2CMPri killed $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: tBcc %bb.1, 1 /* CC::ne */, killed $cpsr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .3:
+    dead early-clobber renamable $r0_r1, dead early-clobber renamable $r2_r3 = CMP_SWAP_64 killed renamable $r2_r3, killed renamable $r8_r9, renamable $r8_r9 :: (volatile load store monotonic monotonic (s64))
+...
+---
+name: func2_hi
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r1, $r2, $r3, $r12, $lr
-    ; CHECK-LABEL: name: func2
+    ; CHECK-LABEL: name: func2_hi
     ; CHECK: successors: %bb.1(0x80000000)
     ; CHECK-NEXT: liveins: $r1, $r2, $r3, $r12, $lr
     ; CHECK-NEXT: {{  $}}
@@ -59,4 +89,33 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .3:
     dead early-clobber renamable $r1, dead early-clobber renamable $r2 = tCMP_SWAP_32 killed renamable $r3, killed renamable $r12, killed renamable $lr
+...
+---
+name: func2_lo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r1, $r2, $r3, $r4, $lr
+    ; CHECK-LABEL: name: func2_lo
+    ; CHECK: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $r1, $r2, $r3, $r4, $lr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.2(0x40000000)
+    ; CHECK-NEXT: liveins: $lr, $r3, $r4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $r1 = t2LDREX $r3, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tCMPr killed $r1, $r4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2:
+    ; CHECK-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    ; CHECK-NEXT: liveins: $lr, $r3, $r4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: early-clobber $r2 = t2STREX $lr, $r3, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: t2CMPri killed $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: tBcc %bb.1, 1 /* CC::ne */, killed $cpsr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .3:
+    dead early-clobber renamable $r1, dead early-clobber renamable $r2 = tCMP_SWAP_32 killed renamable $r3, killed renamable $r4, killed renamable $lr
 ...
