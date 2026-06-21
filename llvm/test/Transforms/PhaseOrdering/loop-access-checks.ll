@@ -133,7 +133,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #0 {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[ANYPTR_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VEC]], align 8, !tbaa [[ANYPTR_TBAA5:![0-9]+]]
@@ -143,17 +143,20 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK-NEXT:    [[SUB_PTR_DIV_I_I:%.*]] = ashr exact i64 [[SUB_PTR_SUB_I_I]], 3
 ; CHECK-NEXT:    [[CMP_NOT9:%.*]] = icmp eq ptr [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT9]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP1]]) ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ 0, %[[FOR_BODY]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP1]], i64 [[I_010]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_010]], 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[INC]], [[SUB_PTR_DIV_I_I]]
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY1]]
 ;
 entry:
   %vec.addr = alloca ptr, align 8
@@ -272,7 +275,7 @@ declare void @abort()
 define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferenceable(24) %vec) {
 ; CHECK-LABEL: define void @loop_with_signed_induction(
 ; CHECK-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[ANYPTR_TBAA0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VEC]], align 8, !tbaa [[ANYPTR_TBAA5]]
@@ -282,17 +285,20 @@ define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[SUB_PTR_DIV_I_I:%.*]] = ashr exact i64 [[SUB_PTR_SUB_I_I]], 3
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[SUB_PTR_DIV_I_I]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP1]]) ]
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ 0, %[[FOR_BODY]] ], [ [[INC:%.*]], %[[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP1]], i64 [[I_010]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_010]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INC]], [[SUB_PTR_DIV_I_I]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY1]], label %[[FOR_COND_CLEANUP]]
 ;
 entry:
   %vec.addr = alloca ptr, align 8

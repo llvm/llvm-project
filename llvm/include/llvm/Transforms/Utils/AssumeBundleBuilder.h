@@ -47,6 +47,8 @@ LLVM_ABI AssumeInst *buildAssumeFromInst(Instruction *I);
 LLVM_ABI bool salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr,
                                DominatorTree *DT = nullptr);
 
+LLVM_ABI void salvageKnowledgeBeforeInlining(CallBase *CB, AssumptionCache *AC);
+
 /// This pass attempts to minimize the number of assume without loosing any
 /// information.
 struct AssumeSimplifyPass : public OptionalPassInfoMixin<AssumeSimplifyPass> {

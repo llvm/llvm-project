@@ -1639,8 +1639,6 @@ static AttrBuilder IdentifyValidUBGeneratingAttributes(CallBase &CB) {
 // behavior or cause new UB.
 static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   AttrBuilder Valid(CB.getContext());
-  if (CB.hasRetAttr(Attribute::NonNull))
-    Valid.addAttribute(Attribute::NonNull);
   if (CB.hasRetAttr(Attribute::Alignment))
     Valid.addAlignmentAttr(CB.getRetAlign());
   if (std::optional<ConstantRange> Range = CB.getRange())
@@ -2837,7 +2835,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
         IFI.GetAssumptionCache ? &IFI.GetAssumptionCache(*Caller) : nullptr;
 
     /// Preserve all attributes on of the call and its parameters.
-    salvageKnowledge(&CB, AC);
+    salvageKnowledgeBeforeInlining(&CB, AC);
 
     // We want the inliner to prune the code as it copies.  We would LOVE to
     // have no dead or constant instructions leftover after inlining occurs
