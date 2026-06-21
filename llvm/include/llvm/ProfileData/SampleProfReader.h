@@ -908,6 +908,79 @@ public:
   }
 };
 
+/// A unified wrapper representing the function offset table.
+///
+/// This class abstracts away the physical representation of the offset table,
+/// which can either be:
+///
+/// - An llvm::DenseMap mapping function GUIDs (or context hashes) to their
+///   profile offsets, populated when reading the array of offsets in
+///   context-sensitive (CS) profiles or version 103 profiles.
+///
+/// - An OnDiskIterableChainedHashTable providing the same mapping directly from
+///   the file in (non-context-sensitive) version 104 profiles.
+///
+/// It exposes a single, type-agnostic lookup interface, shielding the reader
+/// from the underlying container types. To prevent hybrid-state corruption, it
+/// enforces mutually exclusive paths using assertions.
+class SampleProfileFuncOffsetTable {
+public:
+  using OnDiskTableType =
+      llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
+
+  SampleProfileFuncOffsetTable() = default;
+
+  /// Insert a function GUID and its profile offset into the in-memory map.
+  /// Enforces that the on-disk table must not have been set first.
+  void insert(uint64_t GUID, uint64_t Offset) {
+    assert(!OnDiskTable &&
+           "Cannot insert in-memory elements after on-disk table has been set");
+    InMemoryTable[GUID] = Offset;
+  }
+
+  /// Instantiate the on-disk chained hash table using raw stream pointers.
+  /// Enforces that the in-memory map must be empty.
+  void setOnDiskTable(const uint8_t *Buckets, const uint8_t *Payload,
+                      const uint8_t *Base) {
+    assert(
+        InMemoryTable.empty() &&
+        "Cannot set on-disk table after in-memory elements have been inserted");
+    OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
+  }
+
+  /// Query the offset table for the profile offset associated with the given
+  /// GUID. Returns the offset if found, or std::nullopt if the key is missing.
+  std::optional<uint64_t> lookup(uint64_t GUID) const {
+    if (OnDiskTable) {
+      auto Iter = OnDiskTable->find(GUID);
+      if (Iter != OnDiskTable->end())
+        return *Iter;
+    } else {
+      auto Iter = InMemoryTable.find(GUID);
+      if (Iter != InMemoryTable.end())
+        return Iter->second;
+    }
+    return std::nullopt;
+  }
+
+  /// Clear the in-memory map and release the on-disk table.
+  void clear() {
+    InMemoryTable.clear();
+    OnDiskTable.reset();
+  }
+
+  /// Reserve space in the in-memory map for the expected number of entries.
+  void reserve(size_t Size) {
+    assert(!OnDiskTable && "Cannot reserve space in in-memory table after "
+                           "on-disk table has been set");
+    InMemoryTable.reserve(Size);
+  }
+
+private:
+  llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
+  std::unique_ptr<OnDiskTableType> OnDiskTable;
+};
+
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
 /// the basic structure of the extensible binary format.
 /// The format is organized in sections except the magic and version number
@@ -971,7 +1044,7 @@ protected:
   /// The table mapping from a function context's MD5 to the offset of its
   /// FunctionSample towards file start.
   /// At most one of FuncOffsetTable and FuncOffsetList is populated.
-  DenseMap<hash_code, uint64_t> FuncOffsetTable;
+  SampleProfileFuncOffsetTable FuncOffsetTable;
 
   /// The list version of FuncOffsetTable. This is used if every entry is
   /// being accessed.
