@@ -792,7 +792,7 @@ Changes in existing checks
     identifiers when `DefaultCase` was enabled.
 
   - Fixed a crash in dependent base lookup when
-    ``AggressiveDependentMemberLookup`` is enabled.
+    `AggressiveDependentMemberLookup` option is enabled.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
