@@ -407,7 +407,7 @@ bool ISD::matchBinaryPredicate(
        LHS.getOpcode() != ISD::SPLAT_VECTOR))
     return false;
 
-  if (ISD::SPLAT_VECTOR == LHS.getOpcode() && DemandedElts == 0)
+  if (ISD::SPLAT_VECTOR == LHS.getOpcode() && !DemandedElts)
     return true;
 
   EVT SVT = LHS.getValueType().getScalarType();
