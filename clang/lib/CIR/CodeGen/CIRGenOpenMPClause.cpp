@@ -93,6 +93,29 @@ bool OpenMPClauseEmitter::emitProcBind(
   return false;
 }
 
+bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *ic = dyn_cast<OMPIfClause>(clause);
+    if (!ic)
+      continue;
+
+    Expr *ifCondition = ic->getCondition();
+    mlir::Value ifBoolValue = cgf.evaluateExprAsBool(ifCondition); // !cir.bool
+
+    mlir::Type uIntType = builder.getUIntNTy(1);
+    mlir::Value ifUIntValue =
+        builder.createBoolToInt(ifBoolValue, uIntType); // u1
+
+    mlir::Type intType = builder.getI1Type();
+    mlir::Value ifExpr =
+        builder.createBuiltinIntCast(ifUIntValue, intType); // i1
+
+    result.ifExpr = ifExpr;
+    return true;
+  }
+  return false;
+}
+
 bool OpenMPClauseEmitter::emitMap(
     mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const VarDecl *> *mapSyms) const {
