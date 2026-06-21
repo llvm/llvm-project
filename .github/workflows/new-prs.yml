@@ -36,7 +36,6 @@ jobs:
       (github.event.pull_request.author_association != 'OWNER')
     steps:
       - name: Greet Author
-        working-directory: ./llvm/utils/git/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.pull_request.number }}

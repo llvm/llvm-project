@@ -4441,6 +4441,66 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call, bool IsSaturating) {
+  assert(Call->getNumArgs() == 3);
+
+  QualType SrcT = Call->getArg(0)->getType();
+  QualType OpAT = Call->getArg(1)->getType();
+  QualType OpBT = Call->getArg(2)->getType();
+  QualType DstT = Call->getType();
+  if (!SrcT->isVectorType() || !OpAT->isVectorType() || !OpBT->isVectorType() ||
+      !DstT->isVectorType())
+    return false;
+
+  const auto *SrcVecT = SrcT->castAs<VectorType>();
+  const auto *OpAVecT = OpAT->castAs<VectorType>();
+  const auto *OpBVecT = OpBT->castAs<VectorType>();
+  const auto *DstVecT = DstT->castAs<VectorType>();
+
+  assert(OpAVecT->getNumElements() == OpBVecT->getNumElements());
+
+  unsigned NumSrcElems = SrcVecT->getNumElements();
+  unsigned NumOperandElems = OpAVecT->getNumElements();
+  unsigned ElemsPerLane = NumOperandElems / NumSrcElems;
+
+  PrimType SrcElemT = *S.getContext().classify(SrcVecT->getElementType());
+  PrimType OpAElemT = *S.getContext().classify(OpAVecT->getElementType());
+  PrimType OpBElemT = *S.getContext().classify(OpBVecT->getElementType());
+  PrimType DstElemT = *S.getContext().classify(DstVecT->getElementType());
+
+  assert(SrcElemT == DstElemT);
+
+  const Pointer &OpBPtr = S.Stk.pop<Pointer>();
+  const Pointer &OpAPtr = S.Stk.pop<Pointer>();
+  const Pointer &SrcPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned I = 0; I != NumSrcElems; ++I) {
+    APSInt Acc;
+    INT_TYPE_SWITCH_NO_BOOL(SrcElemT, { Acc = SrcPtr.elem<T>(I).toAPSInt(); });
+    Acc = Acc.sext(64);
+    for (unsigned J = 0; J != ElemsPerLane; ++J) {
+      APSInt OpA, OpB;
+      INT_TYPE_SWITCH_NO_BOOL(
+          OpAElemT, { OpA = OpAPtr.elem<T>(ElemsPerLane * I + J).toAPSInt(); });
+      INT_TYPE_SWITCH_NO_BOOL(
+          OpBElemT, { OpB = OpBPtr.elem<T>(ElemsPerLane * I + J).toAPSInt(); });
+      OpA = APSInt(OpA.extend(64), false);
+      OpB = APSInt(OpB.extend(64), false);
+      Acc += OpA * OpB;
+    }
+    if (IsSaturating)
+      Acc = APSInt(Acc.truncSSat(32), false);
+    else
+      Acc = APSInt(Acc.trunc(32), false);
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Acc); });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -6505,7 +6565,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
         },
         /*IsScalar=*/true);
-
+  case X86::BI__builtin_ia32_vpdpwssd128:
+  case X86::BI__builtin_ia32_vpdpwssd256:
+  case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512:
+    return interp__builtin_ia32_vpdp(S, OpPC, Call, false);
+  case X86::BI__builtin_ia32_vpdpwssds128:
+  case X86::BI__builtin_ia32_vpdpwssds256:
+  case X86::BI__builtin_ia32_vpdpwssds512:
+  case X86::BI__builtin_ia32_vpdpbusds128:
+  case X86::BI__builtin_ia32_vpdpbusds256:
+  case X86::BI__builtin_ia32_vpdpbusds512:
+    return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)

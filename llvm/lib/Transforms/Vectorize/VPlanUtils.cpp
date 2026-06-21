@@ -221,9 +221,12 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
-  // Handle shl by constant: x << c is equivalent to x * (1 << c).
+  // Handle shl by constant: x << c is equivalent to x * (1 << c). A shift
+  // amount >= the bit width produces poison; do not rewrite it, as
+  // getPowerOfTwo requires the power to be in range.
   uint64_t ShiftAmt;
-  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))))
+  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < LHSVal->getScalarType()->getScalarSizeInBits())
     return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0],
                            SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
