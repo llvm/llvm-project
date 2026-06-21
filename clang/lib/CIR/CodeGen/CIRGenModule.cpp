@@ -2546,10 +2546,10 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
                    "getMangledName: multi-version functions");
     }
   }
-  if (cgm.getLangOpts().GPURelocatableDeviceCode) {
-    cgm.errorNYI(nd->getSourceRange(),
-                 "getMangledName: GPU relocatable device code");
-  }
+  if (cgm.getASTContext().shouldExternalize(nd) &&
+      cgm.getLangOpts().GPURelocatableDeviceCode &&
+      cgm.getLangOpts().CUDAIsDevice)
+    cgm.printPostfixForExternalizedDecl(out, nd);
 
   return std::string(out.str());
 }
@@ -2630,6 +2630,12 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
                "getMangledName: C++ constructor without variants");
       return cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName();
     }
+  }
+
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
   }
 
   // Keep the first result in the case of a mangling collision.

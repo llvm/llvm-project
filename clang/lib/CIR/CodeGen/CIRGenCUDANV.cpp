@@ -384,8 +384,7 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
 void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
     const VarDecl *d, cir::GlobalLinkageKind &linkage) {
   if (cgm.getLangOpts().GPURelocatableDeviceCode)
-    cgm.errorNYI(d->getSourceRange(),
-                 "internalizeDeviceSideVar: GPU Relocatable Device Code (RDC)");
+    return;
 
   // __shared__ variables are odd. Shadows do get created, but
   // they are not registered with the CUDA runtime, so they
