@@ -1336,7 +1336,7 @@ void binary_conditional_masked_by_conditional(bool cond, MyObj* in) {
 void binary_conditional_use_after_free(int* in) {
   int* h = new int;  // expected-warning {{allocated object does not live long enough}}
   int* p = in ?: h;
-  delete h;          // expected-note {{freed here}}
+  delete h;          // expected-note {{allocated object is freed here}}
   (void)*p;          // expected-note {{later used here}}
 }
 
@@ -2971,44 +2971,44 @@ void new_view_from_dead_scope() {
 
 void new_int_basic() {
   int *p = new int; // expected-warning {{allocated object does not live long enough}}
-  delete p;         // expected-note {{freed here}}
+  delete p;         // expected-note {{allocated object is freed here}}
   (void)*p;         // expected-note {{later used here}}
 }
 
 void new_int_parens() {
   int *p = new int(); // expected-warning {{allocated object does not live long enough}}
-  delete p;           // expected-note {{freed here}}
+  delete p;           // expected-note {{allocated object is freed here}}
   (void)*p;           // expected-note {{later used here}}
 }
 
 void new_int_braces() {
   int *p = new int{}; // expected-warning {{allocated object does not live long enough}}
-  delete p;           // expected-note {{freed here}}
+  delete p;           // expected-note {{allocated object is freed here}}
   (void)*p;           // expected-note {{later used here}}
 }
 
 void new_int_aligned() {
   int *p = new (std::align_val_t(sizeof(int))) int{}; // expected-warning {{allocated object does not live long enough}}
-  delete p;                                           // expected-note {{freed here}}
+  delete p;                                           // expected-note {{allocated object is freed here}}
   (void)*p;                                           // expected-note {{later used here}}
 }
 
 void new_int_nothrow() {
   int *p = new (std::nothrow) int{}; // expected-warning {{allocated object does not live long enough}}
-  delete p;                          // expected-note {{freed here}}
+  delete p;                          // expected-note {{allocated object is freed here}}
   (void)*p;                          // expected-note {{later used here}}
 }
 
 void new_int_aligned_nothrow() {
   int *p = new (std::align_val_t(sizeof(int)), std::nothrow) int{}; // expected-warning {{allocated object does not live long enough}}
-  delete p;                                                         // expected-note {{freed here}}
+  delete p;                                                         // expected-note {{allocated object is freed here}}
   (void)*p;                                                         // expected-note {{later used here}}
 }
 
 void conditional_delete(bool cond) {
   int *p1 = new int;       // expected-warning {{allocated object does not live long enough}}
   int *p2 = new int;       // expected-warning {{allocated object does not live long enough}}
-  delete (cond ? p1 : p2); // expected-note 2 {{freed here}}
+  delete (cond ? p1 : p2); // expected-note 2 {{allocated object is freed here}}
   (void)*p1;               // expected-note {{later used here}}
   (void)*p2;               // expected-note {{later used here}}
 }
@@ -3018,7 +3018,7 @@ int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);
 void delete_returned_from_call() {
   int* x = new int(1); // expected-warning {{allocated object does not live long enough}}
   int* y = new int(2); // expected-warning {{allocated object does not live long enough}}
-  delete foo(x, y);    // expected-note 2 {{freed here}}
+  delete foo(x, y);    // expected-note 2 {{allocated object is freed here}}
   (void)x;             // expected-note {{later used here}}
   (void)y;             // expected-note {{later used here}}
 }
@@ -3058,19 +3058,19 @@ void new_multiview_from_mixed_scope() {
 
 void new_array_basic() {
   int *p = new int[2]; // expected-warning {{allocated object does not live long enough}}
-  delete[] p;          // expected-note {{freed here}}
+  delete[] p;          // expected-note {{allocated object is freed here}}
   (void)p[0];          // expected-note {{later used here}}
 }
 
 void new_array_parens() {
   int *p = new int[2](); // expected-warning {{allocated object does not live long enough}}
-  delete[] p;            // expected-note {{freed here}}
+  delete[] p;            // expected-note {{allocated object is freed here}}
   (void)p[0];            // expected-note {{later used here}}
 }
 
 void new_array_braces() {
   int *p = new int[2]{}; // expected-warning {{allocated object does not live long enough}}
-  delete[] p;            // expected-note {{freed here}}
+  delete[] p;            // expected-note {{allocated object is freed here}}
   (void)p[0];            // expected-note {{later used here}}
 }
 
@@ -3105,26 +3105,26 @@ void pointer_array_field_sensitivity() {
 
 void delete_direct_use_after_free() {
   MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
-  delete p;             // expected-note {{freed here}}
+  delete p;             // expected-note {{allocated object is freed here}}
   (void)p->id;          // expected-note {{later used here}}
 }
 
 void delete_alias_use_after_free() {
   MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
   MyObj *q = p;
-  delete p;             // expected-note {{freed here}}
+  delete p;             // expected-note {{allocated object is freed here}}
   (void)q->id;          // expected-note {{later used here}}
 }
 
 void delete_pointer_propagation_use_after_free() {
   MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
   MyObj **pp = &p;
-  delete p;             // expected-note {{freed here}}
+  delete p;             // expected-note {{allocated object is freed here}}
   (void)(*pp)->id;      // expected-note {{later used here}}
 }
 
 void delete_param_pointer(int* x) { // expected-warning {{parameter 'x' does not live long enough}}
-  delete x;                         // expected-note {{freed here}}
+  delete x;                         // expected-note {{parameter 'x' is freed here}}
   (void)x;                          // expected-note {{later used here}}
 }
 
@@ -3139,7 +3139,7 @@ struct S {
 
 void use_inner_origin_after_delete(MyObj* obj) { // expected-warning {{parameter 'obj' does not live long enough}}
     int* p = &obj->id;
-    delete obj;                                   // expected-note {{freed here}}
+    delete obj;                                   // expected-note {{parameter 'obj' is freed here}}
     (void)*p;                                     // expected-note {{later used here}}
 }
 
@@ -3160,7 +3160,7 @@ struct ClassSpecificDelete {
 
 void class_specific_operator_delete_use_after_free() {
   ClassSpecificDelete *p = new ClassSpecificDelete; // expected-warning {{allocated object does not live long enough}}
-  delete p;                                         // expected-note {{freed here}}
+  delete p;                                         // expected-note {{allocated object is freed here}}
   (void)p->X;                                       // expected-note {{later used here}}
 }
 
@@ -3172,7 +3172,7 @@ struct ClassSpecificNew {
 
 void class_specific_operator_new_use_after_free() {
   ClassSpecificNew *p = new ClassSpecificNew; // expected-warning {{allocated object does not live long enough}}
-  delete p;                                   // expected-note {{freed here}}
+  delete p;                                   // expected-note {{allocated object is freed here}}
   (void)p->X;                                 // expected-note {{later used here}}
 }
 
@@ -3190,14 +3190,14 @@ void delete_through_pointer_field() {
 void delete_stack_object() {
   MyObj obj;
   MyObj* p = &obj; // expected-warning {{local variable 'obj' does not live long enough}}
-  delete &obj;     // expected-note {{freed here}}
+  delete &obj;     // expected-note {{local variable 'obj' is freed here}}
   (void)p->id;     // expected-note {{later used here}}
 }
 
 void delete_stack_object_int() {
   int obj;
   int* p = &obj;  // expected-warning {{local variable 'obj' does not live long enough}}
-  delete &obj;    // expected-note {{freed here}}
+  delete &obj;    // expected-note {{local variable 'obj' is freed here}}
   (void)*p;       // expected-note {{later used here}}
 }
 
@@ -3260,7 +3260,7 @@ void placement_new_array_braces() {
 void placement_new_heap_then_delete_use_after_free() {
   int *storage = new int(7); // expected-warning {{allocated object does not live long enough}}
   int *p = new (storage) int(42);
-  delete storage;            // expected-note {{freed here}}
+  delete storage;            // expected-note {{allocated object is freed here}}
   (void)*p;                  // expected-note {{later used here}}
 }
 
@@ -3308,7 +3308,7 @@ void placement_new_delete_result_of_lifetimebound_call() {
   int *y = new int(2); // expected-warning {{allocated object does not live long enough}}
   int *slot = nullptr;
   int **p = new (&slot) int *(foo(x, y));
-  delete foo(x, y);    // expected-note 2 {{freed here}}
+  delete foo(x, y);    // expected-note 2 {{allocated object is freed here}}
   (void)**p;           // expected-note 2 {{later used here}}
 }
 

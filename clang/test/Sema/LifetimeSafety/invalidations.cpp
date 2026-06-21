@@ -575,12 +575,12 @@ struct S {
   void InvalidatedFieldDelete() {
     int *p = new int; // expected-warning {{allocated object escapes to the field 'FieldFromNew' and is later invalidated}}
     FieldFromNew = p;
-    delete p; // expected-note {{freed here}}
+    delete p; // expected-note {{allocated object is freed here}}
   }
 
   void InvalidatedFieldDeleteParam(int *p) { // expected-warning {{parameter 'p' escapes to the field 'FieldFromPointerParam' and is later invalidated}}
     FieldFromPointerParam = p;
-    delete p; // expected-note {{freed here}}
+    delete p; // expected-note {{parameter 'p' is freed here}}
   }
 
   void FieldReassignedBeforeInvalidation() {
@@ -624,12 +624,12 @@ void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{par
 void InvalidatedGlobalDelete() {
   int *p = new int; // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
   GlobalFromNew = p;
-  delete p; // expected-note {{freed here}}
+  delete p; // expected-note {{allocated object is freed here}}
 }
 
 void InvalidatedGlobalDeleteParam(int *p) { // expected-warning {{parameter 'p' escapes to the global variable 'GlobalFromPointerParam' and is later invalidated}}
   GlobalFromPointerParam = p;
-  delete p; // expected-note {{freed here}}
+  delete p; // expected-note {{parameter 'p' is freed here}}
 }
 
 void InvalidatedStaticLocalString() {
