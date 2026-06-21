@@ -85,6 +85,16 @@ struct ConstantOpConversion : public ConvertOpToLLVMPattern<ptr::ConstantOp> {
   matchAndRewrite(ptr::ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
+
+//===----------------------------------------------------------------------===//
+// LoadOpConversion
+//===----------------------------------------------------------------------===//
+struct LoadOpConversion : public ConvertOpToLLVMPattern<ptr::LoadOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(ptr::LoadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -413,6 +423,54 @@ LogicalResult ConstantOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// LoadOpConversion
+//===----------------------------------------------------------------------===//
+
+static LLVM::AtomicOrdering convertOrdering(ptr::AtomicOrdering ordering) {
+  switch (ordering) {
+  case ptr::AtomicOrdering::not_atomic:
+    return LLVM::AtomicOrdering::not_atomic;
+  case ptr::AtomicOrdering::unordered:
+    return LLVM::AtomicOrdering::unordered;
+  case ptr::AtomicOrdering::monotonic:
+    return LLVM::AtomicOrdering::monotonic;
+  case ptr::AtomicOrdering::acquire:
+    return LLVM::AtomicOrdering::acquire;
+  case ptr::AtomicOrdering::release:
+    return LLVM::AtomicOrdering::release;
+  case ptr::AtomicOrdering::acq_rel:
+    return LLVM::AtomicOrdering::acq_rel;
+  case ptr::AtomicOrdering::seq_cst:
+    return LLVM::AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("unhandled ptr::AtomicOrdering");
+}
+
+LogicalResult
+LoadOpConversion::matchAndRewrite(ptr::LoadOp op, OpAdaptor adaptor,
+                                  ConversionPatternRewriter &rewriter) const {
+  Type ptrType = getTypeConverter()->convertType(op.getPtr().getType());
+  if (!ptrType)
+    return rewriter.notifyMatchFailure(op, "Couldn't convert the ptr type");
+  unsigned alignment = 0;
+  if (std::optional<int64_t> align = op.getAlignment())
+    alignment = *align;
+  StringRef syncscope;
+  if (std::optional<StringRef> scope = op.getSyncscope())
+    syncscope = *scope;
+  rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+      op, op.getType(), adaptor.getPtr(),
+      /*alignment=*/alignment,
+      /*isVolatile=*/op.getVolatile_(),
+      /*isNonTemporal=*/op.getNontemporal(),
+      /*isInvariant=*/op.getInvariant(),
+      /*isInvariantGroup=*/op.getInvariantGroup(),
+      /*ordering=*/convertOrdering(op.getOrdering()),
+      /*syncscope=*/syncscope);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConvertToLLVMPatternInterface implementation
 //===----------------------------------------------------------------------===//
 
@@ -475,8 +533,8 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add conversion patterns.
   patterns.add<FromPtrOpConversion, GetMetadataOpConversion, PtrAddOpConversion,
-               ToPtrOpConversion, TypeOffsetOpConversion, ConstantOpConversion>(
-      converter);
+               ToPtrOpConversion, TypeOffsetOpConversion, ConstantOpConversion,
+               LoadOpConversion>(converter);
 }
 
 void mlir::ptr::registerConvertPtrToLLVMInterface(DialectRegistry &registry) {
