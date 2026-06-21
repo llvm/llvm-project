@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++17
+
+// <cstddef>
+
+// enum class byte : unsigned char {};
+
 #include <cstddef>
-#include <test_macros.h>
+#include <type_traits>
 
-// UNSUPPORTED: c++03, c++11, c++14
-
-int main(int, char**) {
-  constexpr std::byte b{42};
-  static_assert(std::to_integer<int>(b) == 42, "");
-
-  return 0;
-}
+static_assert(std::is_enum_v<std::byte>);
+static_assert(std::is_same_v<std::underlying_type_t<std::byte>, unsigned char>);
+static_assert(!std::is_convertible_v<std::byte, unsigned char>);
