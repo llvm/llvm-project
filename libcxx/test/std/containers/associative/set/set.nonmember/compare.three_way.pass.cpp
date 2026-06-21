@@ -22,7 +22,6 @@
 
 TEST_CONSTEXPR_CXX26 bool test() {
   assert((test_ordered_set_container_spaceship<std::set>()));
-  // `std::set` is not constexpr, so no `static_assert` test here.
   return true;
 }
 int main(int, char**) {
