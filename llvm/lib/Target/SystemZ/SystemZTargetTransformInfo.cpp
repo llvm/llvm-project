@@ -1067,6 +1067,12 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
           return getBoolVecToIntConversionCost(Opcode, Dst, I) + NumDstVectors;
       }
 
+      // These will use vector conversions followed by vector permutes.
+      if (Opcode == Instruction::FPToUI && SrcScalarBits <= 64 &&
+          DstScalarBits < SrcScalarBits &&
+          (SrcScalarBits == 64 || ST->hasVectorEnhancements2()))
+        return NumSrcVectors * 2;
+
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values. Base implementation does not
       // realize float->int gets scalarized.
