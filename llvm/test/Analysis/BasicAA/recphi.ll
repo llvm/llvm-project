@@ -313,6 +313,42 @@ exit:
   ret void
 }
 
+; Same as nested_loop, but with a plain pointer argument (no noalias).
+; TODO: %a and %p.inner do not alias.
+; CHECK-LABEL: Function: nested_loop_plain_arg
+; CHECK: NoAlias:  i8* %a, i8* %p.base
+; CHECK: NoAlias:  i8* %a, i8* %p.outer
+; CHECK: MayAlias: i8* %a, i8* %p.inner
+; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
+; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
+define void @nested_loop_plain_arg(i1 %c, i1 %c2, ptr %p.base) {
+entry:
+  %a = alloca i8
+  load i8, ptr %p.base
+  load i8, ptr %a
+  br label %outer_loop
+
+outer_loop:
+  %p.outer = phi ptr [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
+  load i8, ptr %p.outer
+  br label %inner_loop
+
+inner_loop:
+  %p.inner = phi ptr [ %p.outer, %outer_loop ], [ %p.inner.next, %inner_loop ]
+  %p.inner.next = getelementptr inbounds i8, ptr %p.inner, i64 1
+  load i8, ptr %p.inner
+  load i8, ptr %p.inner.next
+  br i1 %c, label %inner_loop, label %outer_loop_latch
+
+outer_loop_latch:
+  %p.outer.next = getelementptr inbounds i8, ptr %p.inner, i64 10
+  load i8, ptr %p.outer.next
+  br i1 %c2, label %outer_loop, label %exit
+
+exit:
+  ret void
+}
+
 ; CHECK-LABEL: Function: nested_loop3
 ; CHECK: NoAlias:	i8* %a, i8* %p.base
 ; CHECK: NoAlias:	i8* %a, i8* %p.outer
@@ -405,6 +441,62 @@ loop2:
   load i8, ptr %p2
   load i8, ptr %p2.next
   br i1 %c2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
+; Two inductions step identically from the same base, so they are equal within
+; an iteration; MayAlias only arises from cross-iteration comparison.
+; CHECK-LABEL: Function: same_base
+; CHECK: NoAlias:	i8* %a, i8* %p.base
+; CHECK: NoAlias:	i8* %a, i8* %p1
+; CHECK: NoAlias:	i8* %a, i8* %p2
+; CHECK: MayAlias:	i8* %p1, i8* %p2
+define void @same_base(i1 %c, ptr noalias %p.base) {
+entry:
+  %a = alloca i8
+  load i8, ptr %p.base
+  load i8, ptr %a
+  br label %loop
+
+loop:
+  %p1 = phi ptr [ %p.base, %entry ], [ %p1.next, %loop ]
+  %p2 = phi ptr [ %p.base, %entry ], [ %p2.next, %loop ]
+  %p1.next = getelementptr inbounds i8, ptr %p1, i64 1
+  %p2.next = getelementptr inbounds i8, ptr %p2, i64 1
+  load i8, ptr %p1
+  load i8, ptr %p2
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; TODO: %other and %p.inner do not alias.
+; CHECK-LABEL: Function: rec_phi_gep_guard
+; CHECK: NoAlias:	i8* %other, i8* %p.outer
+; CHECK: MayAlias:	i8* %other, i8* %p.inner
+define void @rec_phi_gep_guard(i1 %c, i1 %c2, ptr noalias %base, ptr noalias %other) {
+entry:
+  load i8, ptr %other
+  br label %outer
+
+outer:
+  %p.outer = phi ptr [ %base, %entry ], [ %p.outer.next, %outer.latch ]
+  %p.outer.next = getelementptr inbounds i8, ptr %p.outer, i64 10
+  load i8, ptr %p.outer
+  load i8, ptr %other
+  br label %inner
+
+inner:
+  %p.inner = phi ptr [ %p.outer.next, %outer ], [ %p.inner.next, %inner ]
+  %p.inner.next = getelementptr inbounds i8, ptr %p.inner, i64 1
+  load i8, ptr %p.inner
+  br i1 %c, label %inner, label %outer.latch
+
+outer.latch:
+  br i1 %c2, label %outer, label %exit
 
 exit:
   ret void
