@@ -1394,6 +1394,14 @@ defm ANDN64 : AndN<Xi64, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode
 }
 
 multiclass Andn_Pats<string suffix> {
+  // ANDN has only GR32/GR64 forms; widen i8 inputs to i32 and extract the low
+  // byte. Upper bits are ignored by the result extraction.
+  def : Pat<(and (not GR8:$src1), GR8:$src2),
+            (EXTRACT_SUBREG
+              (!cast<Instruction>(ANDN32rr#suffix)
+                (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src1, sub_8bit),
+                (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit)),
+              sub_8bit)>;
   def : Pat<(and (not GR32:$src1), GR32:$src2),
             (!cast<Instruction>(ANDN32rr#suffix) GR32:$src1, GR32:$src2)>;
   def : Pat<(and (not GR64:$src1), GR64:$src2),
