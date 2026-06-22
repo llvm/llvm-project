@@ -407,6 +407,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-misplaced-widening-cast
+  <clang-tidy/checks/bugprone/misplaced-widening-cast>` check by fixing a false
+  positive on bit field assignments when the `CheckImplicitCasts` option is
+  enabled. The check now uses the actual bit field width instead of the
+  declared type to determine if widening occurs.
+
 - Improved :doc:`bugprone-move-forwarding-reference
   <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
   false positives in the context of moved lambda captures.
