@@ -137,11 +137,6 @@ public:
   /// Closes the file.
   virtual std::error_code close() = 0;
 
-  /// Returns true if this file was opened in text mode (with potential
-  /// encoding conversions), false if opened in binary mode.
-  /// Default implementation returns true for backward compatibility.
-  virtual bool isText() const { return true; }
-
   /// Returns true if this is a real file and the requested text mode differs
   /// from the current mode. Always returns false for non-real files.
   /// Default implementation returns false for non-real files.
