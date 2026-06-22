@@ -872,11 +872,10 @@ public:
   /// This method manages all converters (input charset and file tag converters)
   /// in a single cache owned by SourceManager.
   /// \param SourceEncoding the source character encoding name
-  /// \param TargetEncoding the target character encoding name
   /// \return pointer to the converter or an error code
+  /// The target encoding is always UTF-8.
   llvm::ErrorOr<llvm::TextEncodingConverter *>
-  getOrCreateConverter(llvm::StringRef SourceEncoding,
-                       llvm::StringRef TargetEncoding);
+  getOrCreateConverter(llvm::StringRef SourceEncoding);
 
   /// Set true if the SourceManager should report the original file name
   /// for contents of files that were overridden by other files. Defaults to

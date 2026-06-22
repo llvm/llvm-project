@@ -482,8 +482,10 @@ ContentCache &SourceManager::createMemBufferContentCache(
 }
 
 llvm::ErrorOr<llvm::TextEncodingConverter *>
-SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
-                                    llvm::StringRef TargetEncoding) {
+SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
+  // Target encoding is always UTF-8
+  llvm::StringRef TargetEncoding = "UTF-8";
+  
   // Use getKnownEncoding to get normalized encoding names
   std::optional<llvm::TextEncoding> SourceKnown =
       llvm::TextEncodingConverter::getKnownEncoding(SourceEncoding);
@@ -653,7 +655,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   if (!Ccsid->empty()) {
     // File has a tag, use the converter from SourceManager's cache
     llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has tag encoding: " << *Ccsid << "\n";
-    Converter = getOrCreateConverter(*Ccsid, "UTF-8");
+    Converter = getOrCreateConverter(*Ccsid);
     if (!Converter) {
       llvm::errs() << "DEBUG: Failed to get converter for file tag: " << Converter.getError().message() << "\n";
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
@@ -665,7 +667,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
     // No file tag but -finput-charset conversion is desired.
     // Get the converter from the cache using the input encoding name.
     llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has no tag, using input charset: " << InputEncodingName << "\n";
-    Converter = getOrCreateConverter(InputEncodingName, "UTF-8");
+    Converter = getOrCreateConverter(InputEncodingName);
     if (!Converter) {
       llvm::errs() << "DEBUG: Failed to get input charset converter: " << Converter.getError().message() << "\n";
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
