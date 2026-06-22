@@ -15,6 +15,8 @@
 [[profiles::enforce(test::uninit_read)]];
 #endif
 
+namespace std { enum class byte : unsigned char {}; }
+
 int leading_unrelated_error = undeclared_identifier;
 // common-error@-1 {{use of undeclared identifier 'undeclared_identifier'}}
 
@@ -114,6 +116,14 @@ void test_decl_suppress_does_not_extend() {
   int y = x; // expected-error {{variable 'x' is read before initialization under profile 'std::init'}}
   (void)y;
 }
+
+// std::byte may be read while uninitialized (paper section 4), so std::init
+// does not diagnose a read of an uninitialized std::byte.
+void test_byte_read_exempt() {
+  std::byte b [[uninitialized]];
+  std::byte c = b;
+  (void)c;
+}
 #endif
 
 #ifdef DEMOTE
@@ -126,5 +136,13 @@ void test_demote_test_profile() {
     int y = x; // demote-error {{variable 'x' is read before initialization under profile 'std::init'}}
     (void)y;
   }
+}
+
+// The std::byte exemption is std::init-only: test::uninit_read still diagnoses
+// a read of an uninitialized std::byte.
+void test_byte_not_exempt_under_test_profile() {
+  std::byte b [[uninitialized]]; // demote-note {{variable 'b' is declared here}}
+  std::byte c = b; // demote-error {{variable 'b' is read before initialization under profile 'test::uninit_read'}}
+  (void)c;
 }
 #endif

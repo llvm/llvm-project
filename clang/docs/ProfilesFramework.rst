@@ -695,8 +695,10 @@ existing ``CFGUninitProfiles`` table beside ``test::uninit_read``:
 .. code-block:: c++
 
    constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
-       {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read},
-       {"std::init",         "uninit_read", diag::err_init_uninit_read},
+       {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read,
+        /*ExemptStdByte=*/false},
+       {"std::init", "uninit_read", diag::err_init_uninit_read,
+        /*ExemptStdByte=*/true},
    };
 
 If both ``test::uninit_read`` and ``std::init`` are enforced in the same TU,
@@ -704,10 +706,9 @@ the table-order priority makes ``test::uninit_read`` fire first.  Use
 ``[[profiles::suppress(test::uninit_read)]]`` to demote it at a use site
 and surface the ``std::init`` diagnostic.
 
-Known deviation: the initialization profile paper exempts ``std::byte`` from
-the uninitialized-read rule, but this slice rides the generic CFG
-uninitialized-variables analysis, which does not special-case ``std::byte``,
-so a read of an uninitialized ``std::byte`` is currently diagnosed.
+A read of an uninitialized ``std::byte`` is not diagnosed (paper §4 exempts
+``std::byte``).  The exemption is per-entry via ``CFGUninitProfileEntry`` so it
+applies to ``std::init`` but not the generic ``test::uninit_read`` profile.
 
 R2. ``uninit_decl`` -- pattern 1
 .................................

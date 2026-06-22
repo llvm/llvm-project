@@ -6,8 +6,22 @@
 
 int sink(int);
 
+namespace std { enum class byte : unsigned char {}; }
+
 struct Trivial { int m; };
 struct WithCtor { WithCtor(); int m; };
+struct ByteWrap { std::byte b; };
+struct ByteAndInt { std::byte b; int x; };
+
+void test_byte() {
+  // std::byte may be left uninitialized (paper section 4), as may arrays of it
+  // and records whose only members are std::byte.
+  std::byte a;
+  std::byte buf[8];
+  ByteWrap w;
+  ByteAndInt m;       // expected-error {{variable 'm' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  (void)a; (void)buf; (void)w; (void)m;
+}
 
 void test_scalars() {
   int a;            // expected-error {{variable 'a' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}

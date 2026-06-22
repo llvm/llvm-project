@@ -14724,9 +14724,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     // The enforcement check gates the (possibly recursive) type walk below so
     // it runs only under the profile, not on every default-initialized
     // variable.
+    QualType BaseTy = Context.getBaseElementType(Var->getType());
     if (!Var->isInvalidDecl() &&
         Var->getStorageDuration() == SD_Automatic &&
         !Var->hasAttr<CXX11UninitializedAttr>() &&
+        // std::byte may be left uninitialized (paper §4), so it -- and arrays
+        // of it -- are exempt from this rule.
+        !BaseTy->isStdByteType() &&
         shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var) &&
         // A definition with no initializer (scalar / pointer / enum, or an
         // array of them), or a class/aggregate type -- possibly the element
@@ -14734,13 +14738,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         // indeterminate (its synthesized constructor call provides an
         // initializer, so the !getInit() test alone misses it).
         (!Var->getInit() ||
-         (Context.getBaseElementType(Var->getType())->isRecordType() &&
+         (BaseTy->isRecordType() &&
           defaultInitLeavesScalarIndeterminate(
               Var->getType(), /*HonorUninitMarkers=*/true)))) {
       // A union variable cannot carry [[uninitialized]] (union_marker bans it),
       // so it must be initialized; use a message that does not suggest the
       // marker as a remedy.
-      bool IsUnion = Context.getBaseElementType(Var->getType())->isUnionType();
+      bool IsUnion = BaseTy->isUnionType();
       Diag(Var->getLocation(),
            IsUnion ? diag::err_init_uninit_union : diag::err_init_uninit_decl)
           << Profile << Var->getDeclName();
@@ -14861,8 +14865,10 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
     return false;
   const auto *RD = T->getAsCXXRecordDecl();
   if (!RD)
-    // Scalars, pointers, and enums are left indeterminate by default-init.
-    return T->isScalarType();
+    // Scalars, pointers, and enums are left indeterminate by default-init,
+    // except std::byte, which the profile permits to be uninitialized
+    // (paper §4), so a std::byte subobject does not make a record indeterminate.
+    return T->isScalarType() && !T->isStdByteType();
   if (RD->isInvalidDecl())
     return false;
   // A union's members are mutually exclusive, so the per-member walk below does

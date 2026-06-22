@@ -1695,10 +1695,15 @@ struct CFGUninitProfileEntry {
   StringRef Name;
   StringRef Rule;
   unsigned DiagID;
+  // std::byte may be read while uninitialized (paper §4); the initialization
+  // profile exempts it, while the generic test profile does not.
+  bool ExemptStdByte;
 };
 constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
-    {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read},
-    {"std::init", "uninit_read", diag::err_init_uninit_read},
+    {"test::uninit_read", /*Rule=*/"", diag::err_profile_uninit_read,
+     /*ExemptStdByte=*/false},
+    {"std::init", "uninit_read", diag::err_init_uninit_read,
+     /*ExemptStdByte=*/true},
 };
 
 class UninitValsDiagReporter : public UninitVariablesHandler {
@@ -1773,6 +1778,10 @@ private:
     // and skip the default warning path entirely.
     for (const auto &U : *vec) {
       for (const CFGUninitProfileEntry &E : CFGUninitProfiles) {
+        // std::byte may be read while uninitialized (paper §4).
+        if (E.ExemptStdByte &&
+            S.Context.getBaseElementType(vd->getType())->isStdByteType())
+          continue;
         if (!S.shouldEmitProfileViolation(E.Name, E.Rule, U.getUser(), AC))
           continue;
         S.Diag(U.getUser()->getBeginLoc(), E.DiagID)
