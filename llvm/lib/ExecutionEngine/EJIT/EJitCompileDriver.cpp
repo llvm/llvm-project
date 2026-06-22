@@ -10,6 +10,10 @@
 #endif
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+#include "llvm/ExecutionEngine/EJIT/EJitFuncRegistry.h"
+#include "llvm/ExecutionEngine/EJIT/EJitLifecycleRegistry.h"
+#endif
 #ifndef EJIT_FREESTANDING
 #include <chrono>
 #endif
@@ -29,6 +33,16 @@ bool taskpoolCompileThunk(void *ctx, const EJitCompileRequest &req,
   *outFn = fn;
   return fn != nullptr;
 }
+} // namespace
+#endif
+
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+namespace {
+// The single process-global shared taskpool state. Placed in the cross-core
+// shared section (an empty attribute on host, where one address space already
+// exists). Every EJit instance's driver binds to THIS same blob and elects a
+// single worker owner across cores via CAS.
+EJIT_SHARED_SECTION EJitSharedTaskPoolState gEJitSharedTaskPoolState;
 } // namespace
 #endif
 
@@ -55,9 +69,88 @@ EJitCompileDriver::EJitCompileDriver(const Config &config, EJitCache &cache,
       config_.compileMode == CompileMode::Async ? EJitCompileMode::Async
                                                 : EJitCompileMode::Off);
 #endif
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  // Bind the cross-core shared pool to the process-global shared state and wire
+  // the owner-private hooks. Election + the single worker start happen later in
+  // startSharedTaskPool() (called by EJit once registration is frozen and the
+  // ORC engine is installed). Cross-core fnPtr sharing is OFF by default until
+  // a platform asserts same-VA, sealed, I/D-coherent code (spec §11).
+  sharedPool_.bind(&gEJitSharedTaskPoolState);
+  sharedPool_.setCompiler(&taskpoolCompileThunk, this);
+  sharedPool_.setWorkerHooks(&EJitCompileDriver::sharedWorkerStart,
+                             &EJitCompileDriver::sharedWorkerStop, this);
+  // Inject the platform yield so the worker never busy-spins while waiting for
+  // Ready or on an empty queue (spec §11): a high-priority worker that spun
+  // could starve the owner core trying to publish Ready / a producer enqueuing.
+  sharedPool_.setWorkerIdleHook(&EJitCompileDriver::sharedWorkerIdle, this);
+  sharedPool_.setMode(config_.compileMode == CompileMode::Async
+                          ? EJitCompileMode::Async
+                          : EJitCompileMode::Off);
+  // Cross-core fnPtr sharing is gated by the build capability flag
+  // EJIT_SRE_SHARED_CODE_POINTERS (default OFF -> clean fallback for non-owner
+  // cores). Only the platform may assert same-VA + sealed + I/D-cache-coherent
+  // code (spec §11); we never auto-detect it.
+#ifdef EJIT_SRE_SHARED_CODE_POINTERS
+  sharedPool_.setCodeSharingEnabled(true);
+#else
+  sharedPool_.setCodeSharingEnabled(false);
+#endif
+#endif
 }
 
-EJitCompileDriver::~EJitCompileDriver() = default;
+EJitCompileDriver::~EJitCompileDriver() {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  // Stop + join the single shared worker (if this driver is the owner) BEFORE
+  // owner-private ORC/driver state is destroyed — no use-after-free.
+  sharedPool_.ownerShutdown();
+#endif
+}
+
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+bool EJitCompileDriver::sharedWorkerStart(
+    void *ctx, EJitSharedTaskPool::WorkerEntryFn entry, void *entryCtx,
+    uint64_t *outTaskId) {
+  auto *drv = static_cast<EJitCompileDriver *>(ctx);
+  if (!EJitSreTask::create(drv->sharedWorkerTask_, entry, entryCtx,
+                           "ejit-shared-worker"))
+    return false;
+  if (outTaskId)
+    *outTaskId = 1; // host has no numeric task id; diagnostic only.
+  return true;
+}
+
+void EJitCompileDriver::sharedWorkerStop(void *ctx) {
+  EJitSreTask::destroy(
+      static_cast<EJitCompileDriver *>(ctx)->sharedWorkerTask_);
+}
+
+void EJitCompileDriver::sharedWorkerIdle(void * /*ctx*/) {
+  // Platform yield: SRE_TaskDelay(1) on freestanding, std::this_thread::yield()
+  // on host. The shared taskpool core never names SRE_TaskDelay directly.
+  EJitSreTask::yield();
+}
+
+bool EJitCompileDriver::startSharedTaskPool() {
+  // Publish this core's funcIndex/dimType registration digest so a peer with a
+  // divergent mapping is cleanly rejected at attach (spec §11), never silently
+  // running against mismatched indices.
+  sharedPool_.setRegistrationFingerprint(
+      EJitFuncRegistry::instance().fingerprint() * 0x9e3779b97f4a7c15ULL ^
+      EJitLifecycleRegistry::instance().fingerprint());
+  switch (sharedPool_.init()) {
+  case EJitSharedTaskPool::InitResult::BecameOwner:
+  case EJitSharedTaskPool::InitResult::AttachedReady:
+    return true;
+  case EJitSharedTaskPool::InitResult::OwnerFailed:
+  case EJitSharedTaskPool::InitResult::InitInProgress:
+  case EJitSharedTaskPool::InitResult::AbiMismatch:
+  case EJitSharedTaskPool::InitResult::FingerprintMismatch:
+  case EJitSharedTaskPool::InitResult::NoState:
+    return false;
+  }
+  return false;
+}
+#endif
 
 void EJitCompileDriver::setSyncEngine(std::unique_ptr<EJitOrcEngine> engine) {
   syncEngine_ = std::move(engine);

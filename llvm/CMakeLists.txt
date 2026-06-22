@@ -644,14 +644,90 @@ set(EJIT_SRE_TASKPOOL_QUEUE_CAPACITY "1024" CACHE STRING
 # Flat dedup table capacity = max dense funcIndex (spec §3.5 inFlight_[]).
 set(EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX "4096" CACHE STRING
   "EmbeddedJIT SRE taskpool flat dedup capacity (max dense funcIndex)")
+# Single source of truth for the worker task stack size (bytes). The worker —
+# shared OR per-instance — runs LLVM optimize/codegen/ORC/JITLink on its OWN
+# stack via EJitSreTask, so this drives the platform SRE_TaskCreate stack too
+# (EJitSreTask_sre.cpp consumes the SAME macro). 1 MiB is only a DEFAULT; every
+# platform MUST measure the worker stack peak and tune it.
+set(EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE "1048576" CACHE STRING
+  "EmbeddedJIT taskpool worker task stack size in bytes (default only)")
 if(EJIT_SRE_TASKPOOL)
   add_definitions(-DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS})
   add_definitions(-DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY})
   add_definitions(-DEJIT_SRE_TASKPOOL_MAX_FUNC_INDEX=${EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX})
+  add_definitions(-DEJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE})
   message(STATUS "EmbeddedJIT: SRE taskpool enabled "
                  "(buckets=${EJIT_SRE_TASKPOOL_BUCKETS}, "
                  "queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}, "
-                 "maxFuncIndex=${EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX})")
+                 "maxFuncIndex=${EJIT_SRE_TASKPOOL_MAX_FUNC_INDEX}, "
+                 "workerStack=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE})")
+endif()
+
+#===-- EmbeddedJIT cross-core SHARED taskpool -----------------------------===#
+# Layer a single, cross-core-shared taskpool state + single worker owner on top
+# of EJIT_SRE_TASKPOOL: many cores produce into one shared queue/dedup/cache and
+# exactly one core (elected by CAS) runs the JIT worker. Default OFF, so the
+# default and the plain EJIT_SRE_TASKPOOL builds are byte-for-byte unchanged. It
+# requires EJIT_SRE_TASKPOOL (it reuses the request/identity model and macros).
+option(EJIT_SRE_SHARED_TASKPOOL
+  "Enable the EmbeddedJIT cross-core shared taskpool (single shared worker owner)" OFF)
+# Fixed cache slots per bucket in the shared POD cache (no std::unordered_map can
+# live in shared memory, so each bucket is a fixed slot array).
+set(EJIT_SRE_SHARED_TASKPOOL_CACHE_SLOTS "16" CACHE STRING
+  "EmbeddedJIT shared taskpool fixed cache slots per bucket")
+# Cross-core fnPtr sharing capability (spec §11). DEFAULT OFF: a non-owner core
+# cleanly falls back instead of reading a cache fnPtr. Turn ON only when the
+# platform GUARANTEES: same address space, the code pool mapped at the SAME VA
+# on every core, permissions sealed (enable_ex) before publish, and cross-core
+# I/D-cache coherence for execution. Wrongly enabling it can execute an illegal
+# address or run stale I-cache.
+option(EJIT_SRE_SHARED_CODE_POINTERS
+  "Allow non-owner cores to read shared cache fnPtrs (requires platform same-VA + cache coherence)" OFF)
+# Section attribute placing the shared state blob into inter-core shared memory.
+# Empty on host (one address space already). Override per platform, e.g.
+#   -DEJIT_SHARED_SECTION_ATTR=__attribute__((section(\".ejit_shared\")))
+set(EJIT_SHARED_SECTION_ATTR "" CACHE STRING
+  "Attribute placing the shared taskpool state into inter-core shared memory")
+if(EJIT_SRE_SHARED_TASKPOOL)
+  if(NOT EJIT_SRE_TASKPOOL)
+    message(FATAL_ERROR "EJIT_SRE_SHARED_TASKPOOL requires EJIT_SRE_TASKPOOL=ON")
+  endif()
+  add_definitions(-DEJIT_SRE_SHARED_TASKPOOL)
+  add_definitions(-DEJIT_SRE_SHARED_TASKPOOL_CACHE_SLOTS=${EJIT_SRE_SHARED_TASKPOOL_CACHE_SLOTS})
+  if(EJIT_SHARED_SECTION_ATTR)
+    add_definitions("-DEJIT_SHARED_SECTION=${EJIT_SHARED_SECTION_ATTR}")
+    set(_ejit_shared_section "${EJIT_SHARED_SECTION_ATTR}")
+  else()
+    set(_ejit_shared_section "<empty: ordinary .bss, NOT inter-core shared>")
+    # On a real freestanding/multi-core target an empty section attribute means
+    # the state lands in ordinary per-image .bss, so cores do NOT actually share
+    # one blob — defeating the whole design. Refuse to let that pass silently.
+    if(EJIT_FREESTANDING)
+      message(FATAL_ERROR
+        "EJIT_SRE_SHARED_TASKPOOL + EJIT_FREESTANDING requires a non-empty "
+        "EJIT_SHARED_SECTION_ATTR placing the shared state into inter-core "
+        "shared memory (e.g. "
+        "-DEJIT_SHARED_SECTION_ATTR=__attribute__\\(\\(section\\(\\\".ejit_shared\\\"\\)\\)\\) ). "
+        "Without it the shared state is NOT cross-core shared.")
+    endif()
+  endif()
+  # Real cross-core platform path: bind EJitCoreId::current() to the declared-
+  # only platform symbol ejit_sre_current_core_id (NO weak fallback — a missing
+  # strong definition is a link error). Host/unit-test builds (not freestanding)
+  # keep the settable simulated core id.
+  if(EJIT_FREESTANDING)
+    add_definitions(-DEJIT_SRE_SHARED_TASKPOOL_PLATFORM)
+  endif()
+  # Cross-core fnPtr sharing capability (only meaningful with the shared pool).
+  if(EJIT_SRE_SHARED_CODE_POINTERS)
+    add_definitions(-DEJIT_SRE_SHARED_CODE_POINTERS)
+  endif()
+  message(STATUS "EmbeddedJIT: cross-core shared taskpool enabled "
+                 "(cacheSlots=${EJIT_SRE_SHARED_TASKPOOL_CACHE_SLOTS}, "
+                 "workerStack=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE}, "
+                 "platformCoreId=${EJIT_FREESTANDING}, "
+                 "codePointers=${EJIT_SRE_SHARED_CODE_POINTERS}, "
+                 "sharedSection=${_ejit_shared_section})")
 endif()
 
 set(LLVM_TARGETS_TO_BUILD "all"

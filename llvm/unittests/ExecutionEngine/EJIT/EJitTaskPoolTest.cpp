@@ -95,9 +95,10 @@ TEST(EJitTaskPoolLayout, RequestIsFlatPod) {
   static_assert(std::is_standard_layout<EJitCompileRequest>::value,
                 "EJitCompileRequest must be standard layout");
   EXPECT_LE(alignof(EJitCompileRequest), 8u);
-  EXPECT_EQ(sizeof(EJitCompileRequest),
-            sizeof(uint32_t) * 2 + sizeof(EJitDimPair) * 4 +
-                sizeof(uint32_t) * 4 + sizeof(uintptr_t));
+  // funcIndex + numDims + dims[4] + versions[4] + fallbackPtr + generation,
+  // with tail padding to alignof on a 64-bit target (72) and none on 32-bit
+  // (64). See the static_assert in EJitSreQueue.h.
+  EXPECT_EQ(sizeof(EJitCompileRequest), sizeof(uintptr_t) == 8 ? 72u : 64u);
 }
 
 //===----------------------------------------------------------------------===//

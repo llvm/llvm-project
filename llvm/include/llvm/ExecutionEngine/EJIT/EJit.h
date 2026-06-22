@@ -23,6 +23,7 @@ namespace ejit {
 class EJitCompileDriver;
 class EJitLogger;
 class EJitTaskPool;
+class EJitSharedTaskPool;
 
 /// Main user-facing class for EmbeddedJIT. Owns all runtime components.
 class EJit {
@@ -116,6 +117,12 @@ public:
   /// Access the SRE taskpool scheduler (used by the taskpool C ABI). May be
   /// null if the compile driver was not constructed.
   EJitTaskPool *taskPool();
+#endif
+
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  /// Access the cross-core shared taskpool (the taskpool C ABI binds here in a
+  /// shared build). May be null if the compile driver was not constructed.
+  EJitSharedTaskPool *sharedTaskPool();
 #endif
 
 private:

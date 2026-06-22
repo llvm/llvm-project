@@ -87,6 +87,15 @@ if(EJIT_SRE_TASKPOOL)
   else()
     list(APPEND EJIT_SOURCES EJitSreTask_host.cpp)
   endif()
+  # Cross-core shared taskpool (single shared worker owner) — only when enabled.
+  # POD shared state + injectable core-id seam; no C++ threading facilities, so
+  # it is compatible with EJIT_FREESTANDING.
+  if(EJIT_SRE_SHARED_TASKPOOL)
+    list(APPEND EJIT_SOURCES
+      EJitSharedTaskPool.cpp
+      EJitSharedPlatform.cpp
+    )
+  endif()
 endif()
 
 # Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)

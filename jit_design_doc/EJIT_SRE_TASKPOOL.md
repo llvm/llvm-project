@@ -1256,3 +1256,122 @@ cmake --build build-ejit-sre-taskpool --target check-ejit-taskpool -j8
 - 共享结构使用固定宽度整数与明确对齐。
 - 不使用 bitfield。
 - 不按字节解析整数，不把 native layout 持久化为跨端文件协议。
+
+---
+
+## 11. 跨核共享单例 worker（`EJIT_SRE_SHARED_TASKPOOL`）
+
+> 开关：`EJIT_SRE_SHARED_TASKPOOL`（默认 **OFF**，要求 `EJIT_SRE_TASKPOOL=ON`）
+> 默认 OFF 时：默认构建与既有 `EJIT_SRE_TASKPOOL=ON` 路径、ABI、产物**逐字节不变**。
+
+第 1–10 节的 taskpool 是**每个 `EJit` 运行时实例各自持有一份** `EJitTaskPool`（`EJitCompileDriver` 内 `std::unique_ptr<EJitTaskPool>`）。在多核共享地址空间场景下这会产生**多个 worker、多份队列/缓存**，互相看不到对方的编译结果。本节把调度状态收敛为**单份跨核共享 POD 状态 + 单一 worker owner**：
+
+```
+Core 0 ─┐
+Core 1 ─┼─> EJitSharedTaskPoolState（共享 section）─> 唯一 worker owner ─> LLVM JIT
+Core N ─┘
+```
+
+### 11.1 为什么原先会创建多个 worker
+
+- 每个 `EJit` 构造时 `EJitCompileDriver` 都 `make_unique<EJitTaskPool>`，各自含 queue/dedup/cache/SwitchController/worker。
+- Async 模式下每个实例都 `startWorker()`，于是 N 个核 = N 个 worker、N 份缓存，编译结果不共享、去重不跨核。
+
+共享方案：所有核绑定**同一份** `EJitSharedTaskPoolState`，通过 CAS 选出唯一 owner，只有 owner 创建 worker；其余核作为 producer 共享 queue/dedup/SwitchController/cache。
+
+### 11.2 共享 vs 私有字段清单
+
+**共享（POD，放入 `EJIT_SHARED_SECTION`，全部 `EJitAtomic` 访问）—— `EJitSharedTaskPoolState`：**
+
+| 组 | 字段 |
+|----|------|
+| 头部 | `magic` / `abiVersion` / `structSize`（按值比较，端序无关） |
+| owner/init | `initState`(状态机) / `ownerCoreId` / `generation` / `lastInitError` / `initAttempts` / `codeSharingEnabled` / `workerTaskId` / `registrationFingerprint`(核间注册一致性摘要) |
+| SwitchController | `enabled[8][256]` / `version[8][256]` / `mode` |
+| dedup | `inFlight[MAX_FUNC_INDEX]`（存 generation，0=空闲） |
+| MPSC 队列 | `ring[QUEUE_SLOTS]`（Vyukov cell）/ `enqueuePos` / `dequeuePos`（分处独立 cache line） |
+| 统计 | `EJitSharedCounters`（全 `EJitAtomicU64`） |
+| 结果缓存 | `buckets[32]`，每桶固定 `slots[16]`（POD，无 `unordered_map`）+ 内联两字 RwLock |
+
+**绝不共享（owner 核私有）：** `EJit`、`EJitCompileDriver`、`LLVMContext`、ORC/JITLink、`std::string/vector/map`、含虚函数/`unique_ptr` 的 C++ 对象、编译临时状态、compile/release/worker/idle 回调函数指针（指向 owner 私有对象）。`EJitFuncRegistry`/`EJitLifecycleRegistry` 仍为核私有 STL（不入共享区），仅其**指纹摘要**入共享状态。
+
+ABI 约束（`static_assert`）：`is_standard_layout` + `is_trivially_destructible` + **`is_trivially_default_constructible`** + `alignof==64` + `offsetof(magic)==0`。**关键（本轮）**：`EJitAtomic` 改为**平凡默认构造**（`EJitAtomic() = default`），使整个 blob 平凡默认构造。因此全局 `gEJitSharedTaskPoolState` 落在 **`.bss`**（加载器零填），**不产生** `_GLOBAL__sub_I_*` / `.init_array` / 启动 `memset`——多核分别跑 init_array 的平台上，后启动的核**绝不会重零已运行的共享 queue/cache/owner 状态**。只有赢得 `Uninitialized→Initializing` CAS 的 owner 核才经 `initSharedStorage()` 逐字段初始化。blob 成为 implicit-lifetime 类型，共享存储上存在真实对象生命期，无 UB。依然**不** assert `trivially_copyable`（`EJitAtomic` 删除拷贝，永不 memcpy）。回归测试 `SharedStateRequiresNoDynamicInitialization` + 对 `EJitCompileDriver.cpp.o` 的 llvm-nm/readelf 检查双重保障无动态构造。
+
+### 11.3 共享内存是否要求同虚拟地址
+
+**是。** 两个前提要求所有核把该 blob 映射到**相同虚拟地址**：
+
+1. `EJitAtomic` 直接对字段地址做 `__atomic_*`；跨核语义要求各核看到同一物理字且地址一致。
+2. 缓存里的 `fnPtr` 是绝对代码地址；非 owner 核要执行它，必须在自己地址空间内同地址可见可执行（见 §11.6）。
+
+### 11.4 owner election 状态机
+
+`initState`（`EJitAtomicU32`）取值之一，**绝不用单个含糊 bool**：
+
+```
+Uninitialized ──CAS成功──> Initializing ──(建好全部共享状态+起worker)──> Ready
+      │                          │                                         │
+      │(CAS失败,旁观)            │(起worker失败,记录lastInitError)         │(owner shutdown:
+      ▼                          ▼                                          软停+join后)
+   旁观其它核                  Failed  <───────────────────────────────  Stopping ─> Uninitialized
+```
+
+- 首个把 `Uninitialized` CAS 成 `Initializing` 的核成为 owner：`initSharedStorage` 逐字段写 → bump `generation` → 写 `ownerCoreId/codeSharingEnabled/header` → 起唯一 worker → **最后 `storeRelease(Ready)`**（发布序：所有内容先就绪，Ready 最后发布）。
+- 其它核 `acquire` 观察：`Ready` 校验 `magic/version/size` 后绑定（`AttachedReady`，**绝不创建第二个 worker**）；`Failed`/`Stopping` → 干净 fallback，**不无限等待**；`Initializing` → 有限自旋后返回 `InitInProgress`（pending，不死锁）。
+- 重复 `init()` 幂等：owner 再次 `init()` 观察到 `Ready` 即 `AttachedReady`，不重选不重建。
+- worker 起动失败传播为 `OwnerFailed`/`Failed` + `lastInitError=WorkerStartFailed`，`ejit_init` 失败并销毁实例，**绝不把 init 失败伪装成 JIT 成功**。
+- 核 ID 注入式：`EJitCoreId::current()`。host 用每线程可设值（`setCurrentForTest`）在单进程内**无真实线程**地确定性模拟多核；真实平台绑定**只声明、不提供 weak fallback** 的 `ejit_sre_current_core_id`（缺失即链接错误）。
+
+### 11.5 queue 发布协议（跨核）
+
+Vyukov MPSC，单消费者=唯一 owner worker（§1.3 SC 前提不变）：
+
+- producer：`cell.sequence acquire == pos` → CAS `enqueuePos` 抢槽 → **先写完整 `EJitCompileRequest`** → `cell.sequence.storeRelease(pos+1)` 发布；队列满（`seq<pos`）→ 干净 fallback 并**回滚 dedup 占位**。
+- consumer：`cell.sequence acquire == pos+1` → CAS `dequeuePos` → 读 request → `storeRelease(pos+mask+1)` 释放槽。
+- 半写不可见：consumer 只有看到 release 后的 sequence 才读 request；producer 看不到他核半写的 cell。
+- **`req.generation`（v2 ABI，真实字段）**：`EJitCompileRequest` 新增 `uint32_t generation`，enqueue 时 `acquire` 当前 `state.generation` 写入。consumer 在编译前（checkpoint 0）与编译后（checkpoint 2）都校验 `req.generation == state.generation`，不匹配则丢弃、回滚 dedup、不编译不 publish。`cachePublish` 锁内再次校验 `req.generation == 当前 generation`（**用 req.generation，不以当前 generation 顶替**），并以 `req.generation` 写槽。owner re-init bump generation 后，旧请求/旧编译结果都进不了新 cache。
+
+### 11.6 dedup / cache 跨核协议与 fnPtr 可共享前提
+
+- **dedup（generation-aware，v2 ABI）**：扁平槽 `inFlight[funcIndex]` 存**占位的 generation**（0=空闲），不再是 1 bit。`dedupMark(fi,gen)=CAS(0→gen)`；`dedupClear(fi,gen)=CAS(gen→0)`——只清掉仍属于本 generation 的槽。**关键**：若平台 `SRE_TaskDelete` 不等价 join，旧 generation 的 stale worker 完成后调用 `dedupClear(fi, oldGen)`，此时槽可能已被新 generation 的 producer 重新占为 `newGen`，`CAS(oldGen→0)` 失败 → **不会误清新 generation 的 in-flight 标记**，避免重复编译。queue 满回滚同样按本 gen `CAS`。
+- cache：固定槽 POD 表替代 `unordered_map`（共享内存不能放 STL）。
+  - publish（仅 owner worker）：桶写锁 spin 到 `readers==0` → **锁内重校验逐实例 version**（commit gate，失配 `VersionMismatch` 不写）→ 同 identity 原地覆盖 / 空槽 / 桶满淘汰 → `storeRelease(state=Ready)` → **锁外**通过 owner 私有 release 回调释放旧/被淘汰 fnPtr（回调可能重入 code pool/ORC/分配器，绝不在临界区内运行）。
+  - lookup：桶 `tryRead` → 扫 `Ready` 且 `generation`/identity/version 匹配 → 命中持读 token（调用方用完 `release_read`）。
+- **fnPtr 跨核可共享前提（构建开关 `EJIT_SRE_SHARED_CODE_POINTERS`，默认 OFF）：** 仅当平台保证①同一地址空间、②code pool 在所有核映射到**相同 VA**、③code pool 生命周期覆盖所有读者、④`seal/enable_ex` 已完成、⑤I/D-cache 跨核执行一致时才显式置 ON（`EJitCompileDriver` 据此调 `setCodeSharingEnabled`，**绝不自动猜测平台能力**）。**不满足时 clean reject**：非 owner 核 lookup 命中 `Ready` 但能力关闭时返回 `readyButNotShareable`（fallback，**不重新入队**，避免重编译 churn），**绝不盲目返回指针**；owner 核读自己的 fnPtr 不受限。错误置 ON 可能导致非法地址执行或运行陈旧 I-cache。`codeSharingEnabled` 在诊断中输出。
+- 大端/内存序：仅固定宽度标量按值访问，无 bitfield、无字节解析；所有发布/消费成对 acquire/release（§10.2）。共享状态 ABI version 因 request/dedup 变化升到 **v2**。
+
+### 11.7 worker 启动时序、栈与任务生命周期
+
+- **启动抢跑修复（worker 等待 Ready + 让出 CPU）**：owner `init()` 顺序为 `CAS(→Initializing)` → 建好全部共享状态 → `workerStart` → `storeRelease(Ready)`（成功）/`Failed`（失败）。在 `SRE_TaskCreate` 立即调度、且 worker 优先级较高的环境里，worker 可能在 owner 发布 Ready 之前就跑起来，观察到 `Initializing`：**必须主动让出调度（调用注入的 idle/yield hook），绝不提前退出，绝不读半初始化的 queue/cache**。状态机 `workerPollOnce()`：`Ready→消费`、`Initializing→WaitForReady（yield）`、`Failed/Stopping/Uninitialized→Exit`。
+- **不再用 spin budget 退出**：生产 worker 是生命周期完整的任务——`runWorkerLoop` 永远**不会**因为 owner 稍慢就退出（删除了上轮的 `workerStartupSpinBudget_`），只在终态（Failed/Stopping/Uninitialized）退出。测试通过**可注入 idle callback / step machine** 受控驱动转态与退出，不靠真实线程。
+- **idle/yield 抽象**：Read-but-empty 与 Initializing-wait 两种空闲都调用同一 idle hook；生产构建注入 `EJitSreTask::yield()`（freestanding=`SRE_TaskDelay(1)`，host=`std::this_thread::yield()`），**共享 taskpool 核心不直接依赖 `SRE_TaskDelay`**。禁止在持有 bucket lock / queue slot / dedup 临界态时 yield（`pollOne` 返回后才 idle）。诊断计数 `workerIdleYields`/`workerConsumeLoops`/`workerWaitedForReady` 证明 worker 让出且真正进入 Ready 消费阶段。同理，竞选中的 peer `init()` 观察到 `Initializing` 也调 idle hook 让出，不饥饿 owner。`workerStart` 失败仍发布 `Failed`。
+- **worker 栈（单一事实源）**：`EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE`（默认 `1048576`，**仅默认值**）。CMake 在 `EJIT_SRE_TASKPOOL` 打开时即定义该宏；`EJitSreTask_sre.cpp` 的 `init.uwStackSize` **直接使用同一个宏**（删除旧 `EJIT_SRE_TASK_STACK_SIZE`，消除双事实源；源码仅为非 CMake 编译保留保守 fallback）。`static_assert` 校验非零、16 字节对齐（AArch64 SP）、可放入 32 位 `uwStackSize`；任务创建日志打印最终栈大小。LLVM optimize/codegen/ORC/JITLink 跑在 worker 栈，平台**必须实测栈峰值**并调整（不要默认设 5 MiB）。
+- worker 起动经注入式 hook（owner 私有），`TaskCreate` 失败干净返回 → init 失败。
+- **stop=软停 + join**：`ownerShutdown` 先 `storeRelease(Stopping)`（worker 循环顶检查到 `Stopping` 退出）→ 调 worker stop → 才把状态归 `Uninitialized`、bump generation。`EJitSreTask::destroy` 的 `SRE_TaskDelete` **契约要求阻塞到 worker 真正退出（真 join）**——若平台删除非 join，generation-aware dedup（§11.6）兜底防止污染新 generation，但仍要求真 join 以杜绝 worker 回调触碰已销毁的 driver。`EJitCompileDriver` 析构先 `ownerShutdown` 再析构 owner 私有 ORC/driver；非 owner 实例析构对 worker **无副作用**（`ownerShutdown` 检查 `isOwner_`）。
+
+### 11.8 新增只读诊断 API
+
+`EJitSharedTaskPool::getDiagnostics(EJitSharedDiagnostics&)`：`initState` / `ownerCoreId` / `generation` / `lastInitError` / `initAttempts` / `codeSharingEnabled` / `workerTaskId` / `queueDepth` / `pendingCount` / `cacheReadyCount` / 全部统计计数（enqueue/cacheHit/compile/publish/…）。taskpool C ABI（`ejit_taskpool_compile_or_get` / `set_instance_enabled` / `release_read` / `pending_count` / `get_stats` / 测试用 `poll_one`/`poll_budget`）在 shared 构建经 `activeTaskPool()` 路由到共享池；统计经 `getDiagnostics` 映射。诊断/trace 宏默认完全不展开、参数不求值，可外部重定义为 `SRE_printf`；**不**用 `raw_ostream/std::string` 组织平台日志。
+
+### 11.9 构建开关（最小集合）
+
+| CMake / build.sh | 含义 | 默认 |
+|------|------|------|
+| `EJIT_SRE_SHARED_TASKPOOL` / `--sre-shared-taskpool` | 跨核共享 taskpool 总开关（要求 `EJIT_SRE_TASKPOOL`） | OFF |
+| `EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE` / `--sre-taskpool-worker-stack-size=` | worker 栈字节数（**单一事实源**，`EJIT_SRE_TASKPOOL` 打开即定义；`EJitSreTask_sre.cpp` 直接消费） | 1048576 |
+| `EJIT_SRE_SHARED_CODE_POINTERS` / `--sre-shared-code-pointers` | 允许非 owner 核读共享 cache fnPtr（需平台同 VA + cache coherent；错误开启可致非法执行） | OFF |
+| `EJIT_SRE_SHARED_TASKPOOL_CACHE_SLOTS` | 每桶固定缓存槽数 | 16 |
+| `EJIT_SHARED_SECTION_ATTR` → `EJIT_SHARED_SECTION` | 共享 section 放置属性（host 空；平台覆盖） | 空 |
+| `EJIT_SRE_SHARED_TASKPOOL_PLATFORM`（自动） | shared+`EJIT_FREESTANDING` 时由 CMake 自动定义：`EJitCoreId::current()` 绑定**只声明、无 weak fallback** 的平台符号 `ejit_sre_current_core_id`（缺失即链接错误）；host（非 freestanding）保留可设的模拟核 ID | 随 freestanding |
+
+**平台必须提供的符号（shared+freestanding）：** `extern "C" uint32_t ejit_sre_current_core_id();`（强符号，参与 owner 判断，不能让所有真实核默认 0）；以及本地 `EJitSreTask_sre.cpp` 适配的 `SRE_TaskCreate/SRE_TaskDelete/SRE_TaskDelay`（`SRE_TaskDelete` 须真 join）。**本轮新增前提校验**：当 `EJIT_SRE_SHARED_TASKPOOL=ON` 且 `EJIT_FREESTANDING=ON` 而 `EJIT_SHARED_SECTION_ATTR` 为空时，CMake **直接 `FATAL_ERROR`**（空 section 意味着状态落在每镜像私有 `.bss`，根本不跨核共享，不允许静默通过）；构建摘要打印最终 section 属性。沿用既有固定值（buckets=32、queue=1024、maxFuncIndex=4096）。默认 OFF 时新代码不编译；`EJit/EJitCompileDriver/EJitRuntime` 的绑定全部 `#ifdef EJIT_SRE_SHARED_TASKPOOL`。
+
+**核间注册一致性（registration fingerprint）：** `EJitFuncRegistry`/`EJitLifecycleRegistry` 仍是核私有 STL（不入共享区）。每个核对自身 `(name→funcIndex)` 与 `(name→dimType)` 映射计算确定性 FNV-1a 摘要（func 部分 XOR 累加、与 map 遍历顺序无关；lifecycle 部分按 slot 顺序）。owner 将摘要发布到 `state.registrationFingerprint`；peer attach 时比对自身摘要，**不一致返回 `FingerprintMismatch` clean fail，绝不提交请求**（避免 owner 与 producer 的 funcIndex/dimType 映射不同而静默跨索引）。
+
+### 11.10 测试与尚需真实平台验证项
+
+host `EJITSharedTaskPoolTests`（单进程、注入式核 ID 确定性模拟多核，无真实线程）覆盖：单一 owner、多核仅一个 worker、半初始化不可见、owner 失败传播 Failed、多 producer 共享队列、跨核同 key 去重、queue 满回滚 dedup、generation 切换丢弃旧状态、编译中 deactivate 阻止 publish、publish 可见性 + read token 释放、跨核取回同一 fnPtr（`codeSharingEnabled`）+ 关闭时 clean reject、publish 覆盖释放旧 code、大端字段语义、ABI layout/`static_assert`、实例禁用不入队。**本轮新增**：worker 在 Initializing 启动并等待 Ready（真实状态机 `workerPollOnce` + 真实 `runWorkerLoop` 同步启动/消费/Stopping 退出）、worker start 失败发布 Failed、平台 core-id 构建选择（host 不定义 PLATFORM、核 ID 参与 owner）、配置栈大小校验、code sharing OFF 非 owner 不取指针且不重入队 / ON 取同一指针、stale generation 请求被丢弃、编译中 generation 改变丢弃结果、**stale worker 不能清新 generation 的 dedup**、peer 析构不停 owner worker、owner shutdown 先 stop+join 再回 Uninitialized。**本轮（round-3）再增**：`SharedStateRequiresNoDynamicInitialization`（blob 平凡默认构造，无 .init_array）、真实 `runWorkerLoop` 在 Initializing 启动同一 worker yield → 存活到 Ready → 消费 → 空队 yield → Stopping 退出（`RealWorkerEntrySurvivesInitializingAndConsumes`，证明不因 spin budget 提前消失）、注册 fingerprint 一致 attach / 不一致 `FingerprintMismatch` clean fail。`std::thread/mutex/condition_variable`/STL 共享字段静态扫描在共享核源文件中为空。构建产物检查：`llvm-nm`/`llvm-readelf` 确认 `EJitCompileDriver.cpp.o` 无共享状态动态构造器/`.init_array`。
+
+**本轮明确记录的平台前提：** ① 各核必须看到**同一共享 section、同 VA 或正确共享映射**（否则 fnPtr/原子地址语义不成立）；② `SRE_TaskDelete` 必须是**真 join**（软停+等退），否则靠 generation-aware dedup 兜底但仍可能 worker 回调触碰已销毁 driver；③ `EJIT_SRE_SHARED_CODE_POINTERS=ON` 需同 VA + seal 完成 + I/D cache 一致。
+
+**尚需真实平台（aarch64_be 多核）验证：** ① 真实 `ejit_sre_current_core_id` 与跨核 owner election；② 共享 section 同 VA 映射 + cache coherent；③ `EJIT_SRE_SHARED_CODE_POINTERS=ON` 下跨核执行同一 fnPtr 的 I/D-cache 一致性与 seal 时序；④ host 单进程多 `EJit` 实例共享一份全局状态时，owner 用自身 ORC 为所有 producer 编译——真实平台为单一共享注册镜像，此语义才成立；⑤ 平台 `SRE_TaskCreate` 栈尺寸与 worker 长编译任务的匹配（实测栈峰值）；⑥ 平台 `SRE_TaskDelete` 必须是真 join。

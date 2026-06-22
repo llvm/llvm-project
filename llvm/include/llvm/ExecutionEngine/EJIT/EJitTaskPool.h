@@ -329,7 +329,10 @@ private:
   EJitTaskPoolCache cache_;
   CompileCallback compileFn_ = nullptr;
   void *compileCtx_ = nullptr;
-  EJitTaskPoolCounters counters_;
+  // Value-initialized: EJitAtomic now has a trivial default ctor (so the shared
+  // state blob needs no dynamic init / .init_array), so this heap-resident
+  // counters block zeroes itself explicitly rather than via the atomic ctor.
+  EJitTaskPoolCounters counters_{};
   EJitWorker worker_;
   bool autoStartWorker_ = true;
 };

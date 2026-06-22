@@ -80,6 +80,24 @@ public:
   /// Number of distinct lifecycles assigned so far.
   uint32_t count() const { return count_; }
 
+  /// Deterministic digest of the (name -> dimType slot) mapping. Order MATTERS
+  /// here (slot == position), so this folds names sequentially. Used by the
+  /// cross-core shared taskpool to reject a peer whose dimType mapping diverges
+  /// from the owner's.
+  uint64_t fingerprint() const {
+    uint64_t acc = 0xcbf29ce484222325ULL ^
+                   (static_cast<uint64_t>(count_) * 0x100000001b3ULL);
+    for (uint32_t I = 0; I < count_; ++I) {
+      acc ^= static_cast<uint64_t>(I) + 0x9e3779b9ULL;
+      acc *= 0x100000001b3ULL;
+      for (unsigned char c : names_[I]) {
+        acc ^= c;
+        acc *= 0x100000001b3ULL;
+      }
+    }
+    return acc;
+  }
+
   /// Drop all assignments. For tests only (each test starts from empty state).
   void reset() {
     for (uint32_t I = 0; I < count_; ++I)

@@ -12,6 +12,9 @@
 #ifdef EJIT_SRE_TASKPOOL
 #include "llvm/ExecutionEngine/EJIT/EJitTaskPool.h"
 #endif
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+#include "llvm/ExecutionEngine/EJIT/EJitSharedTaskPool.h"
+#endif
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -353,6 +356,23 @@ static ejit_status_t taskpoolStatus(EJitCompileOrGetStatus s) {
   }
 }
 
+namespace {
+// Resolve the taskpool the C ABI drives: the cross-core SHARED pool in a shared
+// build, otherwise the per-instance pool. Both expose compileOrGet /
+// releaseRead / pendingCount / pollOne / pollBudget with matching shapes, so
+// the common call sites use `auto *tp = activeTaskPool();`. (Stats and the
+// switch-controller toggle differ in shape and branch explicitly.)
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+inline EJitSharedTaskPool *activeTaskPool() {
+  return gEJIT ? gEJIT->sharedTaskPool() : nullptr;
+}
+#else
+inline EJitTaskPool *activeTaskPool() {
+  return gEJIT ? gEJIT->taskPool() : nullptr;
+}
+#endif
+} // namespace
+
 ejit_status_t ejit_taskpool_compile_or_get(uint32_t funcIndex,
                                            const ejit_dim_pair_t *dims,
                                            uint32_t numDims, void **outFn,
@@ -363,7 +383,7 @@ ejit_status_t ejit_taskpool_compile_or_get(uint32_t funcIndex,
     *outBucket = 0;
   if (!gEJIT)
     return EJIT_ERR_NOT_ACTIVE;
-  EJitTaskPool *tp = gEJIT->taskPool();
+  auto *tp = activeTaskPool();
   if (!tp)
     return EJIT_ERR_NOT_ACTIVE;
 
@@ -383,9 +403,8 @@ ejit_status_t ejit_taskpool_compile_or_get(uint32_t funcIndex,
     localDims[i].instanceId = dims[i].instanceId;
   }
 
-  EJitTaskPool::CompileOrGetResult r =
-      tp->compileOrGet(funcIndex, numDims ? localDims : nullptr, numDims,
-                       /*fallback=*/nullptr);
+  auto r = tp->compileOrGet(funcIndex, numDims ? localDims : nullptr, numDims,
+                            /*fallback=*/nullptr);
   if (outFn)
     *outFn = r.fnPtr;
   if (outBucket)
@@ -397,16 +416,23 @@ void ejit_taskpool_set_instance_enabled(uint32_t dimType, uint32_t instanceId,
                                         uint32_t enabled) {
   if (!gEJIT)
     return;
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  EJitSharedTaskPool *sp = gEJIT->sharedTaskPool();
+  if (!sp)
+    return;
+  sp->setInstanceEnabled(dimType, instanceId, enabled != 0);
+#else
   EJitTaskPool *tp = gEJIT->taskPool();
   if (!tp)
     return;
   tp->switchController().setEnabled(dimType, instanceId, enabled != 0);
+#endif
 }
 
 void ejit_taskpool_release_read(uint32_t bucketIndex) {
   if (!gEJIT)
     return;
-  EJitTaskPool *tp = gEJIT->taskPool();
+  auto *tp = activeTaskPool();
   if (!tp)
     return;
   tp->releaseRead(bucketIndex);
@@ -416,7 +442,7 @@ void ejit_taskpool_release_read(uint32_t bucketIndex) {
 unsigned ejit_taskpool_poll_one(void) {
   if (!gEJIT)
     return 0;
-  EJitTaskPool *tp = gEJIT->taskPool();
+  auto *tp = activeTaskPool();
   if (!tp)
     return 0;
   return tp->pollOne() ? 1u : 0u;
@@ -425,7 +451,7 @@ unsigned ejit_taskpool_poll_one(void) {
 unsigned ejit_taskpool_poll_budget(unsigned maxItems) {
   if (!gEJIT)
     return 0;
-  EJitTaskPool *tp = gEJIT->taskPool();
+  auto *tp = activeTaskPool();
   if (!tp)
     return 0;
   return tp->pollBudget(maxItems);
@@ -435,7 +461,7 @@ unsigned ejit_taskpool_poll_budget(unsigned maxItems) {
 unsigned ejit_taskpool_pending_count(void) {
   if (!gEJIT)
     return 0;
-  EJitTaskPool *tp = gEJIT->taskPool();
+  auto *tp = activeTaskPool();
   if (!tp)
     return 0;
   return tp->pendingCount();
@@ -446,6 +472,26 @@ ejit_status_t ejit_taskpool_get_stats(ejit_taskpool_stats_t *out) {
     return EJIT_ERR_INVALID_PARAM;
   if (!gEJIT)
     return EJIT_ERR_NOT_ACTIVE;
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  EJitSharedTaskPool *sp = gEJIT->sharedTaskPool();
+  if (!sp)
+    return EJIT_ERR_NOT_ACTIVE;
+  EJitSharedDiagnostics d;
+  sp->getDiagnostics(d);
+  out->cacheHits = d.cacheHits;
+  out->asyncCompiles = d.asyncCompiles;
+  out->asyncEnqueues = d.asyncEnqueues;
+  out->alreadyPending = d.alreadyPending;
+  out->queueFull = d.queueFull;
+  out->compileFailed = d.compileFailed;
+  out->publishFailed = d.publishFailed;
+  out->instanceDisabled = d.instanceDisabled;
+  out->readyEntries = d.cacheReadyCount;
+  out->pendingEntries = d.pendingCount;
+  out->queueApproxSize = d.queueDepth;
+  out->reserved = 0;
+  return EJIT_OK;
+#else
   EJitTaskPool *tp = gEJIT->taskPool();
   if (!tp)
     return EJIT_ERR_NOT_ACTIVE;
@@ -465,6 +511,7 @@ ejit_status_t ejit_taskpool_get_stats(ejit_taskpool_stats_t *out) {
   out->queueApproxSize = s.queueApproxSize;
   out->reserved = 0;
   return EJIT_OK;
+#endif
 }
 #endif // EJIT_SRE_TASKPOOL
 

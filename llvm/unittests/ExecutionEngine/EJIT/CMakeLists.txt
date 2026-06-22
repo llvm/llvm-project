@@ -67,3 +67,36 @@ add_custom_target(check-ejit-taskpool
   COMMENT "Running EmbeddedJIT SRE taskpool unit tests"
   USES_TERMINAL
   )
+
+# Cross-core SHARED taskpool tests: compile the shared sources directly with the
+# shared-taskpool macros so they build and run independently of LLVMEJIT and need
+# no real SRE platform symbols. Many cores are simulated in one host process via
+# the injectable EJitCoreId; no real thread is required. Only LLVMSupport is
+# linked (the gtest harness).
+set(EJIT_SHARED_TASKPOOL_LINK_COMPONENTS_SAVED "${LLVM_LINK_COMPONENTS}")
+set(LLVM_LINK_COMPONENTS Support)
+add_llvm_unittest(EJITSharedTaskPoolTests
+  EJitSharedTaskPoolTest.cpp
+  ${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/EJIT/EJitSharedTaskPool.cpp
+  ${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/EJIT/EJitSharedPlatform.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  )
+set(LLVM_LINK_COMPONENTS "${EJIT_SHARED_TASKPOOL_LINK_COMPONENTS_SAVED}")
+
+target_compile_definitions(EJITSharedTaskPoolTests PRIVATE
+  EJIT_SRE_TASKPOOL
+  EJIT_SRE_SHARED_TASKPOOL
+  EJIT_SRE_TASKPOOL_TESTING
+  EJIT_SRE_TASKPOOL_BUCKETS=32
+  EJIT_SRE_TASKPOOL_QUEUE_CAPACITY=1024
+  EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=1048576
+  )
+
+# Convenience target: build + run only the cross-core shared taskpool tests.
+add_custom_target(check-ejit-shared-taskpool
+  COMMAND $<TARGET_FILE:EJITSharedTaskPoolTests>
+  DEPENDS EJITSharedTaskPoolTests
+  COMMENT "Running EmbeddedJIT cross-core shared taskpool unit tests"
+  USES_TERMINAL
+  )

@@ -245,9 +245,18 @@ EJit::EJit(const Config &config) : config_(config) {
       if (!engineReady)
         recordInitError(EJIT_ERR_COMPILE_FAILED,
                         "Async mode requires a ready ORC engine", "");
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+      // Cross-core shared taskpool: run owner election and (if elected) start
+      // the ONE shared worker. A clean failure (owner worker-start failed / ABI
+      // mismatch) fails init rather than accepting requests no worker consumes.
+      else if (!compileDriver_->startSharedTaskPool())
+        recordInitError(EJIT_ERR_COMPILE_FAILED,
+                        "shared taskpool init/election failed", "");
+#else
       else if (!compileDriver_->startTaskPoolWorker())
         recordInitError(EJIT_ERR_COMPILE_FAILED,
                         "taskpool worker failed to start", "");
+#endif
       else
         EJIT_DIAG("taskpool async init complete: worker running");
     } else {
@@ -568,5 +577,11 @@ const EJitError *EJit::getLastError() const {
 #ifdef EJIT_SRE_TASKPOOL
 EJitTaskPool *EJit::taskPool() {
   return compileDriver_ ? compileDriver_->taskPool() : nullptr;
+}
+#endif
+
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+EJitSharedTaskPool *EJit::sharedTaskPool() {
+  return compileDriver_ ? compileDriver_->sharedTaskPool() : nullptr;
 }
 #endif

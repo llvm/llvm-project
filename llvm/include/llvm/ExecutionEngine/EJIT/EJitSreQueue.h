@@ -58,12 +58,20 @@ struct EJitCompileRequest {
   EJitDimPair dims[4];
   uint32_t versions[4];
   uintptr_t fallbackPtr;
+  // Shared-taskpool owner generation captured at enqueue time. A worker drops a
+  // request whose generation no longer equals the shared state's generation
+  // (owner re-init), so a stale request can never pollute a new generation's
+  // cache. Unused (left 0) by the non-shared taskpool. Endianness: a plain
+  // fixed-width scalar accessed by value, never byte-parsed.
+  uint32_t generation;
 };
 
+// Size is stable per pointer width: on a 64-bit target the trailing uint32_t
+// generation forces 4 bytes of tail padding (alignof == 8) -> 72; on a 32-bit
+// target everything is 4-aligned with no padding -> 64.
 static_assert(sizeof(EJitCompileRequest) ==
-                  (2 * sizeof(uint32_t) + 4 * sizeof(EJitDimPair) +
-                   4 * sizeof(uint32_t) + sizeof(uintptr_t)),
-              "EJitCompileRequest size must stay stable");
+                  (sizeof(uintptr_t) == 8 ? 72u : 64u),
+              "EJitCompileRequest size must stay stable (incl. generation)");
 static_assert(alignof(EJitCompileRequest) <= 8,
               "EJitCompileRequest alignment must stay <= 8 bytes");
 static_assert(sizeof(uintptr_t) == 4 || sizeof(uintptr_t) == 8,

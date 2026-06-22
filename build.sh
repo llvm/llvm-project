@@ -25,6 +25,9 @@
 #   --sre-taskpool / --no-sre-taskpool  enable/disable SRE taskpool scheduler (default OFF)
 #   --sre-taskpool-buckets=<n>  taskpool dedup/cache bucket count (default: 32)
 #   --sre-taskpool-queue-capacity=<n>  taskpool async queue capacity, pow2 (default: 1024)
+#   --sre-shared-taskpool / --no-sre-shared-taskpool  cross-core shared taskpool, single shared worker (default OFF; needs --sre-taskpool)
+#   --sre-taskpool-worker-stack-size=<bytes>  shared worker task stack size (default: 1048576)
+#   --sre-shared-code-pointers / --no-sre-shared-code-pointers  allow non-owner cores to read shared cache fnPtrs (default OFF; needs platform same-VA + cache coherence)
 #   -h              show help
 #===----------------------------------------------------------------------===#
 
@@ -105,6 +108,9 @@ do_configure() {
         -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL} \
         -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS} \
         -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY} \
+        -DEJIT_SRE_SHARED_TASKPOOL=${EJIT_SRE_SHARED_TASKPOOL} \
+        -DEJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE} \
+        -DEJIT_SRE_SHARED_CODE_POINTERS=${EJIT_SRE_SHARED_CODE_POINTERS} \
         "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
         -DLLVM_ENABLE_ZLIB=OFF \
         -DLLVM_ENABLE_ZSTD=OFF \
@@ -125,6 +131,9 @@ do_configure() {
         -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL} \
         -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS} \
         -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY} \
+        -DEJIT_SRE_SHARED_TASKPOOL=${EJIT_SRE_SHARED_TASKPOOL} \
+        -DEJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE} \
+        -DEJIT_SRE_SHARED_CODE_POINTERS=${EJIT_SRE_SHARED_CODE_POINTERS} \
         "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
         -DLLVM_USE_SPLIT_DWARF=ON \
         -DLLVM_ENABLE_ZLIB=OFF \
@@ -160,6 +169,9 @@ do_configure() {
       -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL}
       -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS}
       -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}
+      -DEJIT_SRE_SHARED_TASKPOOL=${EJIT_SRE_SHARED_TASKPOOL}
+      -DEJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE}
+      -DEJIT_SRE_SHARED_CODE_POINTERS=${EJIT_SRE_SHARED_CODE_POINTERS}
     "
     # shellcheck disable=SC2086
     cmake -S "${LLVM_SRC}" -B "${build_dir}" \
@@ -196,6 +208,9 @@ do_configure() {
       -DEJIT_SRE_TASKPOOL=${EJIT_SRE_TASKPOOL}
       -DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS}
       -DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}
+      -DEJIT_SRE_SHARED_TASKPOOL=${EJIT_SRE_SHARED_TASKPOOL}
+      -DEJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE}
+      -DEJIT_SRE_SHARED_CODE_POINTERS=${EJIT_SRE_SHARED_CODE_POINTERS}
     "
     # shellcheck disable=SC2086
     cmake -S "${LLVM_SRC}" -B "${build_dir}" \
@@ -264,6 +279,9 @@ EJIT_SRE_CODE_POOL_PTNO=8
 EJIT_SRE_TASKPOOL=OFF
 EJIT_SRE_TASKPOOL_BUCKETS=32
 EJIT_SRE_TASKPOOL_QUEUE_CAPACITY=1024
+EJIT_SRE_SHARED_TASKPOOL=OFF
+EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE=1048576
+EJIT_SRE_SHARED_CODE_POINTERS=OFF
 
 if [[ "${1:-}" = "-h" || "${1:-}" = "--help" ]]; then
   sed -n '2,29p' "$0"
@@ -288,6 +306,11 @@ while [[ $# -gt 0 ]]; do
     --no-sre-taskpool) EJIT_SRE_TASKPOOL=OFF ;;
     --sre-taskpool-buckets=*) EJIT_SRE_TASKPOOL_BUCKETS="${1#--sre-taskpool-buckets=}" ;;
     --sre-taskpool-queue-capacity=*) EJIT_SRE_TASKPOOL_QUEUE_CAPACITY="${1#--sre-taskpool-queue-capacity=}" ;;
+    --sre-shared-taskpool) EJIT_SRE_SHARED_TASKPOOL=ON ;;
+    --no-sre-shared-taskpool) EJIT_SRE_SHARED_TASKPOOL=OFF ;;
+    --sre-taskpool-worker-stack-size=*) EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE="${1#--sre-taskpool-worker-stack-size=}" ;;
+    --sre-shared-code-pointers) EJIT_SRE_SHARED_CODE_POINTERS=ON ;;
+    --no-sre-shared-code-pointers) EJIT_SRE_SHARED_CODE_POINTERS=OFF ;;
     -h|--help)
       sed -n '2,29p' "$0"
       exit 0
@@ -321,6 +344,7 @@ BUILD_DIR=$(build_dir "$TYPE" "$ARCH" "$VARIANT")
 log "Type=${TYPE}  Arch=${ARCH}  Variant=${VARIANT}  ccache=$($USE_CCACHE && echo on || echo off)"
 log "EJIT: triple=${EJIT_TARGET_TRIPLE:-$(target_triple "$ARCH")}  sre-code-pool=${EJIT_SRE_CODE_POOL}  ptno=${EJIT_SRE_CODE_POOL_PTNO}"
 log "EJIT: sre-taskpool=${EJIT_SRE_TASKPOOL} buckets=${EJIT_SRE_TASKPOOL_BUCKETS} queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY}"
+log "EJIT: sre-shared-taskpool=${EJIT_SRE_SHARED_TASKPOOL} worker-stack=${EJIT_SRE_TASKPOOL_WORKER_STACK_SIZE} shared-code-pointers=${EJIT_SRE_SHARED_CODE_POINTERS}"
 log "Build dir: ${BUILD_DIR}"
 
 if $DO_CONFIGURE; then

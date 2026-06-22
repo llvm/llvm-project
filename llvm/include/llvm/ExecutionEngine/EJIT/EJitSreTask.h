@@ -27,8 +27,8 @@ public:
   static void destroy(EJitSreTask &task);
 
   /// Idle hint for the worker loop when the queue is empty. Host builds yield
-  /// through std::this_thread::yield; freestanding AArch64 builds use the
-  /// architectural `yield` hint and do not require another platform symbol.
+  /// through std::this_thread::yield; freestanding builds delay for one
+  /// scheduler tick through the platform task API.
   static void yield();
 
   bool stopRequested() const { return stopFlag_.loadAcquire() != 0; }

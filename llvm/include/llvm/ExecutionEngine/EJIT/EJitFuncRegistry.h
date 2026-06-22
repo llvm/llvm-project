@@ -81,6 +81,28 @@ public:
   /// Number of distinct functions assigned so far.
   uint32_t count() const { return next_; }
 
+  /// Deterministic digest of the whole (name -> funcIndex) mapping. Used by the
+  /// cross-core shared taskpool to reject a peer core whose registration
+  /// diverges from the owner's (different mapping => different indices). FNV-1a
+  /// over each name+index, XOR-accumulated so it is independent of the
+  /// unordered_map's iteration order; two cores with an identical mapping (same
+  /// single binary image, same registration set) compute the same value.
+  uint64_t fingerprint() const {
+    uint64_t acc = 0xcbf29ce484222325ULL ^
+                   (static_cast<uint64_t>(next_) * 0x100000001b3ULL);
+    for (const auto &KV : byName_) {
+      uint64_t h = 0xcbf29ce484222325ULL;
+      for (unsigned char c : KV.first) {
+        h ^= c;
+        h *= 0x100000001b3ULL;
+      }
+      h ^= static_cast<uint64_t>(KV.second) + 0x9e3779b97f4a7c15ULL;
+      h *= 0x100000001b3ULL;
+      acc ^= h; // XOR-accumulate: order-independent
+    }
+    return acc;
+  }
+
   /// Drop all assignments. For tests only (each test starts from empty state).
   void reset() {
     byName_.clear();

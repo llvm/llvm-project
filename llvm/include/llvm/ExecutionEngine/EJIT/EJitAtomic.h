@@ -41,7 +41,16 @@ namespace ejit {
 //===----------------------------------------------------------------------===//
 template <typename T> class EJitAtomic {
 public:
-  EJitAtomic() : value_(T{}) {}
+  // Trivial default constructor: leaves value_ UNINITIALIZED for automatic /
+  // dynamic storage, but ZERO for static storage (a namespace-scope object of a
+  // type built from EJitAtomic lands in .bss and is zero-filled by the loader,
+  // with NO C++ dynamic initializer / .init_array / startup memset). This is
+  // what lets the cross-core shared state blob (EJitSharedTaskPoolState) be a
+  // real, implicit-lifetime object that no core's ctor ever re-zeros — only the
+  // elected owner field-initializes it (spec §11). Holders that need a defined
+  // initial value on the stack/heap MUST value-initialize ({}) or store
+  // explicitly; the taskpool data structures already do.
+  EJitAtomic() = default;
   explicit EJitAtomic(T init) : value_(init) {}
 
   // Atomic cells are not copyable/movable: they identify a fixed memory slot.
