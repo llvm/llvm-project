@@ -15291,6 +15291,11 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
         Diag(it.first, it.second);
       var->setInvalidDecl();
     } else if (IsGlobal && [&] {
+                 // Thread-locals have thread (not static) storage duration;
+                 // paper §3 scopes this rule to non-local *static* objects
+                 // (uninit_decl likewise excludes thread storage).
+                 if (var->getTLSKind() != VarDecl::TLS_None)
+                   return false;
                  // std::init / static_runtime_init: paper says non-local
                  // statics must be initialized at compile or link time.
                  // checkConstInit() permits trivial default initialization

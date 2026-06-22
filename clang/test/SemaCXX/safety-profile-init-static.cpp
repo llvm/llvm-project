@@ -24,6 +24,8 @@ Trivial g_trivial_braced = {};
 WithDtor g_with_dtor;
 WithCtor g_with_ctor;                   // expected-error {{non-local variable 'g_with_ctor' requires constant initialization under profile 'std::init'}}
 
+thread_local int t_ns = runtime();      // OK: thread storage duration, not static
+
 constinit int g_ci = 0;
 // The constinit hard error fires regardless of -fprofiles.
 constinit int g_ci_runtime = runtime();
