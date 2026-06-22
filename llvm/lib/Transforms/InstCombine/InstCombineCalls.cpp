@@ -1601,7 +1601,7 @@ Value *InstCombinerImpl::foldReversedIntrinsicOperands(IntrinsicInst *II) {
 
   // intrinsic (reverse X), (reverse Y), ... --> reverse (intrinsic X, Y, ...)
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
-  Instruction *NewIntrinsic = Builder.CreateIntrinsic(
+  Value *NewIntrinsic = Builder.CreateIntrinsic(
       II->getType(), II->getIntrinsicID(), NewArgs, FPI);
   return Builder.CreateVectorReverse(NewIntrinsic);
 }
@@ -2660,6 +2660,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+  case Intrinsic::pdep: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateShl(Input, ShiftAmt);
+        Value *Masked = Builder.CreateAnd(Shifted, II->getArgOperand(1));
+        return replaceInstUsesWith(*II, Masked);
+      }
+    }
+    break;
+  }
+  case Intrinsic::pext: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *Masked = Builder.CreateAnd(Input, II->getArgOperand(1));
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateLShr(Masked, ShiftAmt);
+        return replaceInstUsesWith(*II, Shifted);
+      }
+    }
+    break;
+  }
   case Intrinsic::ptrmask: {
     unsigned BitWidth = DL.getPointerTypeSizeInBits(II->getType());
     KnownBits Known(BitWidth);
@@ -3036,8 +3070,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (ElementCount::isKnownGT(NegatedCount, RetCount)) {
       SmallVector<Value *, 5> NewArgs(II->args());
       NewArgs[NegatedOpArg] = OpNotNeg;
-      Instruction *NewMul =
-          Builder.CreateIntrinsic(II->getType(), IID, NewArgs, II);
+      Value *NewMul = Builder.CreateIntrinsic(II->getType(), IID, NewArgs, II);
       return replaceInstUsesWith(*II, Builder.CreateFNegFMF(NewMul, II));
     }
     break;
@@ -3670,13 +3703,36 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Try to remove redundant alignment assumptions.
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-        if (!Alignment || !Offset || *Offset != 0)
+        if (!Alignment || !Offset)
           break;
 
         // Remove align 1 and non-power-of-two bundles; they don't add any
         // useful information.
         if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
           return RemoveBundle();
+
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP &&
+            GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
+          Builder.CreateAlignmentAssumption(
+              getDataLayout(), GEP->getPointerOperand(), *Alignment,
+              *Offset == 0 ? nullptr : Builder.getInt64(*Offset));
+          return RemoveBundle();
+        }
+
+        Value *BasePtr;
+        const APInt *PtrOffset;
+        if (match(Ptr.get(), m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
+          auto PtrOffsetVal =
+              PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
+                  .trySExtValue();
+          if (!PtrOffsetVal)
+            break;
+          Builder.CreateAlignmentAssumption(
+              DL, BasePtr, *Alignment,
+              Builder.getInt64(*Offset - *PtrOffsetVal));
+          return RemoveBundle();
+        }
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
@@ -3687,10 +3743,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
-            Log2_64(*Alignment))
-          continue;
-        return RemoveBundle();
+        auto AlignMask = (*Alignment - 1);
+        if (KnownBits KB = computeKnownBits(Ptr, II);
+            (KB.Zero & AlignMask) == (~*Offset & AlignMask) &&
+            (KB.One & AlignMask) == (*Offset & AlignMask))
+          return RemoveBundle();
+        break;
       }
 
       case BundleAttr::Dereferenceable: {
@@ -3846,16 +3904,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // If there is a dominating assume with the same condition as this one,
-    // then this one is redundant, and should be removed.
-    KnownBits Known(1);
-    computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes())
-      return eraseInstFromFunction(*II);
-
-    // assume(false) is unreachable.
-    if (match(IIOperand, m_CombineOr(m_Zero(), m_Undef()))) {
-      CreateNonTerminatorUnreachable(II);
+    // Remove assumes on true/false
+    if (auto *CI = dyn_cast<ConstantInt>(IIOperand);
+        CI || isa<UndefValue, PoisonValue>(IIOperand)) {
+      if (!CI || CI->isZero())
+        CreateNonTerminatorUnreachable(II);
       return eraseInstFromFunction(*II);
     }
 

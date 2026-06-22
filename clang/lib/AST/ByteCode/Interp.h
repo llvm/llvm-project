@@ -1836,7 +1836,7 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1853,7 +1853,7 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1872,7 +1872,7 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
                       uint32_t FieldBitWidth) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -1897,7 +1897,7 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
                               uint32_t FieldOffset, uint32_t FieldBitWidth) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2093,7 +2093,7 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
                       const Type *TargetType);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
+  if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
     return false;
   if (!CheckThis(S, OpPC))
     return false;
@@ -2169,6 +2169,8 @@ inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
     return false;
   Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
+  if (!VirtBase)
+    return false;
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
 }
@@ -3641,6 +3643,7 @@ inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
     return true;
   assert(S.PrevDiags == nullptr);
   S.PrevDiags = S.getEvalStatus().Diag;
+  S.PrevDiagsEmitted = S.getEvalStatus().DiagEmitted;
   S.getEvalStatus().Diag = nullptr;
   assert(!S.diagnosing());
   return true;
@@ -3651,6 +3654,7 @@ inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
   --S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth == 0) {
     S.getEvalStatus().Diag = S.PrevDiags;
+    S.getEvalStatus().DiagEmitted = S.PrevDiagsEmitted;
     S.PrevDiags = nullptr;
   }
   return true;

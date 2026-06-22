@@ -6026,6 +6026,11 @@ void Verifier::visitInstruction(Instruction &I) {
     Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }
 
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_noundef)) {
+    Check(isa<LoadInst>(I), "noundef applies only to load instructions", &I);
+    Check(MD->getNumOperands() == 0, "noundef metadata must be empty", &I);
+  }
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable))
     visitDereferenceableMetadata(I, MD);
 
@@ -6276,7 +6281,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(isa<ConstantPointerNull>(Promise) || isa<AllocaInst>(Promise),
           "promise argument must refer to an alloca");
 
-    auto *CoroAddr = Call.getArgOperand(2)->stripPointerCasts();
+    auto *CoroAddr = Call.getArgOperand(2)->stripPointerCastsAndAliases();
     bool BeforeCoroEarly = isa<ConstantPointerNull>(CoroAddr);
     Check(BeforeCoroEarly || isa<Function>(CoroAddr),
           "coro argument must refer to a function");
@@ -6746,46 +6751,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::get_active_lane_mask: {
-    Check(Call.getType()->isVectorTy(),
-          "get_active_lane_mask: must return a "
-          "vector",
-          Call);
-    auto *ElemTy = Call.getType()->getScalarType();
+    Type *ElemTy = Call.getType()->getScalarType();
     Check(ElemTy->isIntegerTy(1),
-          "get_active_lane_mask: element type is not "
-          "i1",
-          Call);
+          "get_active_lane_mask: element type is not i1", Call);
     break;
   }
   case Intrinsic::experimental_get_vector_length: {
     ConstantInt *VF = cast<ConstantInt>(Call.getArgOperand(1));
     Check(!VF->isNegative() && !VF->isZero(),
           "get_vector_length: VF must be positive", Call);
-    break;
-  }
-  case Intrinsic::masked_load: {
-    Check(Call.getType()->isVectorTy(), "masked_load: must return a vector",
-          Call);
-
-    Value *Mask = Call.getArgOperand(1);
-    Value *PassThru = Call.getArgOperand(2);
-    Check(Mask->getType()->isVectorTy(), "masked_load: mask must be vector",
-          Call);
-    Check(PassThru->getType() == Call.getType(),
-          "masked_load: pass through and return type must match", Call);
-    Check(cast<VectorType>(Mask->getType())->getElementCount() ==
-              cast<VectorType>(Call.getType())->getElementCount(),
-          "masked_load: vector mask must be same length as return", Call);
-    break;
-  }
-  case Intrinsic::masked_store: {
-    Value *Val = Call.getArgOperand(0);
-    Value *Mask = Call.getArgOperand(2);
-    Check(Mask->getType()->isVectorTy(), "masked_store: mask must be vector",
-          Call);
-    Check(cast<VectorType>(Mask->getType())->getElementCount() ==
-              cast<VectorType>(Val->getType())->getElementCount(),
-          "masked_store: vector mask must be same length as value", Call);
     break;
   }
   case Intrinsic::experimental_guard: {
@@ -6830,40 +6804,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "get_dynamic_area_offset result type must be scalar integer matching "
           "alloca address space width",
           Call);
-    break;
-  }
-  case Intrinsic::masked_udiv:
-  case Intrinsic::masked_sdiv:
-  case Intrinsic::masked_urem:
-  case Intrinsic::masked_srem:
-  case Intrinsic::vector_reduce_and:
-  case Intrinsic::vector_reduce_or:
-  case Intrinsic::vector_reduce_xor:
-  case Intrinsic::vector_reduce_add:
-  case Intrinsic::vector_reduce_mul:
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_umax:
-  case Intrinsic::vector_reduce_umin: {
-    Type *ArgTy = Call.getArgOperand(0)->getType();
-    Check(ArgTy->isIntOrIntVectorTy() && ArgTy->isVectorTy(),
-          "intrinsic has incorrect argument type!");
-    break;
-  }
-  case Intrinsic::vector_reduce_fmax:
-  case Intrinsic::vector_reduce_fmin: {
-    Type *ArgTy = Call.getArgOperand(0)->getType();
-    Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
-          "intrinsic has incorrect argument type!");
-    break;
-  }
-  case Intrinsic::vector_reduce_fadd:
-  case Intrinsic::vector_reduce_fmul: {
-    // Unlike the other reductions, the first argument is a start value. The
-    // second argument is the vector to be reduced.
-    Type *ArgTy = Call.getArgOperand(1)->getType();
-    Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
-          "intrinsic has incorrect argument type!");
     break;
   }
   case Intrinsic::smul_fix:
@@ -7873,24 +7813,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
         "invalid arguments for constrained FP intrinsic", &FPI);
 
   switch (FPI.getIntrinsicID()) {
-  case Intrinsic::experimental_constrained_lrint:
-  case Intrinsic::experimental_constrained_llrint: {
-    Type *ValTy = FPI.getArgOperand(0)->getType();
-    Type *ResultTy = FPI.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &FPI);
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_lround:
-  case Intrinsic::experimental_constrained_llround: {
-    Type *ValTy = FPI.getArgOperand(0)->getType();
-    Type *ResultTy = FPI.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &FPI);
-    break;
-  }
-
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps: {
     auto Pred = cast<ConstrainedFPCmpIntrinsic>(&FPI)->getPredicate();

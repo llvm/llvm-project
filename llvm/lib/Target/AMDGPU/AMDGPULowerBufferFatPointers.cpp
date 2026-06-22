@@ -2020,7 +2020,7 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
-  auto *Call = IRB.CreateIntrinsic(IID, Ty, Args);
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
   copyMetadata(Call, I);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
@@ -2087,10 +2087,10 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
     Aux |= AMDGPU::CPol::SLC;
   if (AI.isVolatile())
     Aux |= AMDGPU::CPol::VOLATILE;
-  auto *Call =
-      IRB.CreateIntrinsic(Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
-                          {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc,
-                           Off, IRB.getInt32(0), IRB.getInt32(Aux)});
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
+      {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
+       IRB.getInt32(0), IRB.getInt32(Aux)});
   copyMetadata(Call, &AI);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);
@@ -2542,7 +2542,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
         IID == Intrinsic::amdgcn_load_to_lds
             ? Intrinsic::amdgcn_raw_ptr_buffer_load_lds
             : Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds;
-    Instruction *NewLoad = IRB.CreateIntrinsic(
+    Instruction *NewLoad = IRB.CreateIntrinsicWithoutFolding(
         NewIntr, {}, {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
     copyMetadata(NewLoad, &I);
     SplitUsers.insert(&I);
