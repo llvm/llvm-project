@@ -1057,7 +1057,10 @@ def fabs_fptrunc_fold: GICombineRule <
   (defs root:$dst),
   (match (G_FPTRUNC $round, $src):$fptrunc,
          (G_FABS $dst, $round):$fabs,
-         [{ return MRI.hasOneNonDBGUse(${round}.getReg()); }]),
+         [{ return MRI.hasOneNonDBGUse(${round}.getReg()) &&
+                   Helper.isLegalOrBeforeLegalizer(
+                       {TargetOpcode::G_FABS,
+                        {MRI.getType(${src}.getReg())}}); }]),
   (apply [{
             Register Src = ${src}.getReg();
             Helper.getBuilder().setInstrAndDebugLoc(*${fabs});
