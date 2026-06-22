@@ -856,6 +856,151 @@ func.func @reduction_minui(%v : vector<3xi32>, %s: i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL: func @reduction_and
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi32>)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<4xi32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<4xi32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<4xi32>
+//       CHECK:   %[[S3:.+]] = spirv.CompositeExtract %[[V]][3 : i32] : vector<4xi32>
+//       CHECK:   %[[AND0:.+]] = spirv.BitwiseAnd %[[S0]], %[[S1]]
+//       CHECK:   %[[AND1:.+]] = spirv.BitwiseAnd %[[AND0]], %[[S2]]
+//       CHECK:   %[[AND2:.+]] = spirv.BitwiseAnd %[[AND1]], %[[S3]]
+//       CHECK:   return %[[AND2]]
+func.func @reduction_and(%v : vector<4xi32>) -> i32 {
+  %reduce = vector.reduction <and>, %v : vector<4xi32> into i32
+  return %reduce : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_and_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[AND0:.+]] = spirv.BitwiseAnd %[[S0]], %[[S1]]
+//       CHECK:   %[[AND1:.+]] = spirv.BitwiseAnd %[[AND0]], %[[S2]]
+//       CHECK:   %[[AND2:.+]] = spirv.BitwiseAnd %[[AND1]], %[[S]]
+//       CHECK:   return %[[AND2]]
+func.func @reduction_and_acc(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <and>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_or
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi32>)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<4xi32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<4xi32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<4xi32>
+//       CHECK:   %[[S3:.+]] = spirv.CompositeExtract %[[V]][3 : i32] : vector<4xi32>
+//       CHECK:   %[[OR0:.+]] = spirv.BitwiseOr %[[S0]], %[[S1]]
+//       CHECK:   %[[OR1:.+]] = spirv.BitwiseOr %[[OR0]], %[[S2]]
+//       CHECK:   %[[OR2:.+]] = spirv.BitwiseOr %[[OR1]], %[[S3]]
+//       CHECK:   return %[[OR2]]
+func.func @reduction_or(%v : vector<4xi32>) -> i32 {
+  %reduce = vector.reduction <or>, %v : vector<4xi32> into i32
+  return %reduce : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_or_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[OR0:.+]] = spirv.BitwiseOr %[[S0]], %[[S1]]
+//       CHECK:   %[[OR1:.+]] = spirv.BitwiseOr %[[OR0]], %[[S2]]
+//       CHECK:   %[[OR2:.+]] = spirv.BitwiseOr %[[OR1]], %[[S]]
+//       CHECK:   return %[[OR2]]
+func.func @reduction_or_acc(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <or>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_xor
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi32>)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<4xi32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<4xi32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<4xi32>
+//       CHECK:   %[[S3:.+]] = spirv.CompositeExtract %[[V]][3 : i32] : vector<4xi32>
+//       CHECK:   %[[XOR0:.+]] = spirv.BitwiseXor %[[S0]], %[[S1]]
+//       CHECK:   %[[XOR1:.+]] = spirv.BitwiseXor %[[XOR0]], %[[S2]]
+//       CHECK:   %[[XOR2:.+]] = spirv.BitwiseXor %[[XOR1]], %[[S3]]
+//       CHECK:   return %[[XOR2]]
+func.func @reduction_xor(%v : vector<4xi32>) -> i32 {
+  %reduce = vector.reduction <xor>, %v : vector<4xi32> into i32
+  return %reduce : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_xor_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[XOR0:.+]] = spirv.BitwiseXor %[[S0]], %[[S1]]
+//       CHECK:   %[[XOR1:.+]] = spirv.BitwiseXor %[[XOR0]], %[[S2]]
+//       CHECK:   %[[XOR2:.+]] = spirv.BitwiseXor %[[XOR1]], %[[S]]
+//       CHECK:   return %[[XOR2]]
+func.func @reduction_xor_acc(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <xor>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_or_bool
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>)
+//       CHECK:   %[[R:.+]] = spirv.Any %[[V]] : vector<4xi1>
+//       CHECK:   return %[[R]]
+func.func @reduction_or_bool(%v : vector<4xi1>) -> i1 {
+  %reduce = vector.reduction <or>, %v : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_and_bool
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>)
+//       CHECK:   %[[R:.+]] = spirv.All %[[V]] : vector<4xi1>
+//       CHECK:   return %[[R]]
+func.func @reduction_and_bool(%v : vector<4xi1>) -> i1 {
+  %reduce = vector.reduction <and>, %v : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_or_bool_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>, %[[S:.+]]: i1)
+//       CHECK:   %[[R:.+]] = spirv.Any %[[V]] : vector<4xi1>
+//       CHECK:   %[[A:.+]] = spirv.LogicalOr %[[R]], %[[S]]
+//       CHECK:   return %[[A]]
+func.func @reduction_or_bool_acc(%v : vector<4xi1>, %s: i1) -> i1 {
+  %reduce = vector.reduction <or>, %v, %s : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_and_bool_acc
+//  CHECK-SAME: (%[[V:.+]]: vector<4xi1>, %[[S:.+]]: i1)
+//       CHECK:   %[[R:.+]] = spirv.All %[[V]] : vector<4xi1>
+//       CHECK:   %[[A:.+]] = spirv.LogicalAnd %[[R]], %[[S]]
+//       CHECK:   return %[[A]]
+func.func @reduction_and_bool_acc(%v : vector<4xi1>, %s: i1) -> i1 {
+  %reduce = vector.reduction <and>, %v, %s : vector<4xi1> into i1
+  return %reduce : i1
+}
+
+// -----
+
 module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [BFloat16DotProductKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>> } {
 
 // CHECK-LABEL: func @reduction_bf16_addf_mulf
@@ -1063,6 +1208,19 @@ func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageB
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
   vector.store %arg1, %arg0[%idx_0, %idx_1] : memref<4x4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_store_index
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<4xindex, #spirv.storage_class<StorageBuffer>>
+//  CHECK-SAME:  %[[ARG1:.*]]: vector<4xindex>
+//       CHECK:   %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<4xindex, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32, stride=4> [0])>, StorageBuffer>
+//       CHECK:   %[[S1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : vector<4xindex> to vector<4xi32>
+//       CHECK:   %[[S5:.+]] = spirv.Bitcast %{{.+}} : !spirv.ptr<i32, StorageBuffer> to !spirv.ptr<vector<4xi32>, StorageBuffer>
+//       CHECK:   spirv.Store "StorageBuffer" %[[S5]], %[[S1]] : vector<4xi32>
+func.func @vector_store_index(%arg0 : memref<4xindex, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xindex>) {
+  %idx = arith.constant 0 : index
+  vector.store %arg1, %arg0[%idx] : memref<4xindex, #spirv.storage_class<StorageBuffer>>, vector<4xindex>
   return
 }
 

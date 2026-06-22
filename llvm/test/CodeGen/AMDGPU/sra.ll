@@ -648,9 +648,9 @@ define amdgpu_kernel void @ashr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 39, @15, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T3.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
+; EG-NEXT:    ALU 38, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T1.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T3.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 32, #1
@@ -687,19 +687,18 @@ define amdgpu_kernel void @ashr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     AND_INT * T4.W, T1.X, literal.x,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
 ; EG-NEXT:     CNDE_INT T2.X, PS, PV.W, PV.Y,
-; EG-NEXT:     ASHR T6.Y, T3.W, literal.x,
-; EG-NEXT:     ASHR T3.Z, T0.Y, literal.x, BS:VEC_201
-; EG-NEXT:     ADD_INT T3.W, KC0[2].Y, literal.y,
+; EG-NEXT:     ASHR T3.Z, T3.W, literal.x,
+; EG-NEXT:     ASHR T3.W, T0.Y, literal.x, BS:VEC_201
 ; EG-NEXT:     CNDE_INT * T0.W, T1.Z, T2.Y, T1.Y,
-; EG-NEXT:    31(4.344025e-44), 16(2.242078e-44)
-; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
-; EG-NEXT:     CNDE_INT T0.Y, T2.W, T4.Y, PV.Z,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     CNDE_INT T0.Y, T2.W, T4.Y, PV.W,
 ; EG-NEXT:     ASHR T3.W, T3.Y, literal.y,
-; EG-NEXT:     CNDE_INT * T2.W, T1.W, T4.Z, PV.Y,
+; EG-NEXT:     CNDE_INT * T2.W, T1.W, T4.Z, PV.Z,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-; EG-NEXT:     LSHR T3.X, KC0[2].Y, literal.x,
+; EG-NEXT:     ADD_INT T3.X, PV.X, literal.x,
 ; EG-NEXT:     CNDE_INT * T2.Y, T4.W, T5.Y, PV.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
   %b_ptr = getelementptr <4 x i64>, ptr addrspace(1) %in, i64 1
   %a = load <4 x i64>, ptr addrspace(1) %in
   %b = load <4 x i64>, ptr addrspace(1) %b_ptr
@@ -1077,15 +1076,15 @@ define amdgpu_kernel void @v_ashr_62_i64(ptr addrspace(1) %out, ptr addrspace(1)
 define amdgpu_kernel void @s_ashr_63_i64(ptr addrspace(1) %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
 ; SI-LABEL: s_ashr_63_i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
-; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x1d
+; SI-NEXT:    s_load_dword s8, s[4:5], 0x14
+; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x1d
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_ashr_i32 s5, s7, 31
-; SI-NEXT:    s_add_u32 s4, s5, s8
-; SI-NEXT:    s_addc_u32 s5, s5, s9
+; SI-NEXT:    s_ashr_i32 s5, s8, 31
+; SI-NEXT:    s_add_u32 s4, s5, s6
+; SI-NEXT:    s_addc_u32 s5, s5, s7
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, s5
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -1093,15 +1092,15 @@ define amdgpu_kernel void @s_ashr_63_i64(ptr addrspace(1) %out, [8 x i32], i64 %
 ;
 ; VI-LABEL: s_ashr_63_i64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x4c
-; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x74
+; VI-NEXT:    s_load_dword s8, s[4:5], 0x50
+; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x74
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_ashr_i32 s5, s7, 31
-; VI-NEXT:    s_add_u32 s4, s5, s8
-; VI-NEXT:    s_addc_u32 s5, s5, s9
+; VI-NEXT:    s_ashr_i32 s5, s8, 31
+; VI-NEXT:    s_add_u32 s4, s5, s6
+; VI-NEXT:    s_addc_u32 s5, s5, s7
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -1137,13 +1136,14 @@ define amdgpu_kernel void @v_ashr_63_i64(ptr addrspace(1) %out, ptr addrspace(1)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_mov_b64 s[2:3], s[6:7]
+; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; SI-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64 offset:4
+; SI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
+; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v2
-; SI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
+; SI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: v_ashr_63_i64:
@@ -1151,17 +1151,19 @@ define amdgpu_kernel void @v_ashr_63_i64(ptr addrspace(1) %out, ptr addrspace(1)
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s1
-; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v2
+; VI-NEXT:    v_mov_b32_e32 v0, s3
+; VI-NEXT:    v_add_u32_e32 v1, vcc, s2, v2
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v0, vcc
-; VI-NEXT:    v_ashrrev_i32_e32 v0, 31, v1
-; VI-NEXT:    v_mov_b32_e32 v1, v0
-; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v1
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; VI-NEXT:    flat_load_dword v3, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_ashrrev_i32_e32 v2, 31, v3
+; VI-NEXT:    v_mov_b32_e32 v3, v2
+; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: v_ashr_63_i64:

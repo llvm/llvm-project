@@ -55,7 +55,7 @@ class BoUpSLP;
 
 } // end namespace slpvectorizer
 
-struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
+struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   using StoreList = SmallVector<StoreInst *, 8>;
   using StoreListMap = MapVector<Value *, StoreList>;
   using GEPList = SmallVector<GetElementPtrInst *, 8>;
@@ -73,13 +73,14 @@ struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   const DataLayout *DL = nullptr;
 
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, ScalarEvolution *SE_, TargetTransformInfo *TTI_,
-               TargetLibraryInfo *TLI_, AAResults *AA_, LoopInfo *LI_,
-               DominatorTree *DT_, AssumptionCache *AC_, DemandedBits *DB_,
-               OptimizationRemarkEmitter *ORE_);
+  LLVM_ABI bool runImpl(Function &F, ScalarEvolution *SE_,
+                        TargetTransformInfo *TTI_, TargetLibraryInfo *TLI_,
+                        AAResults *AA_, LoopInfo *LI_, DominatorTree *DT_,
+                        AssumptionCache *AC_, DemandedBits *DB_,
+                        OptimizationRemarkEmitter *ORE_);
 
 private:
   /// Collect store and getelementptr instructions and organize them
@@ -98,12 +99,14 @@ private:
                           bool MaxVFOnly = false);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
-  bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);
+  bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
+                      SmallSetVector<Instruction *, 8> &FMACandidates,
+                      bool AllowFMACandidates = false);
 
   /// Try to vectorize chains that may start at the operands of
   /// instructions in \p Insts.
-  bool tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
-                      slpvectorizer::BoUpSLP &R);
+  bool tryToVectorize(ArrayRef<WeakTrackingVH> Insts, slpvectorizer::BoUpSLP &R,
+                      SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
@@ -127,8 +130,10 @@ private:
   /// Make an attempt to vectorize reduction and then try to vectorize
   /// postponed binary operations.
   /// \returns true on any successfull vectorization.
-  bool vectorizeRootInstruction(PHINode *P, Instruction *Root, BasicBlock *BB,
-                                slpvectorizer::BoUpSLP &R);
+  bool
+  vectorizeRootInstruction(PHINode *P, Instruction *Root, BasicBlock *BB,
+                           slpvectorizer::BoUpSLP &R,
+                           SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Try to vectorize trees that start at insertvalue instructions.
   bool vectorizeInsertValueInst(InsertValueInst *IVI, BasicBlock *BB,
@@ -141,12 +146,21 @@ private:
   /// Tries to vectorize \p CmpInts. \Returns true on success.
   template <typename ItT>
   bool vectorizeCmpInsts(iterator_range<ItT> CmpInsts, BasicBlock *BB,
-                         slpvectorizer::BoUpSLP &R);
+                         slpvectorizer::BoUpSLP &R,
+                         SmallSetVector<Instruction *, 8> &FMACandidates);
+
+  /// Tries to vectorize the operand chains of the non-vectorizable
+  /// instructions in \p Insts.
+  template <typename ItT>
+  bool vectorizeNonVectorizableInsts(
+      iterator_range<ItT> Insts, BasicBlock *BB, slpvectorizer::BoUpSLP &R,
+      SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Tries to vectorize constructs started from InsertValueInst or
   /// InsertElementInst instructions.
   bool vectorizeInserts(InstSetVector &Instructions, BasicBlock *BB,
-                        slpvectorizer::BoUpSLP &R);
+                        slpvectorizer::BoUpSLP &R,
+                        SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Scan the basic block and look for patterns that are likely to start
   /// a vectorization chain.

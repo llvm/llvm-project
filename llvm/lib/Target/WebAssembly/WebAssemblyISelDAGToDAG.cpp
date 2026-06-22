@@ -19,7 +19,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/CodeGen/WasmEHInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -337,10 +337,8 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     MVT PtrVT = TLI.getPointerTy(CurDAG->getDataLayout());
     switch (IntNo) {
     case Intrinsic::wasm_tls_base: {
-      MachineSDNode *TLSBase = CurDAG->getMachineNode(
-          GlobalGetIns, DL, PtrVT, MVT::Other,
-          CurDAG->getTargetExternalSymbol("__tls_base", PtrVT),
-          Node->getOperand(0));
+      MachineSDNode *TLSBase = llvm::WebAssembly::getTLSBase(
+          *CurDAG, DL, Subtarget, Node->getOperand(0));
       ReplaceNode(Node, TLSBase);
       return;
     }

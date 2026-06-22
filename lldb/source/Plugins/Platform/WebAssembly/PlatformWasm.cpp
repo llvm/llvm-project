@@ -126,8 +126,7 @@ llvm::Expected<uint16_t> PlatformWasm::FindFreeTCPPort() {
 
 std::vector<ArchSpec>
 PlatformWasm::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
-  return {ArchSpec("wasm32-unknown-unknown-wasm"),
-          ArchSpec("wasm64-unknown-unknown-wasm")};
+  return {ArchSpec("wasm32"), ArchSpec("wasm64")};
 }
 
 lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
@@ -175,7 +174,9 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
 
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);
-  launch_info.GetFlags().Clear(eLaunchFlagDebug);
+  // We're launching the Wasm runtime (a native host binary), not the target
+  // being debugged. Clear flags that don't apply to the runtime process.
+  launch_info.GetFlags().Clear(eLaunchFlagDebug | eLaunchFlagDisableASLR);
   launch_info.GetEnvironment() = Host::GetEnvironment();
 
   auto exit_code = std::make_shared<std::optional<int>>();

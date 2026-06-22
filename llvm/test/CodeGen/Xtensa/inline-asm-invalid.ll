@@ -3,12 +3,12 @@
 
 define void @constraint_f() nounwind {
 ; CHECK: error: unknown asm constraint 'f'
-  tail call void asm "addi a1, a1, $0", "f"(i32 1)
+  tail call void asm "add.s f0, f1, $0", "f"(float 0.0)
   ret void
 }
 
 define i32 @register_a100(i32 %a) nounwind {
-; CHECK: error: couldn't allocate input reg for constraint '{$a100}'
+; CHECK: error: could not allocate input reg for constraint '{$a100}'
   %1 = tail call i32 asm "addi $0, $1, 1", "=r,{$a100}"(i32 %a)
   ret i32 %1
 }

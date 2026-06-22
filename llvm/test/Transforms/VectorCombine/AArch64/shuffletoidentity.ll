@@ -339,7 +339,7 @@ define <8 x i8> @constantdiff2(<8 x i8> %a) {
 
 define <8 x half> @constantsplatf(<8 x half> %a) {
 ; CHECK-LABEL: @constantsplatf(
-; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], splat (half 0xH4900)
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], splat (half 1.000000e+01)
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -534,8 +534,8 @@ define <4 x i64> @single_zext(<4 x i32> %x) {
 
 define <4 x i64> @not_zext(<4 x i32> %x) {
 ; CHECK-LABEL: @not_zext(
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[REVSHUF:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[REVSHUF]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %zext = zext <4 x i32> %x to <4 x i64>
@@ -745,10 +745,7 @@ define <4 x i64> @zext_add_chain(<4 x i32> %x) {
 define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @intrinsics_minmax(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.smax.v8i8(<8 x i8> [[TMP1]], <8 x i8> [[B]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i8> @llvm.umin.v8i8(<8 x i8> [[TMP2]], <8 x i8> [[B]])
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.umax.v8i8(<8 x i8> [[TMP3]], <8 x i8> [[B]])
-; CHECK-NEXT:    ret <8 x i8> [[R]]
+; CHECK-NEXT:    ret <8 x i8> [[B]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
@@ -922,8 +919,7 @@ define <4 x i8> @singleop(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 ; CHECK-LABEL: @cast_mismatched_types(
-; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X:%.*]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
@@ -1202,7 +1198,7 @@ define <16 x i32> @const_types(<16 x i32> %wide.vec, <16 x i32> %wide.vec116) {
 define <32 x half> @cast_types(<32 x i16> %wide.vec) {
 ; CHECK-LABEL: @cast_types(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <32 x i16> [[WIDE_VEC:%.*]] to <32 x half>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fmul fast <32 x half> [[TMP1]], splat (half 0xH0200)
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fmul fast <32 x half> [[TMP1]], splat (half 3.051760e-05)
 ; CHECK-NEXT:    ret <32 x half> [[INTERLEAVED_VEC]]
 ;
   %strided.vec = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>

@@ -3010,7 +3010,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case PPC::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
   case TargetOpcode::STACKMAP: {
     StackMapOpers Opers(&MI);
@@ -3023,10 +3023,7 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (Num || MF->getTarget().getTargetTriple().isOSAIX() ||
         !MF->getTarget().getTargetTriple().isLittleEndian())
       return Num * 4;
@@ -3039,6 +3036,8 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     bool IsConditional = RetOpcode == PPC::BCCLR;
     return (8 + IsConditional) * 4;
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   default:
     return get(Opcode).getSize();
   }
@@ -5449,7 +5448,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
   // extended themselves, but may have operands who's destination registers of
   // signed or zero extended instructions.
-  std::unordered_map<unsigned, unsigned> OpcodeMap = {
+  DenseMap<unsigned, unsigned> OpcodeMap = {
       {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
       {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
       {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
@@ -5922,7 +5921,6 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X8)
       .addReg(ScratchReg)
-      .addImm(16)
       .addReg(PPC::X9, RegState::Implicit)
       .addReg(PPC::X10, RegState::Implicit);
 
