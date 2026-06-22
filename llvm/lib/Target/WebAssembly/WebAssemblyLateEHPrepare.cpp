@@ -298,7 +298,8 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
 bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
-  MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> EHPadToRethrows;
+  MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>>
+      EHPadToRethrows;
 
   // Create a map of <EH pad, a vector of RETHROWs rethrowing its exception>
   for (auto &MBB : MF)

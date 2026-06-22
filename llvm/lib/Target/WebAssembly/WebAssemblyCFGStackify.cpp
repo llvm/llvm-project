@@ -1838,7 +1838,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   // multiple BBs.
   using TryRange = std::pair<MachineInstr *, MachineInstr *>;
   // In original CFG, <unwind destination BB, a vector of try/try_table ranges>
-  MapVector<MachineBasicBlock *, SmallVector<TryRange, 4>> UnwindDestToTryRanges;
+  MapVector<MachineBasicBlock *, SmallVector<TryRange, 4>>
+      UnwindDestToTryRanges;
 
   // Gather possibly throwing calls (i.e., previously invokes) whose current
   // unwind destination is not the same as the original CFG. (Case 1)
