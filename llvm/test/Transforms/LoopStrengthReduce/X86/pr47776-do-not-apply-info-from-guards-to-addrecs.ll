@@ -19,7 +19,7 @@ define void @bar() personality ptr @zot {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[TMP7:%.*]], [[BB5:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:            to label [[BB5]] unwind label [[BB23_LOOPEXIT_SPLIT_LP:%.*]]
+; CHECK-NEXT:    to label [[BB5]] unwind label [[BB23_LOOPEXIT_SPLIT_LP:%.*]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, ptr addrspace(1) undef unordered, align 8
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i64 [[TMP3]], 1
@@ -39,18 +39,18 @@ define void @bar() personality ptr @zot {
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ [[TMP21:%.*]], [[BB20:%.*]] ], [ [[TMP16]], [[BB10]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:            to label [[BB20]] unwind label [[BB23_LOOPEXIT:%.*]]
+; CHECK-NEXT:    to label [[BB20]] unwind label [[BB23_LOOPEXIT:%.*]]
 ; CHECK:       bb20:
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP18]], -1
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[BB1_LOOPEXIT]], label [[BB17]]
 ; CHECK:       bb23.loopexit:
 ; CHECK-NEXT:    [[LPAD_LOOPEXIT:%.*]] = landingpad token
-; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[BB23:%.*]]
 ; CHECK:       bb23.loopexit.split-lp:
 ; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP:%.*]] = landingpad token
-; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[BB23]]
 ; CHECK:       bb23:
 ; CHECK-NEXT:    ret void
