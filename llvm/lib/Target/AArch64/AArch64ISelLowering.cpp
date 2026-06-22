@@ -8882,6 +8882,12 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
   return true;
 }
 
+bool AArch64TargetLowering::useNEONForVectorVT(EVT VT) const {
+  if (VT.isScalableVector() || !Subtarget->isNeonAvailable())
+    return false;
+  return !useSVEForFixedLengthVectorVT(VT);
+}
+
 //===----------------------------------------------------------------------===//
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
@@ -14291,7 +14297,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
       continue;
     else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
              !isa<ConstantSDNode>(V.getOperand(1)) ||
-             V.getOperand(0).getValueType().isScalableVector()) {
+             !useNEONForVectorVT(V->getOperand(0).getValueType())) {
       LLVM_DEBUG(
           dbgs() << "Reshuffle failed: "
                     "a shuffle can only come from building a vector from "
