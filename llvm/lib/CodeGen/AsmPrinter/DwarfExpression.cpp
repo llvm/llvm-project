@@ -236,7 +236,8 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
   }
 }
 
-void DwarfExpression::addImplicitValue(const APInt &Value) {
+void DwarfExpression::addImplicitValue(const APInt &Value,
+                                       const AsmPrinter &AP) {
   assert(isImplicitLocation() || isUnknownLocation());
   assert(DwarfVersion >= 4);
 
@@ -250,7 +251,7 @@ void DwarfExpression::addImplicitValue(const APInt &Value) {
 
   // The loop below is emitting the value starting at the least significant
   // byte, so byte-swap first for big-endian targets.
-  if (CU.getAsmPrinter()->getDataLayout().isBigEndian())
+  if (AP.getDataLayout().isBigEndian())
     API = API.byteSwap();
 
   for (unsigned I = 0; I < NumBytes; ++I)

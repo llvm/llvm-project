@@ -3259,7 +3259,6 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
 
       bool IsSigned = BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
                              BT->getEncoding() == dwarf::DW_ATE_signed_char);
-      unsigned GenericBitSize = AP.MAI.getCodePointerSize() * 8;
       if (BT && AP.getDwarfVersion() >= 4 &&
           !AP.getDwarfDebug()->tuneForSCE() && !Cursor) {
         // DW_OP_const* pushes a generic, address-sized value. For a wider
@@ -3269,6 +3268,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
         // DW_OP_implicit_value for compatibility, and expressions with
         // remaining operations may need a scalar stack value rather than an
         // implicit value block.
+        unsigned GenericBitSize = AP.MAI.getCodePointerSize() * 8;
         uint64_t TypeBitSize = BT->getSizeInBits();
         bool IsByteSized = TypeBitSize % 8 == 0;
         bool IsOutOfRange =
@@ -3278,7 +3278,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
         if (TypeBitSize > GenericBitSize && IsByteSized && IsOutOfRange) {
           DwarfExpr.addImplicitValue(
               APInt(static_cast<unsigned>(TypeBitSize),
-                    static_cast<uint64_t>(Entry.getInt()), IsSigned));
+                    static_cast<uint64_t>(Entry.getInt()), IsSigned),
+              AP);
           return true;
         }
       }
