@@ -514,7 +514,6 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
 }
 
-
 static bool shouldSkipX86OrigGlobal(const GlobalVariable *GV) {
   if (!GV->hasPrivateLinkage() || !GV->isConstant() || !GV->hasInitializer())
     return false;
@@ -523,18 +522,10 @@ static bool shouldSkipX86OrigGlobal(const GlobalVariable *GV) {
   if (!Name.ends_with(".x86.orig"))
     return false;
 
-  StringRef BaseName =
-      Name.drop_back(StringRef(".x86.orig").size());
-
+  StringRef BaseName = Name.drop_back(StringRef(".x86.orig").size());
   const Module *M = GV->getParent();
   const GlobalVariable *NewGV = M->getGlobalVariable(BaseName, true);
-  if (!NewGV)
-    return false;
-
-  if (!NewGV->hasInitializer() || !NewGV->isConstant())
-    return false;
-
-  return true;
+  return NewGV && NewGV->hasInitializer() && NewGV->isConstant();
 }
 
 void X86AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
