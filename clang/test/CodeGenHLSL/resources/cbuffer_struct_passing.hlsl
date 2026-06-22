@@ -237,3 +237,123 @@ void case4() {
 
 // CHECK-NEXT: ret void
 }
+
+void useS(S s) {}
+
+void case5() {
+// CHECK-LABEL: case5
+// CHECK-NEXT: entry:
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT: [[AggTemp1:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: [[AggTemp2:%.*]] = alloca %struct.S, align 1
+
+//
+// Copy S field by field into temporary variable in default address space.
+//
+// CHECK-NEXT: [[Ptr_a:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp1]], i32 0, i32 0
+// CHECK-NEXT: [[CBufLoad_a:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
+// CHECK-NEXT: store <3 x float> [[CBufLoad_a]], ptr [[Ptr_a]], align 4
+
+// CHECK-NEXT: [[Ptr_b:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp1]], i32 0, i32 1
+// CHECK-NEXT: [[CBufLoad_b:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CBufLoad_b]], ptr [[Ptr_b]], align 8
+
+// CHECK-NEXT: [[Ptr_c:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp1]], i32 0, i32 2
+// CHECK-NEXT: [[CBufLoad_c:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CBufLoad_c]], ptr [[Ptr_c]], align 4
+
+// Call useS with the temporary variable.
+// CHECK-NEXT: call {{.*}}void @_Z4useS1S(ptr noundef dead_on_return [[AggTemp1]])
+  useS(cbs);
+
+//
+// Copy T.s field by field into temporary variable in default address space.
+//
+// CHECK-NEXT: [[Ptr_a:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp2]], i32 0, i32 0
+// CHECK-NEXT: [[CBufLoad_a:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, align 4
+// CHECK-NEXT: store <3 x float> [[CBufLoad_a]], ptr [[Ptr_a]], align 4
+
+// CHECK-NEXT: [[Ptr_b:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp2]], i32 0, i32 1
+// CHECK-NEXT: [[CBufLoad_b:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CBufLoad_b]], ptr [[Ptr_b]], align 8
+
+// CHECK-NEXT: [[Ptr_c:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp2]], i32 0, i32 2
+// CHECK-NEXT: [[CBufLoad_c:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CBufLoad_c]], ptr [[Ptr_c]], align 4
+
+// Call useS with the temporary variable.
+// CHECK-NEXT: call {{.*}}void @_Z4useS1S(ptr noundef dead_on_return [[AggTemp2]])
+  useS(cbt.s);
+
+// CHECK-NEXT: ret void
+}
+
+void useT(T t) {
+}
+
+void case6() {
+// CHECK-LABEL: case6
+// CHECK-NEXT: entry:
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT: [[AggTemp:%.*]] = alloca %struct.T, align 1
+
+// Check that constant to default address space copies the struct field by field
+// into a temporary variable before passing it to the function.
+//
+// CHECK-NEXT: [[Ptr_s:%.*]] = getelementptr inbounds %struct.T, ptr [[AggTemp]], i32 0, i32 0
+// CHECK-NEXT: [[Ptr_a:%.*]] = getelementptr inbounds %struct.S, ptr [[Ptr_s]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_a:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, align 4
+// CHECK-NEXT: store <3 x float> [[CbufLoad_a]], ptr [[Ptr_a]], align 4
+
+// CHECK-NEXT: [[Ptr_b:%.*]] = getelementptr inbounds %struct.S, ptr [[Ptr_s]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_c:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CbufLoad_c]], ptr [[Ptr_b]], align 8
+
+// CHECK-NEXT: [[Ptr_c:%.*]] = getelementptr inbounds %struct.S, ptr [[Ptr_s]], i32 0, i32 2
+// CHECK-NEXT: [[CbufLoad_b:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CbufLoad_b]], ptr [[Ptr_c]], align 4
+  
+// CHECK-NEXT: [[Ptr_arr:%.*]] = getelementptr inbounds %struct.T, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[Ptr_arr0:%.*]] = getelementptr inbounds [2 x i32], ptr [[Ptr_arr]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_arr0:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 48), align 4
+// CHECK-NEXT: store i32 [[CbufLoad_arr0]], ptr [[Ptr_arr0]], align 4
+
+// CHECK-NEXT: [[Ptr_arr1:%.*]] = getelementptr inbounds [2 x i32], ptr [[Ptr_arr]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_arr1:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 64), align 4
+// CHECK-NEXT: store i32 [[CbufLoad_arr1]], ptr [[Ptr_arr1]], align 4
+
+// Call useT with the temporary variable
+// CHECK-NEXT: call {{.*}}void @_Z4useT1T(ptr noundef dead_on_return [[AggTemp]])
+  useT(cbt);
+}
+
+void useP(P p) {}
+
+void case7() {
+// CHECK-LABEL: case7
+// CHECK-NEXT: entry:
+// CHECK-NEXT: call token @llvm.experimental.convergence.entry()
+
+// CHECK-NEXT: [[TempP:%.*]] = alloca %struct.P, align 1
+// CHECK-NEXT: [[TempS:%.*]] = alloca %struct.S, align 1
+
+// Check that constant to default address space copies the S struct field by field
+// into a temporary variable and converts it to the base class P before passing it to the function.
+
+// CHECK-NEXT: [[Tmp0Ptr_a1:%.*]] = getelementptr inbounds %struct.S, ptr [[TempS]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_a1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
+// CHECK-NEXT: store <3 x float> [[CbufLoad_a1]], ptr [[Tmp0Ptr_a1]], align 4
+
+// CHECK-NEXT: [[Tmp0Ptr_b1:%.*]] = getelementptr inbounds %struct.S, ptr [[TempS]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_b1:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CbufLoad_b1]], ptr [[Tmp0Ptr_b1]], align 8
+
+// CHECK-NEXT: [[Tmp0Ptr_c1:%.*]] = getelementptr inbounds %struct.S, ptr [[TempS]], i32 0, i32 2
+// CHECK-NEXT: [[CbufLoad_c1:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CbufLoad_c1]], ptr [[Tmp0Ptr_c1]], align 4
+
+// Convert to P temporary and call useP
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[TempP]], ptr align 1 [[TempS]], {{i32|i64}} 12, i1 false)
+// CHECK-NEXT: call {{.*}}void @_Z4useP1P(ptr noundef dead_on_return [[TempP]])
+  useP(cbs);
+}

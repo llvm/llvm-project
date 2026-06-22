@@ -22,6 +22,7 @@ using namespace ssaf;
 [[nodiscard]]
 static TUSummary makeFakeSummary() {
   return TUSummary(
+      llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp"));
 }
 

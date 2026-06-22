@@ -2,11 +2,21 @@
 ! `acc loop` whose default parallelism resolves to `independent`.
 
 ! RUN: split-file %s %t
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/goto_one_level.f90 -o - 2>&1 | FileCheck %s --check-prefix=GOTO1
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/goto_with_intermediate.f90 -o - 2>&1 | FileCheck %s --check-prefix=GOTO2
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_cycle.f90 -o - 2>&1 | FileCheck %s --check-prefix=CCYCLE
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/cache_exit.f90 -o - 2>&1 | FileCheck %s --check-prefix=CEXIT
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/cache_select_case.f90 -o - 2>&1 | FileCheck %s --check-prefix=CCASE
+
+! By default (--emit-independent-loops-as-unstructured=true), the loops are
+! lowered to `acc.loop` operations.
+! RUN: bbc -fopenacc -emit-hlfir %t/goto_one_level.f90 -o - | FileCheck %s --check-prefix=GOTO1-OK
+! RUN: bbc -fopenacc -emit-hlfir %t/goto_with_intermediate.f90 -o - | FileCheck %s --check-prefix=GOTO2-OK
+! RUN: bbc -fopenacc -emit-hlfir %t/collapse_cycle.f90 -o - | FileCheck %s --check-prefix=CCYCLE-OK
+! RUN: bbc -fopenacc -emit-hlfir %t/cache_exit.f90 -o - | FileCheck %s --check-prefix=CEXIT-OK
+! RUN: bbc -fopenacc -emit-hlfir %t/cache_select_case.f90 -o - | FileCheck %s --check-prefix=CCASE-OK
+
+! With --emit-independent-loops-as-unstructured=false, the TODO is emitted.
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/goto_one_level.f90 -o - 2>&1 | FileCheck %s --check-prefix=GOTO1
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/goto_with_intermediate.f90 -o - 2>&1 | FileCheck %s --check-prefix=GOTO2
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/collapse_cycle.f90 -o - 2>&1 | FileCheck %s --check-prefix=CCYCLE
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/cache_exit.f90 -o - 2>&1 | FileCheck %s --check-prefix=CEXIT
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir --emit-independent-loops-as-unstructured=false %t/cache_select_case.f90 -o - 2>&1 | FileCheck %s --check-prefix=CCASE
 
 !--- goto_one_level.f90
 
@@ -28,6 +38,10 @@ end subroutine
 
 ! GOTO1: not yet implemented: unstructured do loop in independent OpenACC loop construct
 
+! GOTO1-OK-LABEL: func.func @_QPtest_unstructured6
+! GOTO1-OK: acc.loop {{.*}}gang vector
+! GOTO1-OK: acc.loop
+
 !--- goto_with_intermediate.f90
 
 ! Same as above but with intermediate code between the inner loop end and
@@ -48,6 +62,10 @@ subroutine test_unstructured7(A, B, C, N)
 end subroutine
 
 ! GOTO2: not yet implemented: unstructured do loop in independent OpenACC loop construct
+
+! GOTO2-OK-LABEL: func.func @_QPtest_unstructured7
+! GOTO2-OK: acc.loop {{.*}}gang vector
+! GOTO2-OK: acc.loop
 
 !--- collapse_cycle.f90
 
@@ -72,6 +90,9 @@ end subroutine
 
 ! CCYCLE: not yet implemented: unstructured do loop in independent OpenACC loop construct
 
+! CCYCLE-OK-LABEL: func.func @_QPtest_unstructured_collapse_loop_only
+! CCYCLE-OK: acc.loop
+
 !--- cache_exit.f90
 
 ! `acc loop` with `cache` directive and EXIT inside the body - the EXIT
@@ -92,6 +113,9 @@ subroutine test_cache_single_element()
 end subroutine
 
 ! CEXIT: not yet implemented: unstructured do loop in independent OpenACC loop construct
+
+! CEXIT-OK-LABEL: func.func @_QPtest_cache_single_element
+! CEXIT-OK: acc.loop
 
 !--- cache_select_case.f90
 
@@ -118,3 +142,6 @@ subroutine test_cache_nonunit_lb()
 end subroutine
 
 ! CCASE: not yet implemented: unstructured do loop in independent OpenACC loop construct
+
+! CCASE-OK-LABEL: func.func @_QPtest_cache_nonunit_lb
+! CCASE-OK: acc.loop
