@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90a -mattr=+ptx88 | FileCheck %s
 ; RUN: %if ptxas-sm_90a && ptxas-isa-8.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90a -mattr=+ptx88 | %ptxas-verify -arch=sm_90a %}
 
-; Check the i8-pack store lowers to a single packed store, with no prmt reading
-; an uninitialized register (combineInsertEltToShuffle must fire pre-legalization).
+; combineInsertEltToShuffle must fire pre-type-legalization, else this i8 pack
+; lowers to prmts that read uninitialized registers.
 
 define ptx_kernel void @pack_i8(<2 x i8> %a) {
 ; CHECK-LABEL: pack_i8(
@@ -19,7 +19,7 @@ define ptx_kernel void @pack_i8(<2 x i8> %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    // end inline asm
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs1;
-; CHECK-NEXT:    bfi.b32 %r3, 0, %r2, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x14U;
 ; CHECK-NEXT:    mov.b64 %rd1, 0;
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd1], {%r3, 0, 0, 0};
 ; CHECK-NEXT:    ret;
