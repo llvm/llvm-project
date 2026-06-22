@@ -48,9 +48,9 @@ public:
                                    const ExceptionRecord &record) override;
   void OnCreateThread(const HostThread &thread) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
-  void OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+  bool OnLoadDll(const lldb_private::ModuleSpec &module_spec,
                  lldb::addr_t module_addr, lldb::tid_t thread_id) override;
-  void OnUnloadDll(lldb::addr_t module_addr, lldb::tid_t thread_id) override;
+  bool OnUnloadDll(lldb::addr_t module_addr, lldb::tid_t thread_id) override;
   void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                      uint16_t length_lower_word) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;

@@ -42,21 +42,9 @@ public:
 
   void ContinueAsyncException(ExceptionResult result);
 
-  /// Whether HandleLoadDllEvent / HandleUnloadDllEvent is currently parked
-  /// waiting for ContinueAsyncDllEvent.
-  bool HasPendingDllEvent() const { return m_pending_dll_event; }
-
-  /// Mark a DLL-event wait as pending so a Resume that arrives between the
-  /// SetState(eStateStopped) broadcast and WaitForResumeAfterDllEvent does
-  /// not race past the predicate.
-  void ArmDllEventWait();
-
-  /// Block the current debugger thread until ContinueAsyncDllEvent is
-  /// invoked. ArmDllEventWait must have been called first.
-  void WaitForResumeAfterDllEvent();
-
-  /// Release a HandleLoadDllEvent / HandleUnloadDllEvent that is waiting on
-  /// the DLL-event predicate.
+  /// Release a HandleLoadDllEvent / HandleUnloadDllEvent that is parked on
+  /// m_dll_event_pred. The delegate's Resume() path calls this to let the
+  /// debug loop issue ContinueDebugEvent. Mirrors ContinueAsyncException.
   void ContinueAsyncDllEvent();
 
 private:
@@ -93,11 +81,9 @@ private:
   // and the debug loop can be continued.
   Predicate<ExceptionResult> m_exception_pred;
 
-  // Predicate which gets signalled when ContinueAsyncDllEvent is called.
+  // Predicate gated by HandleLoadDllEvent / HandleUnloadDllEvent when the
+  // delegate asks them to park.
   Predicate<bool> m_dll_event_pred;
-
-  // True while a HandleLoadDllEvent / HandleUnloadDllEvent is parked.
-  std::atomic<bool> m_pending_dll_event{false};
 
   // An event which gets signalled by the debugger thread when it exits the
   // debugger loop and is detached from the inferior.

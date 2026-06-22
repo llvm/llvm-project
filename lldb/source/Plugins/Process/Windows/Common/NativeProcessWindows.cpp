@@ -50,6 +50,55 @@ using namespace llvm;
 
 namespace lldb_private {
 
+namespace {
+
+/// Whether \a spec lives under the OS's system directory tree (e.g.
+/// `C:\Windows\System32\*`, `C:\Windows\SysWOW64\*`, `C:\Windows\WinSxS\*`).
+bool IsSystemDLL(const FileSpec &spec) {
+  if (!spec)
+    return false;
+
+  static const std::vector<std::string> system_prefixes = []() {
+    std::vector<std::string> prefixes;
+    auto add_dir = [&](UINT (*query)(LPWSTR, UINT)) {
+      wchar_t buf[MAX_PATH];
+      UINT len = query(buf, MAX_PATH);
+      if (len == 0 || len >= MAX_PATH)
+        return;
+      std::string utf8;
+      llvm::convertWideToUTF8(std::wstring_view(buf, len), utf8);
+      // Normalize to lowercase + backslash + trailing separator so a simple
+      // prefix match against an equally-normalized path is correct.
+      for (char &c : utf8) {
+        if (c == '/')
+          c = '\\';
+        else
+          c = std::tolower(static_cast<unsigned char>(c));
+      }
+      if (!utf8.empty() && utf8.back() != '\\')
+        utf8 += '\\';
+      prefixes.push_back(std::move(utf8));
+    };
+    add_dir(::GetSystemDirectoryW);  // C:\Windows\System32
+    add_dir(::GetWindowsDirectoryW); // C:\Windows
+    return prefixes;
+  }();
+
+  std::string path = spec.GetPath();
+  for (char &c : path) {
+    if (c == '/')
+      c = '\\';
+    else
+      c = std::tolower(static_cast<unsigned char>(c));
+  }
+  for (const std::string &prefix : system_prefixes)
+    if (llvm::StringRef(path).starts_with(prefix))
+      return true;
+  return false;
+}
+
+} // namespace
+
 NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
@@ -157,7 +206,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
       // anything happened.
       m_session_data->m_debugger->ContinueAsyncException(
           ExceptionResult::MaskException);
-    } else if (m_session_data->m_debugger->HasPendingDllEvent()) {
+    } else {
       m_session_data->m_debugger->ContinueAsyncDllEvent();
     }
   } else {
@@ -714,7 +763,7 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
   });
 }
 
-void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
+bool NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                      lldb::addr_t module_addr,
                                      lldb::tid_t thread_id) {
   Log *log = GetLog(WindowsLog::Process);
@@ -727,7 +776,11 @@ void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   m_pending_library_events = true;
 
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
-    return;
+    return false;
+
+  // Can't resolve a breakpoint in a system DLL.
+  if (IsSystemDLL(module_spec.GetFileSpec()))
+    return false;
 
   NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
   if (!loader_thread && !m_threads.empty()) {
@@ -745,25 +798,30 @@ void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
     info.signo = 0;
     loader_thread->SetStopReason(info, "");
   }
-  m_session_data->m_debugger->ArmDllEventWait();
   SetState(eStateStopped, true);
 
-  m_session_data->m_debugger->WaitForResumeAfterDllEvent();
+  return true;
 }
 
-void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+bool NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
                                        lldb::tid_t thread_id) {
   Log *log = GetLog(WindowsLog::Process);
+  FileSpec unloaded_spec;
   for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
-    if (it->second == module_addr)
+    if (it->second == module_addr) {
+      unloaded_spec = it->first;
       it = m_loaded_modules.erase(it);
-    else
+    } else {
       ++it;
+    }
   }
   m_pending_library_events = true;
 
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
-    return;
+    return false;
+
+  if (IsSystemDLL(unloaded_spec))
+    return false;
 
   NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
   if (!unloader_thread && !m_threads.empty()) {
@@ -782,9 +840,8 @@ void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
     info.signo = 0;
     unloader_thread->SetStopReason(info, "");
   }
-  m_session_data->m_debugger->ArmDllEventWait();
   SetState(eStateStopped, true);
-  m_session_data->m_debugger->WaitForResumeAfterDllEvent();
+  return true;
 }
 
 void NativeProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,

@@ -255,26 +255,6 @@ void DebuggerThread::ContinueAsyncDllEvent() {
   m_dll_event_pred.SetValue(true, eBroadcastAlways);
 }
 
-void DebuggerThread::ArmDllEventWait() {
-  m_dll_event_pred.SetValue(false, eBroadcastNever);
-  m_pending_dll_event.store(true);
-}
-
-void DebuggerThread::WaitForResumeAfterDllEvent() {
-  Log *log = GetLog(WindowsLog::Process | WindowsLog::Event);
-
-  if (m_is_shutting_down.load()) {
-    m_pending_dll_event.store(false);
-    return;
-  }
-  LLDB_LOG(log, "parking inferior {0} on DLL event until next resume",
-           m_process.GetProcessId());
-  m_dll_event_pred.WaitForValueEqualTo(true);
-  m_pending_dll_event.store(false);
-  LLDB_LOG(log, "inferior {0} released from DLL event wait",
-           m_process.GetProcessId());
-}
-
 void DebuggerThread::FreeProcessHandles() {
   m_process = HostProcess();
   m_main_thread = HostThread();
@@ -716,6 +696,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
 
+  bool wants_park = false;
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
     ModuleSpec module_spec(file_spec);
@@ -724,7 +705,8 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
              m_process.GetProcessId(), path, info.lpBaseOfDll);
 
-    m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
+    m_dll_event_pred.SetValue(false, eBroadcastNever);
+    wants_park = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
   std::optional<std::string> resolved_path;
@@ -764,6 +746,9 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
   // Windows does not automatically close info.hFile, so we need to do it.
   if (info.hFile != nullptr)
     ::CloseHandle(info.hFile);
+
+  if (wants_park && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 
@@ -774,8 +759,11 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
   LLDB_LOG(log, "process {0} unloading DLL at addr {1:x}.",
            m_process.GetProcessId(), info.lpBaseOfDll);
 
-  m_debug_delegate->OnUnloadDll(
+  m_dll_event_pred.SetValue(false, eBroadcastNever);
+  bool wants_park = m_debug_delegate->OnUnloadDll(
       reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll), thread_id);
+  if (wants_park && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 
