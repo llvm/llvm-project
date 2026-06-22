@@ -7,7 +7,7 @@
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC/debug-function-declaration.c"
+; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}AAAAAAAAAA{{[/\\]}}BBBBBBBB{{[/\\]}}CCCCCCCCC{{[/\\]}}debug-function-declaration.c"
 ; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "fwd_decl"
 ; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32]] 100
 ; CHECK-DAG: [[C5:%[0-9]+]] = OpConstant [[I32]] 5

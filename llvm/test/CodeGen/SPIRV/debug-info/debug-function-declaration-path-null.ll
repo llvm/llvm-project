@@ -8,7 +8,7 @@
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "/tmp/path-null.c"
+; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}tmp{{[/\\]}}path-null.c"
 ; CHECK-DAG: [[EMPTY:%[0-9]+]] = OpString ""
 ; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "no_file_path"
 ; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32]] 100

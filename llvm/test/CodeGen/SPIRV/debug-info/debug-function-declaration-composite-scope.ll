@@ -7,7 +7,7 @@
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: OpString "member_fn"
-; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "/tmp/composite-scope-decl.c"
+; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}tmp{{[/\\]}}composite-scope-decl.c"
 ; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32]] 100
 ; CHECK-DAG: [[C5:%[0-9]+]] = OpConstant [[I32]] 5
 ; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32]] 0
