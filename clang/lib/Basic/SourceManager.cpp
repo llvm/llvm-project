@@ -495,18 +495,12 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
   if (SourceKnown == TargetKnown)
     return nullptr;
 
-  // Create a cache key - use enum values for known encodings, raw names otherwise
+  // Create a cache key using only source encoding
   llvm::SmallString<64> CacheKey;
   if (SourceKnown) {
     CacheKey += llvm::Twine(static_cast<int>(*SourceKnown)).str();
   } else {
     CacheKey += SourceEncoding;
-  }
-  CacheKey += ":";
-  if (TargetKnown) {
-    CacheKey += llvm::Twine(static_cast<int>(*TargetKnown)).str();
-  } else {
-    CacheKey += TargetEncoding;
   }
 
   // Check if converter already exists in cache
