@@ -6747,8 +6747,8 @@
 #  ifndef __cpp_lib_constexpr_string
 #    error "__cpp_lib_constexpr_string should be defined in c++26"
 #  endif
-#  if __cpp_lib_constexpr_string != 201907L
-#    error "__cpp_lib_constexpr_string should have the value 201907L in c++26"
+#  if __cpp_lib_constexpr_string != 202511L
+#    error "__cpp_lib_constexpr_string should have the value 202511L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string_view

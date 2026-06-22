@@ -328,34 +328,36 @@ inline wide_printf get_swprintf() {
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-template <typename S, typename V>
-S i_to_string(V v) {
-  //  numeric_limits::digits10 returns value less on 1 than desired for unsigned numbers.
-  //  For example, for 1-byte unsigned value digits10 is 2 (999 can not be represented),
-  //  so we need +1 here.
-  constexpr size_t bufsize = numeric_limits<V>::digits10 + 2; // +1 for minus, +1 for digits10
-  char buf[bufsize];
-  const auto res = to_chars(buf, buf + bufsize, v);
-  _LIBCPP_ASSERT_INTERNAL(res.ec == errc(), "bufsize must be large enough to accomodate the value");
-  return S(buf, res.ptr);
-}
-
 } // unnamed namespace
 
-string to_string(int val) { return i_to_string< string>(val); }
-string to_string(long val) { return i_to_string< string>(val); }
-string to_string(long long val) { return i_to_string< string>(val); }
-string to_string(unsigned val) { return i_to_string< string>(val); }
-string to_string(unsigned long val) { return i_to_string< string>(val); }
-string to_string(unsigned long long val) { return i_to_string< string>(val); }
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long);
+
+string to_string(int val) { return __cpp26::to_string(val); }
+string to_string(long val) { return __cpp26::to_string(val); }
+string to_string(long long val) { return __cpp26::to_string(val); }
+string to_string(unsigned val) { return __cpp26::to_string(val); }
+string to_string(unsigned long val) { return __cpp26::to_string(val); }
+string to_string(unsigned long long val) { return __cpp26::to_string(val); }
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-wstring to_wstring(int val) { return i_to_string<wstring>(val); }
-wstring to_wstring(long val) { return i_to_string<wstring>(val); }
-wstring to_wstring(long long val) { return i_to_string<wstring>(val); }
-wstring to_wstring(unsigned val) { return i_to_string<wstring>(val); }
-wstring to_wstring(unsigned long val) { return i_to_string<wstring>(val); }
-wstring to_wstring(unsigned long long val) { return i_to_string<wstring>(val); }
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long);
+
+wstring to_wstring(int val) { return __cpp26::to_wstring(val); }
+wstring to_wstring(long val) { return __cpp26::to_wstring(val); }
+wstring to_wstring(long long val) { return __cpp26::to_wstring(val); }
+wstring to_wstring(unsigned val) { return __cpp26::to_wstring(val); }
+wstring to_wstring(unsigned long val) { return __cpp26::to_wstring(val); }
+wstring to_wstring(unsigned long long val) { return __cpp26::to_wstring(val); }
 #endif
 
 string to_string(float val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
