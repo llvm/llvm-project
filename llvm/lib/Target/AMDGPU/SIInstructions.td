@@ -296,6 +296,10 @@ def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
+let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE] in
+def FPTRUNC_ROUND_F16_F32_SALU_PSEUDO : SPseudoInstSI <(outs SReg_32:$sdst),
+  (ins SReg_32:$src0, i32imm:$round)>;
+
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -307,6 +311,10 @@ def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
+def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_SALU_PSEUDO $src0, (as_hw_round_mode $round))>;
 
 let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
@@ -327,6 +335,10 @@ def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF)), lo16)>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
+def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 RtzRoundMode))),
+     (f16 (COPY_TO_REGCLASS (S_CVT_PK_RTZ_F16_F32 $src0, $src0), SReg_32))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -2216,6 +2228,19 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v2f64 SGPR_128:$src)),
+  (v2f64 (REG_SEQUENCE SGPR_128,
+         (i32 (EXTRACT_SUBREG $src, sub0)), sub0,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1,
+         (i32 (EXTRACT_SUBREG $src, sub2)), sub2,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub3)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub3))
+>;
+
 // FIXME: Use S_BITSET0_B32/B64?
 def : GCNPat <
   (UniformUnaryFrag<fabs> (f64 SReg_64:$src)),
@@ -2355,6 +2380,14 @@ def : GCNPat <
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
+}
+
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
+  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
+                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
+> {
+  let SubtargetPredicate = HasPackedFP64Ops;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -3779,6 +3812,12 @@ multiclass SelectCanonicalizeAsMax<
     (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
   }
 }
 

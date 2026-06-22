@@ -119,6 +119,19 @@ entry:
   ret void
 }
 
+define i1 @align_with_offset_on_gep(ptr %base) {
+; CHECK-LABEL: @align_with_offset_on_gep(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[BASE:%.*]], i64 8, i64 2) ]
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, ptr %base, i64 16
+  call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 8, i64 2)]
+  %i = ptrtoint ptr %base to i16
+  %and = and i16 %i, 7
+  %cmp = icmp eq i16 %and, 2
+  ret i1 %cmp
+}
+
 define void @align_with_constant_offset_0(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_0(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
@@ -133,8 +146,7 @@ define void @align_with_constant_offset_0(ptr %ptr) {
 define void @align_with_constant_offset_1(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_1(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 9
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 1) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -146,8 +158,7 @@ define void @align_with_constant_offset_1(ptr %ptr) {
 define void @align_with_constant_offset_4(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_4(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -178,6 +189,27 @@ define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
   ret void
 }
 
+define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @align_on_gep_keeping_alignment(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
+define void @align_on_gep_not_keeping_alignment(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @align_on_gep_not_keeping_alignment(
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [4 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
 define void @redundant_align() {
 ; CHECK-LABEL: @redundant_align(
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
@@ -187,6 +219,18 @@ define void @redundant_align() {
   %ptr = call ptr @get_ptr()
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
+  ret void
+}
+
+define void @redundant_align_with_offset() {
+; CHECK-LABEL: @redundant_align_with_offset(
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 4) ]
   ret void
 }
 
@@ -1003,8 +1047,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; CHECK-LABEL: @canonicalize_assume(
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0:%.*]], i64 16, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   %2 = getelementptr inbounds i32, ptr %0, i64 2
@@ -1283,7 +1326,48 @@ define void @not_redundant_assume_dereferenceable_2(ptr dereferenceable(1) %ptr)
   ret void
 }
 
+define void @assume_noundef(i32 %val) {
+; CHECK-LABEL: @assume_noundef(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[VAL:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret void
+}
+
+define void @redundant_assume_noundef(i32 noundef %val) {
+; CHECK-LABEL: @redundant_assume_noundef(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret void
+}
+
+define i32 @assume_noundef_on_load(ptr %ptr) {
+; CHECK-LABEL: @assume_noundef_on_load(
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !noundef [[META6]]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %val = load i32, ptr %ptr
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret i32 %val
+}
+
+define i32 @assume_noundef_on_load_after_call(ptr %ptr) {
+; CHECK-LABEL: @assume_noundef_on_load_after_call(
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    call void @block()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[VAL]]) ]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %val = load i32, ptr %ptr
+  call void @block()
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret i32 %val
+}
+
 declare void @use(i1)
+declare void @block()
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

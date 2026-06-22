@@ -71,11 +71,11 @@ using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
-static cl::opt<unsigned, true>
-VectorizationFactor("force-vector-width", cl::Hidden,
-                    cl::desc("Sets the SIMD width. Zero is autoselect."),
-                    cl::location(VectorizerParams::VectorizationFactor));
-unsigned VectorizerParams::VectorizationFactor;
+static cl::opt<ElementCount, true>
+    VectorizationFactor("force-vector-width", cl::Hidden,
+                        cl::desc("Sets the SIMD width. Zero is autoselect."),
+                        cl::location(VectorizerParams::VectorizationFactor));
+ElementCount VectorizerParams::VectorizationFactor;
 
 static cl::opt<unsigned, true>
 VectorizationInterleave("force-vector-interleave", cl::Hidden,
@@ -220,12 +220,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!StartPtr)
     return false;
   const Loop *L = AR->getLoop();
-  bool CheckForNonNull, CheckForFreed;
+  bool CheckForNonNull;
   Value *StartPtrV = StartPtr->getValue();
   // We can ignore frees, as the fact that an object of a certain size existed
   // at the location *at some point* is sufficient to derive the nowrap fact.
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
-      DL, CheckForNonNull, CheckForFreed);
+      DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
   if (DerefBytes && CheckForNonNull)
     return false;
@@ -240,22 +240,20 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
-  RetainedKnowledge DerefRK;
-  getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
-                       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-                         if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         DerefRK = std::max(DerefRK, RK);
-                         return true;
-                       });
-  if (DerefRK) {
-    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
-    Type *CommonTy =
-        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
-    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
-    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
-    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
-  }
+  getKnowledgeForValue(
+      StartPtrV, Attribute::Dereferenceable, *AC,
+      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+        if (!isValidAssumeForContext(Assume, CtxI, DT))
+          return false;
+        const SCEV *DerefRKSCEV = SE.getSCEV(RK.IRArgValue);
+        Type *CommonTy =
+            SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+        DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+        DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+        DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
+        // Continue with other assumptions.
+        return false;
+      });
 
   if (DerefBytesSCEV->isZero())
     return false;
@@ -2307,12 +2305,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
   // Bail out early if passed-in parameters make vectorization not feasible.
-  unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
-                           VectorizerParams::VectorizationFactor : 1);
+  unsigned MinForcedFactor =
+      std::max(1U, VectorizerParams::VectorizationFactor.getKnownMinValue());
   unsigned ForcedUnroll = (VectorizerParams::VectorizationInterleave ?
                            VectorizerParams::VectorizationInterleave : 1);
   // The minimum number of iterations for a vectorized/unrolled version.
-  unsigned MinNumIter = std::max(ForcedFactor * ForcedUnroll, 2U);
+  unsigned MinNumIter = std::max(MinForcedFactor * ForcedUnroll, 2U);
 
   // It's not vectorizable if the distance is smaller than the minimum distance
   // needed for a vectroized/unrolled version. Vectorizing one iteration in
@@ -2963,6 +2961,7 @@ bool LoopAccessInfo::blockNeedsPredication(const BasicBlock *BB,
 
   // Blocks that do not dominate the latch need predication.
   const BasicBlock *Latch = TheLoop->getLoopLatch();
+  assert(Latch && "Loop expected to have a single latch.");
   return !DT->dominates(BB, Latch);
 }
 

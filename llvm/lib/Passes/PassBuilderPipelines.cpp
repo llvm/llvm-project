@@ -145,6 +145,7 @@
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
+#include "llvm/Transforms/Utils/LowerCommentStringPass.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
@@ -234,7 +235,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -1750,6 +1751,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
           InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
     }
   }
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
+
   return MPM;
 }
 
@@ -1918,6 +1923,9 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
 
   addRequiredLTOPreLinkPasses(MPM);
 
@@ -2212,6 +2220,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   CGPM.addPass(ArgumentPromotionPass());
   CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
   CGPM.addPass(CoroAnnotationElidePass());
+  invokeCGSCCOptimizerLateEPCallbacks(CGPM, Level);
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
   FunctionPassManager FPM;
@@ -2498,6 +2507,9 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   if (EnableInstrumentor)
     MPM.addPass(InstrumentorPass(FS));
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
