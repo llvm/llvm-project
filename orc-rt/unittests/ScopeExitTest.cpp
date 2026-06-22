@@ -16,13 +16,13 @@
 using namespace orc_rt;
 
 TEST(ScopeExitTest, Noop) {
-  auto _ = make_scope_exit([]() {});
+  auto _ = scope_exit([]() {});
 }
 
 TEST(ScopeExitTest, OnScopeExit) {
   bool ScopeExitRun = false;
   {
-    auto _ = make_scope_exit([&]() { ScopeExitRun = true; });
+    auto _ = scope_exit([&]() { ScopeExitRun = true; });
     EXPECT_FALSE(ScopeExitRun);
   }
   EXPECT_TRUE(ScopeExitRun);
@@ -31,7 +31,7 @@ TEST(ScopeExitTest, OnScopeExit) {
 TEST(ScopeExitTest, Release) {
   bool ScopeExitRun = false;
   {
-    auto OnExit = make_scope_exit([&]() { ScopeExitRun = true; });
+    auto OnExit = scope_exit([&]() { ScopeExitRun = true; });
     EXPECT_FALSE(ScopeExitRun);
     OnExit.release();
   }
@@ -46,6 +46,6 @@ TEST(ScopeExitTest, MoveOnlyFunctionObject) {
   };
 
   {
-    auto OnExit = make_scope_exit(MoveOnly());
+    auto OnExit = scope_exit(MoveOnly());
   }
 }

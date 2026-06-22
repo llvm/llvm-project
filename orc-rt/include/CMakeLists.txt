@@ -11,6 +11,7 @@ set(ORC_RT_HEADERS
     orc-rt/SimpleSymbolTable.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
+    orc-rt/InProcessControllerAccess.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/LockedAccess.h
