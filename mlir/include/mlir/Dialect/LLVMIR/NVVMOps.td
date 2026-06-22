@@ -5676,11 +5676,11 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 
     Example:
     ```mlir
-      %data, %redval = nvvm.tcgen05.ld,red %addr, %offset {
+      %data, %redval = nvvm.tcgen05.ld.red %addr, %offset {
         shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
       } : <2xi32>, i32
 
-      %data, %redval = nvvm.tcgen05.ld,red %addr {
+      %data, %redval = nvvm.tcgen05.ld.red %addr {
         shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>,
       } : <2xf32>, f32
     ```
@@ -6896,7 +6896,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     TensormapFieldAttr:$field,
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
     Optional<AnyTypeOf<[I64, I32]>>:$new_value,
-    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<5>]>>:$ord,
+    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<4>]>>:$ord,
     OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
   );
 

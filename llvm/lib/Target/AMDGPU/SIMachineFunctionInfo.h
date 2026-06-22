@@ -303,7 +303,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
 
-  unsigned DynamicVGPRBlockSize = 0;
+  std::optional<unsigned> DynamicVGPRBlockSize;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   unsigned NumKernargPreloadSGPRs = 0;
@@ -362,7 +362,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
-    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);

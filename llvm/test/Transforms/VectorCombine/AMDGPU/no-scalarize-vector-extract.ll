@@ -65,12 +65,10 @@ define void @test_v16i8_load_with_extracts_no_scalarize(ptr addrspace(1) %out) {
 define void @test_v16i8_load_with_extracts_scalarize(ptr addrspace(1) %out) {
 ; GFX9-LABEL: @test_v16i8_load_with_extracts_scalarize(
 ; GFX9-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @lds, i32 0
-; GFX9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 1
-; GFX9-NEXT:    [[E1:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
-; GFX9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 3
-; GFX9-NEXT:    [[E3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1
-; GFX9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <16 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 5
-; GFX9-NEXT:    [[E5:%.*]] = load i8, ptr addrspace(3) [[TMP3]], align 1
+; GFX9-NEXT:    [[VAL:%.*]] = load <16 x i8>, ptr addrspace(3) [[PTR]], align 16
+; GFX9-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[VAL]], i64 1
+; GFX9-NEXT:    [[E3:%.*]] = extractelement <16 x i8> [[VAL]], i64 3
+; GFX9-NEXT:    [[E5:%.*]] = extractelement <16 x i8> [[VAL]], i64 5
 ; GFX9-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 3
 ; GFX9-NEXT:    store i8 [[E1]], ptr addrspace(1) [[P4]], align 1
 ; GFX9-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i64 8
@@ -81,12 +79,10 @@ define void @test_v16i8_load_with_extracts_scalarize(ptr addrspace(1) %out) {
 ;
 ; GFX12-LABEL: @test_v16i8_load_with_extracts_scalarize(
 ; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @lds, i32 0
-; GFX12-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 1
-; GFX12-NEXT:    [[E1:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
-; GFX12-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 3
-; GFX12-NEXT:    [[E3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1
-; GFX12-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <16 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 5
-; GFX12-NEXT:    [[E5:%.*]] = load i8, ptr addrspace(3) [[TMP3]], align 1
+; GFX12-NEXT:    [[VAL:%.*]] = load <16 x i8>, ptr addrspace(3) [[PTR]], align 16
+; GFX12-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[VAL]], i64 1
+; GFX12-NEXT:    [[E3:%.*]] = extractelement <16 x i8> [[VAL]], i64 3
+; GFX12-NEXT:    [[E5:%.*]] = extractelement <16 x i8> [[VAL]], i64 5
 ; GFX12-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 3
 ; GFX12-NEXT:    store i8 [[E1]], ptr addrspace(1) [[P4]], align 1
 ; GFX12-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i64 8
@@ -218,10 +214,9 @@ define void @test_v8i8_load_with_extracts_no_scalarize(ptr addrspace(1) %out) {
 define void @test_v4i8_load_with_extracts_no_scalarize(ptr addrspace(1) %out) {
 ; GFX9-LABEL: @test_v4i8_load_with_extracts_no_scalarize(
 ; GFX9-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @lds, i32 0
-; GFX9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 1
-; GFX9-NEXT:    [[E0:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
-; GFX9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 3
-; GFX9-NEXT:    [[E3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1
+; GFX9-NEXT:    [[VAL:%.*]] = load <4 x i8>, ptr addrspace(3) [[PTR]], align 16
+; GFX9-NEXT:    [[E0:%.*]] = extractelement <4 x i8> [[VAL]], i64 1
+; GFX9-NEXT:    [[E3:%.*]] = extractelement <4 x i8> [[VAL]], i64 3
 ; GFX9-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 0
 ; GFX9-NEXT:    store i8 [[E0]], ptr addrspace(1) [[P0]], align 1
 ; GFX9-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i64 2
@@ -230,10 +225,9 @@ define void @test_v4i8_load_with_extracts_no_scalarize(ptr addrspace(1) %out) {
 ;
 ; GFX12-LABEL: @test_v4i8_load_with_extracts_no_scalarize(
 ; GFX12-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @lds, i32 0
-; GFX12-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 1
-; GFX12-NEXT:    [[E0:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
-; GFX12-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[PTR]], i32 0, i64 3
-; GFX12-NEXT:    [[E3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1
+; GFX12-NEXT:    [[VAL:%.*]] = load <4 x i8>, ptr addrspace(3) [[PTR]], align 16
+; GFX12-NEXT:    [[E0:%.*]] = extractelement <4 x i8> [[VAL]], i64 1
+; GFX12-NEXT:    [[E3:%.*]] = extractelement <4 x i8> [[VAL]], i64 3
 ; GFX12-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 0
 ; GFX12-NEXT:    store i8 [[E0]], ptr addrspace(1) [[P0]], align 1
 ; GFX12-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i64 2

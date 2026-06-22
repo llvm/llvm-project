@@ -787,6 +787,14 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkUInt(ctx, loc, val, 24, rel);
+    if (ctx.arg.relax && (val >> 12) == 0) {
+      uint32_t inst = read32le(loc);
+      // The W-form zero-extends Xd, so only the X-form is a nop.
+      if ((inst & (1u << 31)) && (inst & 0x1f) == ((inst >> 5) & 0x1f)) {
+        write32le(loc, 0xd503201f); // nop
+        break;
+      }
+    }
     write32Imm12(loc, val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:

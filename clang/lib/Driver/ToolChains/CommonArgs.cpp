@@ -1157,6 +1157,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
 
+  // Forward the SLP vectorization preference to the LTO backend by toggling
+  // the existing -vectorize-slp cl::opt, which the pass honors directly. This
+  // avoids minting dedicated linker options for what is only pipeline tuning.
+  if (Arg *A = Args.getLastArg(options::OPT_fslp_vectorize,
+                               options::OPT_fno_slp_vectorize))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-vectorize-slp=" +
+        (A->getOption().matches(options::OPT_fslp_vectorize) ? "1" : "0")));
+
   // Pass down GlobalISel options.
   if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
                                options::OPT_fno_global_isel)) {
@@ -2791,8 +2800,9 @@ static void GetSDLFromOffloadArchive(
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
-  std::string NormalizedTriple = T.getToolChain().getTriple().normalize(
-      llvm::Triple::CanonicalForm::FOUR_IDENT);
+  std::string NormalizedTriple =
+      T.getToolChain().getEffectiveTriple().normalize(
+          llvm::Triple::CanonicalForm::FOUR_IDENT);
   DeviceTriple += NormalizedTriple;
   if (!Target.empty()) {
     DeviceTriple += '-';
@@ -3350,7 +3360,8 @@ const char *tools::renderEscapedCommandLine(const ToolChain &TC,
 bool tools::shouldRecordCommandLine(const ToolChain &TC,
                                     const llvm::opt::ArgList &Args,
                                     bool &FRecordCommandLine,
-                                    bool &GRecordCommandLine) {
+                                    bool &GRecordCommandLine,
+                                    bool &DXRecordCommandLine) {
   const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
@@ -3361,13 +3372,15 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
   GRecordCommandLine =
       Args.hasFlag(options::OPT_grecord_command_line,
                    options::OPT_gno_record_command_line, false);
+  DXRecordCommandLine = Triple.isDXIL() && Args.hasArg(options::OPT_g_Flag);
   if (FRecordCommandLine && !Triple.isOSBinFormatELF() &&
       !Triple.isOSBinFormatXCOFF() && !Triple.isOSBinFormatMachO())
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << Args.getLastArg(options::OPT_frecord_command_line)->getAsString(Args)
         << TripleStr;
 
-  return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
+  return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine ||
+         DXRecordCommandLine;
 }
 
 void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,

@@ -258,6 +258,36 @@ public:
 
       break;
     }
+
+    case CK_NonAtomicToAtomic:
+    case CK_AtomicToNonAtomic: {
+      bool isToAtomic = (e->getCastKind() == CK_NonAtomicToAtomic);
+      if (!isToAtomic) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "AggExprEmitter: CK_AtomicToNonAtomic");
+        return;
+      }
+
+      // Determine the atomic and value types.
+      QualType atomicType = e->getSubExpr()->getType();
+      QualType valueType = e->getType();
+      if (isToAtomic)
+        std::swap(atomicType, valueType);
+
+      assert(atomicType->isAtomicType());
+      assert(cgf.getContext().hasSameUnqualifiedType(
+          valueType, atomicType->castAs<AtomicType>()->getValueType()));
+
+      // Just recurse normally if we're ignoring the result or the
+      // atomic type doesn't change representation.
+      if (dest.isIgnored() || !cgf.cgm.isPaddedAtomicType(atomicType))
+        return Visit(e->getSubExpr());
+
+      cgf.cgm.errorNYI(
+          e->getSourceRange(),
+          "AggExprEmitter: AtomicCast not ignored and has padded atomic type");
+      return;
+    }
     case CK_LValueToRValue:
       // If we're loading from a volatile type, force the destination
       // into existence.
@@ -627,9 +657,7 @@ public:
     emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
-  void VisitCXXThrowExpr(const CXXThrowExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
-  }
+  void VisitCXXThrowExpr(const CXXThrowExpr *e) { cgf.emitCXXThrowExpr(e); }
   void VisitAtomicExpr(AtomicExpr *e) {
     RValue result = cgf.emitAtomicExpr(e);
     emitFinalDestCopy(e->getType(), result);

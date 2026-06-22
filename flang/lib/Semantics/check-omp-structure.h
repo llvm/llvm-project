@@ -32,17 +32,6 @@ static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{
     OmpClauseSet{Clause::OMPC_reduction} | privateSet};
-// omp.td cannot differentiate allowed/not allowed clause list for few
-// directives for fortran. nowait is not allowed on begin directive clause list
-// for below list of directives. Directives with conflicting list of clauses are
-// included in below list.
-static const OmpDirectiveSet noWaitClauseNotAllowedSet{
-    Directive::OMPD_do,
-    Directive::OMPD_do_simd,
-    Directive::OMPD_sections,
-    Directive::OMPD_single,
-    Directive::OMPD_workshare,
-};
 } // namespace omp
 } // namespace llvm
 
@@ -107,12 +96,7 @@ public:
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
 
-  void Enter(const parser::OmpAssumeDirective &);
-  void Leave(const parser::OmpAssumeDirective &);
-  void Enter(const parser::OmpAssumesDirective &);
-  void Leave(const parser::OmpAssumesDirective &);
   void Enter(const parser::OpenMPInteropConstruct &);
-  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OmpBlockConstruct &);
   void Leave(const parser::OmpBlockConstruct &);
   void Enter(const parser::OmpBeginDirective &);
@@ -121,51 +105,31 @@ public:
   void Leave(const parser::OmpEndDirective &);
 
   void Enter(const parser::OpenMPSectionsConstruct &);
-  void Leave(const parser::OpenMPSectionsConstruct &);
   void Enter(const parser::OmpEndSectionsDirective &);
   void Leave(const parser::OmpEndSectionsDirective &);
 
   void Enter(const parser::OmpDeclareVariantDirective &);
-  void Leave(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OmpDeclareSimdDirective &);
-  void Leave(const parser::OmpDeclareSimdDirective &);
   void Enter(const parser::OmpAllocateDirective &);
   void Leave(const parser::OmpAllocateDirective &);
   void Enter(const parser::OmpDeclareMapperDirective &);
-  void Leave(const parser::OmpDeclareMapperDirective &);
   void Enter(const parser::OmpDeclareReductionDirective &);
-  void Leave(const parser::OmpDeclareReductionDirective &);
   void Enter(const parser::OmpDeclareTargetDirective &);
   void Leave(const parser::OmpDeclareTargetDirective &);
   void Enter(const parser::OpenMPDepobjConstruct &);
-  void Leave(const parser::OpenMPDepobjConstruct &);
   void Enter(const parser::OpenMPDispatchConstruct &);
-  void Leave(const parser::OpenMPDispatchConstruct &);
-  void Enter(const parser::OmpErrorDirective &);
-  void Leave(const parser::OmpErrorDirective &);
-  void Enter(const parser::OmpNothingDirective &);
-  void Leave(const parser::OmpNothingDirective &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
-  void Leave(const parser::OpenMPAllocatorsConstruct &);
   void Enter(const parser::OmpRequiresDirective &);
-  void Leave(const parser::OmpRequiresDirective &);
   void Enter(const parser::OmpGroupprivateDirective &);
-  void Leave(const parser::OmpGroupprivateDirective &);
-  void Enter(const parser::OmpThreadprivateDirective &);
   void Leave(const parser::OmpThreadprivateDirective &);
 
   void Enter(const parser::OpenMPSimpleStandaloneConstruct &);
   void Leave(const parser::OpenMPSimpleStandaloneConstruct &);
-  void Enter(const parser::OpenMPFlushConstruct &);
   void Leave(const parser::OpenMPFlushConstruct &);
   void Enter(const parser::OpenMPCancelConstruct &);
-  void Leave(const parser::OpenMPCancelConstruct &);
   void Enter(const parser::OpenMPCancellationPointConstruct &);
-  void Leave(const parser::OpenMPCancellationPointConstruct &);
   void Enter(const parser::OpenMPCriticalConstruct &);
-  void Leave(const parser::OpenMPCriticalConstruct &);
   void Enter(const parser::OpenMPAtomicConstruct &);
-  void Leave(const parser::OpenMPAtomicConstruct &);
 
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
@@ -178,8 +142,6 @@ public:
 
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
-  void Enter(const parser::OmpDelimitedMetadirectiveDirective &);
-  void Leave(const parser::OmpDelimitedMetadirectiveDirective &);
 
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
