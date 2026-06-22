@@ -1677,13 +1677,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_sub_sat: {
     // cir.add/cir.sub do not model i1 arithmetic, so a bool-element
     // saturating add/sub is not representable through the saturated op.
-    // Check the AST element type and bail before emitScalarExpr: an
-    // ext-vector-of-bool operand would otherwise hit the NYI bool-vector
-    // load, which returns a null value and would crash op0.getType().
+    // Bail before emitScalarExpr: an ext-vector-of-bool operand would
+    // otherwise hit the NYI bool-vector load, which returns a null value
+    // and would crash op0.getType().
     QualType argTy = e->getArg(0)->getType();
-    if (const auto *vecTy = argTy->getAs<clang::VectorType>())
-      argTy = vecTy->getElementType();
-    if (argTy->isBooleanType()) {
+    if (argTy->isBooleanType() || argTy->isExtVectorBoolType()) {
       cgm.errorNYI(e->getSourceRange(),
                    "saturating add/sub on a boolean operand");
       return RValue::get(nullptr);
@@ -1691,6 +1689,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Location loc = getLoc(e->getExprLoc());
     mlir::Value op0 = emitScalarExpr(e->getArg(0));
     mlir::Value op1 = emitScalarExpr(e->getArg(1));
+    assert(cir::isIntOrVectorOfIntType(op0.getType()) &&
+           "elementwise saturating add/sub requires integer operands");
     mlir::Value val =
         builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_add_sat
             ? builder.createAdd(loc, op0, op1, cir::OverflowBehavior::Saturated)
