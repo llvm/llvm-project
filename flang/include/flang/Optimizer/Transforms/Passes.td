@@ -267,9 +267,9 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"dwarfDebugFlags", "dwarf-debug-flags",
            "std::string", /*default=*/"std::string{}",
            "Command-line flags to append to DWARF producer">,
-    Option<"emitFakeUseForArguments", "emit-fake-use-for-arguments",
+    Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for function arguments to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">
   ];
 }
 

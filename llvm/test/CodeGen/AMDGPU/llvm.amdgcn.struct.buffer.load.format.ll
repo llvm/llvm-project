@@ -4,7 +4,7 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck --check-prefixes=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-enable-prt-strict-null | FileCheck --check-prefixes=NOPRT %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GFX12,GFX12-SDAG %s
-;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
+;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 ; GFX6-LABEL: buffer_load:

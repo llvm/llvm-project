@@ -626,8 +626,8 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Always pass the target-id features to the LTO job.
   std::vector<StringRef> Features;
-  getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
-                          Features);
+  getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getEffectiveTriple(),
+                          Args, Features);
   if (!Features.empty()) {
     CmdArgs.push_back(
         Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));

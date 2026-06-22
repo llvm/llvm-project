@@ -4,11 +4,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=SDAG-GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=SDAG-GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=SDAG-GFX12-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GISEL-GCN -check-prefix=GISEL-VI %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1200 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx1200 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GISEL-GCN -check-prefix=GISEL-VI %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1200 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx1200 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefix=GISEL-GFX12-FAKE16 %s
 
 declare half @llvm.amdgcn.rsq.f16(half %a)
 

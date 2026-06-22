@@ -213,7 +213,7 @@ public:
 /// SPSTagT value is present, and false indicating that there is no value.
 /// If the boolean is true then the serialized SPSTagT will follow immediately
 /// after it.
-template <typename SPSTagT> class SPSOptional {};
+template <typename SPSTagT> class SPSOptional;
 
 /// SPS tag type for sequences.
 ///
@@ -532,10 +532,7 @@ public:
 };
 
 /// Represents an address in the executor.
-class SPSExecutorAddr {};
-
-/// SPS tag type for errors.
-class SPSError;
+class SPSExecutorAddr;
 
 template <> class SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
 public:
@@ -575,6 +572,29 @@ public:
     return true;
   }
 };
+
+class SPSExecutorAddrRange;
+
+template <>
+class SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
+public:
+  static size_t size(const ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(R.Start, R.End);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::serialize(OB, R.Start,
+                                                                   R.End);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::deserialize(
+        IB, R.Start, R.End);
+  }
+};
+
+/// SPS tag type for errors.
+class SPSError;
 
 /// Helper type for serializing Errors.
 ///
