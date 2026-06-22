@@ -21,8 +21,10 @@
 ; CHECK: %call = call
 ; CHECK-NEXT: %0 = extractvalue { <2 x float>, <2 x float> } %call, 0
 ; CHECK-NEXT: %1 = extractvalue { <2 x float>, <2 x float> } %call, 1
-; CHECK-NEXT: #dbg_value(<2 x float> %0, ![[var:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 256, 64),
-; CHECK-NEXT: #dbg_value(<2 x float> %1, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 320, 64),
+;; lifetime.end makes all promoted slices undef.
+; CHECK-NEXT: #dbg_value([2 x %class.c] undef, ![[var:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 256),
+; CHECK-NEXT: #dbg_value(<2 x float> undef, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 256, 64),
+; CHECK-NEXT: #dbg_value(<2 x float> undef, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 320, 64),
 
 %class.c = type { [4 x float] }
 

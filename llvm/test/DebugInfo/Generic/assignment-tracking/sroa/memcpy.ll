@@ -31,6 +31,9 @@
 ; CHECK-NEXT: %To.sroa.4 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_3:[0-9]+]]
 ; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_3]], ptr %To.sroa.4, !DIExpression(),
 
+;; lifetime.start makes the middle (promoted) slice undef.
+; CHECK: #dbg_value(i32 undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
+
 ;; Split memcpy.
 ; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.0, ptr align 4 @From, i64 12, i1 false),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
 ;; This slice has been split and is promoted.
@@ -41,6 +44,9 @@
 ; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_4]], ptr %To.sroa.0, !DIExpression(),
 ; CHECK-NEXT: #dbg_value(i32 %To.sroa.3.0.copyload, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
 ; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_6]], ptr %To.sroa.4, !DIExpression(),
+
+;; lifetime.end also makes the middle slice undef.
+; CHECK: #dbg_value(i32 undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
