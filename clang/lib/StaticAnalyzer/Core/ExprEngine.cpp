@@ -3200,8 +3200,8 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
 
   ExplodedNodeSet EvalSet;
   if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
-    // The constructor visitior has already taken care of everything, so let's
-    // skip forward to the PostStmt handling after the 'for' loop.
+    // The constructor visitor has already handled everything, so let's skip
+    // forward to PostStmt handling by clearing the range of the 'for' loop.
     EvalSet.insert(CheckerPreStmt);
     CheckerPreStmt.clear();
   }
