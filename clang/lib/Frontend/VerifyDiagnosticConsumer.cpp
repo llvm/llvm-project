@@ -610,10 +610,13 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           }
 
           FileID FID = SM.translateFile(*File);
-  	  // FIXME: Figure out character-encoding converter treatment.
+          // Use input charset converter if available, and file tag converters
+          // are handled by SourceManager's cache.
           if (FID.isInvalid())
             FID = SM.createFileID(*File, Pos, SrcMgr::C_User,
-				  /*Converter=*/nullptr);
+             /*Converter=*/nullptr, /*LoadedID=*/0,
+                                  /*LoadedOffset=*/0,
+                                  /*UseInputCharsetConverter=*/true);
 
           if (PH.Next(Line) && Line > 0)
             ExpectedLoc = SM.translateLineCol(FID, Line, 1);

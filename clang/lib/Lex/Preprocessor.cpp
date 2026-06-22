@@ -649,9 +649,12 @@ void Preprocessor::EnterMainSourceFile() {
           << PPOpts.PCHThroughHeader;
       return;
     }
-    // FIXME: Figure out character-encoding converter treatment.
+    // Use input charset converter if available, and file tag converters
+    // are handled by SourceManager's cache.
     setPCHThroughHeaderFileID(SourceMgr.createFileID(
-        *File, SourceLocation(), SrcMgr::C_User, /*Converter=*/nullptr));    
+        *File, SourceLocation(), SrcMgr::C_User, /*Converter=*/nullptr,
+        /*LoadedID=*/0, /*LoadedOffset=*/0,
+        /*UseInputCharsetConverter=*/true));
   }
 
   // Skip tokens from the Predefines and if needed the main file.
