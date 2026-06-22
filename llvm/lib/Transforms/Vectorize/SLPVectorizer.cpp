@@ -30430,7 +30430,11 @@ public:
                      "op.rdx", ReductionOps);
     }
 
-    // Emit ordered reduction for the vectorized window.
+    // Emit ordered reduction for the vectorized window. The reduction only
+    // applies to floating point types.
+    assert(DestTy->isFloatingPointTy() &&
+           SuccessRoot->getType()->isFPOrFPVectorTy() &&
+           "Expected floating point types for ordered reduction");
     Builder.SetCurrentDebugLocation(
         cast<Instruction>(ReductionRoot)->getDebugLoc());
     VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
