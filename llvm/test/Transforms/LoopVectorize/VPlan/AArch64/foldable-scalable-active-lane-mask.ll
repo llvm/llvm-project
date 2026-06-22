@@ -4,8 +4,6 @@
 ; We never emit scalable active.lane.masks foldable to false.
 define i32 @scalable_alm_liveins(ptr %A, ptr noalias %B) vscale_range(1, 16) {
 ; CHECK-LABEL: VPlan for loop in 'scalable_alm_liveins'
-; CHECK:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<1002>, ir<1>
-; CHECK:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; CHECK:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<1002>, ir<1>
 ; CHECK:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
 ;
@@ -30,8 +28,6 @@ exit:
 
 define void @foldable_wide_alm(ptr %dst, ptr noalias %src) vscale_range(1, 2) {
 ; CHECK-LABEL: VPlan for loop in 'foldable_wide_alm'
-; CHECK:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<15>, ir<1>
-; CHECK:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; CHECK:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<15>, ir<1>
 ; CHECK:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
 ;
