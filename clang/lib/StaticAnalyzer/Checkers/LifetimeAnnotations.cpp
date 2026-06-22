@@ -14,12 +14,11 @@ REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef, LifetimeSourceSet)
 
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *,
                                LifetimeSourceSet)
-REGISTER_SET_WITH_PROGRAMSTATE(DeadSourceSet, const MemRegion *)
+REGISTER_SET_WITH_PROGRAMSTATE(DeallocatedSourceSet, const MemRegion *)
 
 namespace {
 class LifetimeAnnotations
-    : public Checker<check::PostCall, check::EndFunction, check::LifetimeEnd,
-                     check::Location> {
+    : public Checker<check::PostCall, check::EndFunction, check::Location> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
@@ -36,9 +35,9 @@ public:
   template <typename MapTy, typename KeyTy>
   void checkReturnedBorrower(const MapTy &Map, const KeyTy RetKey,
                              ProgramStateRef State, CheckerContext &C) const;
-  void reportDanglingBorrower(const LifetimeSourceSet *Sources, CheckerContext &C) const;
+  void reportDanglingBorrower(const LifetimeSourceSet *Sources,
+                              CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
-  void checkLifetimeEnd(const VarDecl *VD, CheckerContext &C) const;
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
@@ -105,9 +104,11 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 bool LifetimeAnnotations::hasDanglingSource(const MemRegion *Source,
                                             ProgramStateRef State,
                                             CheckerContext &C) const {
-  // FIXME: Currently the checker only focuses on stack MemRegions only since
-  // that is the scope of week 3. Sources without a stack region are not
-  // covered, but should be implemented as well next step.
+  // FIXME: The checker currently handles stack-region sources. Other
+  // region kinds require separate methodology. For example, heap
+  // regions do not go out of scope at the end of a stack frame, so
+  // in order to detect those type of dangling sources the function
+  // needs to be expanded to an event-driven approach as well.
   if (const auto *StackSpace =
           Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
     const StackFrame *SF = StackSpace->getStackFrame();
@@ -165,28 +166,16 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS,
     checkReturnedBorrower(LBMapVal, RetValRegion, State, C);
 }
 
-void LifetimeAnnotations::checkLifetimeEnd(const VarDecl *VD,
-                                           CheckerContext &C) const {
+void LifetimeAnnotations::reportDanglingBorrower(
+    const LifetimeSourceSet *Sources, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  if (!VD)
-    return;
 
-  SVal SourceVal = State->getLValue(VD, C.getStackFrame());
-  if (const MemRegion *SourceRegion = SourceVal.getAsRegion()) {
-    State = State->add<DeadSourceSet>(SourceRegion);
-    C.addTransition(State);
-  }
-}
-
-void LifetimeAnnotations::reportDanglingBorrower(const LifetimeSourceSet *Sources, CheckerContext &C) const {
-    ProgramStateRef State = C.getState();
-
-    for (const MemRegion *Source : *Sources) {
-      if (State->contains<DeadSourceSet>(Source)) {
-        if (ExplodedNode *N = C.generateNonFatalErrorNode())
-          reportUseAfterScope(Source, N, C);
-      }
+  for (const MemRegion *Source : *Sources) {
+    if (State->contains<DeallocatedSourceSet>(Source)) {
+      if (ExplodedNode *N = C.generateNonFatalErrorNode())
+        reportUseAfterScope(Source, N, C);
     }
+  }
 }
 
 void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
@@ -195,23 +184,14 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  // FIXME: Because of the CFG::LifetimeEnd elements now the analyzer can
-  // reason about out-of-scope dangling pointer deref even if there is
-  // no annotations in the source code. This detection part of the detection
-  // should live in a separate checker.
-  if (const MemRegion *R = Loc.getAsRegion()) {
-    if (State->contains<DeadSourceSet>(R)) {
-      if (ExplodedNode *N = C.generateNonFatalErrorNode())
-        reportUseAfterScope(R, N, C);
-    }
-  }
-
   if (LBMap.isEmpty() && LBMapVal.isEmpty())
     return;
 
-  // FIXME: If a borrower has multiple bound sources the callback warns
-  // if any source has died. The callback should track which source the
-  // borrower actually points.
+  // FIXME: If a borrower has multiple bound sources the callback
+  // warns if any of the sources have died. PathDiagnosticVisitor
+  // should be used to trace and identify which annotated parameter
+  // recorded the binding. Attaching this information as path notes
+  // would make the diagnostics more useful to the user.
   if (SymbolRef LocSym = Loc.getAsSymbol(true)) {
     if (auto *SourceSet = State->get<LifetimeBoundMap>(LocSym))
       reportDanglingBorrower(SourceSet, C);
