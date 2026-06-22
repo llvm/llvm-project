@@ -342,6 +342,30 @@ public:
                     Ctx.getTypeSize(FromTy));
   }
 
+  static inline llvm::SMTExprRef convertToBoolExpr(llvm::SMTSolverRef &Solver,
+                                                   ASTContext &Ctx,
+                                                   const llvm::SMTExprRef &Exp,
+                                                   QualType Ty) {
+    if (Ty->isBooleanType())
+      return Exp;
+
+    if (Ty->isRealFloatingType()) {
+      llvm::APFloat Zero =
+          llvm::APFloat::getZero(Ctx.getFloatTypeSemantics(Ty));
+      return fromFloatBinOp(Solver, Exp, BO_NE, Solver->mkFloat(Zero));
+    }
+
+    if (Ty->isIntegralOrEnumerationType() || Ty->isAnyPointerType() ||
+        Ty->isBlockPointerType() || Ty->isReferenceType()) {
+      return fromBinOp(
+          Solver, Exp, BO_NE,
+          Solver->mkBitvector(llvm::APSInt("0"), Ctx.getTypeSize(Ty)),
+          Ty->isSignedIntegerOrEnumerationType());
+    }
+
+    llvm_unreachable("Unsupported type for boolean conversion!");
+  }
+
   // Wrapper to generate SMTSolverRef from unpacked binary symbolic
   // expression. Sets the RetTy parameter. See getSMTSolverRef().
   static inline llvm::SMTExprRef
@@ -351,15 +375,21 @@ public:
              QualType RTy, QualType &RetTy) {
     llvm::SMTExprRef NewLHS = LHS;
     llvm::SMTExprRef NewRHS = RHS;
-    doTypeConversion(Solver, Ctx, NewLHS, NewRHS, LTy, RTy);
 
     // Update the return type parameter if the output type has changed.
     // A boolean result can be represented as an integer type in C/C++, but at
     // this point we only care about the SMT sorts. Set it as a boolean type
     // to avoid subsequent SMT errors.
-    if (BinaryOperator::isComparisonOp(Op) || BinaryOperator::isLogicalOp(Op)) {
+    if (BinaryOperator::isComparisonOp(Op)) {
+      doTypeConversion(Solver, Ctx, NewLHS, NewRHS, LTy, RTy);
       RetTy = Ctx.BoolTy;
+    } else if (BinaryOperator::isLogicalOp(Op)) {
+      RetTy = Ctx.BoolTy;
+      NewLHS = convertToBoolExpr(Solver, Ctx, LHS, LTy);
+      NewRHS = convertToBoolExpr(Solver, Ctx, RHS, RTy);
+      return fromBinOp(Solver, NewLHS, Op, NewRHS, false);
     } else {
+      doTypeConversion(Solver, Ctx, NewLHS, NewRHS, LTy, RTy);
       RetTy = LTy;
     }
 
@@ -456,6 +486,12 @@ public:
       // E.g. -(5 && a)
       if (OperandTy == Ctx.BoolTy && OperandTy != RetTy &&
           RetTy->isIntegerType()) {
+
+        // Converting an expression from bool to a non-bool integer invalidates
+        // it
+        if (hasComparison)
+          *hasComparison = false;
+
         OperandExp = fromCast(Solver, OperandExp, RetTy, Ctx.getTypeSize(RetTy),
                               OperandTy, 1);
         OperandTy = RetTy;

@@ -265,6 +265,9 @@ public:
   accumCXXBase(llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
                const nonloc::PointerToMember &PTM, const clang::CastKind &kind);
 
+  std::optional<APSIntPtr> evalAPSInt(UnaryOperator::Opcode Op,
+                                      const llvm::APSInt &V1);
+
   std::optional<APSIntPtr> evalAPSInt(BinaryOperator::Opcode Op,
                                       const llvm::APSInt &V1,
                                       const llvm::APSInt &V2);

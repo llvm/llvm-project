@@ -171,6 +171,15 @@ public:
       return BVF.Convert(SC->getType(), *Value).get();
     }
 
+    if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
+      SymbolRef Operand = USE->getOperand();
+      const llvm::APSInt *Value;
+      if (!(Value = getSymVal(State, Operand)))
+        return nullptr;
+      std::optional<APSIntPtr> Res = BVF.evalAPSInt(USE->getOpcode(), *Value);
+      return Res ? Res.value().get() : nullptr;
+    }
+
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       const llvm::APSInt *LHS, *RHS;
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
@@ -281,9 +290,8 @@ public:
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
 
-    // UnarySymExpr support is not yet implemented in the Z3 wrapper.
-    if (isa<UnarySymExpr>(Sym)) {
-      return false;
+    if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
+      return canReasonAbout(SVB.makeSymbolVal(USE->getOperand()));
     }
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
