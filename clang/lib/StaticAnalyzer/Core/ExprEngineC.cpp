@@ -134,15 +134,11 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       const StackFrame *SF = N->getStackFrame();
       SVal V = State->getSVal(LHS, SF);
 
-      // Get the computation type.
-      QualType CTy =
-        cast<CompoundAssignOperator>(B)->getComputationResultType();
-      CTy = getContext().getCanonicalType(CTy);
-
-      QualType CLHSTy =
-        cast<CompoundAssignOperator>(B)->getComputationLHSType();
-      CLHSTy = getContext().getCanonicalType(CLHSTy);
-
+      // Determine the relevant types.
+      const ASTContext &ACtx = getContext();
+      const auto *CAOpB = cast<CompoundAssignOperator>(B);
+      QualType CTy = ACtx.getCanonicalType(CAOpB->getComputationResultType());
+      QualType CLHSTy = ACtx.getCanonicalType(CAOpB->getComputationLHSType());
       QualType LTy = getContext().getCanonicalType(LHS->getType());
 
       // Promote LHS.
