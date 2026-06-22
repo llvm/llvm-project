@@ -847,9 +847,6 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// we can add a cc1-level option to do so.
   SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
-  /// Name of the input encoding for -finput-charset conversion.
-  std::string InputEncodingName;
-
   /// Cache of all text encoding converters used by this SourceManager.
   /// This includes both the input charset converter and file tag converters.
   /// Maps from "source_encoding:target_encoding" to the converter.
@@ -875,16 +872,6 @@ public:
   DiagnosticsEngine &getDiagnostics() const { return Diag; }
 
   FileManager &getFileManager() const { return FileMgr; }
-
-  /// Set the input encoding name for -finput-charset conversion.
-  void setInputEncodingName(llvm::StringRef Name) {
-    InputEncodingName = Name.str();
-  }
-
-  /// Get the input encoding name for -finput-charset conversion.
-  llvm::StringRef getInputEncodingName() const {
-    return InputEncodingName;
-  }
 
   /// Get or create a text encoding converter from the cache.
   /// This method manages all converters (input charset and file tag converters)
@@ -955,13 +942,13 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
-  /// \param Converter Optional converter to use. If nullptr and
-  /// UseInputCharsetConverter is true, will use the SourceManager's
-  /// input charset converter for non-tagged files.
+  /// \param InputEncodingName The input encoding name to use for conversion.
+  /// If not empty and the file has no tag, will look up the converter from
+  /// the cache using this encoding name.
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0,
-                      bool UseInputCharsetConverter = false,
+                      llvm::StringRef InputEncodingName = "",
                       SourceLocation::UIntTy LoadedOffset = 0);
 
   /// Create a new FileID that represents the specified memory buffer.

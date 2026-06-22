@@ -867,7 +867,7 @@ public:
                                       DiagnosticsEngine &Diags,
                                       FileManager &FileMgr,
                                       SourceManager &SourceMgr,
-                                      bool UseInputCharsetConverter = false);
+                                      llvm::StringRef InputEncodingName = "");
 
   /// @}
 

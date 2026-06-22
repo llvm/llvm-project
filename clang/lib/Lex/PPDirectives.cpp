@@ -2798,10 +2798,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
   
   // Use the SourceManager's input charset converter for non-tagged files
-  // by passing UseInputCharsetConverter=true
+  // by passing the input encoding name
+  llvm::StringRef InputEncoding = getLangOpts().InputEncoding;
   FileID FID = SourceMgr.createFileID(*File, IncludePos, FileCharacter,
                                       /*LoadedID=*/0,
-                                      /*UseInputCharsetConverter=*/true);
+                                      InputEncoding);
   if (!FID.isValid()) {
     TheModuleLoader.HadFatalFailure = true;
     return ImportAction::Failure;

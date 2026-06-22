@@ -634,7 +634,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID,
-                                   bool UseInputCharsetConverter,
+                                   llvm::StringRef InputEncodingName,
                                    SourceLocation::UIntTy LoadedOffset) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
@@ -655,16 +655,14 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
           << SourceFile.getName() << Converter.getError().message();
       return FileID();
     }
-  } else if (UseInputCharsetConverter) {
+  } else if (!InputEncodingName.empty()) {
     // No file tag but -finput-charset conversion is desired.
     // Get the converter from the cache using the input encoding name.
-    if (!InputEncodingName.empty()) {
-      Converter = getOrCreateConverter(InputEncodingName, "UTF-8");
-      if (!Converter) {
-        Diag.Report(SourceLocation(), diag::err_cannot_open_file)
-            << SourceFile.getName() << Converter.getError().message();
-        return FileID();
-      }
+    Converter = getOrCreateConverter(InputEncodingName, "UTF-8");
+    if (!Converter) {
+      Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+          << SourceFile.getName() << Converter.getError().message();
+      return FileID();
     }
   }
 

@@ -912,34 +912,27 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  // Check if we have an input charset converter
-  bool UseInputCharsetConverter = false;
+  // Get the input encoding and add converter to cache if specified
+  std::string InputEncoding;
   if (hasPreprocessor()) {
-    const std::string &InputEncoding = getLangOpts().InputEncoding;
+    InputEncoding = getLangOpts().InputEncoding;
     if (!InputEncoding.empty()) {
-      // Store the input encoding name in SourceManager
-      getSourceManager().setInputEncodingName(InputEncoding);
-      
       // Add the converter to SourceManager's cache
-      auto ConverterOrErr = getSourceManager().getOrCreateConverter(InputEncoding, "UTF-8");
-      if (ConverterOrErr) {
-        UseInputCharsetConverter = true;
-      }
-      // If converter creation failed, UseInputCharsetConverter stays false
-      // and the error will be reported when createFileID tries to use it
+      (void)getSourceManager().getOrCreateConverter(InputEncoding, "UTF-8");
+      // If converter creation fails, the error will be reported when createFileID tries to use it
     }
   }
   
   return InitializeSourceManager(Input, getDiagnostics(),
                                  getFileManager(), getSourceManager(),
-                                 UseInputCharsetConverter);
+                                 InputEncoding);
 }
 
 // static
 bool CompilerInstance::InitializeSourceManager(
     const FrontendInputFile &Input,
     DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr,
-    bool UseInputCharsetConverter) {
+    llvm::StringRef InputEncodingName) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
@@ -968,11 +961,11 @@ bool CompilerInstance::InitializeSourceManager(
     return false;
   }
 
-  // Use the UseInputCharsetConverter parameter passed from the caller
+  // Pass the input encoding name for charset conversion if specified
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind,
                              /*LoadedID=*/0,
-                             UseInputCharsetConverter));
+                             InputEncodingName));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");
