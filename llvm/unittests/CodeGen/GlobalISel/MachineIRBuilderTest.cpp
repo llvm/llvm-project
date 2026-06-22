@@ -305,8 +305,7 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MOStore, 8, Align(8),
-      AAMDNodes(), nullptr, nullptr, SyncScope::System,
-      AtomicOrdering::Unordered);
+      AAMDNodes(), SyncScope::System, AtomicOrdering::Unordered);
 
   auto Ptr = B.buildUndef(P0);
   B.buildAtomicRMWFAdd(S64, Ptr, Copies[0], *MMO);

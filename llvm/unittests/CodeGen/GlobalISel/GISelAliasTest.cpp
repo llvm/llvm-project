@@ -53,7 +53,7 @@ TEST_F(AArch64GISelMITest, SimpleAlias) {
   // Same for atomics.
   auto *LoadAtomicMMO = MF->getMachineMemOperand(
       PtrInfo, MachineMemOperand::Flags::MOLoad, S64, Align(8), AAMDNodes(),
-      nullptr, nullptr, SyncScope::System, AtomicOrdering::Acquire);
+      SyncScope::System, AtomicOrdering::Acquire);
   auto AtomicLd1 = B.buildLoad(S64, Addr, *LoadAtomicMMO);
   auto AtomicLd2 = B.buildLoad(S64, Base2, *LoadAtomicMMO);
   EXPECT_TRUE(
