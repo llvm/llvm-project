@@ -345,6 +345,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `llvm-objcopy` now reports an error when `--compress-sections` requests unavailable zlib or zstd support.
+  The diagnostic is emitted while parsing the option, matching `--compress-debug-sections`.
+  Such commands may now fail even if the input file contains no sections that would be compressed.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.

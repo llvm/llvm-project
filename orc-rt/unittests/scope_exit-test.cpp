@@ -1,4 +1,4 @@
-//===- ScopeExitTest.cpp --------------------------------------------------===//
+//===- scope_exit-test.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for orc-rt's ScopeExit.h APIs.
+// Tests for orc-rt's scope_exit.h APIs.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ScopeExit.h"
+#include "orc-rt/scope_exit.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

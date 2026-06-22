@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck %s -check-prefixes=SI
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck %s -check-prefixes=VI
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-SDAG
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GFX11,GFX11-GISEL
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck  %s -check-prefixes=EG
 
 declare float @llvm.fabs.f32(float) #1
