@@ -33473,17 +33473,11 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue Res;
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
 
-  // A 128-bit v2i64 <- v16i8 reduction must produce its result in fixed-length
-  // v2i64. The scalable fold below (UADDW{B,T}/SADDW{B,T} or the scalable
-  // split) spreads the sums across all VL/64 lanes, and the trailing extract
-  // then keeps only the low two, silently dropping the rest for any VL > 128
-  // (e.g. 256-bit Neoverse V1). The dot itself is VL-independent: its
-  // meaningful sums occupy the low four i32 lanes regardless of VL (the wider
-  // input lanes are zero-padded), so convert it back to fixed-length v4i32 and
-  // do the split, widen and accumulate in fixed-length. Wider fixed-length
-  // results (e.g. v4i64) are vector-length pinned, so the scalable fold keeps
-  // all their lanes and stays correct. i64 sibling of the v16i8 -> v2i32 case
-  // fixed in PR #177119 / issue #176954.
+  // The scalable fold below spreads the sums across all VL/64 lanes, so the
+  // trailing extract drops the high lanes of a 128-bit v2i64 result for VL >
+  // 128. The dot is VL-independent (sums in the low four i32 lanes), so fold it
+  // back in fixed-length. Wider results (e.g. v4i64) are VL-pinned and stay
+  // correct on the scalable path. See PR #177119 / issue #176954.
   if (OrigResultVT == MVT::v2i64 && OrigOpVT == MVT::v16i8) {
     SDValue FixedDot =
         ConvertToScalable ? convertFromScalableVector(DAG, MVT::v4i32, DotNode)
