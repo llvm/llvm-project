@@ -77,8 +77,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       NodeBuilder Bldr(N, Tmp2, *currBldrCtx);
 
       if (B->isAdditiveOp()) {
-        // TODO: This can be removed after we enable history tracking with
-        // SymSymExpr.
         unsigned Count = getNumVisitedCurrent();
         RightV = conjureOffsetSymbolOnLocation(
             RightV, LeftV, getCFGElementRef(), RHS->getType(), svalBuilder,
