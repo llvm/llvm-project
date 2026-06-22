@@ -314,7 +314,7 @@ or ``+`` (right align).  The default is right aligned.
 
 ``style`` is an optional string consisting of a type specific that controls the
 formatting of the value.  For example, to format a floating point value as a percentage,
-you can use the style option ``P``.
+you can use the style option ``P``. See :ref:`formatv_provider_options` for common options.
 
 Custom formatting
 ^^^^^^^^^^^^^^^^^
@@ -403,6 +403,208 @@ doxygen documentation or by looking at the unit test suite.
   S = formatv("{0}", make_range(V.begin(), V.end())); // S == "8, 9, 10"
   S = formatv("{0:$[+]}", make_range(V.begin(), V.end())); // S == "8+9+10"
   S = formatv("{0:$[ + ]@[x]}", make_range(V.begin(), V.end())); // S == "0x8 + 0x9 + 0xA"
+
+.. _formatv_provider_options:
+
+Format provider options
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- **Integers**: The options string of an integral type has the grammar: ::
+
+    integer_options   :: [style][digits]
+    style             :: <see table below>
+    digits            :: <non-negative integer> 0-99
+
+  +-----------------+-----------------------+----------------------+--------------------+
+  |  ``style``      |     Meaning           |      Example         | ``digits`` Meaning |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  |                 |                       |  Input |  Output     |                    |
+  +=================+=======================+========+=============+====================+
+  |   ``x-``        | Hex no prefix, lower  |   42   |    ``2a``   | Minimum # digits   |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  |   ``X-``        | Hex no prefix, upper  |   42   |    ``2A``   | Minimum # digits   |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  | ``x+`` / ``x``  | Hex + prefix, lower   |   42   |   ``0x2a``  | Minimum # digits   |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  | ``X+`` / ``X``  | Hex + prefix, upper   |   42   |   ``0x2A``  | Minimum # digits   |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  | ``N`` / ``n``   | Digit grouped number  | 123456 | ``123,456`` | Ignored            |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  | ``D`` / ``d``   | Integer               | 100000 | ``100000``  | Ignored            |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  |``+D`` / ``+d``  | Integer with + prefix | 100000 | ``+100000`` | Ignored            |
+  |                 | for numbers ``>= 0``  |        |             |                    |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  |   ``+``         | Same as ``+D``/``+d`` |        |             |                    |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+  | (empty)         | Same as ``D``/``d``   |        |             |                    |
+  +-----------------+-----------------------+--------+-------------+--------------------+
+
+  .. Keep in sync with FormatVariadicTest.DocsInt
+
+  .. code-block:: c++
+
+    std::string S;
+    int I = 1234567;
+    S = formatv("{0}",     I);  // S == "1234567";
+    S = formatv("{0:8}",   I);  // S == "01234567";
+    S = formatv("{0:x}",   I);  // S == "0x12d687";
+    S = formatv("{0:x8}",  I);  // S == "0x0012d687";
+    S = formatv("{0:x-}",  I);  // S == "12d687";
+    S = formatv("{0:X-}",  I);  // S == "12D687";
+    S = formatv("{0:x-8}", I);  // S == "0012d687";
+    S = formatv("{0:n}",   I);  // S == "1,234,567";
+    S = formatv("{0:+d}",  I);  // S == "+1234567";
+    S = formatv("{0:+d}", -I);  // S == "-1234567";
+
+- **Pointers**: The options string of a pointer type has the grammar: ::
+
+    pointer_options   :: [style][precision]
+    style             :: <see table below>
+    digits            :: <non-negative integer> 0-sizeof(void*)
+
+  +-----------------+--------------------------+---------------------------------+
+  | ``style``       |     Meaning              |      Example                    |
+  +-----------------+--------------------------+----------------+----------------+
+  |                 |                          |  Input         |  Output        |
+  +=================+==========================+================+================+
+  |   ``x-``        | Hex no prefix, lower     | ``0xDEADBEEF`` | ``deadbeef``   |
+  +-----------------+--------------------------+----------------+----------------+
+  |   ``X-``        | Hex no prefix, upper     | ``0xDEADBEEF`` | ``2ADEADBEEF`` |
+  +-----------------+--------------------------+----------------+----------------+
+  | ``x+`` / ``x``  | Hex + prefix, lower      | ``0xDEADBEEF`` | ``0xdeadbeef`` |
+  +-----------------+--------------------------+----------------+----------------+
+  | ``X+`` / ``X``  | Hex + prefix, upper      | ``0xDEADBEEF`` | ``0xDEADBEEF`` |
+  +-----------------+--------------------------+----------------+----------------+
+  | (empty)         | Same as ``X+`` / ``X``   |                |                |
+  +-----------------+--------------------------+----------------+----------------+
+
+  The default precision is the number of nibbles in a machine word, and in all
+  cases the precision indicates the minimum number of nibbles to print.
+
+  .. Keep in sync with FormatVariadicTest.DocsPointer
+
+  .. code-block:: c++
+
+    std::string S;
+    void *P = (void*)0xABCD12;
+    S = formatv("{0}",    P);  // S == "0x0000000000ABCD12"; (sizeof(void*) == 8)
+    S = formatv("{0:8}",  P);  // S == "0x00ABCD12";
+    S = formatv("{0:x8}", P);  // S == "0x00abcd12";
+
+- **Strings**: This applies to C-style strings and string objects such as
+  ``std::string`` or ``llvm::StringRef``. The options string of a string type
+  has the grammar: ::
+
+    string_options :: [length]
+
+  Where ``length`` is an optional integer specifying the maximum number of 
+  characters in the string to print.  If ``length`` is omitted, the string is
+  printed up to the null terminator.
+
+  .. Keep in sync with FormatVariadicTest.DocsStrings
+
+  .. code-block:: c++
+
+    std::string S;
+    llvm::StringRef V = "A very long string";
+    S = formatv("{0}",    V);  // S == "A very long string";
+    S = formatv("{0:6}",  V);  // S == "A very";
+
+- **Booleans**: The options string of a boolean type has the grammar: ::
+
+    bool_options :: "" | "Y" | "y" | "D" | "d" | "T" | "t"
+ 
+  +---------------+---------------------+
+  | Option        |     Meaning         |
+  +===============+=====================+
+  | ``Y``         | YES / NO            |
+  +---------------+---------------------+
+  | ``y``         | yes / no            |
+  +---------------+---------------------+
+  | ``D`` / ``d`` | Integer 0 or 1      |
+  +---------------+---------------------+
+  | ``T``         | TRUE / FALSE        |
+  +---------------+---------------------+
+  | ``t``         | true / false        |
+  +---------------+---------------------+
+  | (empty)       | Equivalent to ``t`` |
+  +---------------+---------------------+
+
+  .. Keep in sync with FormatVariadicTest.DocsBooleans
+
+  .. code-block:: c++
+
+    std::string S;
+    S = formatv("{0}",    true);   // S == "true";
+    S = formatv("{0:y}",  false);  // S == "no";
+
+- **Floating point numbers**: The options string of a floating point type has 
+  the grammar: ::
+
+    float_options   :: [style][precision]
+    style           :: <see table below>
+    precision       :: <non-negative integer> 0-99
+
+  +---------------+------------------------+----------------------+
+  | ``style``     |     Meaning            |      Example         |
+  +---------------+------------------------+--------+-------------+
+  |               |                        |  Input |  Output     |
+  +===============+========================+========+=============+
+  | ``P`` / ``p`` | Percentage             | 0.05   |  ``5.00%``  |
+  +---------------+------------------------+--------+-------------+
+  | ``F`` / ``f`` | Fixed point            | 1.0    |  ``1.00``   |
+  +---------------+------------------------+--------+-------------+
+  | ``E``         | Exponential with ``E`` | 100000 | ``1.0E+05`` |
+  +---------------+------------------------+--------+-------------+
+  | ``e``         | Exponential with ``e`` | 100000 | ``1.0e+05`` |
+  +---------------+------------------------+--------+-------------+
+  | (empty)       | Same as ``F`` / ``f``  |        |             |
+  +---------------+------------------------+--------+-------------+
+
+  The default precision is 6 for exponential (``E`` / ``e``) and 2 for
+  everything else.
+
+  .. Keep in sync with FormatVariadicTest.DocsFloats
+
+  .. code-block:: c++
+
+    std::string S;
+    float F = 0.05f;
+    S = formatv("{0}",    F);  // S == "0.05";
+    S = formatv("{0:e}",  F);  // S == "5.000000e-02";
+
+- ``llvm::iterator_range``: This will print an arbitrary range as a delimited
+  sequence of items. The options string of a range type has the grammar: ::
+ 
+    range_style       ::= [separator][element_style]
+    separator         ::= "$" delimeted_expr
+    element_style     ::= "@" delimeted_expr
+    delimeted_expr    ::= "[" expr "]" | "(" expr ")" | "<" expr ">"
+    expr              ::= <any string not containing delimeter>
+ 
+  Where the ``separator`` expression is the string to insert between consecutive
+  items in the range and the ``element_style`` expression is the style 
+  specification to be used when formatting the underlying type.  The default 
+  separator if unspecified is ", ".  The syntax of the argument expression 
+  follows whatever grammar is dictated by the format provider or format adapter
+  used to format the value type.
+ 
+  Note that attempting to format an ``iterator_range<T>`` where no format
+  provider can be found for ``T`` will result in a compile error.
+
+  .. Keep in sync with FormatVariadicTest.DocsIteratorRange
+
+  .. code-block:: c++
+
+    std::string S;
+    std::vector V{1, 2, 4, 8, 16};
+    S = formatv("{0}", iterator_range(V));
+    // S == "1, 2, 4, 8, 16";
+    S = formatv("{0:@(x)}", iterator_range(V));
+    // S == "0x1, 0x2, 0x4, 0x8, 0x10";
+    S = formatv("{0:$[,]@[2]}", iterator_range(V));
+    // S == "01,02,04,08,16";
 
 .. _error_apis:
 

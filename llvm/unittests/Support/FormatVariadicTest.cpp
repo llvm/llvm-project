@@ -903,6 +903,56 @@ TEST(FormatVariadicTest, Validate) {
 #endif // NDEBUG
 }
 
+TEST(FormatVariadicTest, DocsInt) {
+  int I = 1234567;
+  EXPECT_EQ(formatv("{0}", I).str(), "1234567");
+  EXPECT_EQ(formatv("{0:8}", I).str(), "01234567");
+  EXPECT_EQ(formatv("{0:x}", I).str(), "0x12d687");
+  EXPECT_EQ(formatv("{0:x8}", I).str(), "0x0012d687");
+  EXPECT_EQ(formatv("{0:x-}", I).str(), "12d687");
+  EXPECT_EQ(formatv("{0:X-}", I).str(), "12D687");
+  EXPECT_EQ(formatv("{0:x-8}", I).str(), "0012d687");
+  EXPECT_EQ(formatv("{0:n}", I).str(), "1,234,567");
+  EXPECT_EQ(formatv("{0:+d}", I).str(), "+1234567");
+  EXPECT_EQ(formatv("{0:+d}", -I).str(), "-1234567");
+}
+
+TEST(FormatVariadicTest, DocsPointers) {
+  void *P = (void *)0xABCD12;
+  if constexpr (sizeof(void *) == 8) {
+    EXPECT_EQ(formatv("{0}", P).str(), "0x0000000000ABCD12");
+  } else {
+    EXPECT_EQ(formatv("{0}", P).str(), "0x00ABCD12");
+  }
+  EXPECT_EQ(formatv("{0:8}", P).str(), "0x00ABCD12");
+  EXPECT_EQ(formatv("{0:x8}", P).str(), "0x00abcd12");
+}
+
+TEST(FormatVariadicTest, DocsStrings) {
+  llvm::StringRef V = "A very long string";
+  EXPECT_EQ(formatv("{0}", V).str(), "A very long string");
+  EXPECT_EQ(formatv("{0:6}", V).str(), "A very");
+}
+
+TEST(FormatVariadicTest, DocsBooleans) {
+  EXPECT_EQ(formatv("{0}", true).str(), "true");
+  EXPECT_EQ(formatv("{0:y}", false).str(), "no");
+}
+
+TEST(FormatVariadicTest, DocsFloats) {
+  float F = 0.05f;
+  EXPECT_EQ(formatv("{0}", F).str(), "0.05");
+  EXPECT_EQ(formatv("{0:e}", F).str(), "5.000000e-02");
+}
+
+TEST(FormatVariadicTest, DocsIteratorRange) {
+  std::vector V{1, 2, 4, 8, 16};
+  EXPECT_EQ(formatv("{0}", iterator_range(V)).str(), "1, 2, 4, 8, 16");
+  EXPECT_EQ(formatv("{0:@(x)}", iterator_range(V)).str(),
+            "0x1, 0x2, 0x4, 0x8, 0x10");
+  EXPECT_EQ(formatv("{0:$[,]@[2]}", iterator_range(V)).str(), "01,02,04,08,16");
+}
+
 namespace {
 
 enum class Base { First };

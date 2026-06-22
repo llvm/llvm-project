@@ -343,7 +343,7 @@ struct range_item_has_provider
 ///
 /// The options string of a range type has the grammar:
 ///
-///   range_style       ::= [separator] [element_style]
+///   range_style       ::= [separator][element_style]
 ///   separator         ::= "$" delimeted_expr
 ///   element_style     ::= "@" delimeted_expr
 ///   delimeted_expr    ::= "[" expr "]" | "(" expr ")" | "<" expr ">"
@@ -352,7 +352,7 @@ struct range_item_has_provider
 /// where the separator expression is the string to insert between consecutive
 /// items in the range and the argument expression is the Style specification to
 /// be used when formatting the underlying type.  The default separator if
-/// unspecified is ' ' (space).  The syntax of the argument expression follows
+/// unspecified is ", ".  The syntax of the argument expression follows
 /// whatever grammar is dictated by the format provider or format adapter used
 /// to format the value type.
 ///
