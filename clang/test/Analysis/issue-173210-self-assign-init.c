@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 %s -verify -xc \
 // RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores
 
-// Use -w to suppress the C++ -Wuninitialized warnings on struct and reference.
+// Suppress the C++ -Wuninitialized warnings on struct and reference.
 // RUN: %clang_analyze_cc1 %s -verify -xc++ -Wno-uninitialized \
 // RUN:   -analyzer-checker=core,debug.ExprInspection,deadcode.DeadStores
 
