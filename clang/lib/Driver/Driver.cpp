@@ -3822,8 +3822,11 @@ class OffloadingActionBuilder final {
         // object containing ISA. Then we use a special "link" action to create
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
+        bool ExplicitOffloadLTO = Args.hasArg(options::OPT_foffload_lto,
+                                              options::OPT_foffload_lto_EQ);
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          if (ToolChains[I]->isUsingLTO(Args, AssociatedOffloadKind)) {
+          if (ExplicitOffloadLTO &&
+              ToolChains[I]->isUsingLTO(Args, AssociatedOffloadKind)) {
             // When LTO is enabled, skip the backend and assemble phases and
             // use lld to link the bitcode.
             ActionList AL;
@@ -3849,11 +3852,9 @@ class OffloadingActionBuilder final {
               BackendAction =
                   C.MakeAction<BackendJobAction>(CudaDeviceActions[I], Output);
             } else {
-              auto DevLTO =
-                  ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind);
               BackendAction = C.getDriver().ConstructPhaseAction(
                   C, Args, phases::Backend, CudaDeviceActions[I],
-                  AssociatedOffloadKind, DevLTO);
+                  AssociatedOffloadKind, LTOK_None);
             }
             auto AssembleAction = C.getDriver().ConstructPhaseAction(
                 C, Args, phases::Assemble, BackendAction,
@@ -5985,7 +5986,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
   if (JA->getOffloadingDeviceKind() != Action::OFK_None) {
     const ToolChain *TC = JA->getOffloadingToolChain();
     OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-        JA->getOffloadingDeviceKind(), TC ? TC->getTripleString() : "",
+        JA->getOffloadingDeviceKind(), TC ? TC->getEffectiveTriple().str() : "",
         /*CreatePrefixForHost=*/false);
     if (const char *Arch = JA->getOffloadingArch()) {
       OffloadingPrefix += "-";
