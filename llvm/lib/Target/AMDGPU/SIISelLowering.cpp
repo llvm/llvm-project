@@ -8830,7 +8830,7 @@ SDValue
 SITargetLowering::promoteUniformUnaryOpToI32(SDValue Op,
                                              DAGCombinerInfo &DCI) const {
   EVT OpTy = Op.getValueType();
-  auto &DAG = DCI.DAG;
+  SelectionDAG &DAG = DCI.DAG;
   EVT ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
 
   if (isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
@@ -18593,7 +18593,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
   case ISD::ABS:
-    if (auto Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))
+    if (SDValue Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
   case ISD::ADD:
