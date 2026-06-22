@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=51
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=52
 !
 subroutine omp_single
     integer, save :: i

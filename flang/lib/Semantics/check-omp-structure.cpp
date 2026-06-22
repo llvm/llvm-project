@@ -1392,7 +1392,7 @@ void OmpStructureChecker::CheckSingleConstruct(
         .Attach(nowaitSource1, "Previous occurrence of %s"_en_US, nowaitName);
   }
 
-  if (version < 52 && !copyPrivateSyms.empty() &&
+  if (version <= 52 && !copyPrivateSyms.empty() &&
       (!nowaitSource1.empty() || !nowaitSource2.empty())) {
     parser::CharBlock source{
         !nowaitSource1.empty() ? nowaitSource1 : nowaitSource2};
