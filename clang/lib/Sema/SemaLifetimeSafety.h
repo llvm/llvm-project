@@ -172,7 +172,7 @@ public:
     std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(), WarnDiag)
         << InvalidatedSubject << IssueExpr->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -186,7 +186,7 @@ public:
 
     S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
         << InvalidatedSubject << PVD->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -199,7 +199,7 @@ public:
            diag::warn_lifetime_safety_invalidated_field)
         << InvalidatedSubject << getDiagSubjectDescription(DanglingField)
         << IssueExpr->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
@@ -213,7 +213,7 @@ public:
            diag::warn_lifetime_safety_invalidated_field)
         << InvalidatedSubject << getDiagSubjectDescription(DanglingField)
         << PVD->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
@@ -227,7 +227,7 @@ public:
            diag::warn_lifetime_safety_invalidated_global)
         << InvalidatedSubject << getDiagSubjectDescription(DanglingGlobal)
         << IssueExpr->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)
@@ -246,7 +246,7 @@ public:
            diag::warn_lifetime_safety_invalidated_global)
         << InvalidatedSubject << getDiagSubjectDescription(DanglingGlobal)
         << PVD->getSourceRange();
-    reportInvalidationNote(InvalidationExpr, InvalidatedSubject);
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)
