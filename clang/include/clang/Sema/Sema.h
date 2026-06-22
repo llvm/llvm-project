@@ -1096,7 +1096,7 @@ public:
                              SourceLocation Loc, unsigned DiagID);
 
   /// std::init / uninit_with_initializer (R4): diagnose an entity that is both
-  /// marked [[uninitialized]] and has an initializer. Shared by the variable
+  /// marked [[uninit]] and has an initializer. Shared by the variable
   /// (\c CheckCompleteVariableDeclaration) and non-static data member
   /// (\c ActOnFinishCXXInClassMemberInitializer) paths. \p Init is the
   /// (possibly null) initializer; a RecoveryExpr placeholder for a failed
@@ -1115,7 +1115,7 @@ public:
   /// at its own definition). Dependent and incomplete types are treated as
   /// determinate.
   ///
-  /// When \p HonorUninitMarkers is true, a data member marked [[uninitialized]]
+  /// When \p HonorUninitMarkers is true, a data member marked [[uninit]]
   /// is treated as acknowledged and skipped, so a type whose only indeterminate
   /// scalars are all marked is reported as determinate. uninit_decl and
   /// ctor_uninit_member pass true (the marker excuses the member, paper §6.2);
@@ -1127,7 +1127,7 @@ public:
   /// std::init / ref_to_uninit (paper §5): true if \p E refers to (for a
   /// pointer source) or, when \p IsReference, denotes (for a glvalue source)
   /// uninitialized storage. Recognized purely locally from the expression's
-  /// syntactic form -- the address of, or a subobject of, a [[uninitialized]]
+  /// syntactic form -- the address of, or a subobject of, a [[uninit]]
   /// entity; a value of a [[ref_to_uninit]] pointer/reference or array; a
   /// dereference of such a pointer; a cast of such a pointer to another pointer
   /// type, or of such a glvalue to another reference; or a call to a

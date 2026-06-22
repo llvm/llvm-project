@@ -875,11 +875,11 @@ migration for code using ``[[noreturn]]`` after including ``<stdnoreturn.h>``.
   }];
 }
 
-def CXX11UninitializedDocs : Documentation {
+def UninitDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "uninitialized";
+  let Heading = "uninit";
   let Content = [{
-The ``[[uninitialized]]`` attribute marks a variable or non-static data
+The ``[[uninit]]`` attribute marks a variable or non-static data
 member definition as intentionally left uninitialized. It is purely
 informational: it has no effect on code generation and the entity still
 has the same indeterminate value it would have without the attribute.
@@ -887,13 +887,13 @@ has the same indeterminate value it would have without the attribute.
 The attribute exists to support the initialization profile (see
 :doc:`ProfilesFramework`). Under that profile, a definition such as
 ``int x;`` is diagnosed because it leaves ``x`` with an indeterminate
-value; writing ``int x [[uninitialized]];`` instead suppresses that
+value; writing ``int x [[uninit]];`` instead suppresses that
 declaration-site diagnostic and documents that the lack of an initializer
 is intentional. The attribute does **not** suppress diagnostics that fire
 when the variable is later read before being assigned; the read-before-init
 rule still applies.
 
-A declaration or non-static data member with both ``[[uninitialized]]``
+A declaration or non-static data member with both ``[[uninit]]``
 and an initializer is ill-formed under the initialization profile (the
 marker contradicts the explicit initialization).
 

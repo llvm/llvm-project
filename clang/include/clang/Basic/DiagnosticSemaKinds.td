@@ -14146,7 +14146,7 @@ def err_profile_ctor_final_test : ProfileRuleError<
 def err_init_uninit_read : ProfileRuleError<
   "variable %1 is read before initialization under profile '%0'">;
 def err_init_uninit_decl : ProfileRuleError<
-  "variable %1 must be initialized or marked '[[uninitialized]]' under "
+  "variable %1 must be initialized or marked '[[uninit]]' under "
   "profile '%0'">;
 def err_init_uninit_union : ProfileRuleError<
   "variable %1 of union type must be initialized under profile '%0'">;
@@ -14154,19 +14154,19 @@ def err_init_static_runtime_init : ProfileRuleError<
   "non-local variable %1 requires constant initialization under "
   "profile '%0'">;
 def err_init_uninit_with_initializer : ProfileRuleError<
-  "variable %1 cannot be both '[[uninitialized]]' and have an initializer "
+  "variable %1 cannot be both '[[uninit]]' and have an initializer "
   "under profile '%0'">;
-def err_uninitialized_attr_invalid_subject : Error<
-  "'uninitialized' attribute cannot be applied to %select{a reference|"
+def err_uninit_attr_invalid_subject : Error<
+  "'uninit' attribute cannot be applied to %select{a reference|"
   "a function parameter|a structured binding}0">;
 def err_ref_to_uninit_attr_invalid_type : Error<
   "'ref_to_uninit' attribute only applies to pointers, references, and "
   "functions returning them">;
 def err_init_union_marker : ProfileRuleError<
-  "'[[uninitialized]]' cannot be applied to %select{a variable of union type|"
+  "'[[uninit]]' cannot be applied to %select{a variable of union type|"
   "a union member}1 under profile '%0'">;
 def err_init_uninit_pointer_marker : ProfileRuleError<
-  "'[[uninitialized]]' cannot be applied to a pointer under profile '%0'; "
+  "'[[uninit]]' cannot be applied to a pointer under profile '%0'; "
   "initialize the pointer (for example to 'nullptr')">;
 def err_init_ctor_uninit_member : ProfileRuleError<
   "constructor does not initialize member %1 under profile '%0'">;

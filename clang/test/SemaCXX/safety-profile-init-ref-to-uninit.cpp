@@ -9,8 +9,8 @@
 [[profiles::enforce(std::init)]];
 
 int g_init = 0;
-[[uninitialized]] int g_uninit;
-[[uninitialized]] int g_uninit_arr[3];
+[[uninit]] int g_uninit;
+[[uninit]] int g_uninit_arr[3];
 [[ref_to_uninit]] int *allocate(int n);
 [[ref_to_uninit]] void *alloc_void();
 [[ref_to_uninit]] int &get_uninit_ref();
@@ -145,7 +145,7 @@ void test_call_arguments() {
 
   // The worked example from paper §5.
   int a1[] = {1, 2, 3};
-  [[uninitialized]] int a2[3];
+  [[uninit]] int a2[3];
   uninitialized_fill(a1, 10); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
   uninitialized_fill(a2, 10); // OK
 

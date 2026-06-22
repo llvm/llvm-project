@@ -1721,10 +1721,10 @@ def CXX11NoReturn : InheritableAttr {
   let Documentation = [CXX11NoReturnDocs];
 }
 
-def CXX11Uninitialized : InheritableAttr {
-  let Spellings = [CXX11<"", "uninitialized", 202602>];
+def Uninit : InheritableAttr {
+  let Spellings = [CXX11<"", "uninit", 202602>];
   let Subjects = SubjectList<[Var, Field], ErrorDiag>;
-  let Documentation = [CXX11UninitializedDocs];
+  let Documentation = [UninitDocs];
 }
 
 def RefToUninit : InheritableAttr {

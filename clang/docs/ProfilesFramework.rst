@@ -393,7 +393,7 @@ For a variable declaration that range covers the initializer expression (so
 subsequent uses; those uses appear in different declarations or statements
 and are checked normally at their own source location. Profiles that need
 per-object "opt-out of this check everywhere this value is used" semantics
-(for example, the proposed ``[[uninitialized]]`` attribute of the
+(for example, the proposed ``[[uninit]]`` attribute of the
 initialization profile) must introduce their own, separate, decl-scoped
 marker.
 
@@ -631,9 +631,9 @@ The ``std::init`` Profile (initial slice)
 A slice of the proposed initialization profile.  It does not yet implement
 classes that expose uninitialized memory to users (paper §6.2) or random-access
 initialization of uninitialized arrays (paper §6.4); and the constructor-body
-flow check that would let a ``[[uninitialized]]`` member be initialized by
+flow check that would let a ``[[uninit]]`` member be initialized by
 assignment in the body (the dynamic half of paper §6.1) is deferred to a future
-CFG-based pass.  Until it lands, a ``[[uninitialized]]`` data member is trusted,
+CFG-based pass.  Until it lands, a ``[[uninit]]`` data member is trusted,
 and writes *through* a ``[[ref_to_uninit]]`` pointer/reference are not yet
 verified (the paper relegates them to ``construct_at`` or suppression).
 
@@ -642,13 +642,13 @@ The slice introduces two marker attributes and the rules below.
 Marker attributes
 ~~~~~~~~~~~~~~~~~
 
-``[[uninitialized]]`` (a standard C++11 attribute, distinct from the Clang
+``[[uninit]]`` (a standard C++11 attribute, distinct from the Clang
 vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` or
 ``FieldDecl`` as intentionally left uninitialized.  Recognised by Clang
 regardless of ``-fprofiles``; its profile rules carry weight only when
 ``std::init`` is enforced.
 
-- TableGen def: ``CXX11Uninitialized`` in ``clang/include/clang/Basic/Attr.td``,
+- TableGen def: ``Uninit`` in ``clang/include/clang/Basic/Attr.td``,
   with a custom handler in ``clang/lib/Sema/SemaDeclAttr.cpp``.
 - Subjects: ``Var`` and ``Field``.  The handler rejects placement where the
   marker is meaningless -- a reference, a function parameter, or a structured
@@ -662,7 +662,7 @@ regardless of ``-fprofiles``; its profile rules carry weight only when
     ill-formed.
   - Triggers ``uninit_with_initializer`` when combined with an initializer,
     including a language-synthesized one from a constructor that actually runs
-    (e.g. ``WithCtor x [[uninitialized]];``).  A trivial/aggregate type whose
+    (e.g. ``WithCtor x [[uninit]];``).  A trivial/aggregate type whose
     default-initialization is a no-op is *not* such an initializer, so the
     marker is accepted there (the object is genuinely left uninitialized).
   - Is banned on a pointer by ``pointer_marker`` (a pointer must be
@@ -715,7 +715,7 @@ R2. ``uninit_decl`` -- pattern 1
 
 An automatic-storage variable definition whose default-initialization
 leaves it (or a scalar subobject) indeterminate must either carry
-``[[uninitialized]]`` or be initialized.  This covers a scalar / pointer /
+``[[uninit]]`` or be initialized.  This covers a scalar / pointer /
 enum with no initializer, and -- per paper §6 ("classes without
 constructors") -- an aggregate or trivially-default-constructible class type
 whose default-initialization leaves a scalar subobject indeterminate (e.g.
@@ -732,9 +732,9 @@ constructor is trusted; static / thread storage duration is excluded
 - The aggregate case uses ``Sema::defaultInitLeavesScalarIndeterminate``
   with ``HonorUninitMarkers=true``, which recurses through bases and members,
   trusts user-provided default constructors, and skips data members marked
-  ``[[uninitialized]]`` (acknowledged uninitialized, paper §6.2). So a type
+  ``[[uninit]]`` (acknowledged uninitialized, paper §6.2). So a type
   whose only indeterminate scalars are all marked is trusted
-  (e.g. ``struct A { int x [[uninitialized]]; }; A a;`` is accepted), while a
+  (e.g. ``struct A { int x [[uninit]]; }; A a;`` is accepted), while a
   mixed type still fires for its unmarked scalars.
 
 R3. ``static_runtime_init`` -- pattern 1
@@ -754,7 +754,7 @@ be ``constinit`` (which is already a hard error from the existing
 R4. ``uninit_with_initializer`` -- pattern 1
 ............................................
 
-``[[uninitialized]]`` and an initializer on the same declaration is a
+``[[uninit]]`` and an initializer on the same declaration is a
 contradiction (the marker means "no initialization here").
 
 - Diagnostic: ``err_init_uninit_with_initializer``.
@@ -765,25 +765,25 @@ contradiction (the marker means "no initialization here").
 - A ``RecoveryExpr`` placeholder (from a failed initialization) is not a
   user-written initializer and does not trigger the rule.
 - The "initializer" includes a language-synthesized one from a constructor
-  that actually runs (e.g. ``WithCtor x [[uninitialized]];``), but *not* a
+  that actually runs (e.g. ``WithCtor x [[uninit]];``), but *not* a
   no-op trivial/aggregate default-initialization, where the marker is
   consistent with the object being left uninitialized.
 - Unlike R2/R5, this "no-op?" test calls
   ``defaultInitLeavesScalarIndeterminate`` with ``HonorUninitMarkers=false``
   (the *factual* answer): a type whose members are themselves marked still
   default-initializes to a no-op, so the variable marker stays consistent and
-  the rule must not fire (e.g. ``A a [[uninitialized]];`` for the ``A`` above).
+  the rule must not fire (e.g. ``A a [[uninit]];`` for the ``A`` above).
 
 R5. ``ctor_uninit_member`` -- pattern 4
 .......................................
 
 A user-provided constructor must initialize every non-static data member
 via its member-initializer list or an NSDMI, unless the member is marked
-``[[uninitialized]]`` (paper §6.1).  A plain assignment in the constructor
+``[[uninit]]`` (paper §6.1).  A plain assignment in the constructor
 body does not count.  A member whose own default-initialization leaves an
 *unacknowledged* scalar subobject indeterminate (a nested aggregate) is
 flagged as well; a member whose type's indeterminate scalars are all
-themselves marked ``[[uninitialized]]`` is trusted (the same
+themselves marked ``[[uninit]]`` is trusted (the same
 ``HonorUninitMarkers`` walk as R2, paper §6.2).
 
 - Diagnostic: ``err_init_ctor_uninit_member`` (with a
@@ -805,12 +805,12 @@ themselves marked ``[[uninitialized]]`` is trusted (the same
 R6. ``union_marker`` -- attribute handler
 .........................................
 
-``[[uninitialized]]`` on a union object or a union member is banned (paper
+``[[uninit]]`` on a union object or a union member is banned (paper
 §6.5): delayed initialization by assigning a member would be an erroneous
 assignment when compiled without the profile.
 
 - Diagnostic: ``err_init_union_marker``.
-- Check site: the ``CXX11Uninitialized`` handler in
+- Check site: the ``Uninit`` handler in
   ``clang/lib/Sema/SemaDeclAttr.cpp``.  Unlike the reference / parameter /
   structured-binding rejections, which are unconditional, this is gated on
   enforcement -- a union may legitimately carry the marker without the
@@ -834,7 +834,7 @@ A pointer or reference must be bound consistently with its
 refer to uninitialized memory, and an unmarked one may only refer to
 initialized memory.  "Refers to uninitialized memory" is recognised purely
 locally from the source expression's syntactic form (no flow analysis): the
-address of, or a subobject of, a ``[[uninitialized]]`` entity; a value of a
+address of, or a subobject of, a ``[[uninit]]`` entity; a value of a
 ``[[ref_to_uninit]]`` pointer/reference or array; a dereference of such a
 pointer; a cast of such a pointer to another pointer type (paper §4.3), or of
 such a glvalue to another reference; or a call to a
@@ -860,12 +860,12 @@ not used, and keep the pointer and reference recognizers symmetric.
 R8. ``pointer_marker`` -- attribute handler
 ...........................................
 
-``[[uninitialized]]`` on a pointer is banned (paper §4.1): "a reference cannot
+``[[uninit]]`` on a pointer is banned (paper §4.1): "a reference cannot
 be uninitialized.  The initialization profile requires the same for pointers."
 A pointer must instead be initialized (e.g. to ``nullptr``).
 
 - Diagnostic: ``err_init_uninit_pointer_marker``.
-- Check site: the ``CXX11Uninitialized`` handler in
+- Check site: the ``Uninit`` handler in
   ``clang/lib/Sema/SemaDeclAttr.cpp``, alongside ``union_marker``.  Like that
   rule it is gated on enforcement -- a pointer may legitimately carry the marker
   without the profile -- and the marker is retained after the diagnostic so
@@ -933,7 +933,7 @@ profiles.  When changing the framework, run them all with
   defaulted skips, suppression, and the without-``-fprofiles`` path.
 - ``clang/test/SemaCXX/safety-profile-init-decl.cpp`` -- the ``std::init``
   profile's ``uninit_decl`` rule for scalars / pointers / enums: require an
-  initializer or ``[[uninitialized]]``; statics / thread-locals are
+  initializer or ``[[uninit]]``; statics / thread-locals are
   excluded; class types with a user-provided default constructor are
   trusted.
 - ``clang/test/SemaCXX/safety-profile-init-aggregate.cpp`` -- the
@@ -947,11 +947,11 @@ profiles.  When changing the framework, run them all with
   regardless of ``-fprofiles``.
 - ``clang/test/SemaCXX/safety-profile-init-with-initializer.cpp`` -- the
   ``std::init`` profile's ``uninit_with_initializer`` rule: every
-  combination of ``[[uninitialized]]`` placement (prefix / postfix) with
+  combination of ``[[uninit]]`` placement (prefix / postfix) with
   every initializer form (``= e``, ``{}``, ``(e)``), plus the
   synthesized-initializer and RecoveryExpr cases.
 - ``clang/test/SemaCXX/safety-profile-init-field-marker.cpp`` -- placement
-  of ``[[uninitialized]]`` on data members, the marker / NSDMI
+  of ``[[uninit]]`` on data members, the marker / NSDMI
   contradiction, and rejection on references, parameters, and structured
   bindings.
 - ``clang/test/SemaCXX/safety-profile-init-ctor.cpp`` -- the ``std::init``

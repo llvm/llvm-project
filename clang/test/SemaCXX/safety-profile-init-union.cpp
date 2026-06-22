@@ -6,21 +6,21 @@
 
 union U { int x; float y; };
 
-U g_union [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a variable of union type under profile 'std::init'}}
+U g_union [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
 
 void test_union_var() {
-  U a [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a variable of union type under profile 'std::init'}}
+  U a [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
   (void)a;
 }
 
 void test_union_var_suppressed() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
-  [[profiles::suppress(std::init)]] U a [[uninitialized]];
+  [[profiles::suppress(std::init)]] U a [[uninit]];
   (void)a;
 }
 
 union MarkedMember {
-  int x [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a union member under profile 'std::init'}}
+  int x [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a union member under profile 'std::init'}}
   float y;
 };
 
@@ -29,7 +29,7 @@ union MarkedMember {
 
 // A non-union class member may carry the marker (it is not banned here).
 struct NotUnion {
-  int x [[uninitialized]];
+  int x [[uninit]];
 };
 
 union WithNSDMI { int x = 0; float y; };

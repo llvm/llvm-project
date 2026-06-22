@@ -6,8 +6,8 @@
 
 struct WithCtor { WithCtor(); };
 struct Inner { int y; };
-struct InnerMarked { int y [[uninitialized]]; };
-struct InnerMixed { int a [[uninitialized]]; int b; };
+struct InnerMarked { int y [[uninit]]; };
+struct InnerMixed { int a [[uninit]]; int b; };
 
 struct MissingMember {
   int x; // expected-note {{member 'x' declared here}}
@@ -25,7 +25,7 @@ struct DefaultMemberInit {
 };
 
 struct Marked {
-  int x [[uninitialized]];
+  int x [[uninit]];
   Marked() {}
 };
 
@@ -40,7 +40,7 @@ struct NestedAggregate {
   NestedAggregate() {} // expected-error {{constructor does not initialize member 'm' under profile 'std::init'}}
 };
 
-// A member whose type's only indeterminate scalar is [[uninitialized]] is
+// A member whose type's only indeterminate scalar is [[uninit]] is
 // acknowledged (paper §6.2), so the constructor need not initialize it.
 struct NestedMarkedMember {
   InnerMarked m;

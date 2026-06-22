@@ -6941,8 +6941,7 @@ static void handleUninitializedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UninitializedAttr(S.Context, AL));
 }
 
-static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
-                                         const ParsedAttr &AL) {
+static void handleUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The SubjectList has already restricted D to a variable or non-static data
   // member. Reject the subjects for which "leave uninitialized" is
   // meaningless: a reference (must bind when declared), a function parameter
@@ -6959,7 +6958,7 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
     Invalid = Reference;
 
   if (Invalid) {
-    S.Diag(AL.getLoc(), diag::err_uninitialized_attr_invalid_subject)
+    S.Diag(AL.getLoc(), diag::err_uninit_attr_invalid_subject)
         << static_cast<unsigned>(*Invalid);
     AL.setInvalid();
     return;
@@ -6993,14 +6992,14 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
     // the profile.
     S.Diag(AL.getLoc(), diag::err_init_uninit_pointer_marker) << "std::init";
 
-  D->addAttr(::new (S.Context) CXX11UninitializedAttr(S.Context, AL));
+  D->addAttr(::new (S.Context) UninitAttr(S.Context, AL));
 }
 
 static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The SubjectList restricts D to a variable, non-static data member, or
   // function. "Refers to uninitialized memory" is only meaningful for a
   // pointer or reference (for a function, its return value), so reject any
-  // other type. Like the [[uninitialized]] subject checks, this is not
+  // other type. Like the [[uninit]] subject checks, this is not
   // profile policy and so fires regardless of -fprofiles.
   QualType T;
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
@@ -8283,8 +8282,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleUninitializedAttr(S, D, AL);
     break;
 
-  case ParsedAttr::AT_CXX11Uninitialized:
-    handleCXX11UninitializedAttr(S, D, AL);
+  case ParsedAttr::AT_Uninit:
+    handleUninitAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_RefToUninit:

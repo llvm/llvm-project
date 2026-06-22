@@ -4234,7 +4234,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   checkInitProfileUninitWithInitializer(FD->getLocation(), FD->getDeclName(),
                                         FD->getType(),
                                         FD->getInClassInitializer(),
-                                        FD->hasAttr<CXX11UninitializedAttr>(),
+                                        FD->hasAttr<UninitAttr>(),
                                         FD);
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference data member
@@ -7076,7 +7076,7 @@ void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
 void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
   // Paper §6.1: a user-provided constructor must initialize every member via
   // its member-initializer list or an NSDMI, unless the member is marked
-  // [[uninitialized]] (whose body initialization is the deferred R7 check).
+  // [[uninit]] (whose body initialization is the deferred R7 check).
   // A plain assignment in the constructor body does not count.
   if (!Ctor->isUserProvided())
     return;
@@ -7101,7 +7101,7 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
     if (F->isUnnamedBitField() || !F->getDeclName() ||
         F->getType()->isReferenceType() || F->getType().isConstQualified())
       continue;
-    if (F->hasAttr<CXX11UninitializedAttr>() || F->hasInClassInitializer() ||
+    if (F->hasAttr<UninitAttr>() || F->hasInClassInitializer() ||
         Written.count(F))
       continue;
     if (!S.defaultInitLeavesScalarIndeterminate(F->getType(),

@@ -19,45 +19,45 @@ void test_byte() {
   std::byte a;
   std::byte buf[8];
   ByteWrap w;
-  ByteAndInt m;       // expected-error {{variable 'm' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  ByteAndInt m;       // expected-error {{variable 'm' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
   (void)a; (void)buf; (void)w; (void)m;
 }
 
 void test_scalars() {
-  int a;            // expected-error {{variable 'a' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  int a;            // expected-error {{variable 'a' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
   int b = 0;
-  int c [[uninitialized]];
+  int c [[uninit]];
   int d{};
   int e = sink(1);
   (void)b; (void)c; (void)d; (void)e;
 }
 
 void test_pointer() {
-  int* p;           // expected-error {{variable 'p' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  int* p;           // expected-error {{variable 'p' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
   int* q = nullptr;
   // A pointer cannot be left uninitialized (paper section 4.1); the marker is
   // rejected rather than excusing it.
-  int* r [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+  int* r [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
   (void)q; (void)r;
 }
 
 struct PtrMember {
-  int* p [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+  int* p [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
 };
 
 void test_pointer_marker_suppressed() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
-  [[profiles::suppress(std::init)]] int* p [[uninitialized]];
+  [[profiles::suppress(std::init)]] int* p [[uninit]];
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
-  [[profiles::suppress(std::init, rule: "pointer_marker")]] int* q [[uninitialized]];
+  [[profiles::suppress(std::init, rule: "pointer_marker")]] int* q [[uninit]];
   (void)p; (void)q;
 }
 
 enum E { E0, E1 };
 void test_enum() {
-  E x;              // expected-error {{variable 'x' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  E x;              // expected-error {{variable 'x' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
   E y = E0;
-  E z [[uninitialized]];
+  E z [[uninit]];
   (void)y; (void)z;
 }
 
@@ -75,7 +75,7 @@ void test_class_trivial() {
   // member indeterminate is diagnosed by R5 (uninit_decl), the §6
   // "classes without constructors" rule. (Detailed coverage lives in
   // safety-profile-init-aggregate.cpp.)
-  Trivial t; // expected-error {{variable 't' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  Trivial t; // expected-error {{variable 't' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
   (void)t;
 }
 
@@ -94,7 +94,7 @@ void test_param(int p) {
 }
 
 void test_marker_then_assign() {
-  int x [[uninitialized]];
+  int x [[uninit]];
   x = 7;
   (void)x;
 }
@@ -116,7 +116,7 @@ void test_suppress_block() {
 
 template <typename T>
 void template_uninit() {
-  T x;              // expected-error {{variable 'x' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  T x;              // expected-error {{variable 'x' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
   (void)x;
 }
 template void template_uninit<int>(); // expected-note {{in instantiation of function template specialization 'template_uninit<int>' requested here}}

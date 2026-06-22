@@ -14716,7 +14716,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
 
     // std::init / uninit_decl: a definition without any initializer (after
-    // attempted default-initialization) must either carry [[uninitialized]] or
+    // attempted default-initialization) must either carry [[uninit]] or
     // be initialized by a language rule. Static / thread storage duration is
     // excluded -- those are zero-initialized; runtime-init concerns are R3's.
     static constexpr StringRef Profile = "std::init";
@@ -14727,7 +14727,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     QualType BaseTy = Context.getBaseElementType(Var->getType());
     if (!Var->isInvalidDecl() &&
         Var->getStorageDuration() == SD_Automatic &&
-        !Var->hasAttr<CXX11UninitializedAttr>() &&
+        !Var->hasAttr<UninitAttr>() &&
         // std::byte may be left uninitialized (paper §4), so it -- and arrays
         // of it -- are exempt from this rule.
         !BaseTy->isStdByteType() &&
@@ -14741,7 +14741,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
          (BaseTy->isRecordType() &&
           defaultInitLeavesScalarIndeterminate(
               Var->getType(), /*HonorUninitMarkers=*/true)))) {
-      // A union variable cannot carry [[uninitialized]] (union_marker bans it),
+      // A union variable cannot carry [[uninit]] (union_marker bans it),
       // so it must be initialized; use a message that does not suggest the
       // marker as a remedy.
       bool IsUnion = BaseTy->isUnionType();
@@ -14897,10 +14897,10 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
   for (const FieldDecl *F : RD->fields()) {
     if (F->isUnnamedBitField() || F->hasInClassInitializer())
       continue;
-    // A member the type's author marked [[uninitialized]] is acknowledged as
+    // A member the type's author marked [[uninit]] is acknowledged as
     // intentionally uninitialized, so it does not leave an unacknowledged
     // scalar indeterminate (paper §6.2).
-    if (HonorUninitMarkers && F->hasAttr<CXX11UninitializedAttr>())
+    if (HonorUninitMarkers && F->hasAttr<UninitAttr>())
       continue;
     if (defaultInitLeavesScalarIndeterminateImpl(Ctx, F->getType(),
                                                  HonorUninitMarkers, Visited))
@@ -14922,7 +14922,7 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
                                                  const Expr *Init,
                                                  bool HasMarker,
                                                  const Decl *D) {
-  // [[uninitialized]] documents that the entity is intentionally left
+  // [[uninit]] documents that the entity is intentionally left
   // uninitialized, so it contradicts an explicit initializer. A RecoveryExpr
   // is a placeholder for an initialization that already failed (e.g.
   // default-init of a const scalar), not an initializer the user wrote, so it
@@ -14950,7 +14950,7 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
 // std::init / ref_to_uninit (paper §5). Two mutually-recursive local
 // recognizers over the syntactic form of a source expression -- no flow
 // analysis and no type-system tracking. Uninitialized storage is only ever
-// introduced by an explicit [[uninitialized]] / [[ref_to_uninit]] marker;
+// introduced by an explicit [[uninit]] / [[ref_to_uninit]] marker;
 // anything unrecognized is treated as initialized (the trust model).
 static bool glvalueDenotesUninitStorage(const Expr *E);
 
@@ -14996,12 +14996,12 @@ static bool glvalueDenotesUninitStorage(const Expr *E) {
     return false;
   E = E->IgnoreParenImpCasts();
 
-  // A named entity denotes uninitialized storage if it is [[uninitialized]], or
+  // A named entity denotes uninitialized storage if it is [[uninit]], or
   // if it is a reference marked [[ref_to_uninit]] (the glvalue is its referent,
   // which is uninitialized). A [[ref_to_uninit]] *pointer* named here denotes
   // the pointer object itself -- which is initialized -- so it does not count.
   auto DeclDenotesUninit = [](const ValueDecl *VD) {
-    return VD->hasAttr<CXX11UninitializedAttr>() ||
+    return VD->hasAttr<UninitAttr>() ||
            (VD->getType()->isReferenceType() && VD->hasAttr<RefToUninitAttr>());
   };
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
@@ -15063,7 +15063,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   checkInitProfileUninitWithInitializer(
       var->getLocation(), var->getDeclName(), var->getType(), var->getInit(),
-      var->hasAttr<CXX11UninitializedAttr>(), var);
+      var->hasAttr<UninitAttr>(), var);
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference variable must
   // be bound consistently with its [[ref_to_uninit]] marking. A dependent type
