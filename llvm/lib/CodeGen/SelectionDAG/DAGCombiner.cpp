@@ -27235,11 +27235,8 @@ static void collectSubVectorSrcs(
     SmallMapVector<unsigned, std::tuple<SDNode *, SDValue, SDValue>, 4> &Srcs) {
   unsigned NumSubElts = SubVT.getVectorMinNumElements();
   auto record = [&](unsigned Idx, SDValue Sub) {
-    auto It = Srcs.find(Idx);
-    if (It == Srcs.end())
-      return;
-    SDValue &Slot =
-        OpNo == 0 ? std::get<1>(It->second) : std::get<2>(It->second);
+    std::tuple<SDNode *, SDValue, SDValue> &Ext = Srcs[Idx];
+    SDValue &Slot = OpNo == 0 ? std::get<1>(Ext) : std::get<2>(Ext);
     if (!Slot)
       Slot = Sub;
   };
@@ -27291,33 +27288,63 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
   EVT SubVT = N->getValueType(0);
   if (VecVT.getSizeInBits() <= SubVT.getSizeInBits())
     return SDValue();
+
   SmallMapVector<unsigned, std::tuple<SDNode *, SDValue, SDValue>, 4> Extracts;
+  // Scan each wide operand's chain once, filling the seeded indices' sources.
+  collectSubVectorSrcs(Bop0, SubVT, /*OpNo=*/0, Extracts);
+  collectSubVectorSrcs(Bop1, SubVT, /*OpNo=*/1, Extracts);
+
+  bool HasNonZeroExt = false;
+  bool HasNonExtUser = false;
   for (SDNode *User : BinOp->users()) {
-    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        User->getValueType(0) != SubVT ||
+    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR) {
+      HasNonExtUser = true;
+      continue;
+    }
+    if (User->getValueType(0) != SubVT ||
         (User->getCombinerWorklistIndex() < 0 && User != N))
       return SDValue();
-    Extracts[User->getConstantOperandVal(1)] =
-        std::make_tuple(User, SDValue(), SDValue());
+    unsigned Idx = User->getConstantOperandVal(1);
+    auto It = Extracts.find(Idx);
+    if (It == Extracts.end() || !std::get<1>(It->second) ||
+        !std::get<2>(It->second))
+      return SDValue();
+    SDNode *&ExtSubVec = std::get<0>(It->second);
+    if (!ExtSubVec) {
+      ExtSubVec = User;
+      if (Idx != 0)
+        HasNonZeroExt = true;
+    }
   }
 
   if (!TLI.isOperationLegalOrCustom(BinOpcode, SubVT, LegalOperations))
     return SDValue();
 
-  // Scan each wide operand's chain once, filling the seeded indices' sources.
-  collectSubVectorSrcs(Bop0, SubVT, /*OpNo=*/0, Extracts);
-  collectSubVectorSrcs(Bop1, SubVT, /*OpNo=*/1, Extracts);
-
-  // Bail unless every wanted index was sourced for free from both operands, so
-  // we commit to rewriting all of the extracts or none.
-  for (auto &[Idx, Ext] : Extracts)
-    if (!std::get<1>(Ext) || !std::get<2>(Ext))
+  // Narrow for [SubVT, 0/undef,...,0/undef]: when the wide binop also has a
+  // non-extract user it survives, so narrowing only pays off if it folds for
+  // free to concat(narrow binop, 0/undef, ...). That holds when the sole
+  // extract is lane 0 (HasNonZeroExt rejects multi-real-lane cases such as
+  // [a,b,0,0,c,d]) and every other lane is 0/undef in both operands; otherwise
+  // a lane carries real data the wide binop must still compute. `V &&` keeps
+  // IsZeroOrUndef null-safe for lanes that were never sourced.
+  auto IsZeroOrUndef = [](SDValue V) {
+    return V && (V.isUndef() || ISD::isBuildVectorAllZeros(V.getNode()) ||
+                 isNullOrNullSplat(V));
+  };
+  if (HasNonExtUser) {
+    if (HasNonZeroExt)
       return SDValue();
+    for (auto &[Idx, Entry] : Extracts)
+      if (Idx != 0 && (!IsZeroOrUndef(std::get<1>(Entry)) ||
+                       !IsZeroOrUndef(std::get<2>(Entry))))
+        return SDValue();
+  }
 
   if (TLI.isTypeLegal(VecVT)) {
     bool AllExtractsCheap = true;
     for (auto &[Idx, Ext] : Extracts)
-      AllExtractsCheap &= TLI.isExtractSubvectorCheap(SubVT, VecVT, Idx);
+      if (std::get<0>(Ext)) // Only lanes actually consumed by an extract.
+        AllExtractsCheap &= TLI.isExtractSubvectorCheap(SubVT, VecVT, Idx);
     if (AllExtractsCheap &&
         !TLI.isNarrowingProfitable(BinOp.getNode(), VecVT, SubVT))
       return SDValue();
@@ -27330,11 +27357,13 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
   SDValue Result = SDValue();
   for (auto &[Idx, Entry] : Extracts) {
     auto [Ext, Sub0, Sub1] = Entry;
-    SDValue Narrow = DAG.getNode(BinOpcode, SDLoc(Ext), SubVT, Sub0, Sub1,
-                                 BinOp->getFlags());
-    DAG.ReplaceAllUsesOfValueWith(SDValue(Ext, 0), Narrow);
-    if (Ext == N)
-      Result = Narrow;
+    if (Ext) {
+      SDValue Narrow = DAG.getNode(BinOpcode, SDLoc(Ext), SubVT, Sub0, Sub1,
+                                   BinOp->getFlags());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Ext, 0), Narrow);
+      if (Ext == N)
+        Result = Narrow;
+    }
   }
   return Result;
 }
