@@ -476,7 +476,7 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-filter option: Cannot f
 ;--------------------------------------------------
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
-; error: no match found.
+; error: no match found in search range.
 ; possible intended match
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -502,7 +502,7 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-filter option: Cannot f
 ;      CHK-ERR:<<<<<<
 ; CHK-ERR-NEXT:           1: start 
 ; CHK-ERR-NEXT:check:1'0    {        search range start (exclusive)
-; CHK-ERR-NEXT:check:1'1             error: no match found
+; CHK-ERR-NEXT:check:1'1             error: no match found in search range
 ; CHK-ERR-NEXT:           .
 ; CHK-ERR-NEXT:           .
 ; CHK-ERR-NEXT:           .

@@ -121,7 +121,7 @@
 ; W5-NEXT:label:1'1     ^~~~
 ; W5-NEXT:dag:2              ^~~~~~
 ; W5-NEXT:dag:3'0          {         search range start (exclusive)
-; W5-NEXT:dag:3'1                    error: no match found
+; W5-NEXT:dag:3'1                    error: no match found in search range
 ; W5-NEXT:          10: foo1 
 ; W5-NEXT:dag:2         ~~~~~
 ; W5-NEXT:dag:3'2       ?      possible intended match

@@ -18,7 +18,7 @@ DMP-NEXT:           1: offload triples:
 DMP-NEXT:label:1'0     ^~~~~~~~~~~~~~~~
 DMP-NEXT:label:1'1     ^~~~~~~~~~~~~~~~
 DMP-NEXT:check:2'0                    {   search range start (exclusive)
-DMP-NEXT:check:2'1                        error: no match found
+DMP-NEXT:check:2'1                        error: no match found in search range
 DMP-NEXT:           2: - x86_64-linux-gnu 
 DMP-NEXT:check:2'2       ?                  possible intended match
 DMP-NEXT:           3: - x86_64-unknown-linux-gnu 
