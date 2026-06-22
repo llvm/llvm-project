@@ -179,3 +179,42 @@ constexpr int invalidUnaryOrTypeTrait2() {
 /// Pointer::toRValue() of a function type.
 void foo() { *(void (*)()) ""; } // both-warning {{expression result unused}}
 
+namespace InvalidCallExpr {
+  constexpr bool foo() {
+    struct A {};
+    A a;
+    a.~A(__builtin_popcountg == 0, ""); // both-error {{builtin functions must be directly called}}
+
+    return true;
+  }
+}
+
+namespace InvalidUnaryOperator {
+  typedef struct {} S;
+  void foo() {
+    S *s = (S *)malloc(sizeof(*s)); // both-error {{use of undeclared identifier 'malloc'}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}
+
+namespace IncNonDereferencable {
+  struct S {};
+
+  void foo() {
+    S *s = (foo *)malloc(sizeof(*s)); // both-error {{expected expression}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}
+
+namespace InvalidVirtualCast {
+  struct X {};
+  struct Y : virtual X {};
+  struct Z {
+  } z;
+  static_assert((X *)(Y *)&z, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}

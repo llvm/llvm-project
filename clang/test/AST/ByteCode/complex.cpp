@@ -162,6 +162,7 @@ static_assert(__real(Doubles[3]) == 0.0, "");
 static_assert(__imag(Doubles[3]) == 0.0, "");
 
 static_assert(~(0.5 + 1.5j) == (0.5 + -1.5j), "");
+int array[~(1i) == 2000.0];
 
 void func(void) {
   __complex__ int arr;
@@ -475,4 +476,11 @@ namespace MemcpyOp {
     _Complex double z;
     z = *(_Complex double *)&x;
   };
+}
+
+namespace LessThanTwoElements {
+  void foo()  { _Complex float z = *(_Complex double *)&(int[]){0};    } // both-error {{taking the address of a temporary object of type 'int[1]'}}
+  void foo2() { _Complex float z = *(_Complex double *)&(int[]){0, 0}; } // both-error {{taking the address of a temporary object of type 'int[2]'}}
+
+  double _Complex z = *(double _Complex *)&(*(int *)0x1234);
 }

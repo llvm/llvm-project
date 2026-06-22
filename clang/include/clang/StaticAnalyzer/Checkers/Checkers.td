@@ -169,7 +169,7 @@ def CallAndMessageChecker
            CmdLineOption<Boolean, "ArgPointeeInitializedness",
                          "Check whether the pointee of a pass-by-reference or "
                          "pass-by-pointer is undefined",
-                         "false", InAlpha>,
+                         "false", Released>,
            CmdLineOption<
                Boolean, "NilReceiver",
                "Check whether the receiver in the message expression is nil",
@@ -186,11 +186,6 @@ def CallAndMessageChecker
                "member (used only at ArgPointeeInitializedness)",
                "false", Released>,
 ]>,
-      Documentation<HasDocumentation>;
-
-def FixedAddressDereferenceChecker
-    : Checker<"FixedAddressDereference">,
-      HelpText<"Check for dereferences of fixed addresses">,
       Documentation<HasDocumentation>;
 
 def NullDereferenceChecker
@@ -250,10 +245,6 @@ def CastToStructChecker : Checker<"CastToStruct">,
 
 def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
-  Documentation<HasDocumentation>;
-
-def FixedAddressChecker : Checker<"FixedAddr">,
-  HelpText<"Check for assignment of a fixed address to a pointer">,
   Documentation<HasDocumentation>;
 
 def PointerArithChecker : Checker<"PointerArithm">,
@@ -426,6 +417,16 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
   HelpText<"Check integer to enumeration casts for out of range values">,
   Documentation<HasDocumentation>;
 
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
+
+def UnconditionalVAArgChecker
+    : Checker<"UnconditionalVAArg">,
+      HelpText<"Check variadic functions unconditionally using va_arg">,
+      Documentation<HasDocumentation>;
+
 } // end "optin.core"
 
 //===----------------------------------------------------------------------===//
@@ -459,6 +460,11 @@ def CStringSyntaxChecker : Checker<"BadSizeArg">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
+def CStringUninitializedRead : Checker<"UninitializedRead">,
+  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "unix.cstring"
 
 let ParentPackage = CStringAlpha in {
@@ -470,11 +476,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringUninitializedRead : Checker<"UninitializedRead">,
-  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 

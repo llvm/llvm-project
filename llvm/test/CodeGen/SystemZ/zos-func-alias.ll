@@ -1,9 +1,9 @@
 ; Test function aliasing on z/OS
 ;
-; RUN: llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 ; CHECK:      ENTRY foo
-; CHECK-NEXT: foo XATTR LINKAGE(XPLINK),REFERENCE(CODE),SCOPE(LIBRARY)
+; CHECK-NEXT: foo XATTR LINKAGE(XPLINK),REFERENCE(CODE),PSECT(stdin#S),SCOPE(LIBRARY)
 ; CHECK-NEXT: foo DS 0H
 ; CHECK-NEXT: ENTRY foo
 ; CHECK-NEXT: foo1 XATTR LINKAGE(XPLINK),REFERENCE(CODE),SCOPE(LIBRARY)

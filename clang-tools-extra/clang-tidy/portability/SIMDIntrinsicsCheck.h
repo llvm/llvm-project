@@ -31,7 +31,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  llvm::SmallString<32> Std;
+  SmallString<32> Std;
   const bool Suggest;
 };
 

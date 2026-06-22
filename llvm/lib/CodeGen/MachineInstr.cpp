@@ -101,8 +101,6 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Opcode(TID.Opcode), DebugInstrNum(0), DbgLoc(std::move(DL)) {
-  assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-
   // Reserve space for the expected number of operands.
   if (unsigned NumOps = MCID->getNumOperands() + MCID->implicit_defs().size() +
                         MCID->implicit_uses().size()) {
@@ -121,8 +119,6 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Opcode(MI.getOpcode()), DebugInstrNum(0), Info(MI.Info),
       DbgLoc(MI.getDebugLoc()) {
-  assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-
   CapOperands = OperandCapacity::get(MI.getNumOperands());
   Operands = MF.allocateOperandArray(CapOperands);
 
@@ -797,9 +793,9 @@ MachineInstr *MachineInstr::removeFromBundle() {
   return getParent()->remove_instr(this);
 }
 
-void MachineInstr::eraseFromParent() {
+MachineBasicBlock::iterator MachineInstr::eraseFromParent() {
   assert(getParent() && "Not embedded in a basic block!");
-  getParent()->erase(this);
+  return getParent()->erase(this);
 }
 
 void MachineInstr::eraseFromBundle() {
@@ -927,7 +923,7 @@ bool MachineInstr::isStackAligningInlineAsm() const {
 InlineAsm::AsmDialect MachineInstr::getInlineAsmDialect() const {
   assert(isInlineAsm() && "getInlineAsmDialect() only works for inline asms!");
   unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
-  return InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect) != 0);
+  return InlineAsm::getDialect(ExtraInfo);
 }
 
 int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
@@ -1356,8 +1352,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Treat volatile loads as stores. This is not strictly necessary for
   // volatiles, but it is required for atomic loads. It is not allowed to move
   // a load across an atomic load with Ordering > Monotonic.
-  if (mayStore() || isCall() || isPHI() ||
-      (mayLoad() && hasOrderedMemoryRef())) {
+  if (mayStore() || isCall() || isPHI() || hasOrderedMemoryRef()) {
     SawStore = true;
     return false;
   }
@@ -1832,7 +1827,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   SmallBitVector PrintedTypes(8);
   bool ShouldPrintRegisterTies = IsStandalone || hasComplexRegisterTies();
-  auto getTiedOperandIdx = [&](unsigned OpIdx) {
+  auto GetTiedOperandIdx = [&](unsigned OpIdx) {
     if (!ShouldPrintRegisterTies)
       return 0U;
     const MachineOperand &MO = getOperand(OpIdx);
@@ -1853,9 +1848,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << ", ";
 
     LLT TypeToPrint = MRI ? getTypeToPrint(StartOp, PrintedTypes, *MRI) : LLT{};
-    unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+    // tied operands are not printed for defs.
     MO.print(OS, MST, TypeToPrint, StartOp, /*PrintDef=*/false, IsStandalone,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+             /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0, TRI);
     ++StartOp;
   }
 
@@ -1922,7 +1917,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << " ";
     const unsigned OpIdx = InlineAsm::MIOp_AsmString;
     LLT TypeToPrint = MRI ? getTypeToPrint(OpIdx, PrintedTypes, *MRI) : LLT{};
-    unsigned TiedOperandIdx = getTiedOperandIdx(OpIdx);
+    unsigned TiedOperandIdx = GetTiedOperandIdx(OpIdx);
     getOperand(OpIdx).print(OS, MST, TypeToPrint, OpIdx, /*PrintDef=*/true,
                             IsStandalone, ShouldPrintRegisterTies,
                             TiedOperandIdx, TRI);
@@ -1963,7 +1958,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << "!\"" << DIV->getName() << '\"';
       else {
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-        unsigned TiedOperandIdx = getTiedOperandIdx(i);
+        unsigned TiedOperandIdx = GetTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
                  ShouldPrintRegisterTies, TiedOperandIdx, TRI);
       }
@@ -1974,7 +1969,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << "\"" << DIL->getName() << '\"';
       else {
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-        unsigned TiedOperandIdx = getTiedOperandIdx(i);
+        unsigned TiedOperandIdx = GetTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
                  ShouldPrintRegisterTies, TiedOperandIdx, TRI);
       }
@@ -2013,14 +2008,13 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
       // Compute the index of the next operand descriptor.
       AsmDescOp += 1 + F.getNumOperandRegisters();
+    } else if (MO.isImm() && isOperandSubregIdx(i)) {
+      MachineOperand::printSubRegIdx(OS, MO.getImm(), TRI);
     } else {
       LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-      unsigned TiedOperandIdx = getTiedOperandIdx(i);
-      if (MO.isImm() && isOperandSubregIdx(i))
-        MachineOperand::printSubRegIdx(OS, MO.getImm(), TRI);
-      else
-        MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
-                 ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+      unsigned TiedOperandIdx = GetTiedOperandIdx(i);
+      MO.print(OS, MST, TypeToPrint, i, /*PrintDef=*/true, IsStandalone,
+               ShouldPrintRegisterTies, TiedOperandIdx, TRI);
     }
   }
 
@@ -2615,6 +2609,9 @@ MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
 
 std::optional<LocationSize>
 MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
+  if (!mayStore())
+    return std::nullopt;
+
   MMOList Accesses;
   if (TII->hasStoreToStackSlot(*this, Accesses))
     return getSpillSlotSize(Accesses, getMF()->getFrameInfo());

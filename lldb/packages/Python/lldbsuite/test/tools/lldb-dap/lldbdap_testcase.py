@@ -24,26 +24,40 @@ class DAPTestCaseBase(TestBase):
     DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
+    def setUp(self):
+        self.dap_server_count = 0
+        super().setUp()
+
     def create_debug_adapter(
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[int] = None,
         additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
-        log_file_path = self.getBuildArtifact("dap.log")
+        if self.dap_server_count:
+            log_file_path = (
+                self.getLogBasenameForCurrentTest()
+                + f"-dap-{self.dap_server_count}.log"
+            )
+        else:
+            log_file_path = self.getLogBasenameForCurrentTest() + "-dap.log"
+        self.dap_server_count += 1
         self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
+            connection_timeout=connection_timeout,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
-            additional_args=additional_args or [],
+            additional_args=additional_args,
             spawn_helper=self.spawnSubprocess,
         )
+        self.log_files.append(log_file_path)
 
     def build_and_create_debug_adapter(
         self,
@@ -241,11 +255,13 @@ class DAPTestCaseBase(TestBase):
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
         thread has the stop reason 'entry'."""
+        if not self.dap_server.configuration_done_sent:
+            self.verify_configuration_done()
         self.dap_server.wait_for_stopped()
         self.assertIn(
             "entry",
             (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
-            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+            f"Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
         )
 
     def verify_commands(self, flavor: str, output: str, commands: List[str]):
@@ -264,21 +280,6 @@ class DAPTestCaseBase(TestBase):
                 found,
                 f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
-
-    def verify_invalidated_event(self, expected_areas):
-        event = self.dap_server.invalidated_event
-        self.dap_server.invalidated_event = None
-        self.assertIsNotNone(event)
-        areas = event["body"].get("areas", [])
-        self.assertEqual(set(expected_areas), set(areas))
-
-    def verify_memory_event(self, memoryReference):
-        if memoryReference is None:
-            self.assertIsNone(self.dap_server.memory_event)
-        event = self.dap_server.memory_event
-        self.dap_server.memory_event = None
-        self.assertIsNotNone(event)
-        self.assertEqual(memoryReference, event["body"].get("memoryReference"))
 
     def get_dict_value(self, d: Mapping[str, Any], key_path: List[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
@@ -338,7 +339,6 @@ class DAPTestCaseBase(TestBase):
         )
         if stackFrames is not None:
             stackFrame = stackFrames[0]
-            ["source", "path"]
             if "source" in stackFrame:
                 source = stackFrame["source"]
                 if "path" in source:
@@ -376,36 +376,28 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
-    def set_variable(self, varRef, name, value, id=None):
+    def set_variable(self, varRef, name, value, id=None, is_hex: Optional[bool] = None):
         """Set a variable."""
-        response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+        response = self.dap_server.request_setVariable(
+            varRef, name, str(value), id=id, is_hex=is_hex
+        )
         if response["success"]:
-            self.verify_invalidated_event(["variables"])
-            self.verify_memory_event(response["body"].get("memoryReference"))
+            invalidated_event = self.dap_server.wait_for_invalidated()
+            self.assertEqual(invalidated_event["body"].get("areas"), ["variables"])
+            memory_event = self.dap_server.wait_for_memory()
+            self.assertEqual(
+                memory_event["body"].get("memoryReference"),
+                response["body"].get("memoryReference"),
+            )
         return response
 
-    def set_local(self, name, value, id=None):
+    def set_local(self, name, value, id=None, is_hex: Optional[bool] = None):
         """Set a top level local variable only."""
         # Get the locals scope reference dynamically
         locals_ref = self.get_locals_scope_reference()
         if locals_ref is None:
             return None
-        return self.set_variable(locals_ref, name, str(value), id=id)
-
-    def set_global(self, name, value, id=None):
-        """Set a top level global variable only."""
-        # Get the globals scope reference dynamically
-        stackFrame = self.dap_server.get_stackFrame()
-        if stackFrame is None:
-            return None
-        frameId = stackFrame["id"]
-        scopes_response = self.dap_server.request_scopes(frameId)
-        frame_scopes = scopes_response["body"]["scopes"]
-        for scope in frame_scopes:
-            if scope["name"] == "Globals":
-                varRef = scope["variablesReference"]
-                return self.set_variable(varRef, name, str(value), id=id)
-        return None
+        return self.set_variable(locals_ref, name, str(value), id=id, is_hex=is_hex)
 
     def get_locals_scope_reference(self):
         """Get the variablesReference for the locals scope."""
@@ -512,25 +504,6 @@ class DAPTestCaseBase(TestBase):
             disassembled_instructions[inst["address"]] = inst
 
         return disassembled_instructions, disassembled_instructions[memoryReference]
-
-    def _build_error_message(self, base_message, response):
-        """Build a detailed error message from a DAP response.
-        Extracts error information from various possible locations in the response structure.
-        """
-        error_msg = base_message
-        if response:
-            if "message" in response:
-                error_msg += " (%s)" % response["message"]
-            elif "body" in response and "error" in response["body"]:
-                if "format" in response["body"]["error"]:
-                    error_msg += " (%s)" % response["body"]["error"]["format"]
-                else:
-                    error_msg += " (error in body)"
-            else:
-                error_msg += " (no error details available)"
-        else:
-            error_msg += " (no response)"
-        return error_msg
 
     def attach(
         self,
@@ -658,5 +631,6 @@ class DAPTestCaseBase(TestBase):
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )
         if response["success"]:
-            self.verify_invalidated_event(["all"])
+            invalidated_event = self.dap_server.wait_for_invalidated()
+            self.assertEqual(invalidated_event["body"].get("areas"), ["all"])
         return response

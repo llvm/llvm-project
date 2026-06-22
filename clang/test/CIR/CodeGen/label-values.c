@@ -12,7 +12,7 @@ LABEL_A:
   return;
 }
 // CIR:  cir.func {{.*}} @A
-// CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+// CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCK:%.*]] = cir.block_address <@A, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) [[BLOCK]], [[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
@@ -54,7 +54,7 @@ LABEL_B:
 }
 
 // CIR:  cir.func {{.*}} @B()
-// CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+// CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.br ^bb1
 // CIR:   ^bb1: // 2 preds: ^bb0, ^bb2
 // CIR:    cir.label "LABEL_B"
@@ -102,37 +102,33 @@ LABEL_B:
 // CIR:    [[BLOCK1:%.*]] = cir.block_address <@C, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    [[BLOCK2:%.*]] = cir.block_address <@C, "LABEL_B"> : !cir.ptr<!void>
 // CIR:    [[COND:%.*]] = cir.select if [[CMP:%.*]] then [[BLOCK1]] else [[BLOCK2]] : (!cir.bool, !cir.ptr<!void>, !cir.ptr<!void>) -> !cir.ptr<!void>
-// CIR:    cir.store align(8) [[COND]], [[PTR:%.*]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-// CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-// CIR:    cir.br ^bb1([[BLOCKADD]] : !cir.ptr<!void>)
-// CIR:  ^bb1([[PHI:%.*]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb0
+// CIR:    cir.store{{.*}} [[COND]], [[PTR:%.*]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CIR:    [[BLOCKADD:%.*]] = cir.load{{.*}} [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR:    cir.br ^[[INDIRECT_GOTO:.*]]([[BLOCKADD]] : !cir.ptr<!void>)
+// CIR:  ^[[INDIRECT_GOTO]]([[PHI:%.*]]: !cir.ptr<!void> {{.*}}):
 // CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
-// CIR-NEXT:    ^bb2,
-// CIR-NEXT:    ^bb4
+// CIR-NEXT:    ^[[LABEL_A_BB:.*]],
+// CIR-NEXT:    ^[[LABEL_B_BB:.*]]
 // CIR:    ]
-// CIR:  ^bb2:  // pred: ^bb1
+// CIR:  ^[[LABEL_A_BB]]:
 // CIR:    cir.label "LABEL_A"
-// CIR:    cir.br ^bb3
-// CIR:  ^bb3:  // 2 preds: ^bb2, ^bb4
 // CIR:    cir.return
-// CIR:  ^bb4:  // pred: ^bb1
+// CIR:  ^[[LABEL_B_BB]]:
 // CIR:    cir.label "LABEL_B"
-// CIR:    cir.br ^bb3
+// CIR:    cir.return
 
-// LLVM: define dso_local void @C(i32 %0)
+// LLVM: define dso_local void @C
 // LLVM:   [[COND:%.*]] = select i1 [[CMP:%.*]], ptr blockaddress(@C, %[[LABEL_A:.*]]), ptr blockaddress(@C, %[[LABEL_B:.*]])
 // LLVM:   store ptr [[COND]], ptr [[PTR:%.*]], align 8
 // LLVM:   [[BLOCKADD:%.*]] = load ptr, ptr [[PTR]], align 8
-// LLVM:   br label %[[indirectgoto:.*]]
-// LLVM: [[indirectgoto]]:
+// LLVM:   br label %[[INDIRECT_GOTO:.*]]
+// LLVM: [[INDIRECT_GOTO]]:
 // LLVM:   [[PHI:%.*]] = phi ptr [ [[BLOCKADD]], %[[ENTRY:.*]] ]
 // LLVM:   indirectbr ptr [[PHI]], [label %[[LABEL_A]], label %[[LABEL_B]]]
 // LLVM: [[LABEL_A]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 // LLVM: [[LABEL_B]]:
-// LLVM:   br label %[[RET]]
+// LLVM:   ret void
 
 // OGCG: define dso_local void @C
 // OGCG:   [[COND:%.*]] = select i1 [[CMP:%.*]], ptr blockaddress(@C, %LABEL_A), ptr blockaddress(@C, %LABEL_B)
@@ -159,9 +155,9 @@ LABEL_A:
 }
 
 // CIR:  cir.func {{.*}} @D
-// CIR:    %[[PTR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
-// CIR:    %[[PTR2:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr2", init]
-// CIR:    %[[PTR3:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr3", init]
+// CIR:    %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[PTR2:.*]] = cir.alloca "ptr2" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[PTR3:.*]] = cir.alloca "ptr3" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLK1:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) %[[BLK1]], %[[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLK2:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>

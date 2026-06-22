@@ -104,6 +104,7 @@ template<> class numeric_limits<cv long double>;
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_arithmetic.h>
+#include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__type_traits/is_signed.h>
 #include <__cxx03/__type_traits/remove_cv.h>
 
@@ -224,7 +225,7 @@ protected:
   static const bool is_modulo  = !std::is_signed<_Tp>::value;
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__) || defined(__wasm__)
-  static const bool traps = true;
+  static const bool traps = is_same<decltype(+_Tp(0)), _Tp>::value;
 #else
   static const bool traps = false;
 #endif

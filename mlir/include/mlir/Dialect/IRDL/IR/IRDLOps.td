@@ -62,7 +62,7 @@ def IRDL_DialectOp : IRDL_Op<"dialect",
 
 def IRDL_TypeOp : IRDL_Op<"type",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-     AtMostOneChildOf<"ParametersOp">, Symbol]> {
+     AtMostOneChildOf<"ParametersOp">, Symbol, IsolatedFromAbove]> {
   let summary = "Define a new type";
   let description = [{
     `irdl.type` defines a new type belonging to the `irdl.dialect` parent.
@@ -96,7 +96,7 @@ def IRDL_TypeOp : IRDL_Op<"type",
 
 def IRDL_AttributeOp : IRDL_Op<"attribute",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
-     AtMostOneChildOf<"ParametersOp">, Symbol]> {
+     AtMostOneChildOf<"ParametersOp">, Symbol, IsolatedFromAbove]> {
   let summary = "Define a new attribute";
   let description = [{
     `irdl.attribute` defines a new attribute belonging to the `irdl.dialect`
@@ -169,7 +169,7 @@ def IRDL_ParametersOp : IRDL_Op<"parameters",
 def IRDL_OperationOp : IRDL_Op<"operation",
     [HasParent<"DialectOp">, NoTerminator, NoRegionArguments,
     AtMostOneChildOf<"OperandsOp, ResultsOp, AttributesOp, RegionsOp">,
-    Symbol]> {
+    Symbol, IsolatedFromAbove]> {
   let summary = "Define a new operation";
   let description = [{
     `irdl.operation` defines a new operation belonging to the `irdl.dialect`

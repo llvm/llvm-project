@@ -701,9 +701,7 @@ bool GlobalMergeImpl::run(Module &M) {
         !GV.hasLocalLinkage())
       continue;
 
-    PointerType *PT = dyn_cast<PointerType>(GV.getType());
-    assert(PT && "Global variable is not a pointer!");
-
+    PointerType *PT = GV.getType();
     unsigned AddressSpace = PT->getAddressSpace();
     StringRef Section = GV.getSection();
 
@@ -775,8 +773,10 @@ Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool MergeExternalByDefault,
                                   bool MergeConstantByDefault,
                                   bool MergeConstAggressiveByDefault) {
-  bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
-    MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
+  bool MergeExternal =
+      (EnableGlobalMergeOnExternal == cl::boolOrDefault::BOU_UNSET)
+          ? MergeExternalByDefault
+          : (EnableGlobalMergeOnExternal == cl::boolOrDefault::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
   bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
                                   ? GlobalMergeAllConst

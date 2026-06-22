@@ -6,8 +6,8 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16(ptr %ap, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: masked_load_sext_i8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ret
   %p0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 10)
   %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> %p0, <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer)
@@ -23,9 +23,9 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_vl(ptr %ap, <vscale x 16 
 ; CHECK-LABEL: masked_load_sext_i8i16_ptrue_vl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ptrue p1.h, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %p0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 11)
@@ -41,9 +41,9 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_vl(ptr %ap, <vscale x 16 
 define <vscale x 8 x i1> @masked_load_sext_i8i16_parg(ptr %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i16_parg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ptrue p1.h, vl32
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p2.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> %p0, <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer)
@@ -58,8 +58,8 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32(ptr %ap, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: masked_load_sext_i8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
   %p0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 10)
@@ -76,9 +76,9 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_vl(ptr %ap, <vscale x 16 
 ; CHECK-LABEL: masked_load_sext_i8i32_ptrue_vl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ptrue p1.s, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
@@ -95,9 +95,9 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_vl(ptr %ap, <vscale x 16 
 define <vscale x 4 x i1> @masked_load_sext_i8i32_parg(ptr %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i32_parg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ptrue p1.s, vl32
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p2.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
@@ -113,8 +113,8 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64(ptr %ap, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: masked_load_sext_i8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
@@ -132,9 +132,9 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_vl(ptr %ap, <vscale x 16 
 ; CHECK-LABEL: masked_load_sext_i8i64_ptrue_vl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ptrue p1.d, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
@@ -152,9 +152,9 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_vl(ptr %ap, <vscale x 16 
 define <vscale x 2 x i1> @masked_load_sext_i8i64_parg(ptr %ap, <vscale x 16 x i8> %b, <vscale x 16 x i1> %p0) #0 {
 ; CHECK-LABEL: masked_load_sext_i8i64_parg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpeq p2.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ptrue p1.d, vl32
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p2.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
@@ -172,9 +172,9 @@ define <vscale x 8 x i1> @masked_load_sext_i8i16_ptrue_all(ptr %ap, <vscale x 16
 ; CHECK-LABEL: masked_load_sext_i8i16_ptrue_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ptrue p1.h, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %p0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 11)
@@ -191,9 +191,9 @@ define <vscale x 4 x i1> @masked_load_sext_i8i32_ptrue_all(ptr %ap, <vscale x 16
 ; CHECK-LABEL: masked_load_sext_i8i32_ptrue_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    ptrue p1.s, vl32
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
@@ -211,17 +211,15 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_all(ptr %ap, <vscale x 16
 ; CHECK-LABEL: masked_load_sext_i8i64_ptrue_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    punpklo p0.h, p1.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
-  %p0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> %p0, <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer)
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer)
   %extract = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %cmp, i64 0)
   %ext1 = sext <vscale x 2 x i1> %extract to <vscale x 2 x i64>
-  %p1 = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %cmp1 = call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %p1, <vscale x 2 x i64> %ext1, <vscale x 2 x i64> zeroinitializer)
+  %cmp1 = call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %ext1, <vscale x 2 x i64> zeroinitializer)
   ret <vscale x 2 x i1> %cmp1
 }
 

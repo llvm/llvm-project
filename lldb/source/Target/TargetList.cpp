@@ -135,14 +135,13 @@ Status TargetList::CreateTargetInternal(
 
     lldb::offset_t file_offset = 0;
     lldb::offset_t file_size = 0;
-    ModuleSpecList module_specs;
-    const size_t num_specs = ObjectFile::GetModuleSpecifications(
-        module_spec.GetFileSpec(), file_offset, file_size, module_specs);
+    ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+        module_spec.GetFileSpec(), file_offset, file_size);
 
-    if (num_specs > 0) {
+    if (module_specs.GetSize() > 0) {
       ModuleSpec matching_module_spec;
 
-      if (num_specs == 1) {
+      if (module_specs.GetSize() == 1) {
         if (module_specs.GetModuleSpecAtIndex(0, matching_module_spec)) {
           if (platform_arch.IsValid()) {
             if (platform_arch.IsCompatibleMatch(

@@ -399,7 +399,10 @@ KnownBits KnownBits::abds(KnownBits LHS, KnownBits RHS) {
 
 static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   if (isPowerOf2_32(BitWidth))
-    return MaxValue.extractBitsAsZExtValue(Log2_32(BitWidth), 0);
+    // Clamp to the shift amount's width: a narrower amount is already
+    // < BitWidth, so this stays a valid upper bound.
+    return MaxValue.extractBitsAsZExtValue(
+        std::min(Log2_32(BitWidth), MaxValue.getBitWidth()), 0);
   // This is only an approximate upper bound.
   return MaxValue.getLimitedValue(BitWidth - 1);
 }
@@ -603,6 +606,18 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
+KnownBits KnownBits::fshl(const KnownBits &LHS, const KnownBits &RHS,
+                          const APInt &Amt) {
+  return KnownBits(APIntOps::fshl(LHS.Zero, RHS.Zero, Amt),
+                   APIntOps::fshl(LHS.One, RHS.One, Amt));
+}
+
+KnownBits KnownBits::fshr(const KnownBits &LHS, const KnownBits &RHS,
+                          const APInt &Amt) {
+  return KnownBits(APIntOps::fshr(LHS.Zero, RHS.Zero, Amt),
+                   APIntOps::fshr(LHS.One, RHS.One, Amt));
+}
+
 KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits Res =
       makeConstant(APIntOps::clmul(LHS.getMinValue(), RHS.getMinValue()));
@@ -630,33 +645,98 @@ KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
   return Res;
 }
 
+KnownBits KnownBits::pext(const KnownBits &LHS, const KnownBits &RHS) {
+  // For each source position I where mask[I] could be set, the output index j
+  // lies in [M0, M1] where these track the range of possible set-bit counts
+  // seen so far in mask.
+  //
+  // The output bit j
+  // - can be 0 if any candidate LHS[I] could be zero or popcount(mask) could
+  //   be <= j, and
+  // - can be 1 only if some candidate LHS[I] could be one and popcount(mask)
+  //   is known > j.
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Res(BitWidth);
+  Res.setAllConflict();
+
+  unsigned M0 = 0, M1 = 0;
+  for (unsigned I = 0; I < BitWidth; ++I) {
+    if (!RHS.Zero[I]) {
+      APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
+      if (!LHS.Zero[I])
+        Res.Zero &= ~Range; // some position in Range could be 1
+      if (!LHS.One[I])
+        Res.One &= ~Range; // some position in Range could be 0
+    }
+    if (RHS.One[I])
+      ++M0, ++M1;
+    else if (!RHS.Zero[I])
+      ++M1;
+  }
+
+  // Output positions j >= M0 may have no source (popcount(mask) <= j), in
+  // which case they default to zero.
+  Res.One &= APInt::getLowBitsSet(BitWidth, M0);
+  return Res;
+}
+
+KnownBits KnownBits::pdep(const KnownBits &LHS, const KnownBits &RHS) {
+  // For each output position I where mask[I] could be set, the source index j
+  // lies in [M0, M1] where these track possible counts of set mask bits < I.
+  //
+  // The output bit
+  // - can be 0 if mask[I] or any candidate LHS[j] could be zero, and
+  // - can be 1 only if both mask[I] and some candidate LHS[j] could be one.
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits Res(BitWidth);
+  Res.setAllConflict();
+
+  unsigned M0 = 0, M1 = 0;
+  for (unsigned I = 0; I < BitWidth; ++I) {
+    if (!RHS.One[I])
+      Res.One.clearBit(I); // mask[I] could be 0 -> output[I] could be 0
+    if (!RHS.Zero[I]) {
+      APInt Range = APInt::getBitsSet(BitWidth, M0, M1 + 1);
+      if (!Range.isSubsetOf(LHS.One))
+        Res.One.clearBit(I); // some candidate could be 0
+      if (!Range.isSubsetOf(LHS.Zero))
+        Res.Zero.clearBit(I); // some candidate could be 1
+    }
+    if (RHS.One[I])
+      ++M0, ++M1;
+    else if (!RHS.Zero[I])
+      ++M1;
+  }
+  return Res;
+}
+
 std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
-    return std::optional<bool>(LHS.getConstant() == RHS.getConstant());
+    return LHS.getConstant() == RHS.getConstant();
   if (LHS.One.intersects(RHS.Zero) || RHS.One.intersects(LHS.Zero))
-    return std::optional<bool>(false);
+    return false;
   return std::nullopt;
 }
 
 std::optional<bool> KnownBits::ne(const KnownBits &LHS, const KnownBits &RHS) {
   if (std::optional<bool> KnownEQ = eq(LHS, RHS))
-    return std::optional<bool>(!*KnownEQ);
+    return !*KnownEQ;
   return std::nullopt;
 }
 
 std::optional<bool> KnownBits::ugt(const KnownBits &LHS, const KnownBits &RHS) {
   // LHS >u RHS -> false if umax(LHS) <= umax(RHS)
   if (LHS.getMaxValue().ule(RHS.getMinValue()))
-    return std::optional<bool>(false);
+    return false;
   // LHS >u RHS -> true if umin(LHS) > umax(RHS)
   if (LHS.getMinValue().ugt(RHS.getMaxValue()))
-    return std::optional<bool>(true);
+    return true;
   return std::nullopt;
 }
 
 std::optional<bool> KnownBits::uge(const KnownBits &LHS, const KnownBits &RHS) {
   if (std::optional<bool> IsUGT = ugt(RHS, LHS))
-    return std::optional<bool>(!*IsUGT);
+    return !*IsUGT;
   return std::nullopt;
 }
 
@@ -671,16 +751,16 @@ std::optional<bool> KnownBits::ule(const KnownBits &LHS, const KnownBits &RHS) {
 std::optional<bool> KnownBits::sgt(const KnownBits &LHS, const KnownBits &RHS) {
   // LHS >s RHS -> false if smax(LHS) <= smax(RHS)
   if (LHS.getSignedMaxValue().sle(RHS.getSignedMinValue()))
-    return std::optional<bool>(false);
+    return false;
   // LHS >s RHS -> true if smin(LHS) > smax(RHS)
   if (LHS.getSignedMinValue().sgt(RHS.getSignedMaxValue()))
-    return std::optional<bool>(true);
+    return true;
   return std::nullopt;
 }
 
 std::optional<bool> KnownBits::sge(const KnownBits &LHS, const KnownBits &RHS) {
   if (std::optional<bool> KnownSGT = sgt(RHS, LHS))
-    return std::optional<bool>(!*KnownSGT);
+    return !*KnownSGT;
   return std::nullopt;
 }
 

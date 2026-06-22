@@ -11,8 +11,6 @@
 
 #include "DAPForward.h"
 #include "Protocol/ProtocolRequests.h"
-#include "lldb/API/SBCompileUnit.h"
-#include "lldb/API/SBFormat.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-types.h"
@@ -22,7 +20,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -43,34 +40,6 @@ namespace lldb_dap {
 void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
                        llvm::StringRef str);
 
-/// Extract simple values as a string.
-///
-/// \param[in] value
-///     A JSON value to extract the string from.
-///
-/// \return
-///     A llvm::StringRef that contains the string value, or an empty
-///     string if \a value isn't a string.
-llvm::StringRef GetAsString(const llvm::json::Value &value);
-
-/// Extract the string value for the specified key from the
-/// specified object.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the value from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     A llvm::StringRef that contains the string value for the
-///     specified \a key, or \a std::nullopt if there is no key that
-///     matches or if the value is not a string.
-std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
-                                         llvm::StringRef key);
-std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
-                                         llvm::StringRef key);
-
 /// Extract the integer value for the specified key from the specified object
 /// and return it as the specified integer type T.
 ///
@@ -89,47 +58,7 @@ std::optional<T> GetInteger(const llvm::json::Object &obj,
                             llvm::StringRef key) {
   return obj.getInteger(key);
 }
-
-template <typename T>
-std::optional<T> GetInteger(const llvm::json::Object *obj,
-                            llvm::StringRef key) {
-  if (obj != nullptr)
-    return GetInteger<T>(*obj, key);
-  return std::nullopt;
-}
 /// @}
-
-/// Extract the boolean value for the specified key from the
-/// specified object.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the value from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     The boolean value for the specified \a key, or std::nullopt
-///     if there is no key that matches or if the value is not a
-///     boolean value of an integer.
-/// @{
-std::optional<bool> GetBoolean(const llvm::json::Object &obj,
-                               llvm::StringRef key);
-std::optional<bool> GetBoolean(const llvm::json::Object *obj,
-                               llvm::StringRef key);
-/// @}
-
-/// Check if the specified key exists in the specified object.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the value from
-///
-/// \param[in] key
-///     The key to check for
-///
-/// \return
-///     \b True if the key exists in the \a obj, \b False otherwise.
-bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key);
 
 /// Encodes a memory reference
 std::string EncodeMemoryReference(lldb::addr_t addr);
@@ -165,64 +94,6 @@ DecodeMemoryReference(llvm::StringRef memoryReference);
 bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
                            lldb::addr_t &out, llvm::json::Path path,
                            bool required, bool allow_empty = false);
-
-/// Extract an array of strings for the specified key from an object.
-///
-/// String values in the array will be extracted without any quotes
-/// around them. Numbers and Booleans will be converted into
-/// strings. Any NULL, array or objects values in the array will be
-/// ignored.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the array from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     An array of string values for the specified \a key, or
-///     \a fail_value if there is no key that matches or if the
-///     value is not an array or all items in the array are not
-///     strings, numbers or booleans.
-std::vector<std::string> GetStrings(const llvm::json::Object *obj,
-                                    llvm::StringRef key);
-
-/// Extract an object of key value strings for the specified key from an object.
-///
-/// String values in the object will be extracted without any quotes
-/// around them. Numbers and Booleans will be converted into
-/// strings. Any NULL, array or objects values in the array will be
-/// ignored.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the array from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     An object of key value strings for the specified \a key, or
-///     \a fail_value if there is no key that matches or if the
-///     value is not an object or key and values in the object are not
-///     strings, numbers or booleans.
-std::unordered_map<std::string, std::string>
-GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
-
-/// Fill a response object given the request object.
-///
-/// The \a response object will get its "type" set to "response",
-/// the "seq" set to zero, "response_seq" set to the "seq" value from
-/// \a request, "command" set to the "command" from \a request,
-/// and "success" set to true.
-///
-/// \param[in] request
-///     The request object received from a call to DAP::ReadJSON().
-///
-/// \param[in,out] response
-///     An empty llvm::json::Object object that will be filled
-///     in as noted in description.
-void FillResponse(const llvm::json::Object &request,
-                  llvm::json::Object &response);
 
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
@@ -322,10 +193,10 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
 llvm::json::Object CreateRunInTerminalReverseRequest(
-    llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
+    llvm::StringRef program, const std::vector<protocol::String> &args,
+    const llvm::StringMap<protocol::String> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid,
-    const std::vector<std::optional<std::string>> &stdio, bool external);
+    const std::vector<std::optional<protocol::String>> &stdio, bool external);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

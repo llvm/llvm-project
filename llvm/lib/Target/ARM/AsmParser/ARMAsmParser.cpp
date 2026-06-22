@@ -689,8 +689,8 @@ public:
   };
 
   ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI, MII), UC(Parser), MS(STI) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), UC(Parser), MS(STI) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.
@@ -1179,7 +1179,12 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     int64_t Value = CE->getValue();
-    return ((Value & 3) == 0) && Value >= N && Value <= M;
+    // ARM assembly uses #-0 to request the subtract-zero encoding,
+    // which is distinct from the add-zero spelling even though both
+    // have zero magnitude. The rather odd std::numeric_limits
+    // invocation gives us this.
+    return (((Value & 3) == 0) && Value >= N && Value <= M) ||
+           Value == std::numeric_limits<int32_t>::min();
   }
   template<int64_t N, int64_t M>
   bool isImmediateS2() const {
@@ -6871,19 +6876,13 @@ void ARMAsmParser::tryConvertingToTwoOperandForm(
   }
 }
 
+static bool isARMMCExpr(MCParsedAsmOperand &MCOp);
 // this function returns true if the operand is one of the following
 // relocations: :upper8_15:, :upper0_7:, :lower8_15: or :lower0_7:
 static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
+  assert(isARMMCExpr(MCOp));
   ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
-  if (!Op.isImm())
-    return false;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (CE)
-    return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-  if (!E)
-    return false;
-  auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
+  auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(Op.getImm());
   if (ARM16Expr && (ARM16Expr->getSpecifier() == ARM::S_HI_8_15 ||
                     ARM16Expr->getSpecifier() == ARM::S_HI_0_7 ||
                     ARM16Expr->getSpecifier() == ARM::S_LO_8_15 ||
@@ -6947,7 +6946,7 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
 // tablegen, so fix it up here.
 //
 // We have to be careful to not emit an invalid Rt2 here, because the rest of
-// the assembly parser could then generate confusing diagnostics refering to
+// the assembly parser could then generate confusing diagnostics referring to
 // it. If we do find anything that prevents us from doing the transformation we
 // bail out, and let the assembly parser report an error on the instruction as
 // it is written.
@@ -7259,8 +7258,8 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // This marks the end of the LHS Mnemonic operators.
-  // This is used for indexing into the non-menmonic operators as some of the
-  // mnemonic operators are optional and therfore indexes can differ.
+  // This is used for indexing into the non-mnemonic operators as some of the
+  // mnemonic operators are optional and therefore indexes can differ.
   unsigned MnemonicOpsEndInd = Operands.size();
 
   // Read the remaining operands.
@@ -7652,13 +7651,7 @@ static bool isARMMCExpr(MCParsedAsmOperand &MCOp) {
   ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
   if (!Op.isImm())
     return false;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (CE)
-    return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-  if (!E)
-    return false;
-  return true;
+  return !isa<MCConstantExpr>(Op.getImm());
 }
 
 // FIXME: We would really like to be able to tablegen'erate this.
@@ -8286,10 +8279,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     int i = (Operands[MnemonicOpsEndInd]->isImm()) ? MnemonicOpsEndInd
                                                    : MnemonicOpsEndInd + 1;
     ARMOperand &Op = static_cast<ARMOperand &>(*Operands[i]);
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-    if (CE) break;
-    const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-    if (!E) break;
+    const MCExpr *E = Op.getImm();
+    if (isa<MCConstantExpr>(E))
+      break;
     auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
     if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
                        ARM16Expr->getSpecifier() != ARM::S_LO16))
@@ -9008,7 +9000,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     Inst = TmpInst;
     return true;
   }
-  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for ommitted immediate.
+  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for omitted immediate.
   case ARM::LDRSBTii:
   case ARM::LDRHTii:
   case ARM::LDRSHTii: {
@@ -11366,7 +11358,7 @@ unsigned ARMAsmParser::MatchInstruction(OperandVector &Operands, MCInst &Inst,
     extendImplicitITBlock(ITState.Cond);
     if (MatchInstructionImpl(Operands, Inst, nullptr, MatchingInlineAsm) ==
             Match_Success) {
-      // The match succeded, but we still have to check that the instruction is
+      // The match succeeded, but we still have to check that the instruction is
       // valid in this implicit IT block.
       const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
       if (MCID.isPredicable()) {
@@ -11830,7 +11822,7 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
         getTargetStreamer().emitCode16();
       else
         getTargetStreamer().emitCode32();
-      // Warn about the implcit mode switch. GAS does not switch modes here,
+      // Warn about the implicit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following
       // instructions as the mode does not exist on the target.
       Warning(Loc, Twine("new target does not support ") +
@@ -12322,12 +12314,12 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
     return true;
 
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
 
   assert(Section && "must have section to emit alignment");
-  if (getContext().getAsmInfo()->useCodeAlign(*Section))
+  if (getContext().getAsmInfo().useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12525,7 +12517,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (getContext().getAsmInfo()->useCodeAlign(*Section))
+    if (getContext().getAsmInfo().useCodeAlign(*Section))
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

@@ -17,7 +17,7 @@ def by_suite_and_test_path(test):
     return (test.suite.name, id(test.suite), test.path_in_suite)
 
 
-class Report(object):
+class Report:
     def __init__(self, output_file):
         self.output_file = output_file
         # Set by the option parser later.
@@ -213,6 +213,7 @@ def gen_resultdb_test_entry(
         result_code == lit.Test.PASS
         or result_code == lit.Test.XPASS
         or result_code == lit.Test.FLAKYPASS
+        or result_code == lit.Test.FIXED
     ):
         test_data["status"] = "PASS"
     elif result_code == lit.Test.FAIL or result_code == lit.Test.XFAIL:

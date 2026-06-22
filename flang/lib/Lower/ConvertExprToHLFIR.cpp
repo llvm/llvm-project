@@ -1191,52 +1191,6 @@ translateSignedRelational(Fortran::common::RelationalOperator rop) {
   llvm_unreachable("unhandled INTEGER relational operator");
 }
 
-static mlir::arith::CmpIPredicate
-translateUnsignedRelational(Fortran::common::RelationalOperator rop) {
-  switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
-    return mlir::arith::CmpIPredicate::ult;
-  case Fortran::common::RelationalOperator::LE:
-    return mlir::arith::CmpIPredicate::ule;
-  case Fortran::common::RelationalOperator::EQ:
-    return mlir::arith::CmpIPredicate::eq;
-  case Fortran::common::RelationalOperator::NE:
-    return mlir::arith::CmpIPredicate::ne;
-  case Fortran::common::RelationalOperator::GT:
-    return mlir::arith::CmpIPredicate::ugt;
-  case Fortran::common::RelationalOperator::GE:
-    return mlir::arith::CmpIPredicate::uge;
-  }
-  llvm_unreachable("unhandled UNSIGNED relational operator");
-}
-
-/// Convert parser's REAL relational operators to MLIR.
-/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
-/// requirements in the IEEE context (table 17.1 of F2018). This choice is
-/// also applied in other contexts because it is easier and in line with
-/// other Fortran compilers.
-/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
-/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
-/// whether the comparison will signal or not in case of quiet NaN argument.
-static mlir::arith::CmpFPredicate
-translateFloatRelational(Fortran::common::RelationalOperator rop) {
-  switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
-    return mlir::arith::CmpFPredicate::OLT;
-  case Fortran::common::RelationalOperator::LE:
-    return mlir::arith::CmpFPredicate::OLE;
-  case Fortran::common::RelationalOperator::EQ:
-    return mlir::arith::CmpFPredicate::OEQ;
-  case Fortran::common::RelationalOperator::NE:
-    return mlir::arith::CmpFPredicate::UNE;
-  case Fortran::common::RelationalOperator::GT:
-    return mlir::arith::CmpFPredicate::OGT;
-  case Fortran::common::RelationalOperator::GE:
-    return mlir::arith::CmpFPredicate::OGE;
-  }
-  llvm_unreachable("unhandled REAL relational operator");
-}
-
 template <int KIND>
 struct BinaryOp<Fortran::evaluate::Relational<
     Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, KIND>>> {
@@ -1247,7 +1201,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
     auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, translateSignedRelational(op.opr), lhs, rhs);
+        builder, loc, Fortran::lower::translateSignedRelational(op.opr), lhs,
+        rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1269,7 +1224,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
     mlir::Value lhsSL = builder.createConvert(loc, signlessType, lhs);
     mlir::Value rhsSL = builder.createConvert(loc, signlessType, rhs);
     auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, translateUnsignedRelational(op.opr), lhsSL, rhsSL);
+        builder, loc, Fortran::lower::translateUnsignedRelational(op.opr),
+        lhsSL, rhsSL);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1284,7 +1240,8 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
     auto cmp = mlir::arith::CmpFOp::create(
-        builder, loc, translateFloatRelational(op.opr), lhs, rhs);
+        builder, loc, Fortran::lower::translateFloatRelational(op.opr), lhs,
+        rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1298,8 +1255,9 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    auto cmp = fir::CmpcOp::create(builder, loc,
-                                   translateFloatRelational(op.opr), lhs, rhs);
+    auto cmp = fir::CmpcOp::create(
+        builder, loc, Fortran::lower::translateFloatRelational(op.opr), lhs,
+        rhs);
     return hlfir::EntityWithAttributes{cmp};
   }
 };
@@ -1326,6 +1284,33 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
+    bool lhsIsLogical = mlir::isa<fir::LogicalType>(lhs.getType());
+    bool rhsIsLogical = mlir::isa<fir::LogicalType>(rhs.getType());
+    if (lhsIsLogical || rhsIsLogical) {
+      // Use fir logical ops when at least one operand is a Fortran LOGICAL.
+      // Ensure both operands have the same type.
+      mlir::Type resTy = lhsIsLogical ? lhs.getType() : rhs.getType();
+      mlir::Value lhsVal = builder.createConvert(loc, resTy, lhs);
+      mlir::Value rhsVal = builder.createConvert(loc, resTy, rhs);
+      switch (op.logicalOperator) {
+      case Fortran::evaluate::LogicalOperator::And:
+        return hlfir::EntityWithAttributes{
+            fir::LogicalAndOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Or:
+        return hlfir::EntityWithAttributes{
+            fir::LogicalOrOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Eqv:
+        return hlfir::EntityWithAttributes{
+            fir::EqvOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Neqv:
+        return hlfir::EntityWithAttributes{
+            fir::NeqvOp::create(builder, loc, resTy, lhsVal, rhsVal)};
+      case Fortran::evaluate::LogicalOperator::Not:
+        llvm_unreachable(".NOT. is not a binary operator");
+      }
+      llvm_unreachable("unhandled logical operation");
+    }
+    // Both operands are i1 (from arithmetic comparisons): use arith ops.
     mlir::Type i1Type = builder.getI1Type();
     mlir::Value i1Lhs = builder.createConvert(loc, i1Type, lhs);
     mlir::Value i1Rhs = builder.createConvert(loc, i1Type, rhs);
@@ -1343,7 +1328,6 @@ struct BinaryOp<Fortran::evaluate::LogicalOperation<KIND>> {
       return hlfir::EntityWithAttributes{mlir::arith::CmpIOp::create(
           builder, loc, mlir::arith::CmpIPredicate::ne, i1Lhs, i1Rhs)};
     case Fortran::evaluate::LogicalOperator::Not:
-      // lib/evaluate expression for .NOT. is Fortran::evaluate::Not<KIND>.
       llvm_unreachable(".NOT. is not a binary operator");
     }
     llvm_unreachable("unhandled logical operation");
@@ -1594,7 +1578,12 @@ public:
 private:
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
-    TODO(getLoc(), "BOZ");
+    // BOZ literals reach lowering only from BGE/BGT/BLE/BLT intrinsics when at
+    // least one operand is not constant (otherwise folds). For all other
+    // intrinsics, semantics converts BOZ to the expected type before lowering.
+    Fortran::evaluate::Constant<Fortran::evaluate::LargestInt> intConstant{
+        expr};
+    return gen(intConstant);
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
@@ -1819,6 +1808,205 @@ private:
       TODO(loc, "stride inquiry");
     }
     llvm_unreachable("unknown descriptor inquiry");
+  }
+
+  /// Build nested if-then-else chain by walking the right-skewed
+  /// ConditionalExpr tree. The assignValue callback generates and assigns
+  /// each value to avoid evaluating non-taken branches.
+  template <typename T, typename Callback>
+  void
+  buildConditionalIfChain(const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+                          const Callback &assignValue) {
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    getStmtCtx().pushScope();
+    const hlfir::EntityWithAttributes condEntity{gen(condExpr.condition())};
+    mlir::Value condition{hlfir::loadTrivialScalar(loc, builder, condEntity)};
+    condition = builder.createConvert(loc, builder.getI1Type(), condition);
+    builder.genIfOp(loc, {}, condition, /*withElseRegion=*/true)
+        .genThen([&]() {
+          getStmtCtx().pushScope();
+          assignValue(condExpr.thenValue());
+          getStmtCtx().finalizeAndPop();
+        })
+        .genElse([&]() {
+          getStmtCtx().pushScope();
+          assignValue(condExpr.elseValue());
+          getStmtCtx().finalizeAndPop();
+        })
+        .end();
+    getStmtCtx().finalizeAndPop();
+  }
+
+  /// Generate scalar conditional with lazy evaluation using assignment.
+  /// Creates a temporary and assigns the selected branch value to it.
+  template <typename T>
+  hlfir::Entity
+  genScalarConditional(const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+                       mlir::Type elementType,
+                       const llvm::SmallVector<mlir::Value, 1> &typeParams) {
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    const mlir::Value tempStorage{builder.createTemporary(
+        loc, elementType, ".cond.scalar",
+        /*shape=*/mlir::ValueRange{}, /*typeParams=*/typeParams)};
+    const hlfir::DeclareOp tempDecl{hlfir::DeclareOp::create(
+        builder, loc, tempStorage, ".cond.result",
+        /*shape=*/mlir::Value{}, /*typeParams=*/typeParams)};
+    const hlfir::Entity temp{tempDecl};
+    buildConditionalIfChain(
+        condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
+          hlfir::Entity entity{gen(expr)};
+          hlfir::AssignOp::create(builder, loc, entity, temp);
+        });
+    return temp;
+  }
+
+  /// Generate scalar conditional for trivial scalar types using fir.if SSA
+  /// results; avoids temporary and assignment.
+  template <typename T>
+  hlfir::Entity genTrivialScalarConditional(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      mlir::Type elementType) {
+    assert(fir::isa_trivial(elementType) &&
+           "genTrivialScalarConditional only handles trivial scalar types");
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    getStmtCtx().pushScope();
+    const hlfir::EntityWithAttributes condEntity{gen(condExpr.condition())};
+    mlir::Value condition{hlfir::loadTrivialScalar(loc, builder, condEntity)};
+    condition = builder.createConvert(loc, builder.getI1Type(), condition);
+    auto results =
+        builder
+            .genIfOp(loc, {elementType}, condition,
+                     /*withElseRegion=*/true)
+            .genThen([&]() {
+              getStmtCtx().pushScope();
+              hlfir::Entity entity{gen(condExpr.thenValue())};
+              entity = hlfir::loadTrivialScalar(loc, builder, entity);
+              getStmtCtx().finalizeAndPop();
+              mlir::Value result =
+                  builder.createConvert(loc, elementType, entity);
+              fir::ResultOp::create(builder, loc, result);
+            })
+            .genElse([&]() {
+              getStmtCtx().pushScope();
+              hlfir::Entity entity{gen(condExpr.elseValue())};
+              entity = hlfir::loadTrivialScalar(loc, builder, entity);
+              getStmtCtx().finalizeAndPop();
+              mlir::Value result =
+                  builder.createConvert(loc, elementType, entity);
+              fir::ResultOp::create(builder, loc, result);
+            })
+            .getResults();
+    getStmtCtx().finalizeAndPop();
+    return hlfir::Entity{results[0]};
+  }
+
+  /// Generate conditional expression using an allocatable temporary with lazy
+  /// evaluation. Creates an unallocated allocatable, then uses assignment to
+  /// set the value from the chosen branch (allocation/reallocation handled by
+  /// runtime).
+  template <typename T>
+  hlfir::Entity genAllocatableConditional(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      mlir::Type resultType, llvm::StringRef debugName) {
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    // Polymorphic types need fir.class (not fir.box) to carry dynamic type
+    // info. Both scalar and array polymorphic types reach here.
+    const bool isPolymorphic{fir::isPolymorphicType(resultType)};
+    const mlir::Type allocType{
+        hlfir::getFortranElementOrSequenceType(resultType)};
+    const mlir::Type heapType{fir::HeapType::get(allocType)};
+    const mlir::Type boxHeapType{isPolymorphic
+                                     ? mlir::Type{fir::ClassType::get(heapType)}
+                                     : mlir::Type{fir::BoxType::get(heapType)}};
+    const mlir::Value tempStorage{
+        builder.createTemporary(loc, boxHeapType, debugName)};
+    const mlir::Value unallocBox{fir::factory::createUnallocatedBox(
+        builder, loc, boxHeapType, /*nonDeferredParams=*/{})};
+    builder.createStoreWithConvert(loc, unallocBox, tempStorage);
+    const hlfir::DeclareOp tempDecl{
+        hlfir::DeclareOp::create(builder, loc, tempStorage, ".cond.result")};
+    const hlfir::Entity temp{tempDecl};
+    // Lazy evaluation: only the selected branch is evaluated and assigned.
+    buildConditionalIfChain(
+        condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
+          const hlfir::Entity entity{gen(expr)};
+          hlfir::AssignOp::create(builder, loc, entity, temp,
+                                  /*isWholeAllocatableAssignment=*/true,
+                                  /*keepLhsLengthIfRealloc=*/false,
+                                  /*temporary_lhs=*/true);
+        });
+    fir::FirOpBuilder *const bldr{&builder};
+    getStmtCtx().attachCleanup([=]() {
+      fir::factory::genFreememIfAllocated(
+          *bldr, loc,
+          fir::MutableBoxValue{tempStorage, /*lenParams=*/{},
+                               fir::MutableProperties{}});
+    });
+    return temp;
+  }
+
+  /// Generate scalar CHARACTER conditional with proper length handling.
+  template <typename T>
+  std::optional<hlfir::EntityWithAttributes> genCharacterConditional(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
+    const mlir::Location loc{getLoc()};
+    fir::FirOpBuilder &builder{getBuilder()};
+    const mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr))};
+    const mlir::Type elementType{hlfir::getFortranElementType(resultType)};
+    if (auto charType = mlir::dyn_cast<fir::CharacterType>(elementType)) {
+      if (charType.hasConstantLen()) {
+        llvm::SmallVector<mlir::Value, 1> typeParams;
+        const mlir::Value len{builder.createIntegerConstant(
+            loc, builder.getCharacterLengthType(), charType.getLen())};
+        typeParams.push_back(len);
+        return hlfir::EntityWithAttributes{
+            genScalarConditional(condExpr, elementType, typeParams)};
+      }
+      // Non-constant/varying length: use allocatable conditional to get length
+      // from selected branch.
+      return hlfir::EntityWithAttributes{
+          genAllocatableConditional(condExpr, elementType, ".cond.char")};
+    }
+    return std::nullopt;
+  }
+
+  /// Conditional expression (Fortran 2023)
+  template <typename T>
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
+    const int rank{condExpr.Rank()};
+    mlir::Type resultType{Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr))};
+    if (fir::isRecordWithTypeParameters(
+            hlfir::getFortranElementType(resultType)))
+      TODO(getLoc(), "conditional expression with length-parameterized "
+                     "derived type");
+    // Arrays: handle early to avoid unnecessary type checks.
+    // Per F2023 10.1.4(7), the shape is determined by the chosen branch.
+    if (rank != 0) {
+      return hlfir::EntityWithAttributes{
+          genAllocatableConditional(condExpr, resultType, ".cond.array")};
+    }
+    // CHARACTER scalars require special handling for type parameters.
+    if constexpr (T::category == Fortran::common::TypeCategory::Character) {
+      if (auto result = genCharacterConditional(condExpr))
+        return *result;
+    }
+    // Scalar types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED, Derived).
+    const mlir::Type elementType{hlfir::getFortranElementType(resultType)};
+    if (fir::isPolymorphicType(resultType))
+      return hlfir::EntityWithAttributes{
+          genAllocatableConditional(condExpr, resultType, ".cond.polymorphic")};
+    if (fir::isa_trivial(elementType))
+      return hlfir::EntityWithAttributes{
+          genTrivialScalarConditional(condExpr, elementType)};
+    return hlfir::EntityWithAttributes{
+        genScalarConditional(condExpr, elementType, {})};
   }
 
   hlfir::EntityWithAttributes

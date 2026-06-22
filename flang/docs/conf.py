@@ -90,7 +90,7 @@ copyright = "2017-%d, The Flang Team" % date.today().year
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "analyzer", "FIR/*"]
+exclude_patterns = ["_build", "analyzer", "FIR/*", "MeetingNotes/*"]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None

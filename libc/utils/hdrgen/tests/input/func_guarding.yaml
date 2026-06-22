@@ -1,0 +1,38 @@
+header: func_guarding.h
+standards:
+  - stdc
+functions:
+  - name: func_plain
+    return_type: int
+    arguments:
+      - type: int
+    standards:
+      - stdc
+  - name: func_guarded_a
+    return_type: int
+    arguments:
+      - type: int
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: func_guarded_b
+    return_type: int
+    arguments:
+      - type: int
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: func_guarded_c
+    return_type: int
+    arguments:
+      - type: int
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: func_all_guarded
+    return_type: void
+    arguments:
+      - type: int
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT128

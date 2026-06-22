@@ -130,7 +130,7 @@ public:
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.
-  uint32_t groupId;
+  uint32_t groupId = 0;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -157,10 +157,6 @@ public:
   // making the addressable range relative to the toc pointer
   // [.got, .got + 0xFFFC].
   bool ppc64SmallCodeModelTocRelocs = false;
-
-  // True if the file has TLSGD/TLSLD GOT relocations without R_PPC64_TLSGD or
-  // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
-  bool ppc64DisableTLSRelax = false;
 
 public:
   // If not empty, this stores the name of the archive containing this file.
@@ -360,7 +356,7 @@ public:
   template <typename ELFT> void parse();
 
   // Used for --as-needed
-  bool isNeeded;
+  std::atomic<bool> isNeeded;
 
   // Non-weak undefined symbols which are not yet resolved when the SO is
   // parsed. Only filled for `--no-allow-shlib-undefined`.

@@ -15,10 +15,10 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -175,27 +175,6 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
                                 llvm::ArrayRef<ElementType>(outputValues));
 }
 
-// Try to get the values of a DenseResourceElementsAttr construct
-template <typename T>
-std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
-  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
-    // Check that the resource memory blob exists
-    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
-    if (!blob)
-      return std::nullopt;
-
-    // Check that the data are in a valid form
-    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
-                                             blob->getData())) {
-      return std::nullopt;
-    }
-
-    return blob->template getDataAs<T>();
-  }
-
-  return std::nullopt;
-}
-
 // A type specialized transposition of an ElementsAttr.
 // This implementation tries to operate on the underlying data in its raw
 // representation when possible to avoid allocating a large number of Attribute
@@ -263,6 +242,8 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
     auto outputType = cast<ShapedType>(op.getType());
+    if (!outputType.hasRank() || !outputType.hasStaticShape())
+      return failure();
     // TOSA supports quantized types.
     if (!outputType.getElementType().isIntOrIndexOrFloat())
       return failure();
@@ -315,6 +296,10 @@ struct TosaFoldConstantReciprocal : public OpRewritePattern<ReciprocalOp> {
           recip, "Currently, reciprocals will only be folded if the input "
                  "tensor has a single user");
     }
+
+    if (inputTensor.getType() != recip.getType())
+      return rewriter.notifyMatchFailure(
+          recip, "input tensor and reciprocal output have different type");
 
     // Create a new tensor with the updated values
     auto newTensor = applyElementWise<APFloat, APFloat, FloatType>(
