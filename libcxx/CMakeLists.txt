@@ -445,7 +445,21 @@ set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
 set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
     "Path where target-agnostic libc++ module source files should be installed.")
 
-set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
+# On platforms that don't support shared library targets (e.g. CMAKE_SYSTEM_NAME
+# of "Generic", used for GPU and other baremetal targets), CMake implicitly
+# changes shared library targets into static library targets. The shared target
+# is always defined even when LIBCXX_ENABLE_SHARED is off, so this would result
+# in two targets producing the same "libc++.a" output and break the build. Give
+# the shared library a different default output name in that case so it can't
+# collide with the static library.
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBCXX_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(DEFINED LIBCXX_TARGET_SUPPORTS_SHARED_LIBS AND NOT LIBCXX_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXX_DEFAULT_SHARED_OUTPUT_NAME "c++-shared")
+else()
+  set(LIBCXX_DEFAULT_SHARED_OUTPUT_NAME "c++")
+endif()
+set(LIBCXX_SHARED_OUTPUT_NAME "${LIBCXX_DEFAULT_SHARED_OUTPUT_NAME}" CACHE STRING "Output name for the shared libc++ runtime library.")
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 # TODO: Use common runtimes infrastructure for output and install paths
