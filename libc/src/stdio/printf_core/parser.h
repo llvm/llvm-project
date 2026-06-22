@@ -263,18 +263,20 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
+        switch (lm) {
 #if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
-        if (lm == LengthModifier::Q) {
+        case (LengthModifier::Q):
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, float128, conv_index);
-        } else
+          break;
 #endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-            if (lm == LengthModifier::L) {
+        case (LengthModifier::L):
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
-        } else
+          break;
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-        {
+        default:
           WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+          break;
         }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
