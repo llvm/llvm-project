@@ -497,9 +497,10 @@ static bool ParseMemoryRegionInfoJSON(StructuredData::Object *json,
         if (dict->HasKey("types")) {
           dict->GetValueForKey("types")->GetAsArray()->ForEach(
               [&ri](StructuredData::Object *obj) -> bool {
-                if (!obj->GetAsString())
+                StructuredData::String *str = obj->GetAsString();
+                if (!str)
                   return true;
-                if (obj->GetAsString()->GetValue() == "stack")
+                if (str->GetValue() == "stack")
                   ri.SetIsStackMemory(eLazyBoolYes);
                 return true;
               });
