@@ -17,6 +17,21 @@
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3-s.s -o f3-s.o
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3-f.s -o f3-f.o
 
+## Test PLT generation with unlabeled landing pads
+# RUN: llvm-mc -filetype=obj -triple=riscv32 rv32-plt-foo.s -o rv32-plt-foo.o
+# RUN: ld.lld -shared rv32-plt-foo.o -soname=libfoo32.so -z zicfilp-unlabeled-report=error --fatal-warnings -o libfoo32.so
+# RUN: llvm-mc -filetype=obj -triple=riscv32 rv32-plt-start.s -o rv32-plt-start.o
+# RUN: ld.lld rv32-plt-start.o libfoo32.so -z zicfilp-unlabeled-report=error --fatal-warnings -o out.plt32
+# RUN: llvm-readelf -S out.plt32 | FileCheck --check-prefix=PLT-SEC32 %s
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+experimental-zicfilp out.plt32 | FileCheck --check-prefixes=PLT-DIS,PLT-DIS32 %s
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64 rv64-plt-foo.s -o rv64-plt-foo.o
+# RUN: ld.lld -shared rv64-plt-foo.o -soname=libfoo64.so -z zicfilp-unlabeled-report=error --fatal-warnings -o libfoo64.so
+# RUN: llvm-mc -filetype=obj -triple=riscv64 rv64-plt-start.s -o rv64-plt-start.o
+# RUN: ld.lld rv64-plt-start.o libfoo64.so -z zicfilp-unlabeled-report=error --fatal-warnings -o out.plt64
+# RUN: llvm-readelf -S out.plt64 | FileCheck --check-prefix=PLT-SEC64 %s
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+experimental-zicfilp out.plt64 | FileCheck --check-prefixes=PLT-DIS,PLT-DIS64 %s
+
 ## ZICFILP-unlabeled should be enabled when it's enabled in all inputs or when
 ## it's forced on.
 # RUN: ld.lld rv32-f1-s.o rv32-f2-s.o rv32-f3-s.o -o out.rv32 --fatal-warnings
@@ -67,6 +82,33 @@
 ## -z zicfilp=unlabeled should override and disable ZICFILP-func-sig.
 # RUN: llvm-readelf -n out.override | FileCheck --check-prefixes=ZICFILP,OVERRIDE %s
 # OVERRIDE-NOT: ZICFILP-func-sig
+
+# PLT-SEC32: .plt     PROGBITS {{0*}}00011210
+# PLT-SEC32: .got.plt PROGBITS {{0*}}000132a8
+
+# PLT-SEC64: .plt     PROGBITS {{0*}}00011330
+# PLT-SEC64: .got.plt PROGBITS {{0*}}00013430
+
+# PLT-DIS:      Disassembly of section .plt:
+# PLT-DIS:      <.plt>:
+# PLT-DIS-NEXT:     auipc t3, 0x2
+# PLT-DIS-NEXT:     sub t1, t1, t2
+# PLT-DIS32-NEXT:   lw t2, 0x98(t3)
+# PLT-DIS64-NEXT:   ld t2, 0x100(t3)
+# PLT-DIS-NEXT:     addi t1, t1, -0x30
+# PLT-DIS32-NEXT:   addi t0, t3, 0x98
+# PLT-DIS64-NEXT:   addi t0, t3, 0x100
+# PLT-DIS32-NEXT:   srli t1, t1, 0x2
+# PLT-DIS64-NEXT:   srli t1, t1, 0x1
+# PLT-DIS32-NEXT:   lw t0, 0x4(t0)
+# PLT-DIS64-NEXT:   ld t0, 0x8(t0)
+# PLT-DIS-NEXT:     jr t2
+
+# PLT-DIS:          lpad 0x0
+# PLT-DIS-NEXT:     auipc t2, 0x2
+# PLT-DIS32-NEXT:   lw t2, 0x7c(t2)
+# PLT-DIS64-NEXT:   ld t2, 0xec(t2)
+# PLT-DIS-NEXT:     jalr t1, t2
 
 #--- rv32-f1-s.s
 .section ".note.gnu.property", "a"
@@ -260,4 +302,88 @@ ndesc_end:
 .globl f3
 .type f3,@function
 f3:
+  ret
+
+#--- rv32-plt-start.s
+.section ".note.gnu.property", "a"
+.balign 4
+.4byte 4
+.4byte (ndesc_end - ndesc_begin)
+.4byte 0x5        # NT_GNU_PROPERTY_TYPE_0
+.asciz "GNU"
+ndesc_begin:
+.balign 4
+.4byte 0xc0000000 # GNU_PROPERTY_RISCV_FEATURE_1_AND
+.4byte 4
+.4byte 1          # GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED
+.balign 4
+ndesc_end:
+
+.text
+.global _start, foo
+
+_start:
+  call foo@plt
+
+#--- rv32-plt-foo.s
+.section ".note.gnu.property", "a"
+.balign 4
+.4byte 4
+.4byte (ndesc_end - ndesc_begin)
+.4byte 0x5        # NT_GNU_PROPERTY_TYPE_0
+.asciz "GNU"
+ndesc_begin:
+.balign 4
+.4byte 0xc0000000 # GNU_PROPERTY_RISCV_FEATURE_1_AND
+.4byte 4
+.4byte 1          # GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED
+.balign 4
+ndesc_end:
+
+.text
+.global foo
+.type foo, @function
+foo:
+  ret
+
+#--- rv64-plt-start.s
+.section ".note.gnu.property", "a"
+.balign 8
+.4byte 4
+.4byte (ndesc_end - ndesc_begin)
+.4byte 0x5        # NT_GNU_PROPERTY_TYPE_0
+.asciz "GNU"
+ndesc_begin:
+.balign 8
+.4byte 0xc0000000 # GNU_PROPERTY_RISCV_FEATURE_1_AND
+.4byte 4
+.4byte 1          # GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED
+.balign 8
+ndesc_end:
+
+.text
+.global _start, foo
+
+_start:
+  call foo@plt
+
+#--- rv64-plt-foo.s
+.section ".note.gnu.property", "a"
+.balign 8
+.4byte 4
+.4byte (ndesc_end - ndesc_begin)
+.4byte 0x5        # NT_GNU_PROPERTY_TYPE_0
+.asciz "GNU"
+ndesc_begin:
+.balign 8
+.4byte 0xc0000000 # GNU_PROPERTY_RISCV_FEATURE_1_AND
+.4byte 4
+.4byte 1          # GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED
+.balign 8
+ndesc_end:
+
+.text
+.global foo
+.type foo, @function
+foo:
   ret
