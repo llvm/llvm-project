@@ -1147,6 +1147,106 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
+static unsigned getDiagnosedBuiltinID(const FunctionDecl *FD) {
+  if (!FD)
+    return 0;
+
+  if (const auto *DABAttr = FD->getAttr<DiagnoseAsBuiltinAttr>())
+    FD = DABAttr->getFunction();
+
+  return FD ? FD->getBuiltinID(/*ConsiderWrappers=*/true) : 0;
+}
+
+static const Expr *getDirectStrlenCallArgument(const Expr *E) {
+  const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenCasts());
+  if (!CE || CE->getNumArgs() != 1)
+    return nullptr;
+
+  switch (getDiagnosedBuiltinID(CE->getDirectCallee())) {
+  case Builtin::BIstrlen:
+  case Builtin::BI__builtin_strlen:
+    return CE->getArg(0)->IgnoreParenCasts();
+  default:
+    return nullptr;
+  }
+}
+
+static bool areSameSimpleDeclRef(const Expr *E1, const Expr *E2) {
+  const auto *D1 = dyn_cast<DeclRefExpr>(E1->IgnoreParenCasts());
+  const auto *D2 = dyn_cast<DeclRefExpr>(E2->IgnoreParenCasts());
+  return D1 && D2 && D1->getDecl() == D2->getDecl();
+}
+
+static std::string getExprAsString(const Expr *E,
+                                   const PrintingPolicy &Policy) {
+  SmallString<64> Text;
+  llvm::raw_svector_ostream OS(Text);
+  E->printPretty(OS, nullptr, Policy);
+  return std::string(OS.str());
+}
+
+static FixItHint getPlusOneFixIt(const Expr *E, const PrintingPolicy &Policy) {
+  const Expr *SimpleExpr = E->IgnoreParenCasts();
+  if (!isa<DeclRefExpr, CallExpr>(SimpleExpr))
+    return {};
+
+  SourceRange Range = E->getSourceRange();
+  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
+    return {};
+
+  SmallString<64> Replacement;
+  llvm::raw_svector_ostream OS(Replacement);
+  E->printPretty(OS, nullptr, Policy);
+  OS << " + 1";
+  return FixItHint::CreateReplacement(Range, OS.str());
+}
+
+static void DiagnoseMissingNullTerminatorSpace(Sema &S, SourceLocation Loc,
+                                               const Expr *SizeExpr,
+                                               unsigned MissingKind) {
+  std::string SizeText = getExprAsString(SizeExpr, S.getPrintingPolicy());
+  S.Diag(Loc, diag::warn_fortify_missing_null_terminator_space)
+      << MissingKind << SizeText
+      << getPlusOneFixIt(SizeExpr, S.getPrintingPolicy());
+}
+
+static void CheckCStringNullTerminatorSizeArguments(Sema &S,
+                                                    const FunctionDecl *FD,
+                                                    const CallExpr *TheCall) {
+  if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
+      S.isConstantEvaluatedContext() ||
+      S.Diags.isIgnored(diag::warn_fortify_missing_null_terminator_space,
+                        TheCall->getBeginLoc()))
+    return;
+
+  switch (getDiagnosedBuiltinID(FD)) {
+  case Builtin::BImalloc:
+  case Builtin::BI__builtin_malloc: {
+    if (TheCall->getNumArgs() != 1)
+      return;
+    const Expr *SizeArg = TheCall->getArg(0)->IgnoreParenCasts();
+    if (getDirectStrlenCallArgument(SizeArg))
+      DiagnoseMissingNullTerminatorSpace(S, TheCall->getBeginLoc(), SizeArg,
+                                         /*MissingKind=*/0);
+    return;
+  }
+  case Builtin::BImemcpy:
+  case Builtin::BI__builtin_memcpy:
+    if (TheCall->getNumArgs() != 3)
+      return;
+    break;
+  default:
+    return;
+  }
+
+  const Expr *SrcArg = TheCall->getArg(1)->IgnoreParenCasts();
+  const Expr *SizeArg = TheCall->getArg(2)->IgnoreParenCasts();
+  const Expr *StrlenArg = getDirectStrlenCallArgument(SizeArg);
+  if (StrlenArg && areSameSimpleDeclRef(StrlenArg, SrcArg))
+    DiagnoseMissingNullTerminatorSpace(S, TheCall->getBeginLoc(), SizeArg,
+                                       /*MissingKind=*/1);
+}
+
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -4645,6 +4745,7 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
+  CheckCStringNullTerminatorSizeArguments(*this, FDecl, TheCall);
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
