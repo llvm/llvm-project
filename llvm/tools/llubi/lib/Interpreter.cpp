@@ -26,6 +26,7 @@
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
+#include <cstring>
 #include <limits>
 
 namespace llvm::ubi {
@@ -775,15 +776,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       }
     }
 
-    SmallVector<Byte, 16> Tmp;
+    MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
     if (SrcMO->getState() == MemoryObjectState::Dead) {
-      Tmp.assign(Len, Byte::poison());
+      fill(DstBytes, Byte::poison());
     } else {
       ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
-      Tmp.assign(SrcBytes);
+      std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
     }
-    MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
-    copy(Tmp, DstBytes.begin());
     return AnyValue();
   }
 
