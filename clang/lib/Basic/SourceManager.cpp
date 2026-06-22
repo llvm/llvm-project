@@ -489,10 +489,8 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
   // Use getKnownEncoding to get normalized encoding names
   std::optional<llvm::TextEncoding> SourceKnown =
       llvm::TextEncodingConverter::getKnownEncoding(SourceEncoding);
-  std::optional<llvm::TextEncoding> TargetKnown =
-      llvm::TextEncodingConverter::getKnownEncoding(TargetEncoding);
   
-  if (SourceKnown == TargetKnown)
+  if (SourceKnown && *SourceKnown == llvm::TextEncoding::UTF8)
     return nullptr;
 
   // Create a cache key using only source encoding
