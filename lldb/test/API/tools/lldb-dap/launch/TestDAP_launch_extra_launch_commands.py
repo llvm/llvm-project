@@ -2,7 +2,7 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import skipIf, skipIfWindows
+from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
 
@@ -12,7 +12,6 @@ class TestDAP_launch_extra_launch_commands(lldbdap_testcase.DAPTestCaseBase):
     Tests the "launchCommands" with extra launching settings
     """
 
-    @skipIfWindows  # Wait for module events fails.
     # Flakey on 32-bit Arm Linux.
     @skipIf(oslist=["linux"], archs=["arm$"])
     def test(self):

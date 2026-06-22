@@ -228,8 +228,6 @@ static Expected<size_t> parseNames(StringRef Section,
                                                             HeaderOnDisk))
     return Err;
   Names.Parameters = HeaderOnDisk;
-  if (sys::IsBigEndianHost)
-    Names.Parameters.swapBytes();
   Current += sizeof(HeaderOnDisk);
 
   if (Names.Parameters.Flags)
@@ -363,6 +361,7 @@ parseContentsEntries(StringRef Entries,
     return Contents.Parameters.EntriesSizeInBytes;
   }
   }
+  llvm_unreachable("unhandled compression type");
 }
 
 static Expected<size_t>
@@ -452,9 +451,9 @@ Error DXContainer::parseSourceInfo(StringRef Part) {
     return Err;
   Current += sizeof(SourceInfo->Parameters);
 
-  if (SourceInfo->Parameters.AlignedSizeInBytes != Part.size())
-    return parseFailed(formatv("size field in SRCI header ({0} bytes) does not "
-                               "match SRCI part size ({1} bytes)",
+  if (SourceInfo->Parameters.AlignedSizeInBytes > Part.size())
+    return parseFailed(formatv("size field in SRCI header ({0} bytes) is "
+                               "greater than SRCI part size ({1} bytes)",
                                SourceInfo->Parameters.AlignedSizeInBytes,
                                Part.size()));
   if (SourceInfo->Parameters.Flags)

@@ -102,15 +102,6 @@ can trigger extraction of archive members that define that symbol:
 
   clang-sycl-linker input.bc -u my_init_function -l device
 
-Implementation
---------------
-
-Archive linking in ``clang-sycl-linker`` is implemented using the shared
-``llvm::offloading::resolveArchiveMembers()`` API from
-``llvm/lib/Frontend/Offloading/ArchiveLinker.cpp``. This same infrastructure is
-also used by ``clang-nvlink-wrapper``, ensuring consistent archive linking
-semantics across offloading tools.
-
 Examples
 ========
 

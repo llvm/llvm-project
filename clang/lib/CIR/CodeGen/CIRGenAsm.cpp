@@ -560,10 +560,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
     llvm::SmallVector<mlir::Attribute> operandAttrs;
 
-    int i = 0;
-    for (auto typ : argElemTypes) {
+    for (auto [idx, typ] : llvm::enumerate(argElemTypes)) {
       if (typ) {
-        [[maybe_unused]] mlir::Value op = args[i++];
+        [[maybe_unused]] mlir::Value op = args[idx];
         assert(mlir::isa<cir::PointerType>(op.getType()) &&
                "pointer type expected");
         assert(cast<cir::PointerType>(op.getType()).getPointee() == typ &&

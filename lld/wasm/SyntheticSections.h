@@ -102,26 +102,20 @@ protected:
  */
 template <typename T> struct ImportKey {
 public:
-  enum class State { Plain, Empty };
-
-public:
   T type;
   std::optional<StringRef> importModule;
   std::optional<StringRef> importName;
-  State state;
 
 public:
-  ImportKey(T type) : type(type), state(State::Plain) {}
-  ImportKey(T type, State state) : type(type), state(state) {}
+  ImportKey(T type) : type(type) {}
   ImportKey(T type, std::optional<StringRef> importModule,
             std::optional<StringRef> importName)
-      : type(type), importModule(importModule), importName(importName),
-        state(State::Plain) {}
+      : type(type), importModule(importModule), importName(importName) {}
 };
 
 template <typename T>
 inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
-  return lhs.state == rhs.state && lhs.importModule == rhs.importModule &&
+  return lhs.importModule == rhs.importModule &&
          lhs.importName == rhs.importName && lhs.type == rhs.type;
 }
 
@@ -135,7 +129,6 @@ template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
     uintptr_t hash = hash_value(key.importModule);
     hash = hash_combine(hash, key.importName);
     hash = hash_combine(hash, llvm::DenseMapInfo<T>::getHashValue(key.type));
-    hash = hash_combine(hash, key.state);
     return hash;
   }
   static bool isEqual(const lld::wasm::ImportKey<T> &lhs,

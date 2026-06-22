@@ -1009,7 +1009,7 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def ReifyShapedTypeUsingReifyResultShapesOp :
     TEST_Op<"reify_shaped_type_using_reify_result_shapes",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1024,7 +1024,7 @@ def ReifyShapedTypeUsingReifyResultShapesOp :
 
 def ReifyShapedTypeUsingReifyShapeOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1040,7 +1040,7 @@ def ReifyShapedTypeUsingReifyShapeOfResultOp :
 
 def ReifyShapedTypeUsingReifyDimOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -4024,6 +4024,26 @@ def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
 }
 
+// Records the value last stored to a memref slot to test
+// `PromotableOpInterface::visitReplacedValues`.
+def TestSlotTracker : TEST_Op<"slot_tracker",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses",
+                                "requiresReplacedValues",
+                                "visitReplacedValues"]>]> {
+  let arguments = (ins AnyMemRef:$source, StrAttr:$name);
+  let assemblyFormat =
+      "$source `,` $name attr-dict `:` type($source)";
+}
+
+// Marker emitted by `test.slot_tracker` at each reaching-definition store.
+def TestTrackedValue : TEST_Op<"tracked_value"> {
+  let arguments = (ins AnyType:$value, StrAttr:$name);
+  let assemblyFormat =
+      "$value `,` $name attr-dict `:` type($value)";
+}
+
 // Transparent alias of a memref slot exposing two simultaneously-usable
 // aliases of the same bit-width at different signednesses (signed and
 // unsigned 32-bit integers, both aliasing the signless i32 storage).
@@ -4176,6 +4196,103 @@ def TestCreateTensorOp
 def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_BufferLikeTypeInterface>:$output);
+}
+
+def TestTensorWithFutureLayoutOp
+    : TEST_Op<"tensor_with_future_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
+  let description = [{
+    A tensor operation that creates a new value and then forces a specific
+    `TestMemRefLayoutAttr` layout during bufferization into a memref. In tensor
+    world, this op does nothing encoding/layout wise.
+  }];
+
+  let arguments = (ins TestMemRefLayoutAttr:$layout);
+  let results = (outs AnyRankedTensor:$output);
+  let extraClassDefinition = [{
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryWrite(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToAllocation(
+        mlir::Value) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestTensorWithFutureLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestTensorWithFutureLayoutOp::getAliasingOpOperands(::mlir::Value,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestForceNewLayoutOp
+    : TEST_Op<"force_new_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
+  let description = [{
+    A tensor operation that modifies a pre-existing value and then forces a
+    specific `TestMemRefLayoutAttr` to be set during bufferization into a
+    memref. In tensor world, this op does nothing encoding/layout wise. It is
+    similar to TestTensorWithFutureLayoutOp, but it keeps the IR values
+    "connected" which can be particularly useful in e.g. SCF loop's body (one
+    can modify an initArg's layout and yield the new-layout value).
+  }];
+
+  let arguments = (ins
+    AnyRankedTensor:$input,
+    TestMemRefLayoutAttr:$layout
+  );
+  let results = (outs AnyRankedTensor:$output);
+  let extraClassDefinition = [{
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestForceNewLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestForceNewLayoutOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
