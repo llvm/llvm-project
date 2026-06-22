@@ -3,8 +3,6 @@
 
 define void @wide_alm(ptr %dst, ptr noalias %src) vscale_range(1, 2) {
 ; CHECK-LABEL: VPlan for loop in 'wide_alm'
-; CHECK:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<15>, ir<1>
-; CHECK:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; CHECK:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<15>, ir<1>
 ; CHECK:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
 ;

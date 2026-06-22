@@ -19,9 +19,8 @@ define void @all_false(ptr %p) vscale_range(1, 16) {
 ; CHECK-NEXT:    vp<[[VP2:%[0-9]+]]> = vector-pointer i32, ir<%p>, ir<1>, ir<4>
 ; CHECK-NEXT:    WIDEN store ir<%p>, ir<1>, vp<%extract.entry.alm.part>
 ; CHECK-NEXT:    WIDEN store vp<[[VP2]]>, ir<1>, vp<%extract.entry.alm.part>.1
-; CHECK-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask ir<8>, ir<7>, ir<2>
-; CHECK-NEXT:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; CHECK-NEXT:    EMIT vp<%extract.next.alm.part>.1 = extract-vector-for-part vp<%active.lane.mask.next>, ir<1>
+; CHECK-NEXT:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part ir<false>, ir<0>
+; CHECK-NEXT:    EMIT vp<%extract.next.alm.part>.1 = extract-vector-for-part ir<false>, ir<1>
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:

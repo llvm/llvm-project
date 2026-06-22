@@ -16,117 +16,130 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    vp<[[VP2:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<4>
-; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<7>
-; CHECK-NEXT:    EMIT vp<%active.lane.mask>.1 = active lane mask vp<[[VP2]]>, ir<7>
+; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask vp<[[VP2]]>, ir<7>
 ; CHECK-NEXT:    vp<[[VP3:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<1>
 ; CHECK-NEXT:    vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<2>
 ; CHECK-NEXT:    vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<3>
 ; CHECK-NEXT:    vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<5>
 ; CHECK-NEXT:    vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<6>
 ; CHECK-NEXT:    vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS ir<0>, ir<1>, ir<4>, ir<7>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP9]]>
-; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:  Successor(s): pred.load.if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%l> = load ir<%src>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = insertelement ir<poison>, ir<%l>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = insertelement ir<poison>, ir<%l>, ir<0>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP12:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP11]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
-; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:  Successor(s): pred.load.if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p> = getelementptr inbounds ir<%src>, vp<[[VP3]]>
 ; CHECK-NEXT:    CLONE ir<%l>.1 = load ir<%p>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = insertelement vp<[[VP12]]>, ir<%l>.1, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = insertelement vp<[[VP9]]>, ir<%l>.1, ir<1>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP16:%[0-9]+]]> = phi [ vp<[[VP12]]>, pred.load.continue ], [ vp<[[VP15]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<2>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
-; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:  Successor(s): pred.load.if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p>.1 = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:    CLONE ir<%l>.2 = load ir<%p>.1
-; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = insertelement vp<[[VP16]]>, ir<%l>.2, ir<2>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = insertelement vp<[[VP10]]>, ir<%l>.2, ir<2>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP20:%[0-9]+]]> = phi [ vp<[[VP16]]>, pred.load.continue ], [ vp<[[VP19]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP21:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<3>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP21]]>
-; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:  Successor(s): pred.load.if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p>.2 = getelementptr inbounds ir<%src>, vp<[[VP5]]>
 ; CHECK-NEXT:    CLONE ir<%l>.3 = load ir<%p>.2
-; CHECK-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = insertelement vp<[[VP20]]>, ir<%l>.3, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = insertelement vp<[[VP11]]>, ir<%l>.3, ir<3>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP24:%[0-9]+]]> = phi [ vp<[[VP20]]>, pred.load.continue ], [ vp<[[VP23]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = extractelement vp<%active.lane.mask>.1, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP25]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<0>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p>.3 = getelementptr inbounds ir<%src>, vp<[[VP2]]>
 ; CHECK-NEXT:    CLONE ir<%l>.4 = load ir<%p>.3
-; CHECK-NEXT:    EMIT vp<[[VP27:%[0-9]+]]> = insertelement ir<poison>, ir<%l>.4, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = insertelement ir<poison>, ir<%l>.4, ir<0>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP28:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ vp<[[VP27]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP29:%[0-9]+]]> = extractelement vp<%active.lane.mask>.1, ir<1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP29]]>
+; CHECK-NEXT:    WIDEN-PHI vp<[[VP16:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ vp<[[VP15]]>, pred.load.if ]
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p>.4 = getelementptr inbounds ir<%src>, vp<[[VP6]]>
 ; CHECK-NEXT:    CLONE ir<%l>.5 = load ir<%p>.4
-; CHECK-NEXT:    EMIT vp<[[VP31:%[0-9]+]]> = insertelement vp<[[VP28]]>, ir<%l>.5, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = insertelement vp<[[VP16]]>, ir<%l>.5, ir<1>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP32:%[0-9]+]]> = phi [ vp<[[VP28]]>, pred.load.continue ], [ vp<[[VP31]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP33:%[0-9]+]]> = extractelement vp<%active.lane.mask>.1, ir<2>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP33]]>
+; CHECK-NEXT:    WIDEN-PHI vp<[[VP20:%[0-9]+]]> = phi [ vp<[[VP16]]>, pred.load.continue ], [ vp<[[VP19]]>, pred.load.if ]
+; CHECK-NEXT:    EMIT vp<[[VP21:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<2>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP21]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p>.5 = getelementptr inbounds ir<%src>, vp<[[VP7]]>
 ; CHECK-NEXT:    CLONE ir<%l>.6 = load ir<%p>.5
-; CHECK-NEXT:    EMIT vp<[[VP35:%[0-9]+]]> = insertelement vp<[[VP32]]>, ir<%l>.6, ir<2>
+; CHECK-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = insertelement vp<[[VP20]]>, ir<%l>.6, ir<2>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP36:%[0-9]+]]> = phi [ vp<[[VP32]]>, pred.load.continue ], [ vp<[[VP35]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP37:%[0-9]+]]> = extractelement vp<%active.lane.mask>.1, ir<3>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP37]]>
+; CHECK-NEXT:    WIDEN-PHI vp<[[VP24:%[0-9]+]]> = phi [ vp<[[VP20]]>, pred.load.continue ], [ vp<[[VP23]]>, pred.load.if ]
+; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<3>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP25]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
 ; CHECK-NEXT:    CLONE ir<%p>.6 = getelementptr inbounds ir<%src>, vp<[[VP8]]>
 ; CHECK-NEXT:    CLONE ir<%l>.7 = load ir<%p>.6
-; CHECK-NEXT:    EMIT vp<[[VP39:%[0-9]+]]> = insertelement vp<[[VP36]]>, ir<%l>.7, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP27:%[0-9]+]]> = insertelement vp<[[VP24]]>, ir<%l>.7, ir<3>
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    WIDEN-PHI vp<[[VP40:%[0-9]+]]> = phi [ vp<[[VP36]]>, pred.load.continue ], [ vp<[[VP39]]>, pred.load.if ]
-; CHECK-NEXT:    WIDEN ir<%m> = mul vp<[[VP24]]>, ir<3>
-; CHECK-NEXT:    WIDEN ir<%m>.1 = mul vp<[[VP40]]>, ir<3>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP9]]>
-; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT:    WIDEN-PHI vp<[[VP28:%[0-9]+]]> = phi [ vp<[[VP24]]>, pred.load.continue ], [ vp<[[VP27]]>, pred.load.if ]
+; CHECK-NEXT:    WIDEN ir<%m> = mul vp<[[VP12]]>, ir<3>
+; CHECK-NEXT:    WIDEN ir<%m>.1 = mul vp<[[VP28]]>, ir<3>
+; CHECK-NEXT:  Successor(s): pred.store.if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    EMIT vp<[[VP42:%[0-9]+]]> = extractelement ir<%m>, ir<0>
-; CHECK-NEXT:    CLONE store vp<[[VP42]]>, ir<%dst>
+; CHECK-NEXT:    EMIT vp<[[VP29:%[0-9]+]]> = extractelement ir<%m>, ir<0>
+; CHECK-NEXT:    CLONE store vp<[[VP29]]>, ir<%dst>
+; CHECK-NEXT:  Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:  pred.store.continue:
+; CHECK-NEXT:  Successor(s): pred.store.if
+; CHECK-EMPTY:
+; CHECK-NEXT:  pred.store.if:
+; CHECK-NEXT:    CLONE ir<%q> = getelementptr inbounds ir<%dst>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP30:%[0-9]+]]> = extractelement ir<%m>, ir<1>
+; CHECK-NEXT:    CLONE store vp<[[VP30]]>, ir<%q>
+; CHECK-NEXT:  Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:  pred.store.continue:
+; CHECK-NEXT:  Successor(s): pred.store.if
+; CHECK-EMPTY:
+; CHECK-NEXT:  pred.store.if:
+; CHECK-NEXT:    CLONE ir<%q>.1 = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP31:%[0-9]+]]> = extractelement ir<%m>, ir<2>
+; CHECK-NEXT:    CLONE store vp<[[VP31]]>, ir<%q>.1
+; CHECK-NEXT:  Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:  pred.store.continue:
+; CHECK-NEXT:  Successor(s): pred.store.if
+; CHECK-EMPTY:
+; CHECK-NEXT:  pred.store.if:
+; CHECK-NEXT:    CLONE ir<%q>.2 = getelementptr inbounds ir<%dst>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP32:%[0-9]+]]> = extractelement ir<%m>, ir<3>
+; CHECK-NEXT:    CLONE store vp<[[VP32]]>, ir<%q>.2
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
@@ -134,9 +147,9 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    CLONE ir<%q> = getelementptr inbounds ir<%dst>, vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<[[VP44:%[0-9]+]]> = extractelement ir<%m>, ir<1>
-; CHECK-NEXT:    CLONE store vp<[[VP44]]>, ir<%q>
+; CHECK-NEXT:    CLONE ir<%q>.3 = getelementptr inbounds ir<%dst>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP34:%[0-9]+]]> = extractelement ir<%m>.1, ir<0>
+; CHECK-NEXT:    CLONE store vp<[[VP34]]>, ir<%q>.3
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
@@ -144,9 +157,9 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    CLONE ir<%q>.1 = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
-; CHECK-NEXT:    EMIT vp<[[VP46:%[0-9]+]]> = extractelement ir<%m>, ir<2>
-; CHECK-NEXT:    CLONE store vp<[[VP46]]>, ir<%q>.1
+; CHECK-NEXT:    CLONE ir<%q>.4 = getelementptr inbounds ir<%dst>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP36:%[0-9]+]]> = extractelement ir<%m>.1, ir<1>
+; CHECK-NEXT:    CLONE store vp<[[VP36]]>, ir<%q>.4
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
@@ -154,9 +167,9 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    CLONE ir<%q>.2 = getelementptr inbounds ir<%dst>, vp<[[VP5]]>
-; CHECK-NEXT:    EMIT vp<[[VP48:%[0-9]+]]> = extractelement ir<%m>, ir<3>
-; CHECK-NEXT:    CLONE store vp<[[VP48]]>, ir<%q>.2
+; CHECK-NEXT:    CLONE ir<%q>.5 = getelementptr inbounds ir<%dst>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP38:%[0-9]+]]> = extractelement ir<%m>.1, ir<2>
+; CHECK-NEXT:    CLONE store vp<[[VP38]]>, ir<%q>.5
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
@@ -164,39 +177,9 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    CLONE ir<%q>.3 = getelementptr inbounds ir<%dst>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP50:%[0-9]+]]> = extractelement ir<%m>.1, ir<0>
-; CHECK-NEXT:    CLONE store vp<[[VP50]]>, ir<%q>.3
-; CHECK-NEXT:  Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP29]]>
-; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    CLONE ir<%q>.4 = getelementptr inbounds ir<%dst>, vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP52:%[0-9]+]]> = extractelement ir<%m>.1, ir<1>
-; CHECK-NEXT:    CLONE store vp<[[VP52]]>, ir<%q>.4
-; CHECK-NEXT:  Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP33]]>
-; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    CLONE ir<%q>.5 = getelementptr inbounds ir<%dst>, vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP54:%[0-9]+]]> = extractelement ir<%m>.1, ir<2>
-; CHECK-NEXT:    CLONE store vp<[[VP54]]>, ir<%q>.5
-; CHECK-NEXT:  Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP37]]>
-; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.6 = getelementptr inbounds ir<%dst>, vp<[[VP8]]>
-; CHECK-NEXT:    EMIT vp<[[VP56:%[0-9]+]]> = extractelement ir<%m>.1, ir<3>
-; CHECK-NEXT:    CLONE store vp<[[VP56]]>, ir<%q>.6
+; CHECK-NEXT:    EMIT vp<[[VP40:%[0-9]+]]> = extractelement ir<%m>.1, ir<3>
+; CHECK-NEXT:    CLONE store vp<[[VP40]]>, ir<%q>.6
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
