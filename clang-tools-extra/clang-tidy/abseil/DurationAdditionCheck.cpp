@@ -29,19 +29,19 @@ void DurationAdditionCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void DurationAdditionCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Binop = Result.Nodes.getNodeAs<clang::BinaryOperator>("binop");
-  const auto *Call = Result.Nodes.getNodeAs<clang::CallExpr>("call");
+  const auto *Binop = Result.Nodes.getNodeAs<BinaryOperator>("binop");
+  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
 
   // Don't try to replace things inside of macro definitions.
   if (Binop->getExprLoc().isMacroID() || Binop->getExprLoc().isInvalid())
     return;
 
   std::optional<DurationScale> Scale = getScaleForTimeInverse(
-      Result.Nodes.getNodeAs<clang::FunctionDecl>("function_decl")->getName());
+      Result.Nodes.getNodeAs<FunctionDecl>("function_decl")->getName());
   if (!Scale)
     return;
 
-  const llvm::StringRef TimeFactory = getTimeInverseForScale(*Scale);
+  const StringRef TimeFactory = getTimeInverseForScale(*Scale);
 
   FixItHint Hint;
   if (Call == Binop->getLHS()->IgnoreParenImpCasts()) {

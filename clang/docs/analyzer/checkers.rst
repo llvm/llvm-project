@@ -1482,6 +1482,13 @@ For a more detailed description of configuration options, please see the
    advanced users can fully customize their taint configuration model.
    Default: ``true``.
 
+* If the analyzer option ``assume-controlled-environment`` is set to ``false``,
+  it is assumed that the command line arguments and the environment
+  variables of the program are attacker controlled.
+  In particular, the ``argv``, ``argc`` and ``envp`` arguments of the
+  ``main`` function and the return value of the ``getenv()``
+  function are assumed to hold tainted values.
+
 **Related Guidelines**
 
 * `CWE Data Neutralization Issues
@@ -2345,6 +2352,40 @@ Check for null pointers being passed as arguments to C string functions:
  int test() {
    return strlen(0); // warn
  }
+
+.. _unix-cstring-UninitializedRead:
+
+unix.cstring.UninitializedRead (C)
+""""""""""""""""""""""""""""""""""
+Check for uninitialized reads from common memory copy/manipulation functions such as:
+ ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
+
+.. code-block:: c
+
+ void test() {
+  char src[10];
+  char dst[5];
+  memcpy(dst,src,sizeof(dst)); // warn: Bytes string function accesses uninitialized/garbage values
+ }
+
+Limitations:
+
+   - Due to limitations of the memory modeling in the analyzer, one can likely
+     observe some false-positives of the following kind:
+
+      .. code-block:: c
+
+        void false_positive() {
+          int src[] = {1, 2, 3, 4};
+          int dst[5] = {0};
+          memcpy(dst, src, 4 * sizeof(int)); // false-positive:
+          // The 'src' buffer was correctly initialized, yet we cannot conclude
+          // that since the analyzer could not see a direct initialization of the
+          // very last byte of the source buffer.
+        }
+
+     More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
+
 
 .. _unix-StdCLibraryFunctions:
 
@@ -3694,39 +3735,6 @@ the analyzer cannot detect embedded NULL characters when determining the string 
    memcpy(buffer, str, sizeof(str)); // warn
  }
 
-.. _alpha-unix-cstring-UninitializedRead:
-
-alpha.unix.cstring.UninitializedRead (C)
-""""""""""""""""""""""""""""""""""""""""
-Check for uninitialized reads from common memory copy/manipulation functions such as:
- ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
-
-.. code-block:: c
-
- void test() {
-  char src[10];
-  char dst[5];
-  memcpy(dst,src,sizeof(dst)); // warn: Bytes string function accesses uninitialized/garbage values
- }
-
-Limitations:
-
-   - Due to limitations of the memory modeling in the analyzer, one can likely
-     observe a lot of false-positive reports like this:
-
-      .. code-block:: c
-
-        void false_positive() {
-          int src[] = {1, 2, 3, 4};
-          int dst[5] = {0};
-          memcpy(dst, src, 4 * sizeof(int)); // false-positive:
-          // The 'src' buffer was correctly initialized, yet we cannot conclude
-          // that since the analyzer could not see a direct initialization of the
-          // very last byte of the source buffer.
-        }
-
-     More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
-
 alpha.WebKit
 ^^^^^^^^^^^^
 
@@ -3788,7 +3796,7 @@ Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not a
  Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
    return obj->anotherTrivialFunction();
  };
- 
+
 ``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
 For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
 

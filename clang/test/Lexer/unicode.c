@@ -42,7 +42,10 @@ extern int ꙮ;
 extern int \u1B4C;     // BALINESE LETTER ARCHAIC JNYA - Added in Unicode 14
 extern int \U00016AA2; // TANGSA LETTER GA - Added in Unicode 14
 extern int \U0001E4D0; // 𞓐 NAG MUNDARI LETTER O - Added in Unicode 15
-extern int \u{2EBF0}; // CJK UNIFIED IDEOGRAPH-2EBF0 - Added in Unicode 15.1
+extern int \u{2EBF0};  // CJK UNIFIED IDEOGRAPH-2EBF0 - Added in Unicode 15.1
+extern int \u{10D5A};   // GARAY CAPITAL LETTER DA - Added in Unicode 16.0
+extern int \u{16EBE};   // BERIA ERFE SMALL LETTER EH - Added in Unicode 17.0
+extern int \u{16D80};   // CHISOI LETTER A - Added in Unicode 18.0
 extern int a\N{TANGSA LETTER GA};
 extern int a\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \
                                 // expected-error {{expected ';' after top level declarator}} \
@@ -51,6 +54,8 @@ extern int a\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a va
 extern int 𝛛; // expected-warning {{mathematical notation character <U+1D6DB> in an identifier is a Clang extension}}
 extern int ₉; // expected-error {{character <U+2089> not allowed at the start of an identifier}} \\
                  expected-warning {{declaration does not declare anything}}
+
+extern int a\N{PICKLE}; // expected-error {{character <U+1FADD> not allowed in an identifier}}
 
 int a¹b₍₄₂₎∇; // expected-warning 6{{mathematical notation character}}
 

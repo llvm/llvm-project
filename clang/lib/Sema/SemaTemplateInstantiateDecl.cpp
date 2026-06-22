@@ -824,6 +824,18 @@ static void instantiateDependentHLSLParamModifierAttr(
   ParmVarDecl *NewParm = cast<ParmVarDecl>(New);
   NewParm->addAttr(Attr->clone(S.getASTContext()));
 
+  // If this is groupshared don't change the type because it will assert
+  // below. In this case we might have already produced an error but we
+  // must produce one here again because of all the ways templates can
+  // be used.
+  if (const auto *RT = NewParm->getType()->getAs<LValueReferenceType>()) {
+    if (RT->getPointeeType().getAddressSpace() == LangAS::hlsl_groupshared) {
+      S.Diag(Attr->getLoc(), diag::err_hlsl_attr_incompatible)
+          << Attr << "'groupshared'";
+      return;
+    }
+  }
+
   const Type *OldParmTy = cast<ParmVarDecl>(Old)->getType().getTypePtr();
   if (OldParmTy->isDependentType() && Attr->isAnyOut())
     NewParm->setType(S.HLSL().getInoutParameterType(NewParm->getType()));
@@ -862,7 +874,8 @@ void Sema::InstantiateAttrsForDecl(
 
       Attr *NewAttr = sema::instantiateTemplateAttributeForDecl(
           TmplAttr, Context, *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, NewAttr))
+      if (NewAttr && isRelevantAttr(*this, New, NewAttr) &&
+          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
         New->addAttr(NewAttr);
     }
   }
@@ -1089,7 +1102,8 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, TmplAttr))
+      if (NewAttr && isRelevantAttr(*this, New, TmplAttr) &&
+          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
         New->addAttr(NewAttr);
     }
   }
@@ -2130,6 +2144,13 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
 }
 
+Decl *TemplateDeclInstantiator::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // ExplicitInstantiationDecl is a source-info-only node and should not
+  // appear inside a template pattern. Nothing to instantiate.
+  llvm_unreachable("ExplicitInstantiationDecl should not be instantiated");
+}
+
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
   EnumDecl *PrevDecl = nullptr;
   if (EnumDecl *PatternPrev = getPreviousDeclForInstantiation(D)) {
@@ -3164,12 +3185,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   // Instantiate enclosing template arguments for friends.
   SmallVector<TemplateParameterList *, 4> TempParamLists;
-  unsigned NumTempParamLists = 0;
-  if (isFriend && (NumTempParamLists = D->getNumTemplateParameterLists())) {
-    TempParamLists.resize(NumTempParamLists);
-    for (unsigned I = 0; I != NumTempParamLists; ++I) {
-      TemplateParameterList *TempParams = D->getTemplateParameterList(I);
-      TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
+  ArrayRef<TemplateParameterList *> TPLs = D->getTemplateParameterLists();
+  if (isFriend && !TPLs.empty()) {
+    TempParamLists.resize(TPLs.size());
+    for (unsigned I = 0; I != TPLs.size(); ++I) {
+      TemplateParameterList *InstParams = SubstTemplateParams(TPLs[I]);
       if (!InstParams)
         return nullptr;
       TempParamLists[I] = InstParams;
@@ -3348,10 +3368,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // out-of-line, the instantiation will have the same lexical
   // context (which will be a namespace scope) as the template.
   if (isFriend) {
-    if (NumTempParamLists)
-      Method->setTemplateParameterListsInfo(
-          SemaRef.Context,
-          llvm::ArrayRef(TempParamLists.data(), NumTempParamLists));
+    if (!TempParamLists.empty())
+      Method->setTemplateParameterListsInfo(SemaRef.Context, TempParamLists);
 
     Method->setLexicalDeclContext(Owner);
     Method->setObjectOfFriendDecl();
@@ -5502,6 +5520,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   SemaRef.InstantiateAttrs(TemplateArgs, Definition, New,
                            LateAttrs, StartingScope);
 
+  SemaRef.inferLifetimeBoundAttribute(New);
+
   return false;
 }
 
@@ -5996,9 +6016,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
 
+    inferLifetimeBoundAttribute(Function);
+
     checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
 
-    PerformDependentDiagnostics(PatternDecl, TemplateArgs);
+    if (PatternDecl->isDependentContext())
+      PerformDependentDiagnostics(PatternDecl, TemplateArgs);
 
     if (auto *Listener = getASTMutationListener())
       Listener->FunctionDefinitionInstantiated(Function);
@@ -6041,7 +6064,6 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (FromVar->isInvalidDecl())
     return nullptr;
 
-  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, FromVar);
   if (Inst.isInvalid())
     return nullptr;
@@ -6277,8 +6299,7 @@ void Sema::InstantiateVariableInitializer(
       Expr *InitExpr = Init.get();
 
       if (Var->hasAttr<DLLImportAttr>() &&
-          (!InitExpr ||
-           !InitExpr->isConstantInitializer(getASTContext(), false))) {
+          (!InitExpr || !InitExpr->isConstantInitializer(getASTContext()))) {
         // Do not dynamically initialize dllimport variables.
       } else if (InitExpr) {
         bool DirectInit = OldVar->isDirectInit();

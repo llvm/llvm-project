@@ -345,8 +345,10 @@ private:
                                .Case("__fp16", "h")
                                .Case("__hlsl_resource_t", "Qr")
                                .Case("__amdgpu_buffer_rsrc_t", "Qb")
+                               .Case("__amdgpu_feature_predicate_t", "Qc")
                                .Case("__amdgpu_texture_t", "Qt")
                                .Case("__int128_t", "LLLi")
+                               .Case("__uint128_t", "ULLLi")
                                .Case("_Float16", "x")
                                .Case("__bf16", "y")
                                .Case("bool", "b")
@@ -357,6 +359,8 @@ private:
                                .Case("float", "f")
                                .Case("id", "G")
                                .Case("int", "i")
+                               .Case("int8_t", "Bi")
+                               .Case("int16_t", "Ti")
                                .Case("int32_t", "Zi")
                                .Case("int64_t", "Wi")
                                .Case("jmp_buf", "J")
@@ -370,6 +374,8 @@ private:
                                .Case("sigjmp_buf", "SJ")
                                .Case("size_t", "z")
                                .Case("ucontext_t", "K")
+                               .Case("uint8_t", "UBi")
+                               .Case("uint16_t", "UTi")
                                .Case("uint32_t", "UZi")
                                .Case("uint64_t", "UWi")
                                .Case("void", "v")
@@ -769,10 +775,17 @@ void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
 
-  // Sort categories alphabetically by name for deterministic output.
+  // Sort categories alphabetically by name for deterministic output, but
+  // push the "Undocumented" category to the end so that documented sections
+  // always appear first.
   llvm::sort(SplitDocs, [](const auto &A, const auto &B) {
-    return A.first->getValueAsString("Name") <
-           B.first->getValueAsString("Name");
+    StringRef NameA = A.first->getValueAsString("Name");
+    StringRef NameB = B.first->getValueAsString("Name");
+    bool UndocA = (NameA == "Undocumented");
+    bool UndocB = (NameB == "Undocumented");
+    if (UndocA != UndocB)
+      return UndocB;
+    return NameA < NameB;
   });
 
   // Write out each category and its builtins.

@@ -836,7 +836,7 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitMemSetInst(MemSetInst &I);
   void visitMemTransferInst(MemTransferInst &I);
-  void visitBranchInst(BranchInst &BR);
+  void visitCondBrInst(CondBrInst &BR);
   void visitSwitchInst(SwitchInst &SW);
 
 private:
@@ -1790,7 +1790,7 @@ bool DataFlowSanitizer::runImpl(
         Value *PrimitiveShadow = DFSF.collapseToPrimitiveShadow(V, Pos);
         Value *Ne =
             IRB.CreateICmpNE(PrimitiveShadow, DFSF.DFS.ZeroPrimitiveShadow);
-        BranchInst *BI = cast<BranchInst>(SplitBlockAndInsertIfThen(
+        UncondBrInst *BI = cast<UncondBrInst>(SplitBlockAndInsertIfThen(
             Ne, Pos, /*Unreachable=*/false, ColdCallWeights));
         IRBuilder<> ThenIRB(BI);
         ThenIRB.CreateCall(DFSF.DFS.DFSanNonzeroLabelFn, {});
@@ -2976,10 +2976,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   }
 }
 
-void DFSanVisitor::visitBranchInst(BranchInst &BR) {
-  if (!BR.isConditional())
-    return;
-
+void DFSanVisitor::visitCondBrInst(CondBrInst &BR) {
   DFSF.addConditionalCallbacksIfEnabled(BR, BR.getCondition());
 }
 
@@ -3384,8 +3381,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     }
   }
 
-  DenseMap<Value *, Function *>::iterator UnwrappedFnIt =
-      DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
+  auto UnwrappedFnIt = DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
   if (UnwrappedFnIt != DFSF.DFS.UnwrappedFnMap.end())
     if (visitWrappedCallBase(*UnwrappedFnIt->second, CB))
       return;

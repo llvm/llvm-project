@@ -130,8 +130,8 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+set(LLDB_EXPORT_ALL_SYMBOLS OFF CACHE BOOL
+  "Causes lldb to export all private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
 
 set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
   "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
@@ -163,6 +163,40 @@ if (LLDB_ENABLE_LIBEDIT)
   set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
 
+if (APPLE)
+  set(default_enable_mte OFF)
+
+  # The MTE launcher complicates injecting the sanitizer runtime libraries.
+  # Default to OFF when any sanitizer is enabled.
+  if (NOT LLVM_USE_SANITIZER)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
+        OUTPUT_VARIABLE SYSCTL_OUTPUT
+        ERROR_QUIET
+        RESULT_VARIABLE SYSCTL_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
+      set(default_enable_mte ON)
+    endif()
+  endif()
+
+  option(LLDB_ENABLE_MTE "Run the LLDB test suite with MTE enabled." ${default_enable_mte})
+
+  if (LLDB_ENABLE_MTE)
+    message(STATUS "Running the LLDB test suite with MTE")
+  endif()
+else()
+  set(LLDB_ENABLE_MTE OFF)
+endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD")
+  set(default_enable_dynamic_scriptinterpreters ON)
+else()
+  set(default_enable_dynamic_scriptinterpreters OFF)
+endif()
+option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" ${default_enable_dynamic_scriptinterpreters})
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
@@ -177,6 +211,18 @@ if (LLDB_ENABLE_PYTHON)
     get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
+  endif()
+
+  # Expose the build-time libpython through Config.h (its R"(...)"
+  # substitution avoids the per-platform path-escaping hazards of
+  # target_compile_definitions) so the loader has a runtime fallback.
+  # Skip Windows: FindPython3 returns the .lib import library, which is
+  # a different file from the .dll the loader actually needs.
+  if(TARGET Python3::Python AND NOT WIN32)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LOCATION)
+    if(_Python3_LIB_PATH)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH "${_Python3_LIB_PATH}")
+    endif()
   endif()
 
   # Enable targeting the Python Limited C API.

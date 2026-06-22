@@ -11,8 +11,6 @@
 // lowering isn't of interest for this test. We just need to see that the
 // copy constructor is elided without -fno-elide-constructors but not with it.
 
-// XFAIL: *
-
 struct S {
   S();
   int a;
@@ -25,16 +23,16 @@ struct S f1() {
 }
 
 // CIR:      cir.func{{.*}} @_Z2f1v() -> !rec_S
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["__retval", init]
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<!rec_S>
 // CIR-NEXT:   cir.call @_ZN1SC1Ev(%[[RETVAL]]) : (!cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_S>, !rec_S
 // CIR-NEXT:   cir.return %[[RET]]
 
 // CIR-NOELIDE:      cir.func{{.*}} @_Z2f1v() -> !rec_S
-// CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["__retval"]
-// CIR-NOELIDE-NEXT:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_S>
+// CIR-NOELIDE-NEXT:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR-NOELIDE-NEXT:   cir.call @_ZN1SC1Ev(%[[S]]) : (!cir.ptr<!rec_S> {{.*}}) -> ()
-// CIR-NOELIDE-NEXT:   cir.call @_ZN1SC1EOS_(%[[RETVAL]], %[[S]]){{.*}} : (!cir.ptr<!rec_S> {{.*}}, !cir.ptr<!rec_S> {{.*}}) -> ()
+// CIR-NOELIDE-NEXT:   cir.copy %[[S]] to %[[RETVAL]] : !cir.ptr<!rec_S>
 // CIR-NOELIDE-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_S>, !rec_S
 // CIR-NOELIDE-NEXT:   cir.return %[[RET]]
 
@@ -67,20 +65,28 @@ NonTrivial test_nrvo() {
 // TODO(cir): Handle normal cleanup properly.
 
 // CIR: cir.func {{.*}} @_Z9test_nrvov()
-// CIR:   %[[RESULT:.*]] = cir.alloca !rec_NonTrivial, !cir.ptr<!rec_NonTrivial>, ["__retval"]
-// CIR:   %[[NRVO_FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["nrvo"]
+// CIR:   %[[RESULT:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_NonTrivial>
+// CIR:   %[[NRVO_FLAG:.*]] = cir.alloca "nrvo" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[FALSE:.*]] = cir.const #false
 // CIR:   cir.store{{.*}} %[[FALSE]], %[[NRVO_FLAG]]
-// CIR:   cir.call @_Z10maybeThrowv() : () -> ()
-// CIR:   %[[TRUE:.*]] = cir.const #true
-// CIR:   cir.store{{.*}} %[[TRUE]], %[[NRVO_FLAG]]
-// CIR:   %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
-// CIR:   %[[NOT_NRVO_VAL:.*]] = cir.unary(not, %[[NRVO_FLAG_VAL]])
-// CIR:   cir.if %[[NOT_NRVO_VAL]] {
-// CIR:     cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.call @_Z10maybeThrowv() : () -> ()
+// CIR:     %[[TRUE:.*]] = cir.const #true
+// CIR:     cir.store{{.*}} %[[TRUE]], %[[NRVO_FLAG]]
+// CIR:     %[[RET:.*]] = cir.load %[[RESULT]]
+// CIR:     cir.return %[[RET]]
+// CIR:   } cleanup  normal {
+// CIR:     %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
+// CIR:     %[[NOT_NRVO_VAL:.*]] = cir.not %[[NRVO_FLAG_VAL]]
+// CIR:     cir.if %[[NOT_NRVO_VAL]] {
+// CIR:       cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
+// CIR:     }
+// CIR:     cir.yield
 // CIR:   }
-// CIR:   %[[RET:.*]] = cir.load %[[RESULT]]
-// CIR:   cir.return %[[RET]]
+//
+// TODO(cir): This is unreachable, but it really shouldn't be here. This is an
+//            artifact of us falling through to emitImplicitReturn().
+// CIR:   cir.trap
 
 // LLVM: define {{.*}} %struct.NonTrivial @_Z9test_nrvov()
 // LLVM:   %[[RESULT:.*]] = alloca %struct.NonTrivial

@@ -35,6 +35,10 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
 
   return InnerMatcher.matches(**I, Finder, Builder);
 }
+
+AST_MATCHER(Expr, isUnsafeTemporaryRangeInit) {
+  return Node.IgnoreParenCasts()->isPRValue();
+}
 } // namespace
 
 namespace tidy::readability {
@@ -44,13 +48,16 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
     return returnStmt(hasReturnValue(cxxBoolLiteral(equals(V))));
   };
 
-  auto ReturnsButNotTrue =
+  const auto ReturnsButNotTrue =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
-  auto ReturnsButNotFalse =
+  const auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
+  const auto RangeInitMatcher =
+      optionally(expr(isUnsafeTemporaryRangeInit()).bind("unsafe_range_init"));
 
   Finder->addMatcher(
       cxxForRangeStmt(
+          hasRangeInit(RangeInitMatcher),
           nextStmt(Returns(false).bind("final_return")),
           hasBody(allOf(hasDescendant(Returns(true)),
                         unless(anyOf(hasDescendant(breakStmt()),
@@ -61,6 +68,7 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxForRangeStmt(
+          hasRangeInit(RangeInitMatcher),
           nextStmt(Returns(true).bind("final_return")),
           hasBody(allOf(hasDescendant(Returns(false)),
                         unless(anyOf(hasDescendant(breakStmt()),
@@ -85,19 +93,31 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
 }
 
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
-    if (!isViableLoop(*S, *Result.Context))
-      return;
+  const auto *AnyOfS = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop");
+  const auto *AllOfS = Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop");
+  const CXXForRangeStmt *S = AnyOfS ? AnyOfS : AllOfS;
 
-    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::any_of()'")
-        << getLangOpts().CPlusPlus20;
-  } else if (const auto *S =
-                 Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop")) {
-    if (!isViableLoop(*S, *Result.Context))
-      return;
+  if (!S || !isViableLoop(*S, *Result.Context))
+    return;
 
-    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")
-        << getLangOpts().CPlusPlus20;
+  const bool IsAnyOf = (AnyOfS != nullptr);
+
+  diag(S->getForLoc(),
+       "replace loop by 'std%select{|::ranges}0::%select{all_of|any_of}1()'")
+      << getLangOpts().CPlusPlus20 << IsAnyOf;
+
+  if (const auto *Init = Result.Nodes.getNodeAs<Expr>("unsafe_range_init")) {
+    if (getLangOpts().CPlusPlus20)
+      diag(Init->getExprLoc(),
+           "reusing the temporary range directly in the replacement may be "
+           "unsafe; consider materializing it in a local variable first, or "
+           "use 'std::ranges' algorithms which handle temporary ranges safely",
+           DiagnosticIDs::Note);
+    else
+      diag(Init->getExprLoc(),
+           "reusing the temporary range directly in the replacement may be "
+           "unsafe; consider materializing it in a local variable first",
+           DiagnosticIDs::Note);
   }
 }
 

@@ -26,24 +26,45 @@ on:
     types:
       - opened
 
-env:
-  COMMENT_BODY: ${{ github.event.action == 'opened' && github.event.issue.body || github.event.comment.body  }}
 
 jobs:
-  backport-commits:
-    name: Backport Commits
+  backport-commits-validate-input:
     runs-on: ubuntu-24.04
-    environment: main-branch-only
-    permissions:
-      issues: write
-      pull-requests: write
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
       contains(github.event.action == 'opened' && github.event.issue.body || github.event.comment.body, '/cherry-pick')
+    outputs:
+      comment-body: ${{ steps.validate.outputs.comment-body }}
+    steps:
+      - name: Validate Input Comment
+        id: validate
+        env:
+          COMMENT_BODY: ${{ github.event.action == 'opened' && github.event.issue.body || github.event.comment.body  }}
+        run: |
+          # This will strip out everything from the comment except for the /cherry-pick commands.
+          # If there are multiple /cherry-pick commands they will all be included in the output.
+          # This is fine since the github-automation.py script can handle multiple cherry-pick commands.
+          validated_comment=$(\
+            grep -o -e '/cherry-pick \(https://github.com/llvm/llvm-project/commit/\)\?[a-f0-9 ]\+' <<< $COMMENT_BODY \
+          )
+          echo "Validated Comment is:"
+          echo ${validated_comment}
+
+          echo comment-body=${validated_comment} >> $GITHUB_OUTPUT
+
+  backport-commits:
+    name: Backport Commits
+    runs-on: ubuntu-24.04
+    environment: main-branch-only
+    needs:
+      - backport-commits-validate-input
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: llvm/llvm-project
           # GitHub stores the token used for checkout and uses it for pushes
@@ -58,6 +79,9 @@ jobs:
           ./llvm/utils/git/github-automation.py --token ${{ github.token }} setup-llvmbot-git
 
       - name: Backport Commits
+        env:
+          COMMENT_BODY: ${{ needs.backport-commits-validate-input.outputs.comment-body }}
+          REQUESTED_BY: ${{ (github.event.action == 'opened' && github.event.issue.user.login) || github.event.comment.user.login }}
         run: |
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
@@ -66,5 +90,5 @@ jobs:
           release-workflow \
           --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
-          --requested-by ${{ (github.event.action == 'opened' && github.event.issue.user.login) || github.event.comment.user.login }} \
+          --requested-by "$REQUESTED_BY" \
           auto

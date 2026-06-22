@@ -129,6 +129,13 @@ LLVM_ABI Pass *createCanonicalizeFreezeInLoopsPass();
 // functions that are registered in @llvm.global_ctors and which contain a call
 // to `__cxa_atexit` to register their destructor functions.
 LLVM_ABI ModulePass *createLowerGlobalDtorsLegacyPass();
+
+//===----------------------------------------------------------------------===//
+//
+// createStripConvergenceIntrinsicsPass - Strip convergence intrinsics and
+// convergencectrl operand bundles.
+//
+LLVM_ABI FunctionPass *createStripConvergenceIntrinsicsPass();
 } // namespace llvm
 
 #endif

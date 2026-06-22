@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_GETPAYLOADBF16_H
 #define LLVM_LIBC_SHARED_MATH_GETPAYLOADBF16_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/getpayloadbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {

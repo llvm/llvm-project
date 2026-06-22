@@ -16,7 +16,7 @@
 namespace llvm {
 
 class BasicBlock;
-class BranchInst;
+class CondBrInst;
 class DominatorTree;
 class IntegerType;
 class Loop;
@@ -39,7 +39,7 @@ struct LoopStructure {
 
   // `Latch's terminator instruction is `LatchBr', and it's `LatchBrExitIdx'th
   // successor is `LatchExit', the exit block of the loop.
-  BranchInst *LatchBr = nullptr;
+  CondBrInst *LatchBr = nullptr;
   BasicBlock *LatchExit = nullptr;
   unsigned LatchBrExitIdx = std::numeric_limits<unsigned>::max();
 
@@ -67,7 +67,7 @@ struct LoopStructure {
     Result.Tag = Tag;
     Result.Header = cast<BasicBlock>(Map(Header));
     Result.Latch = cast<BasicBlock>(Map(Latch));
-    Result.LatchBr = cast<BranchInst>(Map(LatchBr));
+    Result.LatchBr = cast<CondBrInst>(Map(LatchBr));
     Result.LatchExit = cast<BasicBlock>(Map(LatchExit));
     Result.LatchBrExitIdx = LatchBrExitIdx;
     Result.IndVarBase = Map(IndVarBase);
@@ -80,7 +80,7 @@ struct LoopStructure {
     return Result;
   }
 
-  static std::optional<LoopStructure>
+  LLVM_ABI static std::optional<LoopStructure>
   parseLoopStructure(ScalarEvolution &, Loop &, bool, const char *&);
 };
 
@@ -213,13 +213,13 @@ private:
   SubRanges SR;
 
 public:
-  LoopConstrainer(Loop &L, LoopInfo &LI,
-                  function_ref<void(Loop *, bool)> LPMAddNewLoop,
-                  const LoopStructure &LS, ScalarEvolution &SE,
-                  DominatorTree &DT, Type *T, SubRanges SR);
+  LLVM_ABI LoopConstrainer(Loop &L, LoopInfo &LI,
+                           function_ref<void(Loop *, bool)> LPMAddNewLoop,
+                           const LoopStructure &LS, ScalarEvolution &SE,
+                           DominatorTree &DT, Type *T, SubRanges SR);
 
   // Entry point for the algorithm.  Returns true on success.
-  bool run();
+  LLVM_ABI bool run();
 };
 } // namespace llvm
 

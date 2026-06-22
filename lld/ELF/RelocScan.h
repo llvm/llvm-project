@@ -69,8 +69,6 @@ public:
   // Process relocation after needsGot/needsPlt flags are already handled.
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
-  unsigned handleTlsRelocation(RelExpr expr, RelType type, uint64_t offset,
-                               Symbol &sym, int64_t addend);
 
   // Process R_PC relocations. These are the most common relocation type, so we
   // inline the isStaticLinkTimeConstant check.
@@ -115,8 +113,8 @@ public:
       // PIC when the relocation uses the full address (not just low page bits).
       if (ieExpr == R_GOT && ctx.arg.isPic &&
           !ctx.target->usesOnlyLowPageBits(type))
-        sec->getPartition(ctx).relaDyn->addRelativeReloc(
-            ctx.target->relativeRel, *sec, offset, sym, addend, type, ieExpr);
+        ctx.in.relaDyn->addRelativeReloc(ctx.target->relativeRel, *sec, offset,
+                                         sym, addend, type, ieExpr);
       else
         sec->addReloc({ieExpr, type, offset, addend, &sym});
     }
@@ -137,23 +135,24 @@ public:
   }
 
   // Handle TLS General-Dynamic relocation. Returns true if the __tls_get_addr
-  // call should be skipped (i.e., caller should ++it).
+  // call should be skipped (i.e., caller should ++it). Pass R_NONE for
+  // ieExpr/leExpr to disable GD-to-IE/LE optimization (e.g. ARM, RISC-V).
   bool handleTlsGd(RelExpr sharedExpr, RelExpr ieExpr, RelExpr leExpr,
                    RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
-    if (ctx.arg.shared) {
-      sym.setFlags(NEEDS_TLSGD);
-      sec->addReloc({sharedExpr, type, offset, addend, &sym});
-      return false;
+    if (!ctx.arg.shared && ieExpr != R_NONE) {
+      if (sym.isPreemptible) {
+        // Optimize to Initial Exec.
+        sym.setFlags(NEEDS_TLSIE);
+        sec->addReloc({ieExpr, type, offset, addend, &sym});
+      } else {
+        // Optimize to Local Exec.
+        sec->addReloc({leExpr, type, offset, addend, &sym});
+      }
+      return true;
     }
-    if (sym.isPreemptible) {
-      // Optimize to Initial Exec.
-      sym.setFlags(NEEDS_TLSIE);
-      sec->addReloc({ieExpr, type, offset, addend, &sym});
-    } else {
-      // Optimize to Local Exec.
-      sec->addReloc({leExpr, type, offset, addend, &sym});
-    }
-    return true;
+    sym.setFlags(NEEDS_TLSGD);
+    sec->addReloc({sharedExpr, type, offset, addend, &sym});
+    return false;
   }
 
   // Handle TLSDESC relocation.
@@ -192,36 +191,11 @@ void RelocScan::scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
   RelExpr expr =
       ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
 
-  // Ignore R_*_NONE and other marker relocations.
-  if (expr == R_NONE)
-    return;
-
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIdx != 0 &&
       maybeReportUndefined(cast<Undefined>(sym), offset))
     return;
-
-  // Ensure GOT or GOTPLT is created for relocations that reference their base
-  // addresses without directly creating entries.
-  if (oneof<R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
-    ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-  } else if (oneof<R_GOTONLY_PC, R_GOTREL, RE_PPC32_PLTREL>(expr)) {
-    ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
-  }
-
-  // Process TLS relocations, including TLS optimizations. Note that
-  // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  //
-  // Some RISCV TLSDESC relocations reference a local NOTYPE symbol,
-  // but we need to process them in handleTlsRelocation.
-  if (sym.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr)) {
-    if (unsigned processed =
-            handleTlsRelocation(expr, type, offset, sym, addend)) {
-      it += processed - 1;
-      return;
-    }
-  }
 
   process(expr, type, offset, sym, addend);
 }

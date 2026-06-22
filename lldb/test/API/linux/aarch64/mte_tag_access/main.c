@@ -11,11 +11,17 @@
 // This file uses ACLE intrinsics as detailed in:
 // https://developer.arm.com/documentation/101028/0012/10--Memory-tagging-intrinsics?lang=en
 
-char *checked_mmap(size_t page_size, int prot) {
-  char *ptr = mmap(0, page_size, prot, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+char *checked_mmap(size_t size, int prot) {
+  char *ptr = mmap(0, size, prot, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (ptr == MAP_FAILED)
     exit(1);
   return ptr;
+}
+
+char *checked_mprotect(char *addr, size_t size, int prot) {
+  if (mprotect(addr, size, prot) != 0)
+    exit(1);
+  return addr;
 }
 
 int main(int argc, char const *argv[]) {
@@ -30,29 +36,22 @@ int main(int argc, char const *argv[]) {
     return 1;
   }
 
-  size_t page_size = sysconf(_SC_PAGESIZE);
+  const size_t page_size = sysconf(_SC_PAGESIZE);
+  // Each time we change the permissions of a page, it becomes its own unique
+  // mapping.
+  char *pages = checked_mmap(page_size * 4, 0);
 
-  // We're going to mmap pages in this order:
-  // <high addres>
-  // MTE read/write
-  // MTE read/write executable
-  // non MTE
-  // MTE read only
-  // <low address>
-  //
-  // This means that the first two MTE pages end up next
-  // to each other. Since the second one is also executable
-  // it will create a new entry in /proc/smaps.
-  int mte_prot = PROT_READ | PROT_MTE;
-
-  char *mte_buf_2 = checked_mmap(page_size, mte_prot | PROT_WRITE);
-  char *mte_buf = checked_mmap(page_size, mte_prot | PROT_WRITE | PROT_EXEC);
-  // We expect the mappings to be next to each other
-  if (mte_buf_2 - mte_buf != page_size)
-    return 1;
-
-  char *non_mte_buf = checked_mmap(page_size, PROT_READ);
-  char *mte_read_only = checked_mmap(page_size, mte_prot);
+  // The order and layout of these mappings is important. They start with
+  // the lowest address.
+  char *mte_read_only =
+      checked_mprotect(pages, page_size, PROT_MTE | PROT_READ);
+  char *non_mte_buf =
+      checked_mprotect(mte_read_only + page_size, page_size, PROT_READ);
+  char *mte_buf =
+      checked_mprotect(non_mte_buf + page_size, page_size,
+                       PROT_READ | PROT_MTE | PROT_WRITE | PROT_EXEC);
+  char *mte_buf_2 = checked_mprotect(mte_buf + page_size, page_size,
+                                     PROT_MTE | PROT_READ | PROT_WRITE);
 
   // Target value for "memory find" testing.
   strncpy(mte_buf+128, "LLDB", 4);

@@ -19,6 +19,8 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -34,12 +36,50 @@ bool AlwaysInlineImpl(
     Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
     FunctionAnalysisManager *FAM,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-    function_ref<AAResults &(Function &)> GetAAR) {
+    function_ref<AAResults &(Function &)> GetAAR,
+    function_ref<TargetTransformInfo &(Function &)> GetTTI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
+  SmallVector<Function *, 4> NeedFlattening;
+
+  auto TryInline = [&](CallBase &CB, Function &Callee,
+                       OptimizationRemarkEmitter &ORE, const char *InlineReason,
+                       SmallVectorImpl<CallBase *> *NewCallSites =
+                           nullptr) -> bool {
+    Function *Caller = CB.getCaller();
+    DebugLoc DLoc = CB.getDebugLoc();
+    BasicBlock *Block = CB.getParent();
+
+    InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
+    InlineResult Res = InlineFunction(
+        CB, IFI, /*MergeAttributes=*/true, &GetAAR(Callee), InsertLifetime,
+        /*TrackInlineHistory=*/NewCallSites != nullptr);
+    if (!Res.isSuccess()) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+               << "'" << ore::NV("Callee", &Callee) << "' is not inlined into '"
+               << ore::NV("Caller", Caller)
+               << "': " << ore::NV("Reason", Res.getFailureReason());
+      });
+      return false;
+    }
+
+    emitInlinedIntoBasedOnCost(ORE, DLoc, Block, Callee, *Caller,
+                               InlineCost::getAlways(InlineReason),
+                               /*ForProfileContext=*/false, DEBUG_TYPE);
+    if (FAM)
+      FAM->invalidate(*Caller, PreservedAnalyses::none());
+    if (NewCallSites)
+      *NewCallSites = std::move(IFI.InlinedCallSites);
+    return true;
+  };
 
   for (Function &F : make_early_inc_range(M)) {
+    if (F.hasFnAttribute(Attribute::Flatten))
+      NeedFlattening.push_back(&F);
+
     if (F.isPresplitCoroutine())
       continue;
 
@@ -56,38 +96,12 @@ bool AlwaysInlineImpl(
           Calls.insert(CB);
 
     for (CallBase *CB : Calls) {
-      Function *Caller = CB->getCaller();
-      OptimizationRemarkEmitter ORE(Caller);
-      DebugLoc DLoc = CB->getDebugLoc();
-      BasicBlock *Block = CB->getParent();
-
-      InlineFunctionInfo IFI(GetAssumptionCache, &PSI, nullptr, nullptr);
-      InlineResult Res = InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
-                                        &GetAAR(F), InsertLifetime);
-      if (!Res.isSuccess()) {
-        ORE.emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
-                 << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
-                 << ore::NV("Caller", Caller)
-                 << "': " << ore::NV("Reason", Res.getFailureReason());
-        });
-        continue;
-      }
-
-      emitInlinedIntoBasedOnCost(
-          ORE, DLoc, Block, F, *Caller,
-          InlineCost::getAlways("always inline attribute"),
-          /*ForProfileContext=*/false, DEBUG_TYPE);
-
-      Changed = true;
-      if (FAM)
-        FAM->invalidate(*Caller, PreservedAnalyses::none());
+      OptimizationRemarkEmitter ORE(CB->getCaller());
+      Changed |= TryInline(*CB, F, ORE, "always inline attribute");
     }
 
     F.removeDeadConstantUsers();
     if (F.hasFnAttribute(Attribute::AlwaysInline) && F.isDefTriviallyDead()) {
-      // Remember to try and delete this function afterward. This allows to call
-      // filterDeadComdatFunctions() only once.
       if (F.hasComdat()) {
         InlinedComdatFunctions.push_back(&F);
       } else {
@@ -95,6 +109,72 @@ bool AlwaysInlineImpl(
           FAM->clear(F, F.getName());
         M.getFunctionList().erase(F);
         Changed = true;
+      }
+    }
+  }
+
+  // Flatten functions with the flatten attribute using a local worklist.
+  for (Function *F : NeedFlattening) {
+    SmallVector<std::pair<CallBase *, int>, 16> Worklist;
+    SmallVector<std::pair<Function *, int>, 16> InlineHistory;
+    SmallVector<CallBase *> NewCallSites;
+    OptimizationRemarkEmitter ORE(F);
+
+    // Collect initial calls.
+    for (BasicBlock &BB : *F) {
+      for (Instruction &I : BB) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          Function *Callee = CB->getCalledFunction();
+          if (!Callee || Callee->isDeclaration())
+            continue;
+          Worklist.push_back({CB, -1});
+        }
+      }
+    }
+
+    while (!Worklist.empty()) {
+      auto Item = Worklist.pop_back_val();
+      CallBase *CB = Item.first;
+      int InlineHistoryID = Item.second;
+      Function *Callee = CB->getCalledFunction();
+      if (!Callee)
+        continue;
+
+      // Detect recursion.
+      if (Callee == F) {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed("inline", "NotInlined",
+                                          CB->getDebugLoc(), CB->getParent())
+                 << "'" << ore::NV("Callee", Callee)
+                 << "' is not inlined into '"
+                 << ore::NV("Caller", CB->getCaller())
+                 << "': recursive call during flattening";
+        });
+        continue;
+      }
+
+      // Use getAttributeBasedInliningDecision for all attribute-based checks
+      // including TTI/TLI compatibility and isInlineViable.
+      TargetTransformInfo &CalleeTTI = GetTTI(*Callee);
+      auto Decision =
+          getAttributeBasedInliningDecision(*CB, Callee, CalleeTTI, GetTLI);
+      if (!Decision || !Decision->isSuccess())
+        continue;
+
+      if (!TryInline(*CB, *Callee, ORE, "flatten attribute", &NewCallSites))
+        continue;
+
+      Changed = true;
+
+      // Add new call sites from the inlined function to the worklist.
+      if (!NewCallSites.empty()) {
+        int NewHistoryID = InlineHistory.size();
+        InlineHistory.push_back({Callee, InlineHistoryID});
+        for (CallBase *NewCB : NewCallSites) {
+          Function *NewCallee = NewCB->getCalledFunction();
+          if (NewCallee && !NewCallee->isDeclaration())
+            Worklist.push_back({NewCB, NewHistoryID});
+        }
       }
     }
   }
@@ -134,9 +214,15 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
       return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
+    auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
+      return getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    };
+    auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+      return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    };
 
     return AlwaysInlineImpl(M, InsertLifetime, PSI, /*FAM=*/nullptr,
-                            GetAssumptionCache, GetAAR);
+                            GetAssumptionCache, GetAAR, GetTTI, GetTLI);
   }
 
   static char ID; // Pass identification, replacement for typeid
@@ -145,6 +231,8 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 };
 
@@ -156,6 +244,8 @@ INITIALIZE_PASS_BEGIN(AlwaysInlinerLegacyPass, "always-inline",
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(AlwaysInlinerLegacyPass, "always-inline",
                     "Inliner for always_inline functions", false, false)
 
@@ -173,10 +263,16 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto GetAAR = [&](Function &F) -> AAResults & {
     return FAM.getResult<AAManager>(F);
   };
+  auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
   auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
   bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, &FAM,
-                                  GetAssumptionCache, GetAAR);
+                                  GetAssumptionCache, GetAAR, GetTTI, GetTLI);
   if (!Changed)
     return PreservedAnalyses::all();
 
