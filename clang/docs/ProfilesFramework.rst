@@ -836,8 +836,13 @@ initialized memory.  "Refers to uninitialized memory" is recognised purely
 locally from the source expression's syntactic form (no flow analysis): the
 address of, or a subobject of, a ``[[uninitialized]]`` entity; a value of a
 ``[[ref_to_uninit]]`` pointer/reference or array; a dereference of such a
-pointer; or a call to a ``[[ref_to_uninit]]``-returning function.  Anything
-else is treated as initialized (the trust model).
+pointer; a cast of such a pointer to another pointer type (paper §4.3), or of
+such a glvalue to another reference; or a call to a
+``[[ref_to_uninit]]``-returning function.  Anything else is treated as
+initialized (the trust model).  The reference cast and the
+``[[ref_to_uninit]]``-returning reference call are not spelled out by the
+paper but follow from the profile's guarantee that uninitialized objects are
+not used, and keep the pointer and reference recognizers symmetric.
 
 - Diagnostics: ``err_init_ref_to_uninit_requires_uninit`` (marked target,
   initialized source) and ``err_init_uninit_requires_ref_to_uninit`` (unmarked
