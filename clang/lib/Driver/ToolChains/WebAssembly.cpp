@@ -248,10 +248,12 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 /// Append `Dir` to `Paths`, but also include the LTO directories before that if
-/// LTO is eanbled.
-static void AppendLibDirAndLTODir(ToolChain::path_list &Paths, const Driver &D,
+/// LTO is enabled.
+static void AppendLibDirAndLTODir(ToolChain::path_list &Paths,
+                                  const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
                                   const std::string &Dir) {
-  if (D.isUsingLTO()) {
+  if (TC.isUsingLTO(Args)) {
     // The version allows the path to be keyed to the specific version of
     // LLVM in used, as the bitcode format is not stable.
     Paths.push_back(Dir + "/llvm-lto/" LLVM_VERSION_STRING);
@@ -283,9 +285,9 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
     // sysroots that contain libraries that are capable of producing binaries
     // entirely without exception-handling instructions but also with if
     // exceptions are enabled, for example.
-    AppendLibDirAndLTODir(getFilePaths(), D,
+    AppendLibDirAndLTODir(getFilePaths(), *this, Args,
                           TripleLibDir + "/" + GetCXXExceptionsDir(Args));
-    AppendLibDirAndLTODir(getFilePaths(), D, TripleLibDir);
+    AppendLibDirAndLTODir(getFilePaths(), *this, Args, TripleLibDir);
   }
 
   if (getTriple().getOS() == llvm::Triple::WASI) {
@@ -323,7 +325,7 @@ bool WebAssembly::SupportsProfiling() const { return false; }
 bool WebAssembly::HasNativeLLVMSupport() const { return true; }
 
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args,
+                                        ArgStringList &CC1Args, BoundArch BA,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
@@ -569,9 +571,8 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 }
 
 SanitizerMask WebAssembly::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }

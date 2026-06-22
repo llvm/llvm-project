@@ -1,6 +1,23 @@
 add_custom_target(libc_netinet_unittests)
 
 add_libc_unittest(
+  in_test
+  SUITE
+    libc_netinet_unittests
+  SRCS
+    in_test.cpp
+  DEPENDS
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.struct_in6_addr
+    libc.hdr.types.struct_sockaddr_in6
+    libc.src.arpa.inet.htons
+    libc.src.arpa.inet.htonl
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
+    libc.src.string.memcmp
+)
+
+add_libc_unittest(
   udp_test
   SUITE
     libc_netinet_unittests

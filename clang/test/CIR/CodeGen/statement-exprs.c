@@ -13,8 +13,8 @@ int f19(void) {
 // LLVM-DAG: @[[TEST3_S:.*]] = private constant %struct.S { i32 1 }
 
 // CIR: cir.func {{.*}} @f19() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[TMP:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C4:.+]] = cir.const #cir.int<4> : !s32i
 // CIR:     cir.store {{.*}} %[[C4]], %[[TMP]] : !s32i, !cir.ptr<!s32i>
@@ -64,23 +64,23 @@ int nested(void) {
 }
 
 // CIR: cir.func {{.*}} @nested() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[TMP_OUTER:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[TMP_OUTER:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C123_OUTER:.+]] = cir.const #cir.int<123> : !s32i
 // CIR:     cir.store {{.*}} %[[C123_OUTER]], %[[TMP_OUTER]] : !s32i, !cir.ptr<!s32i>
 // CIR:   }
 // CIR:   %[[LOAD_TMP_OUTER:.+]] = cir.load {{.*}} %[[TMP_OUTER]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.scope {
-// CIR:     %[[BAR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["bar", init]
-// CIR:     %[[TMP_BARRET:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:     %[[BAR:.+]] = cir.alloca "bar" {{.*}} init : !cir.ptr<!s32i>
+// CIR:     %[[TMP_BARRET:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:     %[[C987:.+]] = cir.const #cir.int<987> : !s32i
 // CIR:     cir.store {{.*}} %[[C987]], %[[BAR]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.scope {
-// CIR:       %[[TMP1:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
-// CIR:       %[[TMP2:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:       %[[TMP1:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
+// CIR:       %[[TMP2:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:       cir.scope {
-// CIR:         %[[ASDF:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["asdf", init]
+// CIR:         %[[ASDF:.+]] = cir.alloca "asdf" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         %[[C123_INNER:.+]] = cir.const #cir.int<123> : !s32i
 // CIR:         cir.store {{.*}} %[[C123_INNER]], %[[ASDF]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[LOAD_ASDF:.+]] = cir.load {{.*}} %[[ASDF]] : !cir.ptr<!s32i>, !s32i
@@ -194,9 +194,9 @@ void empty2() { ({ }); }
 // Yields an out-of-scope scalar.
 void test2() { ({int x = 3; x; }); }
 // CIR: cir.func {{.*}} @test2
-// CIR: %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>
+// CIR: %[[RETVAL:.+]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.scope {
-// CIR:   %[[VAR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR:   %[[VAR:.+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 //          [...]
 // CIR:   %[[TMP:.+]] = cir.load{{.*}} %[[VAR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[TMP]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
@@ -229,11 +229,11 @@ void test2() { ({int x = 3; x; }); }
 struct S { int x; };
 int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR: cir.func {{.*}} @test3() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[REF_TMP0:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
-// CIR:   %[[TMP:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["tmp"]
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.scope {
-// CIR:     %[[S:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR:     %[[S:.+]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:     %[[CONST:.*]] = cir.get_global @[[TEST3_S]] : !cir.ptr<!rec_S>
 // CIR:     cir.copy %[[CONST]] to %[[S]] : !cir.ptr<!rec_S>
 // CIR:     cir.copy %[[S]] to %[[REF_TMP0]] : !cir.ptr<!rec_S>

@@ -32,6 +32,9 @@ would not be where we are today.  Much of the knowledge contained within this
 manual was learned through reading code published by Microsoft on their `GitHub
 repo <https://github.com/Microsoft/microsoft-pdb>`__.
 
+For more documentation, see Microsoft's `pdb-rs GitHub repo
+<https://github.com/microsoft/pdb-rs/blob/main/docs/index.md>`__.
+
 .. _pdb_layout:
 
 File Layout

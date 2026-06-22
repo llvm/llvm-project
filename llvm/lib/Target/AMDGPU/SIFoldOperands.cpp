@@ -740,8 +740,20 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
+    Register OldReg = Old.getReg();
     Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
     Old.setIsUndef(New->isUndef());
+
+    // If MI is in a BUNDLE, also update header's matching implicit use.
+    if (MI->isBundledWithPred()) {
+      MachineInstr &Header = *getBundleStart(MI->getIterator());
+      for (MachineOperand &MO : Header.operands()) {
+        if (MO.getReg() == OldReg) {
+          MO.setReg(New->getReg());
+          MO.setSubReg(New->getSubReg());
+        }
+      }
+    }
   }
   return true;
 }
@@ -1084,6 +1096,9 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
     // subreg indexes, so reject any that aren't consecutive.
     if (TRI->getChannelFromSubReg(SubReg0) + 1 !=
         TRI->getChannelFromSubReg(SubReg1))
+      return {};
+
+    if (TRI->getSubRegIdxSize(SubReg0) != 32)
       return {};
 
     int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());

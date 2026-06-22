@@ -152,6 +152,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DLLVM_USE_LINKER=lld-23
           -DCMAKE_INSTALL_PREFIX=/__w/llvm-project/llvm-project/install
           -DLIBC_COMPILE_OPTIONS_NATIVE=''
         "

@@ -29,26 +29,26 @@ define void @test() {
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX2:  Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
-; AVX2:  Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
-; AVX2:  Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 8 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
-; AVX2:  Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 16 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
-; AVX2:  Cost of 33 for VF 32: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX2:  Cost of 33 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX2:    ir<%v0> = load from index 0
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX512:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
-; AVX512:  Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
-; AVX512:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
-; AVX512:  Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4 at %v0, ir<%in0>
+; AVX512:  Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:  Cost of 40 for VF 32: WIDEN ir<%v0> = load ir<%in0>
 ; AVX512:  Cost of 80 for VF 64: WIDEN ir<%v0> = load ir<%in0>

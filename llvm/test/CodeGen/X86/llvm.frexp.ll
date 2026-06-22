@@ -25,7 +25,7 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; X64-NEXT:    cmpl $1024, %esi # imm = 0x400
 ; X64-NEXT:    cmovael %eax, %edi
 ; X64-NEXT:    addl $-14, %edi
-; X64-NEXT:    andl $-31745, %ecx # imm = 0x83FF
+; X64-NEXT:    andl $33791, %ecx # imm = 0x83FF
 ; X64-NEXT:    orl $14336, %ecx # imm = 0x3800
 ; X64-NEXT:    addl $-31744, %esi # imm = 0x8400
 ; X64-NEXT:    movzwl %si, %esi
@@ -76,7 +76,7 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; X64-NEXT:    andl $32767, %edx # imm = 0x7FFF
 ; X64-NEXT:    cmpl $1024, %edx # imm = 0x400
 ; X64-NEXT:    cmovael %ecx, %eax
-; X64-NEXT:    andl $-31745, %eax # imm = 0x83FF
+; X64-NEXT:    andl $33791, %eax # imm = 0x83FF
 ; X64-NEXT:    orl $14336, %eax # imm = 0x3800
 ; X64-NEXT:    addl $-31744, %edx # imm = 0x8400
 ; X64-NEXT:    movzwl %dx, %edx

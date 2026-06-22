@@ -59,6 +59,7 @@ add_header(imaxdiv_t HDR imaxdiv_t.h)
 add_header(in_addr_t HDR in_addr_t.h)
 add_header(in_port_t HDR in_port_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_in_addr HDR struct_in_addr.h DEPENDS .in_addr_t)
+add_header(struct_in6_addr HDR struct_in6_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(ino_t HDR ino_t.h)
 add_header(key_t HDR key_t.h)
 add_header(mbstate_t HDR mbstate_t.h)
@@ -87,11 +88,7 @@ add_header(pthread_spinlock_t HDR pthread_spinlock_t.h DEPENDS .pid_t)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_id_np_t HDR pthread_id_np_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(rlim_t HDR rlim_t.h)
-if(LIBC_TYPES_TIME_T_IS_32_BIT)
-  add_header(time_t HDR time_t_32.h DEST_HDR time_t.h)
-else()
-  add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
-endif()
+add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 add_header(sighandler_t HDR sighandler_t.h)
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
@@ -133,7 +130,6 @@ set(mcontext_deps)
 set(ucontext_deps .sigset_t .stack_t)
 
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
-  file(COPY x86_64 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   add_header(
     mcontext_t_arch
     HDR
@@ -154,6 +150,9 @@ endif()
 
 add_header(mcontext_t HDR mcontext_t.h DEPENDS ${mcontext_deps})
 add_header(ucontext_t HDR ucontext_t.h DEPENDS .mcontext_t ${ucontext_deps})
+add_header(u_char HDR u_char.h)
+add_header(u_int32_t HDR u_int32_t.h)
+add_header(uint HDR uint.h)
 add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
 add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
@@ -170,12 +169,14 @@ add_header(struct_tm HDR struct_tm.h)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)
 add_header(thrd_t HDR thrd_t.h DEPENDS .__thread_type)
+add_header(tm_gmtoff_t HDR tm_gmtoff_t.h)
 add_header(tss_t HDR tss_t.h)
 add_header(tss_dtor_t HDR tss_dtor_t.h)
 add_header(__atexithandler_t HDR __atexithandler_t.h)
 add_header(speed_t HDR speed_t.h)
 add_header(tcflag_t HDR tcflag_t.h)
 add_header(struct_termios HDR struct_termios.h DEPENDS .cc_t .speed_t .tcflag_t)
+add_header(struct_winsize HDR struct_winsize.h)
 add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)
@@ -199,6 +200,16 @@ add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
+add_header(
+    struct_sockaddr_in6
+  HDR
+    struct_sockaddr_in6.h
+  DEPENDS
+    .in_port_t
+    .sa_family_t
+    .struct_in6_addr
+    libc.include.llvm-libc-macros.stdint_macros
+)
 add_header(struct_sockaddr_storage HDR struct_sockaddr_storage.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)

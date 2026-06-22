@@ -105,8 +105,8 @@ runs:
       uses: ./.github/workflows/require-team-membership
       with:
         team-slug: llvm-release-managers
-        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ inputs.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
     - name: Upload Release
       shell: bash

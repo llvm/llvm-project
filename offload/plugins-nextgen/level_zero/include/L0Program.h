@@ -105,8 +105,10 @@ public:
   /// specified global variable name.
   Error writeGlobalVariable(const char *Name, size_t Size, const void *HostPtr);
 
-  /// Looks up a device global symbol with the given \p Name in the device.
-  Expected<void *> getSymbolDeviceAddr(const char *Name) const;
+  /// Looks up a device global symbol with the given \p Name in the device and
+  /// returns its address and size in \p Addr and \p SizePtr respectively.
+  Error getSymbolMetadata(const char *Name, void **AddrPtr,
+                          size_t *SizePtr) const;
 
   /// Returns the handle of a module that contains a given Kernel name.
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {

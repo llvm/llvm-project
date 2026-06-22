@@ -2467,6 +2467,8 @@ void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseEnqueue::VisitOMPInitClause(const OMPInitClause *C) {
   VisitOMPClauseList(C);
+  for (const Expr *A : C->attrs())
+    Visitor->AddStmt(A);
 }
 
 void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {

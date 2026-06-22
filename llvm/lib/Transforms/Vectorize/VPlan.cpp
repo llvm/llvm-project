@@ -274,9 +274,9 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
-                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (isa<VPIRValue, VPSymbolicValue>(Def))
@@ -1019,31 +1019,24 @@ void VPlan::execute(VPTransformState *State) {
 
   State->CFG.DTU.flush();
 
-  VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
-  if (!Header)
-    return;
-
-  auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
-  BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-  // Fix the latch value of canonical, reduction and first-order recurrences
-  // phis in the vector loop.
-  for (VPRecipeBase &R : Header->phis()) {
-    // Skip phi-like recipes that generate their backedege values themselves.
-    if (isa<VPWidenPHIRecipe>(&R))
+  // Fix the latch (backedge) value of all header phis in all loop headers.
+  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry())) {
+    if (!VPBlockUtils::isHeader(VPB, State->VPDT))
       continue;
+    auto *Header = cast<VPBasicBlock>(VPB);
+    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
-    auto *PhiR = cast<VPSingleDefRecipe>(&R);
-    // VPInstructions currently model scalar Phis only.
-    bool NeedsScalar = isa<VPInstruction>(PhiR) ||
-                       (isa<VPReductionPHIRecipe>(PhiR) &&
-                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    for (VPRecipeBase &R : Header->phis()) {
+      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
+                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-    Value *Phi = State->get(PhiR, NeedsScalar);
-    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does
-    // not.
-    Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
-    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+      Value *Phi = State->get(PhiR, NeedsScalar);
+      Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
   }
 }
 
@@ -1123,7 +1116,7 @@ void VPlan::printLiveIns(raw_ostream &O) const {
   }
 
   O << "\n";
-  if (TripCount) {
+  if (TripCount && TripCount->getNumUsers() > 0) {
     if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);
@@ -1653,9 +1646,7 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
 VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
                                                VPValue *TrueVal,
                                                VPValue *FalseVal, DebugLoc DL) {
-  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
-             .inferScalarType(ChainOp)
-             ->isIntegerTy(1) &&
+  assert(ChainOp->getScalarType()->isIntegerTy(1) &&
          "ChainOp must be i1 for AnyOf reduction");
   VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
                   FastMathFlags());
@@ -1899,7 +1890,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
-    Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
+    Tys.push_back(toVectorizedTy(Op->getScalarType(), VF));
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
@@ -1932,7 +1923,7 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
           if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
             continue;
           // Check if scatter is legal for this store. If so, don't count it.
-          Type *Ty = Types.inferScalarType(RepR->getOperand(0));
+          Type *Ty = RepR->getOperand(0)->getScalarType();
           auto *VTy = VectorType::get(Ty, VF);
           const Align Alignment =
               getLoadStoreAlignment(RepR->getUnderlyingInstr());

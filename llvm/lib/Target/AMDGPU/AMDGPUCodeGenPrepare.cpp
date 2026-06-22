@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
@@ -181,14 +182,15 @@ public:
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
-  /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den,
-                        bool IsDiv, bool IsSigned) const;
+  /// Expands div or rem by using floating-point operations.
+  /// Operands must be in the range [-0x400000,0x3FFFFF]
+  Value *expandDivRemToFloat(IRBuilder<> &Builder, BinaryOperator &I,
+                             Value *Num, Value *Den, bool IsDiv,
+                             bool IsSigned) const;
 
-  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I,
-                            Value *Num, Value *Den, unsigned NumBits,
-                            bool IsDiv, bool IsSigned) const;
+  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, BinaryOperator &I,
+                                 Value *Num, Value *Den, unsigned NumBits,
+                                 bool IsDiv, bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
   Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
@@ -1043,38 +1045,50 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
   KnownBits Known = computeKnownBits(Den, SQ.getWithInstruction(&I));
-  if (Known.isNegative() || !Known.isNonNegative())
-    return SSBits;
-  unsigned RHSSignBits = Known.countMinLeadingZeros();
-  unsigned DivBits = SSBits - RHSSignBits;
-  if (DivBits > MaxDivBits)
+  unsigned RHSBits = Known.countMaxActiveBits();
+  if (RHSBits > MaxDivBits)
     return SSBits;
 
   Known = computeKnownBits(Num, SQ.getWithInstruction(&I));
-  if (Known.isNegative() || !Known.isNonNegative())
-    return SSBits;
-  unsigned LHSSignBits = Known.countMinLeadingZeros();
+  unsigned LHSBits = Known.countMaxActiveBits();
 
-  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  DivBits = SSBits - SignBits;
+  unsigned DivBits = std::max(LHSBits, RHSBits);
   return DivBits;
 }
 
-// The fractional part of a float is enough to accurately represent up to
-// a 24-bit signed integer.
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *Num,
-                                                Value *Den, bool IsDiv,
-                                                bool IsSigned) const {
-  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
-  if (DivBits > 24)
+Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
+                                                     BinaryOperator &I,
+                                                     Value *Num, Value *Den,
+                                                     bool IsDiv,
+                                                     bool IsSigned) const {
+  unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
+
+  if (DivBits > (IsSigned ? 23 : 22))
     return nullptr;
-  return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
+  return expandDivRemToFloatImpl(Builder, I, Num, Den, DivBits, IsDiv,
+                                 IsSigned);
 }
 
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
+Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
     IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
     unsigned DivBits, bool IsDiv, bool IsSigned) const {
+
+  // v_rcp_f32(float(X)) can have an error of 1 ulp.
+  // This would cause incorrect calculation of Y/X if:
+  //   Y = (0x7FFFFF/X)*(X-0)-1
+  // were allowed.
+  //
+  // For example,
+  // (0x7FF6D3/0x000FE7) would erroneously produce 2060 instead of 2059.
+  // (0x7FF8F5/0x007EFB) would erroneously produce 258 instead of 257.
+  //
+  // Thus, we conservatively restrict expandDivRemToFloatImpl to
+  // [-0x40000,0x3FFFFF] for IsSigned
+  // [0x000000,0x3FFFFF] for !IsSigned.
+  assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
+         "abs(Num) must be <= than 0x40000 for expandDivRemToFloatImpl to work "
+         "correctly");
+
   Type *I32Ty = Builder.getInt32Ty();
   Num = Builder.CreateTrunc(Num, I32Ty);
   Den = Builder.CreateTrunc(Den, I32Ty);
@@ -1152,20 +1166,6 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
     // Rem needs compensation, it's easier to recompute it
     Value *Rem = Builder.CreateMul(Div, Den);
     Res = Builder.CreateSub(Num, Rem);
-  }
-
-  if (DivBits != 0 && DivBits < 32) {
-    // Extend in register from the number of bits this divide really is.
-    if (IsSigned) {
-      int InRegBits = 32 - DivBits;
-
-      Res = Builder.CreateShl(Res, InRegBits);
-      Res = Builder.CreateAShr(Res, InRegBits);
-    } else {
-      ConstantInt *TruncMask
-        = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
-      Res = Builder.CreateAnd(Res, TruncMask);
-    }
   }
 
   return Res;
@@ -1249,7 +1249,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
     }
   }
 
-  if (Value *Res = expandDivRem24(Builder, I, X, Y, IsDiv, IsSigned)) {
+  if (Value *Res = expandDivRemToFloat(Builder, I, X, Y, IsDiv, IsSigned)) {
     return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
                       Builder.CreateZExtOrTrunc(Res, Ty);
   }
@@ -1358,10 +1358,14 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     return nullptr;
 
   Value *Narrowed = nullptr;
-  if (NumDivBits <= 24) {
-    Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
-                                  IsDiv, IsSigned);
-  } else if (NumDivBits <= 32) {
+  if (NumDivBits <= (IsSigned ? 23 : 22)) {
+    Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
+                                       IsSigned);
+  } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
+    // Do not use 32-bit division if dividend may be -2147483648.
+    // Otherwise 32-bit division cannot be used safely.
+    // -2147483648/1 and -2147483648/-1 are not equal,
+    // but they produce the same lower 32-bit result.
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
 
@@ -1561,17 +1565,15 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
 
     Type *I32Ty = Builder.getInt32Ty();
     LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, I.getPointerOperand());
-    WidenLoad->copyMetadata(I);
+    AMDGPU::copyMetadataForWidenedLoad(*WidenLoad, I);
 
-    // If we have range metadata, we need to convert the type, and not make
+    // The widened load reads the original bytes in the low bits, so a !range
+    // lower bound still holds. Convert it to the new type and don't make
     // assumptions about the high bits.
-    if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
-      ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(Range->getOperand(0));
+    if (auto *Range = I.getMetadata(LLVMContext::MD_range)) {
+      ConstantInt *Lower = mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->isNullValue()) {
-        WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
-      } else {
+      if (!Lower->isNullValue()) {
         Metadata *LowAndHigh[] = {
           ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
           // Don't make assumptions about the high bits.
@@ -1898,7 +1900,8 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption)
+  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption ==
+                             cl::boolOrDefault::BOU_TRUE)
     return false;
 
   FixedVectorType *FVT = dyn_cast<FixedVectorType>(I.getType());
@@ -2312,7 +2315,8 @@ INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
 
 /// Create a workitem.id.x intrinsic call with range metadata.
 CallInst *AMDGPUCodeGenPrepareImpl::createWorkitemIdX(IRBuilder<> &B) const {
-  CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+  CallInst *Tid =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_workitem_id_x, {});
   ST.makeLIDRangeMetadata(Tid);
   return Tid;
 }

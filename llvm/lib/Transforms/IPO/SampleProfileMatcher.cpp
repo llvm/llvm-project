@@ -19,8 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
-#include <unordered_set>
-
 using namespace llvm;
 using namespace sampleprof;
 
@@ -467,7 +465,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (IRCalleeId == ProfCalleeId) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
-        CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
+        CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
       else if (IsPostMatch) {
         if (It->second == MatchState::InitialMatch)
           It->second = MatchState::UnchangedMatch;
@@ -484,7 +482,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     assert(!I.second.stringRef().empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
-      CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
+      CallsiteMatchStates.try_emplace(Loc, MatchState::InitialMismatch);
     else if (IsPostMatch) {
       // Update the state if it's not matched(UnchangedMatch or
       // RecoveredMismatch).
@@ -594,7 +592,7 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
 
 void SampleProfileMatcher::countCallGraphRecoveredSamples(
     const FunctionSamples &FS,
-    std::unordered_set<FunctionId> &CallGraphRecoveredProfiles) {
+    DenseSet<FunctionId> &CallGraphRecoveredProfiles) {
   if (CallGraphRecoveredProfiles.count(FS.getFunction())) {
     NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
     return;
@@ -611,7 +609,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   if (!ReportProfileStaleness && !PersistProfileStaleness)
     return;
 
-  std::unordered_set<FunctionId> CallGraphRecoveredProfiles;
+  DenseSet<FunctionId> CallGraphRecoveredProfiles;
   if (SalvageUnusedProfile) {
     for (const auto &I : FuncToProfileNameMap) {
       CallGraphRecoveredProfiles.insert(I.second);
@@ -713,10 +711,8 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   if (FunctionSamples::UseMD5)
     return;
   StringSet<> NamesInProfile;
-  if (auto NameTable = Reader.getNameTable()) {
-    for (auto Name : *NameTable)
-      NamesInProfile.insert(Name.stringRef());
-  }
+  for (FunctionId Name : Reader.getNameTable())
+    NamesInProfile.insert(Name.stringRef());
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -772,8 +768,8 @@ static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
 void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   if (FunctionsWithoutProfile.empty() || !LoadFuncProfileforCGMatching)
     return;
-  auto *NameTable = Reader.getNameTable();
-  if (!NameTable)
+  auto NameTable = Reader.getNameTable();
+  if (NameTable.empty())
     return;
 
   ItaniumPartialDemangler Demangler;
@@ -800,7 +796,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   // Scan the profile NameTable for candidates whose demangled basename matches
   // a unique orphan. Use a map to track exactly one candidate per basename.
   StringMap<FunctionId> CandidateByBaseName;
-  for (auto &ProfileFuncId : *NameTable) {
+  for (FunctionId ProfileFuncId : NameTable) {
     StringRef ProfName = ProfileFuncId.stringRef();
     if (ProfName.empty())
       continue;

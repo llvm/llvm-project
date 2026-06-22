@@ -785,61 +785,61 @@ public:
       uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
 
 private:
-  CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
+  Value *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
 
 public:
   /// Create a sequential vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value. An unordered reduction
   /// can be created by adding the reassoc fast-math flag to the resulting
   /// sequential reduction.
-  LLVM_ABI CallInst *CreateFAddReduce(Value *Acc, Value *Src);
+  LLVM_ABI Value *CreateFAddReduce(Value *Acc, Value *Src);
 
   /// Create a sequential vector fmul reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value. An unordered reduction
   /// can be created by adding the reassoc fast-math flag to the resulting
   /// sequential reduction.
-  LLVM_ABI CallInst *CreateFMulReduce(Value *Acc, Value *Src);
+  LLVM_ABI Value *CreateFMulReduce(Value *Acc, Value *Src);
 
   /// Create a vector int add reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateAddReduce(Value *Src);
+  LLVM_ABI Value *CreateAddReduce(Value *Src);
 
   /// Create a vector int mul reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateMulReduce(Value *Src);
+  LLVM_ABI Value *CreateMulReduce(Value *Src);
 
   /// Create a vector int AND reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateAndReduce(Value *Src);
+  LLVM_ABI Value *CreateAndReduce(Value *Src);
 
   /// Create a vector int OR reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateOrReduce(Value *Src);
+  LLVM_ABI Value *CreateOrReduce(Value *Src);
 
   /// Create a vector int XOR reduction intrinsic of the source vector.
-  LLVM_ABI CallInst *CreateXorReduce(Value *Src);
+  LLVM_ABI Value *CreateXorReduce(Value *Src);
 
   /// Create a vector integer max reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
+  LLVM_ABI Value *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
 
   /// Create a vector integer min reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateIntMinReduce(Value *Src, bool IsSigned = false);
+  LLVM_ABI Value *CreateIntMinReduce(Value *Src, bool IsSigned = false);
 
   /// Create a vector float max reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateFPMaxReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMaxReduce(Value *Src);
 
   /// Create a vector float min reduction intrinsic of the source
   /// vector.
-  LLVM_ABI CallInst *CreateFPMinReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMinReduce(Value *Src);
 
   /// Create a vector float maximum reduction intrinsic of the source
   /// vector. This variant follows the NaN and signed zero semantic of
   /// llvm.maximum intrinsic.
-  LLVM_ABI CallInst *CreateFPMaximumReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMaximumReduce(Value *Src);
 
   /// Create a vector float minimum reduction intrinsic of the source
   /// vector. This variant follows the NaN and signed zero semantic of
   /// llvm.minimum intrinsic.
-  LLVM_ABI CallInst *CreateFPMinimumReduce(Value *Src);
+  LLVM_ABI Value *CreateFPMinimumReduce(Value *Src);
 
   /// Create a lifetime.start intrinsic.
   LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
@@ -1020,28 +1020,57 @@ public:
 
   /// Create a call to intrinsic \p ID with \p Args, mangled using
   /// \p OverloadTypes. If \p FMFSource is provided, copy fast-math-flags from
-  /// that instruction to the intrinsic.
-  LLVM_ABI CallInst *CreateIntrinsic(Intrinsic::ID ID,
-                                     ArrayRef<Type *> OverloadTypes,
-                                     ArrayRef<Value *> Args,
-                                     FMFSource FMFSource = {},
-                                     const Twine &Name = "",
-                                     ArrayRef<OperandBundleDef> OpBundles = {});
+  /// that instruction to the intrinsic. It is guaranteed not to fold.
+  LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(
+      Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
+      FMFSource FMFSource = {}, const Twine &Name = "",
+      ArrayRef<OperandBundleDef> OpBundles = {});
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  LLVM_ABI CallInst *CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
-                                     ArrayRef<Value *> Args,
-                                     FMFSource FMFSource = {},
-                                     const Twine &Name = "");
+  /// the intrinsic. It is guaranteed not to fold.
+  LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(Type *RetTy,
+                                                   Intrinsic::ID ID,
+                                                   ArrayRef<Value *> Args,
+                                                   FMFSource FMFSource = {},
+                                                   const Twine &Name = "");
 
   /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
-  /// the intrinsic.
-  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
-                            FMFSource FMFSource = {}, const Twine &Name = "") {
-    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  /// the intrinsic. It is guranteed not to fold.
+  CallInst *CreateIntrinsicWithoutFolding(Intrinsic::ID ID,
+                                          ArrayRef<Value *> Args,
+                                          FMFSource FMFSource = {},
+                                          const Twine &Name = "") {
+    return CreateIntrinsicWithoutFolding(ID, /*Types=*/{}, Args, FMFSource,
+                                         Name);
+  }
+
+  /// Variant to create a possibly constant-folded intrinsic. An optional \p
+  /// SetFn is called if the intrinsic doesn't fold, and can be used to set
+  /// things like attributes.
+  LLVM_ABI Value *CreateIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
+      FMFSource FMFSource = {}, const Twine &Name = "",
+      ArrayRef<OperandBundleDef> OpBundles = {},
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {});
+
+  /// Variant to create a possibly constant-folded intrinsic. An optional \p
+  /// SetFn is called if the intrinsic doesn't fold, and can be used to set
+  /// things like attributes.
+  LLVM_ABI Value *CreateIntrinsic(
+      Type *RetTy, Intrinsic::ID ID, ArrayRef<Value *> Args,
+      FMFSource FMFSource = {}, const Twine &Name = "",
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {});
+
+  /// Variant to create a possibly constant-folded intrinsic. An optional \p
+  /// SetFn is called if the intrinsic doesn't fold, and can be used to set
+  /// things like attributes.
+  Value *CreateIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Value *> Args, FMFSource FMFSource = {},
+      const Twine &Name = "",
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {}) {
+    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name, {}, SetFn);
   }
 
   /// Create call to the fabs intrinsic.
@@ -1125,51 +1154,52 @@ public:
   }
 
   /// Create a call to the arithmetic_fence intrinsic.
-  CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
-                                  const Twine &Name = "") {
+  Value *CreateArithmeticFence(Value *Val, Type *DstType,
+                               const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::arithmetic_fence, DstType, Val, nullptr,
                            Name);
   }
 
   /// Create a call to the vector.extract intrinsic.
-  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
-                                const Twine &Name = "") {
+  Value *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
+                             const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_extract,
                            {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
                            Name);
   }
 
   /// Create a call to the vector.extract intrinsic.
-  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
-                                const Twine &Name = "") {
+  Value *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
+                             const Twine &Name = "") {
     return CreateExtractVector(DstType, SrcVec, getInt64(Idx), Name);
   }
 
   /// Create a call to the vector.insert intrinsic.
-  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
-                               Value *Idx, const Twine &Name = "") {
+  Value *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                            Value *Idx, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
   }
 
   /// Create a call to the vector.extract intrinsic.
-  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
-                               uint64_t Idx, const Twine &Name = "") {
+  Value *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                            uint64_t Idx, const Twine &Name = "") {
     return CreateInsertVector(DstType, SrcVec, SubVec, getInt64(Idx), Name);
   }
 
   /// Create a call to llvm.stacksave
   CallInst *CreateStackSave(const Twine &Name = "") {
     const DataLayout &DL = BB->getDataLayout();
-    return CreateIntrinsic(Intrinsic::stacksave, {DL.getAllocaPtrType(Context)},
-                           {}, nullptr, Name);
+    return CreateIntrinsicWithoutFolding(Intrinsic::stacksave,
+                                         {DL.getAllocaPtrType(Context)}, {},
+                                         nullptr, Name);
   }
 
   /// Create a call to llvm.stackrestore
   CallInst *CreateStackRestore(Value *Ptr, const Twine &Name = "") {
-    return CreateIntrinsic(Intrinsic::stackrestore, {Ptr->getType()}, {Ptr},
-                           nullptr, Name);
+    return CreateIntrinsicWithoutFolding(
+        Intrinsic::stackrestore, {Ptr->getType()}, {Ptr}, nullptr, Name);
   }
 
   /// Create a call to llvm.experimental_cttz_elts
@@ -1779,6 +1809,16 @@ public:
     return Insert(BinOp, Name);
   }
 
+  Value *CreateExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                          bool IsExact, const Twine &Name = "") {
+    if (Value *V = Folder.FoldExactBinOp(Opc, LHS, RHS, IsExact))
+      return V;
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    if (IsExact)
+      BinOp->setIsExact(IsExact);
+    return Insert(BinOp, Name);
+  }
+
   Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "",
                           Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
@@ -1906,8 +1946,8 @@ public:
   CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
     const DataLayout &DL = BB->getDataLayout();
     PointerType *PtrTy = DL.getAllocaPtrType(Context);
-    CallInst *Output =
-        CreateIntrinsic(Intrinsic::structured_alloca, {PtrTy}, {}, {}, Name);
+    auto *Output = CreateIntrinsicWithoutFolding(Intrinsic::structured_alloca,
+                                                 {PtrTy}, {}, {}, Name);
     Output->addRetAttr(
         Attribute::get(getContext(), Attribute::ElementType, BaseType));
     return Output;
@@ -1993,18 +2033,20 @@ public:
         new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
-  CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
-                                ArrayRef<Value *> Indices,
-                                const Twine &Name = "") {
+  Value *CreateStructuredGEP(Type *BaseType, Value *PtrBase,
+                             ArrayRef<Value *> Indices,
+                             const Twine &Name = "") {
     SmallVector<Value *> Args;
     Args.push_back(PtrBase);
     llvm::append_range(Args, Indices);
 
-    CallInst *Output = CreateIntrinsic(Intrinsic::structured_gep,
-                                       {PtrBase->getType()}, Args, {}, Name);
-    Output->addParamAttr(
-        0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
-    return Output;
+    return CreateIntrinsic(
+        Intrinsic::structured_gep, {PtrBase->getType()}, Args, {}, Name, {},
+        [&](CallInst *Output) {
+          Output->addParamAttr(
+              0,
+              Attribute::get(getContext(), Attribute::ElementType, BaseType));
+        });
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
@@ -2178,23 +2220,23 @@ public:
   }
 
   Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
-                      bool IsNonNeg = false) {
+                      bool IsNonNeg = false, MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
                                      V, DestTy, nullptr, Name);
-    if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
-      return Folded;
-    Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
-    if (IsNonNeg)
-      I->setNonNeg();
-    return I;
+    Value *Val = CreateCast(Instruction::UIToFP, V, DestTy, Name, FPMathTag);
+    if (auto *I = dyn_cast<Instruction>(Val))
+      if (IsNonNeg)
+        I->setNonNeg();
+    return Val;
   }
 
-  Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
+  Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = "",
+                      MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_sitofp,
                                      V, DestTy, nullptr, Name);
-    return CreateCast(Instruction::SIToFP, V, DestTy, Name);
+    return CreateCast(Instruction::SIToFP, V, DestTy, Name, FPMathTag);
   }
 
   Value *CreateFPTrunc(Value *V, Type *DestTy, const Twine &Name = "",

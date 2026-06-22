@@ -1531,36 +1531,21 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
       CGM.getTarget().getDWARFAddressSpace(
           CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
-  const BTFTagAttributedType *BTFAttrTy;
-  if (auto *Atomic = PointeeTy->getAs<AtomicType>())
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
-  else
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
-  SmallVector<llvm::Metadata *, 4> Annots;
-  while (BTFAttrTy) {
-    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
-    if (!Tag.empty()) {
-      llvm::Metadata *Ops[2] = {
-          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
-          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
-      Annots.insert(Annots.begin(),
-                    llvm::MDNode::get(CGM.getLLVMContext(), Ops));
-    }
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
-  }
-
-  llvm::DINodeArray Annotations = nullptr;
-  if (Annots.size() > 0)
-    Annotations = DBuilder.getOrCreateArray(Annots);
-
   if (Tag == llvm::dwarf::DW_TAG_reference_type ||
-      Tag == llvm::dwarf::DW_TAG_rvalue_reference_type)
+      Tag == llvm::dwarf::DW_TAG_rvalue_reference_type) {
     return DBuilder.createReferenceType(Tag, getOrCreateType(PointeeTy, Unit),
                                         Size, Align, DWARFAddressSpace);
-  else
+  } else {
+    SmallVector<llvm::Metadata *, 4> Annots;
+    CollectBTFTypeTagAnnotations(PointeeTy, Annots);
+
+    llvm::DINodeArray Annotations = nullptr;
+    if (Annots.size() > 0)
+      Annotations = DBuilder.getOrCreateArray(Annots);
     return DBuilder.createPointerType(getOrCreateType(PointeeTy, Unit), Size,
                                       Align, DWARFAddressSpace, StringRef(),
                                       Annotations);
+  }
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateStructPtrType(StringRef Name,
@@ -1780,8 +1765,17 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
-  // Typedefs are derived from some other type.
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(Ty->getDecl());
+
+  // Typedefs are derived from some other type. Collect both btf_decl_tag
+  // annotations on the typedef declaration and btf_type_tag annotations on
+  // the (possibly non-pointer) underlying type, e.g.
+  //   typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+  SmallVector<llvm::Metadata *, 4> Annots;
+  llvm::DINodeArray Annotations;
+  CollectBTFTypeTagAnnotations(Ty->getDecl()->getUnderlyingType(), Annots);
+  CollectBTFDeclTagAnnotations(Ty->getDecl(), Annots);
+  if (!Annots.empty())
+    Annotations = DBuilder.getOrCreateArray(Annots);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   const DeclContext *DC = Ty->getDecl()->getDeclContext();
@@ -2844,18 +2838,44 @@ llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(const RecordDecl *RD,
   return CollectTemplateParams(GetTemplateArgs(RD), Unit);
 }
 
-llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
-  if (!D->hasAttr<BTFDeclTagAttr>())
-    return nullptr;
-
-  SmallVector<llvm::Metadata *, 4> Annotations;
+void CGDebugInfo::CollectBTFDeclTagAnnotations(
+    const Decl *D, SmallVectorImpl<llvm::Metadata *> &Annotations) {
   for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
     llvm::Metadata *Ops[2] = {
         llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_decl_tag")),
         llvm::MDString::get(CGM.getLLVMContext(), I->getBTFDeclTag())};
     Annotations.push_back(llvm::MDNode::get(CGM.getLLVMContext(), Ops));
   }
+}
+
+llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
+  if (!D->hasAttr<BTFDeclTagAttr>())
+    return nullptr;
+
+  SmallVector<llvm::Metadata *, 4> Annotations;
+  CollectBTFDeclTagAnnotations(D, Annotations);
   return DBuilder.getOrCreateArray(Annotations);
+}
+
+void CGDebugInfo::CollectBTFTypeTagAnnotations(
+    QualType Ty, SmallVectorImpl<llvm::Metadata *> &Annotations) {
+  const BTFTagAttributedType *BTFAttrTy;
+  if (auto *Atomic = Ty->getAs<AtomicType>())
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
+  else
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Ty);
+
+  while (BTFAttrTy) {
+    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
+    if (!Tag.empty()) {
+      llvm::Metadata *Ops[2] = {
+          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
+          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
+      Annotations.insert(Annotations.begin(),
+                         llvm::MDNode::get(CGM.getLLVMContext(), Ops));
+    }
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
+  }
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
@@ -3627,7 +3647,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   };
   {
     // Use 'char' for the isClassProperty bit as DenseSet requires space for
-    // empty/tombstone keys in the data type (and bool is too small for that).
+    // the empty key in the data type (and bool is too small for that).
     typedef std::pair<char, const IdentifierInfo *> IsClassAndIdent;
     /// List of already emitted properties. Two distinct class and instance
     /// properties can share the same identifier (but not two instance
