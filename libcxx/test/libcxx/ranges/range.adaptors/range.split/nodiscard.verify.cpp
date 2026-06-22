@@ -10,12 +10,12 @@
 
 // Check that functions are marked [[nodiscard]]
 
-#include <string>
 #include <ranges>
 #include <utility>
+#include <vector>
 
 void test() {
-  std::string range{"19,28,29,49,82,94"};
+  std::vector<char> range = {'1', '9', ',', '2', '8', ',', '2', '9', ',', '4', '9', ',', '8', '2', ',', '9', '4'};
   char pattern = ',';
 
   auto v = std::views::split(range, pattern);
