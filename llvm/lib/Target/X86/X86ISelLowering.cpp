@@ -54384,6 +54384,9 @@ static SDValue combineConstantArrayVariable(EVT RegVT, LoadSDNode *Ld,
     Module *M = GVar->getParent();
 
     // we set the old variable to XX.x86.orig
+    // XX.x86.orig variable should be filtered in asm printer
+    // TODO: I'm really really not sure it's a good design but don't find a
+    // better way...
     constexpr StringRef OrigSuffix = ".x86.orig";
 
     StringRef CurName = GVar->getName();
@@ -54425,6 +54428,7 @@ static SDValue combineConstantArrayVariable(EVT RegVT, LoadSDNode *Ld,
     return DAG.getLoad(Ld->getMemoryVT(), DLN, Ld->getChain(), NewPtr, MPI,
                        Ld->getAlign(), Ld->getMemOperand()->getFlags());
   }
+  return SDValue();
 }
 
 static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
