@@ -1681,7 +1681,6 @@ void addInstrRequirements(const MachineInstr &MI,
           UsesBFloat16 = IsBFloat16(GR->getResultType(MO.getReg(), MF));
       }
 
-      // The OpenCL extended instruction set can operates on IEEE-754 encoding only
       if (UsesBFloat16) {
         if (!ST.canUseExtension(
                 SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
