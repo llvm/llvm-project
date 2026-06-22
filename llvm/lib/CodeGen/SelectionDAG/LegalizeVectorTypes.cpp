@@ -7409,7 +7409,7 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // the "padded" lanes that sit in the middle of the vector. Instead, we should
   // not just concat but also "re-pack" these operands before extracting new
   // operand vectors with the widened type.
-  auto PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+  EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                         WidenEC.multiplyCoefficientBy(Factor));
   SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
   for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
