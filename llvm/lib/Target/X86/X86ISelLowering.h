@@ -367,11 +367,14 @@ namespace llvm {
 
     bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
         SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, unsigned Depth) const override;
+        UndefPoisonKind Kind, unsigned Depth) const override;
 
-    bool canCreateUndefOrPoisonForTargetNode(
-        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+    bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             UndefPoisonKind Kind,
+                                             bool ConsiderFlags,
+                                             unsigned Depth) const override;
 
     bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
                                    APInt &UndefElts, const SelectionDAG &DAG,
@@ -882,6 +885,7 @@ namespace llvm {
 
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
@@ -893,6 +897,10 @@ namespace llvm {
 
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
+
+    bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+      return false;
+    }
 
     bool needsCmpXchgNb(Type *MemType) const;
 

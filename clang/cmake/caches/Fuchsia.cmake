@@ -36,6 +36,8 @@ set(_FUCHSIA_BOOTSTRAP_PASSTHROUGH
   CURL_ROOT
   OpenSSL_ROOT
   httplib_ROOT
+  LLVM_ENABLE_OPENCSD
+  OPENCSD_ROOT
 
   # Deprecated
   CursesAndPanel_ROOT

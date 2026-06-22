@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref,both %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++11 -verify=ref,both      %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++20 -verify=ref,both      %s
 
 
 using MaxBitInt = _BitInt(128);
@@ -68,6 +68,10 @@ constexpr _BitInt(32) nope = top / bottom;  // both-error {{must be initialized 
                                             // both-note {{value 2147483648 is outside the range}}
 constexpr _BitInt(32) noooo = top % bottom; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{value 2147483648 is outside the range}}
+
+struct {
+  _BitInt(35) void : 33; // both-error {{cannot combine with previous '_BitInt' declaration specifier}}
+} s;
 
 namespace APCast {
   constexpr _BitInt(10) A = 1;
@@ -292,6 +296,12 @@ namespace IncDec {
   static_assert(dec1(true) == 1, "");
   static_assert(dec1(false) == 1, "");
 #endif
+}
+
+namespace NegShift {
+  constexpr __int128_t a = ((__int128_t)1 << 127);
+  static_assert((2 >> a) == 1, ""); // both-error {{not an integral constant expression}} \
+                                    // both-note {{negative shift count -170141183460469231731687303715884105728}}
 }
 
 #if __cplusplus >= 201402L

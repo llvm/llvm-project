@@ -3,9 +3,9 @@
 
 define void @f1(<2 x i16> %x, ptr %a) {
 ; CHECK-LABEL: @f1(
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[X:%.*]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i16> [[X]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i16> [[X:%.*]], i32 0
 ; CHECK-NEXT:    store i16 [[TMP1]], ptr [[A:%.*]], align 2
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[X]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i16> [[SHUFFLE]], ptr undef, align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -29,9 +29,9 @@ define void @f2(<2 x i16> %x, ptr %a) {
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[XX:%.*]] = phi <2 x i16> [ [[X:%.*]], [[ENTRY:%.*]] ], [ undef, [[CONT]] ]
 ; CHECK-NEXT:    [[AA:%.*]] = phi ptr [ [[A:%.*]], [[ENTRY]] ], [ undef, [[CONT]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i16> [[XX]], i32 0
 ; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A]], align 2
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i16> [[SHUFFLE]], ptr undef, align 2
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[A_VAL]], 0
@@ -70,9 +70,9 @@ define void @f3(<2 x i16> %x, ptr %a) {
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[XX:%.*]] = phi <2 x i16> [ [[X:%.*]], [[ENTRY:%.*]] ], [ undef, [[CONT]] ]
 ; CHECK-NEXT:    [[AA:%.*]] = phi ptr [ [[A:%.*]], [[ENTRY]] ], [ undef, [[CONT]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i16> [[XX]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A]], align 2
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    store <4 x i16> [[SHUFFLE]], ptr undef, align 2
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[A_VAL]], 0

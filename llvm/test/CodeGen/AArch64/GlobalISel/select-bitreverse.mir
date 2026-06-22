@@ -18,9 +18,9 @@ body:             |
     ; CHECK-NEXT: %bitreverse:gpr32 = RBITWr %copy
     ; CHECK-NEXT: $w0 = COPY %bitreverse
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %bitreverse:gpr(s32) = G_BITREVERSE %copy
-    $w0 = COPY %bitreverse(s32)
+    %copy:gpr(i32) = COPY $w0
+    %bitreverse:gpr(i32) = G_BITREVERSE %copy
+    $w0 = COPY %bitreverse(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -40,9 +40,9 @@ body:             |
     ; CHECK-NEXT: %bitreverse:gpr64 = RBITXr %copy
     ; CHECK-NEXT: $x0 = COPY %bitreverse
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x0
-    %bitreverse:gpr(s64) = G_BITREVERSE %copy
-    $x0 = COPY %bitreverse(s64)
+    %copy:gpr(i64) = COPY $x0
+    %bitreverse:gpr(i64) = G_BITREVERSE %copy
+    $x0 = COPY %bitreverse(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -62,9 +62,9 @@ body:             |
     ; CHECK-NEXT: %bitreverse:fpr64 = RBITv8i8 %vec
     ; CHECK-NEXT: $x0 = COPY %bitreverse
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %vec:fpr(<8 x s8>) = G_IMPLICIT_DEF
-    %bitreverse:fpr(<8 x s8>) = G_BITREVERSE %vec
-    $x0 = COPY %bitreverse(<8 x s8>)
+    %vec:fpr(<8 x i8>) = G_IMPLICIT_DEF
+    %bitreverse:fpr(<8 x i8>) = G_BITREVERSE %vec
+    $x0 = COPY %bitreverse(<8 x i8>)
     RET_ReallyLR implicit $x0
 
 ...
@@ -84,9 +84,9 @@ body:             |
     ; CHECK-NEXT: %bitreverse:fpr128 = RBITv16i8 %vec
     ; CHECK-NEXT: $q0 = COPY %bitreverse
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %vec:fpr(<16 x s8>) = G_IMPLICIT_DEF
-    %bitreverse:fpr(<16 x s8>) = G_BITREVERSE %vec
-    $q0 = COPY %bitreverse(<16 x s8>)
+    %vec:fpr(<16 x i8>) = G_IMPLICIT_DEF
+    %bitreverse:fpr(<16 x i8>) = G_BITREVERSE %vec
+    $q0 = COPY %bitreverse(<16 x i8>)
     RET_ReallyLR implicit $q0
 
 ...

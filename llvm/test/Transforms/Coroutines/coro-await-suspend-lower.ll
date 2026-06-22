@@ -94,7 +94,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.resume(
+; CHECK-LABEL: define internal void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*]]:
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0
@@ -129,7 +129,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    store i2 -1, ptr [[INDEX_ADDR15]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @await_suspend_wrapper_handle(ptr [[AWAITER_RELOAD_ADDR]], ptr [[HDL]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.coro.subfn.addr(ptr [[TMP3]], i8 0)
-; CHECK-NEXT:    musttail call fastcc void [[TMP4]](ptr [[TMP3]])
+; CHECK-NEXT:    musttail call void [[TMP4]](ptr [[TMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CLEANUP]]:
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
@@ -141,7 +141,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    unreachable
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.destroy(
+; CHECK-LABEL: define internal void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0
@@ -150,7 +150,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.cleanup(
+; CHECK-LABEL: define internal void @f.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0

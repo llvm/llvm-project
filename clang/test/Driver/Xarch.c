@@ -20,5 +20,6 @@
 // LINKER: "foo"
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -Xarch_x86_64 -O1 %s -S -### 2>&1 | FileCheck -check-prefix=O1ONCE %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -Xarch_amd64 -O1 %s -S -### 2>&1 | FileCheck -check-prefix=O1ONCE %s
 // O1ONCE: "-O1"
 // O1ONCE-NOT: "-O1"

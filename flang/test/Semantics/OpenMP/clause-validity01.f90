@@ -330,11 +330,10 @@ use omp_lib
   !$omp parallel
   b = 1
   !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
-  !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
+  !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
-  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
@@ -483,14 +482,14 @@ use omp_lib
 ! 2.13.1 master
 
   !$omp parallel
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead. [-Wopen-mp-usage]
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead [-Wopenmp-usage]
   !$omp master
   a=3.14
   !$omp end master
   !$omp end parallel
 
   !$omp parallel
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead. [-Wopen-mp-usage]
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead [-Wopenmp-usage]
   !ERROR: NUM_THREADS clause is not allowed on the MASTER directive
   !$omp master num_threads(4)
   a=3.14

@@ -62,6 +62,7 @@ public:
   void Post(parser::IfConstruct &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
+  void Post(parser::AccObjectList &);
 
   // Name resolution yet implemented:
   // TODO: Can some/all of these now be enabled?
@@ -105,7 +106,7 @@ void RewriteMutator::Post(parser::Name &name) {
 }
 
 static bool ReturnsDataPointer(const Symbol &symbol) {
-  if (const Symbol * funcRes{FindFunctionResult(symbol)}) {
+  if (const Symbol *funcRes{FindFunctionResult(symbol)}) {
     return IsPointer(*funcRes) && !IsProcedure(*funcRes);
   } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
     for (auto ref : generic->specificProcs()) {
@@ -131,9 +132,9 @@ void RewriteMutator::OpenMPSimdOnly(parser::SpecificationPart &specPart) {
       if (auto *ompDecl{std::get_if<
               common::Indirection<parser::OpenMPDeclarativeConstruct>>(
               &specConstr->u)}) {
-        if (std::holds_alternative<parser::OpenMPThreadprivate>(
+        if (std::holds_alternative<parser::OmpThreadprivateDirective>(
                 ompDecl->value().u) ||
-            std::holds_alternative<parser::OpenMPDeclareMapperConstruct>(
+            std::holds_alternative<parser::OmpDeclareMapperDirective>(
                 ompDecl->value().u)) {
           it = list.erase(it);
           continue;
@@ -222,8 +223,7 @@ void RewriteMutator::OpenMPSimdOnly(
               std::get<std::list<parser::OpenMPConstruct>>(ompCon->t);
           auto insertPos = std::next(it);
           for (auto &sectionCon : sections) {
-            auto &section =
-                std::get<parser::OpenMPSectionConstruct>(sectionCon.u);
+            auto &section = std::get<parser::OmpSectionDirective>(sectionCon.u);
             auto &innerBlock = std::get<parser::Block>(section.t);
             block.splice(insertPos, innerBlock);
           }
@@ -257,8 +257,8 @@ void RewriteMutator::FixMisparsedStmtFuncs(
     if (auto *stmt{std::get_if<
             parser::Statement<common::Indirection<parser::StmtFunctionStmt>>>(
             &it->u)}) {
-      if (const Symbol *
-          symbol{std::get<parser::Name>(stmt->statement.value().t).symbol}) {
+      if (const Symbol *symbol{
+              std::get<parser::Name>(stmt->statement.value().t).symbol}) {
         const Symbol &ultimate{symbol->GetUltimate()};
         convert =
             ultimate.has<ObjectEntityDetails>() || ReturnsDataPointer(ultimate);
@@ -461,7 +461,7 @@ template <typename READ_OR_WRITE>
 void FixMisparsedUntaggedNamelistName(READ_OR_WRITE &x) {
   if (x.iounit && x.format &&
       std::holds_alternative<parser::Expr>(x.format->u)) {
-    if (const parser::Name * name{parser::Unwrap<parser::Name>(x.format)}) {
+    if (const parser::Name *name{parser::Unwrap<parser::Name>(x.format)}) {
       if (name->symbol && name->symbol->GetUltimate().has<NamelistDetails>()) {
         x.controls.emplace_front(parser::IoControlSpec{std::move(*name)});
         x.format.reset();
@@ -494,6 +494,15 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
 
 void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
+}
+
+// Erase AccObjects recorded in the context by resolve-directives as same-kind
+// data-sharing duplicates. Cross-kind duplicates remain hard errors and never
+// reach this pass.
+void RewriteMutator::Post(parser::AccObjectList &x) {
+  x.v.remove_if([this](const parser::AccObject &o) {
+    return context_.IsAccObjectDuplicate(&o);
+  });
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

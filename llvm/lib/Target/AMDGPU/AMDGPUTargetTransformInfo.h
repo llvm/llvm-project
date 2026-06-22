@@ -133,6 +133,7 @@ public:
   getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const override;
   unsigned getMinVectorRegisterBitWidth() const override;
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
+  bool preferSLPInstCountCheck() const override;
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const override;

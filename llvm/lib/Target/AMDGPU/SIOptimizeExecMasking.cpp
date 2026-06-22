@@ -293,6 +293,12 @@ bool SIOptimizeExecMasking::removeTerminatorBit(MachineInstr &MI) const {
     MI.setDesc(TII->get(AMDGPU::S_AND_B32));
     return true;
   }
+  case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
+    MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32));
+    return true;
+  case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
+    MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
+    return true;
   default:
     return false;
   }
@@ -416,7 +422,8 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
     ++A;
 
   for (; A != Stop.getParent()->rend() && A != Stop; ++A) {
-    LR.stepBackward(*A);
+    if (!A->isDebugInstr())
+      LR.stepBackward(*A);
   }
 
   return !LR.available(Reg) || MRI->isReserved(Reg);
@@ -467,7 +474,7 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     auto *CopyToExecInst = &*I;
     auto CopyFromExecInst = findExecCopy(MBB, I);
     if (CopyFromExecInst == E) {
-      auto PrepareExecInst = std::next(I);
+      auto PrepareExecInst = next_nodbg(I, E);
       if (PrepareExecInst == E)
         continue;
       // Fold exec = COPY (S_AND_B64 reg, exec) -> exec = S_AND_B64 reg, exec
@@ -500,6 +507,9 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
              J = std::next(CopyFromExecInst->getIterator()),
              JE = I->getIterator();
          J != JE; ++J) {
+      if (J->isDebugInstr())
+        continue;
+
       if (SaveExecInst && J->readsRegister(LMC.ExecReg, TRI)) {
         LLVM_DEBUG(dbgs() << "exec read prevents saveexec: " << *J << '\n');
         // Make sure this is inserted after any VALU ops that may have been
@@ -758,9 +768,10 @@ void SIOptimizeExecMasking::tryRecordOrSaveexecXorSequence(MachineInstr &MI) {
         XorSrc1.isReg() &&
         (XorSrc0.getReg() == LMC.ExecReg || XorSrc1.getReg() == LMC.ExecReg)) {
 
-      // Peek at the previous instruction and check if this is a relevant
-      // s_or_saveexec instruction.
-      MachineInstr &PossibleOrSaveexec = *MI.getPrevNode();
+      // Peek at the previous non-debug instruction and check if this is a
+      // relevant s_or_saveexec instruction.
+      auto It = prev_nodbg(MI.getIterator(), MI.getParent()->instr_begin());
+      MachineInstr &PossibleOrSaveexec = *It;
       if (PossibleOrSaveexec.getOpcode() != LMC.OrSaveExecOpc)
         return;
 

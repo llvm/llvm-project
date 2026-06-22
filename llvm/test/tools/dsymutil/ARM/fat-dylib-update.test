@@ -1,9 +1,9 @@
 # REQUIRES: object-emission,system-darwin
-# RUN: dsymutil -oso-prepend-path %p/..  %p/../Inputs/fat-test.arm.dylib -o %t.dSYM
+# RUN: dsymutil --linker classic -oso-prepend-path %p/..  %p/../Inputs/fat-test.arm.dylib -o %t.dSYM
 # RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
-# RUN: dsymutil -u %t.dSYM
+# RUN: dsymutil --linker classic -u %t.dSYM
 # RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
-# RUN: dsymutil -u %t.dSYM -o %t1.dSYM
+# RUN: dsymutil --linker classic -u %t.dSYM -o %t1.dSYM
 # RUN: llvm-dwarfdump -a -v %t1.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
 #
 # RUN: dsymutil --linker parallel -oso-prepend-path %p/..  %p/../Inputs/fat-test.arm.dylib -o %t.dSYM
