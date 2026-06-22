@@ -10527,6 +10527,12 @@ void Sema::CheckAbsoluteValueFunction(const CallExpr *Call,
   if (IsStdAbs)
     return;
 
+  // Prevent reaching unreachable code in getAbsoluteValueKind for unsupported
+  // types.
+  if (!ArgType->isIntegralOrEnumerationType() &&
+      !ArgType->isRealFloatingType() && !ArgType->isAnyComplexType())
+    return;
+
   AbsoluteValueKind ArgValueKind = getAbsoluteValueKind(ArgType);
   AbsoluteValueKind ParamValueKind = getAbsoluteValueKind(ParamType);
 
