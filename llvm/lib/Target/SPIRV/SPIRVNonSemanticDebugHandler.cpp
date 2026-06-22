@@ -469,17 +469,17 @@ SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
     const DISubprogram *SP) const {
   // Current logic matches SPIRV-LLVM-Translator's logic for Parent operand.
 
-  if (const DIScope *Scope = SP->getScope()) {
-    if (!isa<DIFile>(Scope)) {
-      if (const DIType *Ty = dyn_cast<DIType>(Scope)) {
-        auto TIt = DebugTypeRegs.find(Ty);
-        if (TIt != DebugTypeRegs.end())
-          return TIt->second;
-      }
-      // TODO: Complete with other lookups once other scopes are supported
-      // (subclases of DIScope).
+  const DIScope *Scope = SP->getScope();
+  if (Scope && !isa<DIFile>(Scope)) {
+    // TODO: Complete with other lookups once other scopes are supported
+    // (subclases of DIScope).
+    const DIType *Ty = dyn_cast<DIType>(Scope);
+    if (!Ty)
       return std::nullopt;
-    }
+    auto TIt = DebugTypeRegs.find(Ty);
+    if (TIt == DebugTypeRegs.end())
+      return std::nullopt;
+    return TIt->second;
   }
 
   const DICompileUnit *ParentCU = SP->getUnit();
