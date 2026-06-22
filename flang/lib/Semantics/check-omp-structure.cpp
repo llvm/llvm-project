@@ -1062,8 +1062,10 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
-  if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
+  parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
+  if (dirName.v != llvm::omp::Directive::OMPD_section) {
     dirStack_.pop_back();
+    assert(dirName.v == GetContext().directive && "Context mismatch");
     dirContext_.pop_back();
   }
   constructStack_.pop_back();
@@ -1085,6 +1087,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
 void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeConstruct &x) {
   ExitDirectiveNest(DeclarativeNest);
   dirStack_.pop_back();
+  [[maybe_unused]] parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
+  assert(dirName.v == GetContext().directive && "Context mismatch");
   dirContext_.pop_back();
 }
 
@@ -5773,6 +5777,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPMisplacedEndDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPMisplacedEndDirective &x) {
+  assert(GetContext().directive == llvm::omp::Directive::OMPD_unknown &&
+      "Context mismatch");
   dirContext_.pop_back();
 }
 
@@ -5782,6 +5788,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPInvalidDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
+  assert(GetContext().directive == llvm::omp::Directive::OMPD_unknown &&
+      "Context mismatch");
   dirContext_.pop_back();
 }
 
