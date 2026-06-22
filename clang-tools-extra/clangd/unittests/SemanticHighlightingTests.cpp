@@ -1126,10 +1126,10 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
   checkHighlightings(R"cpp(
       module;
       export module highlight;
-      $Keyword[[export]] void $Function_def[[foo]]() {
+      $Modifier[[export]] void $Function_def[[foo]]() {
       }
       )cpp",
-                     {{"imp.h", R"cpp(
+                     {{"imp.cxx", R"cpp(
     module;
     export module ABC;
   )cpp"}},
