@@ -60,7 +60,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     BinaryOperator::Opcode Op = B->getOpcode();
 
     if (Op == BO_Assign) {
-      // EXPERIMENTAL: "Conjured" symbols.
       // FIXME: Handle structs.
       if (RightV.isUnknown()) {
         unsigned Count = getNumVisitedCurrent();
@@ -157,7 +156,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       SVal Result = svalBuilder.evalCast(evalBinOp(state, Op, V, RightV, CTy),
                                          B->getType(), CTy);
 
-      // EXPERIMENTAL: "Conjured" symbols.
       // FIXME: Handle structs.
 
       SVal LHSVal;
