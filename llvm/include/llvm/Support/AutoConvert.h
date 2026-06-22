@@ -18,8 +18,10 @@
 #include <_Ccsid.h>
 #endif
 #ifdef __cplusplus
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <system_error>
 #endif /* __cplusplus */
 
@@ -105,7 +107,7 @@ inline ErrorOr<bool> needConversion(const Twine &FileName, const int FD = -1) {
   return false;
 }
 
-inline ErrorOr<std::string>
+inline ErrorOr<SmallString<32>>
 getEncodingNameFromFileTag(const Twine &FileName, const int FD = -1) {
 #ifdef __MVS__
   ErrorOr<__ccsid_t> TagOrErr = getzOSFileTag(FileName, FD);
@@ -114,19 +116,19 @@ getEncodingNameFromFileTag(const Twine &FileName, const int FD = -1) {
 
   __ccsid_t Tag = *TagOrErr;
   if (Tag == 0)
-    return std::string(); // Return empty string for no tag
+    return {}; // Return empty string for no tag
 
   if (Tag == 1208)
-    return std::string("utf-8");
+    return {"utf-8"};
 
   if (Tag == 1047)
-    return std::string("ibm-1047");
+    return {"ibm-1047"};
 
-  char Buffer[16];
-  snprintf(Buffer, sizeof(Buffer), "%03d", Tag);
-  return std::string(Buffer);
+  SmallString<32> Result;
+  raw_svector_ostream(Result) << Tag;
+  return Result;
 #else
-  return std::string(); // Return empty string for non-MVS platforms
+  return {}; // Return empty string for non-MVS platforms
 #endif
 }
 

@@ -631,7 +631,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                                      isSystem(FileCharacter));
 
   llvm::ErrorOr<llvm::TextEncodingConverter *> Converter = nullptr;
-  llvm::ErrorOr<std::string> Ccsid =
+  llvm::ErrorOr<llvm::SmallString<32>> Ccsid =
       llvm::getEncodingNameFromFileTag(SourceFile.getName());
   if (!Ccsid) {
     Diag.Report(SourceLocation(), diag::err_cannot_open_file)
