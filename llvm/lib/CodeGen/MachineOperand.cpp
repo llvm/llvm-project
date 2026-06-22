@@ -1169,12 +1169,15 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
   return MachinePointerInfo(MF.getDataLayout().getAllocaAddrSpace());
 }
 
-MachineMemOperand::MachineMemOperand(
-    MachinePointerInfo ptrinfo, Flags f, LLT type, Align a,
-    const AAMDNodes &AAInfo, const MDNode *Ranges, const MDNode *MemCacheHint,
-    SyncScope::ID SSID, AtomicOrdering Ordering, AtomicOrdering FailureOrdering)
-    : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
-      AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {
+MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
+                                     LLT Type, Align A,
+                                     MachineMemOperand::Metadata MMOMetadata,
+                                     SyncScope::ID SSID,
+                                     AtomicOrdering Ordering,
+                                     AtomicOrdering FailureOrdering)
+    : PtrInfo(PtrInfo), MemoryType(Type), FlagVals(F), BaseAlign(A),
+      AAInfo(MMOMetadata.AAInfo), Ranges(MMOMetadata.Ranges),
+      MemCacheHint(MMOMetadata.MemCacheHint) {
   assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
           isa<PointerType>(cast<const Value *>(PtrInfo.V)->getType())) &&
          "invalid pointer value");
@@ -1188,18 +1191,19 @@ MachineMemOperand::MachineMemOperand(
   assert(getFailureOrdering() == FailureOrdering && "Value truncated");
 }
 
-MachineMemOperand::MachineMemOperand(
-    MachinePointerInfo ptrinfo, Flags F, LocationSize TS, Align BaseAlignment,
-    const AAMDNodes &AAInfo, const MDNode *Ranges, const MDNode *MemCacheHint,
-    SyncScope::ID SSID, AtomicOrdering Ordering, AtomicOrdering FailureOrdering)
+MachineMemOperand::MachineMemOperand(MachinePointerInfo PtrInfo, Flags F,
+                                     LocationSize TS, Align BaseAlignment,
+                                     MachineMemOperand::Metadata MMOMetadata,
+                                     SyncScope::ID SSID,
+                                     AtomicOrdering Ordering,
+                                     AtomicOrdering FailureOrdering)
     : MachineMemOperand(
-          ptrinfo, F,
+          PtrInfo, F,
           !TS.isPrecise() ? LLT()
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
-          BaseAlignment, AAInfo, Ranges, MemCacheHint, SSID, Ordering,
-          FailureOrdering) {}
+          BaseAlignment, MMOMetadata, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size

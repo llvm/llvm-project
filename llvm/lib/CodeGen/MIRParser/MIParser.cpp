@@ -3860,9 +3860,10 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   }
   if (expectAndConsume(MIToken::rparen))
     return true;
-  Dest = MF.getMachineMemOperand(Ptr, Flags, MemoryType, Align(BaseAlignment),
-                                 AAInfo, Range, MemCacheHint, SSID, Order,
-                                 FailureOrder);
+  Dest = MF.getMachineMemOperand(
+      Ptr, Flags, MemoryType, Align(BaseAlignment),
+      MachineMemOperand::Metadata(AAInfo, Range, MemCacheHint), SSID, Order,
+      FailureOrder);
   return false;
 }
 

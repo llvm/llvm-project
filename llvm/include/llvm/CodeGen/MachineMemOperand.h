@@ -129,6 +129,18 @@ struct MachinePointerInfo {
 ///
 class MachineMemOperand {
 public:
+  /// LLVM IR metadata carried by a MachineMemOperand.
+  struct Metadata {
+    AAMDNodes AAInfo;
+    const MDNode *Ranges;
+    const MDNode *MemCacheHint;
+
+    Metadata() : Ranges(nullptr), MemCacheHint(nullptr) {}
+    Metadata(const AAMDNodes &AAInfo, const MDNode *Ranges = nullptr,
+             const MDNode *MemCacheHint = nullptr)
+        : AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {}
+  };
+
   /// Flags values. These may be or'd together.
   enum Flags : uint16_t {
     // No flags set.
@@ -191,21 +203,19 @@ public:
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
   LLVM_ABI
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
-                    Align a, const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr,
-                    const MDNode *MemCacheHint = nullptr,
-                    SyncScope::ID SSID = SyncScope::System,
-                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(
+      MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS, Align A,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   LLVM_ABI
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
-                    const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr,
-                    const MDNode *MemCacheHint = nullptr,
-                    SyncScope::ID SSID = SyncScope::System,
-                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(
+      MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   const MachinePointerInfo &getPointerInfo() const { return PtrInfo; }
 

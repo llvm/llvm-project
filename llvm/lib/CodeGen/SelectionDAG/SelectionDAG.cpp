@@ -10600,7 +10600,8 @@ SDValue SelectionDAG::getLoad(
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, Size, Alignment, AAInfo, Ranges, MemCacheHint);
+      PtrInfo, MMOFlags, Size, Alignment,
+      MachineMemOperand::Metadata(AAInfo, Ranges, MemCacheHint));
   return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, MemVT, MMO);
 }
 
@@ -10732,7 +10733,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   MachineFunction &MF = getMachineFunction();
   TypeSize Size = Val.getValueType().getStoreSize();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, Size, Alignment, AAInfo, nullptr, MemCacheHint);
+      PtrInfo, MMOFlags, Size, Alignment,
+      MachineMemOperand::Metadata(AAInfo, nullptr, MemCacheHint));
   return getStore(Chain, dl, Val, Ptr, MMO);
 }
 
@@ -10809,9 +10811,9 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment,
-                              AAInfo, nullptr, MemCacheHint);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment,
+      MachineMemOperand::Metadata(AAInfo, nullptr, MemCacheHint));
   return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
 }
 
@@ -10847,8 +10849,9 @@ SDValue SelectionDAG::getLoadVP(
 
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
-                                                   Alignment, AAInfo, Ranges);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment,
+                              MachineMemOperand::Metadata(AAInfo, Ranges));
   return getLoadVP(AM, ExtType, VT, dl, Chain, Ptr, Offset, Mask, EVL, MemVT,
                    MMO, IsExpanding);
 }
