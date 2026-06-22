@@ -172,7 +172,7 @@ struct RemUIOpInterface
     AffineExpr rhs = cstr.getExpr(rhsValue);
 
     // remui computes an unsigned remainder, so for a provably positive divisor
-    // the result is always in [0, rhs - 1]
+    // the result is always in [0, rhs - 1].
     if (isProvablyPositive(rhsValue, cstr)) {
       cstr.bound(value) >= 0;
       cstr.bound(value) <= rhs - 1;
@@ -293,17 +293,21 @@ struct MinUIOpInterface
     // ValueBoundsConstraintSet models values as signed integers (e.g. an i8
     // 0xff is treated as -1, not 255). For an unsigned minimum it is enough
     // that a single operand is provably non-negative: minui(x, y) is in
-    // [0, y] whenever y >= 0 (and symmetrically for x)
+    // [0, y] whenever y >= 0 (and symmetrically for x).
     bool lhsNonNegative = isProvablyNonNegative(minOp.getLhs(), cstr);
     bool rhsNonNegative = isProvablyNonNegative(minOp.getRhs(), cstr);
     if (!lhsNonNegative && !rhsNonNegative)
       return;
 
     cstr.bound(value) >= 0;
-    if (lhsNonNegative)
-      cstr.bound(value) <= cstr.getExpr(minOp.getLhs());
-    if (rhsNonNegative)
-      cstr.bound(value) <= cstr.getExpr(minOp.getRhs());
+    if (lhsNonNegative) {
+      AffineExpr lhs = cstr.getExpr(minOp.getLhs());
+      cstr.bound(value) <= lhs;
+    }
+    if (rhsNonNegative) {
+      AffineExpr rhs = cstr.getExpr(minOp.getRhs());
+      cstr.bound(value) <= rhs;
+    }
   }
 };
 
