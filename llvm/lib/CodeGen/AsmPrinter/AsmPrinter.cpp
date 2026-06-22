@@ -2445,17 +2445,9 @@ void AsmPrinter::emitFunctionBody() {
     auto *FnEndSym = createTempSymbol("tail_pad_start");
     OutStreamer->emitLabel(FnEndSym);
 
-    uint64_t PadToSize;
-    if (F.getFnAttribute("tail-pad-to-size")
-            .getValueAsString()
-            .getAsInteger(10, PadToSize))
-      PadToSize = 0;
-    uint64_t FillValue;
-    if (!F.hasFnAttribute("tail-pad-value") ||
-        F.getFnAttribute("tail-pad-value")
-            .getValueAsString()
-            .getAsInteger(10, FillValue))
-      FillValue = 0;
+    uint64_t PadToSize = F.getFnAttributeAsParsedInteger("tail-pad-to-size");
+    uint64_t FillValue =
+        PadToSize ? F.getFnAttributeAsParsedInteger("tail-pad-value") : 0;
 
     // .fill ((PadToSize - FuncSize) & (PadToSize - FuncSize >= 0)) FillValue
     const MCExpr *FuncSize = MCBinaryExpr::createSub(
