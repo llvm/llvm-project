@@ -63,7 +63,7 @@ int main()
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP15]], 1
 // CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[ADD]] to i64
 // CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK-NEXT:    store i32 4, ptr [[TMP17]], align 4
+// CHECK-NEXT:    store i32 5, ptr [[TMP17]], align 4
 // CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK-NEXT:    store i32 3, ptr [[TMP18]], align 4
 // CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

@@ -3964,10 +3964,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fopenmp_cuda_blocks_per_sm_EQ,
                 Twine(Opts.OpenMPCUDABlocksPerSM));
 
-  if (Opts.OpenMPCUDAReductionBufNum != 1024)
-    GenerateArg(Consumer, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-                Twine(Opts.OpenMPCUDAReductionBufNum));
-
   if (Opts.OpenMPGPUThreadsPerTeam != 256)
     GenerateArg(Consumer, OPT_fopenmp_gpu_threads_per_team_EQ,
                 Twine(Opts.OpenMPGPUThreadsPerTeam));
@@ -4421,9 +4417,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.OpenMPCUDABlocksPerSM =
         getLastArgIntValue(Args, options::OPT_fopenmp_cuda_blocks_per_sm_EQ,
                            Opts.OpenMPCUDABlocksPerSM, Diags);
-    Opts.OpenMPCUDAReductionBufNum = getLastArgIntValue(
-        Args, options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-        Opts.OpenMPCUDAReductionBufNum, Diags);
   }
 
   Opts.OpenMPGPUThreadsPerTeam =

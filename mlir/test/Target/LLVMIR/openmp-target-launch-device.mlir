@@ -3,19 +3,19 @@
 // CHECK:      @[[EXEC_MODE1:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE1]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL1_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
-// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE1:1]], i32 [[MIN_THREADS1:1]], i32 [[MAX_THREADS1:10]], i32 [[MIN_TEAMS1:1]], i32 [[MAX_TEAMS1:-1]], i32 0, i32 0 },
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE1:1]], i32 [[MIN_THREADS1:1]], i32 [[MAX_THREADS1:10]], i32 [[MIN_TEAMS1:1]], i32 [[MAX_TEAMS1:-1]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
 // CHECK:      @[[EXEC_MODE2:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE2]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL2_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
-// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:30]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0, i32 0 },
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:30]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
 // CHECK:      @[[EXEC_MODE3:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE3]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL3_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
-// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE3:1]], i32 [[MIN_THREADS3:1]], i32 [[MAX_THREADS3:[0-9]+]], i32 [[MIN_TEAMS3:50]], i32 [[MAX_TEAMS3:50]], i32 0, i32 0 },
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE3:1]], i32 [[MIN_THREADS3:1]], i32 [[MAX_THREADS3:[0-9]+]], i32 [[MIN_TEAMS3:50]], i32 [[MAX_TEAMS3:50]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
                
 
