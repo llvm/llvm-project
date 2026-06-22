@@ -297,8 +297,8 @@ define i32 @access_i65(ptr byval(i65) %0) "cmse_nonsecure_entry" {
 ; V8M-LE-NEXT:        ldrb.w r0, [sp, #8]
 ; V8M-LE-NEXT:        and r0, r0, #1
 ; V8M-LE-NEXT:        rsbs r0, r0, #0
-; V8M-BE-NEXT:        movs r1, #0
-; V8M-BE-NEXT:        sub.w r0, r1, r0, lsr #24
+; V8M-BE-NEXT:        lsrs r0, r0, #24
+; V8M-BE-NEXT:        rsbs r0, r0, #0
 ; V8M-COMMON-NEXT:    add sp, #16
 ; V8M-COMMON-NEXT:    mov r1, lr
 ; V8M-COMMON-NEXT:    mov r2, lr
@@ -316,8 +316,8 @@ define i32 @access_i65(ptr byval(i65) %0) "cmse_nonsecure_entry" {
 ; V81M-LE-NEXT:        ldrb.w r0, [sp, #8]
 ; V81M-LE-NEXT:        and r0, r0, #1
 ; V81M-LE-NEXT:        rsbs r0, r0, #0
-; V81M-BE-NEXT:        movs r1, #0
-; V81M-BE-NEXT:        sub.w r0, r1, r0, lsr #24
+; V81M-BE-NEXT:        lsrs r0, r0, #24
+; V81M-BE-NEXT:        rsbs r0, r0, #0
 ; V81M-COMMON-NEXT:    sub sp, #4
 ; V81M-COMMON-NEXT:    add sp, #16
 ; V81M-COMMON-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
