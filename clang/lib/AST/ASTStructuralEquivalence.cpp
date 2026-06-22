@@ -1208,6 +1208,13 @@ bool ASTStructuralEquivalence::isEquivalent(
       return false;
     break;
 
+  case Type::LateParsedAttr:
+    if (!IsStructurallyEquivalent(
+            Context, cast<LateParsedAttrType>(T1)->getWrappedType(),
+            cast<LateParsedAttrType>(T2)->getWrappedType()))
+      return false;
+    break;
+
   case Type::BTFTagAttributed:
     if (!IsStructurallyEquivalent(
             Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),

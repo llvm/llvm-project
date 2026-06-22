@@ -1843,6 +1843,13 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
       ArrayRef(CoupledDecls));
 }
 
+ExpectedType
+ASTNodeImporter::VisitLateParsedAttrType(const LateParsedAttrType *T) {
+  // LateParsedAttrType is a transient placeholder that should not normally
+  // appear during AST import. Import as the wrapped type.
+  return import(T->getWrappedType());
+}
+
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
     const TemplateTypeParmType *T) {
   Expected<TemplateTypeParmDecl *> ToDeclOrErr = import(T->getDecl());

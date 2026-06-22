@@ -282,6 +282,8 @@ public:
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
+  friend struct LateParsedAttribute;
+  friend struct LateParsedTypeAttribute;
 
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;
@@ -1945,10 +1947,12 @@ private:
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
 
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
-    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC,
+                                LateAttrs);
   }
 
   /// ParseSpecifierQualifierList
@@ -1959,10 +1963,12 @@ private:
   /// [GNU]    attributes     specifier-qualifier-list[opt]
   /// \endverbatim
   ///
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS,
+                              ImplicitTypenameContext AllowImplicitTypename,
+                              AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseEnumSpecifier
   /// \verbatim
@@ -2234,6 +2240,8 @@ private:
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
       D.takeAttributesAppending(Attrs);
+      if (LateAttrs)
+        Parser::TakeTypeAttrsAppendingFrom(D.getLateAttributes(), *LateAttrs);
     }
   }
 
@@ -2670,7 +2678,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      llvm::function_ref<void()> CodeCompletionHandler = {});
+      llvm::function_ref<void()> CodeCompletionHandler = {},
+      LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -8089,6 +8098,32 @@ private:
   void ParseLateTemplatedFuncDef(LateParsedTemplate &LPT);
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
+
+  /// Parse the cached tokens stored in \p LTA into \p OutAttrs.
+  ///
+  /// This callback takes ownership of \p LTA and deletes it. Ideally
+  /// \c LateParsedAttrType would own the object, but \c LateParsedTypeAttribute
+  /// is intentionally forward-declared in the AST layer to avoid a dependency
+  /// on Parser/Sema headers.
+  static void ParseLateParsedTypeAttributeCallback(LateParsedTypeAttribute *LTA,
+                                                   ParsedAttributes *OutAttrs);
+
+  /// Return the source location of the attribute name stored in \p LTA.
+  static SourceLocation
+  GetLateParsedAttributeLocationCallback(const LateParsedTypeAttribute *LTA);
+
+  /// Validate \p LA as a late-parsed type attribute and, if valid, wrap
+  /// \p type in a \c LateParsedAttrType placeholder in-place.
+  ///
+  /// \p LA is downcast to \c LateParsedTypeAttribute; if the cast fails the
+  /// attribute is not applicable here and the function returns \c true to skip.
+  /// \p pointerNestLevel is the number of pointer/array/function declarator
+  /// chunks that precede the current chunk (see \c getPointerNestLevel).
+  /// Returns \c true on success and \c false if the attribute is invalid for
+  /// \p type.
+  static bool ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                                QualType &type,
+                                                unsigned pointerNestLevel);
 
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't
