@@ -7410,7 +7410,7 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // not just concat but also "re-pack" these operands before extracting new
   // operand vectors with the widened type.
   EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                        WidenEC.multiplyCoefficientBy(Factor));
+                                       WidenEC.multiplyCoefficientBy(Factor));
   SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
   for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
     const SDValue Op = N->getOperand(Idx);
@@ -7430,8 +7430,7 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   }
 
   SmallVector<EVT, 8> NewVTs(Factor, WidenVT);
-  SDValue NewRes =
-      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, NewVTs, NewOps);
+  SDValue NewRes = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, NewVTs, NewOps);
   // Set the widened results manually.
   for (unsigned Idx = 0U; Idx < Factor; ++Idx)
     SetWidenedVector(SDValue(N, Idx), NewRes.getValue(Idx));
