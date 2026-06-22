@@ -39,16 +39,16 @@ define double @used(double noundef %a, float noundef %b) "zero-call-used-regs"="
 ; 32-BITS-D:       # %bb.0: # %entry
 ; 32-BITS-D-NEXT:    fcvt.d.s fa5, fa1
 ; 32-BITS-D-NEXT:    fmul.d fa0, fa5, fa0
-; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa5, zero, rtz
+; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa5, zero
 ; 32-BITS-D-NEXT:    ret
 ;
 ; 32-BITS-Q-LABEL: used:
 ; 32-BITS-Q:       # %bb.0: # %entry
 ; 32-BITS-Q-NEXT:    fcvt.d.s fa5, fa1
 ; 32-BITS-Q-NEXT:    fmul.d fa0, fa5, fa0
-; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa5, zero, rtz
+; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa5, zero
 ; 32-BITS-Q-NEXT:    ret
 ;
 ; 64-BITS-F-LABEL: used:
@@ -84,8 +84,8 @@ define double @used(double noundef %a, float noundef %b) "zero-call-used-regs"="
 ; 64-BITS-Q:       # %bb.0: # %entry
 ; 64-BITS-Q-NEXT:    fcvt.d.s fa5, fa1
 ; 64-BITS-Q-NEXT:    fmul.d fa0, fa5, fa0
-; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa5, zero, rtz
+; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa5, zero
 ; 64-BITS-Q-NEXT:    ret
 entry:
   %conv = fpext float %b to double
@@ -103,13 +103,13 @@ define half @used_arg_half(half noundef %a, half noundef %b) "zero-call-used-reg
 ; 32-BITS-D-LABEL: used_arg_half:
 ; 32-BITS-D:       # %bb.0: # %entry
 ; 32-BITS-D-NEXT:    fmul.h fa0, fa0, fa1
-; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero, rtz
+; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero
 ; 32-BITS-D-NEXT:    ret
 ;
 ; 32-BITS-Q-LABEL: used_arg_half:
 ; 32-BITS-Q:       # %bb.0: # %entry
 ; 32-BITS-Q-NEXT:    fmul.h fa0, fa0, fa1
-; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
+; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero
 ; 32-BITS-Q-NEXT:    ret
 ;
 ; 64-BITS-F-LABEL: used_arg_half:
@@ -127,7 +127,7 @@ define half @used_arg_half(half noundef %a, half noundef %b) "zero-call-used-reg
 ; 64-BITS-Q-LABEL: used_arg_half:
 ; 64-BITS-Q:       # %bb.0: # %entry
 ; 64-BITS-Q-NEXT:    fmul.h fa0, fa0, fa1
-; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
+; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero
 ; 64-BITS-Q-NEXT:    ret
 entry:
   %mul = fmul half %a, %b
@@ -144,13 +144,13 @@ define float @used_arg_float(float noundef %a, float noundef %b) "zero-call-used
 ; 32-BITS-D-LABEL: used_arg_float:
 ; 32-BITS-D:       # %bb.0: # %entry
 ; 32-BITS-D-NEXT:    fmul.s fa0, fa0, fa1
-; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero, rtz
+; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero
 ; 32-BITS-D-NEXT:    ret
 ;
 ; 32-BITS-Q-LABEL: used_arg_float:
 ; 32-BITS-Q:       # %bb.0: # %entry
 ; 32-BITS-Q-NEXT:    fmul.s fa0, fa0, fa1
-; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
+; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero
 ; 32-BITS-Q-NEXT:    ret
 ;
 ; 64-BITS-F-LABEL: used_arg_float:
@@ -168,7 +168,7 @@ define float @used_arg_float(float noundef %a, float noundef %b) "zero-call-used
 ; 64-BITS-Q-LABEL: used_arg_float:
 ; 64-BITS-Q:       # %bb.0: # %entry
 ; 64-BITS-Q-NEXT:    fmul.s fa0, fa0, fa1
-; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
+; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero
 ; 64-BITS-Q-NEXT:    ret
 entry:
   %mul = fmul float %a, %b
@@ -192,13 +192,13 @@ define double @used_arg_double(double noundef %a, double noundef %b) "zero-call-
 ; 32-BITS-D-LABEL: used_arg_double:
 ; 32-BITS-D:       # %bb.0: # %entry
 ; 32-BITS-D-NEXT:    fmul.d fa0, fa0, fa1
-; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero, rtz
+; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero
 ; 32-BITS-D-NEXT:    ret
 ;
 ; 32-BITS-Q-LABEL: used_arg_double:
 ; 32-BITS-Q:       # %bb.0: # %entry
 ; 32-BITS-Q-NEXT:    fmul.d fa0, fa0, fa1
-; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
+; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero
 ; 32-BITS-Q-NEXT:    ret
 ;
 ; 64-BITS-F-LABEL: used_arg_double:
@@ -223,7 +223,7 @@ define double @used_arg_double(double noundef %a, double noundef %b) "zero-call-
 ; 64-BITS-Q-LABEL: used_arg_double:
 ; 64-BITS-Q:       # %bb.0: # %entry
 ; 64-BITS-Q-NEXT:    fmul.d fa0, fa0, fa1
-; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
+; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero
 ; 64-BITS-Q-NEXT:    ret
 entry:
   %mul = fmul double %a, %b
@@ -287,26 +287,26 @@ define void @all_fp() "zero-call-used-regs"="all" {
 ; 32-BITS-D-NEXT:    li t4, 0
 ; 32-BITS-D-NEXT:    li t5, 0
 ; 32-BITS-D-NEXT:    li t6, 0
-; 32-BITS-D-NEXT:    fcvt.d.w ft0, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft1, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft2, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft3, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft4, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft5, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft6, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft7, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa0, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa2, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa3, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa4, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa5, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa6, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w fa7, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft8, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft9, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft10, zero, rtz
-; 32-BITS-D-NEXT:    fcvt.d.w ft11, zero, rtz
+; 32-BITS-D-NEXT:    fcvt.d.w ft0, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft1, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft2, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft3, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft4, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft5, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft6, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft7, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa0, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa2, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa3, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa4, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa5, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa6, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa7, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft8, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft9, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft10, zero
+; 32-BITS-D-NEXT:    fcvt.d.w ft11, zero
 ; 32-BITS-D-NEXT:    ret
 ;
 ; 32-BITS-Q-LABEL: all_fp:
@@ -326,26 +326,26 @@ define void @all_fp() "zero-call-used-regs"="all" {
 ; 32-BITS-Q-NEXT:    li t4, 0
 ; 32-BITS-Q-NEXT:    li t5, 0
 ; 32-BITS-Q-NEXT:    li t6, 0
-; 32-BITS-Q-NEXT:    fcvt.q.w ft0, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft1, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft2, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft3, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft4, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft5, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft6, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft7, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa0, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa2, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa3, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa4, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa5, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa6, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w fa7, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft8, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft9, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft10, zero, rtz
-; 32-BITS-Q-NEXT:    fcvt.q.w ft11, zero, rtz
+; 32-BITS-Q-NEXT:    fcvt.q.w ft0, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft1, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft2, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft3, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft4, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft5, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft6, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft7, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa0, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa2, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa3, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa4, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa5, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa6, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa7, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft8, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft9, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft10, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w ft11, zero
 ; 32-BITS-Q-NEXT:    ret
 ;
 ; 64-BITS-F-LABEL: all_fp:
@@ -443,26 +443,26 @@ define void @all_fp() "zero-call-used-regs"="all" {
 ; 64-BITS-Q-NEXT:    li t4, 0
 ; 64-BITS-Q-NEXT:    li t5, 0
 ; 64-BITS-Q-NEXT:    li t6, 0
-; 64-BITS-Q-NEXT:    fcvt.q.w ft0, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft1, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft2, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft3, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft4, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft5, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft6, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft7, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa0, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa2, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa3, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa4, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa5, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa6, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w fa7, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft8, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft9, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft10, zero, rtz
-; 64-BITS-Q-NEXT:    fcvt.q.w ft11, zero, rtz
+; 64-BITS-Q-NEXT:    fcvt.q.w ft0, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft1, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft2, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft3, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft4, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft5, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft6, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft7, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa0, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa2, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa3, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa4, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa5, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa6, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa7, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft8, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft9, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft10, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w ft11, zero
 ; 64-BITS-Q-NEXT:    ret
 entry:
   ret void
