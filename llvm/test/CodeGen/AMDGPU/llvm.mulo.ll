@@ -19,8 +19,7 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; SI-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, v8, v7
 ; SI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v6, vcc
-; SI-NEXT:    v_add_i32_e32 v6, vcc, v1, v5
-; SI-NEXT:    v_add_i32_e64 v1, s[4:5], v1, v5
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v1, v5
 ; SI-NEXT:    v_addc_u32_e32 v2, vcc, v2, v4, vcc
 ; SI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v9, vcc
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
@@ -86,7 +85,7 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v3, v9, vcc_lo
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v11, vcc_lo
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v11, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v10
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
@@ -117,7 +116,7 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, v6, v8, vcc_lo
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -145,19 +144,18 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; SI-NEXT:    v_mul_lo_u32 v4, v0, v2
 ; SI-NEXT:    v_add_i32_e32 v8, vcc, v9, v8
 ; SI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v7, vcc
-; SI-NEXT:    v_add_i32_e32 v9, vcc, v8, v5
-; SI-NEXT:    v_add_i32_e64 v5, s[4:5], v8, v5
-; SI-NEXT:    v_addc_u32_e32 v8, vcc, v7, v6, vcc
+; SI-NEXT:    v_add_i32_e32 v5, vcc, v8, v5
+; SI-NEXT:    v_addc_u32_e32 v7, vcc, v7, v6, vcc
+; SI-NEXT:    v_addc_u32_e32 v8, vcc, 0, v10, vcc
 ; SI-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
-; SI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v10, vcc
+; SI-NEXT:    v_add_i32_e32 v9, vcc, v7, v11
+; SI-NEXT:    v_addc_u32_e32 v8, vcc, 0, v8, vcc
 ; SI-NEXT:    v_mov_b32_e32 v7, v6
-; SI-NEXT:    v_add_i32_e32 v8, vcc, v8, v11
-; SI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v9, vcc
-; SI-NEXT:    v_sub_i32_e32 v2, vcc, v8, v2
-; SI-NEXT:    v_subbrev_u32_e32 v10, vcc, 0, v9, vcc
+; SI-NEXT:    v_sub_i32_e32 v2, vcc, v9, v2
+; SI-NEXT:    v_subbrev_u32_e32 v10, vcc, 0, v8, vcc
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
-; SI-NEXT:    v_cndmask_b32_e32 v1, v9, v10, vcc
-; SI-NEXT:    v_cndmask_b32_e32 v2, v8, v2, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v8, v10, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v2, v9, v2, vcc
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, v2, v0
 ; SI-NEXT:    v_subbrev_u32_e32 v8, vcc, 0, v1, vcc
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v3
@@ -252,7 +250,7 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_add_co_u32 v12, vcc_lo, v12, v8
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v7, v9, vcc_lo
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, 0, v11, vcc_lo
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v11, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v7, vcc_lo, v7, v10
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v9, vcc_lo
@@ -298,7 +296,7 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v7, v9, vcc_lo
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, 0, v11, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v11, vcc_lo
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v7, vcc_lo, v7, v10
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -345,19 +343,19 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; SI-NEXT:    s_mul_i32 s5, s0, s3
 ; SI-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; SI-NEXT:    v_mul_hi_u32 v2, s1, v2
-; SI-NEXT:    s_mul_i32 s1, s1, s3
+; SI-NEXT:    s_mul_i32 s3, s1, s3
 ; SI-NEXT:    s_mul_i32 s2, s0, s2
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, s5, v0
 ; SI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; SI-NEXT:    v_add_i32_e32 v0, vcc, s5, v0
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, s4, v4
-; SI-NEXT:    v_addc_u32_e32 v1, vcc, v3, v1, vcc
-; SI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
-; SI-NEXT:    v_add_i32_e32 v3, vcc, s5, v0
-; SI-NEXT:    v_add_i32_e32 v0, vcc, s1, v1
+; SI-NEXT:    v_addc_u32_e64 v1, s[0:1], v3, v1, vcc
+; SI-NEXT:    v_add_i32_e32 v3, vcc, s4, v0
+; SI-NEXT:    v_addc_u32_e64 v2, vcc, 0, v2, s[0:1]
+; SI-NEXT:    v_add_i32_e32 v0, vcc, s3, v1
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
-; SI-NEXT:    v_add_i32_e32 v2, vcc, s4, v3
 ; SI-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; SI-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; SI-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; SI-NEXT:    s_cselect_b32 s0, 0, s2
 ; SI-NEXT:    s_mov_b32 s6, -1
@@ -377,9 +375,9 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX9-NEXT:    s_addc_u32 s5, 0, s5
 ; GFX9-NEXT:    s_mul_hi_u32 s4, s1, s2
 ; GFX9-NEXT:    s_add_u32 s9, s9, s6
-; GFX9-NEXT:    s_mul_hi_u32 s10, s1, s3
 ; GFX9-NEXT:    s_addc_u32 s4, s5, s4
-; GFX9-NEXT:    s_addc_u32 s5, s10, 0
+; GFX9-NEXT:    s_mul_hi_u32 s5, s1, s3
+; GFX9-NEXT:    s_addc_u32 s5, s5, 0
 ; GFX9-NEXT:    s_mul_i32 s1, s1, s3
 ; GFX9-NEXT:    s_add_u32 s4, s4, s1
 ; GFX9-NEXT:    s_addc_u32 s5, 0, s5
@@ -548,9 +546,9 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX9-NEXT:    s_addc_u32 s5, 0, s5
 ; GFX9-NEXT:    s_mul_hi_u32 s4, s1, s2
 ; GFX9-NEXT:    s_add_u32 s9, s9, s6
-; GFX9-NEXT:    s_mul_hi_i32 s10, s1, s3
 ; GFX9-NEXT:    s_addc_u32 s4, s5, s4
-; GFX9-NEXT:    s_addc_u32 s5, s10, 0
+; GFX9-NEXT:    s_mul_hi_i32 s5, s1, s3
+; GFX9-NEXT:    s_addc_u32 s5, s5, 0
 ; GFX9-NEXT:    s_mul_i32 s9, s1, s3
 ; GFX9-NEXT:    s_add_u32 s4, s4, s9
 ; GFX9-NEXT:    s_addc_u32 s5, 0, s5
