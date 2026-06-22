@@ -618,9 +618,11 @@ bool AsmPrinter::doInitialization(Module &M) {
         std::unique_ptr<MCSubtargetInfo> AsmSTI(
             TM.getTarget().createMCSubtargetInfo(
                 TM.getTargetTriple(), Frag.TargetCPU, Frag.TargetFeatures));
+        bool DidPush = emitTargetFeaturePush(*AsmSTI);
         emitInlineAsm(
-            Frag.Asm + "\n", *AsmSTI, TM.Options.MCOptions, nullptr,
+            Frag.Asm, *AsmSTI, TM.Options.MCOptions, nullptr,
             InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
+        emitTargetFeaturePop(*AsmSTI, DidPush);
       } else {
         // If the module asm does not explicitly specify target features,
         // fall back to default subtargetinfo.
