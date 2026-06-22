@@ -60,7 +60,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     BinaryOperator::Opcode Op = B->getOpcode();
 
     if (Op == BO_Assign) {
-      // FIXME: Handle structs.
       if (RightV.isUnknown()) {
         unsigned Count = getNumVisitedCurrent();
         RightV = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), SF,
@@ -155,8 +154,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Compute the result of the operation.
       SVal Result = svalBuilder.evalCast(evalBinOp(state, Op, V, RightV, CTy),
                                          B->getType(), CTy);
-
-      // FIXME: Handle structs.
 
       SVal LHSVal;
 
