@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <cstdlib>
 #include <optional>
 #define DEBUG_TYPE "amdgpu-wmma-sched"
 
@@ -45,6 +46,17 @@ namespace {
 static cl::opt<bool> DisableWMMASchedule(
     "amdgpu-wmma-sched-disable", cl::init(false),
     cl::desc("Disable the AMDGPU WMMA ds_load scheduling mutation"));
+
+// Overrides the ds_load (LDS) latency the mutation uses to space loads ahead of
+// their consuming WMMAs. 0 (default, the unset state) uses the scheduling
+// model's computeInstrLatency value (20 on gfx1250). Set explicitly to sweep
+// how aggressively loads are hoisted, e.g. -amdgpu-wmma-sched-loadlat=64. A
+// value of 0 *is* honored when passed explicitly (getNumOccurrences()), letting
+// the sweep include latency=0.
+static cl::opt<unsigned> WMMALoadLatency(
+    "amdgpu-wmma-sched-loadlat", cl::init(0),
+    cl::desc("Override the ds_load latency (cycles) used by the AMDGPU WMMA "
+             "ds_load scheduling mutation; 0/unset = use the sched model"));
 
 // A single ds_load and their order among the WMMAs.
 struct LoadInfo {
@@ -83,6 +95,13 @@ public:
 void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   if (!ST.hasGFX1250Insts() || DisableWMMASchedule)
     return;
+  // Env override for the Triton path: Triton applies the `flags` it passes to
+  // the backend as *bool, name-only* cl options (python/src/llvm.cc), so a
+  // valued option can't be set that way. Reading the environment here (the
+  // backend runs in-process) lets the sweep harness disable the mutation or
+  // override the ds_load latency per-run. The cl::opts above stay for llc/opt.
+  if (const char *E = std::getenv("AMDGPU_WMMA_SCHED_DISABLE"); E && std::atoi(E))
+    return;
   const TargetSchedModel *SM = DAG->getSchedModel();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
@@ -119,6 +138,15 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   // The following means the DAG Mutation cannot do anything useful.
   if (!LoadLatency || !LDSBandwidth || !WmmaLatency || Wmmas.empty())
     return;
+
+  // Allow the ds_load latency to be overridden so we can sweep how aggressively
+  // loads are hoisted ahead of their WMMAs (the model default is 20). The env
+  // var wins (the Triton sweep path); otherwise the cl::opt, gated on
+  // getNumOccurrences() (not value) so an explicit ...loadlat=0 is honored.
+  if (const char *E = std::getenv("AMDGPU_WMMA_SCHED_LOADLAT"); E && *E)
+    LoadLatency = (unsigned)std::atoi(E);
+  else if (WMMALoadLatency.getNumOccurrences())
+    LoadLatency = WMMALoadLatency;
 
   LLVM_DEBUG(
       dbgs()
