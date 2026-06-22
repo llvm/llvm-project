@@ -6982,6 +6982,16 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
     // error.
     S.Diag(AL.getLoc(), diag::err_init_union_marker)
         << "std::init" << (UnionMember ? 1 : 0);
+  else if (cast<ValueDecl>(D)->getType()->isPointerType() &&
+           S.shouldEmitProfileViolation("std::init", "pointer_marker",
+                                        AL.getLoc()))
+    // std::init / pointer_marker (paper §4.1): "a reference cannot be
+    // uninitialized. The initialization profile requires the same for
+    // pointers." A pointer must be initialized (e.g. to nullptr), so the marker
+    // is rejected -- but, like the union case, retained to avoid a redundant
+    // uninit_decl. Gated on enforcement: a pointer may carry the marker without
+    // the profile.
+    S.Diag(AL.getLoc(), diag::err_init_uninit_pointer_marker) << "std::init";
 
   D->addAttr(::new (S.Context) CXX11UninitializedAttr(S.Context, AL));
 }

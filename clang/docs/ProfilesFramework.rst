@@ -665,7 +665,10 @@ regardless of ``-fprofiles``; its profile rules carry weight only when
     (e.g. ``WithCtor x [[uninitialized]];``).  A trivial/aggregate type whose
     default-initialization is a no-op is *not* such an initializer, so the
     marker is accepted there (the object is genuinely left uninitialized).
-  - Is banned on a union object or union member by ``union_marker``.
+  - Is banned on a pointer by ``pointer_marker`` (a pointer must be
+    initialized, paper §4.1), and on a union object or member by
+    ``union_marker``. Both are gated on enforcement, and the marker is retained
+    after the diagnostic so ``uninit_decl`` does not re-diagnose the entity.
 
 ``[[ref_to_uninit]]`` (also a standard C++11 attribute) marks a pointer,
 reference, or pointer/reference-returning function as referring to
@@ -847,6 +850,23 @@ else is treated as initialized (the trust model).
   (``Sema::GatherArgumentsForCall``), and return statements
   (``Sema::BuildReturnStmt``).  A dependent target type defers to
   instantiation.
+
+R8. ``pointer_marker`` -- attribute handler
+...........................................
+
+``[[uninitialized]]`` on a pointer is banned (paper §4.1): "a reference cannot
+be uninitialized.  The initialization profile requires the same for pointers."
+A pointer must instead be initialized (e.g. to ``nullptr``).
+
+- Diagnostic: ``err_init_uninit_pointer_marker``.
+- Check site: the ``CXX11Uninitialized`` handler in
+  ``clang/lib/Sema/SemaDeclAttr.cpp``, alongside ``union_marker``.  Like that
+  rule it is gated on enforcement -- a pointer may legitimately carry the marker
+  without the profile -- and the marker is retained after the diagnostic so
+  ``uninit_decl`` does not also fire.
+- A pointer parameter is rejected earlier and unconditionally (the marker is
+  meaningless on a parameter); a pointer-to-member is not a pointer type and is
+  out of scope.
 
 Diagnostic suppression
 ~~~~~~~~~~~~~~~~~~~~~~

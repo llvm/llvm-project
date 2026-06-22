@@ -21,8 +21,22 @@ void test_scalars() {
 void test_pointer() {
   int* p;           // expected-error {{variable 'p' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
   int* q = nullptr;
-  int* r [[uninitialized]];
+  // A pointer cannot be left uninitialized (paper section 4.1); the marker is
+  // rejected rather than excusing it.
+  int* r [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
   (void)q; (void)r;
+}
+
+struct PtrMember {
+  int* p [[uninitialized]]; // expected-error {{'[[uninitialized]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+};
+
+void test_pointer_marker_suppressed() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int* p [[uninitialized]];
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "pointer_marker")]] int* q [[uninitialized]];
+  (void)p; (void)q;
 }
 
 enum E { E0, E1 };
