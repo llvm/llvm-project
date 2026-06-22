@@ -68,7 +68,6 @@ def get_line2func_list(args, clang_args, globals_name_prefix):
         if node_kind in (
             "NamespaceDecl",
             "LinkageSpecDecl",
-            "ExportDecl",
             "TranslationUnitDecl",
             "CXXRecordDecl",
             "ClassTemplateSpecializationDecl",
