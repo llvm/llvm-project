@@ -160,12 +160,10 @@ cl::opt<bool> EnableSVEGISel(
 static cl::opt<int> BrMergingBaseCostThresh(
     "aarch64-br-merging-base-cost", cl::init(2),
     cl::desc(
-        "Sets the cost threshold for when multiple conditionals will be merged "
-        "into one branch versus be split in multiple branches. Merging "
-        "conditionals saves branches at the cost of additional instructions. "
-        "This value sets the instruction cost limit, below which conditionals "
-        "will be merged, and above which conditionals will be split. Set to -1 "
-        "to never merge branches."),
+        "Cost threshold for merging multiple conditionals into one branch "
+        "versus splitting into multiple branches: conditionals are merged when "
+        "their instruction cost is below this limit and split above it. Set to "
+        "-1 to never merge branches."),
     cl::Hidden);
 
 static cl::opt<int> BrMergingCcmpBias(
@@ -177,36 +175,24 @@ static cl::opt<int> BrMergingCcmpBias(
 
 static cl::opt<int> BrMergingCbzTbnzBias(
     "aarch64-br-merging-cbz-tbnz-bias", cl::init(6),
-    cl::desc(
-        "Adjusts 'aarch64-br-merging-base-cost' for conditions that lower "
-        "to a single CBZ/CBNZ or TBZ/TBNZ compare-and-branch, which need "
-        "no separate compare. When both conditions are such candidates the "
-        "split form is two fused branches and they are never merged; when "
-        "only one is, the base cost is decreased by this amount to bias "
-        "toward splitting. Set to 0 to disable."),
+    cl::desc("Decreases 'aarch64-br-merging-base-cost' when a condition can "
+             "lower to a single CBZ/CBNZ or TBZ/TBNZ compare-and-branch, to "
+             "bias toward splitting. Set to 0 to disable."),
     cl::Hidden);
 
 static cl::opt<int> BrMergingLikelyBias(
     "aarch64-br-merging-likely-bias", cl::init(0),
-    cl::desc("Increases 'aarch64-br-merging-base-cost' in cases that it is "
-             "likely that all conditionals will be executed. For example for "
-             "merging the conditionals (a == b && c > d), if its known that "
-             "a == b is likely, then it is likely that if the conditionals are "
-             "split both sides will be executed, so it may be desirable to "
-             "increase the instruction cost threshold. Set to -1 to never "
-             "merge likely branches."),
+    cl::desc("Increases 'aarch64-br-merging-base-cost' when all conditionals "
+             "are likely to be executed, biasing toward merging. Set to -1 to "
+             "never merge likely branches."),
     cl::Hidden);
 
 static cl::opt<int> BrMergingUnlikelyBias(
     "aarch64-br-merging-unlikely-bias", cl::init(-1),
     cl::desc(
-        "Decreases 'aarch64-br-merging-base-cost' in cases that it is unlikely "
-        "that all conditionals will be executed. For example for merging "
-        "the conditionals (a == b && c > d), if its known that a == b is "
-        "unlikely, then it is unlikely that if the conditionals are split "
-        "both sides will be executed, so it may be desirable to decrease "
-        "the instruction cost threshold. Set to -1 to never merge unlikely "
-        "branches."),
+        "Decreases 'aarch64-br-merging-base-cost' when all conditionals are "
+        "unlikely to be executed, biasing toward splitting. Set to -1 to never "
+        "merge unlikely branches."),
     cl::Hidden);
 
 static cl::opt<bool> UseFEATCPACodegen(
@@ -31586,6 +31572,16 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                      const Value *Lhs,
                                                      const Value *Rhs) const {
   using namespace llvm::PatternMatch;
+
+  // Do not fold floating-point conditions into an FCMP/FCCMP chain. FCCMP is
+  // never cheaper than the FCMP it would replace and is far costlier on some
+  // cores (e.g. 9 vs 3 cycles, and 3 pipes vs 1, on Ampere1), and unordered
+  // predicates expand a single merge into several FCCMPs (see
+  // branch-cond-split-fcmp.ll). The dependency-chain heuristic below cannot see
+  // that expansion, so keep floating-point conditions split into separate
+  // compares-and-branches, as the generic target default does.
+  if (isa<FCmpInst>(Lhs) || isa<FCmpInst>(Rhs))
+    return {-1, -1, -1};
 
   // Returns true if \p V is a branch condition that AArch64 can lower to a
   // single compare-and-branch (CBZ/CBNZ) or test-bit-and-branch (TBZ/TBNZ),
