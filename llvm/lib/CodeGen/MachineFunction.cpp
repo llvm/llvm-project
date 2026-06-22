@@ -598,7 +598,8 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
          "LocationSize::beforeOrAfter()");
   return new (Allocator) MachineMemOperand(
       PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(AAMDNodes(), nullptr, MMO->getMemCacheHint()),
+      MachineMemOperand::Metadata(/*AAInfo=*/AAMDNodes(), /*Ranges=*/nullptr,
+                                  /*MemCacheHint=*/MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
@@ -607,7 +608,8 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, LLT Ty) {
   return new (Allocator) MachineMemOperand(
       PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(AAMDNodes(), nullptr, MMO->getMemCacheHint()),
+      MachineMemOperand::Metadata(/*AAInfo=*/AAMDNodes(), /*Ranges=*/nullptr,
+                                  /*MemCacheHint=*/MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
@@ -627,8 +629,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
   // are anymore.
   return new (Allocator) MachineMemOperand(
       PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty, Alignment,
-      MachineMemOperand::Metadata(MMO->getAAInfo(), nullptr,
-                                  MMO->getMemCacheHint()),
+      MachineMemOperand::Metadata(/*AAInfo=*/MMO->getAAInfo(),
+                                  /*Ranges=*/nullptr,
+                                  /*MemCacheHint=*/MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
@@ -642,8 +645,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
   return new (Allocator) MachineMemOperand(
       MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(AAInfo, MMO->getRanges(),
-                                  MMO->getMemCacheHint()),
+      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo,
+                                  /*Ranges=*/MMO->getRanges(),
+                                  /*MemCacheHint=*/MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
@@ -653,8 +657,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                       MachineMemOperand::Flags Flags) {
   return new (Allocator) MachineMemOperand(
       MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlign(),
-      MachineMemOperand::Metadata(MMO->getAAInfo(), MMO->getRanges(),
-                                  MMO->getMemCacheHint()),
+      MachineMemOperand::Metadata(/*AAInfo=*/MMO->getAAInfo(),
+                                  /*Ranges=*/MMO->getRanges(),
+                                  /*MemCacheHint=*/MMO->getMemCacheHint()),
       MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }

@@ -238,8 +238,11 @@ static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
 
     MachineMemOperand *NewMMO = DstMF.getMachineMemOperand(
         NewPtrInfo, OldMMO->getFlags(), OldMMO->getMemoryType(),
-        OldMMO->getBaseAlign(), OldMMO->getAAInfo(), OldMMO->getRanges(),
-        nullptr, OldMMO->getSyncScopeID(), OldMMO->getSuccessOrdering(),
+        OldMMO->getBaseAlign(),
+        MachineMemOperand::Metadata(/*AAInfo=*/OldMMO->getAAInfo(),
+                                    /*Ranges=*/OldMMO->getRanges(),
+                                    /*MemCacheHint=*/nullptr),
+        OldMMO->getSyncScopeID(), OldMMO->getSuccessOrdering(),
         OldMMO->getFailureOrdering());
     NewMMOs.push_back(NewMMO);
   }

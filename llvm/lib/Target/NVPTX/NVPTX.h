@@ -252,7 +252,7 @@ enum class L2Prefetch : uint8_t {
 // Bits 0-2:  L1 Eviction (3 bits, 5 values)
 // Bits 3-4:  L2 Eviction (2 bits, 3 values)
 // Bits 5-6:  L2 Prefetch (2 bits, 4 values)
-// Bit 7:    L2::cache_hint mode flag (set when using CachePolicy)
+// Bit 7:     L2::cache_hint mode flag (set when using CachePolicy)
 // Bits 8-31: Reserved
 //
 // Using llvm::Bitfield for type-safe access with compile-time validation.

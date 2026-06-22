@@ -10601,7 +10601,8 @@ SDValue SelectionDAG::getLoad(
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo, MMOFlags, Size, Alignment,
-      MachineMemOperand::Metadata(AAInfo, Ranges, MemCacheHint));
+      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges,
+                                  /*MemCacheHint=*/MemCacheHint));
   return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, MemVT, MMO);
 }
 
@@ -10734,7 +10735,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   TypeSize Size = Val.getValueType().getStoreSize();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo, MMOFlags, Size, Alignment,
-      MachineMemOperand::Metadata(AAInfo, nullptr, MemCacheHint));
+      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/nullptr,
+                                  /*MemCacheHint=*/MemCacheHint));
   return getStore(Chain, dl, Val, Ptr, MMO);
 }
 
@@ -10813,7 +10815,8 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment,
-      MachineMemOperand::Metadata(AAInfo, nullptr, MemCacheHint));
+      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/nullptr,
+                                  /*MemCacheHint=*/MemCacheHint));
   return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
 }
 
@@ -10849,9 +10852,9 @@ SDValue SelectionDAG::getLoadVP(
 
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment,
-                              MachineMemOperand::Metadata(AAInfo, Ranges));
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MMOFlags, Size, Alignment,
+      MachineMemOperand::Metadata(/*AAInfo=*/AAInfo, /*Ranges=*/Ranges));
   return getLoadVP(AM, ExtType, VT, dl, Chain, Ptr, Offset, Mask, EVL, MemVT,
                    MMO, IsExpanding);
 }
