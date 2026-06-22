@@ -283,10 +283,9 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpStringIfNew(
          "emitOpStringIfNew is only valid while emitting SPIR-V section 7");
 #endif
   auto [It, Inserted] = OpStringContentCache.try_emplace(S, MCRegister());
-  if (!Inserted)
-    return It->second;
+  if (Inserted)
+    It->second = emitOpString(S, MAI);
 
-  It->second = emitOpString(S, MAI);
   return It->second;
 }
 
