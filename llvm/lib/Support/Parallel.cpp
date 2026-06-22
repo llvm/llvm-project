@@ -227,14 +227,6 @@ size_t parallel::getThreadCount() {
 }
 #endif
 
-static bool isNested() {
-#if LLVM_ENABLE_THREADS
-  return threadIndex != UINT_MAX;
-#else
-  return false;
-#endif
-}
-
 TaskGroup::TaskGroup()
     : Parallel(
 #if LLVM_ENABLE_THREADS
@@ -248,7 +240,8 @@ TaskGroup::TaskGroup()
 TaskGroup::~TaskGroup() {
 #if LLVM_ENABLE_THREADS
   // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
-  if (Parallel && isNested())
+  bool IsNested = threadIndex != UINT_MAX;
+  if (Parallel && IsNested)
     getDefaultExecutor()->helpSync(L);
 #endif
   L.sync();

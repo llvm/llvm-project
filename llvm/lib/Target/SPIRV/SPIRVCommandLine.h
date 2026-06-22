@@ -19,6 +19,7 @@
 #include <string>
 
 namespace llvm {
+template <typename T> class ArrayRef;
 class StringRef;
 class Triple;
 
@@ -37,7 +38,7 @@ public:
   ///
   /// \return Returns a reference to the unknown SPIR-V extension name from the
   /// list if present, or an empty StringRef on success.
-  static StringRef checkExtensions(const std::vector<std::string> &ExtNames,
+  static StringRef checkExtensions(ArrayRef<std::string> ExtNames,
                                    ExtensionSet &AllowedExtensions);
 
   /// Returns the list of extensions that are valid for a particular
