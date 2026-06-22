@@ -210,6 +210,18 @@ public:
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
+    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                    llvm::dbgs()
+                        << "==========================================\n");
+    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                    llvm::dbgs() << "    Lifetime Analysis buildOriginFlow\n");
+    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                    llvm::dbgs()
+                        << "==========================================\n");
+    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                    llvm::dbgs() << "StartOriginID: " << StartOID
+                                 << ", TargetLoanID: " << TargetLoan << "\n\n");
+
     std::optional<OriginID> FinalOID;
     llvm::DenseMap<OriginID, OriginID> VistedOriginIDs;
 
@@ -256,6 +268,10 @@ public:
       auto [CurrBlock, CurrOID] = PendingContext.front();
       PendingContext.pop();
 
+      DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                      llvm::dbgs() << "CurrBlockID: " << CurrBlock->getBlockID()
+                                   << ", StartOriginID: " << CurrOID << "\n");
+
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
       if (!BuildResult.empty())
@@ -263,6 +279,9 @@ public:
 
       if (Complete)
         return OriginFlowChainFilter(*FinalOID);
+
+      DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                      llvm::dbgs() << "EndOriginID: " << CurrOID << "\n");
 
       for (const CFGBlock *Block : CurrBlock->preds()) {
         SearchContext Context = {Block, CurrOID};
@@ -329,6 +348,10 @@ private:
       const OriginID SrcOriginID = OFF->getSrcOriginID();
       if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
         continue;
+
+      DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
+                      llvm::dbgs()
+                          << "\tFind OriginID: " << SrcOriginID << "\n");
       OriginFlowChain.push_back(SrcOriginID);
       CurrOID = SrcOriginID;
     }
