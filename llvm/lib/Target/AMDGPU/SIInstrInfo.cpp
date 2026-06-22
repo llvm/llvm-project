@@ -6059,6 +6059,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (Opcode == AMDGPU::S_SETPRIO) {
+    constexpr unsigned BarrierMemMaskBits =
+        (1u << 4) | (1u << 5) | (1u << 6) | // VMEM, VMEM_READ, VMEM_WRITE
+        (1u << 7) | (1u << 8) | (1u << 9) | // DS, DS_READ, DS_WRITE
+        (1u << 11);                         // LDSDMA
+    unsigned Mask = MI.getOperand(1).getImm();
+    if (Mask & BarrierMemMaskBits) {
+      ErrInfo = "S_SETPRIO mask contains invalid memory operation bits";
+      return false;
+    }
+  }
+
   return true;
 }
 
