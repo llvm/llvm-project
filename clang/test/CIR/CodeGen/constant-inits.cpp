@@ -102,8 +102,8 @@ void function() {
 }
 
 // Anonymous struct type definitions for bitfields
-// CIR-DAG: !rec_anon_struct = !cir.record<struct  {!u8i, !u8i, !u8i, !u8i}>
-// CIR-DAG: !rec_anon_struct1 = !cir.record<struct  {!u8i, !u8i, !cir.array<!u8i x 2>}>
+// CIR-DAG: !rec_anon_struct = !cir.struct<{!u8i, !u8i, !u8i, !u8i}>
+// CIR-DAG: !rec_anon_struct1 = !cir.struct<{!u8i, !u8i, !cir.array<!u8i x 2>}>
 
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE1e = #cir.zero : !rec_empty
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE1s = #cir.const_record<{#cir.int<0> : !s32i, #cir.int<-1> : !s32i}> : !rec_simple

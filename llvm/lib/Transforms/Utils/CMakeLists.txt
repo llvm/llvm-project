@@ -54,6 +54,7 @@ add_llvm_component_library(LLVMTransformUtils
   LoopUtils.cpp
   LoopVersioning.cpp
   LowerAtomic.cpp
+  LowerCommentStringPass.cpp
   LowerGlobalDtors.cpp
   LowerIFunc.cpp
   LowerInvoke.cpp
@@ -90,6 +91,7 @@ add_llvm_component_library(LLVMTransformUtils
   SplitModuleByCategory.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
+  TriggerCrashPass.cpp
   UnifyFunctionExitNodes.cpp
   UnifyLoopExits.cpp
   Utils.cpp

@@ -28,6 +28,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -118,6 +119,22 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
     if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
 
+  // An intrinsic with a metadata argument has no SPIR-V lowering and can't be
+  // turned into a function.
+  if (any_of(Intrinsic->args(), IsaPred<MetadataAsValue>)) {
+    const Function *F = Intrinsic->getFunction();
+    F->getContext().diagnose(DiagnosticInfoUnsupported(
+        *F,
+        "cannot lower the intrinsic '" +
+            Intrinsic->getCalledFunction()->getName() +
+            "' that takes a metadata argument",
+        Intrinsic->getDebugLoc()));
+    if (!Intrinsic->getType()->isVoidTy())
+      Intrinsic->replaceAllUsesWith(PoisonValue::get(Intrinsic->getType()));
+    Intrinsic->eraseFromParent();
+    return true;
+  }
+
   Module *M = Intrinsic->getModule();
   std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
   if (Intrinsic->isVolatile())
@@ -160,8 +177,8 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
   case Intrinsic::bswap: {
     BasicBlock *EntryBB = BasicBlock::Create(M->getContext(), "entry", F);
     IRBuilder<> IRB(EntryBB);
-    auto *BSwap = IRB.CreateIntrinsic(Intrinsic::bswap, Intrinsic->getType(),
-                                      F->getArg(0));
+    CallInst *BSwap = IRB.CreateIntrinsicWithoutFolding(
+        Intrinsic::bswap, Intrinsic->getType(), F->getArg(0));
     IRB.CreateRet(BSwap);
     IntrinsicLowering IL(M->getDataLayout());
     IL.LowerIntrinsicCall(BSwap);
@@ -502,6 +519,14 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       default:
+        // Drop assume-like intrinsics that have no SPIR-V representation.
+        if (II->isAssumeLikeIntrinsic()) {
+          if (!II->getType()->isVoidTy())
+            II->replaceAllUsesWith(PoisonValue::get(II->getType()));
+          II->eraseFromParent();
+          Changed = true;
+          break;
+        }
         if (TM.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())
@@ -753,6 +778,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
+  unsigned MutatedCallIdx = 0;
   for (auto &&[CB, NewFnTy] : Calls) {
     SmallVector<std::pair<int, Type *>> ChangedTypes;
     SmallVector<Type *> NewArgTypes;
@@ -774,11 +800,13 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
     NewFnTy = FunctionType::get(RetTy, NewArgTypes,
                                 CB->getFunctionType()->isVarArg());
 
-    if (!CB->hasName())
-      CB->setName("spv.mutated_callsite." + F->getName());
-    else
-      CB->setName("spv.named_mutated_callsite." + F->getName() + "." +
-                  CB->getName());
+    // Keyed via instruction metadata, not a name.
+    std::string Key =
+        ("spv.mutated_callsite." + F->getName() + "." + Twine(MutatedCallIdx++))
+            .str();
+    CB->setMetadata(
+        "spv.mutated_callsite",
+        MDNode::get(F->getContext(), MDString::get(F->getContext(), Key)));
 
     std::string Constraints;
     if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
@@ -792,7 +820,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
 
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
-        std::move(ChangedTypes), CB->getName(), Constraints);
+        std::move(ChangedTypes), Key, Constraints);
   }
 
   for (auto &&[CB, NewFTy] : Calls) {
@@ -814,8 +842,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
       ->resolveEnvFromModule(M);
 
   bool Changed = false;
-  if (M.functions().empty()) {
-    // If there are no functions, insert a service
+  if (M.getFunctionDefs().empty()) {
+    // If there are no function definitions, insert a service
     // function so that the global/constant tracking intrinsics
     // will be created. Without these intrinsics the generated SPIR-V
     // will be empty. The service function itself is not emitted.
@@ -829,7 +857,24 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::trap);
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
 
+  for (GlobalVariable &GV : M.globals()) {
+    // Strip + tag available_externally globals so AuxData can re-emit the
+    // original linkage as NonSemantic.AuxData::Linkage.
+    if (GV.hasAvailableExternallyLinkage() && !GV.isDeclaration()) {
+      GV.addAttribute(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
+    }
+  }
+
   for (Function &F : M) {
+    // MachineFunctionPass skips available_externally; strip + tag so AuxData
+    // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
+    if (F.hasAvailableExternallyLinkage() && !F.isDeclaration()) {
+      F.addFnAttr(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
+      F.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
+    }
     Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

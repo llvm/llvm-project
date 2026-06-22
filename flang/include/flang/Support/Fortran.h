@@ -78,6 +78,9 @@ ENUM_CLASS(OmpDependenceKind, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
 // OpenMP memory-order types
 ENUM_CLASS(OmpMemoryOrderType, Acq_Rel, Acquire, Relaxed, Release, Seq_Cst)
 
+// OpenMP device-type
+ENUM_CLASS(OmpDeviceType, Any, Host, Nohost)
+
 // Fortran names may have up to 63 characters (See Fortran 2018 C601).
 static constexpr int maxNameLen{63};
 
@@ -102,6 +105,10 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
     std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
     bool isHostDeviceProcedure,
     const LanguageFeatureControl *features = nullptr);
+
+// Format vector type as Fortran string
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 

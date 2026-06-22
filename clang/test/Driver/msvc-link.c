@@ -66,6 +66,6 @@
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-4 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-5 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-6 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
-// DEBUG-LLD: lld-link"
+// DEBUG-LLD: lld-link{{(\.exe)?}}"
 // DEBUG-LLD-SAME: "-debug"
 // DEBUG-LLD-NOT: link.exe

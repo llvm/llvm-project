@@ -517,6 +517,7 @@ namespace clang {
     ExpectedDecl VisitAccessSpecDecl(AccessSpecDecl *D);
     ExpectedDecl VisitStaticAssertDecl(StaticAssertDecl *D);
     ExpectedDecl VisitTranslationUnitDecl(TranslationUnitDecl *D);
+    ExpectedDecl VisitFileScopeAsmDecl(FileScopeAsmDecl *D);
     ExpectedDecl VisitBindingDecl(BindingDecl *D);
     ExpectedDecl VisitNamespaceDecl(NamespaceDecl *D);
     ExpectedDecl VisitNamespaceAliasDecl(NamespaceAliasDecl *D);
@@ -1079,6 +1080,11 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
+      } else if (auto CR = Record->dyn_cast<const ConceptReference *>()) {
+        Expected<ConceptReference *> ToCROrErr = import(CR);
+        if (!ToCROrErr)
+          return ToCROrErr.takeError();
+        ToSat.Details.emplace_back(ToCROrErr.get());
       } else {
         auto Pair =
             Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
@@ -2778,6 +2784,30 @@ ExpectedDecl ASTNodeImporter::VisitTranslationUnitDecl(TranslationUnitDecl *D) {
     Importer.getToContext().getTranslationUnitDecl();
 
   Importer.MapImported(D, ToD);
+
+  return ToD;
+}
+
+ExpectedDecl ASTNodeImporter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
+  Error Err = Error::success();
+  Expr *ToAsmString = importChecked(Err, D->getAsmStringExpr());
+  SourceLocation ToAsmLoc = importChecked(Err, D->getAsmLoc());
+  SourceLocation ToRParenLoc = importChecked(Err, D->getRParenLoc());
+  if (Err)
+    return std::move(Err);
+
+  auto DCOrErr = Importer.ImportContext(D->getDeclContext());
+  if (!DCOrErr)
+    return DCOrErr.takeError();
+  DeclContext *DC = *DCOrErr;
+
+  FileScopeAsmDecl *ToD;
+  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, ToAsmString,
+                              ToAsmLoc, ToRParenLoc))
+    return ToD;
+
+  ToD->setLexicalDeclContext(DC);
+  DC->addDeclInternal(ToD);
 
   return ToD;
 }
@@ -9210,14 +9240,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
   auto ToType = importChecked(Err, E->getType());
   auto ToNameLoc = importChecked(Err, E->getNameLoc());
   auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  auto ToParamType = importChecked(Err, E->getParameterType());
   auto ToReplacement = importChecked(Err, E->getReplacement());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
       ToType, E->getValueKind(), ToNameLoc, ToReplacement, ToAssociatedDecl,
-      E->getIndex(), E->getPackIndex(), E->isReferenceParameter(),
-      E->getFinal());
+      ToParamType, E->getIndex(), E->getPackIndex(), E->getFinal());
 }
 
 ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
@@ -9609,10 +9639,6 @@ class AttrImporter {
 
 public:
   AttrImporter(ASTImporter &I) : Importer(I), NImporter(I) {}
-
-  // Useful for accessing the imported attribute.
-  template <typename T> T *castAttrAs() { return cast<T>(ToAttr); }
-  template <typename T> const T *castAttrAs() const { return cast<T>(ToAttr); }
 
   // Create an "importer" for an attribute parameter.
   // Result of the 'value()' of that object is to be passed to the function

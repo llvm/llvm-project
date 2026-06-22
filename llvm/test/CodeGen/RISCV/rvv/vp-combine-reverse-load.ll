@@ -82,23 +82,23 @@ define <vscale x 2 x float> @test_load_reverse_mask_not_all_one(ptr %ptr, <vscal
 define <vscale x 2 x float> @test_different_evl(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl1, i32 zeroext %evl2) {
 ; CHECK-LABEL: test_different_evl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a3, a1, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a3
+; CHECK-NEXT:    vrsub.vx v8, v8, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v10, v9, v8
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0), v0.t
-; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vrsub.vx v10, v8, a2
-; CHECK-NEXT:    vrgather.vv v8, v9, v10
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    vrsub.vx v9, v8, a2
+; CHECK-NEXT:    vle32.v v10, (a0), v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9
 ; CHECK-NEXT:    ret
   %loadmask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
   %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %loadmask, i32 %evl2)
@@ -106,3 +106,58 @@ define <vscale x 2 x float> @test_different_evl(<vscale x 2 x float>* %ptr, <vsc
   ret <vscale x 2 x float> %rev
 }
 
+define <vscale x 2 x float> @test_reverse_load_combiner_splice(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: test_reverse_load_combiner_splice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %load)
+  %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl)
+  ret <vscale x 2 x float> %splice
+}
+
+define <vscale x 2 x float> @test_load_mask_is_reverse_splice(ptr %ptr, <vscale x 2 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: test_load_mask_is_reverse_splice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    ret
+  %loadmask.rev = call <vscale x 2 x i1> @llvm.vector.reverse(<vscale x 2 x i1> %mask)
+  %loadmask.splice = call <vscale x 2 x i1> @llvm.vector.splice.right(<vscale x 2 x i1> %loadmask.rev, <vscale x 2 x i1> poison, i32 %evl)
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> %loadmask.splice, i32 %evl)
+  %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %load)
+  %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl)
+  ret <vscale x 2 x float> %splice
+}
+
+define <vscale x 2 x float> @test_different_evl_splice(ptr %ptr, i32 zeroext %evl1, i32 zeroext %evl2) {
+; CHECK-LABEL: test_different_evl_splice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    srli a3, a3, 2
+; CHECK-NEXT:    addi a4, a3, -1
+; CHECK-NEXT:    vrsub.vx v8, v8, a4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v10, v9, v8
+; CHECK-NEXT:    sub a3, a3, a2
+; CHECK-NEXT:    vslidedown.vx v8, v10, a3
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
+  %rev = call <vscale x 2 x float> @llvm.vector.reverse(<vscale x 2 x float> %load)
+  %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl2)
+  ret <vscale x 2 x float> %splice
+}

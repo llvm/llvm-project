@@ -21,7 +21,7 @@ __attribute__((section(IFUNC_SEC_STR))) static int dummy_ifunc_sec[0];
 
 extern IFUNCPair START_SEC, STOP_SEC;
 
-__attribute__((constructor)) void __init_ifuncs() {
+__attribute__((constructor(100))) void __init_ifuncs() {
   void *volatile ref = &dummy_ifunc_sec; // hack to keep dummy_ifunc_sec alive
 
   // hack to prevent compiler from assuming START_SEC and STOP_SEC
