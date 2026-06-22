@@ -39,8 +39,7 @@ void test_big() {
   assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
 }
 
-// std::abs has __int128/_BitInt(N) overloads as a libc++ extension. libc++
-// backports decltype and static_assert to C++03, so the probes run there too.
+// std::abs has __int128/_BitInt(N) overloads as a libc++ extension.
 // Narrow signed types stay on the abs(int) promotion path.
 template <class T>
 struct unpromoted_abs : std::is_same<decltype(std::abs(T(0))), T> {};
