@@ -270,18 +270,24 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
-  // Add minimum and maximum for allowed number of teams. If zero, it means
+  // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t MinMaxBlocks = std::max(KernelArgs.UserNumBlocks[0], uint32_t(0));
   json::Array JsonTeamsLimits;
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
 
-  // Add minimum and maximum for allowed number of threads. If zero, it means
+  // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t UserThreads = std::max(KernelArgs.UserThreadLimit[0], uint32_t(0));
+  uint32_t MaxThreads = UserThreads
+                            ? std::min(UserThreads, Kernel.getMaxThreads())
+                            : Kernel.getMaxThreads();
+  assert(MaxThreads >= 0 && "MaxThreads must be greater than zero.");
   json::Array JsonThreadsLimits;
-  JsonThreadsLimits.push_back(uint32_t(KernelArgs.UserThreadLimit[0] > 0));
-  JsonThreadsLimits.push_back(KernelArgs.UserThreadLimit[0]);
+  JsonThreadsLimits.push_back(1);
+  JsonThreadsLimits.push_back(MaxThreads);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;

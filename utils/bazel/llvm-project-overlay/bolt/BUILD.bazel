@@ -6,6 +6,15 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load(":targets.bzl", "bolt_targets")
 
+_BOLT_REWRITE_TARGETS = [
+    target
+    for target in bolt_targets
+    if target in [
+        "AArch64",
+        "X86",
+    ]
+]
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -71,9 +80,11 @@ cc_binary(
         ":Profile",
         ":Rewrite",
         ":RuntimeLibs",
-        ":TargetAArch64",
         ":TargetConfig",
-        ":TargetX86",
+    ] + [
+        ":Target" + target
+        for target in _BOLT_REWRITE_TARGETS
+    ] + [
         ":Utils",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -94,12 +105,19 @@ cc_library(
         "include/bolt/Rewrite/*.h",
     ]),
     includes = ["include"],
+    local_defines = [
+        target.upper() + "_AVAILABLE"
+        for target in _BOLT_REWRITE_TARGETS
+    ],
     deps = [
         ":Core",
         ":Passes",
         ":Profile",
         ":RuntimeLibs",
-        ":TargetX86",
+    ] + [
+        ":Target" + target
+        for target in _BOLT_REWRITE_TARGETS
+    ] + [
         ":Utils",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
