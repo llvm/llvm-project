@@ -257,7 +257,7 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
       Res.Note = "match failed for invalid pattern";
       break;
     case MatchNoneDiag::Expected:
-      Res.Note = "no match found";
+      Res.Note = "no match found in search range";
       break;
     }
     break;
