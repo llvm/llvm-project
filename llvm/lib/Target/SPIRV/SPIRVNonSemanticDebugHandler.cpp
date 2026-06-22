@@ -600,8 +600,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     return;
 
   for (const CompileUnitInfo &Info : CompileUnits) {
-    MCRegister PathReg = emitOpStringIfNew(Info.FilePath, MAI);
     if (Info.TheCU) {
+      MCRegister PathReg = emitOpStringIfNew(Info.FilePath, MAI);
       ScopeToPathOpStringReg[Info.TheCU] = PathReg;
       if (const DIFile *F = Info.TheCU->getFile())
         ScopeToPathOpStringReg[F] = PathReg;
