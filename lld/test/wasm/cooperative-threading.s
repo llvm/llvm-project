@@ -13,9 +13,9 @@
 
 .globl         __wasm_get_tls_base
 __wasm_get_tls_base:
-    .functype   __wasm_get_tls_base () -> (i32)
-    i32.const 0
-    end_function
+  .functype   __wasm_get_tls_base () -> (i32)
+  i32.const 0
+  end_function
 
 .globl _start
 _start:
