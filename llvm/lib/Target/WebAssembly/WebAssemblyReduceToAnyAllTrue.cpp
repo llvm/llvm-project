@@ -63,7 +63,7 @@ struct WebAssemblyReduceToAnyAllTrue final : FunctionPass {
           continue;
 
         Value *Reduce = nullptr;
-        if (!match(Cmp, m_ICmp(m_Value(Reduce), m_ZeroInt())))
+        if (!match(Cmp, m_c_ICmp(m_Value(Reduce), m_ZeroInt())))
           continue;
 
         auto *II = dyn_cast<IntrinsicInst>(Reduce);

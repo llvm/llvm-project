@@ -28,6 +28,46 @@ start:
   ret i1 %cmp
 }
 
+define zeroext i1 @manual_i8x16_not_all_true(<16 x i8> %v) {
+; CHECK-LABEL: manual_i8x16_not_all_true:
+; CHECK:         .functype manual_i8x16_not_all_true (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.ne
+; CHECK-NEXT:    v128.const 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i8x16.extract_lane_u 0
+; CHECK-NEXT:    i32.eqz
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %mask = icmp ne <16 x i8> %v, zeroinitializer
+  %mask.i8 = zext <16 x i1> %mask to <16 x i8>
+  %reduction = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %mask.i8)
+  %is.zero = icmp eq i8 %reduction, 0
+  ret i1 %is.zero
+}
+
 define zeroext i1 @manual_i16x8_all_true(<8 x i16> %v) {
 ; CHECK-LABEL: manual_i16x8_all_true:
 ; CHECK:         .functype manual_i16x8_all_true (v128) -> (i32)

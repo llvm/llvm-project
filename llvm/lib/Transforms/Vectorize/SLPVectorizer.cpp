@@ -28740,6 +28740,22 @@ class HorizontalReduction {
            RecurrenceDescriptor::isMinMaxRecurrenceKind(getRdxKind(I));
   }
 
+  static TTI::ReductionUseKind
+  getReductionUseKind(const Instruction *ReductionRoot) {
+    if (!ReductionRoot || !ReductionRoot->getType()->isIntegerTy() ||
+        !ReductionRoot->hasOneUse())
+      return TTI::ReductionUseKind::None;
+
+    const auto *Cmp = dyn_cast<ICmpInst>(*ReductionRoot->user_begin());
+    CmpPredicate Pred;
+    if (!Cmp ||
+        !match(Cmp, m_c_ICmp(Pred, m_Specific(ReductionRoot), m_Zero())) ||
+        Pred != ICmpInst::ICMP_NE)
+      return TTI::ReductionUseKind::None;
+
+    return TTI::ReductionUseKind::NonZeroTest;
+  }
+
   // And/or are potentially poison-safe logical patterns like:
   // select x, y, false
   // select x, true, y
@@ -30631,6 +30647,8 @@ private:
     // 2. The storage does not have any vector with full vector use (first
     // vector with full register use).
     bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
+    TTI::ReductionUseKind UseKind =
+        getReductionUseKind(cast<Instruction>(ReductionRoot));
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -30665,8 +30683,8 @@ private:
             auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
                 std::make_pair(RedTy, true));
             if (RType == RedTy) {
-              VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
-                                                           FMF, CostKind);
+              VectorCost = TTI->getArithmeticReductionCost(
+                  RdxOpcode, VectorTy, FMF, CostKind, UseKind);
             } else {
               VectorCost = TTI->getExtendedReductionCost(
                   RdxOpcode, !IsSigned, RedTy,

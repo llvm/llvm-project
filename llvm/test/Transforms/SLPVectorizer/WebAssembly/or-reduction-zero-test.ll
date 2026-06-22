@@ -6,24 +6,7 @@ define i1 @or_reduction_nonzero(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 0, i32 8>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 1, i32 9>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP18]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 2, i32 10>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 3, i32 11>
-; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i8> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 4, i32 12>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 5, i32 13>
-; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i8> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 6, i32 14>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 7, i32 15>
-; CHECK-NEXT:    [[TMP12:%.*]] = or <2 x i8> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i8> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i8> [[TMP9]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i8> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -83,9 +66,9 @@ define i1 @or_reduction_zero(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 0, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 0, i32 8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 1, i32 9>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP18]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 2, i32 10>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <2 x i32> <i32 3, i32 11>
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i8> [[TMP4]], [[TMP5]]
@@ -100,8 +83,8 @@ define i1 @or_reduction_zero(ptr %p) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i8> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[TMP16]], [[TMP17]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[O]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

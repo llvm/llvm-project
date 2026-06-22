@@ -335,6 +335,13 @@ public:
     TCK_SizeAndLatency   ///< The weighted sum of size and latency.
   };
 
+  /// How the scalar result of a reduction is used. The test kind only applies
+  /// when the reduction has no other users.
+  enum class ReductionUseKind {
+    None,        ///< No special use is modeled.
+    NonZeroTest, ///< The result is compared unequal to zero.
+  };
+
   /// Underlying constants for 'cost' values in this interface.
   ///
   /// Many APIs in this interface return a cost. This enum defines the
@@ -1744,10 +1751,13 @@ public:
   ///     result = result + v3
   ///   This is only the case for FP operations and when reassociation is not
   ///   allowed.
+  /// The \p UseKind specifies whether the scalar reduction result is only
+  /// used for a non-zero comparison.
   ///
   LLVM_ABI InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      ReductionUseKind UseKind = ReductionUseKind::None) const;
 
   LLVM_ABI InstructionCost getMinMaxReductionCost(
       Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),

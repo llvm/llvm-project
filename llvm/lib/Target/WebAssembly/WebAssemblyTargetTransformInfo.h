@@ -70,6 +70,13 @@ public:
       const Instruction *CxtI = nullptr) const override;
 
   InstructionCost
+  getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                             std::optional<FastMathFlags> FMF,
+                             TTI::TargetCostKind CostKind,
+                             TTI::ReductionUseKind UseKind) const override;
+  using BaseT::getArithmeticReductionCost;
+
+  InstructionCost
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override;

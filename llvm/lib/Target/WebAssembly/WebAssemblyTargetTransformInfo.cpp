@@ -102,6 +102,20 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
   return Cost;
 }
 
+InstructionCost WebAssemblyTTIImpl::getArithmeticReductionCost(
+    unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
+    TTI::TargetCostKind CostKind, TTI::ReductionUseKind UseKind) const {
+  if (ST->hasSIMD128() && Opcode == Instruction::Or &&
+      UseKind == TTI::ReductionUseKind::NonZeroTest) {
+    if (auto *FVT = dyn_cast<FixedVectorType>(Ty)) {
+      if (FVT->getElementType()->isIntegerTy(8) && FVT->getNumElements() == 16)
+        return TTI::TCC_Basic;
+    }
+  }
+
+  return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+}
+
 InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
     unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
     TTI::TargetCostKind CostKind, const Instruction *I) const {

@@ -1315,9 +1315,9 @@ uint64_t TargetTransformInfo::getMaxMemIntrinsicInlineSizeThreshold() const {
 
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
     unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, ReductionUseKind UseKind) const {
   InstructionCost Cost =
-      TTIImpl->getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+      TTIImpl->getArithmeticReductionCost(Opcode, Ty, FMF, CostKind, UseKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

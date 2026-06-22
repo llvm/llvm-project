@@ -1012,6 +1012,12 @@ public:
     return 1;
   }
 
+  virtual InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
+      TTI::TargetCostKind CostKind, TTI::ReductionUseKind) const {
+    return getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+  }
+
   virtual InstructionCost getMinMaxReductionCost(Intrinsic::ID IID,
                                                  VectorType *, FastMathFlags,
                                                  TTI::TargetCostKind) const {
