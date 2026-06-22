@@ -3032,7 +3032,9 @@ static bool interp__builtin_ia32_mpsadbw(InterpState &S, CodePtr OpPC,
 
   const auto *SrcVT = Call->getArg(0)->getType()->castAs<VectorType>();
   PrimType SrcElemT = *S.getContext().classify(SrcVT->getElementType());
-  unsigned SourceLen = SrcVT->getNumElements(); // 16 or 32
+  unsigned SourceLen = SrcVT->getNumElements();
+  assert((SourceLen == 16 || SourceLen == 32) &&
+         "MPSADBW operates on 128-bit or 256-bit vectors");
 
   const auto *DestVT = Call->getType()->castAs<VectorType>();
   PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
@@ -3045,9 +3047,9 @@ static bool interp__builtin_ia32_mpsadbw(InterpState &S, CodePtr OpPC,
     unsigned Ctrl = (Imm >> (3 * Lane)) & 0x7;
     unsigned AOff = ((Ctrl >> 2) & 1) * 4;
     unsigned BOff = (Ctrl & 3) * 4;
-    for (unsigned J = 0; J < 8; ++J) {
+    for (unsigned J = 0; J != 8; ++J) {
       uint16_t Sad = 0;
-      for (unsigned K = 0; K < 4; ++K) {
+      for (unsigned K = 0; K != 4; ++K) {
         uint8_t A, B;
         INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
           A = static_cast<uint8_t>(
