@@ -6,5 +6,7 @@
     }
   ],
   "id_table": [],
-  "linkage_table": []
+  "linkage_table": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
 }

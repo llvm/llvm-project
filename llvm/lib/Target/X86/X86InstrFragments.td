@@ -424,10 +424,6 @@ def X86bextri : SDNode<"X86ISD::BEXTRI", SDTIntBinOp>;
 // Zero High Bits Starting with Specified Bit Position.
 def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
 
-// Parallel extract and deposit.
-def X86pdep   : SDNode<"X86ISD::PDEP",   SDTIntBinOp>;
-def X86pext   : SDNode<"X86ISD::PEXT",   SDTIntBinOp>;
-
 // X86-specific multiply by immediate.
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 

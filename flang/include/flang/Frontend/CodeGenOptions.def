@@ -45,6 +45,7 @@ CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
                                      ///< compile step.
 CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
+CODEGENOPT(EnableSplitLTOUnit, 1, 0) ///< Set when -fsplit-lto-unit is enabled.
 CODEGENOPT(ProtectParens, 1, 1) ///< -fprotect-parens (enable parenthesis protection)
 CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
 CODEGENOPT(EnableSafeTrampoline, 1, 0) ///< -fsafe-trampoline (W^X compliant trampoline pool)
