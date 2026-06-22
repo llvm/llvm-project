@@ -116,6 +116,12 @@ getEncodingNameFromFileTag(const Twine &FileName, const int FD = -1) {
   if (Tag == 0)
     return std::string(); // Return empty string for no tag
 
+  if (Tag == 1208)
+    return std::string("utf-8");
+
+  if (Tag == 1047)
+    return std::string("ibm-1047");
+
   char Buffer[16];
   snprintf(Buffer, sizeof(Buffer), "%03d", Tag);
   return std::string(Buffer);
