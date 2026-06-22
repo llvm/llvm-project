@@ -192,11 +192,12 @@ public:
   }
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
-                       FastMathFlags FMF = {},
-                       Function *CtxF = nullptr) const override {
+                       FastMathFlags FMF = {}, Function *CtxF = nullptr,
+                       bool IsStrictFP = true) const override {
     if (all_of(Ops, IsaPred<Constant>))
       return ConstantFoldIntrinsic(
-          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty);
+          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty,
+          IsStrictFP);
     return nullptr;
   }
 

@@ -2271,10 +2271,12 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
     return nullptr;
 
   bool IsIntrinsic;
+  bool IsStrictFP;
   unsigned Opcode;
   if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(TrueVal)) {
     Opcode = BOp->getOpcode();
     IsIntrinsic = false;
+    IsStrictFP = false;
 
     // This fold causes some regressions and is primarily intended for
     // add and sub. So we early exit for div and rem to minimize the
@@ -2289,6 +2291,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
     if (!match(II, m_MaxOrMin(m_Specific(X), m_Constant(C2))))
       return nullptr;
     Opcode = II->getIntrinsicID();
+    IsStrictFP = II->isStrictFP();
     IsIntrinsic = true;
   } else {
     return nullptr;
@@ -2300,9 +2303,9 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
   auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
-    return IsIntrinsic
-               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
-               : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+    return IsIntrinsic ? ConstantFoldIntrinsic(Opcode, {LHS, RHS},
+                                               LHS->getType(), IsStrictFP)
+                       : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
   if (C3 == FoldBinaryOpOrIntrinsic(C1, C2)) {

@@ -121,9 +121,10 @@ public:
   }
 
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
-                       FastMathFlags FMF = {},
-                       Function *CtxF = nullptr) const override {
-    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF);
+                       FastMathFlags FMF = {}, Function *CtxF = nullptr,
+                       bool IsStrictFP = true) const override {
+    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF,
+                             IsStrictFP ? fp::ebStrict : fp::ebIgnore);
   }
 
   //===--------------------------------------------------------------------===//
