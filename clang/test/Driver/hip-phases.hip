@@ -297,9 +297,10 @@
 // RELOC-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // RELOC-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // RELOC-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
-// RELOC-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, lto-bc, (device-[[T]], [[ARCH]])
+// RELOC-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// RELOC-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
 // RELOC-NOT: linker
-// RELOC-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}
+// RELOC-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P4]]}
 // RELOC-NOT: host
 
 //
@@ -317,15 +318,17 @@
 // RELOC2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // RELOC2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // RELOC2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
-// RELOC2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, lto-bc, (device-[[T]], [[ARCH]])
+// RELOC2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// RELOC2-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
 // RELOC2-NOT: linker
-// RELOC2-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}, lto-bc
-// RELOC2-DAG: [[P5:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH2:gfx900]])
-// RELOC2-DAG: [[P6:[0-9]+]]: preprocessor, {[[P5]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
-// RELOC2-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (device-[[T]], [[ARCH2]])
-// RELOC2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, lto-bc, (device-[[T]], [[ARCH2]])
+// RELOC2-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P4]]}, object
+// RELOC2-DAG: [[P6:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH2:gfx900]])
+// RELOC2-DAG: [[P7:[0-9]+]]: preprocessor, {[[P6]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
+// RELOC2-DAG: [[P8:[0-9]+]]: compiler, {[[P7]]}, ir, (device-[[T]], [[ARCH2]])
+// RELOC2-DAG: [[P9:[0-9]+]]: backend, {[[P8]]}, assembler, (device-[[T]], [[ARCH2]])
+// RELOC2-DAG: [[P10:[0-9]+]]: assembler, {[[P9]]}, object, (device-[[T]], [[ARCH2]])
 // RELOC2-NOT: linker
-// RELOC2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, lto-bc
+// RELOC2-DAG: [[P11:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P10]]}, object
 // RELOC2-NOT: host
 
 //
@@ -696,14 +699,15 @@
 //      SPIRV-ONLY: 0: input, "[[INPUT:.+]]", hip, (device-hip, gfx1030)
 // SPIRV-ONLY-NEXT: 1: preprocessor, {0}, hip-cpp-output, (device-hip, gfx1030)
 // SPIRV-ONLY-NEXT: 2: compiler, {1}, ir, (device-hip, gfx1030)
-// SPIRV-ONLY-NEXT: 3: backend, {2}, lto-bc, (device-hip, gfx1030)
-// SPIRV-ONLY-NEXT: 4: linker, {3}, image, (device-hip, gfx1030)
-// SPIRV-ONLY-NEXT: 5: offload, "device-hip (amdgcn-amd-amdhsa:gfx1030)" {4}, image
-// SPIRV-ONLY-NEXT: 6: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 7: preprocessor, {6}, hip-cpp-output, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 8: compiler, {7}, ir, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 9: backend, {8}, lto-bc, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 10: linker, {9}, image, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 11: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {10}, image
-// SPIRV-ONLY-NEXT: 12: linker, {5, 11}, hip-fatbin, (device-hip)
-// SPIRV-ONLY-NEXT: 13: offload, "device-hip (amdgcn-amd-amdhsa)" {12}, none
+// SPIRV-ONLY-NEXT: 3: backend, {2}, assembler, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 4: assembler, {3}, object, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 5: linker, {4}, image, (device-hip, gfx1030)
+// SPIRV-ONLY-NEXT: 6: offload, "device-hip (amdgcn-amd-amdhsa:gfx1030)" {5}, image
+// SPIRV-ONLY-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 9: compiler, {8}, ir, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 10: backend, {9}, lto-bc, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 11: linker, {10}, image, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 12: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {11}, image
+// SPIRV-ONLY-NEXT: 13: linker, {6, 12}, hip-fatbin, (device-hip)
+// SPIRV-ONLY-NEXT: 14: offload, "device-hip (amdgcn-amd-amdhsa)" {13}, none
