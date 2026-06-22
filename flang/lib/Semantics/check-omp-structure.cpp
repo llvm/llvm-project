@@ -671,10 +671,14 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
   // clauses. Assumed-size arrays are allowed on "map", "shared", and
   // "use_device_addr". The check for this happens a few lines below.
   bool AssumedSizeArrayAllowed{false};
+  bool CommonBlockAllowed{true};
   bool NamedConstantAllowed{false};
   switch (clauseId) {
   case llvm::omp::Clause::OMPC_firstprivate:
     NamedConstantAllowed = true;
+    break;
+  case llvm::omp::Clause::OMPC_linear:
+    CommonBlockAllowed = false;
     break;
   case llvm::omp::Clause::OMPC_map:
     AssumedSizeArrayAllowed = true;
@@ -706,6 +710,12 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
       context_.Say(source,
           "A whole assumed-size array is not allowed as a list item on %s clause"_err_en_US,
           parser::omp::GetUpperName(clauseId, version));
+      continue;
+    }
+    if (!CommonBlockAllowed && IsCommonBlock(*symbol)) {
+      context_.Say(source,
+          "'%s' is a common block name and must not appear in a %s clause"_err_en_US,
+          symbol->name(), parser::omp::GetUpperName(clauseId, version));
       continue;
     }
     // Emit a more user-friendly diagnostic than "'kind' must be a variable
@@ -1910,12 +1920,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     if (clauseId == llvm::omp::Clause::OMPC_init) {
       CheckInitOnDepobj(x, clause);
     } else if (clauseId == llvm::omp::Clause::OMPC_destroy) {
+      if (arguments.v.empty()) {
+        continue;
+      }
       // [5.2:73:27-28]
       // If the destroy clause appears on a depobj construct, destroy-var must
       // refer to the same depend object as the depobj argument of the
       // construct.
       auto &wrapper{std::get<parser::OmpClause::Destroy>(clause.u)};
       if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
+        assert(!arguments.v.empty() && "Expecting argument");
         const Symbol *constrSym{GetArgumentSymbol(arguments.v.front())};
         const Symbol *clauseSym{GetObjectSymbol(destroy->v)};
         if (constrSym && clauseSym && constrSym != clauseSym) {
@@ -5680,6 +5694,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::ReverseOffload &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_reverse_offload);
+  if (IsAllowedClause(llvm::omp::Clause::OMPC_reverse_offload)) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not supported and will be ignored"_warn_en_US,
+        GetUpperName(llvm::omp::Clause::OMPC_reverse_offload, version));
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::UnifiedAddress &x) {

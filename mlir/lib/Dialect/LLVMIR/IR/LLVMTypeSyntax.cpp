@@ -41,6 +41,7 @@ static StringRef getTypeKeyword(Type type) {
       .Case<LLVMFunctionType>([&](Type) { return "func"; })
       .Case<LLVMPointerType>([&](Type) { return "ptr"; })
       .Case<LLVMArrayType>([&](Type) { return "array"; })
+      .Case<LLVMByteType>([&](Type) { return "byte"; })
       .Case<LLVMStructType>([&](Type) { return "struct"; })
       .Case<LLVMTargetExtType>([&](Type) { return "target"; })
       .Case<LLVMX86AMXType>([&](Type) { return "x86_amx"; })
@@ -102,8 +103,9 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
   printer << getTypeKeyword(type);
 
   llvm::TypeSwitch<Type>(type)
-      .Case<LLVMPointerType, LLVMArrayType, LLVMFunctionType, LLVMTargetExtType,
-            LLVMStructType>([&](auto type) { type.print(printer); });
+      .Case<LLVMPointerType, LLVMArrayType, LLVMByteType, LLVMFunctionType,
+            LLVMTargetExtType, LLVMStructType>(
+          [&](auto type) { type.print(printer); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -270,6 +272,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
       .Case("func", [&] { return LLVMFunctionType::parse(parser); })
       .Case("ptr", [&] { return LLVMPointerType::parse(parser); })
       .Case("array", [&] { return LLVMArrayType::parse(parser); })
+      .Case("byte", [&] { return LLVMByteType::parse(parser); })
       .Case("struct", [&] { return LLVMStructType::parse(parser); })
       .Case("target", [&] { return LLVMTargetExtType::parse(parser); })
       .Case("x86_amx", [&] { return LLVMX86AMXType::get(ctx); })

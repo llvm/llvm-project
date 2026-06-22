@@ -6305,15 +6305,15 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
 }
 
 def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntMultipleOf16
 > {
   let summary = "Reverse the bytes in the object representation of the operand";
   let description = [{
     The `cir.byte_swap` operation takes an integer as operand, reverse the bytes
     in the object representation of the operand integer, and returns the result.
 
-    The operand integer must be an unsigned integer. Its widths must be either
-    16, 32, or 64.
+    The operand integer must be an unsigned integer whose width is a multiple of
+    16 bits (e.g. 16, 32, 64, 128, or a wider `_BitInt`).
 
     Example:
 

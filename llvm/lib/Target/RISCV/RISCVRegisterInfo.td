@@ -372,6 +372,7 @@ def GPRJALRNonX7 : GPRRegisterClass<(sub GPRJALR, X7)>;
 def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
                                  (sequence "X%u", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8, 8>";
+  let DiagnosticString = "register must be a GPR from x8 to x15";
 }
 
 // For indirect tail calls, we can't use callee-saved registers, as they are

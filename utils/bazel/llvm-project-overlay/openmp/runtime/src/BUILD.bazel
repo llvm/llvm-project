@@ -84,6 +84,7 @@ expand_template(
         "#cmakedefine01 LIBOMP_STATS": "#define LIBOMP_STATS 0",
         "#cmakedefine01 LIBOMP_TASKGRAPH_EXPERIMENTAL": "#define LIBOMP_TASKGRAPH_EXPERIMENTAL 0",
         "#cmakedefine01 LIBOMP_USE_ADAPTIVE_LOCKS": "#define LIBOMP_USE_ADAPTIVE_LOCKS 1",
+        "#cmakedefine01 LIBOMP_USE_CANCEL_THREADS": "#define LIBOMP_USE_CANCEL_THREADS 0",
         "#cmakedefine01 LIBOMP_USE_DEBUGGER": "#define LIBOMP_USE_DEBUGGER 0",
         "#cmakedefine01 LIBOMP_USE_HIER_SCHED": "#define LIBOMP_USE_HIER_SCHED 0",
         "#cmakedefine01 LIBOMP_USE_HWLOC": "#define LIBOMP_USE_HWLOC 0",
