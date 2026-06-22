@@ -54420,26 +54420,22 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     SDValue Ptr = Ld->getBasePtr();
 
     GlobalAddressSDNode *GA = nullptr;
-    int64_t OldByteOffset = 0;
 
     if (Ptr.getOpcode() == ISD::ADD) {
       SDValue LHS = Ptr.getOperand(0);
       SDValue RHS = Ptr.getOperand(1);
 
-      if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
+      if (isa<ConstantSDNode>(RHS)) {
         if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(LHS)) {
           GA = MatchedGA;
-          OldByteOffset = GA->getOffset() + C->getSExtValue();
         }
-      } else if (auto *C = dyn_cast<ConstantSDNode>(LHS)) {
+      } else if (isa<ConstantSDNode>(LHS)) {
         if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(RHS)) {
           GA = MatchedGA;
-          OldByteOffset = GA->getOffset() + C->getSExtValue();
         }
       }
     } else if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
       GA = MatchedGA;
-      OldByteOffset = GA->getOffset();
     }
 
     if (!GA)
@@ -54477,9 +54473,8 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     if (PeriodBytes == 0)
       return SDValue();
 
-    int64_t NewByteOffset = OldByteOffset % static_cast<int64_t>(PeriodBytes);
-    if (NewByteOffset < 0)
-      NewByteOffset += PeriodBytes;
+    // TODO: only match the simple case like [1, 2, 3, 4, 1, 2, 3, 4], so the new offset is always 0
+    int64_t NewByteOffset = 0;
 
     uint64_t LoadBytes = Ld->getMemoryVT().getStoreSize();
     if (static_cast<uint64_t>(NewByteOffset) + LoadBytes > PeriodBytes)
@@ -54487,12 +54482,12 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
 
     Module *M = GVar->getParent();
 
+    // we set the old variable to XX.x86.orig
     constexpr StringRef OrigSuffix = ".x86.orig";
 
-    std::string CurName = GVar->getName().str();
+    StringRef CurName = GVar->getName();
     StringRef BaseNameRef(CurName);
-
-    while (BaseNameRef.ends_with(OrigSuffix))
+    if (BaseNameRef.ends_with(OrigSuffix))
       BaseNameRef = BaseNameRef.drop_back(OrigSuffix.size());
 
     std::string OldName = BaseNameRef.str();
@@ -54501,6 +54496,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     GlobalVariable *NewGV = M->getGlobalVariable(OldName, true);
 
     if (NewGV == GVar) {
+      // The global variable node is not optimized yet
       GVar->setName(OrigName);
       NewGV = nullptr;
     }
