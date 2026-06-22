@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// make_scope_exit and related APIs.
+// scope_exit and related APIs.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,17 +17,16 @@
 #include <utility>
 
 namespace orc_rt {
-namespace detail {
 
-template <typename Fn> class ScopeExitRunner {
+template <typename Fn> class scope_exit {
 public:
   template <typename FnInit>
-  ScopeExitRunner(FnInit &&F) : F(std::forward<FnInit>(F)) {}
-  ScopeExitRunner(const ScopeExitRunner &) = delete;
-  ScopeExitRunner &operator=(const ScopeExitRunner &) = delete;
-  ScopeExitRunner(ScopeExitRunner &&) = delete;
-  ScopeExitRunner &operator=(ScopeExitRunner &&) = delete;
-  ~ScopeExitRunner() {
+  scope_exit(FnInit &&F) : F(std::forward<FnInit>(F)) {}
+  scope_exit(const scope_exit &) = delete;
+  scope_exit &operator=(const scope_exit &) = delete;
+  scope_exit(scope_exit &&) = delete;
+  scope_exit &operator=(scope_exit &&) = delete;
+  ~scope_exit() {
     if (Engaged)
       F();
   }
@@ -38,16 +37,7 @@ private:
   bool Engaged = true;
 };
 
-} // namespace detail
-
-/// Creates an object that runs the given function object upon destruction.
-/// Calling the object's release method prior to destruction will prevent the
-/// function object from running.
-template <typename Fn>
-[[nodiscard]] detail::ScopeExitRunner<std::decay_t<Fn>>
-make_scope_exit(Fn &&F) {
-  return detail::ScopeExitRunner<std::decay_t<Fn>>(std::forward<Fn>(F));
-}
+template <typename Fn> scope_exit(Fn) -> scope_exit<Fn>;
 
 } // namespace orc_rt
 

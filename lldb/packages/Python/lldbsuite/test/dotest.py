@@ -832,6 +832,22 @@ def canRunLibcxxTests():
     if lldbplatformutil.platformIsDarwin():
         if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
             return False, "libc++ tests require a locally built libc++"
+
+        # Check that the libc++ architecture matches the test architecture.
+        test_architecture = lldbplatformutil.getArchitecture()
+
+        libcxx_dylib_path = os.path.join(
+            configuration.libcxx_library_dir, "libc++.dylib"
+        )
+        try:
+            libcxx_arch_list = subprocess.check_output(
+                ["lipo", "-archs", libcxx_dylib_path], text=True
+            ).split()
+            if test_architecture not in libcxx_arch_list:
+                return False, f"libc++ dylib missing {test_architecture} slice"
+        except subprocess.CalledProcessError:
+            return False, "libc++ dylib is not present"
+
         return True, "libc++ present"
 
     if platform == "linux":

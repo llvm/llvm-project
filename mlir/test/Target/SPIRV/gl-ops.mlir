@@ -55,6 +55,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %21 = spirv.GL.Tanh %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Exp2 {{%.*}} : f32
     %22 = spirv.GL.Exp2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Radians {{%.*}} : f32
+    %23 = spirv.GL.Radians %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Degrees {{%.*}} : f32
+    %24 = spirv.GL.Degrees %arg0 : f32
     spirv.Return
   }
 
