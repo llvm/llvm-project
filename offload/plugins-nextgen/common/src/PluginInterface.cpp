@@ -367,6 +367,45 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     AsyncInfoWrapper.freeAllocationAfterSynchronization(
         DynBlockMemConf.FallbackPtr);
 
+  // Get max occupancy for this kernel
+  computeMaxOccupancy(GenericDevice);
+  std::string KernelName = getName();
+  KernelRunRecordTy *KernelRecord = GenericDevice.getKernelRunRecords();
+  uint32_t KernelRunCounter = 0;
+
+  // Calculate or adjust the effective number of threads and blocks if needed.
+  if (KernelRecord) {
+    KernelRunCounter = KernelRecord->getRunCounterForKernel(KernelName);
+  }
+  // If Autotuning is enabled and the kernel is not launched for the first time.
+  if (GenericDevice.enableRuntimeAutotuning() && isSPMDMode() &&
+      KernelRunCounter > 0) {
+    assert(KernelRecord &&
+           "Autotuning is enabled, but KernelRunRecord is not initialized!");
+
+    auto [Teams, Threads] =
+        KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
+    EffectiveNumBlocks[0] = Teams;
+    EffectiveNumThreads[0] = Threads;
+  } else if (!KernelArgs.Flags.StrictBlocksAndThreads && !isBareMode()) {
+    EffectiveNumThreads[0] =
+        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
+
+    std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
+        GenericDevice, EffectiveNumThreads[0], KernelArgs.Tripcount,
+        KernelArgs.UserThreadLimit);
+    if (AdjustInfo.first)
+      EffectiveNumThreads[0] = AdjustInfo.second;
+
+    EffectiveNumBlocks[0] = getEffectiveNumBlocks(
+        GenericDevice, EffectiveNumBlocks[0], KernelArgs.Tripcount,
+        EffectiveNumThreads[0], KernelArgs.UserThreadLimit[0] > 0);
+  }
+
+  // The teams reduction buffer is sized from the effective number of blocks, so
+  // the grid size must be finalized before creating the launch environment.
+  // Otherwise a kernel without an explicit num_teams clause would size the
+  // buffer with the raw user value of 0 and fail to allocate.
   auto KernelLaunchEnvOrErr =
       getKernelLaunchEnvironment(GenericDevice, KernelArgs, DynBlockMemConf,
                                  AsyncInfoWrapper, EffectiveNumBlocks[0]);
@@ -420,41 +459,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
-  }
-
-  // Get max occupancy for this kernel
-  computeMaxOccupancy(GenericDevice);
-  std::string KernelName = getName();
-  KernelRunRecordTy *KernelRecord = GenericDevice.getKernelRunRecords();
-  uint32_t KernelRunCounter = 0;
-
-  // Calculate or adjust the effective number of threads and blocks if needed.
-  if (KernelRecord) {
-    KernelRunCounter = KernelRecord->getRunCounterForKernel(KernelName);
-  }
-  // If Autotuning is enabled and the kernel is not launched for the first time.
-  if (GenericDevice.enableRuntimeAutotuning() && isSPMDMode() &&
-      KernelRunCounter > 0) {
-    assert(KernelRecord &&
-           "Autotuning is enabled, but KernelRunRecord is not initialized!");
-
-    auto [Teams, Threads] =
-        KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
-    EffectiveNumBlocks[0] = Teams;
-    EffectiveNumThreads[0] = Threads;
-  } else if (!KernelArgs.Flags.StrictBlocksAndThreads && !isBareMode()) {
-    EffectiveNumThreads[0] =
-        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
-
-    std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
-        GenericDevice, EffectiveNumThreads[0], KernelArgs.Tripcount,
-        KernelArgs.UserThreadLimit);
-    if (AdjustInfo.first)
-      EffectiveNumThreads[0] = AdjustInfo.second;
-
-    EffectiveNumBlocks[0] = getEffectiveNumBlocks(
-        GenericDevice, EffectiveNumBlocks[0], KernelArgs.Tripcount,
-        EffectiveNumThreads[0], KernelArgs.UserThreadLimit[0] > 0);
   }
 
   // Get achieved occupancy for this kernel.
