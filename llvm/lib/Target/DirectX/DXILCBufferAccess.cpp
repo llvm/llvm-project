@@ -19,6 +19,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #define DEBUG_TYPE "dxil-cbuffer-access"
 using namespace llvm;
@@ -50,14 +51,25 @@ static bool replaceCBufferAccesses(Module &M) {
     return false;
 
   SmallVector<Constant *> CBufferGlobals;
-  for (const hlsl::CBufferMapping &Mapping : *CBufMD)
+  SmallPtrSet<GlobalVariable *, 8> CBufferHandles;
+  for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
+    CBufferHandles.insert(Mapping.Handle);
     for (const hlsl::CBufferMember &Member : Mapping.Members)
       CBufferGlobals.push_back(Member.GV);
+  }
   convertUsersOfConstantsToInstructions(CBufferGlobals);
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD)
     for (const hlsl::CBufferMember &Member : Mapping.Members)
       replaceUsersOfGlobal(Member.GV, Mapping.Handle, Member.Offset);
+
+  // Remove cbuffer handle globals from @llvm.compiler.used list.
+  llvm::removeFromUsedLists(M, [&](Constant *C) -> bool {
+    auto *GV = dyn_cast<GlobalVariable>(C);
+    return GV && CBufferHandles.contains(GV);
+  });
+  for (GlobalVariable *HandleGV : CBufferHandles)
+    HandleGV->removeDeadConstantUsers();
 
   CBufMD->eraseFromModule();
   return true;

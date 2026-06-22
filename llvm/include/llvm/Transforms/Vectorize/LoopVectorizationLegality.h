@@ -385,7 +385,7 @@ public:
 
   /// Add unit stride predicates for memory accesses to PSE, if runtime checks
   /// are allowed and an inner loop is vectorized.
-  void collectUnitStridePredicates() const;
+  LLVM_ABI void collectUnitStridePredicates() const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
@@ -532,7 +532,7 @@ private:
   /// the new code path being implemented for outer loop vectorization
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
-  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath);
+  bool canVectorizeLoopCFG(Loop *Lp, bool UseVPlanNativePath) const;
 
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count
@@ -659,8 +659,7 @@ private:
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
   /// better choice for the main induction than the existing one.
-  void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
-                       SmallPtrSetImpl<Value *> &AllowedExit);
+  void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
 
   /// The loop that we evaluate.
   Loop *TheLoop;
@@ -717,10 +716,6 @@ private:
 
   /// Holds the widest induction type encountered.
   IntegerType *WidestIndTy = nullptr;
-
-  /// Allowed outside users. This holds the variables that can be accessed from
-  /// outside the loop.
-  SmallPtrSet<Value *, 4> AllowedExit;
 
   /// Vectorization requirements that will go through late-evaluation.
   LoopVectorizationRequirements *Requirements;

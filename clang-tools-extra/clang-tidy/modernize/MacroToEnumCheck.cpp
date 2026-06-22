@@ -470,11 +470,15 @@ void MacroToEnumCallbacks::warnMacroEnum(const EnumMacro &Macro) const {
 void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
   SourceLocation Begin =
       MacroList.front().Directive->getMacroInfo()->getDefinitionLoc();
+  const StringRef LineEnding =
+      SM.getBufferData(SM.getFileID(Begin)).detectEOL();
+
   Begin = SM.translateLineCol(SM.getFileID(Begin),
                               SM.getSpellingLineNumber(Begin), 1);
   const DiagnosticBuilder Diagnostic =
       Check->diag(Begin, "replace macro with enum")
-      << FixItHint::CreateInsertion(Begin, "enum {\n");
+      << FixItHint::CreateInsertion(Begin,
+                                    (llvm::Twine("enum {") + LineEnding).str());
 
   for (size_t I = 0U; I < MacroList.size(); ++I) {
     const EnumMacro &Macro = MacroList[I];
@@ -503,7 +507,8 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
       LangOpts);
   End = SM.translateLineCol(SM.getFileID(End),
                             SM.getSpellingLineNumber(End) + 1, 1);
-  Diagnostic << FixItHint::CreateInsertion(End, "};\n");
+  Diagnostic << FixItHint::CreateInsertion(
+      End, (llvm::Twine("};") + LineEnding).str());
 }
 
 void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,

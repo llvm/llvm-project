@@ -110,7 +110,7 @@ Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
     GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
     const DynBlockMemConfTy &DynBlockMemConf,
-    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+    AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
@@ -119,9 +119,15 @@ GenericKernelTy::getKernelLaunchEnvironment(
       KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
-  if ((!KernelEnvironment.Configuration.ReductionDataSize ||
-       !KernelEnvironment.Configuration.ReductionBufferLength) &&
-      KernelArgs.DynCGroupMem == 0)
+  const auto &RedCfg = KernelEnvironment.Configuration;
+  const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
+  if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "kernel was built against an older OpenMP "
+                         "kernel-launch-environment ABI (v%u); current "
+                         "runtime requires v%u for cross-team reductions",
+                         KernelArgs.Version, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !KernelArgs.DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
   auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
@@ -143,11 +149,10 @@ GenericKernelTy::getKernelLaunchEnvironment(
   LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
   LocalKLE.ReductionBuffer = nullptr;
 
-  if (KernelEnvironment.Configuration.ReductionDataSize &&
-      KernelEnvironment.Configuration.ReductionBufferLength) {
+  if (NeedsReductionBuffer) {
+    // Use number of teams many buffer elements.
     auto AllocOrErr = GenericDevice.dataAlloc(
-        KernelEnvironment.Configuration.ReductionDataSize *
-            KernelEnvironment.Configuration.ReductionBufferLength,
+        uint64_t(RedCfg.ReductionDataSize) * NumBlocks0,
         /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
@@ -249,15 +254,27 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   uint32_t EffectiveNumBlocks[3] = {KernelArgs.UserNumBlocks[0],
                                     KernelArgs.UserNumBlocks[1],
                                     KernelArgs.UserNumBlocks[2]};
-  if (!isBareMode()) {
-    assert(
-        EffectiveNumThreads[1] == 1 && EffectiveNumThreads[2] == 1 &&
-        EffectiveNumBlocks[1] == 1 && EffectiveNumBlocks[2] == 1 &&
-        "Non-bare mode should only use the first thread and block dimensions");
+
+  // Multidimensional is only supported with bare mode for now.
+  assert(isBareMode() ||
+         EffectiveNumThreads[1] == 1 && EffectiveNumThreads[2] == 1 &&
+             EffectiveNumBlocks[1] == 1 && EffectiveNumBlocks[2] == 1 &&
+             "Non-bare mode should only use the first thread and block "
+             "dimensions");
+
+  assert(!KernelArgs.Flags.StrictBlocksAndThreads ||
+         EffectiveNumThreads[0] > 0 && EffectiveNumThreads[1] > 0 &&
+             EffectiveNumThreads[2] > 0 && EffectiveNumBlocks[0] > 0 &&
+             EffectiveNumBlocks[1] > 0 && EffectiveNumBlocks[2] > 0 &&
+             "Strict requires number of blocks and threads greater than zero");
+
+  // Calculate or adjust the effective number of threads and blocks if needed.
+  if (!KernelArgs.Flags.StrictBlocksAndThreads) {
     EffectiveNumThreads[0] =
-        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads);
+        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
+
     EffectiveNumBlocks[0] = getEffectiveNumBlocks(
-        GenericDevice, EffectiveNumBlocks, KernelArgs.Tripcount,
+        GenericDevice, EffectiveNumBlocks[0], KernelArgs.Tripcount,
         EffectiveNumThreads[0], KernelArgs.UserThreadLimit[0] > 0);
   }
 
@@ -272,18 +289,21 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     AsyncInfoWrapper.freeAllocationAfterSynchronization(
         DynBlockMemConf.FallbackPtr);
 
-  auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      GenericDevice, KernelArgs, DynBlockMemConf, AsyncInfoWrapper);
+  auto KernelLaunchEnvOrErr =
+      getKernelLaunchEnvironment(GenericDevice, KernelArgs, DynBlockMemConf,
+                                 AsyncInfoWrapper, EffectiveNumBlocks[0]);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
   KernelLaunchParamsTy LaunchParams;
 
-  // Kernel languages don't use indirection.
+  // Kernel languages (.IsCUDA) don't use indirection, whereas dispatching with
+  // an array of kernel argument pointers (.IsPtrArgs) uses KernelArgs.ArgPtrs
+  // and KernelArgs.ArgSizes directly.
   if (KernelArgs.Flags.IsCUDA) {
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else {
+  } else if (!KernelArgs.Flags.IsPtrArgs) {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
@@ -362,35 +382,29 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
 uint32_t
 GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                        uint32_t UserThreadLimit[3]) const {
+                                        uint32_t UserThreadLimit) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  assert(UserThreadLimit[1] == 1 && UserThreadLimit[2] == 1 &&
-         "Multi dimensional launch not supported yet.");
+  if (UserThreadLimit > 0 && isGenericMode())
+    UserThreadLimit += GenericDevice.getWarpSize();
 
-  if (UserThreadLimit[0] > 0 && isGenericMode())
-    UserThreadLimit[0] += GenericDevice.getWarpSize();
-
-  return std::min(MaxNumThreads, (UserThreadLimit[0] > 0)
-                                     ? UserThreadLimit[0]
-                                     : PreferredNumThreads);
+  return std::min(MaxNumThreads, (UserThreadLimit > 0) ? UserThreadLimit
+                                                       : PreferredNumThreads);
 }
 
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
-    GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks[3],
+    GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
     uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
     bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
-  assert(UserNumBlocks[1] == 1 && UserNumBlocks[2] == 1 &&
-         "Multi dimensional launch not supported yet.");
-
-  if (UserNumBlocks[0] > 0) {
-    // TODO: We need to honor any value and consequently allow more than the
-    // block limit. For this we might need to start multiple kernels or let the
-    // blocks start again until the requested number has been started.
-    return std::min(UserNumBlocks[0], GenericDevice.getBlockLimit());
-  }
+  // NOTE: This clamps the user-requested number of blocks to the device limit
+  // rather than honoring it exactly, which is non-standard behavior. Truly
+  // honoring an arbitrary value would require launching multiple kernels or
+  // reusing blocks until the requested count has been served.
+  if (UserNumBlocks > 0)
+    return std::min(UserNumBlocks,
+                    GenericDevice.getBlockLimit(EffectiveNumThreads));
 
   // Return the number of blocks required to cover the loop iterations.
   if (isNoLoopMode())
@@ -467,7 +481,8 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
   // If the loops are long running we rather reuse blocks than spawn too many.
   if (GenericDevice.getReuseBlocksForHighTripCount())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
-  return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
+  return std::min(PreferredNumBlocks,
+                  GenericDevice.getBlockLimit(EffectiveNumThreads));
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
@@ -1489,13 +1504,13 @@ int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
 
 int32_t GenericPluginTy::initialize_record_replay(
     int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
-    bool IsNative, bool SaveOutput, bool EmitReport,
+    bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
     const char *OutputDirPath) {
   GenericDeviceTy &Device = getDevice(DeviceId);
 
-  if (auto Err =
-          Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
-                                  SaveOutput, EmitReport, OutputDirPath)) {
+  if (auto Err = Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
+                                         SaveOutput, EmitReport, ReportFilename,
+                                         OutputDirPath)) {
     REPORT() << "Failure to initialize RR with " << MemorySize
              << " bytes on device " << DeviceId << ": "
              << toString(std::move(Err));

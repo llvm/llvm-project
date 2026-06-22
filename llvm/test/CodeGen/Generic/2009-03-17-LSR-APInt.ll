@@ -1,8 +1,11 @@
 ; RUN: llc < %s
 ; PR3806
 
-; NVPTX and z/OS do not support 'alias' yet
-; XFAIL: target=nvptx{{.*}}, target={{.*}}-zos{{.*}}
+; NVPTX does not support 'alias' yet
+; XFAIL: target=nvptx{{.*}}
+
+; The z/OS does not support 'alias'.
+; UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 	%struct..0__pthread_mutex_s = type { i32, i32, i32, i32, i32, i32, %struct.__pthread_list_t }
 	%struct.Alignment = type { i32 }

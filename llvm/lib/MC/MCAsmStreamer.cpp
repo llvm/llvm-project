@@ -419,6 +419,8 @@ public:
   void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
   void emitWinCFISplitChained(SMLoc Loc) override;
   void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
+  void emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                           SMLoc Loc) override;
   void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
   void emitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
@@ -1876,7 +1878,7 @@ void MCAsmStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                        bool PrologueEnd, bool IsStmt,
                                        StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   OS << "\t.cv_loc\t" << FunctionId << " " << FileNo << " " << Line << " "
@@ -2388,6 +2390,17 @@ void MCAsmStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
 
   OS << "\t.seh_pushreg ";
   InstPrinter->printRegName(OS, Register);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                        SMLoc Loc) {
+  MCStreamer::emitWinCFIPush2Regs(Reg1, Reg2, Loc);
+
+  OS << "\t.seh_push2regs ";
+  InstPrinter->printRegName(OS, Reg1);
+  OS << ", ";
+  InstPrinter->printRegName(OS, Reg2);
   EmitEOL();
 }
 

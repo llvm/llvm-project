@@ -18,6 +18,7 @@
 // RUN: llvm-objdump --no-print-imm-hex -d --triple=thumbv6eb-none-linux-gnueabi %t2 --start-address=0x21008 --stop-address=0x2100c | FileCheck --check-prefix=CHECK-THUMB1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d --triple=armv6eb-none-linux-gnueabi --start-address=0x22100c --stop-address=0x221014 %t2 | FileCheck --check-prefix=CHECK-ARM2-EB %s
 // RUN: llvm-objdump --no-print-imm-hex -d --triple=thumbv6eb-none-linux-gnueabi %t2 --start-address=0x622000 --stop-address=0x622002 | FileCheck --check-prefix=CHECK-THUMB2 %s
+// RUN: rm %t %t2
 
 /// On Arm v6 the range of a Thumb BL instruction is only 4 megabytes as the
 /// extended range encoding is not supported. The following example has a Thumb

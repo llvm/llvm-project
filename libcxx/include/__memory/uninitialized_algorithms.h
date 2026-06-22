@@ -148,7 +148,7 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 // uninitialized_default_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -160,7 +160,8 @@ __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   (void)std::__uninitialized_default_construct<_ValueType>(std::move(__first), std::move(__last));
 }
@@ -168,7 +169,8 @@ inline _LIBCPP_HIDE_FROM_ABI void uninitialized_default_construct(_ForwardIterat
 // uninitialized_default_construct_n
 
 template <class _ValueType, class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+__uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
   auto __idx = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
   for (; __n > 0; ++__idx, (void)--__n)
@@ -179,7 +181,8 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_default_construct_
 }
 
 template <class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   return std::__uninitialized_default_construct_n<_ValueType>(std::move(__first), __n);
 }

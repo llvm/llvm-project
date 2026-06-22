@@ -1190,13 +1190,19 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEVAddRecExpr *Src,
 //
 // We don't use OverflowSafeSignedAPInt here because it's known that this
 // algorithm doesn't overflow.
-static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
-                    const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
+static std::optional<bool> findGCD(unsigned Bits, const APInt &AM,
+                                   const APInt &BM, const APInt &Delta,
+                                   APInt &G, APInt &X, APInt &Y) {
   LLVM_DEBUG(dbgs() << "\t    AM = " << AM << "\n");
   LLVM_DEBUG(dbgs() << "\t    BM = " << BM << "\n");
   LLVM_DEBUG(dbgs() << "\t    Delta = " << Delta << "\n");
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
+
+  // APInt::abs will overflow. In that case, bail out early.
+  if (AM.isMinSignedValue() || BM.isMinSignedValue())
+    return std::nullopt;
+
   APInt G0 = AM.abs();
   APInt G1 = BM.abs();
   APInt Q = G0; // these need to be initialized
@@ -1568,7 +1574,12 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
   APInt BM = ConstDstCoeff->getAPInt();
   APInt CM = ConstDelta->getAPInt();
   unsigned Bits = AM.getBitWidth();
-  if (findGCD(Bits, AM, BM, CM, G, X, Y)) {
+  std::optional<bool> GCDRes = findGCD(Bits, AM, BM, CM, G, X, Y);
+
+  // GCD calculation failed so we cannot proceed with this test.
+  if (!GCDRes)
+    return false;
+  if (*GCDRes) {
     // gcd doesn't divide Delta, no dependence
     return true;
   }
@@ -1588,12 +1599,14 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
-  APInt TC = CM.sdiv(G);
-  APInt TX = X * TC;
-  APInt TY = Y * TC;
-  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
+  OverflowSafeSignedAPInt TC = CM.sdiv(G);
+  OverflowSafeSignedAPInt TX = OverflowSafeSignedAPInt(X) * TC;
+  OverflowSafeSignedAPInt TY = OverflowSafeSignedAPInt(Y) * TC;
+  if (!TC || !TX || !TY)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    TC = " << *TC << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TX = " << *TX << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TY = " << *TY << "\n");
 
   APInt TB = BM.sdiv(G);
   APInt TA = AM.sdiv(G);

@@ -34,6 +34,6 @@ void exit_success(int) {
 
 int main(int, char**) {
     std::signal(SIGABRT, exit_success);
-    std::use_facet<my_facet>(std::locale());
+    (void)std::use_facet<my_facet>(std::locale());
     return EXIT_FAILURE;
 }

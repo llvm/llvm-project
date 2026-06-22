@@ -303,13 +303,10 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
       tpctypes::LookupResult Result;
       EXPECT_EQ(Symbols.size(), 1u);
       for (auto &Sym : Symbols) {
-        if (*Sym.first == "_testFunc") {
-          ExecutorSymbolDef Def{ExecutorAddr::fromPtr((void *)0x1000),
-                                JITSymbolFlags::Exported};
-          Result.emplace_back(Def);
-        } else {
+        if (*Sym.first == "_testFunc")
+          Result.emplace_back(ExecutorAddr::fromPtr((void *)0x1000));
+        else
           ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
-        }
       }
       Complete(std::move(Result));
     }

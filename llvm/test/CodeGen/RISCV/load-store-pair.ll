@@ -33,10 +33,10 @@ define void @testi(ptr %a) {
 ; RV32I-NEXT:    .cfi_offset s3, -8
 ; RV32I-NEXT:    .cfi_offset s4, -12
 ; RV32I-NEXT:    .cfi_offset s5, -16
-; RV32I-NEXT:    lw s3, 0(a0)
 ; RV32I-NEXT:    lw s2, 4(a0)
-; RV32I-NEXT:    lw s5, 8(a0)
+; RV32I-NEXT:    lw s3, 0(a0)
 ; RV32I-NEXT:    lw s4, 12(a0)
+; RV32I-NEXT:    lw s5, 8(a0)
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
 ; RV32I-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
@@ -63,10 +63,10 @@ define void @testi(ptr %a) {
 ; RV32D-NEXT:    .cfi_offset s3, -8
 ; RV32D-NEXT:    .cfi_offset s4, -12
 ; RV32D-NEXT:    .cfi_offset s5, -16
-; RV32D-NEXT:    lw s3, 0(a0)
 ; RV32D-NEXT:    lw s2, 4(a0)
-; RV32D-NEXT:    lw s5, 8(a0)
+; RV32D-NEXT:    lw s3, 0(a0)
 ; RV32D-NEXT:    lw s4, 12(a0)
+; RV32D-NEXT:    lw s5, 8(a0)
 ; RV32D-NEXT:    #APP
 ; RV32D-NEXT:    #NO_APP
 ; RV32D-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
@@ -93,10 +93,10 @@ define void @testi(ptr %a) {
 ; RV64I-NEXT:    .cfi_offset s3, -16
 ; RV64I-NEXT:    .cfi_offset s4, -24
 ; RV64I-NEXT:    .cfi_offset s5, -32
-; RV64I-NEXT:    ld s3, 0(a0)
 ; RV64I-NEXT:    ld s2, 8(a0)
-; RV64I-NEXT:    ld s5, 16(a0)
+; RV64I-NEXT:    ld s3, 0(a0)
 ; RV64I-NEXT:    ld s4, 24(a0)
+; RV64I-NEXT:    ld s5, 16(a0)
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
@@ -123,10 +123,10 @@ define void @testi(ptr %a) {
 ; RV64D-NEXT:    .cfi_offset s3, -16
 ; RV64D-NEXT:    .cfi_offset s4, -24
 ; RV64D-NEXT:    .cfi_offset s5, -32
-; RV64D-NEXT:    ld s3, 0(a0)
 ; RV64D-NEXT:    ld s2, 8(a0)
-; RV64D-NEXT:    ld s5, 16(a0)
+; RV64D-NEXT:    ld s3, 0(a0)
 ; RV64D-NEXT:    ld s4, 24(a0)
+; RV64D-NEXT:    ld s5, 16(a0)
 ; RV64D-NEXT:    #APP
 ; RV64D-NEXT:    #NO_APP
 ; RV64D-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
@@ -296,10 +296,10 @@ define void @testi(ptr %a) {
 ; RV64D_NOPAIR-NEXT:    .cfi_offset s3, -16
 ; RV64D_NOPAIR-NEXT:    .cfi_offset s4, -24
 ; RV64D_NOPAIR-NEXT:    .cfi_offset s5, -32
-; RV64D_NOPAIR-NEXT:    ld s3, 0(a0)
 ; RV64D_NOPAIR-NEXT:    ld s2, 8(a0)
-; RV64D_NOPAIR-NEXT:    ld s5, 16(a0)
+; RV64D_NOPAIR-NEXT:    ld s3, 0(a0)
 ; RV64D_NOPAIR-NEXT:    ld s4, 24(a0)
+; RV64D_NOPAIR-NEXT:    ld s5, 16(a0)
 ; RV64D_NOPAIR-NEXT:    #APP
 ; RV64D_NOPAIR-NEXT:    #NO_APP
 ; RV64D_NOPAIR-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload

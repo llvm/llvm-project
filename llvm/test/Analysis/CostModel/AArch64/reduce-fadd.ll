@@ -12,7 +12,7 @@ define void @strict_fp_reductions() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:22 Lat:44 SizeLat:28 for: %fadd_v8f32 = call float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:10 SizeLat:6 for: %fadd_v2f64 = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:10 Lat:20 SizeLat:12 for: %fadd_v4f64 = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:8 Lat:16 SizeLat:8 for: %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 undef, <4 x fp128> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:8 Lat:16 SizeLat:8 for: %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 undef, <4 x fp128> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v2f32 = call float @llvm.vector.reduce.fadd.v2f32(float 0.0, <2 x float> undef)
@@ -86,7 +86,7 @@ define void @fast_fp_reductions() {
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %fadd_v4f64_reassoc = call reassoc double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %fadd_v7f64 = call fast double @llvm.vector.reduce.fadd.v7f64(double 0.000000e+00, <7 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %fadd_v9f64_reassoc = call reassoc double @llvm.vector.reduce.fadd.v9f64(double 0.000000e+00, <9 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:2 Lat:6 SizeLat:2 for: %fadd_v4f128 = call reassoc fp128 @llvm.vector.reduce.fadd.v4f128(fp128 undef, <4 x fp128> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:2 Lat:6 SizeLat:2 for: %fadd_v4f128 = call reassoc fp128 @llvm.vector.reduce.fadd.v4f128(fp128 undef, <4 x fp128> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %fadd_v2f32 = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.0, <2 x float> undef)

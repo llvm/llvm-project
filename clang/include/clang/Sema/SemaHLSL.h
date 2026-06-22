@@ -138,6 +138,8 @@ public:
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
 
+  bool canHaveOverloadedBinOp(QualType Ty, BinaryOperatorKind Opc);
+
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
                                        bool IsCompAssign);
@@ -187,9 +189,12 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
-  void handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL);
-  bool diagnoseInstantiatedMatrixLayoutAttr(Decl *D,
-                                            const HLSLMatrixLayoutAttr *Attr);
+  Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
+  bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
+                                         SourceLocation Loc);
+  // Re-type a layout-adapting matrix builtin call \p E with \p DestType's
+  // row_major/column_major sugar so CodeGen lowers it into that layout.
+  void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>

@@ -102,6 +102,9 @@
 /* Whether to enable opaque pointers by default */
 #define CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL 1
 
+/* Enable the experimental new constant interpreter by default */
+#define CLANG_USE_EXPERIMENTAL_CONST_INTERP 0
+
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration
  * on platforms targeted by Bazel, and defining these here more faithfully

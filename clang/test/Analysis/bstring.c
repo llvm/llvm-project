@@ -2,8 +2,8 @@
 // RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
@@ -11,8 +11,8 @@
 // RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
@@ -20,8 +20,8 @@
 // RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 //
@@ -29,8 +29,8 @@
 // RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-disable-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 

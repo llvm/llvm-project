@@ -33,7 +33,7 @@ public:
     virtual void processInstructionRange(uint64_t Start, uint64_t End) = 0;
   };
 
-  static Expected<std::unique_ptr<ETMDecoder>>
+  LLVM_ABI static Expected<std::unique_ptr<ETMDecoder>>
   create(const object::Binary &Binary, const Triple &TargetTriple,
          uint8_t TraceID = 0x10);
 
