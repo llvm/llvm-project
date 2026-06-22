@@ -116,7 +116,7 @@ public:
 
   /// Construct an ArrayRef from an iterator_range.
   template <typename U>
-  ArrayRef(iterator_range<U> &&Range)
+  ArrayRef(const iterator_range<U *> &Range)
       : Data(Range.begin()), Length(llvm::size(Range)) {}
 
   /// @}
