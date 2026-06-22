@@ -2019,9 +2019,11 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     return false;
   }
 
-  // TODO: Other checks?
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || !Ptr.getRecord())
     return false;
+
+  if (!Ptr.isInitialized())
+    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
 
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.
