@@ -117,24 +117,43 @@ exit:
   ret void
 }
 
-; For %gep, we have the following SCEV: ((4 * (zext i4 {0,+,5}<%loop> to i64))<nuw><nsw> + %x).
-; Note the i4 bit wide AddRec {0,+,5}. It is known to wrap in the loop with trip count 16.
+; For %gep, we an SCEV that is known not to wrap in the loop with the given trip count.
 define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr noalias %x, ptr noalias %out) {
 ; CHECK-LABEL: define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[OUT:%.*]]) {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[IV_MUL5:%.*]] = mul nuw nsw i64 [[IV]], 5
-; CHECK-NEXT:    [[IV_MUL5_MASKED:%.*]] = and i64 [[IV_MUL5]], 15
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[IV_MUL5_MASKED]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[OUT_I:%.*]] = getelementptr inbounds nuw i32, ptr [[OUT]], i64 [[IV]]
-; CHECK-NEXT:    store i32 [[V]], ptr [[OUT_I]], align 4
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw <4 x i64> [[VEC_IND]], splat (i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i64> [[TMP0]], splat (i64 9)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP12]], i32 2
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[OUT]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP18]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -145,7 +164,7 @@ loop:
   %iv = phi i64 [ 0, %start ], [ %iv.next, %loop ]
   %iv.next = add nuw nsw i64 %iv, 1
   %iv.mul5 = mul nuw nsw i64 %iv, 5
-  %iv.mul5.masked = and i64 %iv.mul5, 15
+  %iv.mul5.masked = and i64 %iv.mul5, 9
   %gep = getelementptr inbounds nuw i32, ptr %x, i64 %iv.mul5.masked
   %v = load i32, ptr %gep, align 4
   %out.i = getelementptr inbounds nuw i32, ptr %out, i64 %iv
@@ -190,7 +209,7 @@ define void @wrap_predicate_for_interleave_group_unknown_trip_count(ptr noalias 
 ; CHECK-NEXT:    store <4 x i32> [[STRIDED_VEC]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -206,7 +225,7 @@ define void @wrap_predicate_for_interleave_group_unknown_trip_count(ptr noalias 
 ; CHECK-NEXT:    [[OUT_I:%.*]] = getelementptr inbounds nuw i32, ptr [[OUT]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[V]], ptr [[OUT_I]], align 4
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
