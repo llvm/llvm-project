@@ -3,7 +3,7 @@
 ## Kaleidoscope: Implementing a Language with LLVM
 
 ```{toctree}
-:hidden: true
+:hidden:
 
 MyFirstLanguageFrontend/index
 ```
@@ -14,9 +14,9 @@ MyFirstLanguageFrontend/index
   language using LLVM components in C++.
 
 ```{toctree}
-:glob: true
-:numbered: true
-:titlesonly: true
+:glob:
+:numbered:
+:titlesonly:
 
 MyFirstLanguageFrontend/LangImpl*
 ```
@@ -24,9 +24,9 @@ MyFirstLanguageFrontend/LangImpl*
 ## Building a JIT in LLVM
 
 ```{toctree}
-:glob: true
-:numbered: true
-:titlesonly: true
+:glob:
+:numbered:
+:titlesonly:
 
 BuildingAJIT*
 ```

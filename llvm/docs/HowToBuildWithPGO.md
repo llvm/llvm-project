@@ -72,10 +72,10 @@ Next, at a high level, you're going to need to do the following:
 2. Build Clang using the Clang you built above, but with instrumentation
 3. Use the instrumented Clang to generate profiles, which consists of two steps:
 
-> - Running the instrumented Clang/LLVM/lld/etc. on tasks that represent how
->   users will use said tools.
-> - Using a tool to convert the "raw" profiles generated above into a single,
->   final PGO profile.
+   - Running the instrumented Clang/LLVM/lld/etc. on tasks that represent how
+     users will use said tools.
+   - Using a tool to convert the "raw" profiles generated above into a single,
+     final PGO profile.
 
 4. Build a final release Clang (along with whatever other binaries you need)
    using the profile collected from your benchmark
@@ -98,8 +98,8 @@ In more detailed steps:
      step 1.
    - `-DCMAKE_CXX_COMPILER=/path/to/stage1/clang++` - Same as above.
 
-> In this build directory, you simply need to build the `clang` target (and
-> whatever supporting tooling your benchmark requires).
+   In this build directory, you simply need to build the `clang` target (and
+   whatever supporting tooling your benchmark requires).
 
 3. As mentioned above, this has two steps: gathering profile data, and then
    massaging it into a useful form:
@@ -123,12 +123,12 @@ In more detailed steps:
       It's recommended to build the `all` target with your instrumented Clang,
       since more coverage is often better.
 
-> 2. You should now have a few `*.profraw` files in
->    `path/to/stage2/profiles/`. You need to merge these using
->    `llvm-profdata` (even if you only have one! The profile merge transforms
->    profraw into actual profile data, as well). This can be done with
->    `/path/to/stage1/llvm-profdata merge
->    -output=/path/to/output/profdata.prof path/to/stage2/profiles/*.profraw`.
+   2. You should now have a few `*.profraw` files in
+      `path/to/stage2/profiles/`. You need to merge these using
+      `llvm-profdata` (even if you only have one! The profile merge transforms
+      profraw into actual profile data, as well). This can be done with
+      `/path/to/stage1/llvm-profdata merge
+      -output=/path/to/output/profdata.prof path/to/stage2/profiles/*.profraw`.
 
 4. Now, build your final, PGO-optimized Clang. To do this, you'll want to pass
    the following additional arguments to CMake.
@@ -141,12 +141,12 @@ In more detailed steps:
 
    From here, you can build whatever targets you need.
 
-   :::{note}
+   ```{note}
    You may see warnings about a mismatched profile in the build output. These
    are generally harmless. To silence them, you can add
    `-DCMAKE_C_FLAGS='-Wno-backend-plugin'
    -DCMAKE_CXX_FLAGS='-Wno-backend-plugin'` to your CMake invocation.
-   :::
+   ```
 
 Congrats! You now have a Clang built with profile-guided optimizations, and you
 can delete all but the final build directory if you'd like.
@@ -158,4 +158,3 @@ this for coverage as part of step 3, none of your other builds should benefit
 from building it. You can pass the CMake option
 `-DLLVM_NATIVE_TOOL_DIR=/path/to/stage1/bin`
 to steps 2 and onward to avoid these useless rebuilds.
-

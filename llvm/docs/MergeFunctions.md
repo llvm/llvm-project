@@ -1,7 +1,7 @@
 # MergeFunctions pass, how it works
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -184,16 +184,16 @@ The algorithm is pretty simple:
 
 1. Put all module's functions into the *worklist*.
 
-2\. Scan *worklist*'s functions twice: first, enumerate only strong functions and
+2. Scan *worklist*'s functions twice: first, enumerate only strong functions and
 then only weak ones:
 
-> 2.1. Loop body: take a function from *worklist* (call it *FCur*) and try to
-> insert it into *FnTree*: check whether *FCur* is equal to one of functions
-> in *FnTree*. If there *is* an equal function in *FnTree*
-> (call it *FExists*): merge function *FCur* with *FExists*. Otherwise, add
-> the function from the *worklist* to *FnTree*.
+   2\.1. Loop body: take a function from *worklist* (call it *FCur*) and try to
+   insert it into *FnTree*: check whether *FCur* is equal to one of functions
+   in *FnTree*. If there *is* an equal function in *FnTree*
+   (call it *FExists*): merge function *FCur* with *FExists*. Otherwise, add
+   the function from the *worklist* to *FnTree*.
 
-3\. Once the *worklist* scanning and merging operations are complete, check the
+3. Once the *worklist* scanning and merging operations are complete, check the
 *Deferred* list. If it is not empty, refill the *worklist* contents with
 *Deferred* list and redo step 2, if the *Deferred* list is empty, then exit
 from method.
@@ -266,28 +266,28 @@ comparison:
 A brief look at the source code tells us that the comparison starts in the
 “`int FunctionComparator::compare(void)`” method.
 
-1\. The first parts to be compared are the function's attributes and some
+1. The first parts to be compared are the function's attributes and some
 properties that are outside the “attributes” term, but still could make the
 function different without changing its body. This part of the comparison is
 usually done within simple *cmpNumbers* or *cmpFlags* operations (e.g.
 `cmpFlags(F1->hasGC(), F2->hasGC())`). Below is a full list of function's
 properties to be compared on this stage:
 
-> - *Attributes* (those are returned by `Function::getAttributes()`
->   method).
-> - *GC*, for equivalence, *RHS* and *LHS* should be both either without
->   *GC* or with the same one.
-> - *Section*, just like a *GC*: *RHS* and *LHS* should be defined in the
->   same section.
-> - *Variable arguments*. *LHS* and *RHS* should be both either with or
->   without *var-args*.
-> - *Calling convention* should be the same.
+   - *Attributes* (those are returned by `Function::getAttributes()`
+     method).
+   - *GC*, for equivalence, *RHS* and *LHS* should be both either without
+     *GC* or with the same one.
+   - *Section*, just like a *GC*: *RHS* and *LHS* should be defined in the
+     same section.
+   - *Variable arguments*. *LHS* and *RHS* should be both either with or
+     without *var-args*.
+   - *Calling convention* should be the same.
 
-2\. Function type. Checked by `FunctionComparator::cmpType(Type*, Type*)`
+2. Function type. Checked by `FunctionComparator::cmpType(Type*, Type*)`
 method. It checks return type and parameters type; the method itself will be
 described later.
 
-3\. Associate function formal parameters with each other. Then comparing function
+3. Associate function formal parameters with each other. Then comparing function
 bodies, if we see the usage of *LHS*'s *i*-th argument in *LHS*'s body, then,
 we want to see usage of *RHS*'s *i*-th argument at the same place in *RHS*'s
 body, otherwise functions are different. On this stage we grant the preference
@@ -313,17 +313,17 @@ arguments (see `cmpValues` method below).
 
 Consider how type comparison works.
 
-1\. Coerce pointer to integer. If the left type is a pointer, try to coerce it to the
+1. Coerce pointer to integer. If the left type is a pointer, try to coerce it to the
 integer type. It could be done if its address space is 0, or if address spaces
 are ignored at all. Do the same thing for the right type.
 
-2\. If the left and right types are equal, return 0. Otherwise, we need to give
+2. If the left and right types are equal, return 0. Otherwise, we need to give
 preference to one of them. So proceed to the next step.
 
-3\. If the types are of different kind (different type IDs). Return result of type
+3. If the types are of different kind (different type IDs). Return result of type
 IDs comparison, treating them as numbers (use `cmpNumbers` operation).
 
-4\. If the types are vectors or integers, return result of their pointers comparison,
+4. If the types are vectors or integers, return result of their pointers comparison,
 comparing them as numbers.
 
 5. Check whether type ID belongs to the next group (call it equivalent-group):
@@ -340,15 +340,15 @@ comparing them as numbers.
    If ID belongs to group above, return 0. Since it's enough to see that
    types has the same `TypeID`. No additional information is required.
 
-6\. Left and right are pointers. Return result of address space comparison
+6. Left and right are pointers. Return result of address space comparison
 (numbers comparison).
 
-7\. Complex types (structures, arrays, etc.). Follow complex objects comparison
+7. Complex types (structures, arrays, etc.). Follow complex objects comparison
 technique (see the very first paragraph of this chapter). Both *left* and
 *right* are to be expanded and their element types will be checked the same
 way. If we get -1 or 1 on some stage, return it. Otherwise, return 0.
 
-8\. Steps 1-6 describe all the possible cases, if we passed steps 1-6 and didn't
+8. Steps 1-6 describe all the possible cases, if we passed steps 1-6 and didn't
 get any conclusions, then invoke `llvm_unreachable`, since it's quite an
 unexpectable case.
 
@@ -460,45 +460,43 @@ return cmpNumbers(LeftRes.first->second, RightRes.first->second);
 
 Let's look at how the whole method could be implemented.
 
-1\. We have to start with the bad news. Consider function self and
+1. We have to start with the bad news. Consider function self and
 cross-referencing cases:
 
-```c++
-// self-reference unsigned fact0(unsigned n) { return n > 1 ? n
-* fact0(n-1) : 1; } unsigned fact1(unsigned n) { return n > 1 ? n *
-fact1(n-1) : 1; }
+   ```c++
+   // self-reference unsigned fact0(unsigned n) { return n > 1 ? n
+   * fact0(n-1) : 1; } unsigned fact1(unsigned n) { return n > 1 ? n *
+   fact1(n-1) : 1; }
 
-// cross-reference unsigned ping(unsigned n) { return n!= 0 ? pong(n-1) : 0;
-} unsigned pong(unsigned n) { return n!= 0 ? ping(n-1) : 0; }
-```
+   // cross-reference unsigned ping(unsigned n) { return n!= 0 ? pong(n-1) : 0;
+   } unsigned pong(unsigned n) { return n!= 0 ? ping(n-1) : 0; }
+   ```
 
-%
+   > This comparison has been implemented in initial *MergeFunctions* pass
+   > version. But, unfortunately, it is not transitive. And this is the only case
+   > we can't convert to less-equal-greater comparison. It is a seldom case, 4-5
+   > functions of 10000 (checked in test-suite), and, we hope, the reader would
+   > forgive us for such a sacrifice in order to get the O(log(N)) pass time.
 
-> This comparison has been implemented in initial *MergeFunctions* pass
-> version. But, unfortunately, it is not transitive. And this is the only case
-> we can't convert to less-equal-greater comparison. It is a seldom case, 4-5
-> functions of 10000 (checked in test-suite), and, we hope, the reader would
-> forgive us for such a sacrifice in order to get the O(log(N)) pass time.
-
-2\. If left/right *Value* is a constant, we have to compare them. Return 0 if it
+2. If left/right *Value* is a constant, we have to compare them. Return 0 if it
 is the same constant, or use `cmpConstants` method otherwise.
 
-3\. If left/right is *InlineAsm* instance. Return result of *Value* pointers
+3. If left/right is *InlineAsm* instance. Return result of *Value* pointers
 comparison.
 
-4\. Explicit association of *L* (left value) and *R* (right value). We need to
+4. Explicit association of *L* (left value) and *R* (right value). We need to
 find out whether values met at the same time, and thus are *associated*. Or we
 need to put the rule: when we treat *L* < *R*. Now it is easy: we just return
 the result of numbers comparison:
 
-```c++
-std::pair<iterator, bool>
-  LeftRes = sn_mapL.insert(std::make_pair(Left, sn_mapL.size())),
-  RightRes = sn_mapR.insert(std::make_pair(Right, sn_mapR.size()));
-if (LeftRes.first->second == RightRes.first->second) return 0;
-if (LeftRes.first->second < RightRes.first->second) return -1;
-return 1;
-```
+   ```c++
+   std::pair<iterator, bool>
+     LeftRes = sn_mapL.insert(std::make_pair(Left, sn_mapL.size())),
+     RightRes = sn_mapR.insert(std::make_pair(Right, sn_mapR.size()));
+   if (LeftRes.first->second == RightRes.first->second) return 0;
+   if (LeftRes.first->second < RightRes.first->second) return -1;
+   return 1;
+   ```
 
 Now, when *cmpValues* returns 0, we can proceed with the comparison procedure.
 Otherwise, if we get (-1 or 1), we need to pass this result to the top level,
@@ -508,50 +506,50 @@ and finish comparison procedure.
 
 Performs a constant comparison as follows:
 
-1\. Compare constant types using `cmpType` method. If the result is -1 or 1,
+1. Compare constant types using `cmpType` method. If the result is -1 or 1,
 goto step 2, otherwise proceed to step 3.
 
-2\. If types are different, we still can check whether constants could be
+2. If types are different, we still can check whether constants could be
 losslessly bitcasted to each other. The further explanation is modification of
 `canLosslesslyBitCastTo` method.
 
-> 2.1 Check whether constants are of the first class types
-> (`isFirstClassType` check):
->
-> 2.1.1. If both constants are *not* of the first class type: return result
-> of `cmpType`.
->
-> 2.1.2. Otherwise, if left type is not of the first class, return -1. If
-> right type is not of the first class, return 1.
->
-> 2.1.3. If both types are of the first class type, proceed to the next step
-> (2.1.3.1).
->
-> 2.1.3.1. If types are vectors, compare their bitwidth using the
-> *cmpNumbers*. If result is not 0, return it.
->
-> 2.1.3.2. Different types, but not vectors:
->
-> - if both of them are pointers, good for us, we can proceed to step 3.
-> - if one of types is pointer, return result of *isPointer* flags
->   comparison (*cmpFlags* operation).
-> - otherwise we have no methods to prove bitcastability, and thus return
->   result of types comparison (-1 or 1).
+   2\.1 Check whether constants are of the first class types
+   (`isFirstClassType` check):
+
+   2\.1.1. If both constants are *not* of the first class type: return result
+   of `cmpType`.
+
+   2\.1.2. Otherwise, if left type is not of the first class, return -1. If
+   right type is not of the first class, return 1.
+
+   2\.1.3. If both types are of the first class type, proceed to the next step
+   (2.1.3.1).
+
+   2\.1.3.1. If types are vectors, compare their bitwidth using the
+   *cmpNumbers*. If result is not 0, return it.
+
+   2\.1.3.2. Different types, but not vectors:
+
+   - if both of them are pointers, good for us, we can proceed to step 3.
+   - if one of types is pointer, return result of *isPointer* flags
+     comparison (*cmpFlags* operation).
+   - otherwise we have no methods to prove bitcastability, and thus return
+     result of types comparison (-1 or 1).
 
 Steps below are for the case when types are equal, or case when constants are
 bitcastable:
 
-3\. One of constants is a "*null*" value. Return the result of
+3. One of constants is a "*null*" value. Return the result of
 `cmpFlags(L->isNullValue, R->isNullValue)` comparison.
 
 4. Compare value IDs, and return result if it is not 0:
 
-```c++
-if (int Res = cmpNumbers(L->getValueID(), R->getValueID()))
-  return Res;
-```
+   ```c++
+   if (int Res = cmpNumbers(L->getValueID(), R->getValueID()))
+     return Res;
+   ```
 
-5\. Compare the contents of constants. The comparison depends on the kind of
+5. Compare the contents of constants. The comparison depends on the kind of
 constants, but on this stage it is just a lexicographical comparison. Just see
 how it was described in the beginning of "*Functions comparison*" paragraph.
 Mathematically, it is equal to the next case: we encode left constant and right
@@ -564,35 +562,35 @@ Compares two *BasicBlock* instances.
 
 It enumerates instructions from left *BB* and right *BB*.
 
-1\. It assigns serial numbers to the left and right instructions, using
+1. It assigns serial numbers to the left and right instructions, using
 `cmpValues` method.
 
-2\. If one of left or right is *GEP* (`GetElementPtr`), then treat *GEP* as
+2. If one of left or right is *GEP* (`GetElementPtr`), then treat *GEP* as
 greater than other instructions. If both instructions are *GEPs* use `cmpGEP`
 method for comparison. If result is -1 or 1, pass it to the top-level
 comparison (return it).
 
-> 3.1. Compare operations. Call `cmpOperation` method. If result is -1 or
-> 1, return it.
->
-> 3.2. Compare number of operands, if result is -1 or 1, return it.
->
-> 3.3. Compare operands themselves, use `cmpValues` method. Return result
-> if it is -1 or 1.
->
-> 3.4. Compare type of operands, using `cmpType` method. Return result if
-> it is -1 or 1.
->
-> 3.5. Proceed to the next instruction.
+   3\.1. Compare operations. Call `cmpOperation` method. If result is -1 or
+   1, return it.
+
+   3\.2. Compare number of operands, if result is -1 or 1, return it.
+
+   3\.3. Compare operands themselves, use `cmpValues` method. Return result
+   if it is -1 or 1.
+
+   3\.4. Compare type of operands, using `cmpType` method. Return result if
+   it is -1 or 1.
+
+   3\.5. Proceed to the next instruction.
 
 4. We can finish instruction enumeration in 3 cases:
 
-   4.1. We reached the end of both left and right basic-blocks. We didn't
+   4\.1. We reached the end of both left and right basic-blocks. We didn't
    exit on steps 1-3, so contents are equal, return 0.
 
-   4.2. We have reached the end of the left basic-block. Return -1.
+   4\.2. We have reached the end of the left basic-block. Return -1.
 
-   4.3. Return 1 (we reached the end of the right basic block).
+   4\.3. Return 1 (we reached the end of the right basic block).
 
 ### cmpGEP
 
@@ -613,15 +611,15 @@ Compares instruction opcodes and some important operation properties.
 1. Compare opcodes, if it differs return the result.
 2. Compare number of operands. If it differs – return the result.
 
-3\. Compare operation types, use *cmpType*. All the same – if types are
+3. Compare operation types, use *cmpType*. All the same – if types are
 different, return result.
 
-4\. Compare *subclassOptionalData*, get it with `getRawSubclassOptionalData`
+4. Compare *subclassOptionalData*, get it with `getRawSubclassOptionalData`
 method, and compare it like a numbers.
 
 5. Compare operand types.
 
-6\. For some particular instructions, check equivalence (relation in our case) of
+6. For some particular instructions, check equivalence (relation in our case) of
 some significant attributes. For example, we have to compare alignment for
 `load` instructions.
 
@@ -646,18 +644,18 @@ functions that calls *G* would be put into `Deferred` set and removed from
 
 The approach is as follows:
 
-1\. Most wished case: when we can use alias and both of *F* and *G* are weak. We
+1. Most wished case: when we can use alias and both of *F* and *G* are weak. We
 make both of them with aliases to the third strong function *H*. Actually *H*
 is *F*. See below how it's made (but it's better to look straight into the
 source code). Well, this is a case when we can just replace *G* with *F*
 everywhere, we use `replaceAllUsesWith` operation here (*RAUW*).
 
-2\. *F* could not be overridden, while *G* could. It would be good to do the
+2. *F* could not be overridden, while *G* could. It would be good to do the
 next: after merging the places where overridable function were used, still use
 overridable stub. So try to make *G* alias to *F*, or create overridable tail
 call wrapper around *F* and replace *G* with that call.
 
-3\. Neither *F* nor *G* could be overridden. We can't use *RAUW*. We can just
+3. Neither *F* nor *G* could be overridden. We can't use *RAUW*. We can just
 change the callers: call *F* instead of *G*. That's what
 `replaceDirectCallers` does.
 
@@ -678,25 +676,25 @@ in `FnTree`. Try to combine these two goals.
 
 Do a stub replacement of *F* itself with an alias to *F*.
 
-1\. Create stub function *H*, with the same name and attributes like function
+1. Create stub function *H*, with the same name and attributes like function
 *F*. It takes maximum alignment of *F* and *G*.
 
-2\. Replace all uses of function *F* with uses of function *H*. It is a
+2. Replace all uses of function *F* with uses of function *H*. It is a
 two-step procedure instead. First of all, we must take into account that all functions
 that call *F* would be changed because we change the call argument
 (from *F* to *H*). If so, we must review these caller functions again after
 this procedure. We remove callers from `FnTree`, method with name
 `removeUsers(F)` does that (don't confuse with `replaceAllUsesWith`):
 
-> 2.1. `Inside removeUsers(Value*
-> V)` we go through the all values that use value *V* (or *F* in our context).
-> If value is instruction, we go to function that holds this instruction and
-> mark it as to-be-analyzed-again (put to `Deferred` set), we also remove
-> caller from `FnTree`.
->
-> 2.2. Now we can do the replacement: call `F->replaceAllUsesWith(H)`.
+   2\.1. `Inside removeUsers(Value*
+   V)` we go through the all values that use value *V* (or *F* in our context).
+   If value is instruction, we go to function that holds this instruction and
+   mark it as to-be-analyzed-again (put to `Deferred` set), we also remove
+   caller from `FnTree`.
 
-3\. *H* (that now "officially" plays *F*'s role) is replaced with alias to *F*.
+   2\.2. Now we can do the replacement: call `F->replaceAllUsesWith(H)`.
+
+3. *H* (that now "officially" plays *F*'s role) is replaced with alias to *F*.
 Do the same with *G*: replace it with alias to *F*. So finally everywhere *F*
 was used, we use *H* and it is alias to *F*, and everywhere *G* was used we
 also have alias to *F*.
@@ -737,10 +735,10 @@ a second name for *F* and use it instead of *G*:
 
 3. replace uses of *G*:
 
-   3.1. first mark all callers of *G* as to-be-analyzed-again, using
+   3\.1. first mark all callers of *G* as to-be-analyzed-again, using
    `removeUsers` method (see chapter above),
 
-   3.2. call `G->replaceAllUsesWith(GA)`.
+   3\.2. call `G->replaceAllUsesWith(GA)`.
 
 4. Get rid of *G*.
 
@@ -754,9 +752,8 @@ with bitcast(F). Deletes G.”
 In general, it does the same as usual when we want to replace callee, except the
 first point:
 
-1\. We generate tail call wrapper around *F*, but with an interface that allows using
+1. We generate tail call wrapper around *F*, but with an interface that allows using
 it instead of *G*.
 
 2. “As-usual”: `removeUsers` and `replaceAllUsesWith` then.
 3. Get rid of *G*.
-

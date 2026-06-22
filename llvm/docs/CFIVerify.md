@@ -1,7 +1,7 @@
 # Control Flow Verification Tool Design Document
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Objective
@@ -85,4 +85,3 @@ control flow operations across DSO boundaries. Currently, these CFI features are
 only experimental with an unstable ABI, making them unsuitable for analysis.
 
 The tool currently only supports the x86, x86_64, and AArch64 architectures.
-

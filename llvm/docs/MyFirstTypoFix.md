@@ -1,7 +1,7 @@
 # MyFirstTypoFix
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -50,8 +50,8 @@ test.cc:1:12: warning: to understand recursion, you must first understand recurs
 We're going to need some tools:
 
 - git: to check out the LLVM source code,
-- a C++ compiler: to compile LLVM source code. You'll want `a recent
-  version <host_cpp_toolchain>` of Clang, GCC, or Visual Studio.
+- a C++ compiler: to compile LLVM source code. You'll want a
+  {ref}`recent version <host_cpp_toolchain>` of Clang, GCC, or Visual Studio.
 - CMake: used to configure how LLVM should be built on your system,
 - ninja: runs the C++ compiler to (re)build specific parts of LLVM,
 - python: to run the LLVM tests.
@@ -124,20 +124,20 @@ Let's break down that last command a little:
 - The two **-D** flags set CMake variables, which override
   CMake/project defaults:
 
-  > - **CMAKE_BUILD_TYPE=Release**: build in optimized mode, which is
-  >   (surprisingly) the fastest option.
-  >
-  >   If you want to run under a debugger, you should use the default Debug
-  >   (which is totally unoptimized, and will lead to >10x slower test
-  >   runs) or RelWithDebInfo which is a halfway point.
-  >
-  >   Assertions are not enabled in `Release` builds by default.
-  >   You can enable them using `LLVM_ENABLE_ASSERTIONS=ON`.
-  >
-  > - **LLVM_ENABLE_PROJECTS=clang**: this lists the LLVM subprojects
-  >   you are interested in building, in addition to LLVM itself. Multiple
-  >   projects can be listed, separated by semicolons, such as `clang;lldb`.
-  >   In this example, we'll be making a change to Clang, so we only add clang.
+  - **CMAKE_BUILD_TYPE=Release**: build in optimized mode, which is
+    (surprisingly) the fastest option.
+
+    If you want to run under a debugger, you should use the default Debug
+    (which is totally unoptimized, and will lead to >10x slower test
+    runs) or RelWithDebInfo which is a halfway point.
+
+    Assertions are not enabled in `Release` builds by default.
+    You can enable them using `LLVM_ENABLE_ASSERTIONS=ON`.
+
+  - **LLVM_ENABLE_PROJECTS=clang**: this lists the LLVM subprojects
+    you are interested in building, in addition to LLVM itself. Multiple
+    projects can be listed, separated by semicolons, such as `clang;lldb`.
+    In this example, we'll be making a change to Clang, so we only add clang.
 
 Finally, create a symlink (or copy) of `llvm-project/build/compile-commands.json`
 into `llvm-project/`:
@@ -401,8 +401,8 @@ The process is described in the {ref}`developer policy document <obtaining_commi
 
 ### With great power
 
-Actually, this would be a great time to read the rest of the {ref}`developer
-policy <developer_policy>` too.
+Actually, this would be a great time to read the rest of the
+{ref}`developer policy <developer_policy>` too.
 
 (myfirsttypofix-issues-after-landing-your-pr)=
 
@@ -468,4 +468,3 @@ the expectations of different sub-projects may vary too.
 So whatever you are contributing to, know that we are not expecting perfection.
 Please ask questions whenever you are unsure, and expect that if you have missed
 something, someone will politely point it out and help you address it.
-

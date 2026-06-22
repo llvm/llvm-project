@@ -1,7 +1,7 @@
 # Auto-Vectorization in LLVM
 
 ```{contents}
-:local: true
+:local:
 ```
 
 LLVM has two vectorizers: The {ref}`Loop Vectorizer <loop-vectorizer>`,
@@ -305,20 +305,27 @@ void foo() {
 The Loop Vectorizer can vectorize intrinsic math functions.
 See the table below for a list of these functions.
 
-```{eval-rst}
-+-----+-----+---------+
-| pow | exp |  exp2   |
-+-----+-----+---------+
-| sin | cos |  sqrt   |
-+-----+-----+---------+
-| log |log2 |  log10  |
-+-----+-----+---------+
-|fabs |floor|  ceil   |
-+-----+-----+---------+
-|fma  |trunc|nearbyint|
-+-----+-----+---------+
-|     |     | fmuladd |
-+-----+-----+---------+
+```{list-table}
+:header-rows: 0
+
+* - pow
+  - exp
+  - exp2
+* - sin
+  - cos
+  - sqrt
+* - log
+  - log2
+  - log10
+* - fabs
+  - floor
+  - ceil
+* - fma
+  - trunc
+  - nearbyint
+* -
+  -
+  - fmuladd
 ```
 
 Note that the optimizer may not be able to vectorize math library functions
@@ -488,4 +495,3 @@ SandboxVectorizer
 ```
 
 The {doc}`Sandbox Vectorizer <SandboxVectorizer>` is an experimental framework for building modular vectorization pipelines on top of {doc}`Sandbox IR <SandboxIR>`, with a focus on ease of testing and ease of development.
-

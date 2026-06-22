@@ -1,7 +1,7 @@
 # Advanced Build Configurations
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -206,7 +206,7 @@ and you *must* have compiler-rt in your build tree.
 This process uses any source files under the perf-training directory as training
 data as long as the source files are marked up with LIT-style `RUN` lines.
 
-After it finishes you can use {code}`find . -name clang.profdata` to find it, but it
+After it finishes you can use `find . -name clang.profdata` to find it, but it
 should be at a path something like:
 
 ```console
@@ -223,14 +223,14 @@ You can feed that file into the `LLVM_PROFDATA_FILE` option when you build your
 optimized compiler.
 
 It may be necessary to build additional targets before running perf training, such as
-builtins and runtime libraries. You can use the {code}`CLANG_PGO_TRAINING_DEPS` CMake
+builtins and runtime libraries. You can use the `CLANG_PGO_TRAINING_DEPS` CMake
 variable for that purpose:
 
 ```cmake
 set(CLANG_PGO_TRAINING_DEPS builtins runtimes CACHE STRING "")
 ```
 
-Similarly, for Flang you can make use of :code:`FLANG_PGO_TRAINING_DEPS`:
+Similarly, for Flang you can make use of `FLANG_PGO_TRAINING_DEPS`:
 
 ```cmake
 set(FLANG_PGO_TRAINING_DEPS builtins runtimes CACHE STRING "")
@@ -243,26 +243,21 @@ stage2. Both of the stage2 builds are built using the stage1 compiler.
 The PGO cache generates the following additional targets:
 
 **stage2-instrumented**
-
 : Builds a stage1 compiler, runtime, and required tools (llvm-config,
   llvm-profdata) then uses that compiler to build an instrumented stage2 compiler.
 
 **stage2-instrumented-generate-profdata**
-
 : Depends on stage2-instrumented and will use the instrumented compiler to
   generate profdata based on the training files in `clang/utils/perf-training`
 
 **stage2**
-
 : Depends on stage2-instrumented-generate-profdata and will use the stage1
   compiler with the stage2 profdata to build a PGO-optimized compiler.
 
 **stage2-check-llvm**
-
 : Depends on stage2 and runs check-llvm using the stage2 compiler.
 
 **stage2-check-clang**
-
 : Depends on stage2 and runs check-clang using the stage2 compiler.
 
 **stage2-check-flang**
@@ -270,11 +265,9 @@ The PGO cache generates the following additional targets:
   the Flang's CMake caches)
 
 **stage2-check-all**
-
 : Depends on stage2 and runs check-all using the stage2 compiler.
 
 **stage2-test-suite**
-
 : Depends on stage2 and runs the test-suite using the stage2 compiler (requires
   in-tree test-suite).
 
@@ -376,4 +369,3 @@ $ ninja stage3
 ```
 
 After the build, you can compare the stage2 and stage3 compilers.
-
