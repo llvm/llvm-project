@@ -1237,7 +1237,7 @@ SCEVExpander::expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S) {
   // We have decided to reuse an induction variable of a dominating loop. Apply
   // truncation and/or inversion of the step.
   if (TruncTy) {
-    if ((TruncTy != Result->getType()) || InvertStep)
+    if (TruncTy != Result->getType() || InvertStep)
       Result = fixupLCSSAFormFor(Result);
     // Truncate the result.
     if (TruncTy != Result->getType())
