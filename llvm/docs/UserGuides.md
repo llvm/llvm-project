@@ -1,343 +1,398 @@
-User Guides
-===========
+# User Guides
 
 NOTE: If you are a user who is only interested in using an LLVM-based compiler,
-you should look into `Clang <https://clang.llvm.org>`_ instead. The
+you should look into [Clang](https://clang.llvm.org) instead. The
 documentation here is intended for users who have a need to work with the
 intermediate LLVM representation.
 
-.. contents::
-   :local:
+```{contents}
+:local:
+```
 
-.. toctree::
-   :hidden:
+```{toctree}
+:hidden:
 
-   HowToBuildOnARM
-   HowToBuildWithPGO
-   HowToCrossCompileLLVM
-   CoverageMappingFormat
-   CFIVerify
-   BuildingADistribution
-   CMake
-   Docker
-   SupportLibrary
-   AdvancedBuilds
-   WritingAnLLVMNewPMPass
-   WritingAnLLVMPass
-   Passes
-   StackSafetyAnalysis
-   MergeFunctions
-   AliasAnalysis
-   MemorySSA
-   MemProf
-   LoopTerminology
-   CycleTerminology
-   Vectorizers
-   LinkTimeOptimization
-   DTLTO
-   GoldPlugin
-   Remarks
-   SourceLevelDebugging
-   HowToUpdateDebugInfo
-   Instrumentor
-   InstrRefDebugInfo
-   RemoveDIsDebugInfo
-   KeyInstructionsDebugInfo
-   InstrProfileFormat
-   InstCombineContributorGuide
-   WritingAnLLVMBackend
-   CodeGenerator
-   TableGen/index
-   GlobalISel/MIRPatterns
-   MCJITDesignAndImplementation
-   ORCv2
-   JITLink
-   DebuggingJITedCode
-   CommandLine
-   ExtendingLLVM
-   AddingConstrainedIntrinsics
-   HowToBuildWindowsItaniumPrograms
-   HowToCrossCompileBuiltinsOnArm
-   BigEndianNEON
-   AArch64SME
-   CompileCudaWithLLVM
-   NVPTXUsage
-   AMDGPUUsage
-   AMDGPUAsyncOperations
-   AMDGPUDwarfExtensionsForHeterogeneousDebugging
-   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
-   AMDGPUExecutionSynchronization
-   AMDGPUMemoryModel
-   SPIRVUsage
-   DirectXUsage
-   RISCVUsage
-   RISCV/RISCVVectorExtension
-   RISCV/RISCVVCIX
-   SandboxIR
-   Telemetry
-   LFI
-   AdminTasks
-   Benchmarking
-   CMakePrimer
-   CodeOfConduct
-   FatLTO
-   GitHub
-   MarkdownQuickstartTemplate
-   MisExpect
-   OpaquePointers
-   NewPassManager
-   ReportingGuide
-   ResponseGuide
-   TableGenFundamentals
-   yaml2obj
+HowToBuildOnARM
+HowToBuildWithPGO
+HowToCrossCompileLLVM
+CoverageMappingFormat
+CFIVerify
+BuildingADistribution
+CMake
+Docker
+SupportLibrary
+AdvancedBuilds
+WritingAnLLVMNewPMPass
+WritingAnLLVMPass
+Passes
+StackSafetyAnalysis
+MergeFunctions
+AliasAnalysis
+MemorySSA
+MemProf
+LoopTerminology
+CycleTerminology
+Vectorizers
+LinkTimeOptimization
+DTLTO
+GoldPlugin
+Remarks
+SourceLevelDebugging
+HowToUpdateDebugInfo
+Instrumentor
+InstrRefDebugInfo
+RemoveDIsDebugInfo
+KeyInstructionsDebugInfo
+InstrProfileFormat
+InstCombineContributorGuide
+WritingAnLLVMBackend
+CodeGenerator
+TableGen/index
+GlobalISel/MIRPatterns
+MCJITDesignAndImplementation
+ORCv2
+JITLink
+DebuggingJITedCode
+CommandLine
+ExtendingLLVM
+AddingConstrainedIntrinsics
+HowToBuildWindowsItaniumPrograms
+HowToCrossCompileBuiltinsOnArm
+BigEndianNEON
+AArch64SME
+CompileCudaWithLLVM
+NVPTXUsage
+AMDGPUUsage
+AMDGPUAsyncOperations
+AMDGPUDwarfExtensionsForHeterogeneousDebugging
+AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
+AMDGPUExecutionSynchronization
+AMDGPUMemoryModel
+SPIRVUsage
+DirectXUsage
+RISCVUsage
+RISCV/RISCVVectorExtension
+RISCV/RISCVVCIX
+SandboxIR
+Telemetry
+LFI
+AdminTasks
+Benchmarking
+CMakePrimer
+CodeOfConduct
+FatLTO
+GitHub
+MarkdownQuickstartTemplate
+MisExpect
+OpaquePointers
+NewPassManager
+ReportingGuide
+ResponseGuide
+TableGenFundamentals
+yaml2obj
+```
 
-Clang
------
+## Clang
 
-:doc:`HowToBuildOnARM`
-   Notes on building and testing LLVM/Clang on ARM.
+- {doc}`HowToBuildOnARM`
 
-:doc:`HowToBuildWithPGO`
-    Notes on building LLVM/Clang with PGO.
+  Notes on building and testing LLVM/Clang on ARM.
 
-:doc:`HowToCrossCompileLLVM`
-   Notes on cross-building and testing LLVM/Clang.
+- {doc}`HowToBuildWithPGO`
 
-`How to build the C, C++, ObjC, and ObjC++ front end`__
-   Instructions for building the clang front-end from source.
+  Notes on building LLVM/Clang with PGO.
 
-   .. __: https://clang.llvm.org/get_started.html
+- {doc}`HowToCrossCompileLLVM`
 
-:doc:`CoverageMappingFormat`
+  Notes on cross-building and testing LLVM/Clang.
+
+- [How to build the C, C++, ObjC, and ObjC++ front end](https://clang.llvm.org/get_started.html)
+
+  Instructions for building the clang front-end from source.
+
+- {doc}`CoverageMappingFormat`
+
   This describes the format and encoding used for LLVM’s code coverage mapping.
 
-:doc:`CFIVerify`
+- {doc}`CFIVerify`
+
   A description of the verification tool for Control Flow Integrity.
 
-LLVM Builds and Distributions
------------------------------
+## LLVM Builds and Distributions
 
-:doc:`BuildingADistribution`
+- {doc}`BuildingADistribution`
+
   A best-practices guide for using LLVM's CMake build system to package and
   distribute LLVM-based tools.
 
-:doc:`CMake`
-   An addendum to the main Getting Started guide for those using the `CMake
-   build system <http://www.cmake.org>`_.
+- {doc}`CMake`
 
-:doc:`Docker`
-   A reference for using Dockerfiles provided with LLVM.
+  An addendum to the main Getting Started guide for those using the [CMake
+  build system](http://www.cmake.org).
 
-:doc:`Support Library <SupportLibrary>`
-   This document describes the LLVM Support Library (``lib/Support``) and
-   how to keep LLVM source code portable.
+- {doc}`Docker`
 
-:doc:`AdvancedBuilds`
-   This document describes more advanced build configurations.
+  A reference for using Dockerfiles provided with LLVM.
 
-Optimizations
--------------
+- {doc}`Support Library <SupportLibrary>`
 
-:doc:`WritingAnLLVMNewPMPass`
-   Information on how to write LLVM transformations under the new pass
-   manager.
+  This document describes the LLVM Support Library (`lib/Support`) and
+  how to keep LLVM source code portable.
 
-:doc:`WritingAnLLVMPass`
-   Information on how to write LLVM transformations and analyses under the
-   legacy pass manager.
+- {doc}`AdvancedBuilds`
 
-:doc:`Passes`
-   A list of optimizations and analyses implemented in LLVM.
+  This document describes more advanced build configurations.
 
-:doc:`StackSafetyAnalysis`
+## Optimizations
+
+- {doc}`WritingAnLLVMNewPMPass`
+
+  Information on how to write LLVM transformations under the new pass
+  manager.
+
+- {doc}`WritingAnLLVMPass`
+
+  Information on how to write LLVM transformations and analyses under the
+  legacy pass manager.
+
+- {doc}`Passes`
+
+  A list of optimizations and analyses implemented in LLVM.
+
+- {doc}`StackSafetyAnalysis`
+
   This document describes the design of the stack safety analysis of local
   variables.
 
-:doc:`MergeFunctions`
+- {doc}`MergeFunctions`
+
   Describes functions merging optimization.
 
-:doc:`AliasAnalysis`
-   Information on how to write a new alias analysis implementation or how to
-   use existing analyses.
+- {doc}`AliasAnalysis`
 
-:doc:`MemorySSA`
-   Information about the MemorySSA utility in LLVM, as well as how to use it.
+  Information on how to write a new alias analysis implementation or how to
+  use existing analyses.
 
-:doc:`MemProf`
-   User guide and internals of MemProf, profile guided optimizations for memory.
+- {doc}`MemorySSA`
 
-:doc:`LoopTerminology`
+  Information about the MemorySSA utility in LLVM, as well as how to use it.
+
+- {doc}`MemProf`
+
+  User guide and internals of MemProf, profile guided optimizations for memory.
+
+- {doc}`LoopTerminology`
+
   A document describing Loops and associated terms as used in LLVM.
 
-:doc:`CycleTerminology`
+- {doc}`CycleTerminology`
+
   A document describing cycles as a generalization of loops.
 
-:doc:`Vectorizers`
-   This document describes the current status of vectorization in LLVM.
+- {doc}`Vectorizers`
 
-:doc:`LinkTimeOptimization`
-   This document describes the interface between LLVM intermodular optimizer
-   and the linker and its design
+  This document describes the current status of vectorization in LLVM.
 
-:doc:`DTLTO`
-   This document describes the DTLTO implementation, which allows for
-   distributing ThinLTO backend compilations without requiring support from
-   the build system.
+- {doc}`LinkTimeOptimization`
 
-:doc:`GoldPlugin`
-   How to build your programs with link-time optimization on Linux.
+  This document describes the interface between LLVM intermodular optimizer
+  and the linker and its design
 
-:doc:`Remarks`
-   A reference on the implementation of remarks in LLVM.
+- {doc}`DTLTO`
 
-:doc:`Source Level Debugging with LLVM <SourceLevelDebugging>`
-   This document describes the design and philosophy behind the LLVM
-   source-level debugger.
+  This document describes the DTLTO implementation, which allows for
+  distributing ThinLTO backend compilations without requiring support from
+  the build system.
 
-:doc:`How to Update Debug Info <HowToUpdateDebugInfo>`
-   This document specifies how to correctly update debug info in various kinds
-   of code transformations.
+- {doc}`GoldPlugin`
 
-:doc:`InstrRefDebugInfo`
-   This document explains how LLVM uses value tracking, or instruction
-   referencing, to determine variable locations for debug info in the final
-   stages of compilation.
+  How to build your programs with link-time optimization on Linux.
 
-:doc:`RemoveDIsDebugInfo`
-   This is a migration guide describing how to move from debug info using
-   intrinsics such as dbg.value to using the non-instruction DbgRecord object.
+- {doc}`Remarks`
 
-:doc:`KeyInstructionsDebugInfo`
-   This document explains how the debug info feature Key Instructions is
-   implemented in LLVM.
+  A reference on the implementation of remarks in LLVM.
 
-:doc:`InstrProfileFormat`
-   This document explains two binary formats of instrumentation-based profiles.
+- {doc}`Source Level Debugging with LLVM <SourceLevelDebugging>`
 
-:doc:`InstCombineContributorGuide`
-   This document specifies guidelines for contributions for InstCombine and
-   related passes.
+  This document describes the design and philosophy behind the LLVM
+  source-level debugger.
 
-:doc:`Instrumentor`
-   A comprehensive guide to the highly configurable Instrumentor pass for custom
-   program instrumentation, including the interactive configuration wizard.
+- {doc}`How to Update Debug Info <HowToUpdateDebugInfo>`
 
+  This document specifies how to correctly update debug info in various kinds
+  of code transformations.
 
-Code Generation
----------------
+- {doc}`InstrRefDebugInfo`
 
-:doc:`WritingAnLLVMBackend`
-   Information on how to write LLVM backends for machine targets.
+  This document explains how LLVM uses value tracking, or instruction
+  referencing, to determine variable locations for debug info in the final
+  stages of compilation.
 
-:doc:`CodeGenerator`
-   The design and implementation of the LLVM code generator.  Useful if you are
-   working on retargetting LLVM to a new architecture, designing a new codegen
-   pass, or enhancing existing components.
+- {doc}`RemoveDIsDebugInfo`
 
-:doc:`TableGen <TableGen/index>`
-   Describes the TableGen tool, which is used heavily by the LLVM code
-   generator.
+  This is a migration guide describing how to move from debug info using
+  intrinsics such as dbg.value to using the non-instruction DbgRecord object.
 
-==========
-GlobalISel
-==========
+- {doc}`KeyInstructionsDebugInfo`
 
-:doc:`MIRPatterns <GlobalISel/MIRPatterns>`
-   Describes the design of MIR Patterns and how to use them.
+  This document explains how the debug info feature Key Instructions is
+  implemented in LLVM.
 
-===
-JIT
-===
+- {doc}`InstrProfileFormat`
 
-:doc:`MCJITDesignAndImplementation`
-   Describes the inner workings of MCJIT execution engine.
+  This document explains two binary formats of instrumentation-based profiles.
 
-:doc:`ORCv2`
-   Describes the design and implementation of the ORC APIs, including some
-   usage examples, and a guide for users transitioning from ORCv1 to ORCv2.
+- {doc}`InstCombineContributorGuide`
 
-:doc:`JITLink`
-   Describes the design and APIs for the JITLink library, ORC's new JIT
-   linker.
+  This document specifies guidelines for contributions for InstCombine and
+  related passes.
 
-:doc:`DebuggingJITedCode`
-   How to debug JITed code with GDB.
+- {doc}`Instrumentor`
 
-Additional Topics
------------------
+  A comprehensive guide to the highly configurable Instrumentor pass for custom
+  program instrumentation, including the interactive configuration wizard.
 
-:doc:`CommandLine`
+## Code Generation
+
+- {doc}`WritingAnLLVMBackend`
+
+  Information on how to write LLVM backends for machine targets.
+
+- {doc}`CodeGenerator`
+
+  The design and implementation of the LLVM code generator.  Useful if you are
+  working on retargetting LLVM to a new architecture, designing a new codegen
+  pass, or enhancing existing components.
+
+- {doc}`TableGen <TableGen/index>`
+
+  Describes the TableGen tool, which is used heavily by the LLVM code
+  generator.
+
+### GlobalISel
+
+- {doc}`MIRPatterns <GlobalISel/MIRPatterns>`
+
+  Describes the design of MIR Patterns and how to use them.
+
+### JIT
+
+- {doc}`MCJITDesignAndImplementation`
+
+  Describes the inner workings of MCJIT execution engine.
+
+- {doc}`ORCv2`
+
+  Describes the design and implementation of the ORC APIs, including some
+  usage examples, and a guide for users transitioning from ORCv1 to ORCv2.
+
+- {doc}`JITLink`
+
+  Describes the design and APIs for the JITLink library, ORC's new JIT
+  linker.
+
+- {doc}`DebuggingJITedCode`
+
+  How to debug JITed code with GDB.
+
+## Additional Topics
+
+- {doc}`CommandLine`
+
   Provides information on using the command line parsing library.
 
-:doc:`ExtendingLLVM`
+- {doc}`ExtendingLLVM`
+
   Look here to see how to add instructions and intrinsics to LLVM.
 
-:doc:`AddingConstrainedIntrinsics`
-   Gives the steps necessary when adding a new constrained math intrinsic
-   to LLVM.
+- {doc}`AddingConstrainedIntrinsics`
 
-:doc:`HowToBuildWindowsItaniumPrograms`
-   Notes on assembling a Windows Itanium environment.
+  Gives the steps necessary when adding a new constrained math intrinsic
+  to LLVM.
 
-:doc:`HowToCrossCompileBuiltinsOnArm`
-   Notes on cross-building and testing the compiler-rt builtins for Arm.
+- {doc}`HowToBuildWindowsItaniumPrograms`
 
-:doc:`BigEndianNEON`
+  Notes on assembling a Windows Itanium environment.
+
+- {doc}`HowToCrossCompileBuiltinsOnArm`
+
+  Notes on cross-building and testing the compiler-rt builtins for Arm.
+
+- {doc}`BigEndianNEON`
+
   LLVM's support for generating NEON instructions on big endian ARM targets is
   somewhat nonintuitive. This document explains the implementation and rationale.
 
-:doc:`AArch64SME`
+- {doc}`AArch64SME`
+
   LLVM's support for AArch64 SME ACLE and ABI.
 
-:doc:`CompileCudaWithLLVM`
+- {doc}`CompileCudaWithLLVM`
+
   LLVM support for CUDA.
 
-:doc:`NVPTXUsage`
-   This document describes using the NVPTX backend to compile GPU kernels.
+- {doc}`NVPTXUsage`
 
-:doc:`AMDGPUUsage`
-   This document describes using the AMDGPU backend to compile GPU kernels.
+  This document describes using the NVPTX backend to compile GPU kernels.
 
-:doc:`AMDGPUAsyncOperations`
-   Builtins for invoking asynchronous data transfer operations in AMD GPUs.
+- {doc}`AMDGPUUsage`
 
-:doc:`AMDGPUMemoryModel`
-   This document describes *AMDGPU Memory Model* which overrides the :ref:`LLVM
-   memory model<memmodel>` when a program is compiled for the AMDGPU target.
+  This document describes using the AMDGPU backend to compile GPU kernels.
 
-:doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
-   This document describes DWARF extensions to support heterogeneous debugging
-   for targets such as the AMDGPU backend.
+- {doc}`AMDGPUAsyncOperations`
 
-:doc:`AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack`
-   This document describes a DWARF extension to allow location descriptions on
-   the DWARF expression stack. It is part of
-   :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.
+  Builtins for invoking asynchronous data transfer operations in AMD GPUs.
 
-:doc:`AMDGPUExecutionSynchronization`
-   This document describes how execution of threads can be synchronized on AMD GPUs.
+- {doc}`AMDGPUMemoryModel`
 
-:doc:`SPIRVUsage`
-   This document describes using the SPIR-V target to compile GPU kernels.
+  This document describes *AMDGPU Memory Model* which overrides the
+  {ref}`LLVM memory model <memmodel>` when a program is compiled for the
+  AMDGPU target.
 
-:doc:`DirectXUsage`
-   This document describes using the DirectX target to compile GPU code for the
-   DirectX runtime.
+- {doc}`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
 
-:doc:`RISCVUsage`
-   This document describes using the RISC-V target.
+  This document describes DWARF extensions to support heterogeneous debugging
+  for targets such as the AMDGPU backend.
 
-:doc:`RISCV/RISCVVectorExtension`
-   This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
+- {doc}`AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack`
 
-:doc:`RISCV/RISCVVCIX`
-   This document shows how the scheduling information for RISC-V's ``XSfvcp`` extension -- SiFive Vector Coprocessor Interface (VCIX) -- works and how to customize them.
+  This document describes a DWARF extension to allow location descriptions on
+  the DWARF expression stack. It is part of
+  {doc}`AMDGPUDwarfExtensionsForHeterogeneousDebugging`.
 
-:doc:`Sandbox IR <SandboxIR>`
-   This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.
+- {doc}`AMDGPUExecutionSynchronization`
 
-:doc:`Telemetry`
-   This document describes the Telemetry framework in LLVM.
+  This document describes how execution of threads can be synchronized on AMD GPUs.
 
-:doc:`LFI <LFI>`
-    This document describes the Lightweight Fault Isolation (LFI) target in LLVM.
+- {doc}`SPIRVUsage`
+
+  This document describes using the SPIR-V target to compile GPU kernels.
+
+- {doc}`DirectXUsage`
+
+  This document describes using the DirectX target to compile GPU code for the
+  DirectX runtime.
+
+- {doc}`RISCVUsage`
+
+  This document describes using the RISC-V target.
+
+- {doc}`RISCV/RISCVVectorExtension`
+
+  This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
+
+- {doc}`RISCV/RISCVVCIX`
+
+  This document shows how the scheduling information for RISC-V's `XSfvcp` extension -- SiFive Vector Coprocessor Interface (VCIX) -- works and how to customize them.
+
+- {doc}`Sandbox IR <SandboxIR>`
+
+  This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.
+
+- {doc}`Telemetry`
+
+  This document describes the Telemetry framework in LLVM.
+
+- {doc}`LFI <LFI>`
+
+  This document describes the Lightweight Fault Isolation (LFI) target in LLVM.

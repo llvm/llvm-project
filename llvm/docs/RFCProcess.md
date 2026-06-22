@@ -1,22 +1,20 @@
-=================================
-Request For Comment (RFC) process
-=================================
+# Request For Comment (RFC) process
 
-.. contents::
-   :local:
-   :depth: 1
+```{contents}
+:local:
+:depth: 1
+```
 
-Introduction
-============
+## Introduction
+
 Substantive changes to LLVM projects need to be acceptable to the wider
 community, which requires gaining community consensus to adopt the changes.
 This is done by posting an RFC and obtaining feedback about the proposal.
 
-Process
-=======
+## Process
 
-Writing an RFC
---------------
+### Writing an RFC
+
 The process begins with writing a proposal for the changes you'd like to see
 made. The proposal should include:
 
@@ -26,10 +24,10 @@ made. The proposal should include:
 * any open questions the community should address.
 
 The proposal should be posted to the appropriate forum on
-`Discourse <https://discourse.llvm.org/>`_.
+[Discourse](https://discourse.llvm.org/).
 
-Feedback Period
----------------
+### Feedback Period
+
 Once the RFC is posted, the community will provide feedback on the proposal.
 The feedback period is a collaborative effort between the community and the
 proposal authors. Authors should take the community's feedback into
@@ -45,14 +43,13 @@ discussion is actively continuing on the proposal.
 
 After posting a major proposal, it is common to receive lots of conflicting
 feedback from different parties, or no feedback at all, leaving authors without
-clear next steps. As a community, we are aiming for `"rough consensus"
-<https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
-described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
+clear next steps. As a community, we are aiming for ["rough consensus"][rc],
+similar in spirit to what is
+described in [IETF RFC7282][rfc7282].
 This requires considering and addressing all of the objections to the RFC, and
 confirming that we can all live with the tradeoffs embodied in the proposal.
 
-The LLVM Area Teams (defined in `LP0004
-<https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md>`_)
+The LLVM Area Teams (defined in [LP0004][lp0004])
 are responsible for facilitating project decision making. In cases where there
 isn't obvious agreement, area teams should step in to restate their perceived
 consensus. In cases of deeper disagreement, area teams should try to identify
@@ -60,20 +57,23 @@ the next steps for the proposal, such as gathering more data, changing the
 proposal, or rejecting it in the absence of major changes in the design or
 context. They can also act as moderators by scheduling calls for participants
 to speak directly to resolve disagreements, subject to normal
-:ref:`Code of Conduct <LLVM Community Code of Conduct>` guidelines.
+{ref}`Code of Conduct <LLVM Community Code of Conduct>` guidelines.
 
 Once the design of the new feature is finalized, the work itself should be done
-as a series of :ref:`incremental changes <incremental-changes>`, not as a long-term development branch.
+as a series of {ref}`incremental changes <incremental-changes>`, not as a long-term development branch.
 
+[rc]: https://en.wikipedia.org/wiki/Rough_consensus
+[rfc7282]: https://datatracker.ietf.org/doc/html/rfc7282
+[lp0004]: https://github.com/llvm/llvm-www/blob/main/proposals/LP0004-project-governance.md
 
-Trivial Acceptance or Rejection
--------------------------------
+### Trivial Acceptance or Rejection
+
 Some proposals have obvious consensus (for or against) after discussion in the
 community. It is acceptable to presume a post which appears to have obvious
 consensus has been accepted.
 
-Non-trivial Acceptance or Rejection
------------------------------------
+### Non-trivial Acceptance or Rejection
+
 If the proposal does not have obvious consensus after community discussion,
 a maintainer for each of the impacted parts of the project should explicitly
 accept or reject the RFC by leaving a comment stating their decision and
@@ -81,16 +81,16 @@ possibly detailing any provisions for their acceptance. Overall consensus is
 determined once a maintainer from each impacted part of the project has
 accepted the proposal.
 
-Low Engagement Level
-~~~~~~~~~~~~~~~~~~~~
+#### Low Engagement Level
+
 If the proposal gets little or no engagement by the community, it is a sign that
 the proposal does not have consensus and is rejected. Engagement means comments
 on the proposal. If there are few or no comments but the are a lot of people
 pressing the like/heart button on the post, the appropriate area team can make
 a value judgement on whether to accept or reject.
 
-After Acceptance
-----------------
+### After Acceptance
+
 Once an RFC has been accepted, the authors may begin merging pull requests
 related to the proposal. While the RFC process typically makes reviewing the
 pull requests go more smoothly, the review process may identify additional
@@ -98,16 +98,16 @@ necessary changes to the proposal. Minor changes to the proposal do not require
 an additional RFC. However, if the proposal changes significantly in a material
 way, the authors may be asked to run another RFC.
 
-After Rejection
----------------
+### After Rejection
+
 Any rejected RFC can be brought back to the community as a new RFC in the
 future. The new RFC should either clearly identify new information that may
 change the community's perception of the proposal and/or explicitly address the
 concerns previously raised by the community. It is helpful to explicitly call
 out such information in the subsequent RFC.
 
-Suggestions on Getting a Change Accepted
-----------------------------------------
+### Suggestions on Getting a Change Accepted
+
 These are some suggestions for how to get a major change accepted:
 
 * Make it targeted, and avoid touching components irrelevant to the task.
