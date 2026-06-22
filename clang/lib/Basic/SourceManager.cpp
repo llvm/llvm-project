@@ -151,6 +151,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Convert source from the input charset to UTF-8 if necessary.
   llvm::TextEncodingConverter *Converter = FileIDConverterInfo.getPointer();
   if (Converter) {
+    llvm::errs() << "DEBUG: Converting file " << ContentsEntry->getName() << " using converter\n";
     StringRef OriginalBuf = Buffer->getBuffer();
     llvm::SmallString<0> UTF8Buf;
     UTF8Buf.reserve(OriginalBuf.size() + 1);
@@ -171,13 +172,17 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
       // TODO: Consider adjusting the message to omit the "interpreting as
       // UTF-8" recovery description if the warning has been upgraded to an
       // error.
+      llvm::errs() << "DEBUG: Conversion failed for " << ContentsEntry->getName()
+                   << ": " << EC.message() << " - falling back to UTF-8\n";
       Diag.Report(Loc, diag::warn_charset_conversion_failed)
           << ContentsEntry->getName() << EC.message();
     } else {
+      llvm::errs() << "DEBUG: Successfully converted " << ContentsEntry->getName()
+                   << " from " << OriginalBuf.size() << " to " << UTF8Buf.size() << " bytes\n";
       // TODO: Reclaim memory if the buffer size exceeds the content.
       auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
           std::move(UTF8Buf), Buffer->getBufferIdentifier());
-      Buffer = std::move(NewBuf);  
+      Buffer = std::move(NewBuf);
     }
   }
 
@@ -649,21 +654,29 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   }
   if (!Ccsid->empty()) {
     // File has a tag, use the converter from SourceManager's cache
+    llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has tag encoding: " << *Ccsid << "\n";
     Converter = getOrCreateConverter(*Ccsid, "UTF-8");
     if (!Converter) {
+      llvm::errs() << "DEBUG: Failed to get converter for file tag: " << Converter.getError().message() << "\n";
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
           << SourceFile.getName() << Converter.getError().message();
       return FileID();
     }
+    llvm::errs() << "DEBUG: Using file tag converter for " << SourceFile.getName() << "\n";
   } else if (!InputEncodingName.empty()) {
     // No file tag but -finput-charset conversion is desired.
     // Get the converter from the cache using the input encoding name.
+    llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has no tag, using input charset: " << InputEncodingName << "\n";
     Converter = getOrCreateConverter(InputEncodingName, "UTF-8");
     if (!Converter) {
+      llvm::errs() << "DEBUG: Failed to get input charset converter: " << Converter.getError().message() << "\n";
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
           << SourceFile.getName() << Converter.getError().message();
       return FileID();
     }
+    llvm::errs() << "DEBUG: Using input charset converter for " << SourceFile.getName() << "\n";
+  } else {
+    llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has no tag and no input charset specified - no conversion\n";
   }
 
   #ifndef NDEBUG
@@ -722,13 +735,13 @@ FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
 FileID
 SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
                                  SrcMgr::CharacteristicKind FileCharacter,
-				 bool UseInputCharsetConverter) {
+     llvm::StringRef InputEncodingName) {
   FileID ID = translateFile(SourceFile);
-  return ID.isValid() ? ID
+  return ID.isValid()
+                      ? ID
                       : createFileID(SourceFile, SourceLocation(),
-                                     FileCharacter, UseInputCharsetConverter);
+                                     FileCharacter, /*LoadedID=*/0, InputEncodingName);
 }
-
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
@@ -2480,8 +2493,7 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
       std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
-  FileID ID = SourceMgr->createFileID(
-      FE, SourceLocation(), clang::SrcMgr::C_User, /*UseInputCharsetConverter=*/false);
+  FileID ID = SourceMgr->getOrCreateFileID(FE, clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }

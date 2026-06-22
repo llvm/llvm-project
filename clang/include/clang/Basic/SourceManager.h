@@ -973,7 +973,7 @@ public:
   /// new FileID for the \p SourceFile.
   FileID getOrCreateFileID(FileEntryRef SourceFile,
                            SrcMgr::CharacteristicKind FileCharacter,
-			   bool UseInputCharsetConverter = false);
+  	   llvm::StringRef InputEncodingName = "");
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
   /// function-like macro's body. Returns the start of the expansion.

@@ -555,6 +555,8 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
   }
 
   // Open the file with the requested mode.
+  llvm::errs() << "DEBUG: Opening file " << Filename << " with IsText=" << IsText
+               << (IsText ? " (autoconversion enabled)" : " (autoconversion DISABLED)") << "\n";
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
                               RequiresNullTerminator, IsText);
 }
