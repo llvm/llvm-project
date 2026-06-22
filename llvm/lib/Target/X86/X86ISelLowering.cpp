@@ -2817,6 +2817,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FP_TO_UINT_SAT,
                        ISD::SETCC,
                        ISD::MUL,
+                       ISD::UDIV,
                        ISD::XOR,
                        ISD::MSCATTER,
                        ISD::MGATHER,
@@ -50771,6 +50772,98 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// x86 has no vector integer divide instructions. Lower vector UDIV through f64
+// division instead of scalarizing into N scalar hardware divides.
+static SDValue combineUDIV(SDNode *N, SelectionDAG &DAG,
+                           TargetLowering::DAGCombinerInfo &DCI,
+                           const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Run before the legalizer expands the UDIV.
+  if (!VT.isVector() || !DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+
+  // If the result is only read back as scalar extracts, scalarization computes
+  // just the demanded lanes.
+  if (all_of(N->users(), [](const SDNode *U) {
+        return U->getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+      }))
+    return SDValue();
+
+  // i8/i16/i32: a single f64 divide is exact because they fit the 53-bit
+  // mantissa, so on AVX2+ we divide as f64. Constant divisors are better
+  // handled by the vectorized magic-multiply.
+  if (VT.getScalarSizeInBits() <= 32 && Subtarget.hasAVX2()) {
+    if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))
+      return SDValue();
+    EVT FPVT = EVT::getVectorVT(*DAG.getContext(), MVT::f64,
+                                VT.getVectorElementCount());
+    SDValue X = DAG.getNode(ISD::UINT_TO_FP, DL, FPVT, Dividend);
+    SDValue Y = DAG.getNode(ISD::UINT_TO_FP, DL, FPVT, Divisor);
+    SDValue Quot = DAG.getNode(ISD::FDIV, DL, FPVT, X, Y);
+    return DAG.getNode(ISD::FP_TO_UINT, DL, VT, Quot);
+  }
+
+  // i64: f64 cannot hold the quotient exactly, so compute a round-down
+  // reciprocal of the divisor and refine it with two round-down multiply
+  // iterations plus a final +1 correction. The embedded rounding control is
+  // 512-bit only so this is limited to AVX512DQ on v8i64.
+  if (VT == MVT::v8i64 && Subtarget.hasDQI()) {
+    MVT FPVT = MVT::v8f64;
+    SDValue RD = DAG.getTargetConstant( // {rd-sae}
+        X86::STATIC_ROUNDING::TO_NEG_INF | X86::STATIC_ROUNDING::NO_EXC, DL,
+        MVT::i32);
+    SDValue RU = DAG.getTargetConstant( // {ru-sae}
+        X86::STATIC_ROUNDING::TO_POS_INF | X86::STATIC_ROUNDING::NO_EXC, DL,
+        MVT::i32);
+
+    // Build an AVX512 intrinsic node (the intrinsic id is operand 0).
+    auto Emit = [&](Intrinsic::ID ID, EVT ResVT, ArrayRef<SDValue> Args) {
+      SmallVector<SDValue, 5> Ops = {DAG.getTargetConstant(ID, DL, MVT::i32)};
+      Ops.append(Args.begin(), Args.end());
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResVT, Ops);
+    };
+    auto UToF = [&](SDValue V, SDValue Rnd) { // vcvtuqq2pd
+      return Emit(Intrinsic::x86_avx512_uitofp_round, FPVT, {V, Rnd});
+    };
+    auto FToU = [&](SDValue V) { // vcvtpd2uqq {rd-sae}
+      return Emit(
+          Intrinsic::x86_avx512_mask_cvtpd2uqq_512, VT,
+          {V, DAG.getUNDEF(VT), DAG.getTargetConstant(0xff, DL, MVT::i8), RD});
+    };
+    auto FMul = [&](SDValue A, SDValue B) { // vmulpd {rd-sae}
+      return Emit(Intrinsic::x86_avx512_mul_pd_512, FPVT, {A, B, RD});
+    };
+
+    // b_rcp = round_down(1.0 / round_up(double(b)))
+    SDValue Recip =
+        Emit(Intrinsic::x86_avx512_div_pd_512, FPVT,
+             {DAG.getConstantFP(1.0, DL, FPVT), UToF(Divisor, RU), RD});
+    // first = round_down(uint64(round_down(double(a)) * b_rcp))
+    SDValue First = FToU(FMul(UToF(Dividend, RD), Recip));
+    // rem = a - first * b
+    SDValue Rem = DAG.getNode(ISD::SUB, DL, VT, Dividend,
+                              DAG.getNode(ISD::MUL, DL, VT, First, Divisor));
+    // refine with a second iteration on the remainder
+    SDValue Second = FToU(FMul(UToF(Rem, RD), Recip));
+    SDValue Result = DAG.getNode(ISD::ADD, DL, VT, First, Second);
+    // result += (a - (first + second) * b) >= b
+    Rem = DAG.getNode(ISD::SUB, DL, VT, Rem,
+                      DAG.getNode(ISD::MUL, DL, VT, Second, Divisor));
+    EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
+        DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue Ge = DAG.getSetCC(DL, CCVT, Rem, Divisor, ISD::SETUGE);
+    return DAG.getNode(ISD::ADD, DL, VT, Result,
+                       DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Ge));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -63201,6 +63294,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
+  case ISD::UDIV:           return combineUDIV(N, DAG, DCI, Subtarget);
   case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);

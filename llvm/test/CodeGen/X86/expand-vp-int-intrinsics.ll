@@ -385,28 +385,23 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1,1,1,1]
 ; AVX2-NEXT:    vblendvps %xmm2, %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vextractps $1, %xmm1, %ecx
-; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    divl %ecx
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    vmovd %xmm1, %esi
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    divl %esi
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX2-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    divl %ecx
-; AVX2-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX2-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    divl %ecx
-; AVX2-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15]
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vsubpd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm2
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; AVX2-NEXT:    vsubpd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX2-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vorpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vmovapd %xmm0, (%rdi)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: vp_udiv_v4i32:
@@ -415,28 +410,12 @@ define void @vp_udiv_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %out, i32 %vp) noun
 ; AVX512-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
 ; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm2 {%k1}
-; AVX512-NEXT:    vpextrd $1, %xmm2, %ecx
-; AVX512-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divl %ecx
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    vmovd %xmm2, %esi
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divl %esi
-; AVX512-NEXT:    vmovd %eax, %xmm1
-; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrd $2, %xmm2, %ecx
-; AVX512-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divl %ecx
-; AVX512-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrd $3, %xmm2, %ecx
-; AVX512-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divl %ecx
-; AVX512-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
-; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    vcvtudq2pd %xmm2, %ymm1
+; AVX512-NEXT:    vcvtudq2pd %xmm0, %ymm0
+; AVX512-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vcvttpd2udq %ymm0, %xmm0
+; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %res = call <4 x i32> @llvm.vp.udiv.v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
   store <4 x i32> %res, ptr %out

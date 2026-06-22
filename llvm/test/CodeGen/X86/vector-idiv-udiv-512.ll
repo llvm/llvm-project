@@ -8,77 +8,101 @@
 ;
 
 define <8 x i64> @test_div7_8i64(<8 x i64> %a) nounwind {
-; AVX-LABEL: test_div7_8i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX-NEXT:    movabsq $2635249153387078803, %rsi # imm = 0x2492492492492493
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm2
-; AVX-NEXT:    vmovq %xmm1, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm3
-; AVX-NEXT:    vmovq %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm3
-; AVX-NEXT:    vmovq %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm3
-; AVX-NEXT:    vmovq %xmm0, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %rsi
-; AVX-NEXT:    subq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    addq %rdx, %rcx
-; AVX-NEXT:    vmovq %rcx, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX-NEXT:    vpsrlq $2, %zmm0, %zmm0
-; AVX-NEXT:    retq
+; NODQ-LABEL: test_div7_8i64:
+; NODQ:       # %bb.0:
+; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
+; NODQ-NEXT:    vpextrq $1, %xmm1, %rcx
+; NODQ-NEXT:    movabsq $2635249153387078803, %rsi # imm = 0x2492492492492493
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm2
+; NODQ-NEXT:    vmovq %xmm1, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm1
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm3
+; NODQ-NEXT:    vmovq %xmm2, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm2
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; NODQ-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm3
+; NODQ-NEXT:    vmovq %xmm2, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm2
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; NODQ-NEXT:    vpextrq $1, %xmm0, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm3
+; NODQ-NEXT:    vmovq %xmm0, %rcx
+; NODQ-NEXT:    movq %rcx, %rax
+; NODQ-NEXT:    mulq %rsi
+; NODQ-NEXT:    subq %rdx, %rcx
+; NODQ-NEXT:    shrq %rcx
+; NODQ-NEXT:    addq %rdx, %rcx
+; NODQ-NEXT:    vmovq %rcx, %xmm0
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; NODQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; NODQ-NEXT:    vpsrlq $2, %zmm0, %zmm0
+; NODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_div7_8i64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [7,7,7,7,7,7,7,7]
+; AVX512DQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
+; AVX512DQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512DQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
+; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; AVX512DQ-NEXT:    vpsllq $3, %zmm3, %zmm4
+; AVX512DQ-NEXT:    vpsubq %zmm4, %zmm3, %zmm4
+; AVX512DQ-NEXT:    vpaddq %zmm4, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
+; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm4, %zmm2
+; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; AVX512DQ-NEXT:    vpsllq $3, %zmm2, %zmm4
+; AVX512DQ-NEXT:    vpsubq %zmm4, %zmm2, %zmm4
+; AVX512DQ-NEXT:    vpaddq %zmm4, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k0
+; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
+; AVX512DQ-NEXT:    vpaddq %zmm2, %zmm3, %zmm1
+; AVX512DQ-NEXT:    vpsubq %zmm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    retq
   %res = udiv <8 x i64> %a, <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>
   ret <8 x i64> %res
 }
@@ -294,62 +318,83 @@ define <64 x i8> @test_divconstant_64i8(<64 x i8> %a) nounwind {
 ;
 
 define <8 x i64> @test_divv_8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
-; AVX-LABEL: test_divv_8i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
-; AVX-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm4
-; AVX-NEXT:    vmovq %xmm2, %rax
-; AVX-NEXT:    vmovq %xmm3, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; AVX-NEXT:    vpextrq $1, %xmm4, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm5
-; AVX-NEXT:    vmovq %xmm3, %rax
-; AVX-NEXT:    vmovq %xmm4, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm3
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
-; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; AVX-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX-NEXT:    vextracti128 $1, %ymm1, %xmm4
-; AVX-NEXT:    vpextrq $1, %xmm4, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm5
-; AVX-NEXT:    vmovq %xmm3, %rax
-; AVX-NEXT:    vmovq %xmm4, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm3
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
-; AVX-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm4
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    vmovq %xmm1, %rcx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq %rcx
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
-; AVX-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; AVX-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX-NEXT:    retq
+; NODQ-LABEL: test_divv_8i64:
+; NODQ:       # %bb.0:
+; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm4
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vmovq %xmm3, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm2
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
+; NODQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
+; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm5
+; NODQ-NEXT:    vmovq %xmm3, %rax
+; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm3
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
+; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
+; NODQ-NEXT:    vextracti128 $1, %ymm1, %xmm4
+; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm5
+; NODQ-NEXT:    vmovq %xmm3, %rax
+; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm3
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
+; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-NEXT:    vpextrq $1, %xmm1, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm4
+; NODQ-NEXT:    vmovq %xmm0, %rax
+; NODQ-NEXT:    vmovq %xmm1, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm0
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; NODQ-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; NODQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; NODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_divv_8i64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
+; AVX512DQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512DQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
+; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; AVX512DQ-NEXT:    vpmullq %zmm1, %zmm3, %zmm4
+; AVX512DQ-NEXT:    vpsubq %zmm4, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
+; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm4, %zmm2
+; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; AVX512DQ-NEXT:    vpaddq %zmm2, %zmm3, %zmm3
+; AVX512DQ-NEXT:    vpmullq %zmm1, %zmm2, %zmm2
+; AVX512DQ-NEXT:    vpsubq %zmm2, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k0
+; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
+; AVX512DQ-NEXT:    vpsubq %zmm0, %zmm3, %zmm0
+; AVX512DQ-NEXT:    retq
   %res = udiv <8 x i64> %a, %b
   ret <8 x i64> %res
 }
@@ -357,99 +402,17 @@ define <8 x i64> @test_divv_8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 define <16 x i32> @test_divv_16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; AVX-LABEL: test_divv_16i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
-; AVX-NEXT:    vpextrd $1, %xmm2, %eax
-; AVX-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
-; AVX-NEXT:    vpextrd $1, %xmm3, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm2, %eax
-; AVX-NEXT:    vmovd %xmm3, %esi
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %esi
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX-NEXT:    vpextrd $2, %xmm2, %eax
-; AVX-NEXT:    vpextrd $2, %xmm3, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX-NEXT:    vpextrd $3, %xmm2, %eax
-; AVX-NEXT:    vpextrd $3, %xmm3, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
-; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
-; AVX-NEXT:    vpextrd $1, %xmm4, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    vmovd %xmm4, %esi
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %esi
-; AVX-NEXT:    vmovd %eax, %xmm5
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; AVX-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX-NEXT:    vpextrd $2, %xmm4, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; AVX-NEXT:    vpextrd $3, %xmm3, %eax
-; AVX-NEXT:    vpextrd $3, %xmm4, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; AVX-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX-NEXT:    vextracti128 $1, %ymm1, %xmm4
-; AVX-NEXT:    vpextrd $1, %xmm4, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    vmovd %xmm4, %esi
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %esi
-; AVX-NEXT:    vmovd %eax, %xmm5
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm5, %xmm5
-; AVX-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX-NEXT:    vpextrd $2, %xmm4, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; AVX-NEXT:    vpextrd $3, %xmm3, %eax
-; AVX-NEXT:    vpextrd $3, %xmm4, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; AVX-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX-NEXT:    vpextrd $1, %xmm1, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vmovd %xmm1, %esi
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %esi
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
-; AVX-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX-NEXT:    vpextrd $2, %xmm1, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; AVX-NEXT:    vpextrd $3, %xmm0, %eax
-; AVX-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm0
-; AVX-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; AVX-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX-NEXT:    vcvtudq2pd %ymm1, %zmm2
+; AVX-NEXT:    vcvtudq2pd %ymm0, %zmm3
+; AVX-NEXT:    vdivpd %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vcvttpd2udq %zmm2, %ymm2
+; AVX-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; AVX-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; AVX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; AVX-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX-NEXT:    vdivpd %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
 ; AVX-NEXT:    retq
   %res = udiv <16 x i32> %a, %b
   ret <16 x i32> %res
@@ -824,6 +787,3 @@ define <64 x i8> @test_remconstant_64i8(<64 x i8> %a) nounwind {
   %res = urem <64 x i8> %a, <i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 38, i8 37, i8 36, i8 35, i8 34, i8 33, i8 32, i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7>
   ret <64 x i8> %res
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX512DQ: {{.*}}
-; NODQ: {{.*}}
