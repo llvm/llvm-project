@@ -15,7 +15,7 @@
 #include <vector>
 
 void test() {
-  std::vector<char> range = {'1', '9', ',', '2', '8', ',', '2', '9', ',', '4', '9', ',', '8', '2', ',', '9', '4'};
+  std::vector<char> range = {'1', '9', ' ', '2', '8', ' ', '2', '9', ',', '4', '9', ' ', '8', '2', ' ', '9', '4'};
   char pattern            = ',';
 
   auto v = std::views::split(range, pattern);
