@@ -1891,6 +1891,10 @@ module std [system] {
       header "__ranges/chunk_by_view.h"
       export std.functional.bind_back
     }
+    module chunk_view {
+      header "__ranges/chunk_view.h"
+      export std.functional.bind_back
+    }
     module common_view                    { header "__ranges/common_view.h" }
     module concat_view                    { header "__ranges/concat_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
@@ -2196,6 +2200,7 @@ module std [system] {
     module constant_wrapper                { header "__utility/constant_wrapper.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
+    module div_ceil                        { header "__utility/div_ceil.h" }
     module element_count                   { header "__utility/element_count.h" }
     module exception_guard                 { header "__utility/exception_guard.h" }
     module exchange                        { header "__utility/exchange.h" }

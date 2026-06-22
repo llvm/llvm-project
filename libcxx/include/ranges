@@ -418,6 +418,17 @@ namespace std::ranges {
 
   namespace views { inline constexpr unspecified chunk_by = unspecified; }  // C++23
 
+  // [range.chunk]
+  template <view V>
+    requires input_range<V>
+  class chunk_view;                                                     // C++23
+
+  template <view V>
+    requires forward_range<V>
+  class chunk_view<V>;                                                  // C++23
+
+  namespace views { inline constexpr unspecified chunk = unspecified; } // C++23
+
   // [range.stride.view], stride view
   template<input_range V>
     requires view<V>
@@ -514,6 +525,7 @@ namespace std {
 #    include <__ranges/adjacent_view.h>
 #    include <__ranges/as_rvalue_view.h>
 #    include <__ranges/chunk_by_view.h>
+#    include <__ranges/chunk_view.h>
 #    include <__ranges/enumerate_view.h>
 #    include <__ranges/from_range.h>
 #    include <__ranges/join_with_view.h>

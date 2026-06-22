@@ -1119,7 +1119,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_chunk",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_chunk_by",
