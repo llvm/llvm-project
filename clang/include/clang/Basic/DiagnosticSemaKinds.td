@@ -968,6 +968,10 @@ def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
 
+def warn_stringop_overread
+    : Warning<"'%0' reading %1 byte%s1 from a region of size %2">,
+      InGroup<DiagGroup<"stringop-overread">>;
+
 def warn_fortify_strlen_overflow: Warning<
   "'%0' will always overflow; destination buffer has size %1,"
   " but the source string has length %2 (including NUL byte)">,
@@ -13764,6 +13768,10 @@ def warn_attr_min_eq_max:  Warning<
 
 def err_hlsl_attribute_number_arguments_insufficient_shader_model: Error<
   "attribute %0 with %1 arguments requires shader model %2 or greater">;
+def warn_hlsl_wavesize_unsupported_spirv : Warning<
+  "attribute 'WaveSize' is not supported for the SPIR-V target; "
+  "consider using VK_EXT_subgroup_size_control">,
+  InGroup<HLSLAttributeStatement>;
 def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
   "argument %0 must be constant integer 1 or -1">;
 def err_invalid_hlsl_resource_type: Error<

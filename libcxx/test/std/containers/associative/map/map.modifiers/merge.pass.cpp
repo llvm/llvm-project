@@ -132,7 +132,7 @@ bool test() {
       first.merge(second);
       first.merge(std::move(second));
     }
-    if (!TEST_IS_CONSTANT_EVALUATED) {
+    {
       std::multimap<int, int> second;
       first.merge(second);
       first.merge(std::move(second));
