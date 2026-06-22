@@ -29,16 +29,28 @@ struct EJitCodePoolMemoryManager::FinalizedInfo {
 class EJitCodePoolMemoryManager::InFlightAllocImpl
     : public JITLinkMemoryManager::InFlightAlloc {
 public:
-  InFlightAllocImpl(EJitCodePoolMemoryManager &, LinkGraph &G, BasicLayout BL,
-                    void *Base)
-      : G(&G), BL(std::move(BL)), Base(Base) {}
+  InFlightAllocImpl(EJitCodePoolMemoryManager &MM, LinkGraph &G, BasicLayout BL,
+                    void *Base, size_t Size)
+      : Pool(&MM.getPool()), G(&G), BL(std::move(BL)), Base(Base), Size(Size) {}
 
   void finalize(OnFinalizedFunction OnFinalized) override {
     // The content has already been written into working memory, which (for an
-    // in-process pool) is the executor memory. Deliberately DO NOT apply any
-    // memory protection here: the pool stays RW until it is sealed as a whole
-    // 2MiB region by EJitCodePoolManager. Likewise we do not invalidate the
-    // instruction cache — enable_ex performs that sync on the target.
+    // in-process pool) is the executor memory, and all JITLink fixups are
+    // applied before finalize() runs. Deliberately DO NOT apply any per-segment
+    // memory protection here (no mprotect): the pool stays RW.
+    //
+    // In 4K seal mode, seal exactly the 4KiB pages this allocation covers now
+    // that all writes/relocations are complete, before the function pointer can
+    // be looked up. If any page fails to seal we must not hand back a callable
+    // allocation. (Legacy whole-pool seal is driven later, at lookup, by the
+    // engine.) We do not invalidate the instruction cache here either \u2014
+    // enable_ex performs that sync on the target.
+    if (Pool->usesPageSeal() && Size > 0) {
+      if (auto Err = Pool->sealCodeRange(Base, Size)) {
+        OnFinalized(std::move(Err));
+        return;
+      }
+    }
     runFinalizeActions(
         G->allocActions(),
         [this, OnFinalized = std::move(OnFinalized)](
@@ -66,9 +78,11 @@ public:
   }
 
 private:
+  EJitCodePoolManager *Pool;
   LinkGraph *G;
   BasicLayout BL;
   void *Base;
+  size_t Size;
 };
 
 EJitCodePoolMemoryManager::EJitCodePoolMemoryManager(EJitCodePoolManager &Pool,
@@ -124,7 +138,8 @@ void EJitCodePoolMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
   }
 
   OnAllocated(
-      std::make_unique<InFlightAllocImpl>(*this, G, std::move(BL), Slab));
+      std::make_unique<InFlightAllocImpl>(*this, G, std::move(BL), Slab,
+                                          static_cast<size_t>(Total)));
 }
 
 void EJitCodePoolMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,

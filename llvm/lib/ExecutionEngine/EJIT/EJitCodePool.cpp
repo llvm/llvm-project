@@ -12,9 +12,23 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
+// Lightweight, default-empty trace hook for code-pool key paths. Expands to
+// nothing unless EJIT_CODE_POOL_TRACE is predefined for on-target bring-up
+// (for example, -D'EJIT_CODE_POOL_TRACE(...)=SRE_printf(__VA_ARGS__)').
+// Arguments are restricted to integers, pointers, and C strings.
+#ifndef EJIT_CODE_POOL_TRACE
+#define EJIT_CODE_POOL_TRACE(...)                                              \
+  do {                                                                         \
+  } while (0)
+#endif
+
 namespace {
 
 inline size_t alignUp(size_t V, size_t A) { return (V + (A - 1)) & ~(A - 1); }
+
+inline uintptr_t alignDownAddr(uintptr_t V, size_t A) {
+  return V & ~(static_cast<uintptr_t>(A) - 1);
+}
 
 inline uintptr_t addr(const void *P) {
   return reinterpret_cast<uintptr_t>(P);
@@ -23,13 +37,24 @@ inline uintptr_t addr(const void *P) {
 } // namespace
 
 EJitCodePoolManager::EJitCodePoolManager(Options Opts, RawAllocFn Alloc,
-                                         SealFn Seal)
-    : Opts_(Opts), Alloc_(std::move(Alloc)), Seal_(std::move(Seal)) {
+                                         SealFn Seal, SplitFn Split)
+    : Opts_(Opts), Alloc_(std::move(Alloc)), Seal_(std::move(Seal)),
+      Split_(std::move(Split)) {
   // minCodeAlign and poolAlign must be powers of two for the masking math.
   if (Opts_.minCodeAlign == 0 || !isPowerOf2_64(Opts_.minCodeAlign))
     Opts_.minCodeAlign = 64;
   if (Opts_.poolAlign == 0 || !isPowerOf2_64(Opts_.poolAlign))
     Opts_.poolAlign = static_cast<size_t>(2) * 1024 * 1024;
+  if (Opts_.fourKSeal) {
+    // 4K seal granularity must be a power of two.
+    if (Opts_.sealPageSize == 0 || !isPowerOf2_64(Opts_.sealPageSize))
+      Opts_.sealPageSize = 4096;
+    // The pool size must be a whole multiple of the large-page / split
+    // granularity (poolAlign); round up if a configured size is not.
+    Opts_.poolSize = alignUp(Opts_.poolSize, Opts_.poolAlign);
+    if (Opts_.poolSize == 0)
+      Opts_.poolSize = Opts_.poolAlign;
+  }
 }
 
 EJitCodePoolManager::~EJitCodePoolManager() = default;
@@ -44,10 +69,19 @@ bool EJitCodePoolManager::poolHasRoomLocked(const CodePool &P, size_t Size,
 }
 
 Error EJitCodePoolManager::newActivePoolLocked() {
-  // raw size must allow rounding the base up to poolAlign while still leaving
-  // poolSize usable bytes: rawSize >= poolSize + poolAlign - 1.
-  size_t RawSize = Opts_.poolSize + Opts_.poolAlign - 1;
+  // Reserve alignment slack so the base can be rounded up to poolAlign while
+  // still leaving poolSize usable bytes. In 4K seal mode the platform contract
+  // wants a full large-page (poolAlign) of slack; legacy mode needs only
+  // poolAlign - 1.
+  size_t RawSize = Opts_.fourKSeal ? (Opts_.poolSize + Opts_.poolAlign)
+                                   : (Opts_.poolSize + Opts_.poolAlign - 1);
+  EJIT_CODE_POOL_TRACE("newActivePool:enter",
+                       (unsigned long long)Opts_.poolSize,
+                       (unsigned)Opts_.fourKSeal,
+                       (unsigned long long)RawSize);
   void *Raw = Alloc_ ? Alloc_(RawSize) : nullptr;
+  EJIT_CODE_POOL_TRACE("newActivePool:rawAlloc", Raw,
+                       (unsigned long long)RawSize);
   if (!Raw)
     return make_error<StringError>(
         "EJitCodePool: raw allocation of " + Twine(RawSize) + " bytes failed",
@@ -56,6 +90,26 @@ Error EJitCodePoolManager::newActivePoolLocked() {
   auto *RawBytes = static_cast<uint8_t *>(Raw);
   auto *Base = reinterpret_cast<uint8_t *>(
       alignUp(addr(RawBytes), Opts_.poolAlign));
+  EJIT_CODE_POOL_TRACE("newActivePool:alignedBase", Base);
+
+  if (Opts_.fourKSeal) {
+    // The 2MiB-aligned usable window must stay inside the raw allocation.
+    if (addr(Base) + Opts_.poolSize > addr(RawBytes) + RawSize)
+      return make_error<StringError>(
+          "EJitCodePool: aligned pool window exceeds raw allocation",
+          inconvertibleErrorCode());
+    // Split the 2MiB-aligned region into 4K mappings before any enable_ex. One
+    // split per pool; per-page enable_ex happens later at seal time.
+    unsigned Rc = Split_ ? Split_(Base, Opts_.poolSize) : 1;
+    EJIT_CODE_POOL_TRACE("newActivePool:splitRc", Base,
+                         (unsigned long long)Opts_.poolSize, Rc);
+    if (Rc != 0)
+      return make_error<StringError>(
+          "EJitCodePool: split_2m_to_4k failed (rc=" + Twine(Rc) +
+              ") for pool base " + Twine(addr(Base)),
+          inconvertibleErrorCode());
+    ++SplitInvocations_;
+  }
 
   auto P = std::make_unique<CodePool>();
   P->raw = RawBytes;
@@ -89,9 +143,16 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
     return make_error<StringError>("EJitCodePool: zero-size allocation",
                                    inconvertibleErrorCode());
 
+  EJIT_CODE_POOL_TRACE("allocateCode:req", (unsigned long long)Size,
+                       (unsigned long long)Align);
+
   size_t EffAlign = std::max(Align, Opts_.minCodeAlign);
   if (!isPowerOf2_64(EffAlign))
     EffAlign = alignUp(EffAlign, Opts_.minCodeAlign);
+  // In 4K seal mode every allocation must start on a fresh seal page so a later
+  // allocation never lands on an already-RX page.
+  if (Opts_.fourKSeal)
+    EffAlign = std::max(EffAlign, Opts_.sealPageSize);
 
   // A single allocation can never span pools; reject oversize requests cleanly.
   if (Size > Opts_.poolSize)
@@ -104,7 +165,25 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
   std::lock_guard<std::mutex> Lock(Mutex_);
 #endif
 
-  // Decide whether we can use the current active pool.
+  if (Opts_.fourKSeal) {
+    // 4K seal mode: never whole-seal a pool on rollover. Individual pages are
+    // sealed at finalize; when the active pool runs out of room we simply move
+    // to a fresh pool (the old pool's already-sealed pages stay RX, any unused
+    // tail is just abandoned RW memory).
+    if (!Active_ || !poolHasRoomLocked(*Active_, Size, EffAlign)) {
+      if (auto Err = newActivePoolLocked())
+        return std::move(Err);
+    }
+    size_t Off = alignUp(Active_->used, EffAlign);
+    uint8_t *Ptr = Active_->base + Off;
+    // Round the bump cursor up to a whole seal page so the next allocation
+    // starts on a page this one does not share.
+    Active_->used = alignUp(Off + Size, Opts_.sealPageSize);
+    EJIT_CODE_POOL_TRACE("allocateCode:res4k", Ptr, (unsigned long long)Size);
+    return static_cast<void *>(Ptr);
+  }
+
+  // Legacy whole-pool seal mode. Decide whether we can use the active pool.
   if (!Active_ || Active_->executable ||
       !poolHasRoomLocked(*Active_, Size, EffAlign)) {
     // Case 3: an unsealed-but-full active pool is sealed before rolling over so
@@ -122,6 +201,7 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
   size_t Off = alignUp(Active_->used, EffAlign);
   uint8_t *Ptr = Active_->base + Off;
   Active_->used = Off + Size;
+  EJIT_CODE_POOL_TRACE("allocateCode:res", Ptr, (unsigned long long)Size);
   return static_cast<void *>(Ptr);
 }
 
@@ -139,6 +219,18 @@ Error EJitCodePoolManager::sealPoolContaining(const void *Ptr) {
 #ifndef EJIT_FREESTANDING
   std::lock_guard<std::mutex> Lock(Mutex_);
 #endif
+  // Whole-pool sealing is meaningless in 4K page-seal mode: a bare pointer
+  // carries no size, so we cannot know which 4K pages to flip. Callers must use
+  // sealCodeRange(start, size) instead. Returning an Error (rather than sealing
+  // the whole pool) prevents the easy misuse of marking a 2MiB pool executable
+  // off a single address.
+  if (Opts_.fourKSeal) {
+    EJIT_CODE_POOL_TRACE("sealPoolContaining:unsupported4k", Ptr);
+    return make_error<StringError>(
+        "EJitCodePool: sealPoolContaining is not supported in 4K page-seal "
+        "mode; use sealCodeRange to seal the written code range",
+        inconvertibleErrorCode());
+  }
   CodePool *P = findPoolLocked(Ptr);
   if (!P)
     return make_error<StringError>(
@@ -152,11 +244,57 @@ Error EJitCodePoolManager::sealAllWritablePools() {
 #ifndef EJIT_FREESTANDING
   std::lock_guard<std::mutex> Lock(Mutex_);
 #endif
+  // Whole-pool sealing is not supported in 4K page-seal mode: in that mode a
+  // pool intentionally stays partially writable (only the 4K pages of finalized
+  // code are RX), so "seal every writable pool" has no correct meaning. Return
+  // an Error rather than silently no-op so a caller cannot mistakenly believe
+  // all pools are now fully sealed. Use sealCodeRange per finalized allocation.
+  if (Opts_.fourKSeal)
+    return make_error<StringError>(
+        "EJitCodePool: sealAllWritablePools (whole-pool sealing) is not "
+        "supported in 4K page-seal mode; use sealCodeRange",
+        inconvertibleErrorCode());
   Error Err = Error::success();
   for (auto &P : Pools_)
     if (!P->executable)
       Err = joinErrors(std::move(Err), sealPoolLocked(*P));
   return Err;
+}
+
+Error EJitCodePoolManager::sealCodeRange(const void *Start, size_t Size) {
+#ifndef EJIT_FREESTANDING
+  std::lock_guard<std::mutex> Lock(Mutex_);
+#endif
+  if (Size == 0)
+    return Error::success();
+  CodePool *P = findPoolLocked(Start);
+  if (!P)
+    return make_error<StringError>(
+        "EJitCodePool: address " + Twine(addr(Start)) +
+            " is not owned by any code pool",
+        inconvertibleErrorCode());
+
+  // Seal every 4KiB page the written code overlaps: page-align the start down
+  // and the end up, then enable_ex(1, pageVA) per page.
+  size_t Page = Opts_.sealPageSize;
+  uintptr_t PageStart = alignDownAddr(addr(Start), Page);
+  uintptr_t PageEnd = alignUp(addr(Start) + Size, Page);
+  EJIT_CODE_POOL_TRACE("sealCodeRange", Start, (unsigned long long)Size,
+                       (unsigned long long)PageStart,
+                       (unsigned long long)PageEnd);
+  for (uintptr_t VA = PageStart; VA < PageEnd; VA += Page) {
+    unsigned Rc = Seal_ ? Seal_(reinterpret_cast<void *>(VA)) : 1;
+    EJIT_CODE_POOL_TRACE("sealCodeRange:pageRc", (unsigned long long)VA, Rc);
+    if (Rc != 0)
+      return make_error<StringError>(
+          "EJitCodePool: enable_ex failed (rc=" + Twine(Rc) + ") for page " +
+              Twine(VA),
+          inconvertibleErrorCode());
+    ++SealInvocations_;
+  }
+  // Per platform guidance, enable_ex performs its own permission/cache
+  // synchronization, so we deliberately do NOT call __builtin___clear_cache.
+  return Error::success();
 }
 
 bool EJitCodePoolManager::contains(const void *Ptr) const {
@@ -179,6 +317,7 @@ EJitCodePoolManager::Stats EJitCodePoolManager::getStats() const {
   Stats S;
   S.poolCount = Pools_.size();
   S.sealInvocations = SealInvocations_;
+  S.splitInvocations = SplitInvocations_;
   for (auto &P : Pools_) {
     S.reservedBytes += P->size;
     S.usedBytes += P->used;

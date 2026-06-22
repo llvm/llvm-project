@@ -110,6 +110,14 @@ if(EJIT_DEFAULT_TARGET_TRIPLE)
     EJIT_DEFAULT_TRIPLE="${EJIT_DEFAULT_TARGET_TRIPLE}")
 endif()
 
+# 4K-granular code-pool sealing. The only user of this macro is the SRE adapter
+# (EJitSrePlatform.cpp), so scope it to LLVMEJIT instead of a global
+# add_definitions — toggling it then does not recompile the whole LLVM tree.
+# Effective only when the SRE code pool itself is enabled.
+if(EJIT_SRE_CODE_POOL AND EJIT_CODE_POOL_4K_SEAL)
+  target_compile_definitions(LLVMEJIT PRIVATE EJIT_CODE_POOL_4K_SEAL)
+endif()
+
 # EJIT_FREESTANDING must be visible in LLVMJITLink headers so that
 # std::promise / std::future usage is guarded (bare-metal has no <future>).
 if(EJIT_FREESTANDING)

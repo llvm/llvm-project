@@ -287,3 +287,249 @@ TEST(EJitCodePool, SealUnknownAddressFails) {
   EXPECT_TRUE(static_cast<bool>(Err));
   consumeError(std::move(Err));
 }
+
+//===----------------------------------------------------------------------===//
+// 4K page-seal mode tests
+//
+// These exercise the SRE-platform 4K execute-permission interface: the pool is
+// still 2MiB-aligned (split into 4K mappings via split_2m_to_4k at creation),
+// but only the 4KiB pages a finalized allocation covers are sealed (enable_ex
+// per page). All injected mocks; no real platform symbols.
+//===----------------------------------------------------------------------===//
+namespace {
+
+constexpr size_t kTwoMiB = static_cast<size_t>(2) * 1024 * 1024;
+constexpr size_t kFourKiB = static_cast<size_t>(4) * 1024;
+
+/// Mock SRE backend for 4K mode: deliberately returns a non-2MiB-aligned raw
+/// base, records split_2m_to_4k(base,size) calls and per-page enable_ex calls,
+/// and can be made to fail split or a chosen seal call.
+struct MockSre4K {
+  std::vector<void *> Origs; // posix_memalign bases (freed at teardown)
+  uintptr_t LastRawReturned = 0;
+  size_t LastBytesRequested = 0;
+  size_t AllocCalls = 0;
+
+  std::vector<std::pair<uintptr_t, size_t>> Splits;
+  unsigned SplitRc = 0;
+
+  std::vector<uintptr_t> SealedPages;
+  size_t SealCalls = 0;
+  int FailSealOnCall = -1; // 1-based seal call index to fail; -1 = never
+  unsigned SealFailRc = 7;
+
+  ~MockSre4K() {
+    for (void *P : Origs)
+      std::free(P);
+  }
+
+  void *rawAlloc(size_t Bytes) {
+    ++AllocCalls;
+    LastBytesRequested = Bytes;
+    void *Base = nullptr;
+    // Over-allocate, 2MiB-aligned, then hand back a deliberately misaligned
+    // pointer (offset 4KiB) so the manager must round the base up to 2MiB.
+    if (posix_memalign(&Base, kTwoMiB, Bytes + kTwoMiB) != 0)
+      return nullptr;
+    Origs.push_back(Base);
+    void *Raw = static_cast<char *>(Base) + kFourKiB;
+    LastRawReturned = reinterpret_cast<uintptr_t>(Raw);
+    return Raw;
+  }
+
+  unsigned split(void *Base, size_t Size) {
+    Splits.push_back({reinterpret_cast<uintptr_t>(Base), Size});
+    return SplitRc;
+  }
+
+  unsigned seal(void *PageVA) {
+    ++SealCalls;
+    if (FailSealOnCall > 0 && static_cast<int>(SealCalls) == FailSealOnCall)
+      return SealFailRc;
+    SealedPages.push_back(reinterpret_cast<uintptr_t>(PageVA));
+    return 0;
+  }
+};
+
+EJitCodePoolManager::Options fourKOpts() {
+  EJitCodePoolManager::Options O;
+  O.poolSize = kTwoMiB;
+  O.poolAlign = kTwoMiB;
+  O.minCodeAlign = 64;
+  O.fourKSeal = true;
+  O.sealPageSize = kFourKiB;
+  return O;
+}
+
+EJitCodePoolManager makeManager4K(MockSre4K &M,
+                                  EJitCodePoolManager::Options Opts) {
+  return EJitCodePoolManager(
+      Opts, [&M](size_t N) { return M.rawAlloc(N); },
+      [&M](void *V) { return M.seal(V); },
+      [&M](void *B, size_t S) { return M.split(B, S); });
+}
+
+} // namespace
+
+// A deliberately non-2MiB-aligned raw base is rounded up to a 2MiB-aligned pool
+// base, and the usable window stays inside the raw allocation.
+TEST(EJitCodePool4K, AlignsMisalignedRawBaseTo2MiB) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  void *P = cantFail(Mgr.allocateCode(128, 64));
+  // First allocation in 4K mode starts at offset 0, i.e. the pool base.
+  EXPECT_EQ(A(P) % kTwoMiB, 0u);          // aligned base is 2MiB aligned
+  EXPECT_TRUE(Mgr.contains(P));
+  EXPECT_NE(A(P), M.LastRawReturned);     // raw base was misaligned, base != raw
+  // Usable window [base, base+poolSize) must fit within [raw, raw+requested).
+  EXPECT_LE(A(P) + kTwoMiB, M.LastRawReturned + M.LastBytesRequested);
+  // The manager requests poolSize + 2MiB of alignment slack.
+  EXPECT_EQ(M.LastBytesRequested, kTwoMiB + kTwoMiB);
+}
+
+// split_2m_to_4k is called exactly once per pool, with the aligned base and the
+// usable pool size; a second allocation in the same pool does not re-split.
+TEST(EJitCodePool4K, SplitCalledOncePerPool) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  void *P = cantFail(Mgr.allocateCode(128, 64));
+  ASSERT_EQ(M.Splits.size(), 1u);
+  EXPECT_EQ(M.Splits[0].first, A(P));      // split base == aligned pool base
+  EXPECT_EQ(M.Splits[0].second, kTwoMiB);  // split size == usable pool size
+  EXPECT_EQ(M.Splits[0].first % kTwoMiB, 0u);
+  EXPECT_EQ(Mgr.getStats().splitInvocations, 1u);
+
+  (void)cantFail(Mgr.allocateCode(128, 64)); // same pool, no new split
+  EXPECT_EQ(M.Splits.size(), 1u);
+  EXPECT_EQ(Mgr.getStats().splitInvocations, 1u);
+}
+
+// A small function seals only the single 4K page it covers, not the whole pool.
+TEST(EJitCodePool4K, SmallCodeSealsOnlyCoveredPage) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  void *P = cantFail(Mgr.allocateCode(100, 64));
+  cantFail(Mgr.sealCodeRange(P, 100));
+
+  EXPECT_EQ(M.SealCalls, 1u); // one page, NOT 512 (the whole 2MiB pool)
+  ASSERT_EQ(M.SealedPages.size(), 1u);
+  EXPECT_EQ(M.SealedPages[0], A(P)); // page base == 4K-aligned code start
+  EXPECT_EQ(Mgr.getStats().sealInvocations, 1u);
+}
+
+// A code range spanning multiple 4K pages loops enable_ex over each page.
+TEST(EJitCodePool4K, MultiPageCodeSealsEachPage) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  size_t Sz = 2 * kFourKiB + 200; // covers 3 pages
+  void *P = cantFail(Mgr.allocateCode(Sz, 64));
+  cantFail(Mgr.sealCodeRange(P, Sz));
+
+  EXPECT_EQ(M.SealCalls, 3u);
+  ASSERT_EQ(M.SealedPages.size(), 3u);
+  EXPECT_EQ(M.SealedPages[0], A(P));
+  EXPECT_EQ(M.SealedPages[1], A(P) + kFourKiB);
+  EXPECT_EQ(M.SealedPages[2], A(P) + 2 * kFourKiB);
+}
+
+// If any page's enable_ex fails, sealCodeRange returns an Error.
+TEST(EJitCodePool4K, EnableExFailureOnAPageReturnsError) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  size_t Sz = 2 * kFourKiB + 200; // 3 pages
+  void *P = cantFail(Mgr.allocateCode(Sz, 64));
+  M.FailSealOnCall = 2; // fail the 2nd page
+
+  Error Err = Mgr.sealCodeRange(P, Sz);
+  EXPECT_TRUE(static_cast<bool>(Err));
+  consumeError(std::move(Err));
+}
+
+// A subsequent allocation lands on a fresh 4K page, never inside a sealed page,
+// and stays in the same (still partially-writable) pool.
+TEST(EJitCodePool4K, NextAllocationSkipsSealedPage) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  void *A1 = cantFail(Mgr.allocateCode(100, 64)); // page 0
+  cantFail(Mgr.sealCodeRange(A1, 100));           // seal page 0
+  void *A2 = cantFail(Mgr.allocateCode(100, 64)); // must be a later page
+
+  EXPECT_TRUE(Mgr.contains(A2));
+  EXPECT_GE(A(A2), A(A1) + kFourKiB);
+  EXPECT_FALSE(A(A2) >= A(A1) && A(A2) < A(A1) + kFourKiB); // not in sealed page
+  EXPECT_EQ(A(A2) % kFourKiB, 0u);                          // fresh page start
+  auto S = Mgr.getStats();
+  EXPECT_EQ(S.poolCount, 1u);          // same pool reused
+  EXPECT_EQ(S.splitInvocations, 1u);
+}
+
+// split_2m_to_4k failure makes pool creation (hence allocateCode) fail cleanly,
+// registering no pool.
+TEST(EJitCodePool4K, SplitFailureFailsPoolCreation) {
+  MockSre4K M;
+  M.SplitRc = 5; // split_2m_to_4k fails
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  auto E = Mgr.allocateCode(128, 64);
+  EXPECT_FALSE(static_cast<bool>(E));
+  consumeError(E.takeError());
+  EXPECT_EQ(Mgr.getStats().poolCount, 0u);
+  EXPECT_EQ(Mgr.getStats().splitInvocations, 0u);
+}
+
+// Rolling over to a new pool splits the new pool exactly once, and no whole-pool
+// seal happens (sealing is per-page at finalize, not on rollover).
+TEST(EJitCodePool4K, RolloverCreatesNewPoolAndSplitsAgain) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  (void)cantFail(Mgr.allocateCode(kTwoMiB, 64)); // fills pool 1 exactly
+  void *P2 = cantFail(Mgr.allocateCode(64, 64)); // forces pool 2
+
+  EXPECT_TRUE(Mgr.contains(P2));
+  auto S = Mgr.getStats();
+  EXPECT_EQ(S.poolCount, 2u);
+  EXPECT_EQ(S.splitInvocations, 2u); // one split per pool
+  EXPECT_EQ(M.SealCalls, 0u);        // no whole-pool seal on rollover
+  EXPECT_EQ(S.sealedCount, 0u);
+}
+
+// In 4K mode the whole-pool seal entry point sealPoolContaining is unsupported
+// (a bare pointer has no size); it must return an Error and never enable_ex.
+TEST(EJitCodePool4K, SealPoolContainingReturnsErrorIn4KMode) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  void *P = cantFail(Mgr.allocateCode(100, 64));
+  Error Err = Mgr.sealPoolContaining(P);
+  EXPECT_TRUE(static_cast<bool>(Err));
+  consumeError(std::move(Err));
+
+  // No enable_ex was invoked and the pool was not marked sealed.
+  EXPECT_EQ(M.SealCalls, 0u);
+  EXPECT_EQ(Mgr.getStats().sealInvocations, 0u);
+  EXPECT_EQ(Mgr.getStats().sealedCount, 0u);
+}
+
+// In 4K mode sealAllWritablePools (whole-pool sealing) is unsupported and must
+// return an Error rather than silently sealing or no-op succeeding.
+TEST(EJitCodePool4K, SealAllWritablePoolsReturnsErrorIn4KMode) {
+  MockSre4K M;
+  auto Mgr = makeManager4K(M, fourKOpts());
+
+  (void)cantFail(Mgr.allocateCode(100, 64));
+  Error Err = Mgr.sealAllWritablePools();
+  EXPECT_TRUE(static_cast<bool>(Err));
+  consumeError(std::move(Err));
+
+  EXPECT_EQ(M.SealCalls, 0u);
+  EXPECT_EQ(Mgr.getStats().sealedCount, 0u);
+}
+
+

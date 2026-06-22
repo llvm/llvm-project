@@ -200,3 +200,175 @@ TEST(EJitCodePoolMemMgr, SecondFunctionUsesNewPoolAfterSeal) {
   cantFail(MM.deallocate(std::move(FA2)));
 }
 
+//===----------------------------------------------------------------------===//
+// 4K page-seal mode tests
+//
+// Drive the memory manager with the pool in 4K seal mode: split_2m_to_4k once
+// per pool at creation, and enable_ex per covered 4KiB page at finalize (the
+// allocate step must not seal anything). All mocks; no real platform symbols.
+//===----------------------------------------------------------------------===//
+namespace {
+
+constexpr size_t kTwoMiB = static_cast<size_t>(2) * 1024 * 1024;
+constexpr size_t kFourKiB = static_cast<size_t>(4) * 1024;
+
+struct MockSre4K {
+  std::vector<void *> Origs;
+  std::vector<std::pair<uintptr_t, size_t>> Splits;
+  unsigned SplitRc = 0;
+  size_t SealCalls = 0;
+  int FailSealOnCall = -1; // 1-based seal index to fail; -1 = never
+  unsigned SealFailRc = 7;
+
+  ~MockSre4K() {
+    for (void *P : Origs)
+      std::free(P);
+  }
+  void *rawAlloc(size_t Bytes) {
+    void *Base = nullptr;
+    // 2MiB-aligned over-allocation; return a deliberately misaligned pointer.
+    if (posix_memalign(&Base, kTwoMiB, Bytes + kTwoMiB) != 0)
+      return nullptr;
+    Origs.push_back(Base);
+    return static_cast<char *>(Base) + kFourKiB;
+  }
+  unsigned split(void *Base, size_t Size) {
+    Splits.push_back({reinterpret_cast<uintptr_t>(Base), Size});
+    return SplitRc;
+  }
+  unsigned seal(void *) {
+    ++SealCalls;
+    if (FailSealOnCall > 0 && static_cast<int>(SealCalls) == FailSealOnCall)
+      return SealFailRc;
+    return 0;
+  }
+};
+
+EJitCodePoolManager::Options fourKMemMgrOpts() {
+  EJitCodePoolManager::Options O;
+  O.poolSize = kTwoMiB;
+  O.poolAlign = kTwoMiB;
+  O.minCodeAlign = 64;
+  O.fourKSeal = true;
+  O.sealPageSize = kFourKiB;
+  return O;
+}
+
+// Backing buffer large enough for a multi-page content block (avoids the 64-byte
+// CodeBytes overread for big graphs).
+const char BigCode[16 * 1024] = {0};
+
+std::unique_ptr<LinkGraph> makeBackedCodeGraph(const char *Buf, size_t Size,
+                                               uint64_t VAddr) {
+  auto G = std::make_unique<LinkGraph>(
+      "g", std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-unknown-linux-gnu"), SubtargetFeatures(),
+      getGenericEdgeKindName);
+  auto &Sec =
+      G->createSection("__text", orc::MemProt::Read | orc::MemProt::Exec);
+  G->createContentBlock(Sec, ArrayRef<char>(Buf, Size),
+                        orc::ExecutorAddr(VAddr), 16, 0);
+  return G;
+}
+
+} // namespace
+
+// allocate() must not seal; finalize() seals exactly the covered 4K page(s);
+// split runs once at pool creation.
+TEST(EJitCodePoolMemMgr4K, FinalizeSealsCoveredPage) {
+  MockSre4K M;
+  EJitCodePoolManager Pool(
+      fourKMemMgrOpts(), [&M](size_t N) { return M.rawAlloc(N); },
+      [&M](void *V) { return M.seal(V); },
+      [&M](void *B, size_t S) { return M.split(B, S); });
+  EJitCodePoolMemoryManager MM(Pool, kFourKiB);
+
+  auto G = makeCodeGraph(64, 0x1000); // 64 bytes -> one 4K page slab
+  auto IFA = cantFail(MM.allocate(nullptr, *G));
+  void *CodeAddr = firstBlockAddr(*G);
+  EXPECT_TRUE(Pool.contains(CodeAddr));
+  EXPECT_EQ(M.SealCalls, 0u); // allocate must not enable_ex
+  EXPECT_EQ(Pool.getStats().splitInvocations, 1u);
+
+  auto FA = cantFail(IFA->finalize()); // seals here
+  EXPECT_EQ(M.SealCalls, 1u);          // only the one covered page
+  EXPECT_EQ(Pool.getStats().sealInvocations, 1u);
+
+  cantFail(MM.deallocate(std::move(FA)));
+}
+
+// A multi-page function seals each covered 4K page at finalize.
+TEST(EJitCodePoolMemMgr4K, FinalizeSealsAllPagesOfMultiPageCode) {
+  MockSre4K M;
+  EJitCodePoolManager Pool(
+      fourKMemMgrOpts(), [&M](size_t N) { return M.rawAlloc(N); },
+      [&M](void *V) { return M.seal(V); },
+      [&M](void *B, size_t S) { return M.split(B, S); });
+  EJitCodePoolMemoryManager MM(Pool, kFourKiB);
+
+  // 9000 bytes of content -> ceil(9000 / 4096) = 3 pages.
+  auto G = makeBackedCodeGraph(BigCode, 9000, 0x1000);
+  auto IFA = cantFail(MM.allocate(nullptr, *G));
+  EXPECT_EQ(M.SealCalls, 0u);
+
+  auto FA = cantFail(IFA->finalize());
+  EXPECT_EQ(M.SealCalls, 3u);
+  EXPECT_EQ(Pool.getStats().sealInvocations, 3u);
+
+  cantFail(MM.deallocate(std::move(FA)));
+}
+
+// If enable_ex fails for any page, finalize returns an Error (no callable
+// pointer is handed back).
+TEST(EJitCodePoolMemMgr4K, FinalizeReturnsErrorWhenSealFails) {
+  MockSre4K M;
+  M.FailSealOnCall = 1; // fail the first page seal
+  EJitCodePoolManager Pool(
+      fourKMemMgrOpts(), [&M](size_t N) { return M.rawAlloc(N); },
+      [&M](void *V) { return M.seal(V); },
+      [&M](void *B, size_t S) { return M.split(B, S); });
+  EJitCodePoolMemoryManager MM(Pool, kFourKiB);
+
+  auto G = makeCodeGraph(64, 0x1000);
+  auto IFA = cantFail(MM.allocate(nullptr, *G));
+  auto FA = IFA->finalize();
+  EXPECT_FALSE(static_cast<bool>(FA)); // finalize failed -> no FinalizedAlloc
+  consumeError(FA.takeError());
+}
+
+// Two functions compiled in turn reuse the SAME 2MiB pool (split once) but land
+// on different 4K pages, and neither lands on the other's sealed page.
+TEST(EJitCodePoolMemMgr4K, SecondFunctionUsesFreshPageSamePool) {
+  MockSre4K M;
+  EJitCodePoolManager Pool(
+      fourKMemMgrOpts(), [&M](size_t N) { return M.rawAlloc(N); },
+      [&M](void *V) { return M.seal(V); },
+      [&M](void *B, size_t S) { return M.split(B, S); });
+  EJitCodePoolMemoryManager MM(Pool, kFourKiB);
+
+  auto G1 = makeCodeGraph(64, 0x1000);
+  auto IFA1 = cantFail(MM.allocate(nullptr, *G1));
+  void *Addr1 = firstBlockAddr(*G1);
+  auto FA1 = cantFail(IFA1->finalize());
+  EXPECT_EQ(M.SealCalls, 1u);
+
+  auto G2 = makeCodeGraph(64, 0x2000);
+  auto IFA2 = cantFail(MM.allocate(nullptr, *G2));
+  void *Addr2 = firstBlockAddr(*G2);
+  auto FA2 = cantFail(IFA2->finalize());
+  EXPECT_EQ(M.SealCalls, 2u);
+
+  auto S = Pool.getStats();
+  EXPECT_EQ(S.poolCount, 1u);        // same pool reused (memory efficient)
+  EXPECT_EQ(S.splitInvocations, 1u); // split once for the one pool
+
+  auto pageOf = [](void *P) {
+    return reinterpret_cast<uintptr_t>(P) & ~static_cast<uintptr_t>(kFourKiB - 1);
+  };
+  EXPECT_NE(pageOf(Addr1), pageOf(Addr2)); // different 4K pages
+
+  cantFail(MM.deallocate(std::move(FA1)));
+  cantFail(MM.deallocate(std::move(FA2)));
+}
+
+
