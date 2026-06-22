@@ -337,7 +337,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_constant_wrapper",
             "values": {
-                "c++26": 202603,
+                "c++26": 202606,
             },
             "headers": ["utility"],
         },
