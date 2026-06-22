@@ -107,6 +107,12 @@ public:
   LLVM_ABI static ErrorOr<TextEncodingConverter> create(StringRef From,
                                                         StringRef To);
 
+  /// Maps the encoding name to enum constant if possible.
+  /// Uses normalized charset name matching.
+  /// \param[in] Name the character encoding name
+  /// \return the TextEncoding enum value if known, std::nullopt otherwise
+  LLVM_ABI static std::optional<TextEncoding> getKnownEncoding(StringRef Name);
+
   TextEncodingConverter(const TextEncodingConverter &) = delete;
   TextEncodingConverter &operator=(const TextEncodingConverter &) = delete;
 

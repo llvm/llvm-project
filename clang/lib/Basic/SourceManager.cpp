@@ -469,11 +469,28 @@ ContentCache &SourceManager::createMemBufferContentCache(
 llvm::ErrorOr<llvm::TextEncodingConverter *>
 SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
                                     llvm::StringRef TargetEncoding) {
-  // Create a cache key from source and target encodings
+  // Use getKnownEncoding to get normalized encoding names
+  std::optional<llvm::TextEncoding> SourceKnown =
+      llvm::TextEncodingConverter::getKnownEncoding(SourceEncoding);
+  std::optional<llvm::TextEncoding> TargetKnown =
+      llvm::TextEncodingConverter::getKnownEncoding(TargetEncoding);
+  
+  if (SourceKnown == TargetKnown)
+    return nullptr;
+
+  // Create a cache key - use enum values for known encodings, raw names otherwise
   llvm::SmallString<64> CacheKey;
-  CacheKey = SourceEncoding;
+  if (SourceKnown) {
+    CacheKey += llvm::Twine(static_cast<int>(*SourceKnown)).str();
+  } else {
+    CacheKey += SourceEncoding;
+  }
   CacheKey += ":";
-  CacheKey += TargetEncoding;
+  if (TargetKnown) {
+    CacheKey += llvm::Twine(static_cast<int>(*TargetKnown)).str();
+  } else {
+    CacheKey += TargetEncoding;
+  }
 
   // First, try to find the converter with a read lock
   {
