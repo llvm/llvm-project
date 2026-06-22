@@ -337,6 +337,13 @@ protected:
   /// Current GISelFlags
   GISelFlags Flags = 0;
 
+  /// Whether the back-end that emitted this RuleMatcher relies on
+  /// RecordNamedOperandMatcher for C++ code to access instruction operands.
+  /// When false, it means the back-end uses other means that we do not know
+  /// about and we thus need to assume ANY operand can be accessed by ANY C++
+  /// code (GenericInstructionPredicateMatcher)
+  bool UsesRecordOperand = true;
+
   std::vector<std::string> RequiredSimplePredicates;
   std::vector<const Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
@@ -372,7 +379,7 @@ protected:
   }
 
 public:
-  RuleMatcher(ArrayRef<SMLoc> SrcLoc);
+  RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand = true);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -389,6 +396,8 @@ public:
   ArrayRef<const Record *> getRequiredFeatures() const {
     return RequiredFeatures;
   }
+
+  bool usesRecordOperand() const { return UsesRecordOperand; }
 
   void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
   int getHwModeIdx() const { return HwModeIdx; }
@@ -672,8 +681,7 @@ public:
   unsigned getOpIdx() const { return OpIdx; }
 
   /// Emit MatchTable opcodes that check the predicate for the given operand.
-  virtual void emitPredicateOpcodes(MatchTable &Table,
-                                    RuleMatcher &Rule) const = 0;
+  virtual void emitPredicateOpcodes(MatchTable &Table) const = 0;
 
   PredicateKind getKind() const { return Kind; }
 
@@ -738,31 +746,34 @@ PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
 /// Generates code to check that a register operand is defined by the same exact
 /// one as another.
 class SameOperandMatcher : public OperandPredicateMatcher {
-  std::string MatchingName;
-  unsigned OrigOpIdx;
+  unsigned OtherInsnID;
+  unsigned OtherOpIdx;
 
   GISelFlags Flags;
 
 public:
-  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName,
-                     unsigned OrigOpIdx, GISelFlags Flags)
+  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, unsigned OtherInsnID,
+                     unsigned OtherOpIdx, GISelFlags Flags)
       : OperandPredicateMatcher(OPM_SameOperand, InsnVarID, OpIdx),
-        MatchingName(MatchingName), OrigOpIdx(OrigOpIdx), Flags(Flags) {}
+        OtherInsnID(OtherInsnID), OtherOpIdx(OtherOpIdx), Flags(Flags) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_SameOperand;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
-           OrigOpIdx == cast<SameOperandMatcher>(&B)->OrigOpIdx &&
-           MatchingName == cast<SameOperandMatcher>(&B)->MatchingName;
+           OtherInsnID == cast<SameOperandMatcher>(&B)->OtherInsnID &&
+           OtherOpIdx == cast<SameOperandMatcher>(&B)->OtherOpIdx;
   }
 
-  virtual bool canHoistOutsideOf(const Matcher &M) const override;
+  virtual bool canHoistOutsideOf(const Matcher &M) const override {
+    // We can only hoist these if they only refer to the root instruction.
+    // We do not support hoisting predicates on non-root instructions.
+    return OtherInsnID == 0 && InsnVarID == 0;
+  }
 };
 
 /// Generates code to check that an operand is a particular LLT.
@@ -804,8 +815,7 @@ public:
 
   LLTCodeGen getTy() const { return Ty; }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that the element count & element sizes are the same.
@@ -867,8 +877,7 @@ public:
            SizeInBits == cast<PointerToAnyOperandMatcher>(&B)->SizeInBits;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to record named operand in RecordedOperands list at StoreIdx.
@@ -895,8 +904,7 @@ public:
            Name == cast<RecordNamedOperandMatcher>(&B)->Name;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to store a register operand's type into the set of temporary
@@ -919,8 +927,7 @@ public:
            Idx == cast<RecordRegisterType>(&B)->Idx;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that an operand is a particular target constant.
@@ -944,8 +951,7 @@ public:
     return P->getKind() == OPM_ComplexPattern;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
   unsigned countRendererFns() const override { return 1; }
 };
 
@@ -965,8 +971,7 @@ public:
     return P->getKind() == OPM_RegBank;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that an operand is a basic block.
@@ -979,8 +984,7 @@ public:
     return P->getKind() == OPM_MBB;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 class ImmOperandMatcher : public OperandPredicateMatcher {
@@ -992,8 +996,7 @@ public:
     return P->getKind() == OPM_Imm;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that an operand is a G_CONSTANT with a particular
@@ -1015,8 +1018,7 @@ public:
     return P->getKind() == OPM_Int;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that an operand is a raw int (where MO.isImm() or
@@ -1039,8 +1041,7 @@ public:
     return P->getKind() == OPM_LiteralInt;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that an operand is an CmpInst predicate
@@ -1062,8 +1063,7 @@ public:
     return P->getKind() == OPM_CmpPredicate;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that an operand is an intrinsic ID.
@@ -1085,8 +1085,7 @@ public:
     return P->getKind() == OPM_IntrinsicID;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that this operand is an immediate whose value meets
@@ -1112,8 +1111,7 @@ public:
     return P->getKind() == OPM_ImmPredicate;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that this operand is a register whose value meets
@@ -1132,8 +1130,7 @@ public:
     return P->getKind() == OPM_LeafPredicate;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that a set of predicates match for a particular
@@ -1201,7 +1198,7 @@ public:
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarID matches all the predicates and all the operands.
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule);
+  void emitPredicateOpcodes(MatchTable &Table);
 
   /// Compare the priority of this object and B.
   ///
@@ -1290,8 +1287,7 @@ public:
   // return a list of the opcodes to match.
   RecordAndValue getValue() const override;
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 
   /// Compare the priority of this object and B.
   ///
@@ -1333,8 +1329,7 @@ public:
     return NumOperands == Other.NumOperands && CK == Other.CK;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that this instruction is a constant whose value
@@ -1380,8 +1375,7 @@ public:
     return P->getKind() == IPM_ImmPredicate;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that a memory instruction has a atomic ordering
@@ -1410,8 +1404,7 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override;
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that the size of an MMO is exactly N bytes.
@@ -1434,8 +1427,7 @@ public:
            Size == cast<MemorySizePredicateMatcher>(&B)->Size;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 class MemoryAddressSpacePredicateMatcher : public InstructionPredicateMatcher {
@@ -1455,8 +1447,7 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override;
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 class MemoryAlignmentPredicateMatcher : public InstructionPredicateMatcher {
@@ -1478,8 +1469,7 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override;
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check that the size of an MMO is less-than, equal-to, or
@@ -1508,8 +1498,7 @@ public:
   }
   bool isIdentical(const PredicateMatcher &B) const override;
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 // Matcher for immAllOnesV/immAllZerosV
@@ -1533,8 +1522,7 @@ public:
            Kind == static_cast<const VectorSplatImmPredicateMatcher &>(B).Kind;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check an arbitrary C++ instruction predicate.
@@ -1555,8 +1543,7 @@ public:
     return P->getKind() == IPM_GenericPredicate;
   }
   bool isIdentical(const PredicateMatcher &B) const override;
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 
   bool canHoistOutsideOf(const Matcher &M) const override {
     // We can only hoist C++ code if the parent Matcher does not define any
@@ -1585,8 +1572,7 @@ public:
   }
 
   bool isIdentical(const PredicateMatcher &B) const override;
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to check for the absence of use of the result.
@@ -1604,8 +1590,7 @@ public:
     return InstructionPredicateMatcher::isIdentical(B);
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override {
+  void emitPredicateOpcodes(MatchTable &Table) const override {
     Table << MatchTable::Opcode("GIM_CheckHasNoUse")
           << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
           << MatchTable::LineBreak;
@@ -1626,8 +1611,7 @@ public:
     return InstructionPredicateMatcher::isIdentical(B);
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override {
+  void emitPredicateOpcodes(MatchTable &Table) const override {
     Table << MatchTable::Opcode("GIM_CheckHasOneUse")
           << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
           << MatchTable::LineBreak;
@@ -1718,7 +1702,7 @@ public:
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
-  void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule);
+  void emitPredicateOpcodes(MatchTable &Table);
 
   /// Compare the priority of this object and B.
   ///
@@ -1773,11 +1757,10 @@ public:
 
   InstructionMatcher &getInsnMatcher() const { return InsnMatcher; }
 
-  void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule) const;
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const override {
-    emitCaptureOpcodes(Table, Rule);
-    InsnMatcher.emitPredicateOpcodes(Table, Rule);
+  void emitCaptureOpcodes(MatchTable &Table) const;
+  void emitPredicateOpcodes(MatchTable &Table) const override {
+    emitCaptureOpcodes(Table);
+    InsnMatcher.emitPredicateOpcodes(Table);
   }
 
   bool isHigherPriorityThan(const OperandPredicateMatcher &B) const override;
@@ -1818,8 +1801,7 @@ public:
 
   RendererKind getKind() const { return Kind; }
 
-  virtual void emitRenderOpcodes(MatchTable &Table,
-                                 RuleMatcher &Rule) const = 0;
+  virtual void emitRenderOpcodes(MatchTable &Table) const = 0;
 };
 
 /// A CopyRenderer emits code to copy a single operand from an existing
@@ -1827,14 +1809,20 @@ public:
 class CopyRenderer : public OperandRenderer {
 protected:
   unsigned NewInsnID;
-  /// The name of the operand.
-  const StringRef SymbolicName;
+  StringRef SymbolicName;
+  unsigned OldInsnID;
+  unsigned OldOpIdx;
+  bool OldOpIsVariadic = false;
 
 public:
-  CopyRenderer(unsigned NewInsnID, StringRef SymbolicName)
+  CopyRenderer(unsigned NewInsnID, RuleMatcher &RM, StringRef SymbolicName)
       : OperandRenderer(OR_Copy), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName) {
     assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");
+    const OperandMatcher &Operand = RM.getOperandMatcher(SymbolicName);
+    OldInsnID = Operand.getInstructionMatcher().getInsnVarID();
+    OldOpIdx = Operand.getOpIdx();
+    OldOpIsVariadic = Operand.isVariadic();
   }
 
   static bool classof(const OperandRenderer *R) {
@@ -1843,12 +1831,11 @@ public:
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
-  static void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                unsigned NewInsnID, unsigned OldInsnID,
-                                unsigned OpIdx, StringRef Name,
-                                bool ForVariadic = false);
+  static void emitRenderOpcodes(MatchTable &Table, unsigned NewInsnID,
+                                unsigned OldInsnID, unsigned OpIdx,
+                                StringRef Name, bool ForVariadic = false);
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// A CopyRenderer emits code to copy a virtual register to a specific physical
@@ -1857,11 +1844,16 @@ class CopyPhysRegRenderer : public OperandRenderer {
 protected:
   unsigned NewInsnID;
   const Record *PhysReg;
+  unsigned OldInsnID;
+  unsigned OldOpIdx;
 
 public:
-  CopyPhysRegRenderer(unsigned NewInsnID, const Record *Reg)
+  CopyPhysRegRenderer(unsigned NewInsnID, RuleMatcher &RM, const Record *Reg)
       : OperandRenderer(OR_CopyPhysReg), NewInsnID(NewInsnID), PhysReg(Reg) {
     assert(PhysReg);
+    const OperandMatcher &Operand = RM.getPhysRegOperandMatcher(PhysReg);
+    OldInsnID = Operand.getInstructionMatcher().getInsnVarID();
+    OldOpIdx = Operand.getOpIdx();
   }
 
   static bool classof(const OperandRenderer *R) {
@@ -1870,7 +1862,7 @@ public:
 
   const Record *getPhysReg() const { return PhysReg; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// A CopyOrAddZeroRegRenderer emits code to copy a single operand from an
@@ -1882,13 +1874,19 @@ protected:
   /// The name of the operand.
   const StringRef SymbolicName;
   const Record *ZeroRegisterDef;
+  unsigned OldInsnID;
+  unsigned OldOpIdx;
 
 public:
-  CopyOrAddZeroRegRenderer(unsigned NewInsnID, StringRef SymbolicName,
+  CopyOrAddZeroRegRenderer(unsigned NewInsnID, RuleMatcher &RM,
+                           StringRef SymbolicName,
                            const Record *ZeroRegisterDef)
       : OperandRenderer(OR_CopyOrAddZeroReg), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName), ZeroRegisterDef(ZeroRegisterDef) {
     assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");
+    const OperandMatcher &Operand = RM.getOperandMatcher(SymbolicName);
+    OldInsnID = Operand.getInstructionMatcher().getInsnVarID();
+    OldOpIdx = Operand.getOpIdx();
   }
 
   static bool classof(const OperandRenderer *R) {
@@ -1897,7 +1895,7 @@ public:
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// A CopyConstantAsImmRenderer emits code to render a G_CONSTANT instruction to
@@ -1908,11 +1906,16 @@ protected:
   /// The name of the operand.
   const std::string SymbolicName;
   bool Signed = true;
+  unsigned OldInsnID;
 
 public:
-  CopyConstantAsImmRenderer(unsigned NewInsnID, StringRef SymbolicName)
+  CopyConstantAsImmRenderer(unsigned NewInsnID, RuleMatcher &RM,
+                            StringRef SymbolicName)
       : OperandRenderer(OR_CopyConstantAsImm), NewInsnID(NewInsnID),
-        SymbolicName(SymbolicName) {}
+        SymbolicName(SymbolicName) {
+    InstructionMatcher &InsnMatcher = RM.getInstructionMatcher(SymbolicName);
+    OldInsnID = InsnMatcher.getInsnVarID();
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopyConstantAsImm;
@@ -1920,7 +1923,7 @@ public:
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// A CopyFConstantAsFPImmRenderer emits code to render a G_FCONSTANT
@@ -1930,11 +1933,16 @@ protected:
   unsigned NewInsnID;
   /// The name of the operand.
   const std::string SymbolicName;
+  unsigned OldInsnID;
 
 public:
-  CopyFConstantAsFPImmRenderer(unsigned NewInsnID, StringRef SymbolicName)
+  CopyFConstantAsFPImmRenderer(unsigned NewInsnID, RuleMatcher &RM,
+                               StringRef SymbolicName)
       : OperandRenderer(OR_CopyFConstantAsFPImm), NewInsnID(NewInsnID),
-        SymbolicName(SymbolicName) {}
+        SymbolicName(SymbolicName) {
+    InstructionMatcher &InsnMatcher = RM.getInstructionMatcher(SymbolicName);
+    OldInsnID = InsnMatcher.getInsnVarID();
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopyFConstantAsFPImm;
@@ -1942,7 +1950,7 @@ public:
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// A CopySubRegRenderer emits code to copy a single register operand from an
@@ -1955,12 +1963,18 @@ protected:
   const StringRef SymbolicName;
   /// The subregister to extract.
   const CodeGenSubRegIndex *SubReg;
+  unsigned OldInsnID;
+  unsigned OldOpIdx;
 
 public:
-  CopySubRegRenderer(unsigned NewInsnID, StringRef SymbolicName,
-                     const CodeGenSubRegIndex *SubReg)
+  CopySubRegRenderer(unsigned NewInsnID, RuleMatcher &RM,
+                     StringRef SymbolicName, const CodeGenSubRegIndex *SubReg)
       : OperandRenderer(OR_CopySubReg), NewInsnID(NewInsnID),
-        SymbolicName(SymbolicName), SubReg(SubReg) {}
+        SymbolicName(SymbolicName), SubReg(SubReg) {
+    const OperandMatcher &Operand = RM.getOperandMatcher(SymbolicName);
+    OldInsnID = Operand.getInstructionMatcher().getInsnVarID();
+    OldOpIdx = Operand.getOpIdx();
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopySubReg;
@@ -1968,7 +1982,7 @@ public:
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// Adds a specific physical register to the instruction being built.
@@ -1992,7 +2006,7 @@ public:
     return R->getKind() == OR_Register;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// Adds a specific temporary virtual register to the instruction being built.
@@ -2017,7 +2031,7 @@ public:
     return R->getKind() == OR_TempRegister;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// Adds a specific immediate to the instruction being built.
@@ -2042,10 +2056,10 @@ public:
     return R->getKind() == OR_Imm;
   }
 
-  static void emitAddImm(MatchTable &Table, RuleMatcher &RM, unsigned InsnID,
-                         int64_t Imm, StringRef ImmName = "Imm");
+  static void emitAddImm(MatchTable &Table, unsigned InsnID, int64_t Imm,
+                         StringRef ImmName = "Imm");
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// Adds an enum value for a subreg index to the instruction being built.
@@ -2062,7 +2076,7 @@ public:
     return R->getKind() == OR_SubRegIndex;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// Adds operands by calling a renderer function supplied by the ComplexPattern
@@ -2099,7 +2113,7 @@ public:
     return R->getKind() == OR_ComplexPattern;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// Adds an intrinsic ID operand to the instruction being built.
@@ -2116,7 +2130,7 @@ public:
     return R->getKind() == OR_Intrinsic;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 class CustomRenderer : public OperandRenderer {
@@ -2125,18 +2139,22 @@ protected:
   const Record &Renderer;
   /// The name of the operand.
   const std::string SymbolicName;
+  unsigned OldInsnID;
 
 public:
-  CustomRenderer(unsigned InsnID, const Record &Renderer,
+  CustomRenderer(unsigned InsnID, RuleMatcher &RM, const Record &Renderer,
                  StringRef SymbolicName)
       : OperandRenderer(OR_Custom), InsnID(InsnID), Renderer(Renderer),
-        SymbolicName(SymbolicName) {}
+        SymbolicName(SymbolicName) {
+    InstructionMatcher &InsnMatcher = RM.getInstructionMatcher(SymbolicName);
+    OldInsnID = InsnMatcher.getInsnVarID();
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Custom;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 class CustomOperandRenderer : public OperandRenderer {
@@ -2145,18 +2163,24 @@ protected:
   const Record &Renderer;
   /// The name of the operand.
   const std::string SymbolicName;
+  unsigned OldInsnID;
+  unsigned OldOpIdx;
 
 public:
-  CustomOperandRenderer(unsigned InsnID, const Record &Renderer,
-                        StringRef SymbolicName)
+  CustomOperandRenderer(unsigned InsnID, RuleMatcher &RM,
+                        const Record &Renderer, StringRef SymbolicName)
       : OperandRenderer(OR_CustomOperand), InsnID(InsnID), Renderer(Renderer),
-        SymbolicName(SymbolicName) {}
+        SymbolicName(SymbolicName) {
+    const OperandMatcher &OM = RM.getOperandMatcher(SymbolicName);
+    OldInsnID = OM.getInsnVarID();
+    OldOpIdx = OM.getOpIdx();
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CustomOperand;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
 /// An action taken when all Matcher predicates succeeded for a parent rule.
@@ -2184,19 +2208,17 @@ public:
   virtual ~MatchAction() = default;
 
   // Some actions may need to add extra predicates to ensure they can run.
-  virtual void emitAdditionalPredicates(MatchTable &Table,
-                                        RuleMatcher &Rule) const {}
+  virtual void emitAdditionalPredicates(MatchTable &Table) const {}
 
   /// Emit the MatchTable opcodes to implement the action.
-  virtual void emitActionOpcodes(MatchTable &Table,
-                                 RuleMatcher &Rule) const = 0;
+  virtual void emitActionOpcodes(MatchTable &Table) const = 0;
 
-  /// If this opcode has an overload that can call GIR_Done directly, emit that
-  /// instead of the usual opcode and return "true". Return "false" if GIR_Done
-  /// still needs to be emitted.
+  /// If this opcode has an overload that can call GIR_Done directly, call \p
+  /// OnDone, emit the opcode, and return true. Otherwise, emit the normal
+  /// action opcode and return false.
   virtual bool emitActionOpcodesAndDone(MatchTable &Table,
-                                        RuleMatcher &Rule) const {
-    emitActionOpcodes(Table, Rule);
+                                        function_ref<void()> OnDone) const {
+    emitActionOpcodes(Table);
     return false;
   }
 
@@ -2216,7 +2238,7 @@ public:
     return A->getKind() == AK_DebugComment;
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+  void emitActionOpcodes(MatchTable &Table) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
 };
@@ -2234,13 +2256,28 @@ private:
   std::vector<const InstructionMatcher *> CopiedFlags;
   std::vector<StringRef> SetFlags;
   std::vector<StringRef> UnsetFlags;
+  std::vector<unsigned> MergeInsnIDs;
 
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate(RuleMatcher &Rule, const InstructionMatcher *Insn) const;
 
 public:
-  BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
-      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I) {}
+  BuildMIAction(unsigned InsnID, RuleMatcher &RM, const CodeGenInstruction *I)
+      : MatchAction(AK_BuildMI), InsnID(InsnID), I(I) {
+
+    // Emit the ID's for all the instructions that are matched by this rule.
+    // TODO: Limit this to matched instructions that mayLoad/mayStore or have
+    //       some other means of having a memoperand. Also limit this to
+    //       emitted instructions that expect to have a memoperand too. For
+    //       example, (G_SEXT (G_LOAD x)) that results in separate load and
+    //       sign-extend instructions shouldn't put the memoperand on the
+    //       sign-extend since it has no effect there.
+    if (I->mayLoad || I->mayStore) {
+      for (const auto &Matcher : RM.all_instmatchers())
+        MergeInsnIDs.push_back(Matcher->getInsnVarID());
+      llvm::sort(MergeInsnIDs);
+    }
+  }
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_BuildMI;
@@ -2265,7 +2302,7 @@ public:
     return *static_cast<Kind *>(OperandRenderers.back().get());
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitActionOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to create a constant that defines a TempReg.
@@ -2283,7 +2320,7 @@ public:
     return A->getKind() == AK_BuildConstantMI;
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitActionOpcodes(MatchTable &Table) const override;
 };
 
 class EraseInstAction : public MatchAction {
@@ -2299,9 +2336,9 @@ public:
     return A->getKind() == AK_EraseInst;
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitActionOpcodes(MatchTable &Table) const override;
   bool emitActionOpcodesAndDone(MatchTable &Table,
-                                RuleMatcher &Rule) const override;
+                                function_ref<void()> OnDone) const override;
 };
 
 class ReplaceRegAction : public MatchAction {
@@ -2323,9 +2360,8 @@ public:
     return A->getKind() == AK_ReplaceReg;
   }
 
-  void emitAdditionalPredicates(MatchTable &Table,
-                                RuleMatcher &Rule) const override;
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitAdditionalPredicates(MatchTable &Table) const override;
+  void emitActionOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to constrain the operands of an output instruction to the
@@ -2341,7 +2377,7 @@ public:
     return A->getKind() == AK_ConstraintOpsToDef;
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+  void emitActionOpcodes(MatchTable &Table) const override {
     if (InsnID == 0) {
       Table << MatchTable::Opcode("GIR_RootConstrainSelectedInstOperands")
             << MatchTable::LineBreak;
@@ -2370,7 +2406,7 @@ public:
     return A->getKind() == AK_ConstraintOpsToRC;
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitActionOpcodes(MatchTable &Table) const override;
 };
 
 /// Generates code to create a temporary register which can be used to chain
@@ -2391,7 +2427,7 @@ public:
     return A->getKind() == AK_MakeTempReg;
   }
 
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+  void emitActionOpcodes(MatchTable &Table) const override;
 };
 
 } // namespace gi

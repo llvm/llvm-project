@@ -32,6 +32,7 @@ from __future__ import annotations
 
 # System modules
 import abc
+import errno
 from functools import wraps
 import gc
 import io
@@ -46,7 +47,7 @@ import sys
 import time
 import datetime
 import traceback
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 # Third-party modules
 import unittest
@@ -791,7 +792,21 @@ class Base(unittest.TestCase):
                 "MAX_PATH limit): {}".format(bdir)
             )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            shutil.rmtree(bdir)
+            # Tolerate files vanishing mid-walk. Clang's implicit module
+            # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
+            # tied to the holding process; a concurrent or just-exited
+            # clang can unlink one between rmtree's scandir and unlink,
+            # raising ENOENT. The dir is going away anyway, so treat
+            # already-gone entries as success.
+            def _ignore_enoent(func, path, exc_info):
+                if (
+                    isinstance(exc_info[1], OSError)
+                    and exc_info[1].errno == errno.ENOENT
+                ):
+                    return
+                raise exc_info[1]
+
+            shutil.rmtree(bdir, onerror=_ignore_enoent)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
@@ -1601,6 +1616,38 @@ class Base(unittest.TestCase):
             raise Exception("Don't know how to build binary")
 
         self.runBuildCommand(command)
+
+    def build_and_run(
+        self,
+        build_dictionary: dict[str, str] | None = None,
+        file_name: str = "",
+        comment: str = "// break here",
+    ) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
+        """
+        Builds the target binary, launches it and runs to the breakpoint
+        location specified by the '// break here' comment.
+
+        Returns the target/process/thread/breakpoint returned from
+        lldbutil.run_to_name_breakpoint
+        """
+        self.build(dictionary=build_dictionary)
+
+        if file_name:
+            main_candidates = [file_name]
+        else:
+            main_candidates = ["main.c", "main.cpp", "main.m", "main.mm"]
+
+        for candidate in main_candidates:
+            if os.path.exists(candidate):
+                return lldbutil.run_to_source_breakpoint(
+                    self, comment, lldb.SBFileSpec(candidate, False)
+                )
+
+        self.fail(
+            f"Could not find any main file in {self.mydir}."
+            + "Searched: "
+            + ", ".join(main_candidates)
+        )
 
     def runBuildCommand(self, command):
         self.trace(shlex.join(command))

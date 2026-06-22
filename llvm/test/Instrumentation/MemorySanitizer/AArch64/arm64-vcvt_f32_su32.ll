@@ -75,9 +75,9 @@ define <4 x float> @cvtf16(<4 x i16> %a) nounwind readnone ssp sanitize_memory {
 ; CHECK-SAME: <4 x i16> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[VCVT1_I:%.*]] = tail call <4 x float> @llvm.aarch64.neon.vcvthf2fp(<4 x i16> [[A]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[A]] to <4 x half>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[VCVT1_I:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[VCVT1_I]]
 ;
@@ -92,9 +92,9 @@ define <4 x float> @cvtf16_high(<8 x i16> %a) nounwind readnone ssp sanitize_mem
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> splat (i16 -1), <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[IN:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i16> [[_MSPROP]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[VCVT1_I:%.*]] = tail call <4 x float> @llvm.aarch64.neon.vcvthf2fp(<4 x i16> [[IN]]) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[IN]] to <4 x half>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[_MSPROP]] to <4 x i32>
+; CHECK-NEXT:    [[VCVT1_I:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[VCVT1_I]]
 ;
@@ -110,9 +110,9 @@ define <4 x i16> @cvtf16f32(<4 x float> %a) nounwind readnone ssp  sanitize_memo
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[VCVT1_I:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.vcvtfp2hf(<4 x float> [[A]]) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = fptrunc <4 x float> [[A]] to <4 x half>
+; CHECK-NEXT:    [[VCVT1_I:%.*]] = bitcast <4 x half> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[VCVT1_I]]
 ;
@@ -126,9 +126,9 @@ define <8 x i16> @cvtf16f32_high(<4 x i16> %low, <4 x float> %high_big)  sanitiz
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[HIGH:%.*]] = call <4 x i16> @llvm.aarch64.neon.vcvtfp2hf(<4 x float> [[HIGH_BIG]])
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = fptrunc <4 x float> [[HIGH_BIG]] to <4 x half>
+; CHECK-NEXT:    [[HIGH:%.*]] = bitcast <4 x half> [[TMP5]] to <4 x i16>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[LOW]], <4 x i16> [[HIGH]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8

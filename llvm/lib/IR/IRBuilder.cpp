@@ -697,7 +697,8 @@ CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
   assert(Mask && "Mask should not be all-ones (null)");
   if (!PassThru)
     PassThru = PoisonValue::get(Ty);
-  Type *OverloadedTypes[] = {Ty};
+  Type *PtrTy = Ptr->getType();
+  Type *OverloadedTypes[] = {Ty, PtrTy};
   Value *Ops[] = {Ptr, Mask, PassThru};
   CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_expandload, Ops,
                                        OverloadedTypes, Name);
@@ -718,7 +719,8 @@ CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
   Type *DataTy = Val->getType();
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
-  Type *OverloadedTypes[] = {DataTy};
+  Type *PtrTy = Ptr->getType();
+  Type *OverloadedTypes[] = {DataTy, PtrTy};
   Value *Ops[] = {Val, Ptr, Mask};
   CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_compressstore, Ops,
                                        OverloadedTypes);
@@ -1372,9 +1374,7 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
   assert(Alignment != 0 && "Invalid Alignment");
-  auto *PtrTy = cast<PointerType>(PtrValue->getType());
-  Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
-  Value *AlignValue = ConstantInt::get(IntPtrTy, Alignment);
+  Value *AlignValue = ConstantInt::get(getInt64Ty(), Alignment);
   return CreateAlignmentAssumptionHelper(DL, PtrValue, AlignValue, OffsetValue);
 }
 
