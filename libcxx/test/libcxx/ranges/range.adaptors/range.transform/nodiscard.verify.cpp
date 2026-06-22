@@ -48,7 +48,7 @@ void test() {
 
   // [range.transform.iterator]
 
-  auto it = v.base();
+  auto it = v.begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(it).base();
