@@ -51,11 +51,9 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
   getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, B, *this);
 
   // With both the LHS and RHS evaluated, process the operation itself.
-  for (ExplodedNodeSet::iterator it=CheckedSet.begin(), ei=CheckedSet.end();
-         it != ei; ++it) {
-
-    ProgramStateRef state = (*it)->getState();
-    const StackFrame *SF = (*it)->getStackFrame();
+  for (ExplodedNode *N : CheckedSet) {
+    ProgramStateRef state = N->getState();
+    const StackFrame *SF = N->getStackFrame();
     SVal LeftV = state->getSVal(LHS, SF);
     SVal RightV = state->getSVal(RHS, SF);
 
@@ -72,13 +70,13 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Simulate the effects of a "store":  bind the value of the RHS
       // to the L-Value represented by the LHS.
       SVal ExprVal = B->isGLValue() ? LeftV : RightV;
-      evalStore(Tmp2, B, LHS, *it, state->BindExpr(B, SF, ExprVal), LeftV,
+      evalStore(Tmp2, B, LHS, N, state->BindExpr(B, SF, ExprVal), LeftV,
                 RightV);
       continue;
     }
 
     if (!B->isAssignmentOp()) {
-      NodeBuilder Bldr(*it, Tmp2, *currBldrCtx);
+      NodeBuilder Bldr(N, Tmp2, *currBldrCtx);
 
       if (B->isAdditiveOp()) {
         // TODO: This can be removed after we enable history tracking with
@@ -109,7 +107,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         state = escapeValues(state, RightV, PSK_EscapeOther);
       }
 
-      Bldr.generateNode(B, *it, state);
+      Bldr.generateNode(B, N, state);
       continue;
     }
 
@@ -134,7 +132,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     // null dereferences, and so on.
     ExplodedNodeSet Tmp;
     SVal location = LeftV;
-    evalLoad(Tmp, B, LHS, *it, state, location);
+    evalLoad(Tmp, B, LHS, N, state, location);
 
     for (ExplodedNode *N : Tmp) {
       state = N->getState();
