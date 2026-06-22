@@ -2,6 +2,18 @@
 
 #include <stdio.h>
 
+// The dummy var is used for testing the hugify feature on pre-5.10 kernels,
+// which do not include the patch "fs/binfmt_elf: use PT_LOAD p_align values for
+// suitable start address".
+// The code size of the hugify test with the dummy var is about 2 MB. This
+// allows testing a corner case where the left (rounded down) and right (rounded
+// up) boundaries are located in different hugepages when the segment is mapped
+// with page alignment instead of the expected segment alignment. It is expected
+// that the hugified binary (PIE only) doesn't crash with a segfault, even in
+// the case of unexpected segment alignment, on pre-5.10 kernels.
+const char dummy_const_var_in_text[2 * 1024 * 1024 - 0x1000]
+    __attribute__((section(".text")));
+
 int main(int argc, char **argv) {
   printf("Hello world\n");
   return 0;
