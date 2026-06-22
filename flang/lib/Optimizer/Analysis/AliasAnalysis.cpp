@@ -1304,6 +1304,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                   type = SourceKind::Allocate;
                   v = def;
                   defOp = nullptr;
+                } else if (boxSrc.kind == SourceKind::HostAssoc) {
+                  // Box loaded from a host-associated descriptor: classify
+                  // the dereferenced target as HostAssoc (not Indirect) so
+                  // alias() can apply the host-assoc/pointer rules instead
+                  // of coarsening to MayAlias. The access path (PointerDeref/
+                  // AllocDeref step) and Pointer attribute were already set
+                  // above, so the resulting Source matches the one that
+                  // buildSourceAtDeclare() rebuilds during scope-aware
+                  // refinement.
+                  type = SourceKind::HostAssoc;
+                  v = def;
+                  defOp = nullptr;
                 } else if (isDummyArgument(def)) {
                   defOp = nullptr;
                   v = def;
