@@ -6962,9 +6962,6 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
           return false;
       }
 
-      if (IsUnion && !this->emitActivate(InitExpr))
-        return false;
-
       if (!this->visitInitializerPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
