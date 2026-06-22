@@ -2430,6 +2430,7 @@ cc_library(
         "Process/Windows/Common/**/*.h",
     ]),
     includes = [".."],
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:windows": [],
         "//conditions:default": ["@platforms//:incompatible"],
