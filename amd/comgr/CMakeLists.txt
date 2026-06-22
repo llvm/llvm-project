@@ -211,11 +211,11 @@ target_include_directories(amd_comgr
 
 # The hotswap subdirectory is added unconditionally below (around the
 # add_subdirectory(src/hotswap) line) so the OBJECT library is available
-# to the test-unit suite; here we opt amd_comgr into linking the
-# transpiler in (its TUs land in amd_comgr.so) and exposing the
-# `amd_comgr_hotswap_transpile` entry point.
+# to the test-unit suite; here we opt amd_comgr into exposing the
+# `amd_comgr_hotswap_transpile` entry point. The transpiler link edge is
+# added after the curated LLVM/LLD link block below (see "hotswap transpiler
+# link edge"), not here.
 if(COMGR_ENABLE_HOTSWAP_TRANSPILE)
-  target_link_libraries(amd_comgr PRIVATE hotswap::transpiler)
   target_compile_definitions(amd_comgr PRIVATE COMGR_ENABLE_HOTSWAP_TRANSPILE=1)
 endif()
 
@@ -601,6 +601,13 @@ target_link_libraries(amd_comgr
     ${LLD_LIBS}
     ${LLVM_LIBS}
     ${CLANG_LIBS})
+
+# hotswap transpiler link edge — must come after the curated LLVM set above so
+# static-archive resolution pulls in the full set (incl. LLVMCodeGen's -mcpu
+# registration) before the transpiler's partial LLVM deps.
+if(COMGR_ENABLE_HOTSWAP_TRANSPILE)
+  target_link_libraries(amd_comgr PRIVATE hotswap::transpiler)
+endif()
 
 if(TARGET embedded-resource-dir)
   target_link_libraries(amd_comgr PRIVATE embedded-resource-dir)
