@@ -1808,7 +1808,7 @@ declare void @barney(i32 signext, i32 signext)
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR5]] = { nofree willreturn memory(read) }
-; CGSCC: attributes #[[ATTR6]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR6]] = { willreturn }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nosync willreturn }
 ;.
 ; TUNIT: [[RNG0]] = !{i32 0, i32 10}

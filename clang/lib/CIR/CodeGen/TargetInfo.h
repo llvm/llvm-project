@@ -50,6 +50,9 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
+  /// Returns true if the target supports math library calls.
+  virtual bool supportsLibCall() const { return true; }
+
   /// Get target favored AST address space of a global variable for languages
   /// other than OpenCL and CUDA.
   /// If \p d is nullptr, returns the default target favored address space
@@ -147,6 +150,8 @@ void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo> createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

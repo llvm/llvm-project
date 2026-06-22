@@ -21,6 +21,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -214,11 +215,8 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
       // remove any AllocRelatedValues for it.
       if (GAR->IndirectGlobals.erase(GV)) {
         // Remove any entries in AllocsForIndirectGlobals for this global.
-        for (auto I = GAR->AllocsForIndirectGlobals.begin(),
-                  E = GAR->AllocsForIndirectGlobals.end();
-             I != E; ++I)
-          if (I->second == GV)
-            GAR->AllocsForIndirectGlobals.erase(I);
+        GAR->AllocsForIndirectGlobals.remove_if(
+            [GV](const auto &Entry) { return Entry.second == GV; });
       }
 
       // Scan the function info we have collected and remove this global
@@ -415,9 +413,9 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   // value produced by the noalias call and any casts.
   std::vector<Value *> AllocRelatedValues;
 
-  // If the initializer is a valid pointer, bail.
+  // If the initializer is a non-null pointer, bail.
   if (Constant *C = GV->getInitializer())
-    if (!C->isNullValue())
+    if (!isa<ConstantPointerNull>(C))
       return false;
 
   // Walk the user list of the global.  If we find anything other than a direct
@@ -773,7 +771,7 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
       if (auto *CPN = dyn_cast<ConstantPointerNull>(Input)) {
         // Null pointer cannot alias with a non-addr-taken global.
         const Function *F = CtxI->getFunction();
-        if (!NullPointerIsDefined(F, CPN->getType()->getAddressSpace()))
+        if (!NullPointerIsDefined(F, CPN->getPointerType()->getAddressSpace()))
           continue;
       }
 

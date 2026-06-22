@@ -685,6 +685,15 @@ public:
                     LegalityPredicates::typePairAndMemDescInSet(
                         typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
   }
+  LegalizeRuleSet &legalForTypesWithMemDesc(
+      bool Pred, std::initializer_list<LegalityPredicates::TypePairAndMemDesc>
+                     TypesAndMemDesc) {
+    if (!Pred)
+      return *this;
+    return actionIf(LegalizeAction::Legal,
+                    LegalityPredicates::typePairAndMemDescInSet(
+                        typeIdx(0), typeIdx(1), /*MMOIdx=*/0, TypesAndMemDesc));
+  }
   /// The instruction is legal when type indexes 0 and 1 are both in the given
   /// list. That is, the type pair is in the cartesian product of the list.
   LegalizeRuleSet &legalForCartesianProduct(std::initializer_list<LLT> Types) {
@@ -844,6 +853,12 @@ public:
     // free-form user provided Predicate properly handles all type indices:
     markAllIdxsAsCovered();
     return actionIf(LegalizeAction::WidenScalar, Predicate, Mutation);
+  }
+  /// Widen the scalar, specified in mutation, when type index 0 is any type in
+  /// the given list.
+  LegalizeRuleSet &widenScalarFor(std::initializer_list<LLT> Types,
+                                  LegalizeMutation Mutation) {
+    return actionFor(LegalizeAction::WidenScalar, Types, Mutation);
   }
   /// Widen the scalar, specified in mutation, when type indexes 0 and 1 is any
   /// type pair in the given list.

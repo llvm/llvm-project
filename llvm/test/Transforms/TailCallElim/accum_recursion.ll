@@ -80,10 +80,10 @@ define i64 @test3_fib(i64 %n) nounwind readnone {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N_TR]], -1
 ; CHECK-NEXT:    [[RECURSE1:%.*]] = tail call i64 @test3_fib(i64 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP1]] = add i64 [[N_TR]], -2
-; CHECK-NEXT:    [[ACCUMULATE]] = add nsw i64 [[ACCUMULATOR_TR]], [[RECURSE1]]
+; CHECK-NEXT:    [[ACCUMULATE]] = add i64 [[ACCUMULATOR_TR]], [[RECURSE1]]
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i64 [[ACCUMULATOR_TR]], [[N_TR]]
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add i64 [[ACCUMULATOR_TR]], [[N_TR]]
 ; CHECK-NEXT:    ret i64 [[ACCUMULATOR_RET_TR]]
 ;
 entry:
@@ -117,10 +117,10 @@ define i32 @test4_base_case_call() local_unnamed_addr {
 ; CHECK-NEXT:      i32 7, label [[CLEANUP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    [[ACCUMULATE]] = add nsw i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    [[ACCUMULATE]] = add i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i32 [[ACCUMULATOR_TR]], [[BASE]]
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add i32 [[ACCUMULATOR_TR]], [[BASE]]
 ; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR]]
 ;
 entry:
@@ -255,15 +255,15 @@ define i32 @test7_multiple_accumulators(i32 %a) local_unnamed_addr {
 ; CHECK-NEXT:    [[SUB]] = add nsw i32 [[A_TR]], -1
 ; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_END3:%.*]], label [[IF_THEN2]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[ACCUMULATE1]] = add nsw i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    [[ACCUMULATE1]] = add i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       if.end3:
 ; CHECK-NEXT:    [[RECURSE2:%.*]] = tail call i32 @test7_multiple_accumulators(i32 [[SUB]])
 ; CHECK-NEXT:    [[ACCUMULATE2:%.*]] = mul nsw i32 [[RECURSE2]], 2
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add nsw i32 [[ACCUMULATOR_TR]], [[ACCUMULATE2]]
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add i32 [[ACCUMULATOR_TR]], [[ACCUMULATE2]]
 ; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[ACCUMULATOR_RET_TR1:%.*]] = add nsw i32 [[ACCUMULATOR_TR]], 0
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR1:%.*]] = add i32 [[ACCUMULATOR_TR]], 0
 ; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR1]]
 ;
 entry:
@@ -328,3 +328,41 @@ if.end:                                           ; preds = %entry
 }
 
 declare i32 @llvm.sadd.sat.i32(i32, i32)
+
+; Reassociating the accumulator into a loop reorders the operands, so nsw must
+; be dropped from both the loop-body accumulator and the per-return copy.
+define i32 @test_drop_poison_flags(i32 %x) {
+; CHECK-LABEL: define i32 @test_drop_poison_flags(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[ACC:%.*]], [[REC:%.*]] ]
+; CHECK-NEXT:    [[X_TR:%.*]] = phi i32 [ [[X]], [[ENTRY]] ], [ [[XM1:%.*]], [[REC]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X_TR]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[BASE:%.*]], label [[REC]]
+; CHECK:       base:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = mul i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    ret i32 [[ACCUMULATOR_RET_TR]]
+; CHECK:       rec:
+; CHECK-NEXT:    [[XM1]] = add i32 [[X_TR]], -1
+; CHECK-NEXT:    [[IS1:%.*]] = icmp eq i32 [[X_TR]], 1
+; CHECK-NEXT:    [[G:%.*]] = select i1 [[IS1]], i32 0, i32 46341
+; CHECK-NEXT:    [[ACC]] = mul i32 [[ACCUMULATOR_TR]], [[G]]
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+;
+entry:
+  %c = icmp eq i32 %x, 0
+  br i1 %c, label %base, label %rec
+
+base:
+  ret i32 1
+
+rec:
+  %xm1 = add i32 %x, -1
+  %r = call i32 @test_drop_poison_flags(i32 %xm1)
+  %is1 = icmp eq i32 %x, 1
+  %g = select i1 %is1, i32 0, i32 46341
+  %acc = mul nsw i32 %r, %g
+  ret i32 %acc
+}

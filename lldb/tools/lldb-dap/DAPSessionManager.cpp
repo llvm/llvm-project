@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBListener.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "llvm/Support/Threading.h"
@@ -105,6 +106,29 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
     m_debugger_event_threads.erase(it);
   }
 
+  // Add the listener for the 'StopEventThread' event before starting the
+  // event thread to prevent a race condition. Under heavy load, a stop event
+  // could be sent immediately after the thread starts. If the listener isn't
+  // registered first, the event is missed, leading to a deadlock.
+  lldb::SBListener listener = debugger.GetListener();
+  requesting_dap->broadcaster.AddListener(listener,
+                                          eBroadcastBitStopEventThread);
+  debugger.GetBroadcaster().AddListener(
+      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+  // listen for thread events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBThread::GetBroadcasterClassName(),
+      lldb::SBThread::eBroadcastBitStackChanged);
+  // Listen for target events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBTarget::GetBroadcasterClassName(),
+      lldb::SBTarget::eBroadcastBitBreakpointChanged |
+          lldb::SBTarget::eBroadcastBitModulesLoaded |
+          lldb::SBTarget::eBroadcastBitModulesUnloaded |
+          lldb::SBTarget::eBroadcastBitSymbolsLoaded |
+          lldb::SBTarget::eBroadcastBitSymbolsChanged |
+          lldb::SBTarget::eBroadcastBitNewTargetCreated);
+
   // Create a new event thread and store it.
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
       requesting_dap->broadcaster,
@@ -118,10 +142,10 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
 DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
+  const lldb::user_id_t debugger_id = target.GetDebugger().GetID();
   for (const auto &[loop, dap] : m_active_sessions)
-    if (dap && dap->target.IsValid() && dap->target == target)
+    if (dap && dap->debugger.GetID() == debugger_id)
       return dap;
-
   return nullptr;
 }
 

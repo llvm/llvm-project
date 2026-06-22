@@ -331,41 +331,37 @@ define <2 x i128> @sdiv_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; CHECK-LABEL: sdiv_v3i10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mtfprwz 0, 9
-; CHECK-NEXT:    mtfprwz 1, 10
-; CHECK-NEXT:    addis 9, 2, .LCPI7_0@toc@ha
-; CHECK-NEXT:    addi 9, 9, .LCPI7_0@toc@l
-; CHECK-NEXT:    mtvsrwz 38, 8
+; CHECK-NEXT:    lbz 12, 96(1)
+; CHECK-NEXT:    li 11, 0
+; CHECK-NEXT:    mtfprwz 2, 7
+; CHECK-NEXT:    rldimi 9, 10, 32, 0
+; CHECK-NEXT:    mtvsrwz 33, 8
 ; CHECK-NEXT:    vspltisw 4, 11
+; CHECK-NEXT:    xxleqv 38, 38, 38
 ; CHECK-NEXT:    vadduwm 4, 4, 4
-; CHECK-NEXT:    lxvd2x 2, 0, 9
-; CHECK-NEXT:    xxmrghw 35, 1, 0
+; CHECK-NEXT:    rldimi 12, 11, 32, 0
+; CHECK-NEXT:    addis 11, 2, .LCPI7_0@toc@ha
+; CHECK-NEXT:    addi 11, 11, .LCPI7_0@toc@l
+; CHECK-NEXT:    mtfprd 1, 12
+; CHECK-NEXT:    lxvd2x 0, 0, 11
+; CHECK-NEXT:    xxswapd 34, 0
 ; CHECK-NEXT:    mtfprwz 0, 6
-; CHECK-NEXT:    lbz 6, 96(1)
-; CHECK-NEXT:    mtfprwz 1, 7
-; CHECK-NEXT:    mtvsrwz 32, 6
-; CHECK-NEXT:    addis 6, 2, .LCPI7_1@toc@ha
-; CHECK-NEXT:    addi 6, 6, .LCPI7_1@toc@l
-; CHECK-NEXT:    xxswapd 34, 2
-; CHECK-NEXT:    xxmrghw 37, 1, 0
-; CHECK-NEXT:    mtfprwz 1, 4
-; CHECK-NEXT:    lxvd2x 0, 0, 6
-; CHECK-NEXT:    vperm 5, 6, 5, 2
-; CHECK-NEXT:    mtvsrwz 38, 5
-; CHECK-NEXT:    vslw 5, 5, 4
-; CHECK-NEXT:    vsraw 5, 5, 4
-; CHECK-NEXT:    vperm 3, 0, 3, 2
-; CHECK-NEXT:    xxswapd 32, 0
+; CHECK-NEXT:    xxmrghw 35, 2, 0
+; CHECK-NEXT:    mtfprd 0, 9
+; CHECK-NEXT:    vperm 3, 1, 3, 2
+; CHECK-NEXT:    mtvsrwz 33, 5
+; CHECK-NEXT:    vslw 3, 3, 4
+; CHECK-NEXT:    vsraw 3, 3, 4
+; CHECK-NEXT:    xxmrghd 37, 1, 0
 ; CHECK-NEXT:    mtfprwz 0, 3
-; CHECK-NEXT:    xxland 35, 35, 32
-; CHECK-NEXT:    xxleqv 32, 32, 32
-; CHECK-NEXT:    vslw 3, 3, 0
-; CHECK-NEXT:    vsraw 3, 3, 0
-; CHECK-NEXT:    xxmrghw 33, 1, 0
-; CHECK-NEXT:    vperm 1, 6, 1, 2
-; CHECK-NEXT:    vspltisw 6, 1
-; CHECK-NEXT:    xxsel 0, 38, 37, 35
-; CHECK-NEXT:    vslw 3, 1, 4
+; CHECK-NEXT:    mtfprwz 1, 4
+; CHECK-NEXT:    vslw 5, 5, 6
+; CHECK-NEXT:    vsraw 5, 5, 6
+; CHECK-NEXT:    xxmrghw 32, 1, 0
+; CHECK-NEXT:    vperm 0, 1, 0, 2
+; CHECK-NEXT:    vspltisw 1, 1
+; CHECK-NEXT:    xxsel 0, 33, 35, 37
+; CHECK-NEXT:    vslw 3, 0, 4
 ; CHECK-NEXT:    vsraw 3, 3, 4
 ; CHECK-NEXT:    xxswapd 1, 0
 ; CHECK-NEXT:    xxsldwi 3, 0, 0, 1
@@ -374,10 +370,10 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; CHECK-NEXT:    xxsldwi 4, 35, 35, 1
 ; CHECK-NEXT:    mffprwz 4, 2
 ; CHECK-NEXT:    divw 3, 4, 3
-; CHECK-NEXT:    mffprwz 4, 3
+; CHECK-NEXT:    mffprwz 4, 4
 ; CHECK-NEXT:    mtfprwz 1, 3
-; CHECK-NEXT:    mffprwz 3, 4
-; CHECK-NEXT:    divw 3, 3, 4
+; CHECK-NEXT:    mffprwz 3, 3
+; CHECK-NEXT:    divw 3, 4, 3
 ; CHECK-NEXT:    mfvsrwz 4, 35
 ; CHECK-NEXT:    mtfprwz 2, 3
 ; CHECK-NEXT:    mffprwz 3, 0

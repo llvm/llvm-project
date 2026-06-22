@@ -8,6 +8,11 @@
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -mattr=+real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-GISEL-REAL16 %s
 ; xUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -mattr=-real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-GISEL-FAKE16 %s
 
+; RUN: not llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: error: <unknown>:0:0: in function tanh_f32 void (ptr addrspace(1), float): intrinsic not supported on subtarget
+
 ; FIXME: GlobalISel does not work with bf16
 
 declare float @llvm.amdgcn.tanh.f32(float) #0

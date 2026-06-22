@@ -100,7 +100,7 @@ void foo(enum x X) {
 
 int test_pr8880(void) {
   int first = 1;
-  for ( ; ({ if (first) { first = 0; continue; } 0; }); )
+  for ( ; ({ if (first) { first = 0; continue; } 0; }); ) // expected-error {{'continue' statement not in loop statement}}
     return 0;
   return 1;
 }

@@ -6,23 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstddef>
-#include <test_macros.h>
-
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 
 // constexpr byte operator~(byte b) noexcept;
 
+#include <cassert>
+#include <cstddef>
+#include <type_traits>
+
+static_assert(noexcept(~std::byte{}));
+static_assert(std::is_same_v<decltype(~std::byte{}), std::byte>);
+
+constexpr bool test() {
+  std::byte b1{1};
+  std::byte b2{2};
+  std::byte b8{8};
+
+  assert(std::to_integer<int>(~b1) == 254);
+  assert(std::to_integer<int>(~b2) == 253);
+  assert(std::to_integer<int>(~b8) == 247);
+
+  return true;
+}
+
 int main(int, char**) {
-    constexpr std::byte b1{static_cast<std::byte>(1)};
-    constexpr std::byte b2{static_cast<std::byte>(2)};
-    constexpr std::byte b8{static_cast<std::byte>(8)};
-
-    static_assert(noexcept(~b1), "" );
-
-    static_assert(std::to_integer<int>(~b1) == 254, "");
-    static_assert(std::to_integer<int>(~b2) == 253, "");
-    static_assert(std::to_integer<int>(~b8) == 247, "");
+  test();
+  static_assert(test());
 
   return 0;
 }

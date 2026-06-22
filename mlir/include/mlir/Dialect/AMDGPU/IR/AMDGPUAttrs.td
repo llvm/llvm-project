@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/AMDGPU/IR/AMDGPUBase.td"
 include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.td"
+include "mlir/Dialect/LLVMIR/ROCDLAttrs.td"
 
 def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
     "address_space"> {
@@ -38,14 +39,6 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
 
 def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,
   "dpp_perm">;
-
-def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierOpOpt,
-  "sched_barrier_opt">{
-   let assemblyFormat = "`<` $value `>`";
-}
-
-def AMDGPU_MFMAPermBAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_MFMAPermB,
-  "mfma_perm_b">;
 
 def AMDGPU_LoadTemporalHintAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_LoadTemporalHint,
   "load_temporal_hint">;
