@@ -606,16 +606,12 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     }
   }
 
-  for (const DIBasicType *BT : BasicTypes) {
-    [[maybe_unused]] MCRegister BasicTypeNameStrReg =
-        emitOpStringIfNew(BT->getName(), MAI);
-  }
+  for (const DIBasicType *BT : BasicTypes)
+    emitOpStringIfNew(BT->getName(), MAI);
 
   for (const DISubprogram *SP : SubprogramDeclarations) {
-    [[maybe_unused]] MCRegister DeclNameStrReg =
-        emitOpStringIfNew(SP->getName(), MAI);
-    [[maybe_unused]] MCRegister DeclLinkageStrReg =
-        emitOpStringIfNew(SP->getLinkageName(), MAI);
+    emitOpStringIfNew(SP->getName(), MAI);
+    emitOpStringIfNew(SP->getLinkageName(), MAI);
     ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
   }
 
