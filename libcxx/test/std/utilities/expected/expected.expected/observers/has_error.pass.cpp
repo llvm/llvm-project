@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++29
+// REQUIRES: std-at-least-c++23
 
 // constexpr bool has_error() const noexcept;
 
@@ -18,12 +18,12 @@
 
 #include "../../types.h"
 
-static_assert(noexcept(std::expected<int, int>().has_error()));
-
 constexpr bool test() {
   {
     const std::expected<int, int> e(std::unexpect, 5);
-    assert(e.has_error());
+    static_assert(noexcept(e.has_error()));
+    std::same_as<bool> decltype(auto) has_err = e.has_error();
+    assert(has_err);
   }
 
   {
@@ -34,18 +34,9 @@ constexpr bool test() {
   return true;
 }
 
-constexpr bool test_nodiscard() {
-  std::expected<int, int> e;
-  e.has_error(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  return true;
-}
-
 int main(int, char**) {
   test();
   static_assert(test());
-  test_nodiscard();
-  static_assert(test_nodiscard());
 
   return 0;
 }
