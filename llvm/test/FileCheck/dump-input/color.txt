@@ -36,7 +36,7 @@
 ; CHECK-Q-NEXT: <<<<<<
 ; CHECK-Q-NEXT: <bold><reset><bold-bright-black> 1: <reset><bold><reset>hello <reset>
 ; CHECK-Q-NEXT: <bold-red>dag:2'0                                            {          search range start (exclusive)
-; CHECK-Q-NEXT: <reset><bold-red>dag:2'1                                                error: no match found
+; CHECK-Q-NEXT: <reset><bold-red>dag:2'1                                                error: no match found in search range
 ; CHECK-Q-NEXT: <reset><bold-bright-black>       2: <reset><bold><reset>jello <reset>
 ; CHECK-Q-NEXT: <bold-magenta>dag:2'2                                   ?               possible intended match
 ; CHECK-Q-NEXT: <reset><bold-bright-black>       3: <reset><bold><reset>end <reset>
@@ -57,7 +57,7 @@
 ; CHECK-V-NEXT: <bold><reset><bold-bright-black>  1: <reset><bold><bg-bold-cyan><reset>hello<bg-bold-cyan> <reset>
 ; CHECK-V-NEXT: <bold-green>dag:1                                                      ^~~~~
 ; CHECK-V-NEXT: <reset><bold-red>dag:2'0                                                                  {        search range start (exclusive)
-; CHECK-V-NEXT: <reset><bold-red>dag:2'1                                                                           error: no match found
+; CHECK-V-NEXT: <reset><bold-red>dag:2'1                                                                           error: no match found in search range
 ; CHECK-V-NEXT: <reset><bold-bright-black>        2: <reset><bold><bg-bold-cyan>jello <reset>
 ; CHECK-V-NEXT: <bold-magenta>dag:2'2                                           ?                                  possible intended match
 ; CHECK-V-NEXT: <reset><bold-bright-black>        3: <reset><bold><bg-bold-cyan><reset>end<bg-bold-cyan> <reset>
@@ -79,7 +79,7 @@
 ; CHECK-VV-NEXT: <bold-green>dag:1                                                      ^~~~~
 ; CHECK-VV-NEXT: <reset><bold-cyan>dag:2'0                                              !~~~~                       discard: overlaps earlier match
 ; CHECK-VV-NEXT: <reset><bold-red>dag:2'1                                                                  {        search range start (exclusive)
-; CHECK-VV-NEXT: <reset><bold-red>dag:2'2                                                                           error: no match found
+; CHECK-VV-NEXT: <reset><bold-red>dag:2'2                                                                           error: no match found in search range
 ; CHECK-VV-NEXT: <reset><bold-bright-black>        2: <reset><bold><bg-bold-cyan>jello <reset>
 ; CHECK-VV-NEXT: <bold-magenta>dag:2'3                                           ?                                  possible intended match
 ; CHECK-VV-NEXT: <reset><bold-bright-black>        3: <reset><bold><bg-bold-cyan><reset>end<bg-bold-cyan> <reset>
