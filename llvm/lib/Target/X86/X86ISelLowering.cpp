@@ -62770,7 +62770,6 @@ static SDValue combineXorOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
                                                 SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  unsigned VecWidth = VT.getSizeInBits();
   unsigned MatrixWidth = 64;
 
   SDValue X, Y, SplatOp;
