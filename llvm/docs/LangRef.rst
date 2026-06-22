@@ -13765,7 +13765,7 @@ Syntax:
 
 ::
 
-      <result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...
+      <result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...[, !nonnull !<empty_node>][, !noundef !<empty_node>][, !range !<range-info>][, !nofpclass !<fpclass-info>]
 
 Overview:
 """""""""
