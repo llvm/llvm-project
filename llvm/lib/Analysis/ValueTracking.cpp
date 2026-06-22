@@ -1075,7 +1075,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
       if (auto OBU = I->getOperandBundleAt(Elem.Index);
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
-        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
         if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
             isValidAssumeForContext(I, Q)) {
           Known.Zero |= (*Alignment - 1) & ~*Offset;
