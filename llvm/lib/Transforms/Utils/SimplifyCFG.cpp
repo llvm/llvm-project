@@ -8905,9 +8905,12 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
         if (isa<ConstantPointerNull>(C) &&
             CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
-        // Passing undef to a noundef argument is undefined.
+        // Passing poison/undef to a noundef argument is undefined in the
+        // single-lane IR model, unless the call is convergent: at a join
+        // point, convergent operations bind SIMT semantics and poison on one
+        // PHI incoming edge does not imply that predecessor is unreachable.
         if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))
-          return true;
+          return !CB->isConvergent();
       }
     }
     // Div/Rem by zero is immediate UB
