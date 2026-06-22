@@ -23,6 +23,7 @@ using llvm::APSInt;
 void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
                                      ExplodedNode *Pred,
                                      ExplodedNodeSet &Dst) {
+  const StackFrame *SF = Pred->getStackFrame();
 
   Expr *LHS = B->getLHS()->IgnoreParens();
   Expr *RHS = B->getRHS()->IgnoreParens();
@@ -35,7 +36,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
   // With both the LHS and RHS evaluated, process the operation itself.
   for (ExplodedNode *N : CheckedSet) {
     ProgramStateRef State = N->getState();
-    const StackFrame *SF = N->getStackFrame();
     SVal LeftV = State->getSVal(LHS, SF);
     SVal RightV = State->getSVal(RHS, SF);
 
@@ -116,7 +116,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
 
     for (ExplodedNode *N : Tmp) {
       State = N->getState();
-      const StackFrame *SF = N->getStackFrame();
       SVal V = State->getSVal(LHS, SF);
 
       // Determine the relevant types.
