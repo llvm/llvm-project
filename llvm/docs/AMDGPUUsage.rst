@@ -2261,8 +2261,8 @@ operand is divergent, and the atomic is in the LDS (``addrspace(3)``) address
 space, the optimizer normally replaces the per-lane atomics with a single
 wavefront-wide DPP scan. That scan has a fixed overhead that is only
 worthwhile when enough lanes participate. If the expected active lane count
-is small (currently ``<= 5``), the optimizer skips the DPP scan and instead
-lets each lane issue its own atomic.
+is small, the optimizer skips the DPP scan and instead lets each lane issue
+its own atomic.
 
 The metadata is ignored for non-LDS atomics and when the DPP strategy is not
 in use. Without this metadata the optimizer unconditionally applies the DPP
