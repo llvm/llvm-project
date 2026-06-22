@@ -1738,7 +1738,7 @@ define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 
 ; OSS Fuzz #5032
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5032
-define void @ashr_out_of_range(ptr %A) "instcombine-no-verify-fixpoint" {
+define void @ashr_out_of_range(ptr %A) {
 ; CHECK-LABEL: @ashr_out_of_range(
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L]], -1
@@ -1747,7 +1747,7 @@ define void @ashr_out_of_range(ptr %A) "instcombine-no-verify-fixpoint" {
 ; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 4
 ; CHECK-NEXT:    [[L7_FROZEN:%.*]] = freeze i177 [[L7]]
 ; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7_FROZEN]], 0
-; CHECK-NEXT:    [[C17:%.*]] = select i1 [[TMP1]], i1 [[C171]], i1 false
+; CHECK-NEXT:    [[C17:%.*]] = and i1 [[TMP1]], [[C171]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr [24 x i8], ptr [[G11]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7_FROZEN]], -1

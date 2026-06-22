@@ -49,7 +49,7 @@ _start:
 # CHECK-NEXT:        Index:           0
 # CHECK-NEXT:      - Name:            foo_global
 # CHECK-NEXT:        Kind:            GLOBAL
-# CHECK-NEXT:        Index:           1
+# CHECK-NEXT:        Index:           0
 # CHECK-NEXT:  - Type:            CODE
 
 #      CHECK-SP:  - Type:            EXPORT

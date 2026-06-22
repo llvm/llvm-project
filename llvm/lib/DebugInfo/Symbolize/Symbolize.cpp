@@ -335,7 +335,7 @@ bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
         consumeError(ContentsOrErr.takeError());
         return false;
       }
-      DataExtractor DE(*ContentsOrErr, Obj->isLittleEndian(), 0);
+      DataExtractor DE(*ContentsOrErr, Obj->isLittleEndian());
       uint64_t Offset = 0;
       if (const char *DebugNameStr = DE.getCStr(&Offset)) {
         // 4-byte align the offset.

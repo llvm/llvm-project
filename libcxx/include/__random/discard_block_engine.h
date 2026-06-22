@@ -54,8 +54,8 @@ public:
   static constexpr result_type _Max = _Engine::max();
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI discard_block_engine() : __n_(0) {}
@@ -64,10 +64,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Engine&& __e) : __e_(std::move(__e)), __n_(0) {}
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
-  template <
-      class _Sseq,
-      __enable_if_t<__is_seed_sequence<_Sseq, discard_block_engine>::value && !is_convertible<_Sseq, _Engine>::value,
-                    int> = 0>
+  template <class _Sseq,
+            __enable_if_t<__is_seed_sequence_v<_Sseq, discard_block_engine> && !is_convertible<_Sseq, _Engine>::value,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Sseq& __q) : __e_(__q), __n_(0) {}
   _LIBCPP_HIDE_FROM_ABI void seed() {
     __e_.seed();
@@ -77,21 +76,21 @@ public:
     __e_.seed(__sd);
     __n_ = 0;
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, discard_block_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, discard_block_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __e_.seed(__q);
     __n_ = 0;
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()();
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
-      operator()();
+      (void)operator()();
   }
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
 
   template <class _Eng, size_t _Pp, size_t _Rp>
   friend bool

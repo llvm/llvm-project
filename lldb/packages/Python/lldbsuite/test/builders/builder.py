@@ -245,7 +245,14 @@ class Builder:
         return []
 
     def getLLDBObjRoot(self):
-        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
+        if configuration.lldb_obj_root:
+            return [f"LLDB_OBJ_ROOT={configuration.lldb_obj_root}"]
+        return []
+
+    def getResourceDirArgs(self):
+        if configuration.resource_dir:
+            return [f"RESOURCE_DIR={configuration.resource_dir}"]
+        return []
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
@@ -259,6 +266,7 @@ class Builder:
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
             "pdb": {"MAKE_PDB": "YES"},
+            "none": {"MAKE_DSYM": "NO", "MAKE_NO_DEBUG_INFO": "YES"},
         }
 
         # Collect all flags, with later options overriding earlier ones
@@ -298,6 +306,7 @@ class Builder:
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
             self.getLLDBObjRoot(),
+            self.getResourceDirArgs(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))

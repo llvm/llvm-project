@@ -382,11 +382,9 @@ public:
 
   bool hasDivergentDefs(const InstructionT &I) const;
 
-  bool isDivergent(const InstructionT &I) const {
-    if (I.isTerminator()) {
-      return DivergentTermBlocks.contains(I.getParent());
-    }
-    return hasDivergentDefs(I);
+  bool isDivergentTerminator(const InstructionT &I) const {
+    assert(I.isTerminator() && "Expected a terminator instruction!");
+    return DivergentTermBlocks.contains(I.getParent());
   };
 
   /// \brief Whether \p Val is divergent at its definition.
@@ -1167,7 +1165,7 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
     }
 
     // propagate value divergence to users
-    assert(isDivergent(*I) && "Worklist invariant violated!");
+    assert(hasDivergentDefs(*I) && "Worklist invariant violated!");
     pushUsers(*I);
   }
 }
@@ -1292,17 +1290,19 @@ GenericUniformityInfo<ContextT>::getFunction() const {
 /// A default-constructed instance (no analysis computed) reports everything
 /// as uniform, which is conservatively correct for non-divergent targets.
 template <typename ContextT>
-bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
+bool GenericUniformityInfo<ContextT>::isDivergentAtDef(ConstValueRefT V) const {
   return DA && DA->isDivergent(V);
 }
 
 template <typename ContextT>
-bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
-  return DA && DA->isDivergent(*I);
+bool GenericUniformityInfo<ContextT>::isDivergentTerminator(
+    const InstructionT *I) const {
+  assert(I->isTerminator() && "Expected a terminator instruction!");
+  return DA && DA->isDivergentTerminator(*I);
 }
 
 template <typename ContextT>
-bool GenericUniformityInfo<ContextT>::isDivergentUse(const UseT &U) const {
+bool GenericUniformityInfo<ContextT>::isDivergentAtUse(const UseT &U) const {
   return DA && DA->isDivergentUse(U);
 }
 
