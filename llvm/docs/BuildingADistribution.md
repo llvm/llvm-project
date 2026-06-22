@@ -1,7 +1,7 @@
 # Building a Distribution of LLVM
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -43,14 +43,14 @@ at process launch time, which can be very slow for C++ code.
 
 (shared-libs)=
 
-:::{warning}
+```{warning}
 One very important note: Distributions should never be built using the
 *BUILD_SHARED_LIBS* CMake option. That option exists for optimizing developer
 workflow only. Due to design and implementation decisions, LLVM relies on
 global data which can end up being duplicated across shared libraries
 resulting in bugs. As such this is not a safe way to distribute LLVM or
 LLVM-based tools.
-:::
+```
 
 The simplest example of building a distribution with reasonable performance is
 captured in the DistributionExample CMake cache file located at
@@ -178,10 +178,10 @@ generation using dtrace is also non-deterministic.
 
 ## Options for Reducing Size
 
-:::{warning}
+```{warning}
 Any steps taken to reduce binary size will come at the cost of runtime
 performance in the generated binaries.
-:::
+```
 
 The simplest and least significant way to reduce binary size is to set the
 *CMAKE_BUILD_TYPE* variable to `MinSizeRel`, which will set the compiler
@@ -193,10 +193,10 @@ all the tools. This reduces code size by decreasing duplication of common code
 among the LLVM-based tools. This can be done by setting the following two
 CMake options to `On`: *LLVM_BUILD_LLVM_DYLIB* and *LLVM_LINK_LLVM_DYLIB*.
 
-:::{warning}
+```{warning}
 Distributions should never be built using the *BUILD_SHARED_LIBS* CMake
-option. ({ref}`See the warning above for more explanation <shared_libs>`.).
-:::
+option. ({ref}`See the warning above for more explanation <shared-libs>`.).
+```
 
 ## Relevant CMake Options
 
@@ -222,8 +222,9 @@ that are already documented include: *LLVM_TARGETS_TO_BUILD*, *LLVM_ENABLE_PROJE
 **LLVM_DISTRIBUTIONS**:STRING
 
 : This variable can be set to a semicolon-separated list of distributions. See
-  the {ref}`Multi-distribution configurations` section above for details on this
-  and other CMake variables to configure multiple distributions.
+  the {ref}`Multi-distribution configurations <multi-distribution-configurations>`
+  section above for details on this and other CMake variables to configure
+  multiple distributions.
 
 **LLVM_RUNTIME_DISTRIBUTION_COMPONENTS**:STRING
 
@@ -254,4 +255,3 @@ that are already documented include: *LLVM_TARGETS_TO_BUILD*, *LLVM_ENABLE_PROJE
   default `install` target. Including the development tools is not recommended
   for distributions as many of the LLVM tools are only intended for development
   and testing use.
-

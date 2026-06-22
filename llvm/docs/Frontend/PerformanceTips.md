@@ -2,7 +2,7 @@
 
 ```{contents}
 :depth: 2
-:local: true
+:local:
 ```
 
 ## Abstract
@@ -299,4 +299,3 @@ a patch to [llvm-commits](http://lists.llvm.org/mailman/listinfo/llvm-commits) f
 If you have questions on these items, please ask them on [Discourse](https://discourse.llvm.org). The more relevant
 context you are able to give to your question, the more likely it is to be
 answered.
-

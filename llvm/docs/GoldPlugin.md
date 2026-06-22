@@ -40,7 +40,7 @@ support.
 
 - Download, configure and build gold with plugin support:
 
-  ```bash
+  ```console
   $ git clone --depth 1 git://sourceware.org/git/binutils-gdb.git binutils
   $ mkdir build
   $ cd build
@@ -116,7 +116,7 @@ void foo4(void) {
 }
 ```
 
-```bash
+```console
 --- command lines ---
 $ clang -flto a.c -c -o a.o      # <-- a.o is LLVM bitcode file
 $ ar q a.a a.o                   # <-- a.a is an archive with LLVM bitcode
@@ -125,16 +125,16 @@ $ clang -flto a.a b.o -o main    # <-- link with LLVMgold plugin
 ```
 
 Gold informs the plugin that foo3 is never referenced outside the IR,
-leading LLVM to delete that function. However, unlike in the {ref}`libLTO
-example <libLTO-example>` gold does not currently eliminate foo4.
+leading LLVM to delete that function. However, unlike in the
+{ref}`libLTO example <libLTO-example>` gold does not currently eliminate foo4.
 
 ## Quickstart for using LTO with autotooled projects
 
 Once your system `ld`, `ar`, and `nm` all support LLVM bitcode,
 everything is in place for an easy-to-use LTO build of autotooled projects:
 
-- Follow the instructions {ref}`on how to build LLVMgold.so
-  <lto-how-to-build>`.
+- Follow the instructions
+  {ref}`on how to build LLVMgold.so <lto-how-to-build>`.
 
 - Install the newly built binutils to `$PREFIX`
 
@@ -162,7 +162,7 @@ everything is in place for an easy-to-use LTO build of autotooled projects:
 
 - Configure and build the project as usual:
 
-  ```bash
+  ```console
   % ./configure && make && make check
   ```
 

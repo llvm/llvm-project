@@ -1,7 +1,7 @@
 # LLVM Link Time Optimization: Design and Implementation
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Description
@@ -19,12 +19,12 @@ the developer take advantage of intermodular optimizations without making any
 significant changes to the developer's makefiles or build system. This is
 achieved through tight integration with the linker. In this model, the linker
 treats LLVM bitcode files like native object files and allows mixing and
-matching among them. The linker uses [libLTO], a shared object, to handle LLVM
-bitcode files. This tight integration between the linker and LLVM optimizer
+matching among them. The linker uses {ref}`libLTO`, a shared object, to handle
+LLVM bitcode files. This tight integration between the linker and LLVM optimizer
 helps to do optimizations that are not possible in other models. The linker
 input allows the optimizer to avoid relying on conservative escape analysis.
 
-(liblto-example)=
+(libLTO-example)=
 
 ### Example of link time optimization
 
@@ -104,7 +104,6 @@ input.
 ### Alternative Approaches
 
 **Compiler driver invokes link time optimizer separately.**
-
 : In this model the link time optimizer is not able to take advantage of
   information collected during the linker's normal symbol resolution phase.
   In the above example, the optimizer can not remove `foo2()` without the
@@ -112,7 +111,6 @@ input.
   optimizer from removing `foo3()`.
 
 **Use separate tool to collect symbol information from all object files.**
-
 : In this model, a new, separate, tool or library replicates the linker's
   capability to collect information for link time optimization. Not only is
   this code duplication difficult to justify, but it also has several other
@@ -185,7 +183,7 @@ symbol information appropriately and performs dead code stripping.
 After this phase, the linker continues linking as if it never saw LLVM bitcode
 files.
 
-(liblto)=
+(libLTO)=
 
 ## `libLTO`
 
@@ -288,4 +286,3 @@ lto_codegen_compile(lto_code_gen_t, size*)
 which returns a pointer to a buffer containing the generated native object file.
 The linker then parses that and links it with the rest of the native object
 files.
-

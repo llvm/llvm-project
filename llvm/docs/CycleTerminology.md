@@ -3,15 +3,17 @@
 # LLVM Cycle Terminology
 
 ```{contents}
-:local: true
+:local:
 ```
 
 (cycle-definition)=
 
 ## Cycles
 
-Cycles are a generalization of LLVM {ref}`loops <loop-terminology>`,
-defined recursively as follows [^cite_havlakcycles]:
+```{eval-rst}
+Cycles are a generalization of LLVM :ref:`loops <loop-terminology>`,
+defined recursively as follows [HavlakCycles]_:
+```
 
 1. In a directed graph G that is a function CFG or a subgraph of it, a *cycle*
    is a maximal strongly connected region with at least one internal edge.
@@ -71,9 +73,11 @@ Informational notes:
 - Cycles are well-nested (by definition).
 - The entry blocks of a cycle are siblings in the dominator tree.
 
-[^cite_havlakcycles]: Paul Havlak, "Nesting of reducible and irreducible
-    loops." ACM Transactions on Programming Languages
-    and Systems (TOPLAS) 19.4 (1997): 557-567.
+```{eval-rst}
+.. [HavlakCycles] Paul Havlak, "Nesting of reducible and irreducible
+                  loops." ACM Transactions on Programming Languages
+                  and Systems (TOPLAS) 19.4 (1997): 557-567.
+```
 
 (cycle-examples)=
 
@@ -81,7 +85,7 @@ Informational notes:
 
 ### Irreducible cycle enclosing natural loops
 
-% Graphviz source; the indented blocks below form a comment.
+% Graphviz source; leading `%` is a markdown comment
 %
 % ///     |   |
 % ///   />A] [B<\
@@ -119,7 +123,7 @@ This hierarchy arises when DFS visits the blocks in the order `A`,
 
 ### Irreducible union of two natural loops
 
-% Graphviz source; the indented blocks below form a comment.
+% Graphviz source; leading `%` is a markdown comment
 %
 % ///     |   |
 % ///     A<->B
@@ -157,7 +161,7 @@ cycle: {A, B, C, D} entries: {A, B} header: A
 
 ### Irreducible cycle without natural loops
 
-% Graphviz source; the indented blocks below form a comment.
+% Graphviz source; leading `%` is a markdown comment
 %
 % ///     |   |
 % ///   />A   B<\
@@ -264,4 +268,3 @@ whose header is in `P`. Since `H` is the only entry to `P`,
 `H` must be the header of `C'`. Since headers uniquely define
 cycles, `C'` contains every such closed path `P`, and hence `C'`
 contains `C`.
-

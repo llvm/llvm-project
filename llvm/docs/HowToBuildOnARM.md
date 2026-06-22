@@ -34,7 +34,7 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
 
    Other options you can use are:
 
-   ```bash
+   ```text
    Use Ninja instead of Make: "-G Ninja"
    Build with assertions on: "-DLLVM_ENABLE_ASSERTIONS=True"
    Local (non-sudo) install path: "-DCMAKE_INSTALL_PREFIX=$HOME/llvm/install"
@@ -49,7 +49,7 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
    please use `gold` rather than GNU `ld`. In any case, it is probably a good
    idea to set up a swap partition, too.
 
-   ```bash
+   ```console
    $ sudo ln -sf /usr/bin/ld /usr/bin/ld.gold
    ```
 
@@ -79,4 +79,3 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
    provide *at least* 4 amperes. This is especially important if you use USB
    devices with your board. Externally powered USB/SATA hard drives are even
    better than having a good power supply.
-
