@@ -9395,9 +9395,11 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     }
     Triples += Action::GetOffloadKindName(CurKind);
     Triples += '-';
-    Triples +=
-        CurTC->getTriple().normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-    if (CurKind != Action::OFK_Host &&
+    Triples += llvm::Triple(CurTC->ComputeEffectiveClangTriple(
+                                TCArgs, CurDep->getOffloadingArch()))
+                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+
+    if ((CurKind != Action::OFK_Host) &&
         !StringRef(CurDep->getOffloadingArch()).empty()) {
       Triples += '-';
       Triples += CurDep->getOffloadingArch();
@@ -9473,9 +9475,12 @@ void OffloadBundler::ConstructJobMultipleOutputs(
     auto &Dep = DepInfo[I];
     Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
     Triples += '-';
-    Triples += Dep.DependentToolChain->getTriple().normalize(
-        llvm::Triple::CanonicalForm::FOUR_IDENT);
-    if (Dep.DependentOffloadKind != Action::OFK_Host &&
+    Triples += llvm::Triple(Dep.DependentToolChain->ComputeEffectiveClangTriple(
+                                TCArgs, Dep.DependentBoundArch))
+                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+
+    if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
+         Dep.DependentOffloadKind == Action::OFK_Cuda) &&
         !Dep.DependentBoundArch.empty()) {
       Triples += '-';
       Triples += Dep.DependentBoundArch;
@@ -9544,7 +9549,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     // linker wrapper.
     SmallVector<std::string> Parts{
         "file=" + File.str(),
-        "triple=" + TC->getTripleString().str(),
+        "triple=" + TC->ComputeEffectiveClangTriple(TCArgs, Arch),
         "arch=" + (Arch.empty() ? "generic" : Arch.str()),
         "kind=" + Kind.str(),
     };
