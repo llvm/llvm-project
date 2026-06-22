@@ -84,6 +84,9 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       AArch64 Stack Tagging
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Loop Pass Manager
+; CHECK-NEXT:         SVE Shuffle Optimizations
 ; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Memory SSA

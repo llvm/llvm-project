@@ -2017,6 +2017,13 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
+defm experimental_lifetime_safety_c : BoolFOption<
+    "experimental-lifetime-safety-c",
+    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
+    PosFlag<SetTrue, [], [CC1Option], "Enable">,
+    NegFlag<SetFalse, [], [CC1Option], "Disable">,
+    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
+
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
       Group<m_Group>,
@@ -2024,6 +2031,15 @@ def lifetime_safety_max_cfg_blocks
       HelpText<"Skip LifetimeSafety analysis for functions with CFG block "
                "count exceeding this threshold. Specify 0 for no limit.">,
       MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
+
+def lifetime_safety_lifetimebound_macro
+    : Joined<["-"], "lifetime-safety-lifetimebound-macro=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<macro>">,
+      HelpText<"Use the given macro name when suggesting lifetimebound "
+               "attributes">,
+      MarshallingInfoString<LangOpts<"LifetimeSafetyLifetimeBoundMacro">>;
 
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
@@ -4814,9 +4830,9 @@ defm whole_program_vtables : BoolFOption<"whole-program-vtables",
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
 defm split_lto_unit : BoolFOption<"split-lto-unit",
   CodeGenOpts<"EnableSplitLTOUnit">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Enables splitting of the LTO unit">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption]>>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CLOption, FlangOption, FC1Option]>>;
 defm force_emit_vtables : BoolFOption<"force-emit-vtables",
   CodeGenOpts<"ForceEmitVTables">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5038,8 +5054,8 @@ defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
 def femit_dwarf_unwind_EQ : Joined<["-"], "femit-dwarf-unwind=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"When to emit DWARF unwind (EH frame) info">,
-  Values<"always,no-compact-unwind,default">,
-  NormalizedValues<["Always", "NoCompactUnwind", "Default"]>,
+  Values<"always,no-compact-unwind,dwarf-only,default">,
+  NormalizedValues<["Always", "NoCompactUnwind", "DwarfOnly", "Default"]>,
   NormalizedValuesScope<"llvm::EmitDwarfUnwindType">,
   MarshallingInfoEnum<CodeGenOpts<"EmitDwarfUnwind">, "Default">;
 defm emit_compact_unwind_non_canonical : BoolFOption<"emit-compact-unwind-non-canonical",

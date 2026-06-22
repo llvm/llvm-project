@@ -71,9 +71,12 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return std::nullopt;
+    std::optional<uint64_t> NumElements = C->getValue().tryZExtValue();
+    if (!NumElements)
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     auto CheckedProd =
-        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+        checkedMulUnsigned(Size.getKnownMinValue(), *NumElements);
     if (!CheckedProd)
       return std::nullopt;
     return TypeSize::getFixed(*CheckedProd);

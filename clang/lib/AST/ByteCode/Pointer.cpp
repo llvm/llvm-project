@@ -872,6 +872,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
         for (unsigned I = 0; I != NV; ++I) {
           const Record::Base *VD = Record->getVirtualBase(I);
+          assert(VD);
           QualType VirtBaseTy =
               Ctx.getASTContext().getCanonicalTagType(VD->Decl);
           PtrView VP = Ptr.atField(VD->Offset);

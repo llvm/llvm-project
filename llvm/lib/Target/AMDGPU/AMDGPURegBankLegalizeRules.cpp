@@ -1681,6 +1681,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}}, hasSALUFloat)
       .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}}, !hasSALUFloat);
 
+  addRulesForGOpcs({G_INTRINSIC_FPTRUNC_ROUND})
+      .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}}, hasSALUFloat)
+      .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}}, !hasSALUFloat)
+      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
+      .Any({{UniS16, S64}, {{UniInVgprS16}, {Vgpr64}}})
+      .Any({{DivS16, S64}, {{Vgpr16}, {Vgpr64}}})
+      .Any({{UniS32, S64}, {{UniInVgprS32}, {Vgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}});
+
   addRulesForGOpcs({G_IS_FPCLASS})
       .Any({{DivS1, S16}, {{Vcc}, {Vgpr16}}})
       .Any({{UniS1, S16}, {{UniInVcc}, {Vgpr16}}})
@@ -2323,7 +2332,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
-  addRulesForIOpcs({amdgcn_global_load_lds, amdgcn_load_to_lds})
+  addRulesForIOpcs(
+      {amdgcn_global_load_lds, amdgcn_load_to_lds, amdgcn_load_async_to_lds})
       .Any({{}, {{}, {IntrId, VgprP1, SgprB32_M0}}});
 
   addRulesForIOpcs({amdgcn_global_load_async_to_lds_b8,
@@ -2623,16 +2633,34 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   // gfx90a+ only MFMAs
   addRulesForIOpcs(
-      {amdgcn_mfma_f32_32x32x4bf16_1k, amdgcn_mfma_f32_16x16x4bf16_1k,
-       amdgcn_mfma_f32_4x4x4bf16_1k, amdgcn_mfma_f32_32x32x8bf16_1k,
-       amdgcn_mfma_f32_16x16x16bf16_1k, amdgcn_mfma_f64_16x16x4f64,
-       amdgcn_mfma_f64_4x4x4f64, amdgcn_mfma_i32_16x16x32_i8,
-       amdgcn_mfma_i32_32x32x16_i8, amdgcn_mfma_f32_16x16x8_xf32,
-       amdgcn_mfma_f32_32x32x4_xf32, amdgcn_mfma_f32_16x16x32_bf8_bf8,
-       amdgcn_mfma_f32_16x16x32_bf8_fp8, amdgcn_mfma_f32_16x16x32_fp8_bf8,
-       amdgcn_mfma_f32_16x16x32_fp8_fp8, amdgcn_mfma_f32_32x32x16_bf8_bf8,
-       amdgcn_mfma_f32_32x32x16_bf8_fp8, amdgcn_mfma_f32_32x32x16_fp8_bf8,
-       amdgcn_mfma_f32_32x32x16_fp8_fp8})
+      {
+          amdgcn_mfma_f32_32x32x4bf16_1k,
+          amdgcn_mfma_f32_16x16x4bf16_1k,
+          amdgcn_mfma_f32_4x4x4bf16_1k,
+          amdgcn_mfma_f32_32x32x8bf16_1k,
+          amdgcn_mfma_f32_16x16x16bf16_1k,
+          amdgcn_mfma_f64_16x16x4f64,
+          amdgcn_mfma_f64_4x4x4f64,
+          amdgcn_mfma_i32_16x16x32_i8,
+          amdgcn_mfma_i32_32x32x16_i8,
+          amdgcn_mfma_f32_16x16x8_xf32,
+          amdgcn_mfma_f32_32x32x4_xf32,
+          amdgcn_mfma_f32_16x16x32_bf8_bf8,
+          amdgcn_mfma_f32_16x16x32_bf8_fp8,
+          amdgcn_mfma_f32_16x16x32_fp8_bf8,
+          amdgcn_mfma_f32_16x16x32_fp8_fp8,
+          amdgcn_mfma_f32_32x32x16_bf8_bf8,
+          amdgcn_mfma_f32_32x32x16_bf8_fp8,
+          amdgcn_mfma_f32_32x32x16_fp8_bf8,
+          amdgcn_mfma_f32_32x32x16_fp8_fp8,
+          // gfx950
+          amdgcn_mfma_f32_16x16x32_f16,
+          amdgcn_mfma_f32_32x32x16_f16,
+          amdgcn_mfma_i32_16x16x64_i8,
+          amdgcn_mfma_i32_32x32x32_i8,
+          // TODO: bf16 variants fail in IRTranslator.
+          // amdgcn_mfma_f32_16x16x32_bf16, amdgcn_mfma_f32_32x32x16_bf16,
+      })
       .Any({{DivAnyTy},
             {{VgprOrAgprAnyTy},
              {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy}}});
