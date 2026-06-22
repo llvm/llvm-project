@@ -562,7 +562,6 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
   ctx.arg.cooperativeThreading = args.hasArg(OPT_cooperative_threading);
-  ;
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
