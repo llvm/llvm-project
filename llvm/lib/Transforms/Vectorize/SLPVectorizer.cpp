@@ -30432,7 +30432,7 @@ public:
 
     // Emit ordered reduction for the vectorized window. The reduction only
     // applies to floating point types.
-    assert(DestTy->isFloatingPointTy() &&
+    assert(DestTy->isFPOrFPVectorTy() &&
            SuccessRoot->getType()->isFPOrFPVectorTy() &&
            "Expected floating point types for ordered reduction");
     Builder.SetCurrentDebugLocation(
