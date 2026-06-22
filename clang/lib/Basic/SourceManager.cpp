@@ -465,6 +465,7 @@ ContentCache &SourceManager::createMemBufferContentCache(
   MemBufferInfos.push_back(Entry);
   Entry->setBuffer(std::move(Buffer));
   return *Entry;
+}
 
 llvm::ErrorOr<llvm::TextEncodingConverter *>
 SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
