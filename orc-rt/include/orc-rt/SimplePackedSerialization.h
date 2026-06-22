@@ -573,6 +573,26 @@ public:
   }
 };
 
+class SPSExecutorAddrRange;
+
+template <>
+class SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
+public:
+  static size_t size(const ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(R.Start, R.End);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::serialize(OB, R.Start,
+                                                                   R.End);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::deserialize(
+        IB, R.Start, R.End);
+  }
+};
+
 /// SPS tag type for errors.
 class SPSError;
 
