@@ -288,11 +288,11 @@ public:
       if (!CooperativeThreading)
         StrippedTLS = stripThreadLocals(M);
     }
-    if (!Features[WebAssembly::FeatureBulkMemory]) {
-      StrippedTLS |= stripThreadLocals(M);
+    if (!Features[WebAssembly::FeatureBulkMemory] && !StrippedTLS) {
+      StrippedTLS = stripThreadLocals(M);
     }
 
-    if (StrippedAtomics && !StrippedTLS)
+    if (StrippedAtomics && !StrippedTLS && !CooperativeThreading)
       stripThreadLocals(M);
     else if (StrippedTLS && !StrippedAtomics)
       stripAtomics(M);
