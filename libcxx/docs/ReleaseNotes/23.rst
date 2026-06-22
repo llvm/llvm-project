@@ -53,7 +53,7 @@ Implemented Papers
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
 - P3798R1: The unexpected in ``std::expected`` (`Github <https://llvm.org/PR204394>`__)
-  
+
 Improvements and New Features
 -----------------------------
 
