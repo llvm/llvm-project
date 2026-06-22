@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=true" %s -split-input-file | FileCheck %s --check-prefixes=CPP,CHECK
-// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=false" %s -split-input-file | FileCheck %s --check-prefixes=NOCPP,CHECK
+// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=true" %s | FileCheck %s --check-prefixes=CPP,CHECK
+// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=false" %s | FileCheck %s --check-prefixes=NOCPP,CHECK
 
 func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
   memref.copy %arg0, %arg1 : memref<9x4x5x7xf32> to memref<9x4x5x7xf32>
@@ -28,3 +28,20 @@ func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
 // CHECK:           return
 // CHECK:         }
 
+func.func @copying_rank0(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+  memref.copy %arg0, %arg1 : memref<i32> to memref<i32>
+  return
+}
+
+// CHECK-LABEL:   func.func @copying_rank0(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<i32>,
+// CHECK-SAME:      %[[ARG1:.*]]: memref<i32>) {
+// CHECK:           %[[TARGET_CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<i32> to !emitc.ptr<i32>
+// CHECK:           %[[SOURCE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<i32> to !emitc.ptr<i32>
+// CHECK:           %[[ZERO:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+// CHECK:           %[[SOURCE_LVALUE:.*]] = emitc.subscript %[[SOURCE_CAST]]{{\[}}%[[ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+// CHECK:           %[[VALUE:.*]] = emitc.load %[[SOURCE_LVALUE]] : <i32>
+// CHECK:           %[[TARGET_LVALUE:.*]] = emitc.subscript %[[TARGET_CAST]]{{\[}}%[[ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+// CHECK:           emitc.assign %[[VALUE]] : i32 to %[[TARGET_LVALUE]] : <i32>
+// CHECK:           return
+// CHECK:         }

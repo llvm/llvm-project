@@ -8,21 +8,6 @@ func.func @unsuppoted_emitc_type(%arg0: i4) -> i4 {
 // -----
 
 // expected-error@+1 {{failed to legalize operation 'func.func'}}
-func.func private @return_rank0_alloc() -> memref<i32> {
-  %alloc = memref.alloc() : memref<i32>
-  return %alloc : memref<i32>
-}
-
-// -----
-
-// expected-error@+1 {{failed to legalize operation 'func.func'}}
-func.func private @return_rank0_arg(%arg0: memref<i32>) -> memref<i32> {
-  return %arg0 : memref<i32>
-}
-
-// -----
-
-// expected-error@+1 {{failed to legalize operation 'func.func'}}
 func.func private @return_rank1_alloc() -> memref<1xi32> {
   %alloc = memref.alloc() : memref<1xi32>
   return %alloc : memref<1xi32>
