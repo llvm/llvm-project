@@ -390,8 +390,8 @@ def RetCC_X86_Win64_C : CallingConv<[
 
 // X86-64 vectorcall return-value convention.
 def RetCC_X86_64_Vectorcall : CallingConv<[
-  // Vectorcall calling convention always returns FP values in XMMs.
-  CCIfType<[f32, f64, f128], 
+  // See RetCC_X86_64 for details on f128.
+  CCIfType<[f32, f64],
     CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
 
   // Otherwise, everything is the same as Windows X86-64 C CC.
@@ -469,6 +469,36 @@ def RetCC_X86_32 : CallingConv<[
 
 // This is the root return-value convention for the X86-64 backend.
 def RetCC_X86_64 : CallingConv<[
+  // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
+  //
+  // Using sret is a reasonable implementation of the Windows x64 calling
+  // convention:
+  //
+  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#return-values
+  //
+  // > Otherwise, the caller must allocate memory for the return value and pass
+  // > a pointer to it as the first argument.
+  //
+  // Although it is not the only reasonable interpretation:
+  //
+  // > Nonscalar types including floats, doubles, and vector types such as
+  // > __m128, __m128i, __m128d are returned in XMM0.
+  //
+  // For now, we prefer compatibility with GCC. If official guidelines are ever
+  // published, this can be revisited.
+  //
+  // The alignment of 1 is so the frame's alignment is not bumped.
+  CCIfType<[f128], CCIfCC<"CallingConv::Win64", CCAssignToStack<16, 1>>>,
+  CCIfType<[f128], CCIfSubtarget<"isTargetWin64()",
+    CCIfCC<"CallingConv::C", CCAssignToStack<16, 1>>>>,
+  CCIfType<[f128], CCIfSubtarget<"isTargetWin64()",
+    CCIfCC<"CallingConv::X86_VectorCall", CCAssignToStack<16, 1>>>>,
+  // UEFI also uses the Win64 CC.
+  CCIfType<[f128], CCIfSubtarget<"isTargetUEFI64()",
+    CCIfCC<"CallingConv::C", CCAssignToStack<16, 1>>>>,
+  CCIfType<[f128], CCIfSubtarget<"isTargetUEFI64()",
+    CCIfCC<"CallingConv::X86_VectorCall", CCAssignToStack<16, 1>>>>,
+
   // HiPE uses RetCC_X86_64_HiPE
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_64_HiPE>>,
 

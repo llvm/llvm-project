@@ -670,34 +670,15 @@ bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
-  // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
-  //
-  //
-  // Using sret is a reasonable implementation of the Windows x64 calling
-  // convention:
-  //
-  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#return-values
-  //
-  // > Otherwise, the caller must allocate memory for the return value and pass
-  // > a pointer to it as the first argument.
-  //
-  // Although it is not the only reasonable interpretation:
-  //
-  // > Nonscalar types including floats, doubles, and vector types such as
-  // > __m128, __m128i, __m128d are returned in XMM0.
-  //
-  // For now, we prefer compatibility with GCC. If official guidelines are ever
-  // published, this can be revisited.
-  //
-  // Return false, which will perform sret demotion.
-  if (Subtarget.isCallingConvWin64(CallConv) &&
-      llvm::any_of(
-          Outs, [](const ISD::OutputArg &Out) { return Out.VT == MVT::f128; }))
-    return false;
-
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, RetCC_X86);
+  if (!CCInfo.CheckReturn(Outs, RetCC_X86))
+    return false;
+
+  // Demotion to sret when the value must be returned via memory. This is the
+  // case for fp128 on windows.
+  return llvm::none_of(RVLocs,
+                       [](const CCValAssign &VA) { return VA.isMemLoc(); });
 }
 
 const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
