@@ -706,6 +706,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
+    if (N->getValueType(0) == MVT::i64) {
+      SelectAddcSubbI64(N);
+      return;
+    }
+
     if (N->getValueType(0) != MVT::i32)
       break;
 
@@ -713,6 +718,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     return;
   case ISD::UADDO:
   case ISD::USUBO: {
+    if (N->getValueType(0) == MVT::i64) {
+      SelectAddcSubbI64(N);
+      return;
+    }
+
     SelectUADDO_USUBO(N);
     return;
   }
@@ -1047,7 +1057,9 @@ SDValue AMDGPUDAGToDAGISel::getMaterializedScalarImm32(int64_t Val,
   return SDValue(Mov, 0);
 }
 
-// FIXME: Should only handle uaddo_carry/usubo_carry
+// Keep this as a fallback for i64 ADDC/ADDE/SUBC/SUBE glue nodes. Wide integer
+// add/sub should normally expand through the explicit carry nodes handled in
+// SelectAddcSubbI64.
 void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
@@ -1134,6 +1146,84 @@ void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
                                                       : AMDGPU::S_SUB_CO_PSEUDO;
     CurDAG->SelectNodeTo(N, Opc, N->getVTList(), {LHS, RHS, CI});
   }
+}
+
+void AMDGPUDAGToDAGISel::SelectAddcSubbI64(SDNode *N) {
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  unsigned Opcode = N->getOpcode();
+  bool ConsumeCarry = Opcode == ISD::UADDO_CARRY || Opcode == ISD::USUBO_CARRY;
+  bool IsAdd = Opcode == ISD::UADDO || Opcode == ISD::UADDO_CARRY;
+
+  SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
+  SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
+
+  SDNode *Lo0 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, LHS, Sub0);
+  SDNode *Hi0 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, LHS, Sub1);
+
+  SDNode *Lo1 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, RHS, Sub0);
+  SDNode *Hi1 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                       MVT::i32, RHS, Sub1);
+
+  SDVTList VTList = CurDAG->getVTList(MVT::i32, N->getValueType(1));
+
+  static const unsigned NoCarryOpcMap[2][2] = {
+      {AMDGPU::S_USUBO_PSEUDO, AMDGPU::S_UADDO_PSEUDO},
+      {AMDGPU::V_SUB_CO_U32_e64, AMDGPU::V_ADD_CO_U32_e64}};
+  static const unsigned CarryOpcMap[2][2] = {
+      {AMDGPU::S_SUB_CO_PSEUDO, AMDGPU::S_ADD_CO_PSEUDO},
+      {AMDGPU::V_SUBB_U32_e64, AMDGPU::V_ADDC_U32_e64}};
+
+  bool IsVALU = N->isDivergent();
+
+  unsigned NoCarryOpc = NoCarryOpcMap[IsVALU][IsAdd];
+  unsigned CarryOpc = CarryOpcMap[IsVALU][IsAdd];
+  SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
+
+  SDNode *AddLo;
+  if (!ConsumeCarry) {
+    if (IsVALU) {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0), Clamp};
+      AddLo = CurDAG->getMachineNode(NoCarryOpc, DL, VTList, Args);
+    } else {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0)};
+      AddLo = CurDAG->getMachineNode(NoCarryOpc, DL, VTList, Args);
+    }
+  } else {
+    if (IsVALU) {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0), N->getOperand(2),
+                        Clamp};
+      AddLo = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+    } else {
+      SDValue Args[] = {SDValue(Lo0, 0), SDValue(Lo1, 0), N->getOperand(2)};
+      AddLo = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+    }
+  }
+
+  SDNode *AddHi;
+  if (IsVALU) {
+    SDValue Args[] = {SDValue(Hi0, 0), SDValue(Hi1, 0), SDValue(AddLo, 1),
+                      Clamp};
+    AddHi = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+  } else {
+    SDValue Args[] = {SDValue(Hi0, 0), SDValue(Hi1, 0), SDValue(AddLo, 1)};
+    AddHi = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
+  }
+
+  unsigned RC = IsVALU ? AMDGPU::VReg_64RegClassID : AMDGPU::SReg_64RegClassID;
+  SDValue RegSequenceArgs[] = {CurDAG->getTargetConstant(RC, DL, MVT::i32),
+                               SDValue(AddLo, 0), Sub0, SDValue(AddHi, 0),
+                               Sub1};
+  SDNode *RegSequence = CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                               MVT::i64, RegSequenceArgs);
+
+  ReplaceUses(SDValue(N, 1), SDValue(AddHi, 1));
+  ReplaceNode(N, RegSequence);
 }
 
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
@@ -1865,22 +1955,23 @@ static MemSDNode* findMemSDNode(SDNode *N) {
   llvm_unreachable("cannot find MemSDNode in the pattern!");
 }
 
-bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
-                                              SDValue &VAddr, SDValue &Offset,
-                                              uint64_t FlatVariant) const {
+bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
+    SDNode *N, SDValue Addr, SDValue &VAddr, SDValue &Offset,
+    AMDGPU::FlatAddrSpace FlatVariant) const {
+  using AMDGPU::FlatAddrSpace;
   int64_t OffsetVal = 0;
 
   unsigned AS = findMemSDNode(N)->getAddressSpace();
 
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
-      FlatVariant == SIInstrFlags::FLAT &&
+      FlatVariant == FlatAddrSpace::FLAT &&
       (AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS);
 
   if (Subtarget->hasFlatInstOffsets() && !CanHaveFlatSegmentOffsetBug) {
     SDValue N0, N1;
     if (isBaseWithConstantOffset64(Addr, N0, N1) &&
-        (FlatVariant != SIInstrFlags::FlatScratch ||
+        (FlatVariant != FlatAddrSpace::FlatScratch ||
          isFlatScratchBaseLegal(Addr))) {
       int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
@@ -1889,7 +1980,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
       // only fold offsets from inbounds GEPs into FLAT instructions.
       bool IsInBounds =
           Addr.getOpcode() == ISD::PTRADD && Addr->getFlags().hasInBounds();
-      if (COffsetVal == 0 || FlatVariant != SIInstrFlags::FLAT || IsInBounds) {
+      if (COffsetVal == 0 || FlatVariant != FlatAddrSpace::FLAT || IsInBounds) {
         const SIInstrInfo *TII = Subtarget->getInstrInfo();
         if (TII->isLegalFLATOffset(COffsetVal, AS, FlatVariant)) {
           Addr = N0;
@@ -1974,20 +2065,22 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N, SDValue Addr,
                                           SDValue &VAddr,
                                           SDValue &Offset) const {
-  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset, SIInstrFlags::FLAT);
+  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset,
+                              AMDGPU::FlatAddrSpace::FLAT);
 }
 
 bool AMDGPUDAGToDAGISel::SelectGlobalOffset(SDNode *N, SDValue Addr,
                                             SDValue &VAddr,
                                             SDValue &Offset) const {
-  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset, SIInstrFlags::FlatGlobal);
+  return SelectFlatOffsetImpl(N, Addr, VAddr, Offset,
+                              AMDGPU::FlatAddrSpace::FlatGlobal);
 }
 
 bool AMDGPUDAGToDAGISel::SelectScratchOffset(SDNode *N, SDValue Addr,
                                              SDValue &VAddr,
                                              SDValue &Offset) const {
   return SelectFlatOffsetImpl(N, Addr, VAddr, Offset,
-                              SIInstrFlags::FlatScratch);
+                              AMDGPU::FlatAddrSpace::FlatScratch);
 }
 
 // If this matches *_extend i32:x, return x
@@ -2013,6 +2106,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
                                            SDValue &SAddr, SDValue &VOffset,
                                            SDValue &Offset, bool &ScaleOffset,
                                            bool NeedIOffset) const {
+  using AMDGPU::FlatAddrSpace;
   int64_t ImmOffset = 0;
   ScaleOffset = false;
 
@@ -2026,7 +2120,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
 
     if (NeedIOffset &&
         TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS,
-                               SIInstrFlags::FlatGlobal)) {
+                               FlatAddrSpace::FlatGlobal)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent()) {
@@ -2038,7 +2132,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
         int64_t SplitImmOffset = 0, RemainderOffset = COffsetVal;
         if (NeedIOffset) {
           std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
-              COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
+              COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, FlatAddrSpace::FlatGlobal);
         }
 
         if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
@@ -2251,6 +2345,7 @@ static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
 bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
                                             SDValue &SAddr,
                                             SDValue &Offset) const {
+  using AMDGPU::FlatAddrSpace;
   if (Addr->isDivergent())
     return false;
 
@@ -2270,10 +2365,10 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
   if (!TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
-                              SIInstrFlags::FlatScratch)) {
+                              FlatAddrSpace::FlatScratch)) {
     int64_t SplitImmOffset, RemainderOffset;
     std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
-        COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
+        COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, FlatAddrSpace::FlatScratch);
 
     COffsetVal = SplitImmOffset;
 
@@ -2323,7 +2418,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
     if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
-                               SIInstrFlags::FlatScratch)) {
+                               AMDGPU::FlatAddrSpace::FlatScratch)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent() && COffsetVal > 0) {
@@ -2331,8 +2426,9 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
       // saddr + large_offset -> saddr + (vaddr = large_offset & ~MaxOffset) +
       //                         (large_offset & MaxOffset);
       int64_t SplitImmOffset, RemainderOffset;
-      std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
-          COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
+      std::tie(SplitImmOffset, RemainderOffset) =
+          TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
+                               AMDGPU::FlatAddrSpace::FlatScratch);
 
       if (isUInt<32>(RemainderOffset)) {
         SDNode *VMov = CurDAG->getMachineNode(
@@ -3604,6 +3700,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  // 64-bit VOP3P instructions do not have OPSEL or ABS. Bail on v2f64 or v2i64.
+  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
+  if (Src.getValueSizeInBits() == 128) {
+    Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
+    SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+    return true;
+  }
+
   if (Src.getOpcode() == ISD::BUILD_VECTOR && Src.getNumOperands() == 2 &&
       (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
     unsigned VecMods = Mods;
@@ -4080,6 +4184,29 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
         }
     }
 
+  // Currently f64 immediate vectors are represented as vectors of v2i32, with
+  // different lo and hi 32-bit values even though double values are splated.
+  // So we have to manually compare to determine whether it is splated.
+  if (CurDAG->isConstantIntBuildVectorOrConstantInt(SplatSrc32)) {
+    int64_t Imm64 = 0;
+    for (unsigned i = 0; i < SplatSrc32->getNumOperands(); i += 2) {
+      auto Lo32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i));
+      auto Hi32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i + 1));
+      int64_t LoImm = Lo32->getAPIntValue().getSExtValue();
+      int64_t HiImm = Hi32->getAPIntValue().getSExtValue();
+      int64_t Imm64I = (HiImm << 32) + LoImm;
+      if (i == 0) {
+        if (!isInlineImmediate(APInt(64, Imm64I)))
+          return false;
+        Imm64 = Imm64I;
+      } else if (Imm64I != Imm64)
+        return false;
+    } // end for
+
+    Src = CurDAG->getTargetConstant(Imm64, SDLoc(In), MVT::i64);
+    return true;
+  }
+
   return false;
 }
 
@@ -4401,16 +4528,107 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     }
 
     // Recursion is naturally limited by the size of the operand vector.
-    auto Op = BitOp3_Op(LHS, Src);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      LHSBits = Op.second;
+    //
+    // When LHS and RHS share a common sub-expression, one side's recursion
+    // may decompose that sub-expression and replace the Src slot the other
+    // side occupies with sub-operands via the "replace parent" path in
+    // getOperandBits. The other side's cached bit-pattern then refers to a
+    // slot whose contents changed, producing a wrong truth table.
+    //
+    // We detect this in three ways:
+    // (A) If LHS recursed, its truth table is valid against the Src state
+    //     when LHS recursion completed (SrcAfterLHS). If RHS recursion
+    //     then mutates a Src slot that LHSBits depends on, LHSBits is
+    //     stale.
+    // (B) If RHS did not recurse, RHSBits came from getOperandBits and
+    //     refers to a specific Src slot. If that slot's contents changed
+    //     (by either recursion), RHSBits is stale.
+    // (C) Symmetrically for LHS if it did not recurse.
+    SmallVector<SDValue, 3> SrcBeforeRecurse(Src.begin(), Src.end());
+    uint8_t LHSBitsOrig = LHSBits;
+    uint8_t RHSBitsOrig = RHSBits;
+
+    auto LHSOp = BitOp3_Op(LHS, Src);
+    if (LHSOp.first) {
+      NumOpcodes += LHSOp.first;
+      LHSBits = LHSOp.second;
     }
 
-    Op = BitOp3_Op(RHS, Src);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      RHSBits = Op.second;
+    SmallVector<SDValue, 3> SrcAfterLHS(Src.begin(), Src.end());
+
+    auto RHSOp = BitOp3_Op(RHS, Src);
+    if (RHSOp.first) {
+      NumOpcodes += RHSOp.first;
+      RHSBits = RHSOp.second;
+    }
+
+    // dependsOnSlot: true iff the truth table TT varies with slot Slot.
+    auto dependsOnSlot = [](uint8_t TT, int Slot) -> bool {
+      if (Slot < 0 || Slot > 2)
+        return false;
+      const uint8_t Masks[3] = {0x0f, 0x33, 0x55};
+      const int Shifts[3] = {4, 2, 1};
+      return ((TT ^ (TT >> Shifts[Slot])) & Masks[Slot]) != 0;
+    };
+
+    // findSlot: locate the Src slot a getOperandBits result depends on,
+    // including negated (XOR with -1) patterns that getOperandBits
+    // resolves via the NOT shortcut (~SrcBits[I]).
+    const uint8_t SrcBitsConst[3] = {0xf0, 0xcc, 0xaa};
+    auto findSlot = [&](uint8_t Bits, SDValue Op,
+                        const SmallVectorImpl<SDValue> &S) -> int {
+      SDValue NegatedInner;
+      bool IsNegationOp =
+          Op.getOpcode() == ISD::XOR && isAllOnesConstant(Op.getOperand(1));
+      if (IsNegationOp)
+        NegatedInner = Op.getOperand(0);
+      for (int I = 0; I < (int)S.size(); I++) {
+        if (Bits == SrcBitsConst[I] && S[I] == Op)
+          return I;
+        if (IsNegationOp && Bits == (uint8_t)~SrcBitsConst[I] &&
+            S[I] == NegatedInner)
+          return I;
+      }
+      return -1;
+    };
+
+    bool Stale = false;
+
+    // (A) LHS recursed: its truth table is against SrcAfterLHS.
+    //     Check if RHS recursion mutated a slot that LHSBits uses.
+    if (LHSOp.first) {
+      for (int I = 0; I < (int)SrcAfterLHS.size() && I < 3; I++) {
+        if (I < (int)Src.size() && Src[I] != SrcAfterLHS[I] &&
+            dependsOnSlot(LHSBits, I)) {
+          Stale = true;
+          break;
+        }
+      }
+    }
+
+    // (B) RHS did not recurse: RHSBits from getOperandBits is against
+    //     SrcBeforeRecurse. Check if that slot was mutated since then.
+    if (!Stale && !RHSOp.first) {
+      int Slot = findSlot(RHSBitsOrig, RHS, SrcBeforeRecurse);
+      if (Slot >= 0 &&
+          (Slot >= (int)Src.size() || Src[Slot] != SrcBeforeRecurse[Slot]))
+        Stale = true;
+    }
+
+    // (C) LHS did not recurse: LHSBits from getOperandBits is against
+    //     SrcBeforeRecurse. Check if that slot was mutated since then.
+    if (!Stale && !LHSOp.first) {
+      int Slot = findSlot(LHSBitsOrig, LHS, SrcBeforeRecurse);
+      if (Slot >= 0 &&
+          (Slot >= (int)Src.size() || Src[Slot] != SrcBeforeRecurse[Slot]))
+        Stale = true;
+    }
+
+    if (Stale) {
+      Src = std::move(SrcBeforeRecurse);
+      LHSBits = LHSBitsOrig;
+      RHSBits = RHSBitsOrig;
+      NumOpcodes = 0;
     }
     break;
   }

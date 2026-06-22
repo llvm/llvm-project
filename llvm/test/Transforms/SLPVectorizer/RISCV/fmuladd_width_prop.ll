@@ -10,32 +10,32 @@ define void @bar(ptr %0, i64 %1, double %2, i64 %3, double %4, double %5, double
 ; CHECK-NEXT:  [[E:.*]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP0]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 6
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x i16>, ptr [[TMP12]], align 2
+; CHECK-NEXT:    [[TMP14:%.*]] = uitofp <2 x i16> [[TMP13]] to <2 x double>
+; CHECK-NEXT:    [[TMP15:%.*]] = call <2 x i16> @llvm.experimental.vp.strided.load.v2i16.p0.i64(ptr align 2 [[TMP9]], i64 6, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor i16 [[TMP16]], -1
 ; CHECK-NEXT:    [[TMP18:%.*]] = uitofp i16 [[TMP17]] to double
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul nnan double [[TMP18]], f0x3EF0001000100010
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul double [[TMP2]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fadd double [[TMP4]], [[TMP20]]
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 4
-; CHECK-NEXT:    [[TMP32:%.*]] = load i16, ptr [[TMP31]], align 2
-; CHECK-NEXT:    [[TMP33:%.*]] = uitofp i16 [[TMP32]] to double
-; CHECK-NEXT:    [[TMP34:%.*]] = call double @llvm.fmuladd.f64(double [[TMP20]], double [[TMP33]], double [[TMP5]])
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = load i16, ptr [[TMP22]], align 2
-; CHECK-NEXT:    [[TMP24:%.*]] = uitofp i16 [[TMP23]] to double
-; CHECK-NEXT:    [[TMP25:%.*]] = call double @llvm.fmuladd.f64(double [[TMP20]], double [[TMP24]], double [[TMP6]])
-; CHECK-NEXT:    [[TMP26:%.*]] = load i16, ptr [[TMP9]], align 2
-; CHECK-NEXT:    [[TMP27:%.*]] = uitofp i16 [[TMP26]] to double
-; CHECK-NEXT:    [[TMP28:%.*]] = call double @llvm.fmuladd.f64(double [[TMP20]], double [[TMP27]], double [[TMP7]])
-; CHECK-NEXT:    [[TMP29:%.*]] = uitofp i16 [[TMP16]] to double
-; CHECK-NEXT:    [[TMP30:%.*]] = call double @llvm.fmuladd.f64(double [[TMP2]], double [[TMP29]], double [[TMP8]])
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> poison, double [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x double> [[TMP22]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x double> [[TMP24]], double [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP23]], <2 x double> [[TMP14]], <2 x double> [[TMP25]])
+; CHECK-NEXT:    [[TMP27:%.*]] = uitofp <2 x i16> [[TMP15]] to <2 x double>
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x double> [[TMP28]], double [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x double> [[TMP30]], double [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP32:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP29]], <2 x double> [[TMP27]], <2 x double> [[TMP31]])
 ; CHECK-NEXT:    br label %[[R:.*]]
 ; CHECK:       [[R]]:
-; CHECK-NEXT:    [[D0:%.*]] = phi double [ [[TMP30]], %[[E]] ]
-; CHECK-NEXT:    [[D1:%.*]] = phi double [ [[TMP28]], %[[E]] ]
-; CHECK-NEXT:    [[D2:%.*]] = phi double [ [[TMP25]], %[[E]] ]
-; CHECK-NEXT:    [[D3:%.*]] = phi double [ [[TMP34]], %[[E]] ]
+; CHECK-NEXT:    [[TMP33:%.*]] = phi <2 x double> [ [[TMP32]], %[[E]] ]
+; CHECK-NEXT:    [[TMP34:%.*]] = phi <2 x double> [ [[TMP26]], %[[E]] ]
 ; CHECK-NEXT:    ret void
 ;
 e:

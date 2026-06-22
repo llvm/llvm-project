@@ -3453,6 +3453,9 @@ protected:
       const char *object_name = module->GetObjectName().GetCString();
       if (object_name)
         strm.Printf("(%s)", object_name);
+      std::optional<addr_t> memory_addr = module->GetMemoryModuleAddress();
+      if (memory_addr.has_value())
+        strm.Printf("(0x%" PRIx64 ")", memory_addr.value());
     }
     strm.EOL();
   }
@@ -3783,6 +3786,11 @@ protected:
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
         if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
+          assert(((!plan_sp || plan_sp->GetRowCount() == 0 ||
+                   plan_sp->GetRowAtIndex(0)
+                       ->GetUnspecifiedRegistersAreUndefined())) &&
+                 "Default UnwindPlan must set "
+                 "UnspecifiedRegistersAreUndefined to true");
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
           plan_sp->Dump(result.GetOutputStream(), thread.get(),
                         LLDB_INVALID_ADDRESS);

@@ -10,7 +10,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc (dead)]
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc)
 ; CHECK-NEXT:   store i32 0, ptr %alloc, align 4
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %alloc)

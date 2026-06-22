@@ -143,7 +143,7 @@ def test_barriers():
             nvvm.BarrierReduction.OR,
             nvvm.BarrierReduction.POPC,
         ):
-            pred = nvvm.barrier(
+            pred = nvvm.barrier_reduction(
                 reduction_op=reduction,
                 reduction_predicate=pred,
             )
@@ -167,9 +167,9 @@ def test_barriers():
 # CHECK:           %[[CONSTANT_1:.*]] = arith.constant 65535 : i32
 # CHECK:           nvvm.barrier id = %[[CONSTANT_0]] number_of_threads = %[[CONSTANT_1]]
 # CHECK:           %[[PRED:.*]] = arith.constant 1 : i32
-# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier #nvvm.reduction<and> %[[PRED]] -> i32
-# CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier #nvvm.reduction<or> %[[BARRIER_1]] -> i32
-# CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
+# CHECK:           %[[BARRIER_1:.*]] = nvvm.barrier.reduction #nvvm.reduction<and> %[[PRED]] -> i32
+# CHECK:           %[[BARRIER_2:.*]] = nvvm.barrier.reduction #nvvm.reduction<or> %[[BARRIER_1]] -> i32
+# CHECK:           %[[BARRIER_3:.*]] = nvvm.barrier.reduction #nvvm.reduction<popc> %[[BARRIER_2]] -> i32
 # CHECK:           nvvm.barrier
 # CHECK:           nvvm.bar.warp.sync %[[ARG0]] : i32
 # CHECK:           nvvm.cluster.arrive

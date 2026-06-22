@@ -18,4 +18,4 @@
 # CHECK: ulimit -f 5
 # CHECK: RLIMIT_FSIZE=5
 # CHECK: ulimit -f unlimited
-# CHECK: RLIMIT_FSIZE=-1
+# CHECK: RLIMIT_FSIZE=infinity

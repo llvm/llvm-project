@@ -24,7 +24,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeEnumTypes : public IPDBEnumChildren<PDBSymbol> {
+class LLVM_ABI NativeEnumTypes : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumTypes(NativeSession &Session,
                   codeview::LazyRandomTypeCollection &TypeCollection,

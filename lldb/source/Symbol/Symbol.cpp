@@ -85,7 +85,7 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_is_debug = rhs.m_is_debug;
     m_is_external = rhs.m_is_external;
     m_size_is_sibling = rhs.m_size_is_sibling;
-    m_size_is_synthesized = rhs.m_size_is_sibling;
+    m_size_is_synthesized = rhs.m_size_is_synthesized;
     m_size_is_valid = rhs.m_size_is_valid;
     m_demangled_is_synthesized = rhs.m_demangled_is_synthesized;
     m_contains_linker_annotations = rhs.m_contains_linker_annotations;
@@ -645,6 +645,16 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   m_flags = data.GetU32(offset_ptr);
   return true;
 }
+
+// If the size of Symbol has changed, the Encode and
+// Decode methods also likely need to be updated and
+// the DataFileCache version number in Symtab::Encode
+// will need to be incremented as well.
+#if __SIZEOF_POINTER__ == 8
+static_assert(sizeof(lldb_private::Symbol) == 80,
+              "Symbol size has changed, Symbol::Encode and Decode likely need "
+              "to be updated");
+#endif
 
 /// The encoding format for the symbol is as follows:
 ///

@@ -125,7 +125,6 @@ struct MissingFeatures {
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }
-  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -218,7 +217,6 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool hipModuleCtor() { return false; }
-  static bool globalRegistration() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
@@ -281,7 +279,6 @@ struct MissingFeatures {
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
-  static bool loopSpecificCleanupHandling() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
@@ -323,7 +320,6 @@ struct MissingFeatures {
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
   static bool fixedPointType() { return false; }
-  static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

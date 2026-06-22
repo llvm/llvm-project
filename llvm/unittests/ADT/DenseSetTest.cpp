@@ -82,8 +82,6 @@ TEST(DenseSetTest, RemoveIf) {
 }
 
 struct TestDenseSetInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -230,10 +228,6 @@ int CountCopyAndMove::Move = 0;
 namespace llvm {
 // Specialization required to insert a CountCopyAndMove into a DenseSet.
 template <> struct DenseMapInfo<CountCopyAndMove> {
-  static inline CountCopyAndMove getEmptyKey() { return CountCopyAndMove(-1); };
-  static inline CountCopyAndMove getTombstoneKey() {
-    return CountCopyAndMove(-2);
-  };
   static unsigned getHashValue(const CountCopyAndMove &Val) {
     return Val.Value;
   }
@@ -281,4 +275,15 @@ TEST(DenseSetCustomTest, ConstTest) {
   EXPECT_TRUE(Map.contains(B));
   EXPECT_TRUE(Map.contains(C));
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseSetCustomTest, EraseInvalidatesIterators) {
+  DenseSet<int> Set;
+  Set.insert(1);
+  Set.insert(2);
+  auto It = Set.find(1);
+  Set.erase(2);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif
 }

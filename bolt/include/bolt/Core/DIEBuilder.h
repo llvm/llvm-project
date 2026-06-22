@@ -132,9 +132,6 @@ private:
   uint64_t DebugNamesUnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
   DWARF5AcceleratorTable &DebugNamesTable;
-  // Unordered map to handle name collision if output DWO directory is
-  // specified.
-  std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
   State &getState() { return *BuilderState; }
@@ -220,6 +217,9 @@ private:
   /// Returns true if DWARFUnit is registered successfully.
   bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
+  /// Builds type units needed in the DWO.
+  void buildDWPTypeUnitsForUnit(DWARFUnit &U);
+
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);
 
@@ -290,7 +290,7 @@ public:
   /// Constructs IR for all the CUs.
   void buildCompileUnits(const bool Init = true);
   /// Constructs IR for CUs in a vector.
-  void buildCompileUnits(const std::vector<DWARFUnit *> &CUs);
+  void buildCompileUnits(const SmallVector<DWARFUnit *> &CUs);
   /// Preventing implicit conversions.
   template <class T> void buildCompileUnits(T) = delete;
   /// Builds DWO Unit. For DWARF5 this includes the type units.
@@ -341,7 +341,12 @@ public:
   void generateAbbrevs();
   void generateUnitAbbrevs(DIE *Die);
   void assignAbbrev(DIEAbbrev &Abbrev);
-
+  /// Set the base offset for CU emission, used by the incremental merge
+  /// pipeline
+  void setUnitOffsetBases(uint64_t Base) {
+    DebugNamesUnitSize = Base;
+    UnitSize = Base;
+  }
   /// Finish current DIE construction.
   void finish();
 
@@ -392,12 +397,12 @@ public:
   std::string updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
                                    DebugStrWriter &StrWriter,
                                    DWARFUnit &SkeletonCU,
-                                   std::optional<StringRef> DwarfOutputPath,
-                                   std::optional<StringRef> DWONameToUse);
+                                   StringRef DwarfOutputPath,
+                                   const StringRef DWOName);
   /// Updates DWO Name and Compilation directory for Type Units.
   void updateDWONameCompDirForTypes(DebugStrOffsetsWriter &StrOffstsWriter,
                                     DebugStrWriter &StrWriter, DWARFUnit &Unit,
-                                    std::optional<StringRef> DwarfOutputPath,
+                                    StringRef DwarfOutputPath,
                                     const StringRef DWOName);
 };
 } // namespace bolt

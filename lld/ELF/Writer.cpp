@@ -26,6 +26,7 @@
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
@@ -1496,6 +1497,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  if (ctx.arg.branchToBranch)
+    ctx.target->relaxCFIJumpTables();
+
   // Iterate until a fixed point is reached, skipping relocatable links since
   // the final addresses are unavailable.
   uint32_t pass = 0, assignPasses = 0;
@@ -2282,29 +2286,27 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
     load->add(ctx.out.programHeaders.get());
   }
 
-  // PT_GNU_RELRO includes all sections that should be marked as
-  // read-only by dynamic linker after processing relocations.
-  // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
-  // an error message if more than one PT_GNU_RELRO PHDR is required.
-  auto relRo = std::make_unique<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R);
-  bool inRelroPhdr = false;
-  OutputSection *relroEnd = nullptr;
+  // PT_GNU_RELRO includes all sections that should be marked as read-only by
+  // dynamic linker after processing relocations. Create one PT_GNU_RELRO for
+  // each run of contiguous relro sections. No diagnostics even if some loaders
+  // only honor one PT_GNU_RELRO.
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> relRos;
+  SmallPtrSet<OutputSection *, 1> relroEnds;
+  PhdrEntry *activeRelRo = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
     if (!needsPtLoad(sec))
       continue;
     if (isRelroSection(ctx, sec)) {
-      inRelroPhdr = true;
-      if (!relroEnd)
-        relRo->add(sec);
-      else
-        ErrAlways(ctx) << "section: " << sec->name
-                       << " is not contiguous with other relro" << " sections";
-    } else if (inRelroPhdr) {
-      inRelroPhdr = false;
-      relroEnd = sec;
+      if (!activeRelRo) {
+        relRos.push_back(std::make_unique<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R));
+        activeRelRo = relRos.back().get();
+      }
+      activeRelRo->add(sec);
+    } else if (activeRelRo) {
+      activeRelRo = nullptr;
+      relroEnds.insert(sec);
     }
   }
-  relRo->p_align = 1;
 
   for (OutputSection *sec : ctx.outputSections) {
     if (!needsPtLoad(sec))
@@ -2342,7 +2344,7 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
 
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
-    if (load && sec != relroEnd &&
+    if (load && !relroEnds.contains(sec) &&
         sec->memRegion == load->firstSec->memRegion &&
         (sameLMARegion || load->lastSec == ctx.out.programHeaders.get()) &&
         (ctx.script->hasSectionsCommand || sec->type == SHT_NOBITS ||
@@ -2369,8 +2371,10 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
     if (OutputSection *sec = ctx.in.dynamic->getParent())
       addHdr(PT_DYNAMIC, sec->getPhdrFlags())->add(sec);
 
-  if (relRo->firstSec)
-    ret.push_back(std::move(relRo));
+  for (std::unique_ptr<PhdrEntry> &phdr : relRos) {
+    phdr->p_align = 1;
+    ret.push_back(std::move(phdr));
+  }
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
   if (ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())
@@ -2734,12 +2738,18 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
       vmas.push_back({sec, sec->addr});
   checkOverlap(ctx, "virtual address", vmas, true);
 
-  // Finally, check that the load addresses don't overlap. This will usually be
-  // the same as the virtual addresses but can be different when using a linker
-  // script with AT().
+  // Finally, check that the load addresses don't overlap. This will
+  // usually be the same as the virtual addresses but can be different
+  // when using a linker script with AT(). SHT_NOBITS sections consume
+  // no space in the file so their load address is normally unimportant.
+  // Following GNU ld we permit the load address of a SHT_PROGBITS section
+  // to overlap the load address of a SHT_NOBITS section. This is used
+  // by embedded systems that copy the SHT_PROGBITS sections to a
+  // non-overlapping VMA before the SHT_NOBITS section is zero-initialized.
   std::vector<SectionOffset> lmas;
   for (OutputSection *sec : ctx.outputSections)
-    if (sec->size > 0 && (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
+    if (sec->size > 0 && (sec->type != SHT_NOBITS) &&
+        (sec->flags & SHF_ALLOC) && !(sec->flags & SHF_TLS))
       lmas.push_back({sec, sec->getLMA()});
   checkOverlap(ctx, "load address", lmas, false);
 }
