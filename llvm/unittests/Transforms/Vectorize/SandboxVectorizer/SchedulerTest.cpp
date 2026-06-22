@@ -263,6 +263,33 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   }
 }
 
+TEST_F(SchedulerTest, FalseNegatives) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  store i8 %ld0, ptr %ptr0
+  store i8 %ld1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
+  EXPECT_FALSE(Sched.trySchedule({S0, S1, L0, L1}));
+  EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+}
+
 TEST_F(SchedulerTest, Basic_TopDown) {
   parseIR(C, R"IR(
 define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {

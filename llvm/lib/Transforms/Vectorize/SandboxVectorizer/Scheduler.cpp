@@ -411,8 +411,14 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
-    for (auto &I : Extension) {
+    Interval<Instruction> InstrsInterval(Instrs);
+    Interval<Instruction> ScanForReady =
+        InstrsInterval.getUnionInterval(Extension);
+    for (auto &I : ScanForReady) {
       auto *N = DAG.getNode(&I);
+      if (N->scheduled())
+        continue;
+      ReadyList.remove(N);
       if (Dir == SchedDirection::BottomUp ? N->readyBottomUp()
                                           : N->readyTopDown())
         ReadyList.insert(N);
