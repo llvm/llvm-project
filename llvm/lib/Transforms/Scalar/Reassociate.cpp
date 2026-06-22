@@ -2575,7 +2575,6 @@ PreservedAnalyses ReassociatePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   // On targets with branch divergence, obtain UniformityInfo so we can group
   // uniform operands together in expression trees.
-  UA = nullptr;
   if (!SkipUniformityAnalysis) {
     const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
     if (TTI.hasBranchDivergence(&F))
@@ -2668,7 +2667,8 @@ class ReassociateLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  ReassociateLegacyPass() : FunctionPass(ID) {
+  ReassociateLegacyPass()
+      : FunctionPass(ID), Impl(/*SkipUniformityAnalysis=*/true) {
     initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -2676,7 +2676,6 @@ public:
     if (skipFunction(F))
       return false;
 
-    Impl.SkipUniformityAnalysis = true;
     FunctionAnalysisManager DummyFAM;
     auto PA = Impl.run(F, DummyFAM);
     return !PA.areAllPreserved();

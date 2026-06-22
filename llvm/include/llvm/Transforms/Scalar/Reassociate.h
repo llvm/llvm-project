@@ -98,8 +98,13 @@ protected:
   bool MadeChange;
   UniformityInfo *UA = nullptr;
 
+  // When set, UniformityInfo is not fetched in run(). This is used by the
+  // legacy pass manager, which cannot provide the required analyses.
+  bool SkipUniformityAnalysis;
+
 public:
-  bool SkipUniformityAnalysis = false;
+  ReassociatePass(bool SkipUniformityAnalysis = false)
+      : SkipUniformityAnalysis(SkipUniformityAnalysis) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
