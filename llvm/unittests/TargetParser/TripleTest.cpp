@@ -2668,10 +2668,29 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.isArch64Bit());
   EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
 
+  T = Triple("arm64-apple-darwin25");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26), Version);
+
   T = Triple("x86_64-apple-darwin26");
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Version);
   EXPECT_EQ(VersionTuple(27), Version);
+
+  T = Triple("x86_64-apple-darwin27");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  T = Triple("x86_64-apple-darwin30");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(30), Version);
 
   // Check invalid ranges are remapped.
   T = Triple("arm64-apple-visionos6.0");
@@ -2759,6 +2778,10 @@ TEST(TripleTest, getOSVersion) {
   T = Triple("x86_64-apple-driverkit");
   Version = T.getDriverKitVersion();
   EXPECT_EQ(VersionTuple(19, 0), Version);
+
+  T = Triple("arm64-apple-driverkit27");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(27), Version);
 
   T = Triple("dxil-unknown-shadermodel6.6-pixel");
   EXPECT_EQ(Triple::dxil, T.getArch());
@@ -3527,6 +3550,19 @@ TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
 
   EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
+TEST(DataLayoutTest, CheriRISCV32) {
+  Triple TT = Triple("riscv32-unknown-unknown");
+
+  EXPECT_THAT(TT.computeDataLayout(""),
+              testing::Not(testing::HasSubstr("pe200")));
+  EXPECT_THAT(TT.computeDataLayout(""),
+              testing::Not(testing::HasSubstr("A200-P200-G200")));
+  EXPECT_THAT(TT.computeDataLayout("cheriot"),
+              testing::HasSubstr("pe200:64:64:64:32"));
+  EXPECT_THAT(TT.computeDataLayout("cheriot"),
+              testing::HasSubstr("A200-P200-G200"));
 }
 
 } // end anonymous namespace

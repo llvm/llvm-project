@@ -275,9 +275,9 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
-                 mlir::Type t, bool isConstant = false,
+  cir::GlobalOp
+  createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
+                 bool isConstant = false,
                  mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
@@ -431,9 +431,34 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return cir::VisibilityKind::Default;
+    case HiddenVisibility:
+      return cir::VisibilityKind::Hidden;
+    case ProtectedVisibility:
+      return cir::VisibilityKind::Protected;
+    }
+
+    llvm_unreachable("unknown visibility!");
+  }
+
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;
+  llvm::DenseMap<const CompoundLiteralExpr *, cir::GlobalOp>
+      emittedCompoundLiterals;
+
+  cir::GlobalOp
+  getAddrOfConstantCompoundLiteralIfEmitted(const CompoundLiteralExpr *e) {
+    return emittedCompoundLiterals.lookup(e);
+  }
+  void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *e,
+                                        cir::GlobalOp gv) {
+    [[maybe_unused]] bool ok = emittedCompoundLiterals.insert({e, gv}).second;
+    assert(ok && "compound literal global already emitted");
+  }
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -596,10 +621,14 @@ public:
                           GlobalDecl aliasGD, cir::FuncOp aliasee,
                           cir::GlobalLinkageKind linkage);
 
+  /// Emit a definition for an `__attribute__((alias))` declaration.
+  void emitAliasDefinition(GlobalDecl gd);
+
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+                           const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
@@ -609,8 +638,10 @@ public:
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
   /// Set TLS mode for the given operation based on the given variable
-  /// declaration.
-  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+  /// declaration. If `isExtendingDecl` is true, then the operation is a
+  /// temporary whose lifetime is extended by the variable declared by `d`.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d,
+                  bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
   cir::TLS_Model getDefaultCIRTLSModel() const;
@@ -645,6 +676,7 @@ public:
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
 
+  void setGlobalTlsReferences(const VarDecl &vd, cir::GlobalOp globalOp);
   void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
                                     bool performInit);
 
@@ -690,6 +722,11 @@ public:
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
+  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Returns std::nullopt and emits errorNYI for virtual-base paths.
+  std::optional<llvm::SmallVector<int32_t>>
+  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
   // alternate name for the function to be called by. This function mangles
@@ -722,6 +759,13 @@ public:
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
+  /// Print the postfix for externalized static variable or kernels for single
+  /// source offloading languages CUDA and HIP. The unique postfix is created
+  /// using either the CUID argument, or the file's UniqueID and active macros.
+  /// The fallback method without a CUID requires that the offloading toolchain
+  /// does not define separate macros via the -cc1 options.
+  void printPostfixForExternalizedDecl(llvm::raw_ostream &os, const Decl *d);
 
   /// Replace all uses of the old global with the new global, updating types
   /// and references as needed. Erases the old global when done.
@@ -783,6 +827,9 @@ public:
     assert(openMPRuntime != nullptr);
     return *openMPRuntime;
   }
+
+  bool isPaddedAtomicType(QualType type);
+  bool isPaddedAtomicType(const AtomicType *type);
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -888,6 +935,12 @@ public:
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
 private:
+  /// Search \p currentClass and its non-virtual base subobjects for \p field,
+  /// appending CIR field indices along the path from \p currentClass.
+  bool findFieldMemberPath(const CXXRecordDecl *currentClass,
+                           const FieldDecl *field,
+                           llvm::SmallVectorImpl<int32_t> &path);
+
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;

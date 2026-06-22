@@ -11,6 +11,7 @@
 #include "hdr/types/struct_tm.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/stdio/printf_core/writer.h"
 #include "src/time/strftime_core/strftime_main.h"
 
@@ -19,6 +20,11 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(size_t, strftime,
                    (char *__restrict buffer, size_t buffsz,
                     const char *__restrict format, const tm *timeptr)) {
+  if (buffsz > 0)
+    LIBC_CRASH_ON_NULLPTR(buffer);
+  LIBC_CRASH_ON_NULLPTR(format);
+  LIBC_CRASH_ON_NULLPTR(timeptr);
+
   printf_core::DropOverflowBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(wb);
   auto ret = strftime_core::strftime_main(&writer, format, timeptr);

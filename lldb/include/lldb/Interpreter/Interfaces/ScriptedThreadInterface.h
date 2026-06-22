@@ -21,8 +21,8 @@ namespace lldb_private {
 class ScriptedThreadInterface : virtual public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     ExecutionContext &exe_ctx,
                      StructuredData::Generic *script_obj = nullptr) = 0;
 
   virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }

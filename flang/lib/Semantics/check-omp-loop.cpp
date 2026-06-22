@@ -381,7 +381,6 @@ void OmpStructureChecker::CheckNestedConstruct(
 
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveName &beginName{x.BeginDir().DirName()};
-  PushContextAndClauseSets(beginName.source, beginName.v);
 
   // Check matching, end directive is optional
   if (auto &endSpec{x.EndDir()}) {
@@ -465,7 +464,7 @@ void OmpStructureChecker::CheckIterationVariables(
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
       for (const parser::OmpObject &object :
           parser::omp::GetOmpObjectList(clause)->v) {
-        if (const Symbol *symbol{GetObjectSymbol(object)}) {
+        if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(
@@ -484,6 +483,10 @@ void OmpStructureChecker::CheckIterationVariables(
 
   std::vector<parser::Name> ivs;
   for (const parser::DoConstruct *loop : *doLoops) {
+    // Skip DO CONCURRENT, since their iteration variables are local.
+    if (loop->IsDoConcurrent()) {
+      continue;
+    }
     for (auto &control : GetLoopControls(*loop)) {
       if (control.iv.symbol) {
         ivs.push_back(control.iv);
@@ -498,14 +501,18 @@ void OmpStructureChecker::CheckIterationVariables(
           "The DO loop iteration variable must be of integer type"_err_en_US,
           iv.ToString());
     }
-    const Symbol *host{GetHostSymbol(*iv.symbol)};
-    if (!host) {
-      continue;
-    }
-    if (host->test(Symbol::Flag::OmpThreadprivate)) {
+    if (iv.symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate)) {
       context_.Say(iv.source,
           "Loop iteration variable of an affected loop cannot be THREADPRIVATE"_err_en_US,
           iv.ToString());
+    }
+    // Get the symbol from the variable that was listed in a DSA clause.
+    const Symbol *host{iv.symbol};
+    while (host && !dsa.count(host)) {
+      host = GetHostSymbol(*host);
+    }
+    if (!host) {
+      continue;
     }
     // Check conflict between a predetermined DSA and explicit DSA.
     assert(iv.symbol->test(Symbol::Flag::OmpPreDetermined) &&
@@ -680,7 +687,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   if (llvm::omp::allSimdSet.test(beginSpec.DirName().v)) {
     ExitDirectiveNest(SIMDNest);
   }
-  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
@@ -714,9 +720,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
-  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
@@ -810,9 +816,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           "The list item `%s` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute"_err_en_US,
           symbol->name());
     }
-    if (FindCommonBlockContaining(*symbol)) {
+    if (symbol->has<CommonBlockDetails>()) {
       context_.Say(source,
-          "'%s' is a common block name and must not appear in an LINEAR clause"_err_en_US,
+          "'%s' is a common block name and must not appear in a LINEAR clause"_err_en_US,
           symbol->name());
     }
   }

@@ -1,5 +1,6 @@
-from __future__ import absolute_import, annotations
+from __future__ import annotations
 
+import enum
 import os
 import pathlib
 import re
@@ -77,7 +78,7 @@ def buildPdbgCommand(msg, cmd):
     return res
 
 
-class TimeoutHelper(object):
+class TimeoutHelper:
     """
     Object used to helper manage enforcing a timeout in
     _executeShCmd(). It is passed through recursive calls
@@ -475,7 +476,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     stderr=stderr,
                     env=cmd_shenv.env,
                     close_fds=kUseCloseFDs,
-                    text=False,
+                    universal_newlines=True,
+                    errors="replace",
                 )
             )
             if old_umask != -1:
@@ -520,11 +522,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if procs[i].stdout is not None:
             out = procs[i].stdout.read()
         else:
-            out = b""
+            out = ""
         if procs[i].stderr is not None:
             err = procs[i].stderr.read()
         else:
-            err = b""
+            err = ""
         procData[i] = (out, err)
 
     # Read stderr out of the temp files.
@@ -567,7 +569,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         output_files = []
         if res != 0:
             for (name, mode, f, path) in sorted(opened_files):
-                if path is not None and mode in ("wb", "ab"):
+                if path is not None and mode in ("w", "a"):
                     try:
                         with open(path, "rb") as f:
                             data = f.read()
@@ -689,9 +691,20 @@ def executeScriptInternal(
                 f"shell parser error on {dbg}: {command.lstrip()}\n"
             ) from None
 
-    cmd = cmds[0]
-    for c in cmds[1:]:
-        cmd = ShUtil.Seq(cmd, "&&", c)
+    # Link all of `cmds` into a single command, consisting of the original
+    # commands chained together with &&. To avoid RecursionError in large tests
+    # (e.g. with 1000 RUN: lines), we do this by subdividing the list in half
+    # each time, so that we make a balanced tree structure with depth
+    # proportional to only the log of the list length.
+    def make_tree(cmds):
+        if len(cmds) == 1:
+            return cmds[0]
+        else:
+            assert len(cmds) > 1, "didn't expect an empty sequence"
+            split = len(cmds) // 2
+            return ShUtil.Seq(make_tree(cmds[:split]), "&&", make_tree(cmds[split:]))
+
+    cmd = make_tree(cmds)
 
     results = []
     timeoutInfo = None
@@ -702,7 +715,7 @@ def executeScriptInternal(
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
-        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+        cmd, shenv, results, timeout=test.config.maxIndividualTestTime
     )
 
     out = err = ""
@@ -746,7 +759,7 @@ def executeScriptInternal(
 
         # If nothing interesting happened, move on.
         if (
-            litConfig.maxIndividualTestTime == 0
+            test.config.maxIndividualTestTime == 0
             and result.exitCode == 0
             and not result.stdout.strip()
             and not result.stderr.strip()
@@ -775,7 +788,7 @@ def executeScriptInternal(
             else:
                 codeStr = str(result.exitCode)
             out += "# error: command failed with exit status: %s\n" % (codeStr,)
-        if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
+        if test.config.maxIndividualTestTime > 0 and result.timeoutReached:
             out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
@@ -899,7 +912,7 @@ def executeScript(
             command,
             cwd=cwd,
             env=env,
-            timeout=litConfig.maxIndividualTestTime,
+            timeout=test.config.maxIndividualTestTime,
         )
         return (out, err, exitCode, None, None)
     except lit.util.ExecuteCommandTimeoutException as e:
@@ -990,11 +1003,13 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     tmpName = tmpBase + ".tmp"
     tmpBaseName = os.path.basename(tmpBase)
     sourceBaseName = os.path.basename(sourcepath)
+    sourceStem = os.path.splitext(sourceBaseName)[0]
 
     substitutions.append(("%{pathsep}", os.pathsep))
     substitutions.append(("%basename_t", tmpBaseName))
 
     substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{s:stem}", sourceStem))
     substitutions.append(("%{t:stem}", tmpBaseName))
 
     fs_sep = os.path.sep
@@ -1065,23 +1080,11 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     return substitutions
 
 
-def _memoize(f):
-    cache = {}  # Intentionally unbounded, see applySubstitutions()
-
-    def memoized(x):
-        if x not in cache:
-            cache[x] = f(x)
-        return cache[x]
-
-    return memoized
-
-
-@_memoize
+@lit.util.memoize  # Intentionally unbounded: see applySubstitutions
 def _caching_re_compile(r):
     return re.compile(r)
 
-
-class ExpandableScriptDirective(object):
+class ExpandableScriptDirective:
     """
     Common interface for lit directives for which any lit substitutions must be
     expanded to produce the shell script.  It includes directives (e.g., 'RUN:')
@@ -1445,7 +1448,8 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
     return output
 
 
-class ParserKind(object):
+@enum.unique
+class ParserKind(enum.IntEnum):
     """
     An enumeration representing the style of an integrated test keyword or
     command.
@@ -1464,46 +1468,24 @@ class ParserKind(object):
         'REDEFINE: %{name}=value'
     """
 
-    TAG = 0
-    COMMAND = 1
-    LIST = 2
-    SPACE_LIST = 3
-    BOOLEAN_EXPR = 4
-    INTEGER = 5
-    CUSTOM = 6
-    DEFINE = 7
-    REDEFINE = 8
+    def __new__(cls, value, suffixes):
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        obj.allowed_suffixes = suffixes
+        return obj
 
-    @staticmethod
-    def allowedKeywordSuffixes(value):
-        return {
-            ParserKind.TAG: ["."],
-            ParserKind.COMMAND: [":"],
-            ParserKind.LIST: [":"],
-            ParserKind.SPACE_LIST: [":"],
-            ParserKind.BOOLEAN_EXPR: [":"],
-            ParserKind.INTEGER: [":"],
-            ParserKind.CUSTOM: [":", "."],
-            ParserKind.DEFINE: [":"],
-            ParserKind.REDEFINE: [":"],
-        }[value]
-
-    @staticmethod
-    def str(value):
-        return {
-            ParserKind.TAG: "TAG",
-            ParserKind.COMMAND: "COMMAND",
-            ParserKind.LIST: "LIST",
-            ParserKind.SPACE_LIST: "SPACE_LIST",
-            ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
-            ParserKind.INTEGER: "INTEGER",
-            ParserKind.CUSTOM: "CUSTOM",
-            ParserKind.DEFINE: "DEFINE",
-            ParserKind.REDEFINE: "REDEFINE",
-        }[value]
+    TAG = (0, ["."])
+    COMMAND = (1, [":"])
+    LIST = (2, [":"])
+    SPACE_LIST = (3, [":"])
+    BOOLEAN_EXPR = (4, [":"])
+    INTEGER = (5, [":"])
+    CUSTOM = (6, [":", "."])
+    DEFINE = (7, [":"])
+    REDEFINE = (8, [":"])
 
 
-class IntegratedTestKeywordParser(object):
+class IntegratedTestKeywordParser:
     """A parser for LLVM/Clang style integrated test scripts.
 
     keyword: The keyword to parse for. It must end in either '.' or ':'.
@@ -1513,18 +1495,17 @@ class IntegratedTestKeywordParser(object):
     """
 
     def __init__(self, keyword, kind, parser=None, initial_value=None):
-        allowedSuffixes = ParserKind.allowedKeywordSuffixes(kind)
+        allowedSuffixes = kind.allowed_suffixes
         if len(keyword) == 0 or keyword[-1] not in allowedSuffixes:
             if len(allowedSuffixes) == 1:
                 raise ValueError(
                     "Keyword '%s' of kind '%s' must end in '%s'"
-                    % (keyword, ParserKind.str(kind), allowedSuffixes[0])
+                    % (keyword, kind.name, allowedSuffixes[0])
                 )
             else:
                 raise ValueError(
                     "Keyword '%s' of kind '%s' must end in "
-                    " one of '%s'"
-                    % (keyword, ParserKind.str(kind), " ".join(allowedSuffixes))
+                    " one of '%s'" % (keyword, kind.name, " ".join(allowedSuffixes))
                 )
 
         if parser is not None and kind != ParserKind.CUSTOM:
@@ -1832,10 +1813,10 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         scriptCopy = script[:]
         # Set unique LLVM_PROFILE_FILE for each run command
         if litConfig.per_test_coverage:
-            # Extract the test case name from the test object, and remove the
-            # file extension.
-            test_case_name = test.path_in_suite[-1]
-            test_case_name = test_case_name.rsplit(".", 1)[0]
+            # Use the test's full path in the suite, plus the %p (pid) and %m
+            # (binary signature) runtime placeholders, so that distinct tests,
+            # processes, and instrumented binaries don't share a profraw file.
+            test_case_name = "_".join(test.path_in_suite)
             coverage_index = 0  # Counter for coverage file index
             for i, ln in enumerate(scriptCopy):
                 match = re.fullmatch(kPdbgRegex, ln)
@@ -1844,7 +1825,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                     command = match.group(2)
                 else:
                     command = ln
-                profile = f"{test_case_name}{coverage_index}.profraw"
+                profile = f"{test_case_name}-%p-%m{coverage_index}.profraw"
                 coverage_index += 1
                 command = f"export LLVM_PROFILE_FILE={profile}; {command}"
                 if match:

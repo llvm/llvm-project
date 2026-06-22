@@ -624,6 +624,33 @@ Warning to detect invalidation of references.
   }];
 }
 
+def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
+  code Documentation = [{
+Detects parameters marked as [[clang::lifetimebound]] for which the analysis could not verify that the return value can be lifetime bound to the parameter.
+This warning may produce false-positives diagnostics when it cannot fully model the code.
+  }];
+}
+
+def LifetimeSafetyInapplicableLifetimebound
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound"> {
+  code Documentation = [{
+Detects uses of [[clang::lifetimebound]] that have no effect because the type of the annotated parameter cannot carry a lifetime.
+  }];
+}
+
+def LifetimeSafetyCrossTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-cross-tu-misplaced-lifetimebound">;
+def LifetimeSafetyIntraTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-intra-tu-misplaced-lifetimebound">;
+def LifetimeSafetyMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-misplaced-lifetimebound",
+                [LifetimeSafetyCrossTUMisplacedLifetimebound,
+                 LifetimeSafetyIntraTUMisplacedLifetimebound]> {
+    code Documentation = [{
+Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the first declaration is not.
+}];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
@@ -636,6 +663,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
+                                    LifetimeSafetyDanglingGlobalMoved,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -665,11 +693,29 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
-def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape]> {
+def LifetimeSafetyAnnotationPlacement
+    : DiagGroup<"lifetime-safety-annotation-placement",
+                [LifetimeSafetyInapplicableLifetimebound,
+                 LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
-Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
-like verifying [[clang::noescape]] and [[clang::lifetimebound]] (upcoming).
+Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
+  }];
+}
+
+def LifetimeSafetyAnnotationVerification
+    : DiagGroup<"lifetime-safety-annotation-verification",
+                [LifetimeSafetyNoescape,
+                 LifetimeSafetyLifetimeboundViolation]> {
+  code Documentation = [{
+Verifies that function implementations adhere to their lifetime annotation contracts through dataflow analysis.
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                         [LifetimeSafetyAnnotationPlacement,
+                                          LifetimeSafetyAnnotationVerification]> {
+  code Documentation = [{
+Validates correct usage and adherence to lifetime safety annotations like [[clang::noescape]] and [[clang::lifetimebound]].
   }];
 }
 
@@ -955,6 +1001,7 @@ def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
 def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
 def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
 def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
+def NonportableSystemIncludePath : DiagGroup<"nonportable-system-include-path">;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,

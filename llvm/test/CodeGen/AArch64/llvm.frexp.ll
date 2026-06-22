@@ -697,17 +697,17 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    ldr q3, [sp] // 16-byte Reload
 ; CHECK-NEXT:    ldr s1, [sp, #44]
-; CHECK-NEXT:    ldr q2, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    mov v2.s[3], v0.s[0]
+; CHECK-NEXT:    ldr s2, [x20]
+; CHECK-NEXT:    mov v3.s[3], v0.s[0]
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x19]
-; CHECK-NEXT:    ldr s0, [x20]
-; CHECK-NEXT:    ld1 { v0.s }[1], [x21]
+; CHECK-NEXT:    ld1 { v2.s }[1], [x21]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x21, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    zip1 v1.2d, v1.2d, v0.2d
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    mov v0.16b, v3.16b
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 ;
@@ -872,8 +872,8 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    ldr s0, [sp, #28]
-; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
 ; CHECK-NEXT:    ldr s1, [x20]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x19]
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x21]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x30, x21, [sp, #32] // 16-byte Folded Reload

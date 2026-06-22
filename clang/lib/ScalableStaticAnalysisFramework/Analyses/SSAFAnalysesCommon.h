@@ -15,9 +15,19 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::ssaf {
+///\return a short descriptions of a json::Value
+std::string describeJSONValue(const llvm::json::Value &V);
+///\return a short descriptions of a json::Array
+std::string describeJSONValue(const llvm::json::Array &A);
+///\return a short descriptions of a json::Object
+std::string describeJSONValue(const llvm::json::Object &O);
+
 template <typename NodeTy, typename... Ts>
 llvm::Error makeErrAtNode(clang::ASTContext &Ctx, const NodeTy *N,
                           llvm::StringRef Fmt, const Ts &...Args) {
@@ -26,23 +36,35 @@ llvm::Error makeErrAtNode(clang::ASTContext &Ctx, const NodeTy *N,
                                  LocStr.c_str());
 }
 
-template <typename... Ts>
-llvm::Error makeSawButExpectedError(const llvm::json::Value &Saw,
-                                    llvm::StringRef Expected,
+template <typename JSONTy, typename... Ts>
+llvm::Error makeSawButExpectedError(const JSONTy &Saw, llvm::StringRef Expected,
                                     const Ts &...ExpectedArgs) {
   std::string Fmt = ("saw %s but expected " + Expected).str();
-  std::string SawStr = llvm::formatv("{0:2}", Saw).str();
+  std::string SawStr = describeJSONValue(Saw);
 
   return llvm::createStringError(Fmt.c_str(), SawStr.c_str(), ExpectedArgs...);
 }
 
-template <typename DeclOrExpr> bool hasPtrOrArrType(const DeclOrExpr *E) {
+///\return true iff expression `E` has pointer or array type.
+inline bool hasPtrOrArrType(const Expr *E) {
   return llvm::isa<clang::PointerType, clang::ArrayType>(
       E->getType().getCanonicalType());
 }
 
+///\return true iff Decl `D` has (reference-to) pointer or array type.
+inline bool hasPtrOrArrType(const ValueDecl *D) {
+  return llvm::isa<clang::PointerType, clang::ArrayType>(
+      D->getType().getNonReferenceType().getCanonicalType());
+}
+
 llvm::Error makeEntityNameErr(clang::ASTContext &Ctx,
                               const clang::NamedDecl *D);
+
+/// Log a warning from an llvm::Error
+inline void logWarningFromError(llvm::Error Err) {
+  DEBUG_WITH_TYPE("ssaf-analyses", llvm::errs() << Err);
+  llvm::consumeError(std::move(Err));
+}
 
 /// Find all contributors in an AST.
 void findContributors(ASTContext &Ctx,

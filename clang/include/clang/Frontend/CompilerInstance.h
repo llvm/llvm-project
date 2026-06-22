@@ -805,7 +805,7 @@ public:
   std::unique_ptr<raw_pwrite_stream> createDefaultOutputFile(
       bool Binary = true, StringRef BaseInput = "", StringRef Extension = "",
       bool RemoveFileOnSignal = true, bool CreateMissingDirectories = false,
-      bool ForceUseTemporary = false);
+      bool ForceUseTemporary = false, bool SetOnlyIfDifferent = false);
 
   /// Create a new output file, optionally deriving the output path name, and
   /// add it to the list of tracked output files.
@@ -813,7 +813,8 @@ public:
   /// \return - Null on error.
   std::unique_ptr<raw_pwrite_stream>
   createOutputFile(StringRef OutputPath, bool Binary, bool RemoveFileOnSignal,
-                   bool UseTemporary, bool CreateMissingDirectories = false);
+                   bool UseTemporary, bool CreateMissingDirectories = false,
+                   bool SetOnlyIfDifferent = false);
 
 private:
   /// Prepare the CompilerInstance for executing a frontend action.
@@ -843,7 +844,7 @@ private:
   Expected<std::unique_ptr<raw_pwrite_stream>>
   createOutputFileImpl(StringRef OutputPath, bool Binary,
                        bool RemoveFileOnSignal, bool UseTemporary,
-                       bool CreateMissingDirectories);
+                       bool CreateMissingDirectories, bool SetOnlyIfDifferent);
 
 public:
   std::unique_ptr<raw_pwrite_stream> createNullOutputFile();

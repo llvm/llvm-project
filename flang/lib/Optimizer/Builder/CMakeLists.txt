@@ -53,7 +53,6 @@ add_flang_library(FIRBuilder
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranEvaluate
   FortranSupport
   HLFIRDialect
   MIFDialect

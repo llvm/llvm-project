@@ -70,6 +70,30 @@ for.body:
 for.end:
   ret void
 }
+
+define i32 @reverse_gather(ptr %p) "target-cpu"="znver5" {
+; CHECK-LABEL: reverse_gather
+; CHECK-AVX1: LV: Selecting VF: 8
+; CHECK-AVX2: LV: Selecting VF: 8
+entry:
+  br label %loop
+
+loop:
+  %any = phi i32 [ 1, %entry ], [ %sel, %loop ]
+  %iv = phi i32 [ 100, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, -1
+  %idx = zext i32 %iv to i64
+  %gep = getelementptr [8 x i8], ptr %p, i64 %idx
+  %ptr = load ptr, ptr %gep, align 8
+  %v = load i32, ptr %ptr, align 8
+  %nz = icmp eq i32 %v, 0
+  %sel = select i1 %nz, i32 %any, i32 0
+  %cond = icmp sgt i32 %iv.next, 0
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %sel
+}
 !3 = !{!3, !{!"llvm.loop.parallel_accesses", !13}}
 !4 = !{!4}
 !13 = distinct !{}

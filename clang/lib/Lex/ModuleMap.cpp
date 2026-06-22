@@ -180,8 +180,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
   SmallString<128> FullPathName(Directory->getName());
 
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
-    auto File =
-        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    auto File = SourceMgr.getFileManager().getOptionalFileRef(Filename);
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
         (Header.ModTime && File->getModificationTime() != *Header.ModTime))
       return std::nullopt;
@@ -970,7 +969,8 @@ Module *ModuleMap::lookupModuleUnqualified(StringRef Name,
   return findModule(Name);
 }
 
-Module *ModuleMap::lookupModuleQualified(StringRef Name, Module *Context) const{
+ModuleRef ModuleMap::lookupModuleQualified(StringRef Name,
+                                           Module *Context) const {
   if (!Context)
     return findModule(Name);
 
@@ -982,8 +982,8 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
                                                         bool IsFramework,
                                                         bool IsExplicit) {
   // Try to find an existing module with this name.
-  if (Module *Sub = lookupModuleQualified(Name, Parent))
-    return std::make_pair(Sub, false);
+  if (ModuleRef Sub = lookupModuleQualified(Name, Parent); Sub.getExisting())
+    return std::make_pair(Sub.getExisting(), false);
 
   // Create a new module with this name.
   Module *M = createModule(Name, Parent, IsFramework, IsExplicit);
@@ -992,7 +992,7 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
 
 Module *ModuleMap::createModule(StringRef Name, Module *Parent,
                                 bool IsFramework, bool IsExplicit) {
-  assert(lookupModuleQualified(Name, Parent) == nullptr &&
+  assert(!lookupModuleQualified(Name, Parent).getExisting() &&
          "Creating duplicate submodule");
 
   Module *Result = new (ModulesAlloc.Allocate())

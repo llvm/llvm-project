@@ -497,8 +497,8 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   if (!MainFileBuf)
     return SourceLocation();
 
-  std::unique_ptr<Lexer> RawLexer(
-      new Lexer(MainFileID, *MainFileBuf, SourceMgr, CI.getLangOpts()));
+  auto RawLexer = std::make_unique<Lexer>(MainFileID, *MainFileBuf, SourceMgr,
+                                          CI.getLangOpts());
 
   // If the first line has the syntax of
   //
