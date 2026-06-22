@@ -1104,6 +1104,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         break;
       }
 
+      case Intrinsic::pext: {
+        Value *X;
+        if (match(II->getArgOperand(0),
+                  m_c_And(m_Value(X), m_Specific(II->getArgOperand(1)))))
+          return replaceOperand(*I, 0, X);
+
+        break;
+      }
+
       case Intrinsic::fshr:
       case Intrinsic::fshl: {
         const APInt *SA;
