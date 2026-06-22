@@ -1892,9 +1892,9 @@ def get_qsupported_capabilities(test):
     return reply.strip().split(";")
 
 
-def connect_to_new_remote_platform(test, platform_exe, extra_args=[]):
+def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):
     hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
-    port_file = test.getBuildArtifact("port")
+    port_file = testcase.getBuildArtifact("port")
     commandline_args = [
         "platform",
         "--listen",
@@ -1902,11 +1902,11 @@ def connect_to_new_remote_platform(test, platform_exe, extra_args=[]):
         "--socket-file",
         port_file,
     ] + extra_args
-    test.spawnSubprocess(platform_exe, commandline_args)
+    testcase.spawnSubprocess(platform_exe, commandline_args)
 
-    socket_id = wait_for_file_on_target(test, port_file)
-    new_platform = lldb.SBPlatform("remote-" + test.getPlatform())
-    test.dbg.SetSelectedPlatform(new_platform)
-    test.runCmd(f"platform connect connect://[{hostname}]:{socket_id}")
+    socket_id = wait_for_file_on_target(testcase, port_file)
+    new_platform = lldb.SBPlatform("remote-" + testcase.getPlatform())
+    testcase.dbg.SetSelectedPlatform(new_platform)
+    testcase.runCmd(f"platform connect connect://[{hostname}]:{socket_id}")
 
     return new_platform
