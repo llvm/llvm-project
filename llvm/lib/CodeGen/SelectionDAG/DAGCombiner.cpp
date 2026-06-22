@@ -24642,8 +24642,8 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
   // would create an illegal-typed shuffle after type legalization.
   EVT SubVecEltVT = SubVecVT.getVectorElementType();
   EVT ShufVT = EVT::getVectorVT(*DAG.getContext(), SubVecEltVT, NumMaskVals);
-  if (!TLI.isShuffleMaskLegal(Mask, ShufVT) ||
-      (LegalTypes && !TLI.isTypeLegal(ShufVT)))
+  if ((LegalTypes && !TLI.isTypeLegal(ShufVT)) ||
+      !TLI.isShuffleMaskLegal(Mask, ShufVT))
     return SDValue();
 
   // Step 2: Create a wide vector from the inserted source vector by appending
