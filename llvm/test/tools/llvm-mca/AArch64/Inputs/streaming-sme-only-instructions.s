@@ -1,24 +1,6 @@
 // Instructions only available when in streaming SVE mode
 // and sent to CME.
 
-// SVE2 and base A64 instructions added by SME.
-bfmlslb z0.s, z1.h, z2.h
-bfmlslt z0.s, z1.h, z2.h
-fclamp z0.s, z1.s, z2.s
-fdot z0.s, z1.h, z2.h
-revd z0.q, p0/m, z0.q
-rprfm #0, x0, [x0]
-sclamp z0.s, z1.s, z2.s
-uclamp z0.s, z1.s, z2.s
-sdot z0.s, z0.h, z0.h
-udot z0.s, z0.h, z0.h
-sqcvtn z0.h, {z0.s, z1.s}
-sqcvtun z0.b, {z0.s - z3.s}
-uqcvtn z0.h, {z0.s, z1.s}
-sqrshrn z0.b, {z0.s - z3.s}, #32
-sqrshrun z0.b, {z0.s - z3.s}, #32
-uqrshrn z0.b, {z0.s - z3.s}, #32
-
 // SME and SME2 processing instructions.
 add za.s[w8, 0, vgx2], {z0.s, z1.s}
 sub za.s[w8, 0, vgx2], {z0.s, z1.s}

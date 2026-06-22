@@ -1,3 +1,6 @@
+// Instructions available with no SME but will be sent to CME when in streaming
+// SVE mode
+
 fadd s0, s1, s2
 fcvtzs w0, s1
 frintz s0, s1
