@@ -7,9 +7,8 @@ define half @test_vext_v8i16_0(<8 x i16> %a) {
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
-  ; CHECK-NEXT:   $h0 = COPY [[COPY2]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
+  ; CHECK-NEXT:   $h0 = COPY [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $h0
 entry:
   %b = extractelement <8 x i16> %a, i32 0

@@ -1,0 +1,15 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "PointerFlowAnalysisResult",
+      "result": {
+        "PointerFlowAnalysisResult": [
+          "not-an-object",
+          []
+        ]
+      }
+    }
+  ],
+  "type": "WPASuite"
+}

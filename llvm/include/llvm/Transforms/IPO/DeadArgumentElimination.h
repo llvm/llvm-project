@@ -36,7 +36,7 @@ class Value;
 
 /// Eliminate dead arguments (and return values) from functions.
 class DeadArgumentEliminationPass
-    : public PassInfoMixin<DeadArgumentEliminationPass> {
+    : public OptionalPassInfoMixin<DeadArgumentEliminationPass> {
 public:
   /// Struct that represents (part of) either a return value or a function
   /// argument.  Used so that arguments and return values can be used
@@ -72,10 +72,7 @@ public:
   /// (in Uses) will never be marked alive and will thus become dead in the end.
   enum Liveness { Live, MaybeLive };
 
-  DeadArgumentEliminationPass(bool ShouldHackArguments = false)
-      : ShouldHackArguments(ShouldHackArguments) {}
-
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
   /// Convenience wrapper
   RetOrArg createRet(const Function *F, unsigned Idx) {
@@ -118,10 +115,6 @@ public:
   FuncSet FrozenRetTyFunctions;
 
   using UseVector = SmallVector<RetOrArg, 5>;
-
-  /// This allows this pass to do double-duty as the dead arg hacking pass
-  /// (used only by bugpoint).
-  bool ShouldHackArguments = false;
 
 private:
   Liveness markIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses);

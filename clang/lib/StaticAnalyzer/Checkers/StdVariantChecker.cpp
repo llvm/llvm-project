@@ -143,7 +143,7 @@ public:
                                      const InvalidatedSymbols *,
                                      ArrayRef<const MemRegion *>,
                                      ArrayRef<const MemRegion *> Regions,
-                                     const LocationContext *,
+                                     const StackFrame *,
                                      const CallEvent *Call) const {
     if (!Call)
       return State;

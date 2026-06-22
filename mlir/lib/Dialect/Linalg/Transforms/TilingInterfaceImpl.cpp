@@ -1157,7 +1157,8 @@ struct PackOpTiling
         FailureOr<int64_t> cstTileSize =
             ValueBoundsConstraintSet::computeConstantBound(
                 presburger::BoundType::UB, sizes[dim],
-                /*stopCondition=*/nullptr, /*closedUB=*/true);
+                /*stopCondition=*/nullptr,
+                ValueBoundsOptions{/*closedUB=*/true});
         std::optional<int64_t> cstInnerSize =
             getConstantIntValue(dimAndTileMapping[dim]);
 
@@ -1326,7 +1327,7 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
   info.isAlignedToInnerTileSize = false;
   FailureOr<int64_t> cstSize = ValueBoundsConstraintSet::computeConstantBound(
       presburger::BoundType::UB, tileSize,
-      /*stopCondition=*/nullptr, /*closedUB=*/true);
+      /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
   std::optional<int64_t> cstInnerSize = getConstantIntValue(innerTileSize);
   if (!failed(cstSize) && cstInnerSize) {
     if (*cstSize % *cstInnerSize == 0)

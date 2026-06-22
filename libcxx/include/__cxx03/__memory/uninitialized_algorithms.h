@@ -223,7 +223,7 @@ template <class _Alloc,
           class _Out,
           __enable_if_t<
               // using _RawTypeIn because of the allocator<T const> extension
-              is_trivially_copy_constructible<_RawTypeIn>::value && is_trivially_copy_assignable<_RawTypeIn>::value &&
+              is_trivially_copy_constructible<_RawTypeIn>::value && is_trivially_assignable<_Out&, _In&>::value &&
                   is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
                   __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value,
               int> = 0>

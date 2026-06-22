@@ -1805,19 +1805,59 @@ OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
                                      SourceLocation VarLoc,
                                      SourceLocation EndLoc) {
 
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<Expr *>(InteropInfo.PreferTypes.size() + 1));
-  auto *Clause = new (Mem) OMPInitClause(
-      InteropInfo.IsTarget, InteropInfo.IsTargetSync, StartLoc, LParenLoc,
-      VarLoc, EndLoc, InteropInfo.PreferTypes.size() + 1);
-  Clause->setInteropVar(InteropVar);
-  llvm::copy(InteropInfo.PreferTypes, Clause->getTrailingObjects() + 1);
+  unsigned NumPrefs = InteropInfo.Prefs.size();
+  unsigned NumAttrs = 0;
+  for (const OMPInteropPref &P : InteropInfo.Prefs)
+    NumAttrs += P.Attrs.size();
+
+  // Trailing layout: Expr*[1 + NumPrefs + NumAttrs], unsigned[NumPrefs].
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Expr *, unsigned>(1 + NumPrefs + NumAttrs, NumPrefs));
+  auto *Clause = new (Mem)
+      OMPInitClause(InteropInfo.IsTarget, InteropInfo.IsTargetSync, StartLoc,
+                    LParenLoc, VarLoc, EndLoc, /*VarListN=*/1 + NumPrefs);
+  Clause->NumAttrs = NumAttrs;
+  Clause->HasPreferAttrs = InteropInfo.HasPreferAttrs;
+
+  Expr **E = Clause->getTrailingObjects<Expr *>();
+  E[0] = InteropVar;
+  for (unsigned I = 0; I < NumPrefs; ++I)
+    E[1 + I] = InteropInfo.Prefs[I].Fr;
+  unsigned *AttrEnds = Clause->getTrailingObjects<unsigned>();
+  unsigned AttrBase = 1 + NumPrefs;
+  unsigned AttrPos = AttrBase;
+  for (unsigned I = 0; I < NumPrefs; ++I) {
+    for (Expr *A : InteropInfo.Prefs[I].Attrs)
+      E[AttrPos++] = A;
+    AttrEnds[I] = AttrPos - AttrBase;
+  }
   return Clause;
 }
 
-OMPInitClause *OMPInitClause::CreateEmpty(const ASTContext &C, unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
-  return new (Mem) OMPInitClause(N);
+OMPInitClause *OMPInitClause::CreateEmpty(const ASTContext &C,
+                                          unsigned NumPrefs,
+                                          unsigned NumAttrs) {
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Expr *, unsigned>(1 + NumPrefs + NumAttrs, NumPrefs));
+  auto *Clause = new (Mem) OMPInitClause(/*VarListN=*/1 + NumPrefs);
+  Clause->NumAttrs = NumAttrs;
+  return Clause;
+}
+
+void OMPInitClause::setAttrs(ArrayRef<unsigned> Counts,
+                             ArrayRef<Expr *> Attrs) {
+  assert(Counts.size() == getNumPrefs() &&
+         "attr-count vector size must match number of pref-specs");
+  assert(Attrs.size() == NumAttrs &&
+         "attr-expr count must match preallocated NumAttrs");
+  // Store inclusive cumulative counts (end offsets)
+  unsigned *AttrEnds = getTrailingObjects<unsigned>();
+  unsigned Run = 0;
+  for (unsigned I = 0, E = Counts.size(); I < E; ++I) {
+    Run += Counts[I];
+    AttrEnds[I] = Run;
+  }
+  llvm::copy(Attrs, getTrailingObjects<Expr *>() + varlist_size());
 }
 
 OMPBindClause *
@@ -2388,17 +2428,39 @@ void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
 
 void OMPClausePrinter::VisitOMPInitClause(OMPInitClause *Node) {
   OS << "init(";
-  bool First = true;
-  for (const Expr *E : Node->prefs()) {
-    if (First)
-      OS << "prefer_type(";
-    else
-      OS << ",";
-    E->printPretty(OS, nullptr, Policy);
-    First = false;
-  }
-  if (!First)
+  if (!Node->prefs().empty()) {
+    OS << "prefer_type(";
+    if (Node->hasPreferAttrs()) {
+      // OMP 6.0 brace-grouped form
+      llvm::interleaveComma(Node->prefs(), OS, [&](OMPInitClause::PrefView P) {
+        OS << "{";
+        if (P.Fr) {
+          OS << "fr(";
+          P.Fr->printPretty(OS, nullptr, Policy);
+          OS << ")";
+          if (!P.Attrs.empty())
+            OS << ", ";
+        }
+        if (!P.Attrs.empty()) {
+          OS << "attr(";
+          llvm::interleaveComma(P.Attrs, OS, [&](const Expr *A) {
+            A->printPretty(OS, nullptr, Policy);
+          });
+          OS << ")";
+        }
+        OS << "}";
+      });
+    } else {
+      llvm::interleave(
+          Node->prefs(), OS,
+          [&](OMPInitClause::PrefView P) {
+            if (P.Fr)
+              P.Fr->printPretty(OS, nullptr, Policy);
+          },
+          ",");
+    }
     OS << "), ";
+  }
   if (Node->getIsTarget())
     OS << "target";
   if (Node->getIsTargetSync()) {

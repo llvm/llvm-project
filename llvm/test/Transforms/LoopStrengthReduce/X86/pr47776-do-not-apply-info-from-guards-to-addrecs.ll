@@ -26,14 +26,13 @@ define void @bar() personality ptr @zot {
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i64 [[TMP7]], 10000
 ; CHECK-NEXT:    br i1 [[C_0]], label [[BB2]], label [[BB8:%.*]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    [[TMP7_LCSSA:%.*]] = phi i64 [ [[TMP7]], [[BB5]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10:%.*]], label [[BB29:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[TMP7_LCSSA]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP1]], 7
 ; CHECK-NEXT:    br label [[BB17:%.*]]

@@ -318,8 +318,7 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
 
         // If this call site already existed in the callgraph, just verify it
         // matches up to expectations and remove it from Calls.
-        DenseMap<Value *, CallGraphNode *>::iterator ExistingIt =
-            Calls.find(Call);
+        auto ExistingIt = Calls.find(Call);
         if (ExistingIt != Calls.end()) {
           CallGraphNode *ExistingNode = ExistingIt->second;
 
@@ -679,7 +678,7 @@ namespace {
       auto PrintBannerOnce = [&]() {
         if (BannerPrinted)
           return;
-        OS << Banner;
+        OS << Banner << "\n";
         BannerPrinted = true;
       };
 

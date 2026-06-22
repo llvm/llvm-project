@@ -38,9 +38,8 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, ptr nocapture %r
 ; CHECK-NEXT:    [[LSR_IV_NEXT11]] = add i64 [[LSR_IV10]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[DO_BODY]], label [[DO_END:%.*]]
 ; CHECK:       do.end:
-; CHECK-NEXT:    [[LSR_IV_NEXT11_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT11]], [[DO_BODY]] ]
 ; CHECK-NEXT:    [[SCEVGEP9_LCSSA:%.*]] = phi ptr [ [[SCEVGEP9]], [[DO_BODY]] ]
-; CHECK-NEXT:    [[XAP_0:%.*]] = inttoptr i64 [[LSR_IV_NEXT11_LCSSA]] to ptr
+; CHECK-NEXT:    [[XAP_0:%.*]] = inttoptr i64 [[LSR_IV_NEXT11]] to ptr
 ; CHECK-NEXT:    [[CAP_0:%.*]] = ptrtoint ptr [[XAP_0]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
 ; CHECK-NEXT:    [[SUB_PTR_DIV39:%.*]] = lshr exact i64 [[SUB_PTR_SUB]], 1
@@ -63,9 +62,8 @@ define void @_Z15IntegerToStringjjR7Vector2(i32 %i, i32 %radix, ptr nocapture %r
 ; CHECK-NEXT:    [[INST29:%.*]] = load i16, ptr [[LSR_IV6]], align 2
 ; CHECK-NEXT:    store i16 [[INST29]], ptr [[SCEVGEP1]], align 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 2
-; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = inttoptr i64 [[LSR_IV_NEXT]] to ptr
 ; CHECK-NEXT:    [[SCEVGEP7]] = getelementptr i8, ptr [[LSR_IV6]], i64 2
-; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq ptr [[LSR_IV_NEXT2]], null
+; CHECK-NEXT:    [[CMP27:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP27]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

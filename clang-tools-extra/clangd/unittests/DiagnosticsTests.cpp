@@ -264,10 +264,10 @@ TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
     float foo = [[0.1f]];
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  // Enable alias clang-tidy checks, these check emits the same diagnostics
+  // Enable alias clang-tidy checks, these checks emit the same diagnostics
   // (except the check name).
   TU.ClangTidyProvider = addTidyChecks("readability-uppercase-literal-suffix,"
-                                       "hicpp-uppercase-literal-suffix");
+                                       "cert-dcl16-c");
   // Verify that we filter out the duplicated diagnostic message.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -318,12 +318,13 @@ TEST(DiagnosticsTest, ClangTidy) {
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  TU.AdditionalFiles["system/assert.h"] = ""; // Suppress "not found" error.
   TU.ClangTidyProvider = addTidyChecks("bugprone-sizeof-expression,"
                                        "bugprone-macro-repeated-side-effects,"
                                        "modernize-deprecated-headers,"
                                        "modernize-use-trailing-return-type,"
                                        "misc-no-recursion");
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.ExtraArgs.push_back("-Wno-unsequenced");
   EXPECT_THAT(
       TU.build().getDiagnostics(),
