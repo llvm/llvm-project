@@ -3522,6 +3522,11 @@ def Fwrite : LibBuiltin<"stdio.h"> {
   let Prototype = "size_t(void const*, size_t, size_t, FILE*)";
 }
 
+def Fgets : LibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets"];
+  let Prototype = "char*(char*, int, FILE*)";
+}
+
 // C99 ctype.h
 
 def IsAlNum : LibBuiltin<"ctype.h"> {

@@ -1232,6 +1232,25 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     return std::nullopt;
   };
 
+  auto ComputeExplicitObjectSizeArgumentProduct =
+      [&](unsigned LIndex, unsigned RIndex) -> std::optional<llvm::APSInt> {
+    auto L = ComputeExplicitObjectSizeArgument(LIndex);
+    auto R = ComputeExplicitObjectSizeArgument(RIndex);
+    if (!L || !R)
+      return std::nullopt;
+
+    unsigned W =
+        2 * std::max({L->getBitWidth(), R->getBitWidth(), SizeTypeWidth});
+
+    llvm::APSInt LE = L->extOrTrunc(W);
+    llvm::APSInt RE = R->extOrTrunc(W);
+
+    LE.setIsUnsigned(true);
+    RE.setIsUnsigned(true);
+
+    return LE * RE;
+  };
+
   auto ComputeStrLenArgument =
       [&](unsigned Index) -> std::optional<llvm::APSInt> {
     std::optional<unsigned> IndexOptional = TranslateIndex(Index);
@@ -1431,6 +1450,24 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DiagID = diag::warn_fortify_source_overflow;
     SourceSize = ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
     DestinationSize = ComputeSizeArgument(1);
+    break;
+  }
+  case Builtin::BIfread: {
+    DiagID = diag::warn_fortify_source_overflow;
+    SourceSize = ComputeExplicitObjectSizeArgumentProduct(1, 2);
+    DestinationSize = ComputeSizeArgument(0);
+    break;
+  }
+  case Builtin::BIfwrite: {
+    DiagID = diag::warn_fortify_source_overread;
+    SourceSize = ComputeExplicitObjectSizeArgumentProduct(1, 2);
+    DestinationSize = ComputeSizeArgument(0);
+    break;
+  }
+  case Builtin::BIfgets: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = ComputeExplicitObjectSizeArgument(1);
+    DestinationSize = ComputeSizeArgument(0);
     break;
   }
   case Builtin::BIsnprintf:
