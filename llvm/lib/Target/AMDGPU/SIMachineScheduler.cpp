@@ -1833,10 +1833,10 @@ void SIScheduleDAGMI::moveLowLatencies() {
 void SIScheduleDAGMI::restoreSULinksLeft() {
   for (unsigned i = 0, e = SUnits.size(); i != e; ++i) {
     SUnits[i].isScheduled = false;
-    SUnits[i].WeakPredsLeft = SUnitsLinksBackup[i].WeakPredsLeft;
-    SUnits[i].NumPredsLeft = SUnitsLinksBackup[i].NumPredsLeft;
-    SUnits[i].WeakSuccsLeft = SUnitsLinksBackup[i].WeakSuccsLeft;
-    SUnits[i].NumSuccsLeft = SUnitsLinksBackup[i].NumSuccsLeft;
+    SUnits[i].WeakPredsLeft = SUnitsWeakPredsLeftBackup[i];
+    SUnits[i].NumPredsLeft = SUnitsNumPredsLeftBackup[i];
+    SUnits[i].WeakSuccsLeft = SUnitsWeakSuccsLeftBackup[i];
+    SUnits[i].NumSuccsLeft = SUnitsNumSuccsLeftBackup[i];
   }
 }
 
@@ -1887,7 +1887,20 @@ void SIScheduleDAGMI::schedule()
 
   // Fill some stats to help scheduling.
 
-  SUnitsLinksBackup = SUnits;
+  SUnitsWeakPredsLeftBackup.clear();
+  SUnitsNumPredsLeftBackup.clear();
+  SUnitsWeakSuccsLeftBackup.clear();
+  SUnitsNumSuccsLeftBackup.clear();
+  SUnitsWeakPredsLeftBackup.reserve(SUnits.size());
+  SUnitsNumPredsLeftBackup.reserve(SUnits.size());
+  SUnitsWeakSuccsLeftBackup.reserve(SUnits.size());
+  SUnitsNumSuccsLeftBackup.reserve(SUnits.size());
+  for (const auto &SU : SUnits) {
+    SUnitsWeakPredsLeftBackup.push_back(SU.WeakPredsLeft);
+    SUnitsNumPredsLeftBackup.push_back(SU.NumPredsLeft);
+    SUnitsWeakSuccsLeftBackup.push_back(SU.WeakSuccsLeft);
+    SUnitsNumSuccsLeftBackup.push_back(SU.NumSuccsLeft);
+  }
   IsLowLatencySU.clear();
   LowLatencyOffset.clear();
   IsHighLatencySU.clear();

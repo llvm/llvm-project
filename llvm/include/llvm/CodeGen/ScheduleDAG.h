@@ -357,6 +357,11 @@ class TargetRegisterInfo;
           isHeightCurrent(false), isNode(false), isInst(false),
           SchedulingPref(Sched::None) {}
 
+    SUnit(const SUnit &) = delete;
+    SUnit &operator=(const SUnit &) = delete;
+    SUnit(SUnit &&) = default;
+    SUnit &operator=(SUnit &&) = default;
+
     /// Boundary nodes are placeholders for the boundary of the
     /// scheduling region.
     ///

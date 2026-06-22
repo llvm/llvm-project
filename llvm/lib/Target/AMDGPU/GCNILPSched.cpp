@@ -289,13 +289,13 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
                           const ScheduleDAG &DAG) {
   auto &SUnits = const_cast<ScheduleDAG&>(DAG).SUnits;
 
-  std::vector<SUnit> SUSavedCopy;
-  SUSavedCopy.resize(SUnits.size());
+  std::vector<unsigned> SavedNumSuccsLeft(SUnits.size());
+  std::vector<char> SavedIsScheduled(SUnits.size());
 
-  // we cannot save only those fields we touch: some of them are private
-  // so save units verbatim: this assumes SUnit should have value semantics
-  for (const SUnit &SU : SUnits)
-    SUSavedCopy[SU.NodeNum] = SU;
+  for (const SUnit &SU : SUnits) {
+    SavedNumSuccsLeft[SU.NodeNum] = SU.NumSuccsLeft;
+    SavedIsScheduled[SU.NodeNum] = SU.isScheduled;
+  }
 
   SUNumbers.assign(SUnits.size(), 0);
   for (const SUnit &SU : SUnits)
@@ -345,8 +345,11 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
   std::reverse(Schedule.begin(), Schedule.end());
 
   // restore units
-  for (auto &SU : SUnits)
-    SU = SUSavedCopy[SU.NodeNum];
+  for (auto &SU : SUnits) {
+    SU.isScheduled = SavedIsScheduled[SU.NodeNum];
+    SU.NumSuccsLeft = SavedNumSuccsLeft[SU.NodeNum];
+    SU.setHeightDirty();
+  }
 
   return Schedule;
 }
