@@ -4317,54 +4317,56 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     return false;
   }};
 
-  if (OmpVerifyModifiers(
+  if (!OmpVerifyModifiers(
           x.v, llvm::omp::OMPC_if, GetContext().clauseSource, context_)) {
-    auto &modifiers{OmpGetModifiers(x.v)};
-    if (auto *dnm{OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(
-            modifiers)}) {
-      llvm::omp::Directive sub{dnm->v};
-      std::string subName{parser::omp::GetUpperName(sub, version)};
-      std::string dirName{parser::omp::GetUpperName(dir, version)};
+    return;
+  }
 
-      parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
-      auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
-      std::string modName{desc.name.str()};
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (auto *dnm{
+          OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(modifiers)}) {
+    llvm::omp::Directive sub{dnm->v};
+    std::string subName{parser::omp::GetUpperName(sub, version)};
+    std::string dirName{parser::omp::GetUpperName(dir, version)};
 
-      if (!isConstituent(dir, sub)) {
-        context_
-            .Say(modifierSource,
-                "%s is not a constituent of the %s directive"_err_en_US,
-                subName, dirName)
-            .Attach(GetContext().directiveSource,
-                "Cannot apply to directive"_en_US);
-      } else {
-        static llvm::omp::Directive valid45[]{
-            llvm::omp::OMPD_cancel, //
-            llvm::omp::OMPD_parallel, //
-            /* OMP 5.0+ also allows OMPD_simd */
-            llvm::omp::OMPD_target, //
-            llvm::omp::OMPD_target_data, //
-            llvm::omp::OMPD_target_enter_data, //
-            llvm::omp::OMPD_target_exit_data, //
-            llvm::omp::OMPD_target_update, //
-            llvm::omp::OMPD_task, //
-            llvm::omp::OMPD_taskloop, //
-            /* OMP 5.2+ also allows OMPD_teams */
-        };
-        if (version < 50 && sub == llvm::omp::OMPD_simd) {
-          context_.Say(modifierSource,
-              "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName,
-              modName, ThisVersion(version), TryVersion(50));
-        } else if (version < 52 && sub == llvm::omp::OMPD_teams) {
-          context_.Say(modifierSource,
-              "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName,
-              modName, ThisVersion(version), TryVersion(52));
-        } else if (!llvm::is_contained(valid45, sub) &&
-            sub != llvm::omp::OMPD_simd && sub != llvm::omp::OMPD_teams) {
-          context_.Say(modifierSource,
-              "%s is not allowed as '%s' in %s"_err_en_US, subName, modName,
-              ThisVersion(version));
-        }
+    parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
+    auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
+    std::string modName{desc.name.str()};
+
+    if (!isConstituent(dir, sub)) {
+      context_
+          .Say(modifierSource,
+              "%s is not a constituent of the %s directive"_err_en_US, subName,
+              dirName)
+          .Attach(
+              GetContext().directiveSource, "Cannot apply to directive"_en_US);
+    } else {
+      static llvm::omp::Directive valid45[]{
+          llvm::omp::OMPD_cancel, //
+          llvm::omp::OMPD_parallel, //
+          /* OMP 5.0+ also allows OMPD_simd */
+          llvm::omp::OMPD_target, //
+          llvm::omp::OMPD_target_data, //
+          llvm::omp::OMPD_target_enter_data, //
+          llvm::omp::OMPD_target_exit_data, //
+          llvm::omp::OMPD_target_update, //
+          llvm::omp::OMPD_task, //
+          llvm::omp::OMPD_taskloop, //
+          /* OMP 5.2+ also allows OMPD_teams */
+      };
+      if (version < 50 && sub == llvm::omp::OMPD_simd) {
+        context_.Say(modifierSource,
+            "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
+            ThisVersion(version), TryVersion(50));
+      } else if (version < 52 && sub == llvm::omp::OMPD_teams) {
+        context_.Say(modifierSource,
+            "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
+            ThisVersion(version), TryVersion(52));
+      } else if (!llvm::is_contained(valid45, sub) &&
+          sub != llvm::omp::OMPD_simd && sub != llvm::omp::OMPD_teams) {
+        context_.Say(modifierSource,
+            "%s is not allowed as '%s' in %s"_err_en_US, subName, modName,
+            ThisVersion(version));
       }
     }
   }
