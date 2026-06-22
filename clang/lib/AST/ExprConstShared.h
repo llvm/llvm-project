@@ -29,6 +29,7 @@ class LangOptions;
 class ASTContext;
 class CharUnits;
 class Expr;
+class FunctionDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -88,5 +89,8 @@ llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
 std::optional<llvm::APFloat>
 EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif

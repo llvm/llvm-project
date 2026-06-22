@@ -6708,7 +6708,8 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   else
     Kind = ConstantExprKind::Normal;
 
-  if (!E->EvaluateAsConstantExpr(Eval, Context, Kind) ||
+  if (!E->EvaluateAsMandatedConstantExpr(Eval, Context, getProxyForEval(),
+                                         Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.

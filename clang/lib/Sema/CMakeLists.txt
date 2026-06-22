@@ -52,6 +52,7 @@ add_clang_library(clangSema
   SemaDeclAttr.cpp
   SemaDeclCXX.cpp
   SemaDeclObjC.cpp
+  SemaEval.cpp
   SemaExceptionSpec.cpp
   SemaExpr.cpp
   SemaExprCXX.cpp
