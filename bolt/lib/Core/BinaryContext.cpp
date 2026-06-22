@@ -41,13 +41,11 @@
 #include <iterator>
 #include <unordered_set>
 #define DEBUG_TYPE "bolt"
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Object/ELF.h"
 
 using namespace llvm;
-
-
 
 namespace opts {
 
@@ -168,7 +166,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
 
 BinaryContext::~BinaryContext() {
   for (BinarySection *Section : Sections)
-      delete Section;
+    delete Section;
   for (BinaryFunction *InjectedFunction : InjectedBinaryFunctions)
     delete InjectedFunction;
   for (std::pair<const uint64_t, JumpTable *> JTI : JumpTables)
@@ -2451,7 +2449,6 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
   return registerSection(
       new BinarySection(*this, Name, Data, Size, Alignment, ELFType, ELFFlags));
 }
-
 
 void BinaryContext::deregisterSectionName(const BinarySection &Section) {
 

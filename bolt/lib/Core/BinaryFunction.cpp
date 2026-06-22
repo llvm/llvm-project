@@ -1363,8 +1363,8 @@ Error BinaryFunction::disassemble() {
       if (BC.isPPC64() && SeenTerminator) {
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: PPC64: treating bytes at offset 0x"
                           << Twine::utohexstr(Offset)
-                          << " as trailing data after terminator in "
-                          << *this << "\n");
+                          << " as trailing data after terminator in " << *this
+                          << "\n");
         break;
       }
 
@@ -1385,8 +1385,8 @@ Error BinaryFunction::disassemble() {
     }
 
     // PPC64: track terminator instructions (blr, bctr, unconditional branch)
-    if (BC.isPPC64() &&
-        (MIB->isReturn(Instruction) || MIB->isUnconditionalBranch(Instruction))) {
+    if (BC.isPPC64() && (MIB->isReturn(Instruction) ||
+                         MIB->isUnconditionalBranch(Instruction))) {
       SeenTerminator = true;
     }
 
@@ -4427,15 +4427,15 @@ bool BinaryFunction::isSymbolValidInScope(const SymbolRef &Symbol,
 
   // It's okay to have a zero-sized symbol in the middle of non-zero-sized
   // function.
-  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress()))){
+  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress()))) {
     // PPC64 ELFv2: PLT call stubs are emitted in .text as local zero-sized
     // symbols (e.g. "plt_call.*", "plt_branch.*", "__glink").
     // Although their address may fall within an existing function range,
     // they are separate call stubs and must not be treated as part of that
-    // function, otherwise function boundaries and control flow may be corrupted.
-    // Unlike other architectures where PLT entries reside in dedicated
-    // sections (e.g. .plt), PPC64 places these stubs in .text, making the
-    // distinction ambiguous without explicit filtering.
+    // function, otherwise function boundaries and control flow may be
+    // corrupted. Unlike other architectures where PLT entries reside in
+    // dedicated sections (e.g. .plt), PPC64 places these stubs in .text, making
+    // the distinction ambiguous without explicit filtering.
     if (BC.isPPC64()) {
       StringRef SymName = cantFail(Symbol.getName());
       if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
