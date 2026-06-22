@@ -13,8 +13,8 @@ declare void @use_i1(i1)
 
 define i32 @align_to_bundle(ptr %a) #0 {
 ; CHECK-LABEL: @align_to_bundle(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -27,8 +27,8 @@ define i32 @align_to_bundle(ptr %a) #0 {
 
 define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 ; CHECK-LABEL: @align_to_bundle_ptrtoaddr(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -41,8 +41,8 @@ define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 
 define i32 @align_assume_trunc_cond(ptr %a) #0 {
 ; CHECK-LABEL: @align_assume_trunc_cond(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 2) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
