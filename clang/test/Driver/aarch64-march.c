@@ -1,9 +1,9 @@
 // RUN: %clang --target=aarch64 -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-V8A %s
 // RUN: %clang --target=aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-V8A %s
-// GENERIC-V8A: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+v8a"
+// GENERIC-V8A: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+v8a"
 
 // RUN: %clang --target=aarch64 -march=armv8-r -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-V8R %s
-// GENERIC-V8R: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+v8r"
+// GENERIC-V8R: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+v8r"
 
 // RUN: %clang --target=aarch64 -march=armv9a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A %s
 // RUN: %clang --target=aarch64 -march=armv9-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV9A %s

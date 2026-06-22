@@ -922,8 +922,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   bool ExplicitlyDereferenceableOnly;
   if (!isWritableObject(getUnderlyingObject(cpyDest),
                         ExplicitlyDereferenceableOnly) ||
-      !isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
-                                          DL, C, AC, DT)) {
+      !isDereferenceablePointer(cpyDest, APInt(64, cpySize),
+                                SimplifyQuery(DL, DT, AC, C))) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
   }

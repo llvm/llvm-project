@@ -39,3 +39,33 @@ define void @test_first_arg_index_in_bounds_varargs(i32 %arg, ...) "modular-form
 define void @test_first_arg_index_zero(i32 %arg) "modular-format"="printf,1,0,basic_mod,basic_impl" {
   ret void
 }
+
+define void @test_format_string_index_not_integer(i32 %arg, ...) "modular-format"="printf,foo,2,basic_mod,basic_impl" {
+  ret void
+}
+; CHECK: modular-format attribute format string index is not an integer
+; CHECK-NEXT: ptr @test_format_string_index_not_integer
+
+define void @test_format_string_index_zero(i32 %arg, ...) "modular-format"="printf,0,2,basic_mod,basic_impl" {
+  ret void
+}
+; CHECK: modular-format attribute format string index must be greater than 0
+; CHECK-NEXT: ptr @test_format_string_index_zero
+
+define void @test_format_string_index_out_of_bounds(i32 %arg) "modular-format"="printf,2,1,basic_mod,basic_impl" {
+  ret void
+}
+; CHECK: modular-format attribute format string index is out of bounds
+; CHECK-NEXT: ptr @test_format_string_index_out_of_bounds
+
+define void @test_modular_impl_fn_empty(i32 %arg) "modular-format"="printf,1,1,,basic_impl" {
+  ret void
+}
+; CHECK: modular-format attribute modular implementation function name cannot be empty
+; CHECK-NEXT: ptr @test_modular_impl_fn_empty
+
+define void @test_impl_name_empty(i32 %arg) "modular-format"="printf,1,1,basic_mod," {
+  ret void
+}
+; CHECK: modular-format attribute implementation name cannot be empty
+; CHECK-NEXT: ptr @test_impl_name_empty

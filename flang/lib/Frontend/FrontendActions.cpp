@@ -633,6 +633,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
   MLIRToLLVMPassPipelineConfig config(level);
   config.fpMaxminBehavior =
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
+  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
+    config.EnableOpenMPIsTargetDevice = true;
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -762,6 +764,9 @@ void CodeGenAction::generateLLVMIR() {
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
+
+  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
+    config.EnableOpenMPIsTargetDevice = true;
 
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     config.EnableOpenMPSimd = true;
@@ -1054,10 +1059,17 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    // If it is not ThinLTO, emits the module flag and sets it to be off.
-    if (!opts.PrepareForThinLTO && emitSummary &&
-        !llvmModule->getModuleFlag("ThinLTO")) {
-      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+    if (opts.PrepareForThinLTO) {
+      if (!llvmModule->getModuleFlag("EnableSplitLTOUnit"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
+                                  opts.EnableSplitLTOUnit);
+    } else if (emitSummary && opts.PrepareForFullLTO) {
+      // If it is not ThinLTO, emits the module flag and sets it to be off.
+      if (!llvmModule->getModuleFlag("ThinLTO"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+      if (!llvmModule->getModuleFlag("EnableSplitLTOUnit"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
+                                  uint32_t(1));
     }
 
     if (action == BackendActionTy::Backend_EmitBC) {
