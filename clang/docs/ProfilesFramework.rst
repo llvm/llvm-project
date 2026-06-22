@@ -637,11 +637,12 @@ CFG-based pass.  Until it lands, a ``[[uninit]]`` data member is trusted,
 and writes *through* a ``[[ref_to_uninit]]`` pointer/reference are not yet
 verified (the paper relegates them to ``construct_at`` or suppression).
 
-Dynamically-created objects are also not covered: a ``new`` expression whose
-default-initialization leaves a scalar subobject indeterminate (e.g.
-``new int``, paper §1.2 / §2) has no check site, so only automatic-storage
-(``uninit_decl``, R2) and non-local static (``static_runtime_init``, R3)
-definitions are checked -- the dynamic-storage analogue is not yet implemented.
+Dynamically-created objects are covered when bound: a ``new`` expression that
+default-initializes its allocated object and leaves a scalar subobject
+indeterminate (e.g. ``new int``, ``new int[n]``, paper §1.2 / §4.3) is
+recognised as a source of uninitialized memory by ``ref_to_uninit`` (R7).  An
+*unbound* ``new`` whose result is discarded (``new int;``) is still unchecked,
+because R7 fires only at binding sites.
 
 The slice introduces two marker attributes and the rules below.
 
@@ -850,9 +851,11 @@ locally from the source expression's syntactic form (no flow analysis): the
 address of, or a subobject of, a ``[[uninit]]`` entity; a value of a
 ``[[ref_to_uninit]]`` pointer/reference or array; a dereference of such a
 pointer; a cast of such a pointer to another pointer type (paper §4.3), or of
-such a glvalue to another reference; or a call to a
-``[[ref_to_uninit]]``-returning function.  Anything else is treated as
-initialized (the trust model).  The reference cast and the
+such a glvalue to another reference; a call to a
+``[[ref_to_uninit]]``-returning function; or a ``new`` expression that
+default-initializes its allocated object and leaves a scalar subobject
+indeterminate (e.g. ``new int``, ``new int[n]``, paper §1.2 / §4.3).  Anything
+else is treated as initialized (the trust model).  The reference cast and the
 ``[[ref_to_uninit]]``-returning reference call are not spelled out by the
 paper but follow from the profile's guarantee that uninitialized objects are
 not used, and keep the pointer and reference recognizers symmetric.
@@ -862,6 +865,14 @@ not used, and keep the pointer and reference recognizers symmetric.
   target, uninitialized source).
 - Recognizer + shared check: ``Sema::refersToUninitializedMemory`` and
   ``Sema::checkRefToUninitInit`` in ``clang/lib/Sema/SemaDecl.cpp``.
+- A ``new`` expression is recognised only when it default-initializes its
+  object (none init style, no written initializer); ``new T(...)`` and
+  ``new T{...}`` are value- or list-initialized and excluded.  Whether the
+  allocated type leaves a scalar indeterminate reuses
+  ``Sema::defaultInitLeavesScalarIndeterminate`` (R2), so a ``T`` with a
+  user-provided default constructor is trusted and the ``std::byte`` exemption
+  is inherited.  ``getAllocatedType`` yields the element type, so array
+  ``new`` (``new int[n]``) is handled uniformly.
 - Check sites: variable initialization
   (``Sema::CheckCompleteVariableDeclaration``), default member initializers
   (``Sema::ActOnFinishCXXInClassMemberInitializer``), pointer assignment
