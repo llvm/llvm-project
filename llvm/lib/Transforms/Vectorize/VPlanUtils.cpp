@@ -505,7 +505,9 @@ bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
     return RepR->doesGeneratePerAllLanes();
   if (auto *VPI = dyn_cast<VPInstruction>(R))
     return VPI->doesGeneratePerAllLanes();
-  return isa<VPScalarIVStepsRecipe>(R);
+  if (isa<VPScalarIVStepsRecipe>(R))
+    return !vputils::onlyFirstLaneUsed(R->getVPSingleValue());
+  return false;
 }
 
 VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {

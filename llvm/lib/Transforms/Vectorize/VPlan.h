@@ -3449,8 +3449,7 @@ public:
                                          bool IsSingleScalar, ElementCount VF,
                                          VPCostContext &Ctx);
 
-  /// Returns true if the recipe produces a single scalar value, with scalar
-  /// operands.
+  /// Returns true if the recipe produces a single scalar value.
   bool isSingleScalar() const { return IsSingleScalar; }
 
   /// Returns true if the recipe produces scalar values for all VF lanes.
