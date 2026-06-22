@@ -466,6 +466,35 @@ ContentCache &SourceManager::createMemBufferContentCache(
   MemBufferInfos.push_back(Entry);
   Entry->setBuffer(std::move(Buffer));
   return *Entry;
+
+llvm::ErrorOr<llvm::TextEncodingConverter *>
+SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
+                                    llvm::StringRef TargetEncoding) {
+  // Create a cache key from source and target encodings
+  llvm::SmallString<64> CacheKey;
+  CacheKey = SourceEncoding;
+  CacheKey += ":";
+  CacheKey += TargetEncoding;
+
+  // Check if converter already exists in cache
+  auto It = ConverterCache.find(CacheKey);
+  if (It != ConverterCache.end())
+    return It->second.get();
+
+  // Create a new converter
+  llvm::ErrorOr<llvm::TextEncodingConverter> NewConverter =
+      llvm::TextEncodingConverter::create(SourceEncoding, TargetEncoding);
+  
+  if (!NewConverter)
+    return NewConverter.getError();
+
+  // Store the converter in the cache
+  auto Inserted = ConverterCache.insert(
+      std::make_pair(CacheKey, std::make_unique<llvm::TextEncodingConverter>(
+                                   std::move(*NewConverter))));
+  
+  return Inserted.first->second.get();
+}
 }
 
 const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
@@ -576,13 +605,14 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 /// being \#included from the specified IncludePosition.
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
-				   SrcMgr::CharacteristicKind FileCharacter,
-                                   llvm::TextEncodingConverter *Converter,
+                                   SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID,
-                                   SourceLocation::UIntTy LoadedOffset) {
+                                   SourceLocation::UIntTy LoadedOffset,
+                                   bool UseInputCharsetConverter) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
 
+  llvm::ErrorOr<llvm::TextEncodingConverter *> Converter = nullptr;
   llvm::ErrorOr<std::string> Ccsid =
       llvm::getEncodingNameFromFileTag(SourceFile.getName());
   if (!Ccsid) {
@@ -591,10 +621,17 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
     return FileID();
   }
   if (!Ccsid->empty()) {
-    llvm::ErrorOr<llvm::TextEncodingConverter *> FileTagConverter =
-      llvm::TextEncodingConverterCache::getOrCreateConverter(*Ccsid, "UTF-8");
-    if (FileTagConverter)
-      Converter = *FileTagConverter;
+    // File has a tag, use the converter from SourceManager's cache
+    Converter = getOrCreateConverter(*Ccsid, "UTF-8");
+    if (!Converter) {
+      Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+          << SourceFile.getName() << "Failed to create converter";
+      return FileID();
+    }
+  } else if (UseInputCharsetConverter) {
+    // No file tag but -finput-charset conversion is desired. Use the converter
+    // from SourceManager.
+    Converter = getInputCharsetConverter();
   }
 
   #ifndef NDEBUG

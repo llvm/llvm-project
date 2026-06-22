@@ -846,6 +846,16 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// we can add a cc1-level option to do so.
   SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
+  /// Converter for -finput-charset conversion to UTF-8.
+  /// Stored here to avoid global cache and allow SourceManager to manage
+  /// converters for non-tagged files.
+  std::unique_ptr<llvm::TextEncodingConverter> InputCharsetConverter;
+
+  /// Cache of all text encoding converters used by this SourceManager.
+  /// This includes both the input charset converter and file tag converters.
+  /// Maps from "source_encoding:target_encoding" to the converter.
+  llvm::StringMap<std::unique_ptr<llvm::TextEncodingConverter>> ConverterCache;
+
 public:
   SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
                 bool UserFilesAreVolatile = false);
@@ -862,6 +872,28 @@ public:
   DiagnosticsEngine &getDiagnostics() const { return Diag; }
 
   FileManager &getFileManager() const { return FileMgr; }
+
+  /// Set the input charset converter for -finput-charset conversion.
+  void setInputCharsetConverter(
+      std::unique_ptr<llvm::TextEncodingConverter> Converter) {
+    InputCharsetConverter = std::move(Converter);
+  }
+
+  /// Get the input charset converter for -finput-charset conversion.
+  /// Returns nullptr if no converter is set.
+  llvm::TextEncodingConverter *getInputCharsetConverter() const {
+    return InputCharsetConverter.get();
+  }
+
+  /// Get or create a text encoding converter from the cache.
+  /// This method manages all converters (input charset and file tag converters)
+  /// in a single cache owned by SourceManager.
+  /// \param SourceEncoding the source character encoding name
+  /// \param TargetEncoding the target character encoding name
+  /// \return pointer to the converter or an error code
+  llvm::ErrorOr<llvm::TextEncodingConverter *>
+  getOrCreateConverter(llvm::StringRef SourceEncoding,
+                       llvm::StringRef TargetEncoding);
 
   /// Set true if the SourceManager should report the original file name
   /// for contents of files that were overridden by other files. Defaults to
@@ -922,11 +954,14 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
+  /// \param Converter Optional converter to use. If nullptr and
+  /// UseInputCharsetConverter is true, will use the SourceManager's
+  /// input charset converter for non-tagged files.
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
-		      llvm::TextEncodingConverter *Converter = nullptr,	
                       int LoadedID = 0,
-                      SourceLocation::UIntTy LoadedOffset = 0);
+                      SourceLocation::UIntTy LoadedOffset = 0,
+                      bool UseInputCharsetConverter = false);
 
   /// Create a new FileID that represents the specified memory buffer.
   ///

@@ -913,19 +913,20 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  // Retrieve the converter to the internal charset if it exists.
-  llvm::TextEncodingConverter *Converter =
-      hasPreprocessor() ? getPreprocessor().getTextEncoding().getConverter(
-                              CA_FromInputEncoding)
-                        : nullptr;
-
-  return InitializeSourceManager(Input, Converter, getDiagnostics(),
+  // Note: The input charset converter is now managed by SourceManager's
+  // converter cache along with file tag converters. The Preprocessor's
+  // TextEncoding still has its own converter for backward compatibility,
+  // but SourceManager owns and caches all converters used during file loading.
+  // When createFileID is called with UseInputCharsetConverter=true, it will
+  // use the converter from SourceManager's InputCharsetConverter field.
+  
+  return InitializeSourceManager(Input, getDiagnostics(),
                                  getFileManager(), getSourceManager());
 }
 
 // static
 bool CompilerInstance::InitializeSourceManager(
-    const FrontendInputFile &Input, llvm::TextEncodingConverter *Converter,
+    const FrontendInputFile &Input,
     DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
@@ -955,8 +956,12 @@ bool CompilerInstance::InitializeSourceManager(
     return false;
   }
 
+  // Use UseInputCharsetConverter=true to get converter from SourceManager
   SourceMgr.setMainFileID(
-      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind, Converter));
+      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind,
+                             /*Converter=*/nullptr, /*LoadedID=*/0,
+                             /*LoadedOffset=*/0,
+                             /*UseInputCharsetConverter=*/true));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");
