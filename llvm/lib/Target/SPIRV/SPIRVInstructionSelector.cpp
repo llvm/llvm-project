@@ -1611,10 +1611,8 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
   return false;
 }
 
-// OpCooperativeMatrixLoad/StoreKHR require the pointer to point to the element
-// type. A workgroup array tile reaches the selector as a pointer to the whole
-// array, so index it to its first element to get the scalar pointer the op
-// requires. Returns PtrReg unchanged when it is not an aggregate.
+// OpCooperativeMatrixLoad/StoreKHR need a pointer to the element type. If the
+// tile is an array, index to its first element; else return PtrReg unchanged.
 Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
                                                         MachineInstr &I) const {
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrReg);
@@ -1635,22 +1633,22 @@ Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
   Register Zero = buildZerosVal(I32Type, I);
   Register NewPtr = MRI->createVirtualRegister(GR.getRegClass(ElemPtrType));
   GR.assignSPIRVTypeToVReg(ElemPtrType, NewPtr, *I.getParent()->getParent());
-  unsigned Opcode =
-      STI.isLogicalSPIRV() ? SPIRV::OpAccessChain : SPIRV::OpPtrAccessChain;
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(NewPtr)
-      .addUse(GR.getSPIRVTypeID(ElemPtrType))
-      .addUse(PtrReg)
-      .addUse(Zero)
-      .constrainAllUses(TII, TRI, RBI);
+  bool IsLogical = STI.isLogicalSPIRV();
+  unsigned Opcode = IsLogical ? SPIRV::OpAccessChain : SPIRV::OpPtrAccessChain;
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(NewPtr)
+                 .addUse(GR.getSPIRVTypeID(ElemPtrType))
+                 .addUse(PtrReg);
+  // OpPtrAccessChain takes a leading element operand to dereference Base.
+  if (!IsLogical)
+    MIB.addUse(Zero);
+  MIB.addUse(Zero);
+  MIB.constrainAllUses(TII, TRI, RBI);
   return NewPtr;
 }
 
 bool SPIRVInstructionSelector::selectCoopMatrixStore(MachineInstr &I) const {
-  // Operands 1..: pointer, matrix, memory_layout, stride.
-  // OpCooperativeMatrixStoreKHR has no result.
-  // Build the element access chain before the store so its result is defined
-  // before the store that consumes it.
+  // OpCooperativeMatrixStoreKHR ptr matrix memory_layout stride; no result.
   Register Ptr = coopMatrixElementPtr(I.getOperand(1).getReg(), I);
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(SPIRV::OpCooperativeMatrixStoreKHR));
