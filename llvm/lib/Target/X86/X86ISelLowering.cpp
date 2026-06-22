@@ -20096,14 +20096,12 @@ struct OptimizedConstantArrayInfo {
 };
 
 static OptimizedConstantArrayInfo
-optimizeGlobalConstantArray(GlobalVariable *GV) {
+optimizeGlobalConstantArray(GlobalVariable *GV, Module *M) {
   auto *OldInit = GV->getInitializer();
-
   auto *CDA = dyn_cast<ConstantDataArray>(OldInit);
-  if (!CDA)
-    return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
-
-  constexpr unsigned PeriodElems = 4;
+  auto DL = M->getDataLayout();
+  auto Sz = DL.getTypeAllocSize(CDA->getElementType());
+  unsigned PeriodElems = 16 / Sz; // 128 bit load
 
   unsigned NumElems = CDA->getNumElements();
   Type *EltTy = CDA->getElementType();
@@ -20114,12 +20112,11 @@ optimizeGlobalConstantArray(GlobalVariable *GV) {
   for (unsigned I = PeriodElems; I < NumElems; ++I) {
     Constant *A = CDA->getElementAsConstant(I);
     Constant *B = CDA->getElementAsConstant(I % PeriodElems);
-
     if (A != B)
       return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
   }
 
-  SmallVector<Constant *, PeriodElems> NewElems;
+  SmallVector<Constant *, 4> NewElems;
   for (unsigned I = 0; I < PeriodElems; ++I)
     NewElems.push_back(CDA->getElementAsConstant(I));
 
@@ -54344,17 +54341,17 @@ static SDValue combineConstantArrayVariable(EVT RegVT, LoadSDNode *Ld,
   if (!GVar->hasInitializer())
     return SDValue();
 
+  Module *M = GVar->getParent();
   auto *CDA = dyn_cast<ConstantDataArray>(GVar->getInitializer());
   if (!CDA)
     return SDValue();
-  if (CDA->getNumElements() <= 4)
+  if (CDA->getNumElements() <=
+      16 / M->getDataLayout().getTypeAllocSize(CDA->getElementType()))
     return SDValue();
 
-  OptimizedConstantArrayInfo Info = optimizeGlobalConstantArray(GVar);
+  OptimizedConstantArrayInfo Info = optimizeGlobalConstantArray(GVar, M);
   if (!Info.Success)
     return SDValue();
-
-  Module *M = GVar->getParent();
 
   // we set the old variable to XX.x86.orig
   // XX.x86.orig variable should be filtered in asm printer
