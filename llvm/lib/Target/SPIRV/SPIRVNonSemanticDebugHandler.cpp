@@ -27,6 +27,18 @@ using namespace llvm;
 
 namespace {
 
+/// Look up \p Key in a register map and return its value, or std::nullopt when
+/// the key is absent.
+template <typename MapT>
+static std::optional<MCRegister> lookupOptReg(const MapT &Map,
+                                              typename MapT::key_type Key) {
+  auto It = Map.find(Key);
+  if (It == Map.end())
+    return std::nullopt;
+  assert(It->second.isValid() && "invalid register stored in map");
+  return It->second;
+}
+
 /// Partition \p Ty into \p BasicTypes, \p PointerTypes, \p SubroutineTypes,
 /// and \p VectorTypes for NSDI emission. Used when iterating
 /// DebugInfoFinder.types(); each DI node is seen once, so no recursion into
@@ -474,10 +486,7 @@ SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
     const DIType *Ty = dyn_cast<DIType>(Scope);
     if (!Ty)
       return std::nullopt;
-    auto TIt = DebugTypeRegs.find(Ty);
-    if (TIt == DebugTypeRegs.end())
-      return std::nullopt;
-    return TIt->second;
+    return lookupOptReg(DebugTypeRegs, Ty);
   }
 
   const DICompileUnit *ParentCU = SP->getUnit();
@@ -485,10 +494,7 @@ SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
     ParentCU = CompileUnits[0].TheCU;
   if (!ParentCU)
     return std::nullopt;
-  auto CUIt = CUToCompilationUnitDbgReg.find(ParentCU);
-  if (CUIt == CUToCompilationUnitDbgReg.end())
-    return std::nullopt;
-  return CUIt->second;
+  return lookupOptReg(CUToCompilationUnitDbgReg, ParentCU);
 }
 
 std::optional<MCRegister>
@@ -502,9 +508,10 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
   // The IR verifier already enforces that this cannot be null.
   const DISubroutineType *ST = SP->getType();
 
-  auto FnTyIt = DebugTypeRegs.find(ST);
-  if (FnTyIt == DebugTypeRegs.end())
+  auto FnTyRegOpt = lookupOptReg(DebugTypeRegs, ST);
+  if (!FnTyRegOpt)
     return std::nullopt;
+  MCRegister FnTyReg = *FnTyRegOpt;
 
   auto ParentRegOpt = resolveDebugFunctionDeclarationParent(SP);
   if (!ParentRegOpt)
@@ -537,8 +544,8 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
 
   return emitExtInst(SPIRV::NonSemanticExtInst::DebugFunctionDeclaration,
                      VoidTypeReg, ExtInstSetReg,
-                     {NameReg, FnTyIt->second, SrcReg, LineReg, ColReg,
-                      ParentReg, LinkageReg, FlagsReg},
+                     {NameReg, FnTyReg, SrcReg, LineReg, ColReg, ParentReg,
+                      LinkageReg, FlagsReg},
                      MAI);
 }
 
@@ -551,10 +558,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
            "DebugInfoNone must be emitted before DISubroutineType operands");
     return CachedDebugInfoNoneReg;
   }
-  auto It = DebugTypeRegs.find(Ty);
-  if (It != DebugTypeRegs.end())
-    return It->second;
-  return std::nullopt;
+  return lookupOptReg(DebugTypeRegs, Ty);
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
