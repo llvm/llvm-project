@@ -913,21 +913,24 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  // Note: The input charset converter is now managed by SourceManager's
-  // converter cache along with file tag converters. The Preprocessor's
-  // TextEncoding still has its own converter for backward compatibility,
-  // but SourceManager owns and caches all converters used during file loading.
-  // When createFileID is called with UseInputCharsetConverter=true, it will
-  // use the converter from SourceManager's InputCharsetConverter field.
+  // Check if we have an input charset converter from the preprocessor
+  bool UseInputCharsetConverter = false;
+  if (hasPreprocessor()) {
+    llvm::TextEncodingConverter *Converter =
+        getPreprocessor().getTextEncoding().getConverter(CA_FromInputEncoding);
+    UseInputCharsetConverter = (Converter != nullptr);
+  }
   
   return InitializeSourceManager(Input, getDiagnostics(),
-                                 getFileManager(), getSourceManager());
+                                 getFileManager(), getSourceManager(),
+                                 UseInputCharsetConverter);
 }
 
 // static
 bool CompilerInstance::InitializeSourceManager(
     const FrontendInputFile &Input,
-    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr) {
+    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr,
+    bool UseInputCharsetConverter) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
@@ -956,12 +959,12 @@ bool CompilerInstance::InitializeSourceManager(
     return false;
   }
 
-  // Use UseInputCharsetConverter=true to get converter from SourceManager
+  // Use the UseInputCharsetConverter parameter passed from the caller
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind,
                              /*Converter=*/nullptr, /*LoadedID=*/0,
                              /*LoadedOffset=*/0,
-                             /*UseInputCharsetConverter=*/true));
+                             UseInputCharsetConverter));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");

@@ -847,8 +847,6 @@ class SourceManager : public RefCountedBase<SourceManager> {
   SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
   /// Converter for -finput-charset conversion to UTF-8.
-  /// Stored here to avoid global cache and allow SourceManager to manage
-  /// converters for non-tagged files.
   std::unique_ptr<llvm::TextEncodingConverter> InputCharsetConverter;
 
   /// Cache of all text encoding converters used by this SourceManager.
@@ -985,7 +983,7 @@ public:
   /// new FileID for the \p SourceFile.
   FileID getOrCreateFileID(FileEntryRef SourceFile,
                            SrcMgr::CharacteristicKind FileCharacter,
-			   llvm::TextEncodingConverter *Converter = nullptr);
+			   bool UseInputCharsetConverter = false);
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
   /// function-like macro's body. Returns the start of the expansion.

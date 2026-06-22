@@ -495,7 +495,6 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
   
   return Inserted.first->second.get();
 }
-}
 
 const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
                                                       bool *Invalid) const {
@@ -625,7 +624,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
     Converter = getOrCreateConverter(*Ccsid, "UTF-8");
     if (!Converter) {
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
-          << SourceFile.getName() << "Failed to create converter";
+          << SourceFile.getName() << Converter.getError().message();
       return FileID();
     }
   } else if (UseInputCharsetConverter) {
@@ -689,11 +688,11 @@ FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
 FileID
 SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
                                  SrcMgr::CharacteristicKind FileCharacter,
-                                 llvm::TextEncodingConverter *Converter) {
+				 bool UseInputCharsetConverter) {
   FileID ID = translateFile(SourceFile);
   return ID.isValid() ? ID
                       : createFileID(SourceFile, SourceLocation(),
-                                     FileCharacter, Converter);
+                                     FileCharacter, UseInputCharsetConverter);
 }
 
 /// createFileID - Create a new FileID for the specified ContentCache and
@@ -2448,7 +2447,7 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID = SourceMgr->createFileID(
-      FE, SourceLocation(), clang::SrcMgr::C_User, /*Converter=*/nullptr);
+      FE, SourceLocation(), clang::SrcMgr::C_User, /*UseInputCharsetConverter=*/false);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }
