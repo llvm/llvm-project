@@ -55,9 +55,9 @@ static void normalizeCharSetName(StringRef CSName,
 std::optional<TextEncoding> TextEncodingConverter::getKnownEncoding(StringRef Name) {
   SmallString<16> Normalized;
   normalizeCharSetName(Name, Normalized);
-  if (Normalized.equals("utf8"))
+  if (Normalized.equals("utf8") || Normalized.equals("1208"))
     return TextEncoding::UTF8;
-  if (Normalized.equals("ibm1047"))
+  if (Normalized.equals("ibm1047") || Normalized.equals("1047"))
     return TextEncoding::IBM1047;
   return std::nullopt;
 }
