@@ -997,7 +997,8 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    udot z0.s, z2.b, z1.b
 ; SVE-NEXT:    ldr z2, [x0]
 ; SVE-NEXT:    uunpklo z1.d, z0.s
-; SVE-NEXT:    uunpkhi z0.d, z0.s
+; SVE-NEXT:    ext z0.b, z0.b, z0.b, #16
+; SVE-NEXT:    uunpklo z0.d, z0.s
 ; SVE-NEXT:    add z1.d, z2.d, z1.d
 ; SVE-NEXT:    add z0.d, z1.d, z0.d
 ; SVE-NEXT:    movprfx z1, z0
@@ -1012,9 +1013,13 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SME-NEXT:    ldr z1, [x2]
 ; SME-NEXT:    mov z2.s, #0 // =0x0
 ; SME-NEXT:    udot z2.s, z1.b, z0.b
-; SME-NEXT:    ldr z0, [x0]
-; SME-NEXT:    uaddwb z0.d, z0.d, z2.s
-; SME-NEXT:    uaddwt z0.d, z0.d, z2.s
+; SME-NEXT:    uunpklo z0.d, z2.s
+; SME-NEXT:    movprfx z1, z2
+; SME-NEXT:    ext z1.b, z1.b, z2.b, #16
+; SME-NEXT:    ldr z2, [x0]
+; SME-NEXT:    uunpklo z1.d, z1.s
+; SME-NEXT:    add z0.d, z2.d, z0.d
+; SME-NEXT:    add z0.d, z0.d, z1.d
 ; SME-NEXT:    movprfx z1, z0
 ; SME-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SME-NEXT:    ret
