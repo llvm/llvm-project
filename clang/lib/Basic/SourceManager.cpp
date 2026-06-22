@@ -673,17 +673,18 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   // it) or the conversion (or lack thereof) should be the same as that used
   // previously.
   auto [CacheConverter, CacheUsedByFileID] = IR.FileIDConverterInfo;
+  llvm::TextEncodingConverter *ConverterPtr = Converter ? *Converter : nullptr;
   if (CacheUsedByFileID)
-    assert(CacheConverter == Converter);
+    assert(CacheConverter == ConverterPtr);
   else
-    assert(!Converter || IR.IsBufferInvalid || !IR.getBufferIfLoaded());
+    assert(!ConverterPtr || IR.IsBufferInvalid || !IR.getBufferIfLoaded());
 #endif
-  IR.FileIDConverterInfo.setPointerAndInt(Converter, true);
+  IR.FileIDConverterInfo.setPointerAndInt(Converter ? *Converter : nullptr, true);
 
   // If this is a named pipe, immediately load the buffer to ensure subsequent
   // calls to ContentCache::getSize() are accurate.
   // Do the same if character-encoding conversion was requested.
-  if (IR.ContentsEntry->isNamedPipe() || Converter) 
+  if (IR.ContentsEntry->isNamedPipe() || (Converter && *Converter))
     (void)IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
 
   return createFileIDImpl(IR, SourceFile.getName(), IncludePos, FileCharacter,
