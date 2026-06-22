@@ -120,8 +120,17 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Start with the assumption that the buffer is invalid to simplify early
   // return paths.
   IsBufferInvalid = true;
+  
+  // If a converter is set, open the file in binary mode to get raw bytes
+  // and avoid platform-specific auto-conversion (e.g., EBCDIC->ASCII on z/OS,
+  // CRLF->LF on Windows). The explicit converter will handle all transformations.
+  bool NeedsExplicitConversion = FileIDConverterInfo.getPointer() != nullptr;
+  bool IsText = !NeedsExplicitConversion;
 
-  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile);
+  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile,
+                                           /*RequiresNullTerminator=*/true,
+                                           /*MaybeLimit=*/std::nullopt,
+                                           IsText);
 
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
