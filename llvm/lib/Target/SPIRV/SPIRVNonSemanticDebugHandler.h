@@ -73,7 +73,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   // DISubprogram nodes that are declarations only (!isDefinition()), collected
   // in beginModule() for DebugFunctionDeclaration emission.
-  SmallVector<const DISubprogram *, 8> SubprogramDeclarations;
+  SmallVector<const DISubprogram *> SubprogramDeclarations;
 
   // DebugFunctionDeclaration result id per emitted declaration DISubprogram
   // (only entries where emission succeeded).
