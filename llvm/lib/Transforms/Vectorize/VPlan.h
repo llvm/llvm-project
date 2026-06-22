@@ -1542,8 +1542,10 @@ public:
                         Type *ResultTy, const VPIRFlags &Flags = {},
                         const VPIRMetadata &Metadata = {},
                         DebugLoc DL = DebugLoc::getUnknown(),
-                        const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {}
+                        const Twine &Name = "", Value *UV = nullptr)
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {
+    setUnderlyingValue(UV);
+  }
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -1581,12 +1583,16 @@ public:
 
   /// Return the cost of this VPInstruction.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   Type *getResultType() const { return getScalarType(); }
+
+  /// Cast recipes always use scalars of their operand.
+  bool usesScalars(const VPValue *Op) const override {
+    if (Instruction::isCast(getOpcode()))
+      return true;
+    return VPInstruction::usesScalars(Op);
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2911,11 +2917,6 @@ public:
     Style = RdxUnordered{ScaleFactor};
   }
 
-  /// Returns the number of incoming values, also number of incoming blocks.
-  /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
-  /// incoming value, its start value.
-  unsigned getNumIncoming() const override { return 2; }
-
   /// Returns the recurrence kind of the reduction.
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -3410,6 +3411,8 @@ public:
                             computeScalarType(I, Operands), Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
+    assert((!IsSingleScalar || !I->isCast()) &&
+           "single-scalar casts should use VPInstructionWithType");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);
@@ -3477,6 +3480,12 @@ public:
   /// Return the recipe's operands, excluding the mask of a predicated recipe.
   operand_range operandsWithoutMask() {
     return isPredicated() ? drop_end(operands()) : operands();
+  }
+
+  /// Returns the number of operands, excluding the mask if the recipe is
+  /// predicated.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isPredicated();
   }
 
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
@@ -3586,8 +3595,9 @@ public:
       : VPExpressionRecipe(ExpressionTypes::NegatedExtendedReduction,
                            {Ext, Neg, Red}) {
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(1));
       assert(SubConst && SubConst->isZero() && "Expected a negating sub");
@@ -3609,8 +3619,9 @@ public:
             Mul->getOpcode() == Instruction::FMul) &&
            "Expected a mul");
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
@@ -3834,8 +3845,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3885,8 +3896,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3937,8 +3948,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3995,8 +4006,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -4280,10 +4291,7 @@ public:
 
   /// Return the cost of this VPScalarIVStepsRecipe.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   VPValue *getStepValue() const { return getOperand(1); }
 
@@ -5075,6 +5083,11 @@ public:
   /// Return a VPIRValue wrapping a ConstantInt with the given APInt value.
   VPIRValue *getConstantInt(const APInt &Val) {
     return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
+  }
+
+  /// Return a VPIRValue wrapping a poison value of type \p Ty.
+  VPIRValue *getPoison(Type *Ty) {
+    return getOrAddLiveIn(PoisonValue::get(Ty));
   }
 
   /// Return the live-in VPIRValue for \p V, if there is one or nullptr

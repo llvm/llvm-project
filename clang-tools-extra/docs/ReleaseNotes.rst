@@ -349,6 +349,11 @@ Changes in existing checks
   positives when ordinary variable or field assignments are used in loop
   conditions and note locations for inferred ID-dependent fields.
 
+- Improved :doc:`altera-unroll-loops
+  <clang-tidy/checks/altera/unroll-loops>` check by fixing a crash when
+  analyzing a ``for`` loop whose initialization statement declares multiple
+  variables.
+
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:
 
@@ -362,6 +367,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
   negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
+
+- Improved :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` check by fixing a false positive
+  where ``if``/``else`` branches containing inline assembly that differed only
+  in the asm string or clobber list were reported as identical.
 
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
@@ -396,6 +406,12 @@ Changes in existing checks
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-misplaced-widening-cast
+  <clang-tidy/checks/bugprone/misplaced-widening-cast>` check by fixing a false
+  positive on bit field assignments when the `CheckImplicitCasts` option is
+  enabled. The check now uses the actual bit field width instead of the
+  declared type to determine if widening occurs.
 
 - Improved :doc:`bugprone-move-forwarding-reference
   <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
@@ -799,6 +815,10 @@ Changes in existing checks
   - Fixed a false positive where ``bool`` conditions in C conditional
     operators were diagnosed as implicit conversions to ``int``.
 
+- Improved :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check to
+  correctly handle labeled statements of ``if``/``else`` bodies.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
@@ -807,6 +827,9 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+  - Fixed a false positive when adding ``const`` to a pointer parameter would
+    conflict with an existing overload.
 
   - Fixed a crash when analyzing a redeclaration whose initializer is attached
     to another declaration.
