@@ -443,6 +443,17 @@ future tuple
 future typeinfo
 future version
 initializer_list version
+inplace_vector cctype
+inplace_vector compare
+inplace_vector cstdint
+inplace_vector cstring
+inplace_vector cwchar
+inplace_vector cwctype
+inplace_vector initializer_list
+inplace_vector limits
+inplace_vector optional
+inplace_vector stdexcept
+inplace_vector version
 iomanip cctype
 iomanip cerrno
 iomanip climits
