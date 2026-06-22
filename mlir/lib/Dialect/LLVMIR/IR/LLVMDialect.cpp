@@ -75,10 +75,10 @@ getFPEnvSpeculatability(LLVM::FPEnvConstrainedOpInterface op) {
 /// exception is required to be preserved (`strict_except` is set). Otherwise
 /// the effect can be ignored, leaving the operation eligible for dead-code
 /// elimination even when it is not speculatable.
-static void
-getFPEnvEffects(LLVM::FPEnvConstrainedOpInterface op,
-                SmallVectorImpl<SideEffects::EffectInstance<
-                    MemoryEffects::Effect>> &effects) {
+static void getFPEnvEffects(
+    LLVM::FPEnvConstrainedOpInterface op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
   if (op.getFenvExceptionMode() != LLVM::FPExceptionMode::Masked &&
       op.getFenvStrictExcept())
     effects.emplace_back(MemoryEffects::Write::get(),

@@ -82,8 +82,7 @@ public:
     builder.setDefaultConstrainedRounding(oldRounding);
   }
 
-  void enable(llvm::RoundingMode rounding,
-              llvm::fp::ExceptionBehavior except) {
+  void enable(llvm::RoundingMode rounding, llvm::fp::ExceptionBehavior except) {
     builder.setIsFPConstrained(true);
     builder.setDefaultConstrainedRounding(rounding);
     builder.setDefaultConstrainedExcept(except);
@@ -150,12 +149,13 @@ getConstrainedIntrinsicFor(llvm::Intrinsic::ID base) {
 
 /// Emits a constrained floating-point call for a function-style operation: the
 /// math intrinsic dialect operations and `llvm.call_intrinsic`. The original
-/// floating-point operands are taken from \p fpOperands and the result is mapped
-/// to \p result.
-static LogicalResult emitConstrainedFPCall(
-    Operation *op, llvm::Intrinsic::ID constrainedID, ValueRange fpOperands,
-    Value result, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) {
+/// floating-point operands are taken from \p fpOperands and the result is
+/// mapped to \p result.
+static LogicalResult
+emitConstrainedFPCall(Operation *op, llvm::Intrinsic::ID constrainedID,
+                      ValueRange fpOperands, Value result,
+                      llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *mod = builder.GetInsertBlock()->getModule();
   llvm::LLVMContext &ctx = mod->getContext();
 
@@ -177,8 +177,8 @@ static LogicalResult emitConstrainedFPCall(
   for (unsigned i = 0; i < numMetadataArgs; ++i)
     signatureArgTypes.push_back(metadataType);
 
-  llvm::FunctionType *signature =
-      llvm::FunctionType::get(resultType, signatureArgTypes, /*isVarArg=*/false);
+  llvm::FunctionType *signature = llvm::FunctionType::get(
+      resultType, signatureArgTypes, /*isVarArg=*/false);
 
   std::string errorMsg;
   llvm::raw_string_ostream errorOS(errorMsg);
@@ -190,9 +190,8 @@ static LogicalResult emitConstrainedFPCall(
            << errorMsg;
   }
 
-  llvm::Function *callee =
-      llvm::Intrinsic::getOrInsertDeclaration(mod, constrainedID,
-                                              overloadedTypes);
+  llvm::Function *callee = llvm::Intrinsic::getOrInsertDeclaration(
+      mod, constrainedID, overloadedTypes);
   // The rounding mode and exception behavior come from the IRBuilder's
   // constrained floating-point state, configured by ConstrainedFPStateRAII.
   llvm::Value *call = builder.CreateConstrainedFPCall(callee, args, "");
@@ -370,7 +369,8 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   // (configured by ConstrainedFPStateRAII) supplies the rounding mode and
   // exception behavior.
   if (op.getFenvAttr()) {
-    llvm::Intrinsic::ID base = llvm::Intrinsic::lookupIntrinsicID(op.getIntrin());
+    llvm::Intrinsic::ID base =
+        llvm::Intrinsic::lookupIntrinsicID(op.getIntrin());
     if (!base)
       return op.emitError("could not find LLVM intrinsic: ") << op.getIntrin();
     llvm::Intrinsic::ID constrainedID = getConstrainedIntrinsicFor(base);
