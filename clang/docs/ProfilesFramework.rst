@@ -637,6 +637,12 @@ CFG-based pass.  Until it lands, a ``[[uninit]]`` data member is trusted,
 and writes *through* a ``[[ref_to_uninit]]`` pointer/reference are not yet
 verified (the paper relegates them to ``construct_at`` or suppression).
 
+Dynamically-created objects are also not covered: a ``new`` expression whose
+default-initialization leaves a scalar subobject indeterminate (e.g.
+``new int``, paper §1.2 / §2) has no check site, so only automatic-storage
+(``uninit_decl``, R2) and non-local static (``static_runtime_init``, R3)
+definitions are checked -- the dynamic-storage analogue is not yet implemented.
+
 The slice introduces two marker attributes and the rules below.
 
 Marker attributes
@@ -736,6 +742,13 @@ constructor is trusted; static / thread storage duration is excluded
   whose only indeterminate scalars are all marked is trusted
   (e.g. ``struct A { int x [[uninit]]; }; A a;`` is accepted), while a
   mixed type still fires for its unmarked scalars.
+- Known gap: because static / thread storage is excluded here and
+  ``uninit_with_initializer`` (R4) sees no initializer for a zero-initialized
+  object, a ``[[uninit]]`` marker on a non-local static or thread-local
+  variable (e.g. ``static int x [[uninit]];``) is silently accepted -- even
+  though such an object is zero-initialized by language rule, so marking it
+  ``[[uninit]]`` contradicts paper §4.2 ("an initialized object marked
+  ``[[uninit]]`` is an error").
 
 R3. ``static_runtime_init`` -- pattern 1
 .........................................
