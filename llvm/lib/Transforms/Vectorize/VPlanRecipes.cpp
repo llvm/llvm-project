@@ -2310,8 +2310,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
                                                     VPCostContext &Ctx) const {
-  SmallVector<const VPValue *> ArgOps(operands());
-  return computeCallCost(VectorIntrinsicID, ArgOps, *this, VF, Ctx);
+  return computeCallCost(VectorIntrinsicID, operands(), *this, VF, Ctx);
 }
 
 StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
@@ -3806,9 +3805,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
     Type *ResultTy = this->getScalarType();
-    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
-    return computeCallCost(CalledFn, ResultTy, ArgOps, isSingleScalar(), VF,
-                           Ctx);
+    return computeCallCost(CalledFn, ResultTy, operandsWithoutMask(),
+                           isSingleScalar(), VF, Ctx);
   }
   case Instruction::Add:
   case Instruction::Sub:
