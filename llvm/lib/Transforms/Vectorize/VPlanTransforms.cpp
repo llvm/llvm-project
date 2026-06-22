@@ -6546,14 +6546,8 @@ struct VPPartialReductionChain {
   unsigned AccumulatorOpIdx;
   unsigned ScaleFactor;
 
-  /// Mask from a VPBlendRecipe that guards the reduction (e.g. an `if` inside
-  /// the loop body).
-  VPValue *BlendMask = nullptr;
-
-  /// If true, negate the BlendMask before passing to the partial reduction.
-  /// This is needed for normalized blends where ReductionBinOp is the first
-  /// incoming value and selected when BlendMask is false.
-  bool NegateBlendMask = false;
+  /// Optional blend guarding the reduction.
+  VPBlendRecipe *Blend = nullptr;
 };
 
 static VPSingleDefRecipe *
@@ -6742,61 +6736,28 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   }
 
   // Check if WidenRecipe is the final result of the reduction. If so look
-  // through select-like recipes for predicated reductions.
-  //
-  // There are up to two sources of predication:
-  //   1) Chain.Mask: captured from a VPBlendRecipe that gates this link with
-  //      an inner `if` mask. May need negation (see Chain.NegateMask).
-  //   2) A latch select: introduced by tail-folding and/or
-  //      non-predicated reductions to select between the updated and previous
-  //      reduction values.
-  // Both must be combined (logical-and) and absorbed into the partial
-  // reduction's Cond, and both the blend and the latch select must be
-  // replaced by the partial reduction.
-  VPValue *Cond = Chain.BlendMask;
-  if (Cond && Chain.NegateBlendMask) {
+  // through the select recipes introduced by tail-folding or predicated
+  // reductions for the BinOp's exit value.
+  VPValue *TailFoldCond = nullptr;
+  auto *ExitValue = cast_or_null<VPInstruction>(findUserOf(
+      WidenRecipe, m_Select(m_VPValue(TailFoldCond), m_Specific(WidenRecipe),
+                            m_Specific(RdxPhi))));
+
+  VPValue *BlendCond = Chain.Blend ? Chain.Blend->getMask(0) : nullptr;
+  VPValue *Cond = TailFoldCond;
+
+  if (TailFoldCond && BlendCond) {
     VPBuilder Builder(WidenRecipe);
-    Cond = Builder.createNot(Cond, WidenRecipe->getDebugLoc());
+    Cond = Builder.createLogicalAnd(TailFoldCond, BlendCond,
+                                    WidenRecipe->getDebugLoc());
+  } else if (BlendCond) {
+    Cond = BlendCond;
   }
 
-  // If the chain saw a blend, the latch select uses the
-  // blend rather than the WidenRecipe directly.
-  VPValue *SearchVal = WidenRecipe;
-  VPBlendRecipe *BlendUser = nullptr;
-  if (Chain.BlendMask) {
-    BlendUser = findUserOf<VPBlendRecipe>(WidenRecipe);
-    if (BlendUser)
-      SearchVal = BlendUser;
-  }
-
-  VPValue *LatchCond = nullptr;
-  VPRecipeBase *ExitRecipe = findUserOf(
-      SearchVal, m_SelectLike(m_VPValue(LatchCond), m_Specific(SearchVal),
-                              m_Specific(RdxPhi)));
-  if (!ExitRecipe) {
-    ExitRecipe = findUserOf(SearchVal, m_SelectLike(m_VPValue(LatchCond),
-                                                    m_Specific(RdxPhi),
-                                                    m_Specific(SearchVal)));
-    if (ExitRecipe) {
-      VPBuilder Builder(WidenRecipe);
-      LatchCond = Builder.createNot(LatchCond, ExitRecipe->getDebugLoc());
-    }
-  }
-
-  // Combine the blend mask and the latch select mask.
-  if (LatchCond && Cond) {
-    VPBuilder Builder(WidenRecipe);
-    Cond =
-        Builder.createLogicalAnd(LatchCond, Cond, WidenRecipe->getDebugLoc());
-  } else if (LatchCond) {
-    Cond = LatchCond;
-  }
-
-  VPValue *ExitValue = cast_or_null<VPSingleDefRecipe>(ExitRecipe);
-
-  bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
-                       RdxPhi->getBackedgeValue() == ExitValue ||
-                       (BlendUser && RdxPhi->getBackedgeValue() == BlendUser);
+  bool IsLastInChain =
+      RdxPhi->getBackedgeValue() == WidenRecipe ||
+      RdxPhi->getBackedgeValue() == ExitValue ||
+      (Chain.Blend && RdxPhi->getBackedgeValue() == Chain.Blend);
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
@@ -6811,12 +6772,12 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
-  // Replace uses of the latch select (if found) with PartialRed; otherwise
+  // Replace uses of the select (if found) with PartialRed; otherwise
   // the blend directly produces the reduction backedge value.
   if (ExitValue)
     ExitValue->replaceAllUsesWith(PartialRed);
-  if (BlendUser)
-    BlendUser->replaceAllUsesWith(PartialRed);
+  if (Chain.Blend)
+    Chain.Blend->replaceAllUsesWith(PartialRed);
   WidenRecipe->replaceAllUsesWith(PartialRed);
 
   // For cost-model purposes, fold this into a VPExpression.
@@ -7026,12 +6987,6 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   if (!RdxResult)
     return std::nullopt;
   VPValue *ExitValue = RdxResult->getOperand(0);
-  VPValue *SelectedValue = nullptr;
-  if (match(ExitValue, m_SelectLike(m_VPValue(), m_VPValue(SelectedValue),
-                                    m_Specific(RedPhiR))) ||
-      match(ExitValue, m_SelectLike(m_VPValue(), m_Specific(RedPhiR),
-                                    m_VPValue(SelectedValue))))
-    ExitValue = SelectedValue;
 
   SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
@@ -7041,42 +6996,13 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Work backwards from the ExitValue examining each reduction operation.
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
-    VPValue *LinkMask = nullptr;
-    bool LinkNegateMask = false;
-    if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentValue)) {
-      // Look through an incoming blend. We handle both:
-      //   * Normalized blends     ([I0, I1, M1]): introduced by inner `if`.
-      //   * Non-normalized blends ([I0, M0, I1, M1]): introduced by an inner
-      //     `if` combined with tail-folding (M0 and M1 already include the
-      //     header / lane mask).
-      if (Blend->getNumIncomingValues() != 2)
+    VPBlendRecipe *Blend = nullptr;
+    if (auto *B = dyn_cast<VPBlendRecipe>(CurrentValue)) {
+      if (B->getNumIncomingValues() != 2)
         return std::nullopt;
 
-      VPValue *V0 = Blend->getIncomingValue(0);
-      VPValue *V1 = Blend->getIncomingValue(1);
-      auto IsBinOpWiden = [](VPValue *V) {
-        auto *W = dyn_cast_or_null<VPWidenRecipe>(V);
-        return W && Instruction::isBinaryOp(W->getOpcode());
-      };
-
-      // Identify which incoming is the BinOp.
-      if (IsBinOpWiden(V1)) {
-        // Both forms: V1 is selected when M1 is true.
-        CurrentValue = V1;
-        LinkMask = Blend->getMask(1);
-      } else if (IsBinOpWiden(V0)) {
-        CurrentValue = V0;
-        if (Blend->isNormalized()) {
-          // Normalized [I0, I1, M1]: V0 is default, fires when M1 is false.
-          LinkMask = Blend->getMask(1);
-          LinkNegateMask = true;
-        } else {
-          // Non-normalized [I0, M0, I1, M1]: V0 fires when M0 is true.
-          LinkMask = Blend->getMask(0);
-        }
-      } else {
-        return std::nullopt;
-      }
+      Blend = B;
+      CurrentValue = B->getIncomingValue(0);
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
@@ -7085,6 +7011,9 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
 
     VPValue *Op = UpdateR->getOperand(1);
     VPValue *PrevValue = UpdateR->getOperand(0);
+
+    if (Blend && Blend->getIncomingValue(1) != PrevValue)
+      return std::nullopt;
 
     // Find the extended operand. The other operand (PrevValue) is the next link
     // in the reduction chain.
@@ -7106,7 +7035,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
          static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)),
-         LinkMask, LinkNegateMask});
+         Blend});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
@@ -7198,34 +7127,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
 
-        // Predicated reductions introduced by an 'if' inside the loop
-        // will be represented by a VPBlendRecipe with two incoming values,
-        // the reduction PHI and the reduction Bin Op.
-        if (auto *Blend = dyn_cast<VPBlendRecipe>(U)) {
-          if (Blend->getNumIncomingValues() != 2)
-            return false;
-
-          VPValue *V0 = Blend->getIncomingValue(0);
-          VPValue *V1 = Blend->getIncomingValue(1);
-          if (!((V0 == Chain.ReductionBinOp && V1 == RedPhiR) ||
-                (V1 == Chain.ReductionBinOp && V0 == RedPhiR)))
-            return false;
-
-          // The blend's users must be the reduction PHI's backedge, the
-          // compute-reduction-result, the latch select introduced
-          // by tail-folding, or another scaled-reduction with the same
-          // scale factor for chained reductions.
-          return all_of(Blend->users(), [&](VPUser *BU) {
-            if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(BU))
-              return PhiR == RedPhiR;
-            auto *R = dyn_cast<VPSingleDefRecipe>(BU);
-            return R &&
-                   (Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
-                    match(R, m_ComputeReductionResult(m_Specific(Blend))) ||
-                    match(R, m_Select(m_VPValue(), m_Specific(Blend),
-                                      m_Specific(RedPhiR))));
-          });
-        }
+        if (Chain.Blend == U)
+          return true;
 
         auto *R = cast<VPSingleDefRecipe>(U);
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
