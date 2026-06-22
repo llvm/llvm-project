@@ -65,9 +65,9 @@ static_assert(sizeof(__consume_result) == sizeof(char32_t));
 /// https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundary_Rules
 ///
 /// The data tables used are
-/// https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakProperty.txt
-/// https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
-/// https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakTest.txt (for testing only)
+/// https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakProperty.txt
+/// https://www.unicode.org/Public/18.0.0/ucd/emoji/emoji-data.txt
+/// https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakTest.txt (for testing only)
 
 inline constexpr char32_t __replacement_character = U'\ufffd';
 
@@ -132,7 +132,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const noexcept { return __first_ == __last_; }
   _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __position() const noexcept { return __first_; }
 
-  // https://www.unicode.org/versions/latest/ch03.pdf#G7404
+  // https://www.unicode.org/versions/Unicode18.0.0/core-spec/chapter-3/#G7404
   // Based on Table 3-7, Well-Formed UTF-8 Byte Sequences
   //
   // Code Points        First Byte Second Byte Third Byte Fourth Byte  Remarks
