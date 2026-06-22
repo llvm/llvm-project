@@ -20,9 +20,14 @@ jobs:
       run:
         shell: bash
     steps:
-      # Long path support for the deep llvm-project tree under runner workspace.
-      - name: Enable git long paths
-        run: git config --global core.longpaths true
+      - name: Configure git (long paths, LF line endings)
+        # longpaths: llvm-project tree exceeds Windows' 260-char path limit.
+        # autocrlf=false/eol=lf: avoid CRLF checkout, which breaks clang's
+        # check_format_depend_* targets (clang-format emits LF).
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
       # Pinned ninja 1.12.1 — TheRock pins this version because 1.13.0 has a bug.
       - name: Install ninja
@@ -149,8 +154,14 @@ jobs:
         shell: bash
 
     steps:
-      - name: Enable git long paths
-        run: git config --global core.longpaths true
+      - name: Configure git (long paths, LF line endings)
+        # longpaths: llvm-project tree exceeds Windows' 260-char path limit.
+        # autocrlf=false/eol=lf: avoid CRLF checkout, which breaks clang's
+        # check_format_depend_* targets (clang-format emits LF).
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
       - name: Install ninja
         run: choco install -y ninja --version 1.12.1
@@ -270,8 +281,14 @@ jobs:
         shell: bash
 
     steps:
-      - name: Enable git long paths
-        run: git config --global core.longpaths true
+      - name: Configure git (long paths, LF line endings)
+        # longpaths: llvm-project tree exceeds Windows' 260-char path limit.
+        # autocrlf=false/eol=lf: avoid CRLF checkout, which breaks clang's
+        # check_format_depend_* targets (clang-format emits LF).
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
       - name: Install ninja
         run: choco install -y ninja --version 1.12.1
@@ -337,8 +354,14 @@ jobs:
         shell: bash
 
     steps:
-      - name: Enable git long paths
-        run: git config --global core.longpaths true
+      - name: Configure git (long paths, LF line endings)
+        # longpaths: llvm-project tree exceeds Windows' 260-char path limit.
+        # autocrlf=false/eol=lf: avoid CRLF checkout, which breaks clang's
+        # check_format_depend_* targets (clang-format emits LF).
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
       - name: Install ninja
         run: choco install -y ninja --version 1.12.1
