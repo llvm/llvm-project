@@ -1688,27 +1688,21 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_reduce_xor: {
-    mlir::Value arg = emitScalarExpr(e->getArg(0));
-    cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
-    return RValue::get(builder.emitIntrinsicCallOp(
-        getLoc(e->getExprLoc()), "vector.reduce.xor", vecTy.getElementType(),
-        mlir::ValueRange{arg}));
-  }
-  case Builtin::BI__builtin_reduce_or: {
-    mlir::Value arg = emitScalarExpr(e->getArg(0));
-    cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
-    return RValue::get(builder.emitIntrinsicCallOp(
-        getLoc(e->getExprLoc()), "vector.reduce.or", vecTy.getElementType(),
-        mlir::ValueRange{arg}));
-  }
-  case Builtin::BI__builtin_reduce_and: {
-    mlir::Value arg = emitScalarExpr(e->getArg(0));
-    cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
-    return RValue::get(builder.emitIntrinsicCallOp(
-        getLoc(e->getExprLoc()), "vector.reduce.and", vecTy.getElementType(),
-        mlir::ValueRange{arg}));
-  }
+  case Builtin::BI__builtin_reduce_xor:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.xor",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  case Builtin::BI__builtin_reduce_or:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.or",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  case Builtin::BI__builtin_reduce_and:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.and",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd:
   case Builtin::BI__builtin_reduce_maximum:
