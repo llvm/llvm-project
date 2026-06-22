@@ -93,7 +93,7 @@ def ProfileCountReal : LLVM_EnumAttrCase<
 def ProfileCountSynthetic : LLVM_EnumAttrCase<
   /*string cppSym=*/"Synthetic", /*string irSym=*/"synthetic",
   /*string llvmSym=*/"PCT_Synthetic", /*int val=*/1>;
-def ProfileCountType : LLVM_EnumAttr<
+def ProfileCountTypeAttr : LLVM_EnumAttr<
   /*string name=*/"ProfileCountType",
   /*string llvmName=*/"::llvm::Function::ProfileCountType",
   /*string description=*/"real or synthetic function entry count",

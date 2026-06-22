@@ -2005,19 +2005,16 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
-    if (FunctionEntryCountAttr entryCount =
-            function.getFunctionEntryCountAttr()) {
+    if (auto entryCount = function.getFunctionEntryCountAttr()) {
       llvm::Function::ProfileCount profileCount(
           entryCount.getEntryCount(),
           convertProfileCountTypeToLLVM(entryCount.getCountType()));
-      std::optional<llvm::DenseSet<llvm::GlobalValue::GUID>> importGUIDs;
       ArrayRef<uint64_t> imports = entryCount.getImports();
-      if (!imports.empty()) {
-        importGUIDs.emplace();
-        importGUIDs->insert(imports.begin(), imports.end());
-      }
+      llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
+      if (!imports.empty())
+        importGUIDs.insert(imports.begin(), imports.end());
       llvmFunc->setEntryCount(profileCount,
-                              importGUIDs ? &*importGUIDs : nullptr);
+                              imports.empty() ? nullptr : &importGUIDs);
     }
 
     // Convert result attributes.

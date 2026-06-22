@@ -171,7 +171,7 @@ declare range(i64 0, 4097) i64 @func_res_attr_range()
 ; // -----
 
 ; CHECK-LABEL: @entry_count
-; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 4242, count_type = real>}
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 4242>}
 define void @entry_count() !prof !1 {
   ret void
 }
@@ -191,7 +191,7 @@ define void @synthetic_entry_count() !prof !2 {
 ; // -----
 
 ; CHECK-LABEL: @entry_count_imports
-; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = real, imports = [1234, 18446744073709551615, 4, 1234]>}
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = [1234, 18446744073709551615, 4, 1234]>}
 define void @entry_count_imports() !prof !3 {
   ret void
 }
@@ -243,10 +243,9 @@ define void @entry_count_too_wide_import() !prof !7 {
 
 ; // -----
 
-; Preserve the raw i64 metadata bit pattern. LLVM's semantic getEntryCount()
-; treats real uint64_t(-1) as unknown, but translation preserves the metadata.
+; LLVM treats real uint64_t(-1) entry counts as unknown.
 ; CHECK-LABEL: @entry_count_negative_count
-; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615, count_type = real>}
+; CHECK-NOT: function_entry_count
 define void @entry_count_negative_count() !prof !8 {
   ret void
 }

@@ -131,11 +131,16 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
 
     bool isSynthetic =
         profName == llvm::MDProfLabels::SyntheticFunctionEntryCount;
+    llvm::Function::ProfileCountType profileCountType =
+        isSynthetic ? llvm::Function::PCT_Synthetic : llvm::Function::PCT_Real;
 
     std::optional<uint64_t> entryCountValue =
         getUInt64Metadata(node->getOperand(1));
     if (!entryCountValue)
       return failure();
+    if (profileCountType == llvm::Function::PCT_Real &&
+        *entryCountValue == uint64_t(-1))
+      return success();
 
     SmallVector<uint64_t> importGUIDValues;
     importGUIDValues.reserve(node->getNumOperands() - 2);
@@ -150,8 +155,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
       funcOp.setFunctionEntryCountAttr(FunctionEntryCountAttr::get(
           builder.getContext(), *entryCountValue,
-          isSynthetic ? ProfileCountType::Synthetic : ProfileCountType::Real,
-          importGUIDValues));
+          convertProfileCountTypeFromLLVM(profileCountType), importGUIDValues));
       return success();
     }
     return op->emitWarning()

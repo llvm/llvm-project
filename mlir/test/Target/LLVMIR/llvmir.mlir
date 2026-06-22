@@ -1895,7 +1895,7 @@ llvm.func @my_allocator(i64) attributes {passthrough = [["allocsize", "429496729
 // CHECK-LABEL: @functionEntryCount
 // CHECK-SAME: !prof ![[PROF_ID:[0-9]+]]
 llvm.func @functionEntryCount() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 4242, count_type = real>
+  function_entry_count = #llvm.function_entry_count<entry_count = 4242>
 } {
   llvm.return
 }
@@ -1931,7 +1931,7 @@ llvm.func @syntheticFunctionEntryCountWithImports() attributes {
 // CHECK-LABEL: @functionEntryCountWithImports
 // CHECK-SAME: !prof ![[IMPORTS_PROF_ID:[0-9]+]]
 llvm.func @functionEntryCountWithImports() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = real, imports = [1234, 4, 18446744073709551615, 1234]>
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = [1234, 4, 18446744073709551615, 1234]>
 } {
   llvm.return
 }
@@ -1943,7 +1943,7 @@ llvm.func @functionEntryCountWithImports() attributes {
 // CHECK-LABEL: @functionEntryCountNegativeCount
 // CHECK-SAME: !prof ![[NEG_PROF_ID:[0-9]+]]
 llvm.func @functionEntryCountNegativeCount() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615, count_type = real>
+  function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>
 } {
   llvm.return
 }
