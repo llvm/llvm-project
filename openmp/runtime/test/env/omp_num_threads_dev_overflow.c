@@ -13,15 +13,14 @@
 #include <stdio.h>
 #include <string.h>
 
-extern const char *__kmpc_get_resolved_device_env(const char *name,
-                                                  int device_id);
+extern const char *__kmp_resolve_device_env(const char *name, int device_id);
 
 int main(void) {
   if (omp_get_max_threads() != 4) {
     fprintf(stderr, "FAIL: host got %d, expected 4\n", omp_get_max_threads());
     return 1;
   }
-  const char *q = __kmpc_get_resolved_device_env("OMP_NUM_THREADS", 2147483646);
+  const char *q = __kmp_resolve_device_env("OMP_NUM_THREADS", 2147483646);
   if (q == NULL || strcmp(q, "4") != 0) {
     fprintf(stderr, "FAIL: large valid id expected '4', got %s\n",
             q ? q : "(null)");

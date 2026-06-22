@@ -305,28 +305,42 @@ extern "C" int __kmp_device_env_record(char const *full_name,
   return 0;
 }
 
-extern "C" char const *__kmp_resolve_device_env(char const *base_name,
-                                                int device_id) {
+// Look up the registry state for `base_name`, or NULL if it is not an
+// eligible base or nothing was recorded yet.
+static kmp_device_env_state_t *__kmp_device_env_lookup(char const *base_name) {
   int idx = __kmp_device_env_index(base_name);
   if (idx < 0 || __kmp_device_env_states == NULL)
     return NULL;
-  kmp_device_env_state_t *st = &__kmp_device_env_states[idx];
+  return &__kmp_device_env_states[idx];
+}
 
-  // Host: <ENV> > <ENV>_ALL
-  if (device_id == -1) {
-    if (st->host_value != NULL)
-      return st->host_value;
-    // Defensive: after `__kmp_env_initialize` completes, `host_value` is
-    // always populated whenever `<ENV>` or `<ENV>_ALL` was set (the post-pass
-    // calls `observe_host` after replaying `_ALL`). This `all_value` fallback
-    // covers the narrow window of an early query during init bootstrap (e.g.
-    // a query issued from inside `__kmp_stg_parse` while the post-pass has
-    // not yet run). Kept deliberately so the contract holds end-to-end.
-    if (st->all_value != NULL)
-      return st->all_value;
+extern "C" char const *__kmp_resolve_host_env(char const *base_name) {
+  kmp_device_env_state_t *st = __kmp_device_env_lookup(base_name);
+  if (st == NULL)
     return NULL;
-  }
+  // Host: <ENV> > <ENV>_ALL.
+  if (st->host_value != NULL)
+    return st->host_value;
+  // Defensive: after `__kmp_env_initialize` completes, `host_value` is
+  // always populated whenever `<ENV>` or `<ENV>_ALL` was set (the post-pass
+  // calls `observe_host` after replaying `_ALL`). This `all_value` fallback
+  // covers the narrow window of an early query during init bootstrap (e.g.
+  // a query issued from inside `__kmp_stg_parse` while the post-pass has
+  // not yet run). Kept deliberately so the contract holds end-to-end.
+  if (st->all_value != NULL)
+    return st->all_value;
+  return NULL;
+}
+
+extern "C" char const *__kmp_resolve_device_env(char const *base_name,
+                                                int device_id) {
+  // Host queries must use `__kmp_resolve_host_env`; this entry point is for
+  // non-host devices only and takes a 0-based, non-negative device id.
+  KMP_DEBUG_ASSERT(device_id >= 0);
   if (device_id < 0)
+    return NULL;
+  kmp_device_env_state_t *st = __kmp_device_env_lookup(base_name);
+  if (st == NULL)
     return NULL;
 
   // Non-host device d: <ENV>_DEV_<d> > <ENV>_DEV > <ENV>_ALL > default.
@@ -370,11 +384,4 @@ extern "C" void __kmp_device_env_reset(void) {
   }
   KMP_INTERNAL_FREE(__kmp_device_env_states);
   __kmp_device_env_states = NULL;
-}
-
-// Public test/query helper. Returns the resolved value for `name` on
-// `device_id`.
-extern "C" char const *__kmpc_get_resolved_device_env(char const *name,
-                                                      int device_id) {
-  return __kmp_resolve_device_env(name, device_id);
 }

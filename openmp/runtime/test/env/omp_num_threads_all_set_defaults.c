@@ -7,8 +7,8 @@
 #include <stdio.h>
 
 extern void kmp_set_defaults(const char *);
-extern const char *__kmpc_get_resolved_device_env(const char *name,
-                                                  int device_id);
+extern const char *__kmp_resolve_host_env(const char *name);
+extern const char *__kmp_resolve_device_env(const char *name, int device_id);
 
 int main(void) {
   int rc = 0;
@@ -20,7 +20,7 @@ int main(void) {
             omp_get_max_threads());
     rc = 1;
   }
-  const char *q = __kmpc_get_resolved_device_env("OMP_NUM_THREADS", -1);
+  const char *q = __kmp_resolve_host_env("OMP_NUM_THREADS");
   if (q == NULL || q[0] != '1' || q[1] != '6' || q[2] != '\0') {
     fprintf(stderr, "FAIL: query host expected '16' got %s\n",
             q ? q : "(null)");
@@ -28,7 +28,7 @@ int main(void) {
   }
 
   kmp_set_defaults("KMP_BLOCKTIME=200");
-  q = __kmpc_get_resolved_device_env("OMP_NUM_THREADS", 0);
+  q = __kmp_resolve_device_env("OMP_NUM_THREADS", 0);
   if (q == NULL || q[0] != '1' || q[1] != '6' || q[2] != '\0') {
     fprintf(stderr,
             "FAIL: registry wiped by unrelated kmp_set_defaults; got %s\n",
