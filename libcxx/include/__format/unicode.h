@@ -380,6 +380,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __evaluate_none(char32_t __next_code_point, __EGC_property __next_property) {
+    (void)__next_code_point;
     // *** Break at the start and end of text, unless the text is empty. ***
 
     _LIBCPP_ASSERT_INTERNAL(__prev_property_ != __EGC_property::__sot, "should be handled in the constructor"); // GB1
