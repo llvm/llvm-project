@@ -196,6 +196,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_FP16:
     Res = PromoteIntRes_FP_TO_FP16_BF16(N);
     break;
+  case ISD::CONVERT_TO_ARBITRARY_FP:
+    Res = PromoteIntRes_CONVERT_TO_ARBITRARY_FP(N);
+    break;
   case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_FP_TO_FP16:
     Res = PromoteIntRes_STRICT_FP_TO_FP16_BF16(N);
@@ -961,6 +964,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16_BF16(SDNode *N) {
   SDLoc dl(N);
 
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+}
+
+// TODO: CONVERT_TO_ARBITRARY_FP also needs an ExpandIntegerResult handler for
+// wider arbitrary FP formats whose integer result requires expansion.
+SDValue DAGTypeLegalizer::PromoteIntRes_CONVERT_TO_ARBITRARY_FP(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  return DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, dl, NVT, N->getOperand(0),
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_STRICT_FP_TO_FP16_BF16(SDNode *N) {

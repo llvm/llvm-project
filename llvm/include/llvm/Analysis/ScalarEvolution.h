@@ -2644,6 +2644,9 @@ public:
   /// Adds a new predicate.
   LLVM_ABI void addPredicate(const SCEVPredicate &Pred);
 
+  /// Adds all predicates in \p Preds.
+  LLVM_ABI void addPredicates(ArrayRef<const SCEVPredicate *> Preds);
+
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current

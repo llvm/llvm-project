@@ -15620,6 +15620,12 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   updateGeneration();
 }
 
+void PredicatedScalarEvolution::addPredicates(
+    ArrayRef<const SCEVPredicate *> Preds) {
+  for (const SCEVPredicate *P : Preds)
+    addPredicate(*P);
+}
+
 const SCEVPredicate &PredicatedScalarEvolution::getPredicate() const {
   return *Preds;
 }
@@ -15660,8 +15666,7 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
     return New;
   }
 
-  for (const auto *P : NewPreds)
-    addPredicate(*P);
+  addPredicates(NewPreds);
 
   RewriteMap[SE.getSCEV(V)] = {Generation, New};
   return New;

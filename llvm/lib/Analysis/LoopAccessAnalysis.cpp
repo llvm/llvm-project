@@ -240,22 +240,20 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
-  RetainedKnowledge DerefRK;
-  getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
-                       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-                         if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         DerefRK = std::max(DerefRK, RK);
-                         return true;
-                       });
-  if (DerefRK) {
-    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
-    Type *CommonTy =
-        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
-    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
-    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
-    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
-  }
+  getKnowledgeForValue(
+      StartPtrV, Attribute::Dereferenceable, *AC,
+      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+        if (!isValidAssumeForContext(Assume, CtxI, DT))
+          return false;
+        const SCEV *DerefRKSCEV = SE.getSCEV(RK.IRArgValue);
+        Type *CommonTy =
+            SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+        DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+        DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+        DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
+        // Continue with other assumptions.
+        return false;
+      });
 
   if (DerefBytesSCEV->isZero())
     return false;
@@ -1309,13 +1307,16 @@ bool AccessAnalysis::createCheckForAccess(
 
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
     if (!AR && Assume)
-      AR = PSE.getAsAddRec(Ptr);
+      AR = PSE.getAsAddRec(Ptr, &Predicates);
     if (!AR || !AR->isAffine())
       return false;
 
-    // If there's only one option for Ptr, look it up after bounds and wrap
-    // checking, because assumptions might have been added to PSE.
+    // If there's only one option for Ptr, commit the predicates collected by
+    // getAsAddRec and look Ptr up again afterwards: the lookup below reads the
+    // assumptions back from PSE, so they need to be committed first.
     if (RTCheckPtrs.size() == 1) {
+      PSE.addPredicates(Predicates);
+      Predicates.clear();
       AR =
           cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
       P.setPointer(AR);
@@ -1326,8 +1327,7 @@ bool AccessAnalysis::createCheckForAccess(
                   Assume ? &Predicates : nullptr))
       return false;
   }
-  for (const SCEVPredicate *P : Predicates)
-    PSE.addPredicate(*P);
+  PSE.addPredicates(Predicates);
 
   for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
@@ -1702,8 +1702,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   std::optional<int64_t> Stride =
       getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
                    Assume ? &Predicates : nullptr);
-  for (const SCEVPredicate *P : Predicates)
-    PSE.addPredicate(*P);
+  PSE.addPredicates(Predicates);
   return Stride;
 }
 
@@ -2126,8 +2125,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   std::optional<int64_t> StrideBPtr =
       getPtrStride(PSE, BTy, BPtr, InnermostLoop, *DT, SymbolicStrides,
                    /*ShouldCheckWrap=*/true, &Predicates);
-  for (const SCEVPredicate *P : Predicates)
-    PSE.addPredicate(*P);
+  PSE.addPredicates(Predicates);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -2994,6 +2992,7 @@ bool LoopAccessInfo::blockNeedsPredication(const BasicBlock *BB,
 
   // Blocks that do not dominate the latch need predication.
   const BasicBlock *Latch = TheLoop->getLoopLatch();
+  assert(Latch && "Loop expected to have a single latch.");
   return !DT->dominates(BB, Latch);
 }
 
