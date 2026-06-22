@@ -54315,107 +54315,8 @@ static SDValue combineAtomicLoad(SDNode *N, SelectionDAG &DAG,
   return DAG.getMergeValues({Cast, IntLoad.getValue(1)}, DL);
 }
 
-static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
-                           TargetLowering::DAGCombinerInfo &DCI,
-                           const X86Subtarget &Subtarget) {
-  auto *Ld = cast<LoadSDNode>(N);
-  EVT RegVT = Ld->getValueType(0);
-  EVT MemVT = Ld->getMemoryVT();
-  SDLoc dl(Ld);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  // For chips with slow 32-byte unaligned loads, break the 32-byte operation
-  // into two 16-byte operations. Also split non-temporal aligned loads on
-  // pre-AVX2 targets as 32-byte loads will lower to regular temporal loads.
-  ISD::LoadExtType Ext = Ld->getExtensionType();
-  unsigned Fast;
-  if (RegVT.is256BitVector() && !DCI.isBeforeLegalizeOps() &&
-      Ext == ISD::NON_EXTLOAD &&
-      ((Ld->isNonTemporal() && !Subtarget.hasInt256() &&
-        Ld->getAlign() >= Align(16)) ||
-       (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), RegVT,
-                               *Ld->getMemOperand(), &Fast) &&
-        !Fast))) {
-    unsigned NumElems = RegVT.getVectorNumElements();
-    if (NumElems < 2)
-      return SDValue();
-
-    unsigned HalfOffset = 16;
-    SDValue Ptr1 = Ld->getBasePtr();
-    SDValue Ptr2 =
-        DAG.getMemBasePlusOffset(Ptr1, TypeSize::getFixed(HalfOffset), dl);
-    EVT HalfVT = EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(),
-                                  NumElems / 2);
-    SDValue Load1 =
-        DAG.getLoad(HalfVT, dl, Ld->getChain(), Ptr1, Ld->getPointerInfo(),
-                    Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
-    SDValue Load2 =
-        DAG.getLoad(HalfVT, dl, Ld->getChain(), Ptr2,
-                    Ld->getPointerInfo().getWithOffset(HalfOffset),
-                    Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
-    SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                             Load1.getValue(1), Load2.getValue(1));
-
-    SDValue NewVec = DAG.getNode(ISD::CONCAT_VECTORS, dl, RegVT, Load1, Load2);
-    return DCI.CombineTo(N, NewVec, TF, true);
-  }
-
-  // Bool vector load - attempt to cast to an integer, as we have good
-  // (vXiY *ext(vXi1 bitcast(iX))) handling.
-  if (Ext == ISD::NON_EXTLOAD && !Subtarget.hasAVX512() && RegVT.isVector() &&
-      RegVT.getScalarType() == MVT::i1 && DCI.isBeforeLegalize()) {
-    unsigned NumElts = RegVT.getVectorNumElements();
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-    if (TLI.isTypeLegal(IntVT)) {
-      SDValue IntLoad = DAG.getLoad(IntVT, dl, Ld->getChain(), Ld->getBasePtr(),
-                                    Ld->getPointerInfo(), Ld->getBaseAlign(),
-                                    Ld->getMemOperand()->getFlags());
-      SDValue BoolVec = DAG.getBitcast(RegVT, IntLoad);
-      return DCI.CombineTo(N, BoolVec, IntLoad.getValue(1), true);
-    }
-  }
-
-  // If we also broadcast this vector to a wider type, then just extract the
-  // lowest subvector.
-  if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
-      (RegVT.is128BitVector() || RegVT.is256BitVector())) {
-    SDValue Ptr = Ld->getBasePtr();
-    SDValue Chain = Ld->getChain();
-    for (SDNode *User : Chain->users()) {
-      auto *UserLd = dyn_cast<MemSDNode>(User);
-      if (User != N && UserLd &&
-          User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-          UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
-          UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
-          User->hasAnyUseOfValue(0) &&
-          User->getValueSizeInBits(0).getFixedValue() >
-              RegVT.getFixedSizeInBits()) {
-        DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
-        SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
-                                           RegVT.getSizeInBits());
-        Extract = DAG.getBitcast(RegVT, Extract);
-        return DCI.CombineTo(N, Extract, SDValue(User, 1));
-      }
-    }
-  }
-
-  if (SDValue V = combineConstantPoolLoads(Ld, dl, DAG, DCI, Subtarget))
-    return V;
-
-  // Cast ptr32 and ptr64 pointers to the default address space before a load.
-  unsigned AddrSpace = Ld->getAddressSpace();
-  if (AddrSpace == X86AS::PTR64 || AddrSpace == X86AS::PTR32_SPTR ||
-      AddrSpace == X86AS::PTR32_UPTR) {
-    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-    if (PtrVT != Ld->getBasePtr().getSimpleValueType()) {
-      SDValue Cast =
-          DAG.getAddrSpaceCast(dl, PtrVT, Ld->getBasePtr(), AddrSpace, 0);
-      return DAG.getExtLoad(Ext, dl, RegVT, Ld->getChain(), Cast,
-                            Ld->getPointerInfo(), MemVT, Ld->getBaseAlign(),
-                            Ld->getMemOperand()->getFlags());
-    }
-  }
-
+static SDValue combineConstantArrayVariable(EVT RegVT, LoadSDNode *Ld,
+                                            SelectionDAG &DAG) {
   if (RegVT.is128BitVector()) {
     SDValue Ptr = Ld->getBasePtr();
 
@@ -54524,6 +54425,113 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     return DAG.getLoad(Ld->getMemoryVT(), DLN, Ld->getChain(), NewPtr, MPI,
                        Ld->getAlign(), Ld->getMemOperand()->getFlags());
   }
+}
+
+static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
+                           TargetLowering::DAGCombinerInfo &DCI,
+                           const X86Subtarget &Subtarget) {
+  auto *Ld = cast<LoadSDNode>(N);
+  EVT RegVT = Ld->getValueType(0);
+  EVT MemVT = Ld->getMemoryVT();
+  SDLoc dl(Ld);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // For chips with slow 32-byte unaligned loads, break the 32-byte operation
+  // into two 16-byte operations. Also split non-temporal aligned loads on
+  // pre-AVX2 targets as 32-byte loads will lower to regular temporal loads.
+  ISD::LoadExtType Ext = Ld->getExtensionType();
+  unsigned Fast;
+  if (RegVT.is256BitVector() && !DCI.isBeforeLegalizeOps() &&
+      Ext == ISD::NON_EXTLOAD &&
+      ((Ld->isNonTemporal() && !Subtarget.hasInt256() &&
+        Ld->getAlign() >= Align(16)) ||
+       (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), RegVT,
+                               *Ld->getMemOperand(), &Fast) &&
+        !Fast))) {
+    unsigned NumElems = RegVT.getVectorNumElements();
+    if (NumElems < 2)
+      return SDValue();
+
+    unsigned HalfOffset = 16;
+    SDValue Ptr1 = Ld->getBasePtr();
+    SDValue Ptr2 =
+        DAG.getMemBasePlusOffset(Ptr1, TypeSize::getFixed(HalfOffset), dl);
+    EVT HalfVT = EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(),
+                                  NumElems / 2);
+    SDValue Load1 =
+        DAG.getLoad(HalfVT, dl, Ld->getChain(), Ptr1, Ld->getPointerInfo(),
+                    Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
+    SDValue Load2 =
+        DAG.getLoad(HalfVT, dl, Ld->getChain(), Ptr2,
+                    Ld->getPointerInfo().getWithOffset(HalfOffset),
+                    Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
+    SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                             Load1.getValue(1), Load2.getValue(1));
+
+    SDValue NewVec = DAG.getNode(ISD::CONCAT_VECTORS, dl, RegVT, Load1, Load2);
+    return DCI.CombineTo(N, NewVec, TF, true);
+  }
+
+  // Bool vector load - attempt to cast to an integer, as we have good
+  // (vXiY *ext(vXi1 bitcast(iX))) handling.
+  if (Ext == ISD::NON_EXTLOAD && !Subtarget.hasAVX512() && RegVT.isVector() &&
+      RegVT.getScalarType() == MVT::i1 && DCI.isBeforeLegalize()) {
+    unsigned NumElts = RegVT.getVectorNumElements();
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+    if (TLI.isTypeLegal(IntVT)) {
+      SDValue IntLoad = DAG.getLoad(IntVT, dl, Ld->getChain(), Ld->getBasePtr(),
+                                    Ld->getPointerInfo(), Ld->getBaseAlign(),
+                                    Ld->getMemOperand()->getFlags());
+      SDValue BoolVec = DAG.getBitcast(RegVT, IntLoad);
+      return DCI.CombineTo(N, BoolVec, IntLoad.getValue(1), true);
+    }
+  }
+
+  // If we also broadcast this vector to a wider type, then just extract the
+  // lowest subvector.
+  if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
+      (RegVT.is128BitVector() || RegVT.is256BitVector())) {
+    SDValue Ptr = Ld->getBasePtr();
+    SDValue Chain = Ld->getChain();
+    for (SDNode *User : Chain->users()) {
+      auto *UserLd = dyn_cast<MemSDNode>(User);
+      if (User != N && UserLd &&
+          User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+          UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
+          UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
+          User->hasAnyUseOfValue(0) &&
+          User->getValueSizeInBits(0).getFixedValue() >
+              RegVT.getFixedSizeInBits()) {
+        DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
+        SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
+                                           RegVT.getSizeInBits());
+        Extract = DAG.getBitcast(RegVT, Extract);
+        return DCI.CombineTo(N, Extract, SDValue(User, 1));
+      }
+    }
+  }
+
+  if (SDValue V = combineConstantPoolLoads(Ld, dl, DAG, DCI, Subtarget))
+    return V;
+
+  // Cast ptr32 and ptr64 pointers to the default address space before a load.
+  unsigned AddrSpace = Ld->getAddressSpace();
+  if (AddrSpace == X86AS::PTR64 || AddrSpace == X86AS::PTR32_SPTR ||
+      AddrSpace == X86AS::PTR32_UPTR) {
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    if (PtrVT != Ld->getBasePtr().getSimpleValueType()) {
+      SDValue Cast =
+          DAG.getAddrSpaceCast(dl, PtrVT, Ld->getBasePtr(), AddrSpace, 0);
+      return DAG.getExtLoad(Ext, dl, RegVT, Ld->getChain(), Cast,
+                            Ld->getPointerInfo(), MemVT, Ld->getBaseAlign(),
+                            Ld->getMemOperand()->getFlags());
+    }
+  }
+
+  if (RegVT.is128BitVector()) {
+    return combineConstantArrayVariable(RegVT, Ld, DAG);
+  }
+
   return SDValue();
 }
 
