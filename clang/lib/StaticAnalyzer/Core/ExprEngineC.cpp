@@ -20,24 +20,6 @@ using namespace clang;
 using namespace ento;
 using llvm::APSInt;
 
-/// Optionally conjure and return a symbol for offset when processing
-/// \p Elem.
-/// If \p Other is a location, conjure a symbol for \p Symbol
-/// (offset) if it is unknown so that memory arithmetic always
-/// results in an ElementRegion.
-/// \p Count The number of times the current basic block was visited.
-static SVal conjureOffsetSymbolOnLocation(SVal Symbol, SVal Other,
-                                          ConstCFGElementRef Elem, QualType Ty,
-                                          SValBuilder &svalBuilder,
-                                          unsigned Count,
-                                          const StackFrame *SF) {
-  if (isa<Loc>(Other) && Ty->isIntegralOrEnumerationType() &&
-      Symbol.isUnknown()) {
-    return svalBuilder.conjureSymbolVal(Elem, SF, Ty, Count);
-  }
-  return Symbol;
-}
-
 void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
                                      ExplodedNode *Pred,
                                      ExplodedNodeSet &Dst) {
@@ -77,13 +59,18 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       NodeBuilder Bldr(N, Tmp2, *currBldrCtx);
 
       if (B->isAdditiveOp()) {
-        unsigned Count = getNumVisitedCurrent();
-        RightV = conjureOffsetSymbolOnLocation(
-            RightV, LeftV, getCFGElementRef(), RHS->getType(), svalBuilder,
-            Count, SF);
-        LeftV = conjureOffsetSymbolOnLocation(LeftV, RightV, getCFGElementRef(),
-                                              LHS->getType(), svalBuilder,
-                                              Count, SF);
+        // Ensure that if `p` is a pointer and `i` is an integer with Unknown
+        // value, then `p+i`, `i+p` and `p-i` are evaluated to element regions
+        // (with a symbolic offset) instead of Unknown.
+        auto ConjureIfNeeded = [this, SF](SVal &V, SVal Other, QualType VTy) {
+          if (isa<Loc>(Other) && VTy->isIntegralOrEnumerationType() &&
+              V.isUnknown()) {
+            V = svalBuilder.conjureSymbolVal(getCFGElementRef(), SF, VTy,
+                                             getNumVisitedCurrent());
+          }
+        };
+        ConjureIfNeeded(RightV, LeftV, RHS->getType());
+        ConjureIfNeeded(LeftV, RightV, LHS->getType());
       }
 
       // Although we don't yet model pointers-to-members, we do need to make
