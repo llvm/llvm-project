@@ -734,7 +734,10 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
                                           (CV_LO5 cv_uimm10:$imm))>;
 
   def : PatGpr<cttz, CV_FF1, i32>;
-  def : PatGpr<ctlz, CV_FL1, i32>;
+
+  // ctlz(x) = 31 - fl1(x), for x != 0. Not intercepting the x == 0 case.
+  def : Pat<(i32 (ctlz_zero_poison GPR:$rs1)), (XORI (CV_FL1 GPR:$rs1), 31)>;
+
   def : PatGpr<int_riscv_cv_bitmanip_clb, CV_CLB>;
   def : PatGpr<ctpop, CV_CNT, i32>;
 

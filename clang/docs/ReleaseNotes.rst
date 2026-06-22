@@ -305,6 +305,10 @@ Non-comprehensive list of changes in this release
   integers including ``_BitInt`` types. This includes constexpr evaluation
   support.
 
+- Added ``__builtin_elementwise_pext`` and ``__builtin_elementwise_pdep`` for
+  parallel bit extract and parallel bit deposit operations on integers including
+  ``_BitInt`` types. This includes constexpr evaluation support.
+
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
@@ -842,6 +846,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
+- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
 ------------------------
@@ -949,6 +954,9 @@ AIX Support
   archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
   between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
   the same library name.
+- Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
+  This directive embeds a copyright or identifying string into the compiled object file. 
+  The string is included in the final executable and loaded into memory at program runtime.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -1043,6 +1051,12 @@ Improvements
     - New checkers and features
     - Improvements
     - Moved checkers
+
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- The checker ``unix.cstring.UninitializedRead`` is now out of alpha.
 
 .. _release-notes-sanitizers:
 

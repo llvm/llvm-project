@@ -455,6 +455,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP()))
       setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i32, Custom);
   } else {
+    if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())
+      setOperationAction(ISD::CTLZ_ZERO_POISON, XLenVT, Legal);
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
 
@@ -21584,31 +21586,66 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::PSRL:
   case RISCVISD::PSRA: {
     // Fold (PSRL/PSRA (trunc (PSRL X, C1)), C2) -> (trunc (PSRL/PSRA X, C1+C2))
-    // when C1 equals the number of bits discarded by the truncate.
-    SDValue Src = N->getOperand(0);
-    if (Src.getOpcode() != ISD::TRUNCATE || !Src.hasOneUse())
-      break;
-    SDValue PSRLVal = Src.getOperand(0);
-    if (PSRLVal.getOpcode() != RISCVISD::PSRL || !PSRLVal.hasOneUse())
-      break;
-    auto *C1 = dyn_cast<ConstantSDNode>(PSRLVal.getOperand(1));
+    // Fold (PSRL/PSRA (concat (trunc (PSRL X, C1)), (trunc (PSRL Y, C1))), C2)
+    //   -> (concat (trunc (PSRL/PSRA X, C1+C2)), (trunc (PSRL/PSRA Y, C1+C2)))
+    // In both cases C1 must equal the number of bits discarded by the truncate.
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (!C1 || !C2)
+    if (!C2)
       break;
-    MVT NarrowVT = N->getSimpleValueType(0);
-    MVT WideVT = PSRLVal.getSimpleValueType();
-    unsigned NarrowEltBits = NarrowVT.getVectorElementType().getSizeInBits();
-    unsigned WideEltBits = WideVT.getVectorElementType().getSizeInBits();
-    unsigned TruncatedBits = WideEltBits - NarrowEltBits;
-    if (C1->getZExtValue() != TruncatedBits)
-      break;
-    uint64_t NewShAmt = C1->getZExtValue() + C2->getZExtValue();
-    if (NewShAmt >= WideEltBits)
-      break;
-    SDValue NewShift =
-        DAG.getNode(N->getOpcode(), DL, WideVT, PSRLVal.getOperand(0),
-                    DAG.getConstant(NewShAmt, DL, XLenVT));
-    return DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, NewShift);
+    // Match (trunc (PSRL X, C1)) where C1 == bits discarded by the truncate
+    // and C1+C2 is a valid shift. Returns {NarrowVT, WideVT, NewShAmt, X}
+    // without creating any DAG nodes.
+    struct TruncPSRLMatch {
+      uint64_t NewShAmt;
+      SDValue Src;
+    };
+    auto MatchTruncPSRL =
+        [](SDValue TruncVal,
+           ConstantSDNode *C2) -> std::optional<TruncPSRLMatch> {
+      if (TruncVal.getOpcode() != ISD::TRUNCATE || !TruncVal.hasOneUse())
+        return std::nullopt;
+      SDValue PSRLVal = TruncVal.getOperand(0);
+      if (PSRLVal.getOpcode() != RISCVISD::PSRL || !PSRLVal.hasOneUse())
+        return std::nullopt;
+      auto *C1 = dyn_cast<ConstantSDNode>(PSRLVal.getOperand(1));
+      if (!C1)
+        return std::nullopt;
+      MVT NarrowVT = TruncVal.getSimpleValueType();
+      MVT WideVT = PSRLVal.getSimpleValueType();
+      unsigned WideEltBits = WideVT.getVectorElementType().getSizeInBits();
+      unsigned NarrowEltBits = NarrowVT.getVectorElementType().getSizeInBits();
+      if (C1->getZExtValue() != WideEltBits - NarrowEltBits)
+        return std::nullopt;
+      uint64_t NewShAmt = C1->getZExtValue() + C2->getZExtValue();
+      if (NewShAmt >= WideEltBits)
+        return std::nullopt;
+      return TruncPSRLMatch{NewShAmt, PSRLVal.getOperand(0)};
+    };
+    auto MakeFoldedShift = [&](const TruncPSRLMatch &M, EVT VT,
+                               unsigned OuterOpc) {
+      SDValue NewShift = DAG.getNode(OuterOpc, DL, M.Src.getValueType(), M.Src,
+                                     DAG.getConstant(M.NewShAmt, DL, XLenVT));
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, NewShift);
+    };
+
+    SDValue Src = N->getOperand(0);
+    if (auto M = MatchTruncPSRL(Src, C2))
+      return MakeFoldedShift(*M, Src.getValueType(), N->getOpcode());
+
+    if (Src.getOpcode() == ISD::CONCAT_VECTORS && Src.hasOneUse() &&
+        Src.getNumOperands() == 2) {
+      SDValue Op0 = Src.getOperand(0);
+      SDValue Op1 = Src.getOperand(1);
+      auto M0 = MatchTruncPSRL(Op0, C2);
+      auto M1 = MatchTruncPSRL(Op1, C2);
+      if (M0 && M1)
+        return DAG.getNode(
+            ISD::CONCAT_VECTORS, DL, N->getValueType(0),
+            MakeFoldedShift(*M0, Op0.getValueType(), N->getOpcode()),
+            MakeFoldedShift(*M1, Op1.getValueType(), N->getOpcode()));
+    }
+
+    break;
   }
   case RISCVISD::ADDD: {
     assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
