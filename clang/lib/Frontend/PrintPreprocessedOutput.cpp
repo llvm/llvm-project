@@ -892,8 +892,7 @@ struct UnknownPragmaHandler : public PragmaHandler {
 static void PrintPreprocessedComment(raw_ostream *OS, const char *TokStr,
                                      unsigned Len) {
   for (; Len; --Len, ++TokStr) {
-    if (*TokStr != '\n' &&
-        *TokStr != '\r') {
+    if (*TokStr != '\n' && *TokStr != '\r') {
       *OS << *TokStr;
       continue;
     }
@@ -901,8 +900,7 @@ static void PrintPreprocessedComment(raw_ostream *OS, const char *TokStr,
     *OS << '\n';
 
     // If we have \n\r or \r\n, skip both and emit one newline.
-    if (Len != 1 &&
-        (TokStr[1] == '\n' || TokStr[1] == '\r') &&
+    if (Len != 1 && (TokStr[1] == '\n' || TokStr[1] == '\r') &&
         TokStr[0] != TokStr[1]) {
       ++TokStr;
       --Len;
