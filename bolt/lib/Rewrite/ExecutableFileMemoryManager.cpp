@@ -104,7 +104,6 @@ public:
 void ExecutableFileMemoryManager::updateSection(
     const jitlink::Section &JLSection, uint8_t *Contents, size_t Size,
     size_t Alignment) {
-  LLVM_DEBUG(dbgs() << "[sect] updateSection " << JLSection.getName() << "\n");
 
   auto SectionID = JLSection.getName();
   auto SectionName = sectionName(JLSection, BC);
@@ -183,17 +182,6 @@ void ExecutableFileMemoryManager::updateSection(
            << " with size " << Size << ", alignment " << Alignment << " at "
            << Contents << ", ID = " << SectionID << "\n";
   });
-
-
-LLVM_DEBUG({
-  dbgs() << "[sect] updateSection:"
-         << " JL=" << JLSection.getName()
-         << " Name=" << SectionName
-         << " BS=" << Section->getName()
-         << " IsCode=" << (IsCode ? "Y":"N")
-         << " IsRO="   << (IsReadOnly ? "Y":"N")
-         << "\n";
-});
 
 static constexpr char kOrgPrefix[] = ".bolt.org";
 const bool IsOrgByJL   = JLSection.getName().starts_with(kOrgPrefix);

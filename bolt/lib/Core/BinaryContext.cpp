@@ -2359,8 +2359,7 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
 
 
 void BinaryContext::deregisterSectionName(const BinarySection &Section) {
-    LLVM_DEBUG(dbgs() << "[sect] erase-name " << Section.getName()
-                    << " ptr=" << &Section << "\n");
+
   auto NameRange = NameToSection.equal_range(Section.getName().str());
   while (NameRange.first != NameRange.second) {
     if (NameRange.first->second == &Section) {

@@ -4338,29 +4338,6 @@ void RewriteInstance::emitAndLink() {
   ErrorOr<BinarySection &> TextSection =
       BC->getUniqueSectionByName(BC->getMainCodeSectionName());
 
-// If present, show flags BEFORE renaming (this captures the "original .text" state)
-if (TextSection) {
-  DEBUG_WITH_TYPE("bolt-ppc64", {
-    const unsigned F = TextSection->getELFFlags();
-    dbgs() << "[ppc64] pre-rename: " << TextSection->getName() << "\n"
-           << "  flags=0x" << llvm::format_hex(F, 8)
-           << " (ALLOC=" << ((F & ELF::SHF_ALLOC) ? "yes" : "no")
-           << ", EXEC="  << ((F & ELF::SHF_EXECINSTR) ? "yes" : "no")
-           << ", EXCL="  << ((F & ELF::SHF_EXCLUDE) ? "yes" : "no")
-           << ")\n";
-  });
-}
-
-// Guard logging BEFORE rename
-DEBUG_WITH_TYPE("bolt-flags", {
-  dbgs() << "[decide-rename] HasRelocations=" << (BC->HasRelocations ? "true" : "false")
-         << " TextSection=" << (TextSection ? "non-null" : "null");
-  if (TextSection)
-    dbgs() << " name=" << TextSection->getName();
-  dbgs() << "\n";
-});
-
-
   if (BC->HasRelocations && TextSection)
     BC->renameSection(*TextSection,
                       getOrgSecPrefix() + BC->getMainCodeSectionName());
