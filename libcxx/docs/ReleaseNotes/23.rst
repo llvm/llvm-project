@@ -52,6 +52,9 @@ Implemented Papers
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
+- P3948R1: ``constant_wrapper`` is the only tool needed for passing constant expressions via function arguments (`Github <https://llvm.org/PR189604>`__)
+- P3961R1: Less double indirection in ``function_ref`` (RU-220) (`Github <https://llvm.org/PR189606>`__)
 
 Improvements and New Features
 -----------------------------
