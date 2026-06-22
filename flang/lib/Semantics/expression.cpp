@@ -3865,7 +3865,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     if (isStatementFunction) {
       // Statement functions have implicit interfaces, so keyword actual
       // arguments are not allowed. They are exempt from the explicit-interface
-      // requirements of 15.4.2.2.
+      // requirements of F2023 15.4.2.2.
       parser::ContextualMessages &messages{
           context_.foldingContext().messages()};
       for (auto &arg : arguments) {
