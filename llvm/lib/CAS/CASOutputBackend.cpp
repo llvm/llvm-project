@@ -8,7 +8,6 @@
 
 #include "llvm/CAS/CASOutputBackend.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/CAS/Utils.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
