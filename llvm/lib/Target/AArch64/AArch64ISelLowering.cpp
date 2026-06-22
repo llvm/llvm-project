@@ -33411,6 +33411,7 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   EVT ResultVT = Op.getValueType();
   EVT OrigResultVT = ResultVT;
   EVT OpVT = LHS.getValueType();
+  EVT OrigOpVT = OpVT;
 
   // We can handle this case natively by accumulating into a wider
   // zero-padded vector.
@@ -33445,19 +33446,11 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
 
-  // Keep a fixed-length i8 -> i64 reduction fixed-length when NEON is
-  // available. The scalable path spreads the sums across all VL-dependent lanes
-  // but only extracts the low fixed-width lanes, dropping the high lanes for VL
-  // > the fixed width (e.g. 256-bit Neoverse V1). i64 sibling of the v16i8 ->
-  // v2i32 case fixed in PR #177119 / issue #176954.
-  bool KeepFixedI8ToI64 = Subtarget->isNeonAvailable() &&
-                          ResultVT == MVT::v2i64 && OpVT == MVT::v16i8;
-
   bool ConvertToScalable =
       ResultVT.isFixedLengthVector() &&
-      useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true) &&
-      !KeepFixedI8ToI64;
+      useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true);
 
+  SDValue OrigAcc = Acc;
   if (ConvertToScalable) {
     ResultVT = getContainerForFixedLengthVector(DAG, ResultVT);
     OpVT = getContainerForFixedLengthVector(DAG, LHS.getValueType());
@@ -33479,10 +33472,35 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
 
   SDValue Res;
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
-  // UADDW{B,T}/SADDW{B,T} are scalable-only; a fixed-length result (the i8 ->
-  // i64 case kept fixed above) must use the NEON widening-add path below.
-  if (ResultVT.isScalableVector() &&
-      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+
+  // A 128-bit v2i64 <- v16i8 reduction must produce its result in fixed-length
+  // v2i64. The scalable fold below (UADDW{B,T}/SADDW{B,T} or the scalable
+  // split) spreads the sums across all VL/64 lanes, and the trailing extract
+  // then keeps only the low two, silently dropping the rest for any VL > 128
+  // (e.g. 256-bit Neoverse V1). The dot itself is VL-independent: its
+  // meaningful sums occupy the low four i32 lanes regardless of VL (the wider
+  // input lanes are zero-padded), so convert it back to fixed-length v4i32 and
+  // do the split, widen and accumulate in fixed-length. Wider fixed-length
+  // results (e.g. v4i64) are vector-length pinned, so the scalable fold keeps
+  // all their lanes and stays correct. i64 sibling of the v16i8 -> v2i32 case
+  // fixed in PR #177119 / issue #176954.
+  if (OrigResultVT == MVT::v2i64 && OrigOpVT == MVT::v16i8) {
+    SDValue FixedDot =
+        ConvertToScalable ? convertFromScalableVector(DAG, MVT::v4i32, DotNode)
+                          : DotNode;
+    auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(FixedDot, DL);
+    if (IsUnsigned) {
+      DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, OrigResultVT);
+      DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, OrigResultVT);
+    } else {
+      DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, OrigResultVT);
+      DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, OrigResultVT);
+    }
+    SDValue Lo = DAG.getNode(ISD::ADD, DL, OrigResultVT, OrigAcc, DotNodeLo);
+    return DAG.getNode(ISD::ADD, DL, OrigResultVT, Lo, DotNodeHi);
+  }
+
+  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
     SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
