@@ -1,0 +1,40 @@
+// Round-trip tests for clang-ssaf-format auto mode (no --type, or explicit
+// --type auto, dispatch by the self-describing 'type' field). Reads each
+// fixture, writes it back via the matching reader/writer pair selected from
+// the variant, and diffs the result against the original.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Artifact round-trips (resolved)
+// ============================================================================
+
+// RUN: clang-ssaf-format %S/Inputs/rt-tu-empty.json -o %t/rt-tu-empty.json
+// RUN: diff %S/Inputs/rt-tu-empty.json %t/rt-tu-empty.json
+// RUN: clang-ssaf-format --type auto %S/Inputs/rt-tu-empty.json -o %t/rt-tu-empty-explicit.json
+// RUN: diff %S/Inputs/rt-tu-empty.json %t/rt-tu-empty-explicit.json
+
+// RUN: clang-ssaf-format %S/Inputs/rt-lu-empty.json -o %t/rt-lu-empty.json
+// RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty.json
+// RUN: clang-ssaf-format --type auto %S/Inputs/rt-lu-empty.json -o %t/rt-lu-empty-explicit.json
+// RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-explicit.json
+
+// RUN: clang-ssaf-format %S/Inputs/rt-wpa-empty.json -o %t/rt-wpa-empty.json
+// RUN: diff %S/Inputs/rt-wpa-empty.json %t/rt-wpa-empty.json
+// RUN: clang-ssaf-format --type auto %S/Inputs/rt-wpa-empty.json -o %t/rt-wpa-empty-explicit.json
+// RUN: diff %S/Inputs/rt-wpa-empty.json %t/rt-wpa-empty-explicit.json
+
+// ============================================================================
+// ArtifactEncoding round-trips (--encoding)
+// ============================================================================
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-tu-empty.json -o %t/rt-tu-empty-enc.json
+// RUN: diff %S/Inputs/rt-tu-empty.json %t/rt-tu-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-tu-empty.json -o %t/rt-tu-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-tu-empty.json %t/rt-tu-empty-enc-explicit.json
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-lu-empty.json -o %t/rt-lu-empty-enc.json
+// RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-lu-empty.json -o %t/rt-lu-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-enc-explicit.json
