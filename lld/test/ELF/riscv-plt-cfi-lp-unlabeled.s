@@ -43,7 +43,6 @@
 # DIS-NEXT:     jalr t1, t2
 
 #--- rv32-start.s
-
 .section ".note.gnu.property", "a"
 .balign 4
 .4byte 4
@@ -65,7 +64,6 @@ _start:
   call foo@plt
 
 #--- rv32-foo.s
-
 .section ".note.gnu.property", "a"
 .balign 4
 .4byte 4
@@ -87,7 +85,6 @@ foo:
   ret
 
 #--- rv64-start.s
-
 .section ".note.gnu.property", "a"
 .balign 8
 .4byte 4
@@ -109,7 +106,6 @@ _start:
   call foo@plt
 
 #--- rv64-foo.s
-
 .section ".note.gnu.property", "a"
 .balign 8
 .4byte 4
