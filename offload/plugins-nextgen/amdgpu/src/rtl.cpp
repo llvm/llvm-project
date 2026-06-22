@@ -4335,14 +4335,30 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != HSA_STATUS_SUCCESS)
     REPORT() << "Unrecognized " GETNAME(TARGET_NAME) " error code " << Code;
 
-  // TODO: Add more entries to this switch
   ErrorCode OffloadErrCode;
   switch (ResultCode) {
   case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
+  case HSA_STATUS_ERROR_INVALID_ISA_NAME:
     OffloadErrCode = ErrorCode::NOT_FOUND;
     break;
   case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
+  case HSA_STATUS_ERROR_INVALID_ISA:
+  case HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS:
     OffloadErrCode = ErrorCode::INVALID_BINARY;
+    break;
+  case HSA_STATUS_ERROR_OUT_OF_RESOURCES:
+    OffloadErrCode = ErrorCode::OUT_OF_RESOURCES;
+    break;
+  case HSA_STATUS_ERROR_NOT_INITIALIZED:
+    OffloadErrCode = ErrorCode::UNINITIALIZED;
+    break;
+  case HSA_STATUS_ERROR_INVALID_ARGUMENT:
+  case HSA_STATUS_ERROR_INVALID_ALLOCATION:
+  case HSA_STATUS_ERROR_INVALID_AGENT:
+  case HSA_STATUS_ERROR_INVALID_REGION:
+  case HSA_STATUS_ERROR_INVALID_QUEUE:
+  case HSA_STATUS_ERROR_INVALID_INDEX:
+    OffloadErrCode = ErrorCode::INVALID_ARGUMENT;
     break;
   default:
     OffloadErrCode = ErrorCode::UNKNOWN;

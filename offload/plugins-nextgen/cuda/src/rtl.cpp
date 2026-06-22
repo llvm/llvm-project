@@ -1813,17 +1813,51 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != CUDA_SUCCESS)
     REPORT() << "Unrecognized " GETNAME(TARGET_NAME) " error code " << Code;
 
-  // TODO: Add more entries to this switch
   ErrorCode OffloadErrCode;
   switch (ResultCode) {
+  case CUDA_ERROR_INVALID_VALUE:
+    OffloadErrCode = ErrorCode::INVALID_VALUE;
+    break;
+  case CUDA_ERROR_OUT_OF_MEMORY:
+  case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES:
+    OffloadErrCode = ErrorCode::OUT_OF_RESOURCES;
+    break;
+  case CUDA_ERROR_NOT_INITIALIZED:
+  case CUDA_ERROR_DEINITIALIZED:
+    OffloadErrCode = ErrorCode::UNINITIALIZED;
+    break;
+  case CUDA_ERROR_NO_DEVICE:
+  case CUDA_ERROR_INVALID_DEVICE:
+    OffloadErrCode = ErrorCode::INVALID_DEVICE;
+    break;
+  case CUDA_ERROR_INVALID_IMAGE:
+  case CUDA_ERROR_INVALID_SOURCE:
+  case CUDA_ERROR_INVALID_PTX:
+  case CUDA_ERROR_UNSUPPORTED_PTX_VERSION:
+    OffloadErrCode = ErrorCode::INVALID_BINARY;
+    break;
+  case CUDA_ERROR_FILE_NOT_FOUND:
+  case CUDA_ERROR_OPERATING_SYSTEM:
+    OffloadErrCode = ErrorCode::HOST_IO;
+    break;
+  case CUDA_ERROR_JIT_COMPILER_NOT_FOUND:
+    OffloadErrCode = ErrorCode::HOST_TOOL_NOT_FOUND;
+    break;
   case CUDA_ERROR_NOT_FOUND:
+  case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND:
     OffloadErrCode = ErrorCode::NOT_FOUND;
+    break;
+  case CUDA_ERROR_NOT_SUPPORTED:
+    OffloadErrCode = ErrorCode::UNSUPPORTED;
+    break;
+  case CUDA_ERROR_INVALID_HANDLE:
+  case CUDA_ERROR_INVALID_CONTEXT:
+    OffloadErrCode = ErrorCode::INVALID_ARGUMENT;
     break;
   default:
     OffloadErrCode = ErrorCode::UNKNOWN;
   }
 
-  // TODO: Create a map for CUDA error codes to Offload error codes
   return Plugin::error(OffloadErrCode, ErrFmt, Args..., Desc);
 }
 
