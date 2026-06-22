@@ -40,6 +40,16 @@ define float @test_ldexp_f32_fast(float %x, i32 %y) {
   ret float %ldexp
 }
 
+define float @test_ldexp_f32_fastcc(float %x, i32 %y) {
+; CHECK-LABEL: define float @test_ldexp_f32_fastcc
+; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret float [[LDEXP]]
+;
+  %ldexp = tail call fastcc float @_Z5ldexpfi(float %x, i32 %y)
+  ret float %ldexp
+}
+
 define <2 x float> @test_ldexp_v2f32(<2 x float> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x float> @test_ldexp_v2f32
 ; CHECK-SAME: (<2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {

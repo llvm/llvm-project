@@ -2,8 +2,8 @@
 ! module boundaries.
 
 ! RUN: split-file %s %t
-! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -fopenmp-version=50 %t/imp_scalar_map_module.f90 -o - | FileCheck %s --check-prefix=CHECK-MOD
-! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -fopenmp-version=50 %t/imp_scalar_map_target.f90 -o - | FileCheck %s --check-prefix=CHECK-PROG
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 %t/imp_scalar_map_module.f90 -o - | FileCheck %s --check-prefix=CHECK-MOD
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 %t/imp_scalar_map_target.f90 -o - | FileCheck %s --check-prefix=CHECK-PROG
 
 !--- imp_scalar_map_module.f90
 module test_data
@@ -14,8 +14,8 @@ module test_data
 end module
 
 ! CHECK-MOD: module {{.*}}
-! CHECK-MOD: fir.global @_QMtest_dataEj : !fir.array<200xi8> {
-! CHECK-MOD: fir.global @_QMtest_dataEi : !fir.array<10x10xf32> {
+! CHECK-MOD: fir.global @_QMtest_dataEj {alignment = 64 : i64} : !fir.array<200xi8> {
+! CHECK-MOD: fir.global @_QMtest_dataEi {alignment = 64 : i64} : !fir.array<10x10xf32> {
 ! CHECK-MOD: fir.global @_QMtest_dataEz : i32 {
 
 !--- imp_scalar_map_target.f90

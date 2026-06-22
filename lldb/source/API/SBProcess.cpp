@@ -1041,8 +1041,11 @@ SBStructuredData SBProcess::GetExtendedCrashInformation() {
   auto expected_data =
       platform_sp->FetchExtendedCrashInformation(*process_sp.get());
 
-  if (!expected_data)
+  if (!expected_data) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), expected_data.takeError(),
+                   "FetchExtendedCrashInformation failed: {0}");
     return data;
+  }
 
   StructuredData::ObjectSP fetched_data = *expected_data;
   data.m_impl_up->SetObjectSP(fetched_data);
@@ -1349,6 +1352,15 @@ lldb::SBFileSpec SBProcess::GetCoreFile() {
     core_file = process_sp->GetCoreFile();
   }
   return SBFileSpec(core_file);
+}
+
+bool SBProcess::IsLiveDebugSession() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ProcessSP process_sp(GetSP());
+  if (!process_sp)
+    return false;
+  return process_sp->IsLiveDebugSession();
 }
 
 addr_t SBProcess::GetAddressMask(AddressMaskType type,

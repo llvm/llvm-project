@@ -332,12 +332,12 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
 define i64 @sll_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sll_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slli a3, a2, 26
 ; CHECK-NEXT:    slx a1, a0, a2
-; CHECK-NEXT:    slli a2, a2, 26
-; CHECK-NEXT:    srai a2, a2, 31
-; CHECK-NEXT:    mvm a1, a3, a2
-; CHECK-NEXT:    andn a0, a3, a2
+; CHECK-NEXT:    sll a0, a0, a2
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    mvm a1, a0, a3
+; CHECK-NEXT:    andn a0, a0, a3
 ; CHECK-NEXT:    ret
   %b = shl i64 %x, %y
   ret i64 %b
@@ -346,9 +346,8 @@ define i64 @sll_i64(i64 %x, i64 %y) {
 define i64 @sll_small_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sll_small_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    sll a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = and i64 %y, 31
   %b = shl i64 %x, %a
@@ -379,8 +378,9 @@ define i64 @slli_i64(i64 %x) {
 define i64 @slli_i64_large(i64 %x) {
 ; CHECK-LABEL: slli_i64_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    slli a1, a1, 7
 ; CHECK-NEXT:    ret
   %a = shl i64 %x, 39
   ret i64 %a
@@ -390,10 +390,10 @@ define i64 @srl_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: srl_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsrl a0, a0, a2
-; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srl a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    andn a1, a1, a3
+; CHECK-NEXT:    nsrl a0, a0, a2
+; CHECK-NEXT:    andn a1, a4, a3
 ; CHECK-NEXT:    ret
   %b = lshr i64 %x, %y
   ret i64 %b
@@ -427,10 +427,10 @@ define i64 @srl_mask63_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: srl_mask63_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsrl a0, a0, a2
-; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srl a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    andn a1, a1, a3
+; CHECK-NEXT:    nsrl a0, a0, a2
+; CHECK-NEXT:    andn a1, a4, a3
 ; CHECK-NEXT:    ret
   %a = and i64 %y, 63
   %b = lshr i64 %x, %a
@@ -450,8 +450,9 @@ define i64 @srli_i64(i64 %x) {
 define i64 @srli_i64_large(i64 %x) {
 ; CHECK-LABEL: srli_i64_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    srli a0, a0, 7
 ; CHECK-NEXT:    ret
   %a = lshr i64 %x, 39
   ret i64 %a
@@ -461,10 +462,10 @@ define i64 @sra_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sra_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsra a0, a0, a2
-; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    sra a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    sra a1, a1, a3
+; CHECK-NEXT:    nsra a0, a0, a2
+; CHECK-NEXT:    sra a1, a4, a3
 ; CHECK-NEXT:    ret
   %b = ashr i64 %x, %y
   ret i64 %b
@@ -498,10 +499,10 @@ define i64 @sra_mask63_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: sra_mask63_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli a3, a2, 26
-; CHECK-NEXT:    nsra a0, a0, a2
-; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    sra a4, a1, a2
 ; CHECK-NEXT:    srai a3, a3, 31
-; CHECK-NEXT:    sra a1, a1, a3
+; CHECK-NEXT:    nsra a0, a0, a2
+; CHECK-NEXT:    sra a1, a4, a3
 ; CHECK-NEXT:    ret
   %a = and i64 %y, 63
   %b = ashr i64 %x, %a
@@ -668,8 +669,8 @@ define i32 @ushlsat_i32(i32 %a, i32 %b) {
 define i8 @ushlsati_i8(i8 %a) {
 ; CHECK-LABEL: ushlsati_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 24
 ; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    slli a0, a0, 24
 ; CHECK-NEXT:    sshl a0, a0, a1
 ; CHECK-NEXT:    srli a0, a0, 24
 ; CHECK-NEXT:    ret
@@ -680,8 +681,8 @@ define i8 @ushlsati_i8(i8 %a) {
 define i16 @ushlsati_i16(i16 %a) {
 ; CHECK-LABEL: ushlsati_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 16
 ; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    slli a0, a0, 16
 ; CHECK-NEXT:    sshl a0, a0, a1
 ; CHECK-NEXT:    srli a0, a0, 16
 ; CHECK-NEXT:    ret
@@ -729,6 +730,26 @@ define i32 @sadd_i32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    sadd a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i32 @ssh1sadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: ssh1sadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssh1sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call i32 @llvm.sshl.sat.i32(i32 %x, i32 1)
+  %a = call i32 @llvm.sadd.sat.i32(i32 %shl, i32 %y)
+  ret i32 %a
+}
+
+define i32 @ssh1sadd_i32_addself(i32 %x, i32 %y) {
+; CHECK-LABEL: ssh1sadd_i32_addself:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssh1sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %shl = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %x)
+  %a = call i32 @llvm.sadd.sat.i32(i32 %shl, i32 %y)
   ret i32 %a
 }
 
@@ -783,10 +804,10 @@ define i16 @uadd_i16(i16 %x, i16 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    lui a2, 16
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    minu a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y)
   ret i16 %a
@@ -879,6 +900,88 @@ define i32 @aaddu2_i32(i32 %a, i32 %b) {
   %xor = xor i32 %a, %b
   %shift = lshr i32 %xor, 1
   %res = add i32 %and, %shift
+  ret i32 %res
+}
+
+define i32 @asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asub a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %sub = sub i64 %ext.a, %ext.b
+  %shift = ashr i64 %sub, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @asubu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: asubu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %sub = sub i64 %ext.a, %ext.b
+  %shift = lshr i64 %sub, 1
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhr_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhr a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhru_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhru_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhru a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhrsu_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhrsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext.a = sext i32 %a to i64
+  %ext.b = zext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
+  ret i32 %res
+}
+
+define i32 @mulhrsu_i32_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: mulhrsu_i32_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a1, a0
+; CHECK-NEXT:    ret
+  %ext.a = zext i32 %a to i64
+  %ext.b = sext i32 %b to i64
+  %mul = mul i64 %ext.a, %ext.b
+  %add = add i64 %mul, 2147483648
+  %shift = lshr i64 %add, 32
+  %res = trunc i64 %shift to i32
   ret i32 %res
 }
 
@@ -1364,9 +1467,9 @@ define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %o
 ; CHECK-NEXT:    mv a5, a3
 ; CHECK-NEXT:    mv a6, a2
 ; CHECK-NEXT:    wmacc a2, a0, a1
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    sw a5, 4(a4)
-; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -1998,4 +2101,139 @@ define i8 @usati_i8_from_i16(i16 %x) {
   %trunc = trunc i16 %x to i8
   %sel = select i1 %cmp1, i8 %cmp2.ext, i8 %trunc
   ret i8 %sel
+}
+
+; Test that pli.b is rematerialized rather than spilled
+define i32 @test_pli_b_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_b_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    pli.b a1, -8
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.b a0, -8
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  store volatile i32 u0xf8f8f8f8, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i32 u0xf8f8f8f8
+}
+
+; Test that pli.h is rematerialized rather than spilled
+define i32 @test_pli_h_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_h_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    pli.h a1, -64
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.h a0, -64
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  store volatile i32 u0xffc0ffc0, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i32 u0xffc0ffc0
+}
+
+; Test that plui.h is rematerialized rather than spilled
+define i32 @test_plui_h_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_plui_h_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s6, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s7, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s8, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s9, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s10, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    plui.h a1, 511
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    plui.h a0, 511
+; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s6, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s7, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s8, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  store volatile i32 u0x7fc07fc0, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i32 u0x7fc07fc0
 }

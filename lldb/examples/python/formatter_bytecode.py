@@ -128,6 +128,7 @@ define_selector(0x11, "get_child_at_index")
 define_selector(0x12, "get_child_with_name")
 define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
+define_selector(0x14, "get_parent")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
 define_selector(0x18, "get_synthetic_value")
@@ -136,6 +137,7 @@ define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
+define_selector(0x24, "clone")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -334,7 +336,7 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if swift(>=6.3)
+                #if swift(>=6.3) && !objectFormat(Wasm)
                 #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
@@ -694,6 +696,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 data.append(valobj.GetIndexOfChildWithName(name))
             elif sel == sel_get_type:
                 data.append(data.pop().GetType())
+            elif sel == sel_get_parent:
+                valobj = data.pop()
+                data.append(valobj.GetParent())
             elif sel == sel_get_template_argument_type:
                 n = data.pop()
                 valobj = data.pop()
@@ -714,6 +719,10 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 sbtype = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Cast(sbtype))
+            elif sel == sel_clone:
+                new_name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.Clone(new_name))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -736,12 +745,20 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 _BUILTINS = {
     "Cast": "@cast",
+    "Clone": "@clone",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
+    "GetParent": "@get_parent",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
