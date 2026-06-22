@@ -18,13 +18,9 @@ define <16 x i8> @sext_v16i1_v16i8(ptr %p) {
 ;
 ; VL-128-LABEL: sext_v16i1_v16i8:
 ; VL-128:       // %bb.0:
-; VL-128-NEXT:    adrp x8, .LCPI0_0
-; VL-128-NEXT:    ldr h1, [x0]
-; VL-128-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
-; VL-128-NEXT:    adrp x8, .LCPI0_1
-; VL-128-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
-; VL-128-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
-; VL-128-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; VL-128-NEXT:    ldr p0, [x0]
+; VL-128-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; VL-128-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VL-128-NEXT:    ret
 ;
 ; VL-256-LABEL: sext_v16i1_v16i8:
@@ -73,14 +69,9 @@ define <16 x i8> @zext_v16i1_v16i8(ptr %p) {
 ;
 ; VL-128-LABEL: zext_v16i1_v16i8:
 ; VL-128:       // %bb.0:
-; VL-128-NEXT:    adrp x8, .LCPI1_0
-; VL-128-NEXT:    ldr h1, [x0]
-; VL-128-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
-; VL-128-NEXT:    adrp x8, .LCPI1_1
-; VL-128-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
-; VL-128-NEXT:    ldr q1, [x8, :lo12:.LCPI1_1]
-; VL-128-NEXT:    cmtst v0.16b, v0.16b, v1.16b
-; VL-128-NEXT:    ushr v0.16b, v0.16b, #7
+; VL-128-NEXT:    ldr p0, [x0]
+; VL-128-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; VL-128-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VL-128-NEXT:    ret
 ;
 ; VL-256-LABEL: zext_v16i1_v16i8:
@@ -130,13 +121,10 @@ define <16 x i16> @sext_v16i1_v16i16(ptr %p) {
 ;
 ; VL-128-LABEL: sext_v16i1_v16i16:
 ; VL-128:       // %bb.0:
-; VL-128-NEXT:    adrp x8, .LCPI2_0
-; VL-128-NEXT:    ld1r { v1.8h }, [x0]
-; VL-128-NEXT:    adrp x9, .LCPI2_1
-; VL-128-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
-; VL-128-NEXT:    ldr q2, [x9, :lo12:.LCPI2_1]
-; VL-128-NEXT:    cmtst v0.8h, v1.8h, v0.8h
-; VL-128-NEXT:    cmtst v1.8h, v1.8h, v2.8h
+; VL-128-NEXT:    ldr p0, [x0]
+; VL-128-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; VL-128-NEXT:    sshll2 v1.8h, v0.16b, #0
+; VL-128-NEXT:    sshll v0.8h, v0.8b, #0
 ; VL-128-NEXT:    ret
 ;
 ; VL-256-LABEL: sext_v16i1_v16i16:
@@ -256,13 +244,9 @@ define <16 x i8> @sext_v16i1_strictalign_align2(ptr %p) #0 {
 ;
 ; VL-128-LABEL: sext_v16i1_strictalign_align2:
 ; VL-128:       // %bb.0:
-; VL-128-NEXT:    adrp x8, .LCPI4_0
-; VL-128-NEXT:    ldr h1, [x0]
-; VL-128-NEXT:    ldr q0, [x8, :lo12:.LCPI4_0]
-; VL-128-NEXT:    adrp x8, .LCPI4_1
-; VL-128-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
-; VL-128-NEXT:    ldr q1, [x8, :lo12:.LCPI4_1]
-; VL-128-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; VL-128-NEXT:    ldr p0, [x0]
+; VL-128-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; VL-128-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VL-128-NEXT:    ret
 ;
 ; VL-256-LABEL: sext_v16i1_strictalign_align2:
@@ -329,34 +313,12 @@ define <32 x i8> @sext_v32i1_v32i8(ptr %p) {
 ;
 ; VL-256-LABEL: sext_v32i1_v32i8:
 ; VL-256:       // %bb.0:
-; VL-256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VL-256-NEXT:    sub x9, sp, #48
-; VL-256-NEXT:    mov x29, sp
-; VL-256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VL-256-NEXT:    .cfi_def_cfa w29, 16
-; VL-256-NEXT:    .cfi_offset w30, -8
-; VL-256-NEXT:    .cfi_offset w29, -16
-; VL-256-NEXT:    ldr w9, [x0]
-; VL-256-NEXT:    adrp x8, .LCPI5_0
-; VL-256-NEXT:    add x8, x8, :lo12:.LCPI5_0
-; VL-256-NEXT:    ldr z0, [x8]
-; VL-256-NEXT:    adrp x8, .LCPI5_1
-; VL-256-NEXT:    add x8, x8, :lo12:.LCPI5_1
-; VL-256-NEXT:    str w9, [sp]
-; VL-256-NEXT:    mov x9, sp
-; VL-256-NEXT:    ptrue p0.b
-; VL-256-NEXT:    ldr z1, [x9]
-; VL-256-NEXT:    tbl z0.b, { z1.b }, z0.b
-; VL-256-NEXT:    ldr z1, [x8]
-; VL-256-NEXT:    and z0.d, z0.d, z1.d
-; VL-256-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; VL-256-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
+; VL-256-NEXT:    ldr p0, [x0]
+; VL-256-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; VL-256-NEXT:    movprfx z1, z0
 ; VL-256-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; VL-256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VL-256-NEXT:    // kill: def $q1 killed $q1 killed $z1
-; VL-256-NEXT:    mov sp, x29
-; VL-256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VL-256-NEXT:    ret
 ;
 ; VL-128-BE-LABEL: sext_v32i1_v32i8:

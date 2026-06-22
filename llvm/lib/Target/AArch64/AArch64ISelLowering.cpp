@@ -25044,11 +25044,36 @@ performExtendToBoolVectorLoadCombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  // When SVE is enabled and each bit of the input boolean vector maps to a byte
+  // lane of the full SVE vector (NumElts * 8 == vector length), we can load it
+  // directly into a predicate register. This is only valid on little-endian,
+  // where the in-memory bit order matches the predicate lane order; big-endian
+  // falls back to the NEON path below. Under strict-align, a predicate load
+  // that is not at least 2-byte aligned is treated as misaligned and routed to
+  // expandUnalignedLoad, which does not currently support scalable types.
+  if (Subtarget.isSVEAvailable() && Subtarget.isLittleEndian() &&
+      Subtarget.getSVEVectorSizeInBits() == NumElts * 8 &&
+      (!Subtarget.requiresStrictAlign() || LN0->getAlign() >= Align(2))) {
+    // Load directly into a predicate register.
+    SDValue PredLd =
+        DAG.getLoad(MVT::nxv16i1, DL, LN0->getChain(), LN0->getBasePtr(),
+                    LN0->getPointerInfo(), LN0->getAlign(),
+                    LN0->getMemOperand()->getFlags());
+    // Extend the predicate to nxv16i8
+    SDValue Ext = DAG.getNode(N->getOpcode(), DL, MVT::nxv16i8, PredLd);
+    // Extract the fixed-width <N x i8> result from the scalable vector.
+    EVT ByteVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumElts);
+    SDValue Res = convertFromScalableVector(DAG, ByteVT, Ext);
+    // Extend again if the original result type is wider
+    if (VT != ByteVT)
+      Res = DAG.getNode(N->getOpcode(), DL, VT, Res);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), PredLd.getValue(1));
+    return Res;
+  }
   // Load <N x i1> as a scalar iN, then bitcast it back to <N x i1> so the
   // generic combineToExtendBoolVectorInReg helper can apply. That helper
   // requires the scalar to be broadcast across the result elements, so only
   // proceed when that precondition holds.
-  // TODO: Use a predicate load for SVE vectors.
   bool CanSplatOrSplit =
       NumElts <= EltSizeInBits || NumElts % EltSizeInBits == 0;
   if (Subtarget.isNeonAvailable() && CanSplatOrSplit) {
