@@ -95,7 +95,7 @@ public:
   /// operand bundle tags without comparing strings. Keep this in sync with
   /// LLVMContext::LLVMContext().
   enum : unsigned {
-#define ATTR(Name, Str) OB_##Name,
+#define ATTR(Name, Str, IsValueAttr) OB_##Name,
 #include "llvm/IR/BundleAttributes.def"
     OB_deopt,                  // "deopt"
     OB_funclet,                // "funclet"

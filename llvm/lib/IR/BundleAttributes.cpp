@@ -14,7 +14,7 @@ using namespace llvm;
 
 StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
   switch (BA) {
-#define ATTR(Name, Str)                                                        \
+#define ATTR(Name, Str, Flags)                                                 \
   case BundleAttr::Name:                                                       \
     return #Str;
 #include "llvm/IR/BundleAttributes.def"
@@ -26,12 +26,23 @@ StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
 
 BundleAttr llvm::getBundleAttrFromID(uint32_t ID) {
   switch (ID) {
-#define ATTR(Name, Str)                                                        \
+#define ATTR(Name, Str, Flags)                                                 \
   case LLVMContext::OB_##Name:                                                 \
     return BundleAttr::Name;
 #include "llvm/IR/BundleAttributes.def"
   default:
     return BundleAttr::None;
+  }
+}
+
+bool llvm::isValueAttr(BundleAttr BA) {
+  switch (BA) {
+#define ATTR(Name, Str, IsValueAttr)                                           \
+  case BundleAttr::Name:                                                       \
+    return IsValueAttr;
+#include "llvm/IR/BundleAttributes.def"
+  default:
+    llvm_unreachable("unknown bundle attribute");
   }
 }
 

@@ -14,7 +14,7 @@
 
 enum class BundleAttr {
   None,
-#define ATTR(Name, String) Name,
+#define ATTR(Name, String, Flags) Name,
 #include "BundleAttributes.def"
 };
 
@@ -22,6 +22,7 @@ namespace llvm {
 
 LLVM_ABI StringRef getNameFromBundleAttr(BundleAttr);
 LLVM_ABI BundleAttr getBundleAttrFromID(uint32_t);
+LLVM_ABI bool isValueAttr(BundleAttr);
 
 inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
   return getBundleAttrFromID(OBU.getTagID());

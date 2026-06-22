@@ -13,8 +13,8 @@ declare void @use_i1(i1)
 
 define i32 @align_to_bundle(ptr %a) #0 {
 ; CHECK-LABEL: @align_to_bundle(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -27,8 +27,8 @@ define i32 @align_to_bundle(ptr %a) #0 {
 
 define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 ; CHECK-LABEL: @align_to_bundle_ptrtoaddr(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -41,8 +41,8 @@ define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 
 define i32 @align_assume_trunc_cond(ptr %a) #0 {
 ; CHECK-LABEL: @align_assume_trunc_cond(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 2) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -1439,6 +1439,33 @@ bb:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %ptrtoint.i) ]
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %ptrtoint.i) ]
   ret ptr null
+}
+
+declare void @personality()
+
+define void @do_not_move_before_landingpad(ptr %ptr) personality ptr @personality {
+; CHECK-LABEL: @do_not_move_before_landingpad(
+; CHECK-NEXT:    invoke void @block()
+; CHECK-NEXT:            to label [[RETURN:%.*]] unwind label [[PAD:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret void
+; CHECK:       pad:
+; CHECK-NEXT:    [[DATA:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    store i64 0, ptr [[PTR]], align 8
+; CHECK-NEXT:    resume { ptr, i32 } [[DATA]]
+;
+  invoke void @block() to label %return unwind label %pad
+
+return:
+  ret void
+
+pad:
+  %data = landingpad { ptr, i32 } cleanup
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  store i64 0, ptr %ptr
+  resume { ptr, i32 } %data
 }
 
 declare void @use(i1)
