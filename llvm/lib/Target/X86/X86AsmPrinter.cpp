@@ -523,12 +523,12 @@ static bool shouldSkipX86OrigGlobal(const GlobalVariable *GV) {
   if (!Name.ends_with(".x86.orig"))
     return false;
 
-  std::string BaseName =
-      Name.drop_back(StringRef(".x86.orig").size()).str();
+  StringRef BaseName =
+      Name.drop_back(StringRef(".x86.orig").size());
 
   const Module *M = GV->getParent();
   const GlobalVariable *NewGV = M->getGlobalVariable(BaseName, true);
-  if (!NewGV || NewGV == GV)
+  if (!NewGV)
     return false;
 
   if (!NewGV->hasInitializer() || !NewGV->isConstant())
