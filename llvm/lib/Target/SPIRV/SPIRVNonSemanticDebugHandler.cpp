@@ -616,9 +616,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
         emitOpStringIfNew(SP->getName(), MAI);
     [[maybe_unused]] MCRegister DeclLinkageStrReg =
         emitOpStringIfNew(SP->getLinkageName(), MAI);
-    SmallString<128> Buf;
-    fillDebugFullPath(SP, Buf);
-    ScopeToPathOpStringReg[SP] = emitOpStringIfNew(Buf, MAI);
+    ScopeToPathOpStringReg[SP] = emitOpStringIfNew(getDebugFullPath(SP), MAI);
   }
 
 #ifndef NDEBUG
@@ -760,11 +758,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 }
 
-void SPIRVNonSemanticDebugHandler::fillDebugFullPath(
-    const DIScope *Scope, SmallVectorImpl<char> &Out) const {
-  Out.clear();
+SmallString<128>
+SPIRVNonSemanticDebugHandler::getDebugFullPath(const DIScope *Scope) const {
+  SmallString<128> Out;
   if (!Scope)
-    return;
+    return Out;
   StringRef Filename = Scope->getFilename();
   const auto Style = sys::path::Style::native;
   if (sys::path::is_absolute(Filename, Style))
@@ -774,6 +772,7 @@ void SPIRVNonSemanticDebugHandler::fillDebugFullPath(
     Out.assign(Dir.begin(), Dir.end());
     sys::path::append(Out, Style, Filename);
   }
+  return Out;
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugSourceForFileStrReg(

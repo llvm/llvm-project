@@ -81,7 +81,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
   // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
-  // \c fillDebugFullPath + \c emitOpStringIfNew; section 10 uses it for
+  // \c getDebugFullPath + \c emitOpStringIfNew; section 10 uses it for
   // \c DebugSource without recomputing path text.
   DenseMap<const DIScope *, MCRegister> ScopeToPathOpStringReg;
 
@@ -289,9 +289,8 @@ private:
   /// SPIRV-LLVM-Translator \c getFullPath (OCLUtil.h): \c DIScope::getFilename,
   /// \c getDirectory, and \c sys::path::Style::native. Works for any \c DIScope
   /// that carries file path fields (e.g. \c DIFile, \c DISubprogram,
-  /// \c DICompileUnit). Clears \p Out when \p Scope is null.
-  void fillDebugFullPath(const DIScope *Scope,
-                         SmallVectorImpl<char> &Out) const;
+  /// \c DICompileUnit). Returns an empty path when \p Scope is null.
+  SmallString<128> getDebugFullPath(const DIScope *Scope) const;
 
   /// Return an existing \c DebugSource id for file path \c OpString \p
   /// FileStrReg or emit \c DebugSource and cache it (keyed by \p FileStrReg
