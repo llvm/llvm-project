@@ -652,11 +652,9 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
                                                unsigned ValIdx,
                                                bool ValDivergent,
                                                bool IsLDS) const {
-  // The DPP scan has a fixed overhead, so it only pays off with enough active
-  // lanes. The !amdgpu.expected.active.lanes metadata hints at how many lanes
-  // are expected to be active; for a divergent LDS atomic, when that count is
-  // small (<= 5), skip DPP and let each lane issue its own atomic.
-  //
+  // Don't generate a DPP scan if !amdgpu.expected.active.lane hint indicates
+  // insufficient lanes to offset fixed overhead.
+
   // FIXME: The threshold was tuned empirically on gfx11 and gfx12. The DPP scan
   // overhead differs across subtargets, so the break-even point may differ too;
   // this may need to become subtarget-dependent.

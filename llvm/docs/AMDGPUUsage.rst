@@ -2240,11 +2240,10 @@ and
 -------------------------------------------------
 
 A profiling-derived hint describing how many lanes of the wavefront are
-expected to be active when this :ref:`atomicrmw <i_atomicrmw>` instruction
-executes. The metadata has a single ``i32`` constant operand giving the
-expected number of active lanes as an absolute count (the same value is used
-for both wave32 and wave64 targets). This structure is enforced by the
-verifier.
+expected to be active. The metadata has a single ``i32`` constant operand
+giving the expected number of active lanes as an absolute count (the same
+value is used for both wave32 and wave64 targets). This structure is
+enforced by the verifier.
 
 The AMDGPU atomic optimizer uses the hint as follows. When the
 ``-amdgpu-atomic-optimizer-strategy=DPP`` strategy is active, the value
