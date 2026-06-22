@@ -62784,10 +62784,8 @@ static SDValue combineXorOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
       getTargetConstantBitsFromNode(Y, MatrixWidth, ConstUndef, MatEltBits,
                                     /*AllowWholeUndefs=*/false)) {
     // Immediate is shared, so all matrices need to permute it in the same way
-    for (unsigned I = 1; I != VecWidth / MatrixWidth; ++I) {
-      if (MatEltBits[I] != MatEltBits[0])
-        return SDValue();
-    }
+    if (!llvm::all_equal(MatEltBits))
+      return SDValue();
 
     APInt NewImm = getGFNIByteAffine(SplatVal, MatEltBits[0], Imm);
 
