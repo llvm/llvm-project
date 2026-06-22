@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -6195,11 +6196,8 @@ LogicalResult vector::LoadOp::verify() {
     return failure();
 
   // Negative strides are not supported on vector.load.
-  auto [strides, offset] = memRefTy.getStridesAndOffset();
-  for (int64_t stride : strides) {
-    if (ShapedType::isStatic(stride) && stride < 0)
-      return emitOpError("memref strides must be non-negative");
-  }
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
 
   if (memRefTy.getRank() < resVecTy.getRank())
     return emitOpError(
@@ -6248,11 +6246,8 @@ LogicalResult vector::StoreOp::verify() {
     return failure();
 
   // Negative strides are not supported on vector.store.
-  auto [strides, offset] = memRefTy.getStridesAndOffset();
-  for (int64_t stride : strides) {
-    if (ShapedType::isStatic(stride) && stride < 0)
-      return emitOpError("memref strides must be non-negative");
-  }
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
 
   if (memRefTy.getRank() < valueVecTy.getRank())
     return emitOpError("source memref has lower rank than the vector to store");

@@ -194,6 +194,25 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
     Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
     SmallVectorImpl<Value> &sourceIndices);
 
+/// Returns true if all strides of `memRefTy` are static and non-negative.
+///
+/// Dynamic strides cause this to return false because their sign is unknown at
+/// compile time. Use `hasNegativeStaticStride` instead when dynamic strides
+/// should be treated as acceptable.
+///
+/// Typical use: guard `mul nuw` GEP flags during LLVM lowering, where an
+/// unknown-sign stride could make the arithmetic wrap.
+bool hasNonNegativeStaticStrides(MemRefType memRefTy);
+
+/// Returns true if any stride of `memRefTy` is statically known to be
+/// negative.
+///
+/// Dynamic strides are conservatively treated as non-negative (sign unknown),
+/// so only static negative values trigger this predicate. This is the
+/// complement of `hasNonNegativeStaticStrides` for legality checks that must
+/// not reject dynamically-strided memrefs.
+bool hasNegativeStaticStride(MemRefType memRefTy);
+
 } // namespace memref
 } // namespace mlir
 
