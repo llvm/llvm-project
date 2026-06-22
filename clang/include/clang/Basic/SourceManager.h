@@ -847,8 +847,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// we can add a cc1-level option to do so.
   SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
-  /// Converter for -finput-charset conversion to UTF-8.
-  std::unique_ptr<llvm::TextEncodingConverter> InputCharsetConverter;
+  /// Name of the input encoding for -finput-charset conversion.
+  std::string InputEncodingName;
 
   /// Cache of all text encoding converters used by this SourceManager.
   /// This includes both the input charset converter and file tag converters.
@@ -876,16 +876,14 @@ public:
 
   FileManager &getFileManager() const { return FileMgr; }
 
-  /// Set the input charset converter for -finput-charset conversion.
-  void setInputCharsetConverter(
-      std::unique_ptr<llvm::TextEncodingConverter> Converter) {
-    InputCharsetConverter = std::move(Converter);
+  /// Set the input encoding name for -finput-charset conversion.
+  void setInputEncodingName(llvm::StringRef Name) {
+    InputEncodingName = Name.str();
   }
 
-  /// Get the input charset converter for -finput-charset conversion.
-  /// Returns nullptr if no converter is set.
-  llvm::TextEncodingConverter *getInputCharsetConverter() const {
-    return InputCharsetConverter.get();
+  /// Get the input encoding name for -finput-charset conversion.
+  llvm::StringRef getInputEncodingName() const {
+    return InputEncodingName;
   }
 
   /// Get or create a text encoding converter from the cache.

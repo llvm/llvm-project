@@ -912,12 +912,22 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  // Check if we have an input charset converter from the preprocessor
+  // Check if we have an input charset converter
   bool UseInputCharsetConverter = false;
   if (hasPreprocessor()) {
-    llvm::TextEncodingConverter *Converter =
-        getPreprocessor().getTextEncoding().getConverter(CA_FromInputEncoding);
-    UseInputCharsetConverter = (Converter != nullptr);
+    const std::string &InputEncoding = getLangOpts().InputEncoding;
+    if (!InputEncoding.empty()) {
+      // Store the input encoding name in SourceManager
+      getSourceManager().setInputEncodingName(InputEncoding);
+      
+      // Add the converter to SourceManager's cache
+      auto ConverterOrErr = getSourceManager().getOrCreateConverter(InputEncoding, "UTF-8");
+      if (ConverterOrErr) {
+        UseInputCharsetConverter = true;
+      }
+      // If converter creation failed, UseInputCharsetConverter stays false
+      // and the error will be reported when createFileID tries to use it
+    }
   }
   
   return InitializeSourceManager(Input, getDiagnostics(),

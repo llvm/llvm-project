@@ -655,9 +655,16 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
       return FileID();
     }
   } else if (UseInputCharsetConverter) {
-    // No file tag but -finput-charset conversion is desired. Use the converter
-    // from SourceManager.
-    Converter = getInputCharsetConverter();
+    // No file tag but -finput-charset conversion is desired.
+    // Get the converter from the cache using the input encoding name.
+    if (!InputEncodingName.empty()) {
+      Converter = getOrCreateConverter(InputEncodingName, "UTF-8");
+      if (!Converter) {
+        Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+            << SourceFile.getName() << Converter.getError().message();
+        return FileID();
+      }
+    }
   }
 
   #ifndef NDEBUG
