@@ -264,6 +264,9 @@
 
 using namespace llvm;
 
+using GetTTIFn = function_ref<const TargetTransformInfo *(Function &)>;
+using GetSEFn = function_ref<ScalarEvolution *(Function &)>;
+
 static constexpr unsigned BufferOffsetWidth = 32;
 
 namespace {
@@ -436,9 +439,8 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
   IRBuilder<InstSimplifyFolder> IRB;
 
-  const TargetMachine *TM;
-
-  // Uned for memcpy() lowering since we have it.
+  // Used for memcpy() lowering.
+  const TargetTransformInfo *TTI;
   ScalarEvolution *SE;
 
   // Convert all the buffer fat pointers within the input value to inttegers
@@ -452,10 +454,10 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
                                            const DataLayout &DL,
-                                           LLVMContext &Ctx,
-                                           const TargetMachine *TM)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), TM(TM) {}
-  bool processFunction(Function &F, ScalarEvolution *SE);
+                                           LLVMContext &Ctx)
+      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)) {}
+  bool processFunction(Function &F, const TargetTransformInfo *TTI,
+                       ScalarEvolution *SE);
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAllocaInst(AllocaInst &I);
@@ -542,7 +544,8 @@ Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::intsToFatPtrs(
 }
 
 bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
-    Function &F, ScalarEvolution *SE) {
+    Function &F, const TargetTransformInfo *TTI, ScalarEvolution *SE) {
+  this->TTI = TTI;
   this->SE = SE;
   bool Changed = false;
   // Process memcpy-like instructions after the main iteration because they can
@@ -558,6 +561,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
     Changed |= visit(cast<Instruction>(VH));
   }
   ConvertedForStore.clear();
+  this->TTI = nullptr;
   this->SE = nullptr;
   return Changed;
 }
@@ -625,8 +629,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemCpyInst(
   if (MCI.getSourceAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER &&
       MCI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemCpyAsLoop(&MCI, TM->getTargetTransformInfo(*MCI.getFunction()),
-                           SE);
+  llvm::expandMemCpyAsLoop(&MCI, *TTI, SE);
   MCI.eraseFromParent();
   return true;
 }
@@ -645,8 +648,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetInst(
     MemSetInst &MSI) {
   if (MSI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetAsLoop(&MSI,
-                           TM->getTargetTransformInfo(*MSI.getFunction()));
+  llvm::expandMemSetAsLoop(&MSI, TTI);
   MSI.eraseFromParent();
   return true;
 }
@@ -655,8 +657,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetPatternInst(
     MemSetPatternInst &MSPI) {
   if (MSPI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetPatternAsLoop(
-      &MSPI, TM->getTargetTransformInfo(*MSPI.getFunction()));
+  llvm::expandMemSetPatternAsLoop(&MSPI, *TTI);
   MSPI.eraseFromParent();
   return true;
 }
@@ -2592,8 +2593,7 @@ public:
 
   AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
-  bool run(Module &M, const TargetMachine &TM,
-           llvm::function_ref<ScalarEvolution *(Function &)> GetSE);
+  bool run(Module &M, const TargetMachine &TM, GetTTIFn GetTTI, GetSEFn GetSE);
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -2685,9 +2685,8 @@ static void makeCloneInPraceMap(Function *F, ValueToValueMapTy &CloneMap) {
   }
 }
 
-bool AMDGPULowerBufferFatPointers::run(
-    Module &M, const TargetMachine &TM,
-    llvm::function_ref<ScalarEvolution *(Function &)> GetSE) {
+bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
+                                       GetTTIFn GetTTI, GetSEFn GetSE) {
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
   // Record the functions which need to be remapped.
@@ -2754,14 +2753,15 @@ bool AMDGPULowerBufferFatPointers::run(
   }
 
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
-                                                         M.getContext(), &TM);
+                                                         M.getContext());
   LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(
       DL, M.getContext(), &TM);
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
+    const TargetTransformInfo *TTI = GetTTI(F);
     ScalarEvolution *SE = GetSE(F);
-    Changed |= MemOpsRewrite.processFunction(F, SE);
+    Changed |= MemOpsRewrite.processFunction(F, TTI, SE);
     if (InterfaceChange || BodyChanges) {
       NeedsRemap.push_back(std::make_pair(&F, InterfaceChange));
       Changed |= BufferContentsTypeRewrite.processFunction(F, SE);
@@ -2820,12 +2820,17 @@ bool AMDGPULowerBufferFatPointers::run(
 bool AMDGPULowerBufferFatPointers::runOnModule(Module &M) {
   TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  auto GetTTI = [&](Function &F) -> const TargetTransformInfo * {
+    if (F.isDeclaration())
+      return nullptr;
+    return &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  };
   auto GetSE = [&](Function &F) -> ScalarEvolution * {
     if (F.isDeclaration())
       return nullptr;
     return &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
   };
-  return run(M, TM, GetSE);
+  return run(M, TM, GetTTI, GetSE);
 }
 
 char AMDGPULowerBufferFatPointers::ID = 0;
@@ -2834,6 +2839,7 @@ char &llvm::AMDGPULowerBufferFatPointersID = AMDGPULowerBufferFatPointers::ID;
 
 void AMDGPULowerBufferFatPointers::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
 }
 
@@ -2841,6 +2847,7 @@ void AMDGPULowerBufferFatPointers::getAnalysisUsage(AnalysisUsage &AU) const {
 INITIALIZE_PASS_BEGIN(AMDGPULowerBufferFatPointers, DEBUG_TYPE, PASS_DESC,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(AMDGPULowerBufferFatPointers, DEBUG_TYPE, PASS_DESC, false,
                     false)
@@ -2853,12 +2860,17 @@ ModulePass *llvm::createAMDGPULowerBufferFatPointersPass() {
 PreservedAnalyses
 AMDGPULowerBufferFatPointersPass::run(Module &M, ModuleAnalysisManager &MA) {
   auto &FA = MA.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTTI = [&](Function &F) -> const TargetTransformInfo * {
+    if (F.isDeclaration())
+      return nullptr;
+    return &FA.getResult<TargetIRAnalysis>(F);
+  };
   auto GetSE = [&](Function &F) -> ScalarEvolution * {
     if (F.isDeclaration())
       return nullptr;
     return &FA.getResult<ScalarEvolutionAnalysis>(F);
   };
-  return AMDGPULowerBufferFatPointers().run(M, TM, GetSE)
+  return AMDGPULowerBufferFatPointers().run(M, TM, GetTTI, GetSE)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
