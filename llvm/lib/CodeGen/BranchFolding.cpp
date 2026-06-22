@@ -790,6 +790,15 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
   return true;
 }
 
+/// Ensure undef flag is preserved only when it is present in both instructions.
+static void mergeUndefFlag(MachineInstr &Merged, const MachineInstr &Other) {
+  for (unsigned I = 0, E = Merged.getNumOperands(); I != E; ++I) {
+    MachineOperand &MO = Merged.getOperand(I);
+    if (MO.isReg() && MO.isUndef() && !Other.getOperand(I).isUndef())
+      MO.setIsUndef(false);
+  }
+}
+
 static void
 mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
                 MachineBasicBlock &MBBCommon) {
@@ -825,15 +834,9 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
     // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoadOrStore())
       MBBICommon->cloneMergedMemRefs(*MBB->getParent(), {&*MBBICommon, &*MBBI});
+
     // Drop undef flags if they aren't present in all merged instructions.
-    for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MBBICommon->getOperand(I);
-      if (MO.isReg() && MO.isUndef()) {
-        const MachineOperand &OtherMO = MBBI->getOperand(I);
-        if (!OtherMO.isUndef())
-          MO.setIsUndef(false);
-      }
-    }
+    mergeUndefFlag(*MBBICommon, *MBBI);
 
     ++MBBI;
     ++MBBICommon;
@@ -2158,6 +2161,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
              "Expected non-debug lockstep");
+
+      // Drop undef flag on the hoisted instruction if it was not present in
+      // both of the original ones.
+      mergeUndefFlag(*TI, *FI);
 
       // Merge debug locs on hoisted instructions.
       TI->setDebugLoc(
