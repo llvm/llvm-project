@@ -1476,8 +1476,7 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
       // Module map files are textual "source files". Use input charset converter
       // if available, and file tag converters are handled by SourceManager's cache.
       LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter,
-                                /*Converter=*/nullptr, /*LoadedID=*/0,
-                                /*LoadedOffset=*/0,
+                                /*LoadedID=*/0,
                                 /*UseInputCharsetConverter=*/true);
     }
     ID = LocalFID;

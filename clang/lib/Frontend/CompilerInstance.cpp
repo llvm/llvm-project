@@ -34,7 +34,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -962,8 +961,7 @@ bool CompilerInstance::InitializeSourceManager(
   // Use the UseInputCharsetConverter parameter passed from the caller
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind,
-                             /*Converter=*/nullptr, /*LoadedID=*/0,
-                             /*LoadedOffset=*/0,
+                             /*LoadedID=*/0,
                              UseInputCharsetConverter));
 
   assert(SourceMgr.getMainFileID().isValid() &&

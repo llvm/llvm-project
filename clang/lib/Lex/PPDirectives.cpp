@@ -2800,8 +2800,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Use the SourceManager's input charset converter for non-tagged files
   // by passing UseInputCharsetConverter=true
   FileID FID = SourceMgr.createFileID(*File, IncludePos, FileCharacter,
-                                      /*Converter=*/nullptr, /*LoadedID=*/0,
-                                      /*LoadedOffset=*/0,
+                                      /*LoadedID=*/0,
                                       /*UseInputCharsetConverter=*/true);
   if (!FID.isValid()) {
     TheModuleLoader.HadFatalFailure = true;

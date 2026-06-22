@@ -16,7 +16,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManagerInternals.h"
-#include "clang/Lex/TextEncoding.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -606,8 +605,8 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID,
-                                   SourceLocation::UIntTy LoadedOffset,
-                                   bool UseInputCharsetConverter) {
+                                   bool UseInputCharsetConverter,
+                                   SourceLocation::UIntTy LoadedOffset) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
 

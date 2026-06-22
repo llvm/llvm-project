@@ -614,8 +614,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           // are handled by SourceManager's cache.
           if (FID.isInvalid())
             FID = SM.createFileID(*File, Pos, SrcMgr::C_User,
-             /*Converter=*/nullptr, /*LoadedID=*/0,
-                                  /*LoadedOffset=*/0,
+             /*LoadedID=*/0,
                                   /*UseInputCharsetConverter=*/true);
 
           if (PH.Next(Line) && Line > 0)

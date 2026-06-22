@@ -652,8 +652,8 @@ void Preprocessor::EnterMainSourceFile() {
     // Use input charset converter if available, and file tag converters
     // are handled by SourceManager's cache.
     setPCHThroughHeaderFileID(SourceMgr.createFileID(
-        *File, SourceLocation(), SrcMgr::C_User, /*Converter=*/nullptr,
-        /*LoadedID=*/0, /*LoadedOffset=*/0,
+        *File, SourceLocation(), SrcMgr::C_User,
+        /*LoadedID=*/0,
         /*UseInputCharsetConverter=*/true));
   }
 
