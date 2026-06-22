@@ -1043,6 +1043,15 @@ Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
 
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
+
+  // an empty image is not a valid binary
+  // plugins behave differently given empty binaries - e.g. CUDA will map to INVALID_BINARY,
+  // while L0 will map to INVALID_SIZE which is also associated with invalid kernel launch dims etc.
+  // so we guard here for consistent behavior
+  if (ProgDataSize == 0)
+    return createOffloadError(ErrorCode::INVALID_BINARY,
+                              "provided binary image is empty");
+
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
   Expected<plugin::DeviceImageTy *> Res =
       Device->Device->loadBinary(Device->Device->Plugin, Buffer);
