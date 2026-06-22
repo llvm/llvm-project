@@ -56,8 +56,6 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     }
 
     if (!B->isAssignmentOp()) {
-      NodeBuilder Bldr(N, Tmp2, *currBldrCtx);
-
       if (B->isAdditiveOp()) {
         // Ensure that if `p` is a pointer and `i` is an integer with Unknown
         // value, then `p+i`, `i+p` and `p-i` are evaluated to element regions
@@ -90,7 +88,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         State = escapeValues(State, RightV, PSK_EscapeOther);
       }
 
-      Bldr.generateNode(B, N, State);
+      Tmp2.insert(Engine.makePostStmtNode(B, State, N));
       continue;
     }
 
