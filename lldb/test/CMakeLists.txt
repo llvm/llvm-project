@@ -42,12 +42,16 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 # Configure the build directory.
-# The .noindex suffix is a marker for Spotlight to never index the
-# build directory.  LLDB queries Spotlight to locate .dSYM bundles
-# based on the UUID embedded in a binary, and because the UUID is a
-# hash of filename and .text section, there *will* be conflicts inside
-# the build directory.
-set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+if(APPLE)
+  # The .noindex suffix is a marker for Spotlight to never index the
+  # build directory.  LLDB queries Spotlight to locate .dSYM bundles
+  # based on the UUID embedded in a binary, and because the UUID is a
+  # hash of filename and .text section, there *will* be conflicts inside
+  # the build directory.
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+else()
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build" CACHE PATH "The build root for building tests.")
+endif()
 
 # Configure and create module cache directories.
 set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running tests.")

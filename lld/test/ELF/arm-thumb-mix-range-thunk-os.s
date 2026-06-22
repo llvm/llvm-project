@@ -14,6 +14,7 @@
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x3300004 --stop-address=0x3300010 | FileCheck --check-prefix=CHECK9 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x4100000 --stop-address=0x410000c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK10 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x4200000 --stop-address=0x4200008 | FileCheck --check-prefix=CHECK11 %s
+// RUN: rm %t %t2
 
 // Test the Range extension Thunks for ARM and Thumb when all the code is in a
 // single OutputSection. The ARM branches and branch and link instructions

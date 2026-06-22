@@ -325,7 +325,7 @@ bool HostInfoBase::ComputeProcessTempFileDirectory(FileSpec &file_spec) {
   if (llvm::sys::fs::create_directory(temp_file_spec.GetPath()))
     return false;
 
-  file_spec.SetDirectory(temp_file_spec.GetPathAsConstString());
+  file_spec.SetDirectory(temp_file_spec.GetPath());
   return true;
 }
 
@@ -348,7 +348,7 @@ bool HostInfoBase::ComputeGlobalTempFileDirectory(FileSpec &file_spec) {
   if (llvm::sys::fs::create_directory(temp_file_spec.GetPath()))
     return false;
 
-  file_spec.SetDirectory(temp_file_spec.GetPathAsConstString());
+  file_spec.SetDirectory(temp_file_spec.GetPath());
   return true;
 }
 
@@ -367,14 +367,14 @@ bool HostInfoBase::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 bool HostInfoBase::ComputeUserHomeDirectory(FileSpec &file_spec) {
   FileSpec temp_file("~");
   FileSystem::Instance().Resolve(temp_file);
-  file_spec.SetDirectory(temp_file.GetPathAsConstString());
+  file_spec.SetDirectory(temp_file.GetPath());
   return true;
 }
 
 bool HostInfoBase::ComputeUserLLDBHomeDirectory(FileSpec &file_spec) {
   FileSpec home_dir_spec = GetUserHomeDir();
   home_dir_spec.AppendPathComponent(".lldb");
-  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
+  file_spec.SetDirectory(home_dir_spec.GetPath());
   return true;
 }
 

@@ -1354,6 +1354,15 @@ lldb::SBFileSpec SBProcess::GetCoreFile() {
   return SBFileSpec(core_file);
 }
 
+bool SBProcess::IsLiveDebugSession() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ProcessSP process_sp(GetSP());
+  if (!process_sp)
+    return false;
+  return process_sp->IsLiveDebugSession();
+}
+
 addr_t SBProcess::GetAddressMask(AddressMaskType type,
                                  AddressMaskRange addr_range) {
   LLDB_INSTRUMENT_VA(this, type, addr_range);

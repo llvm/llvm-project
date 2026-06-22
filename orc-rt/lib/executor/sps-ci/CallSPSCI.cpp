@@ -44,7 +44,9 @@ makeNullTerminatedCStringArray(std::vector<std::string> &U) {
 void call_main(move_only_function<void(int64_t)> Return, MainFn Main,
                std::vector<std::string> Args) {
   auto ArgV = makeNullTerminatedCStringArray(Args);
-  Return(Main(ArgV.size(), ArgV.data()));
+  // Use Args.size() below, not ArgV.size, because ArgV contains a null
+  // terminator.
+  Return(Main(Args.size(), ArgV.data()));
 }
 
 ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_call_main,
