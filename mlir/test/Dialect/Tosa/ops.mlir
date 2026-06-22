@@ -962,6 +962,45 @@ func.func @test_gather_unranked_indices(%arg0: tensor<13x21x3xf32>, %arg1: tenso
 }
 
 // -----
+// CHECK-LABEL: test_row_gather
+func.func @test_row_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf32>
+  return %0 : tensor<13x52x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_int64
+func.func @test_row_gather_int64(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi64>) -> tensor<13x52x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi64>, tensor<1xi32>) -> tensor<13x52x3xf32>
+  return %0 : tensor<13x52x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_non_const_row_count
+func.func @test_row_gather_non_const_row_count(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %row_count: tensor<1xi32>) -> tensor<13x?x3xf32> {
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x?x3xf32>
+  return %0 : tensor<13x?x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_unranked_indices
+func.func @test_row_gather_unranked_indices(%arg0: tensor<13x21x3xf32>, %arg1: tensor<*xi32>) -> tensor<13x?x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<*xi32>, tensor<1xi32>) -> tensor<13x?x3xf32>
+  return %0 : tensor<13x?x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_fully_unranked
+func.func @test_row_gather_fully_unranked(%arg0: tensor<*xf32>, %arg1: tensor<*xi32>) -> tensor<*xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<*xf32>, tensor<*xi32>, tensor<1xi32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
 // CHECK-LABEL: test_row_gather_block_scaled
 func.func @test_row_gather_block_scaled(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf32> {
   %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
@@ -1282,6 +1321,14 @@ func.func @test_cast_f8E5M2(%arg0: tensor<13x21x3xf8E5M2>) -> tensor<13x21x3xf16
 func.func @test_concat_f8E5M2(%arg0: tensor<13x21x3xf8E5M2>, %arg1: tensor<13x21x3xf8E5M2>) -> tensor<26x21x3xf8E5M2> {
   %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xf8E5M2>, tensor<13x21x3xf8E5M2>) -> tensor<26x21x3xf8E5M2>
   return %0 : tensor<26x21x3xf8E5M2>
+}
+
+// -----
+// CHECK-LABEL: row_gather_f8E5M2
+func.func @test_row_gather_f8E5M2(%arg0: tensor<13x21x3xf8E5M2>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf8E5M2> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf8E5M2>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x52x3xf8E5M2>
+  return %0 : tensor<13x52x3xf8E5M2>
 }
 
 // -----

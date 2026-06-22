@@ -100,6 +100,7 @@ endif()
 # Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
 check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_PTHREAD_SETNAME_NP)
 check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" LIBOMP_HAVE_PTHREAD_SET_NAME_NP)
+check_symbol_exists(pthread_cancel "pthread.h" LIBOMP_HAVE_PTHREAD_CANCEL)
 
 # Check for Unix shared memory
 check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)

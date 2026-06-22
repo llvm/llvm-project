@@ -78,9 +78,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   if (!TEST_IS_CONSTANT_EVALUATED)
     test_node_container<std::multiset<int> >([](int i) { return i; });
   test_node_container<std::map<int, int> >([](int i) { return std::make_pair(i, i); });
-  // FIXME: remove when multimap is made constexpr
-  if (!TEST_IS_CONSTANT_EVALUATED)
-    test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
+  test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
 
   return true;
 }

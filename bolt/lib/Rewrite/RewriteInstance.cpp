@@ -38,6 +38,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -2283,15 +2284,16 @@ Error RewriteInstance::readSpecialSections() {
     BC->printSections(BC->outs());
   }
 
-  if (opts::RelocationMode == cl::BOU_TRUE && !HasTextRelocations) {
+  if (opts::RelocationMode == cl::boolOrDefault::BOU_TRUE &&
+      !HasTextRelocations) {
     BC->errs()
         << "BOLT-ERROR: relocations against code are missing from the input "
            "file. Cannot proceed in relocations mode (-relocs).\n";
     exit(1);
   }
 
-  BC->HasRelocations =
-      HasTextRelocations && (opts::RelocationMode != cl::BOU_FALSE);
+  BC->HasRelocations = HasTextRelocations &&
+                       (opts::RelocationMode != cl::boolOrDefault::BOU_FALSE);
 
   if (BC->IsLinuxKernel && BC->HasRelocations) {
     BC->outs() << "BOLT-INFO: disabling relocation mode for Linux kernel\n";
@@ -2415,7 +2417,7 @@ void RewriteInstance::adjustCommandLineOptions() {
   }
 
   if (opts::Instrument && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT &&
-      !BC->HasInterpHeader) {
+      !BC->HasInterpHeader && !BC->IsStaticExecutable) {
     BC->errs()
         << "BOLT-WARNING: adjusted runtime-lib-init-hook to 'init' due to "
            "absence of INTERP header\n";
@@ -3916,8 +3918,28 @@ void RewriteInstance::runBinaryAnalyses() {
   NamedRegionTimer T("runBinaryAnalyses", "run binary analysis passes",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
   BinaryFunctionPassManager Manager(*BC);
-  // FIXME: add a pass that warns about which functions do not have CFG,
-  // and therefore, analysis is most likely to be less accurate.
+
+  // Warn about functions for which BOLT could not reconstruct the CFG: binary
+  // analyses are less precise on them and may report both false negatives and
+  // false positives.
+  unsigned NoCFGCount = 0;
+  for (const auto &BFI : BC->getBinaryFunctions()) {
+    const BinaryFunction &BF = BFI.second;
+    // Skip ignored functions: BOLT does not attempt to build a CFG for them
+    // (e.g. pseudo functions such as PLT stubs), so a missing CFG there is
+    // expected rather than a sign of degraded analysis.
+    if (BF.isIgnored() || BF.hasCFG())
+      continue;
+    ++NoCFGCount;
+    if (opts::Verbosity >= 1)
+      BC->errs() << "BOLT-WARNING: no CFG for " << BF
+                 << "; binary analyses may be imprecise\n";
+  }
+  if (NoCFGCount)
+    BC->errs() << "BOLT-WARNING: " << NoCFGCount
+               << " function(s) lack CFG; binary-analysis results may be"
+                  " incomplete. Re-run with -v=1 to list these functions.\n";
+
   using PtrAuthScanner = PAuthGadgetScanner::Analysis;
 
   // Accumulate all enabled analyses.
@@ -6070,7 +6092,6 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
 
   if (!DynamicPhdr) {
     BC->outs() << "BOLT-INFO: static input executable detected\n";
-    // TODO: static PIE executable might have dynamic header
     BC->IsStaticExecutable = true;
     return Error::success();
   }
@@ -6087,6 +6108,14 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
 
   for (const Elf_Dyn &Dyn : DynamicEntries) {
     switch (Dyn.d_tag) {
+    case ELF::DT_FLAGS_1: {
+      auto Flags = Dyn.getVal();
+      if (Flags & ELF::DF_1_PIE && !BC->HasInterpHeader) {
+        BC->outs() << "BOLT-INFO: static pie executable detected\n";
+        BC->IsStaticExecutable = true;
+      }
+      break;
+    }
     case ELF::DT_INIT:
       BC->InitAddress = Dyn.getPtr();
       break;
