@@ -3800,7 +3800,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       Diag(New->getLocation(), diag::ext_static_non_static) << New;
       Diag(OldLocation, PrevDiag) << Old << Old->getType();
     } else {
-      Diag(New->getLocation(), diag::err_static_non_static) << New;
+      Diag(New->getLocation(), diag::err_static_non_static)
+          << New << /*MixedLinkageUB=*/false;
       Diag(OldLocation, PrevDiag) << Old << Old->getType();
       return true;
     }
@@ -4817,8 +4818,12 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
           << New->getDeclName();
       Diag(OldLocation, PrevDiag);
     } else {
+      // This is the same internal/external linkage conflict as C2y 6.7.1p7;
+      // before C2y it was undefined behavior (C11 6.2.2p7), so note that in
+      // the older C language modes.
       Diag(New->getLocation(), diag::err_static_non_static)
-          << New->getDeclName();
+          << New->getDeclName()
+          << (!getLangOpts().CPlusPlus && !getLangOpts().C2y);
       Diag(OldLocation, PrevDiag);
       return New->setInvalidDecl();
     }

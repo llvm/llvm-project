@@ -6588,7 +6588,8 @@ def err_inline_decl_follows_def : Error<
 def err_inline_declaration_block_scope : Error<
   "inline declaration of %0 not allowed in block scope">;
 def err_static_non_static : Error<
-  "static declaration of %0 follows non-static declaration">;
+  "static declaration of %0 follows non-static declaration"
+  "%select{|; behavior is undefined}1">;
 def err_internal_extern_mismatch : Error<
   "variable %0 declared with both internal and external linkage "
   "in the same translation unit%select{; behavior is undefined|}1">;

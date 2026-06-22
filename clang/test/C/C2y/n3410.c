@@ -19,7 +19,7 @@ void func1(void) {
 /* This 'a' is the same as the one declared extern above. */
 static int a; /* c2y-error {{static declaration of 'a' follows non-static declaration}}
                  c2y-note@#a {{previous declaration is here}}
-                 c89-23-error {{static declaration of 'a' follows non-static declaration}}
+                 c89-23-error {{static declaration of 'a' follows non-static declaration; behavior is undefined}}
                  c89-23-note@#a {{previous declaration is here}}
                */
 
