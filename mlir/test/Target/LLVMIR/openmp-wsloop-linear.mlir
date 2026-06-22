@@ -14,8 +14,7 @@
 // CHECK:         omp_loop.inc:
 // CHECK-NOT:       %.linear_result
 // CHECK:         omp_loop.linear_lastiter_exit:
-// CHECK:           %.linear_result
-// CHECK:         omp_loop.linear_exit:
+// CHECK:           load i32, ptr %.linear_result
 // CHECK-NOT:       %.linear_result
 
 llvm.func @wsloop_linear_post_use(%lb : i32, %ub : i32, %step : i32,
