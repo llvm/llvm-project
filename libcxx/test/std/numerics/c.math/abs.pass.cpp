@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The frozen C++03 headers predate the decltype/static_assert backports the
-// _BitInt/__int128 probes rely on.
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <assert.h>
