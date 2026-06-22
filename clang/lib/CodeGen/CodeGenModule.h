@@ -2179,16 +2179,13 @@ private:
   /// Check if a variable is eligible to be treated as a loadtime comment
   /// variable (must be in the requested list and have a valid char type).
   bool isLoadTimeCommentCandidateVariable(
-      const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars);
+      const VarDecl *VD,
+      const std::vector<std::string> &LoadTimeCommentVars) const;
 
-  /// Queue loadtime comment variable candidates into the deferred
-  /// emission list before EmitDeferred() so their initializers are emitted
-  /// through the normal infrastructure with correct ordering.
-  void QueueLoadTimeCommentVarEmission();
-
-  /// Attach loadtime_comment metadata and add variables to
-  /// llvm.compiler.used after EmitDeferred() has defined them.
-  void ProcessLoadTimeCommentVars();
+  /// Check if a variable name matches any entry in LoadTimeCommentVars.
+  bool matchesLoadTimeCommentVarName(
+      const VarDecl *VD,
+      const std::vector<std::string> &LoadTimeCommentVars) const;
 };
 
 }  // end namespace CodeGen

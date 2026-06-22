@@ -1078,12 +1078,6 @@ void CodeGenModule::Release() {
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
 
-  // Queue loadtime comment variable candidates into the deferred emission
-  // list before EmitDeferred() runs, so their initializers (which may
-  // reference other globals, e.g. static const char *p = a;) are emitted
-  // through the normal infrastructure with correct ordering.
-  QueueLoadTimeCommentVarEmission();
-
   EmitDeferred();
   DeferredDecls.insert_range(EmittedDeferredDecls);
   EmittedDeferredDecls.clear();
@@ -1764,9 +1758,6 @@ void CodeGenModule::Release() {
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
-
-  // Mark loadtime comment variables specified via -mloadtime-comment-vars.
-  ProcessLoadTimeCommentVars();
 
   // If there is device offloading code embed it in the host now.
   EmbedObject(&getModule(), CodeGenOpts, *getFileSystem(), getDiags());
@@ -4285,7 +4276,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
         (VD->getStorageDuration() == SD_Static ||
          VD->getStorageDuration() == SD_Thread)) ||
        (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
-        VD->getType().isConstQualified())))
+        VD->getType().isConstQualified()) ||
+       // Keep requested loadtime-comment variables in the normal
+       // emission path so EmitGlobalVarDefinition can annotate the definition.
+       (getTriple().isOSAIX() && !CodeGenOpts.LoadTimeCommentVars.empty() &&
+        isLoadTimeCommentCandidateVariable(VD,
+                                           CodeGenOpts.LoadTimeCommentVars))))
     return true;
 
   return getContext().DeclMustBeEmitted(Global);
@@ -4347,23 +4343,19 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
   return true;
 }
 
-/// Check if a variable declaration is suitable to be treated as a loadtime
-/// comment variable. Valid variables must be character pointers or character
-/// arrays with an initializer.
+/// Return true if a variable is a supported loadtime-comment declaration:
+/// character pointer/array with an initializer.
 bool CodeGenModule::isValidLoadTimeCommentVariable(const VarDecl *D) const {
-  // Must be a valid declaration and must have an initializer (the string).
   if (!D || !D->hasInit())
     return false;
 
   QualType Ty = D->getType();
 
-  // 1. Handle Pointers (e.g., char *sccsid, const char *copyright).
   if (const PointerType *PT = Ty->getAs<PointerType>()) {
     if (PT->getPointeeType()->isAnyCharacterType())
       return true;
   }
 
-  // 2. Handle Arrays (e.g., char version[])
   if (const ArrayType *AT = getContext().getAsArrayType(Ty)) {
     if (AT->getElementType()->isAnyCharacterType())
       return true;
@@ -4372,88 +4364,57 @@ bool CodeGenModule::isValidLoadTimeCommentVariable(const VarDecl *D) const {
   return false; // Reject ints, structs, etc.
 }
 
+/// Return true if a variable name matches any entry in LoadTimeCommentVars.
+///
+///  - A token containing "::" is treated as a source-qualified name.
+///  - A token without "::" is treated as an unqualified identifier and may
+///    match declarations in multiple scopes.
+///
+/// For qualified matching, leading "::" is ignored on both sides, so "::x"
+/// and "x" both select a file-scope variable.
+bool CodeGenModule::matchesLoadTimeCommentVarName(
+    const VarDecl *VD,
+    const std::vector<std::string> &LoadTimeCommentVars) const {
+  if (!VD)
+    return false;
+
+  StringRef Unqualified = VD->getName();
+  std::optional<std::string> Qualified;
+
+  for (const std::string &RequestedName : LoadTimeCommentVars) {
+    StringRef Requested(RequestedName);
+    if (Requested.empty())
+      continue;
+
+    if (Requested.contains("::")) {
+      if (!Qualified) {
+        Qualified = VD->getQualifiedNameAsString();
+        // Normalize file-scope names by dropping a leading "::".
+        if (StringRef(*Qualified).starts_with("::"))
+          Qualified->erase(0, 2);
+      }
+      Requested.consume_front("::");
+      if (Requested == *Qualified)
+        return true;
+      continue;
+    }
+
+    if (Requested == Unqualified)
+      return true;
+  }
+
+  return false;
+}
+
 /// Check if a variable is eligible to be treated as a loadtime comment
 /// variable. This requires: (1) the variable name is in the requested list
 /// and (2) the variable type is valid (char pointer or array with initializer).
 bool CodeGenModule::isLoadTimeCommentCandidateVariable(
-    const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars) {
-  if (!llvm::is_contained(LoadTimeCommentVars, VD->getName()))
+    const VarDecl *VD,
+    const std::vector<std::string> &LoadTimeCommentVars) const {
+  if (!isValidLoadTimeCommentVariable(VD))
     return false;
-  return isValidLoadTimeCommentVariable(VD);
-}
-
-/// QueueLoadTimeCommentVarEmission: Called before EmitDeferred().
-/// Move loadtime comment variable candidates from DeferredDecls into
-/// DeferredDeclsToEmit so that the normal deferred emission machinery
-/// defines them — including any globals their initializers reference
-/// (e.g. static const char *p = a;).
-void CodeGenModule::QueueLoadTimeCommentVarEmission() {
-  if (!getTriple().isOSAIX())
-    return;
-
-  const auto &LoadTimeCommentVars = getCodeGenOpts().LoadTimeCommentVars;
-  if (LoadTimeCommentVars.empty())
-    return;
-
-  TranslationUnitDecl *TU = getContext().getTranslationUnitDecl();
-  for (auto *D : TU->decls()) {
-    auto *VD = dyn_cast<VarDecl>(D);
-    if (!VD)
-      continue;
-    if (!isLoadTimeCommentCandidateVariable(VD, LoadTimeCommentVars))
-      continue;
-
-    // Move the decl from DeferredDecls -> DeferredDeclsToEmit so EmitDeferred
-    // will define it.  If it is already being emitted (e.g. it is referenced
-    // somewhere), this is a harmless duplicate that EmitDeferred ignores.
-    GlobalDecl GD(VD);
-    StringRef MangledName = getMangledName(GD);
-    auto DDI = DeferredDecls.find(MangledName);
-    if (DDI != DeferredDecls.end()) {
-      addDeferredDeclToEmit(DDI->second);
-      DeferredDecls.erase(DDI);
-    }
-  }
-}
-
-/// ProcessLoadTimeCommentVars: Called after EmitDeferred().
-/// Attach loadtime_comment metadata and add each variable to
-/// llvm.compiler.used. By this point the deferred emission loop has already
-/// defined the globals, so we only need to look them up and annotate them. Only
-/// valid on AIX targets.
-void CodeGenModule::ProcessLoadTimeCommentVars() {
-  if (!getTriple().isOSAIX())
-    return;
-
-  const auto &LoadTimeCommentVars = getCodeGenOpts().LoadTimeCommentVars;
-  if (LoadTimeCommentVars.empty())
-    return;
-
-  auto &C = getLLVMContext();
-  TranslationUnitDecl *TU = getContext().getTranslationUnitDecl();
-
-  for (auto *D : TU->decls()) {
-    auto *VD = dyn_cast<VarDecl>(D);
-    if (!VD)
-      continue;
-    if (!isLoadTimeCommentCandidateVariable(VD, LoadTimeCommentVars))
-      continue;
-
-    // Look up the LLVM global that EmitDeferred() should have defined.
-    llvm::GlobalValue *GV = GetGlobalValue(getMangledName(GlobalDecl(VD)));
-    if (!GV || GV->isDeclaration())
-      continue;
-
-    auto *GVar = dyn_cast<llvm::GlobalVariable>(GV);
-    if (!GVar)
-      continue;
-
-    // Mark with loadtime_comment metadata for LowerCommentStringPass.
-    GVar->setMetadata("loadtime_comment", llvm::MDNode::get(C, {}));
-
-    // Prevent the optimizer from removing the global variable.
-    llvm::appendToCompilerUsed(getModule(), {GVar});
-  }
+  return matchesLoadTimeCommentVarName(VD, LoadTimeCommentVars);
 }
 
 ConstantAddress CodeGenModule::GetAddrOfMSGuidDecl(const MSGuidDecl *GD) {
@@ -6645,6 +6606,17 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   if (D->hasAttr<AnnotateAttr>())
     AddGlobalAnnotations(D, GV);
+
+  if (getTriple().isOSAIX()) {
+    const auto &LoadTimeCommentVars = getCodeGenOpts().LoadTimeCommentVars;
+    if (!LoadTimeCommentVars.empty() &&
+        isLoadTimeCommentCandidateVariable(D, LoadTimeCommentVars)) {
+      auto &C = getLLVMContext();
+      // Mark for LowerCommentStringPass and keep the symbol alive.
+      GV->setMetadata("loadtime_comment", llvm::MDNode::get(C, {}));
+      llvm::appendToCompilerUsed(getModule(), {GV});
+    }
+  }
 
   // Set the llvm linkage type as appropriate.
   llvm::GlobalValue::LinkageTypes Linkage = getLLVMLinkageVarDefinition(D);

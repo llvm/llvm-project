@@ -35,13 +35,13 @@ extern char *not_defined_here;
 
 void foo() {}
 
-// CHECK-DAG: @active = internal global ptr @.str, align {{[0-9]+}}, !loadtime_comment ![[MD:[0-9]+]]
-// CHECK: @.str = private unnamed_addr constant [19 x i8] c"@(#) active string\00", align {{[0-9]+}}
-// CHECK-DAG: @sccsid = internal global ptr @.str.1, align {{[0-9]+}}, !loadtime_comment ![[MD]]
-// CHECK: @.str.1 = private unnamed_addr constant [24 x i8] c"@(#) sccsid Version 1.0\00", align {{[0-9]+}}
+// CHECK-DAG: @[[ACTIVE:active]] = internal global ptr @[[ACTIVE_STR:.str(\.[0-9]+)?]], align {{[0-9]+}}, !loadtime_comment ![[MD:[0-9]+]]
+// CHECK-DAG: @[[ACTIVE_STR]] = private unnamed_addr constant [19 x i8] c"@(#) active string\00", align {{[0-9]+}}
+// CHECK-DAG: @sccsid = internal global ptr @[[SCCSID_STR:.str(\.[0-9]+)?]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
+// CHECK-DAG: @[[SCCSID_STR]] = private unnamed_addr constant [24 x i8] c"@(#) sccsid Version 1.0\00", align {{[0-9]+}}
 // CHECK-DAG: @version = internal global [27 x i8] c"@(#) Copyright Version 2.0\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 // CHECK-DAG: @same_copyright = internal global ptr @dummy, align {{[0-9]+}}, !loadtime_comment ![[MD]]
-// CHECK: @dummy = internal constant [25 x i8] c"dummy copyright deferred\00"
+// CHECK-DAG: @dummy = internal constant [25 x i8] c"dummy copyright deferred\00"
 // CHECK: @llvm.compiler.used = appending global [4 x ptr]
 // CHECK-SAME: ptr @sccsid
 // CHECK-SAME: ptr @version

@@ -6878,8 +6878,9 @@ Preserving Identifying Variables with -mloadtime-comment-vars
 
 The ``-mloadtime-comment-vars=`` flag accepts a comma-separated list of
 global variable names that should be preserved in the final object file as
-loadtime identifying strings. This is an AIX-specific feature and is ignored
-on other targets.
+loadtime identifying strings. This is an AIX-specific feature; on other
+targets the compiler emits a warning and the flag is not forwarded to
+``-cc1``.
 
 This flag complements ``#pragma comment(copyright, ...)`` for codebases that
 already use the traditional UNIX convention of embedding identifying strings
@@ -6890,6 +6891,18 @@ Syntax:
 .. code-block:: console
 
   -mloadtime-comment-vars=<var1>[,<var2>,...]
+
+Name matching:
+
+- In C, names are matched as plain identifiers (for example, ``sccsid``).
+- In C++, names containing ``::`` are treated as source-qualified names and
+  matched against the declaration's qualified source name (for example,
+  ``N::x`` or ``A::x``).
+- In C++, names without ``::`` are treated as unqualified names and matched by
+  plain identifier. This may match more than one declaration when names are
+  reused across scopes.
+- To target a single declaration in C++, prefer qualified names. Unqualified
+  matches can preserve additional globals and increase object size.
 
 Valid variable types:
 
