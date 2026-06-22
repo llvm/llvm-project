@@ -9,9 +9,6 @@
 Syntax of Core GFX9 Instructions
 ====================================================================================
 
-.. contents::
-  :local:
-
 Introduction
 ============
 

@@ -1,8 +1,6 @@
 # Instrumentation Profile Format
 
-```{contents}
-:local:
-```
+
 
 ## Overview
 

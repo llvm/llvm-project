@@ -2,9 +2,7 @@
 
 This article is intended to take someone in the state of “I want to write documentation and get it added to LLVM’s docs” and help them start writing documentation as fast as possible and with as little nonsense as possible.
 
-```{contents}
-:local:
-```
+
 
 ## Overview
 

@@ -2,9 +2,6 @@
 How To Use Instruction Mappings
 ===============================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

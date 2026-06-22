@@ -2,10 +2,6 @@
 Request For Comment (RFC) process
 =================================
 
-.. contents::
-   :local:
-   :depth: 1
-
 Introduction
 ============
 Substantive changes to LLVM projects need to be acceptable to the wider

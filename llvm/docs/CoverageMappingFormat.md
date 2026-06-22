@@ -1,9 +1,5 @@
 # LLVM Code Coverage Mapping Format
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 LLVM's code coverage mapping format is used to provide code coverage

@@ -4,9 +4,6 @@
 LLVM Developer Policy
 =====================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

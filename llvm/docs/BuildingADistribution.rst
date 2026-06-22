@@ -2,9 +2,6 @@
 Building a Distribution of LLVM
 ===============================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

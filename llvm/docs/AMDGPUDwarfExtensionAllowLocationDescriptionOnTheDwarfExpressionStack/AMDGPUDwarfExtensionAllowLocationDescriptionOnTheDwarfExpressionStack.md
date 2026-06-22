@@ -1,10 +1,6 @@
 # Allow Location Descriptions on the DWARF Expression Stack <!-- omit in toc -->
 
-```{contents}
----
-local:
----
-```
+
 
 # 1. Extension
 

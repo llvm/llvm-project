@@ -19,9 +19,6 @@ The LLVM Target-Independent Code Generator
     .na:before { content: "N/A" }
   </style>
 
-.. contents::
-   :local:
-
 .. warning::
   This is a work in progress.
 

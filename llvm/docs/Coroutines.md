@@ -1,10 +1,5 @@
 # Coroutines in LLVM
 
-```{contents}
-:local:
-:depth: 3
-```
-
 ```{warning}
 Compatibility across LLVM releases is not guaranteed.
 ```

@@ -2,9 +2,6 @@
 User Guide for SPIR-V Target
 =============================
 
-.. contents::
-   :local:
-
 .. toctree::
    :hidden:
 

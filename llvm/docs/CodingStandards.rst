@@ -2,9 +2,6 @@
 LLVM Coding Standards
 =====================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

@@ -2,9 +2,6 @@
 Auto-Vectorization in LLVM
 ==========================
 
-.. contents::
-   :local:
-
 LLVM has two vectorizers: The :ref:`Loop Vectorizer <loop-vectorizer>`,
 which operates on Loops, and the :ref:`SLP Vectorizer
 <slp-vectorizer>`. These vectorizers

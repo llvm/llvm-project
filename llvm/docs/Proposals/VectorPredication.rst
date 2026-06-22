@@ -2,10 +2,6 @@
 Vector Predication Roadmap
 ==========================
 
-.. contents:: Table of Contents
-  :depth: 3
-  :local:
-
 Motivation
 ==========
 

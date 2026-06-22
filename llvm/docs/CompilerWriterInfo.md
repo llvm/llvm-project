@@ -1,8 +1,6 @@
 # Architecture & Platform Information for Compiler Writers
 
-```{contents}
-:local:
-```
+
 
 ```{note}
 This document is a work-in-progress.  Additions and clarifications are

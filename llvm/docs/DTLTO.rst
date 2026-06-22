@@ -1,10 +1,6 @@
 ===================
 DTLTO
 ===================
-.. contents::
-   :local:
-   :depth: 2
-
 .. toctree::
    :maxdepth: 1
 

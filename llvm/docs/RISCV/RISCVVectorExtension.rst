@@ -2,9 +2,6 @@
  RISC-V Vector Extension
 =========================
 
-.. contents::
-   :local:
-
 The RISC-V target supports the 1.0 version of the `RISC-V Vector Extension (RVV) <https://github.com/riscv/riscv-v-spec/blob/v1.0/v-spec.adoc>`_.
 This guide gives an overview of how it's modelled in LLVM IR and how the backend generates code for it.
 

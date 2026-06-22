@@ -7,9 +7,6 @@ User Guide for the DirectX Target
    It is not yet feature complete or ready to be used outside of experimental or
    demonstration contexts.
 
-.. contents::
-   :local:
-
 .. toctree::
    :hidden:
 

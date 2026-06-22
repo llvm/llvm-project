@@ -2,9 +2,6 @@
 LLVM Programmer's Manual
 ========================
 
-.. contents::
-   :local:
-
 .. warning::
    This is always a work in progress.
 

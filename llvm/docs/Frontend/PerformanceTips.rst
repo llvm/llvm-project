@@ -2,10 +2,6 @@
 Performance Tips for Frontend Authors
 =====================================
 
-.. contents::
-   :local:
-   :depth: 2
-
 Abstract
 ========
 
