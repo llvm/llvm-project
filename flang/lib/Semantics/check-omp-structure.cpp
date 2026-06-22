@@ -1283,63 +1283,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   }
 
   if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
-    std::set<Symbol *> singleCopyprivateSyms;
-    std::set<Symbol *> endSingleCopyprivateSyms;
-    bool foundNowait{false};
-    parser::CharBlock NowaitSource;
-
-    auto catchCopyPrivateNowaitClauses = [&](const auto &dirSpec, bool isEnd) {
-      for (auto &clause : dirSpec.Clauses().v) {
-        if (clause.Id() == llvm::omp::Clause::OMPC_copyprivate) {
-          for (const auto &ompObject : GetOmpObjectList(clause)->v) {
-            const auto *name{parser::Unwrap<parser::Name>(ompObject)};
-            if (Symbol * symbol{name->symbol}) {
-              if (singleCopyprivateSyms.count(symbol)) {
-                if (isEnd) {
-                  context_.Warn(common::UsageWarning::OpenMPUsage, name->source,
-                      "The COPYPRIVATE clause with '%s' is already used on the SINGLE directive"_warn_en_US,
-                      name->ToString());
-                } else {
-                  context_.Say(name->source,
-                      "'%s' appears in more than one COPYPRIVATE clause on the SINGLE directive"_err_en_US,
-                      name->ToString());
-                }
-              } else if (endSingleCopyprivateSyms.count(symbol)) {
-                context_.Say(name->source,
-                    "'%s' appears in more than one COPYPRIVATE clause on the END SINGLE directive"_err_en_US,
-                    name->ToString());
-              } else {
-                if (isEnd) {
-                  endSingleCopyprivateSyms.insert(symbol);
-                } else {
-                  singleCopyprivateSyms.insert(symbol);
-                }
-              }
-            }
-          }
-        } else if (clause.Id() == llvm::omp::Clause::OMPC_nowait) {
-          if (foundNowait) {
-            context_.Say(clause.source,
-                "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
-          } else {
-            foundNowait = !isEnd;
-          }
-          if (!NowaitSource.ToString().size()) {
-            NowaitSource = clause.source;
-          }
-        }
-      }
-    };
-    catchCopyPrivateNowaitClauses(beginSpec, false);
-    if (endSpec) {
-      catchCopyPrivateNowaitClauses(*endSpec, true);
-    }
-    unsigned version{context_.langOptions().OpenMPVersion};
-    if (version <= 52 && NowaitSource.ToString().size() &&
-        (singleCopyprivateSyms.size() || endSingleCopyprivateSyms.size())) {
-      context_.Say(NowaitSource,
-          "NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive"_err_en_US);
-    }
+    CheckSingleConstruct(x);
   }
 
   switch (beginSpec.DirId()) {
@@ -1384,6 +1328,78 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
     break;
   default:
     break;
+  }
+}
+
+void OmpStructureChecker::CheckSingleConstruct(
+    const parser::OmpBlockConstruct &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  unsigned version{context_.langOptions().OpenMPVersion};
+  SymbolSourceMap copyPrivateSyms;
+  parser::CharBlock nowaitSource1, nowaitSource2;
+
+  auto catchCopyPrivateNowaitClauses =
+      [&](const parser::OmpDirectiveSpecification &spec,
+          parser::CharBlock &nowaitSource) {
+        for (auto &clause : spec.Clauses().v) {
+          llvm::omp::Clause clauseId{clause.Id()};
+          if (clauseId == llvm::omp::Clause::OMPC_copyprivate) {
+            GetSymbolsInObjectList(*GetOmpObjectList(clause), copyPrivateSyms);
+          } else if (clauseId == llvm::omp::Clause::OMPC_nowait) {
+            if (nowaitSource.empty()) {
+              nowaitSource = clause.source;
+            }
+          }
+        }
+      };
+
+  catchCopyPrivateNowaitClauses(beginSpec, nowaitSource1);
+  if (auto &endSpec{x.EndDir()}) {
+    catchCopyPrivateNowaitClauses(*endSpec, nowaitSource2);
+  }
+
+  std::string nowaitName{//
+      GetUpperName(llvm::omp::Clause::OMPC_nowait, version)};
+  std::string copyPrivateName{
+      GetUpperName(llvm::omp::Clause::OMPC_copyprivate, version)};
+  std::string singleName{
+      GetUpperName(llvm::omp::Directive::OMPD_single, version)};
+
+  std::pair<const Symbol *, parser::CharBlock> last{nullptr, {}};
+  bool reported{false};
+
+  for (auto [symbol, source] : copyPrivateSyms) {
+    if (symbol == last.first) {
+      if (!reported) {
+        context_
+            .Say(source, "'%s' appears more than once in a %s clause"_err_en_US,
+                symbol->name().ToString(), copyPrivateName)
+            .Attach(last.second, "Previous occurrence of '%s'"_en_US,
+                symbol->name().ToString());
+        reported = true;
+      }
+    } else {
+      reported = false;
+    }
+    last = std::make_pair(symbol, source);
+  }
+
+  if (!nowaitSource1.empty() && !nowaitSource2.empty()) {
+    context_
+        .Say(nowaitSource2,
+            // Match the message text with the one emitted by "CheckAllowed".
+            "At most one %s clause can appear on the %s directive"_err_en_US,
+            nowaitName, singleName)
+        .Attach(nowaitSource1, "Previous occurrence of %s"_en_US, nowaitName);
+  }
+
+  if (version <= 52 && !copyPrivateSyms.empty() &&
+      (!nowaitSource1.empty() || !nowaitSource2.empty())) {
+    parser::CharBlock source{
+        !nowaitSource1.empty() ? nowaitSource1 : nowaitSource2};
+    context_.Say(source,
+        "%s clause must not be used with %s clause on %s directive"_err_en_US,
+        nowaitName, copyPrivateName, singleName);
   }
 }
 
