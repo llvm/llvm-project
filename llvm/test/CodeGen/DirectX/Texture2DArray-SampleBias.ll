@@ -21,10 +21,10 @@ define void @samplebias_texture2darray_float4(<3 x float> %coords, float %bias) 
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float poison,
-  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float undef,
+  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float poison)
+  ; CHECK-SAME: float undef)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_7t.tdx.Sampler_0t.v3f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 7) %texture,
@@ -53,10 +53,10 @@ define void @samplebias_texture2darray_with_offset(<3 x float> %coords, float %b
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float poison,
-  ; CHECK-SAME: i32 1, i32 -2, i32 poison,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float undef,
+  ; CHECK-SAME: i32 1, i32 -2, i32 undef,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float poison)
+  ; CHECK-SAME: float undef)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_7t.tdx.Sampler_0t.v3f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 7) %texture,
@@ -80,8 +80,8 @@ define void @samplebias_texture2darray_with_clamp(<3 x float> %coords, float %bi
 
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
-  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float %{{[^,]*}}, float poison,
-  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
+  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float %{{[^,]*}}, float undef,
+  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
   ; CHECK-SAME: float %bias,
   ; CHECK-SAME: float %clamp)
   %data = call <4 x float>

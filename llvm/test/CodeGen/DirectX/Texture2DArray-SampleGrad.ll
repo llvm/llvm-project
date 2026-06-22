@@ -25,11 +25,11 @@ define void @samplegrad_texture2darray_float4(<3 x float> %coords, <2 x float> %
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float poison,
-  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
-  ; CHECK-SAME: float %[[DDX0]], float %[[DDX1]], float poison,
-  ; CHECK-SAME: float %[[DDY0]], float %[[DDY1]], float poison,
-  ; CHECK-SAME: float poison)
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float undef,
+  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %[[DDX0]], float %[[DDX1]], float undef,
+  ; CHECK-SAME: float %[[DDY0]], float %[[DDY1]], float undef,
+  ; CHECK-SAME: float undef)
   %data = call <4 x float>
       @llvm.dx.resource.samplegrad.v4f32.tdx.Texture_v4f32_0_0_0_7t.tdx.Sampler_0t.v3f32.v2f32.v2f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 7) %texture,
@@ -54,11 +54,11 @@ define void @samplegrad_texture2darray_with_offset(<3 x float> %coords, <2 x flo
 
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
-  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float %{{[^,]*}}, float poison,
-  ; CHECK-SAME: i32 1, i32 -2, i32 poison,
-  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float poison,
-  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float poison,
-  ; CHECK-SAME: float poison)
+  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float %{{[^,]*}}, float undef,
+  ; CHECK-SAME: i32 1, i32 -2, i32 undef,
+  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float undef,
+  ; CHECK-SAME: float %{{[^,]*}}, float %{{[^,]*}}, float undef,
+  ; CHECK-SAME: float undef)
   %data = call <4 x float>
       @llvm.dx.resource.samplegrad.v4f32.tdx.Texture_v4f32_0_0_0_7t.tdx.Sampler_0t.v3f32.v2f32.v2f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 7) %texture,
