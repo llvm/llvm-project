@@ -99,7 +99,7 @@ void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
       State = State->BindExpr(CallExpr, SF, ThisVal);
     else
       State = bindReturnValue(Call, SF, State);
-    Dst.insert(Engine.makePostStmtNode(CallExpr, State, Pred));
+    Dst.insert(Engine.makePostStmtNode(CallExpr, State, N));
   }
 }
 
