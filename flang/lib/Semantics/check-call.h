@@ -28,7 +28,7 @@ class SemanticsContext;
 // Check keyword constraints on actual arguments for procedures with implicit
 // interfaces.
 void CheckImplicitInterfaceArgKeywords(
-    evaluate::ActualArgument &, parser::ContextualMessages &);
+    const evaluate::ActualArgument &, parser::ContextualMessages &);
 
 // Check constraints on actual arguments for procedures with implicit
 // interfaces.
