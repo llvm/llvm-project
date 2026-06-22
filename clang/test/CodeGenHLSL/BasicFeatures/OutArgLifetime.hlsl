@@ -8,12 +8,13 @@
 // CHECK-LABEL: define hidden void @_Z9incrementRi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[I]], ptr [[I_ADDR]], align 4, !tbaa [[INTPTR_TBAA6:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 4, !tbaa [[INTPTR_TBAA6]], !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP0]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[I_ADDR]], align 4, !tbaa [[INTPTR_TBAA6]], !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 1
+// CHECK-NEXT:    store i32 [[ADD]], ptr [[TMP1]], align 4, !tbaa [[INT_TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void increment(inout int I) { I += 1; }
@@ -21,54 +22,57 @@ void increment(inout int I) { I += 1; }
 // CHECK-LABEL: define hidden void @_Z5resetRi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[I]], ptr [[I_ADDR]], align 4, !tbaa [[INTPTR_TBAA6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 4, !tbaa [[INTPTR_TBAA6]], !nonnull [[META9]], !align [[META10]]
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[I_ADDR]], align 4, !tbaa [[INTPTR_TBAA6]], !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void reset(out int I) { I = 0; }
 
 // The lifetime.start must come before the copy-in load/store sequence.
-// CHECK-LABEL: define noundef i32 @_Z10inout_testi(
+// CHECK-LABEL: define hidden noundef i32 @_Z10inout_testi(
 // CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]]) #[[ATTR2:[0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    call void @_Z9incrementRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]]) #[[ATTR2]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    call void @_Z9incrementRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR4:[0-9]+]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[TMP2]], ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[X_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    ret i32 [[TMP3]]
 //
-export int inout_test(int X) {
+int inout_test(int X) {
   increment(X);
   return X;
 }
 
 // For `out` parameters there is no copy-in, so lifetime.start just needs
 // to appear before the call with no intervening store to the temporary.
-// CHECK-LABEL: define noundef i32 @_Z8out_testv(
+// CHECK-LABEL: define hidden noundef i32 @_Z8out_testv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]]) #[[ATTR2]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]]) #[[ATTR2]]
-// CHECK-NEXT:    call void @_Z5resetRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[TMP]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]]) #[[ATTR2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR2]]
-// CHECK-NEXT:    ret i32 [[TMP1]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_Z5resetRi(ptr noalias noundef nonnull align 4 dereferenceable(4) [[TMP]]) #[[ATTR4]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[X]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR3]]
+// CHECK-NEXT:    ret i32 [[TMP2]]
 //
-export int out_test() {
+int out_test() {
   int X;
   reset(X);
   return X;
