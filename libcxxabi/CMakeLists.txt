@@ -89,21 +89,20 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 
-# On platforms that don't support shared library targets (e.g. CMAKE_SYSTEM_NAME
-# of "Generic", used for GPU and other baremetal targets), CMake implicitly
-# changes shared library targets into static library targets. The shared target
-# is always defined even when LIBCXXABI_ENABLE_SHARED is off, so this would
-# result in two targets producing the same "libc++abi.a" output and break the
-# build. Give the shared library a different default output name in that case so
-# it can't collide with the static library.
-# See https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't.  See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
 get_property(LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
-if(DEFINED LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS AND NOT LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS)
-  set(LIBCXXABI_DEFAULT_SHARED_OUTPUT_NAME "c++abi-shared")
+if(NOT DEFINED LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS OR LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY ON)
 else()
-  set(LIBCXXABI_DEFAULT_SHARED_OUTPUT_NAME "c++abi")
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY OFF)
 endif()
-set(LIBCXXABI_SHARED_OUTPUT_NAME "${LIBCXXABI_DEFAULT_SHARED_OUTPUT_NAME}" CACHE STRING "Output name for the shared libc++abi runtime library.")
+set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
 set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
 
 set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE STRING "Path to install the libc++abi headers at.")
