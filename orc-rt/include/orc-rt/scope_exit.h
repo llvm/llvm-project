@@ -1,4 +1,4 @@
-//===---------- ScopeExit.h - Execute code at scope exit --------*- C++ -*-===//
+//===---------- scope_exit.h - Execute code at scope exit -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,15 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SCOPEEXIT_H
-#define ORC_RT_SCOPEEXIT_H
+#ifndef ORC_RT_SCOPE_EXIT_H
+#define ORC_RT_SCOPE_EXIT_H
 
-#include <type_traits>
 #include <utility>
 
 namespace orc_rt {
 
-template <typename Fn> class scope_exit {
+template <typename Fn> class [[nodiscard]] scope_exit {
 public:
   template <typename FnInit>
   scope_exit(FnInit &&F) : F(std::forward<FnInit>(F)) {}
@@ -41,4 +40,4 @@ template <typename Fn> scope_exit(Fn) -> scope_exit<Fn>;
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SCOPEEXIT_H
+#endif // ORC_RT_SCOPE_EXIT_H
