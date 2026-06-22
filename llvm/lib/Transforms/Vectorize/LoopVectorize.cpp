@@ -469,7 +469,8 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
 /// following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
-///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
+///   3) Returns upper bound estimate if known, if \p CanUseConstantMax, and
+///      if \p ComputeUpperBoundOnly is false.
 ///   4) Returns the maximum trip count from the SCEV range excluding zero,
 ///      if \p CanUseConstantMax and \p CanExcludeZeroTrips.
 ///   5) Returns std::nullopt if all of the above failed.
