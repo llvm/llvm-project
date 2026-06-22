@@ -274,10 +274,7 @@ cc_library(
     hdrs = glob(["Platform/MacOSX/objcxx/*.h"]),
     includes = [".."],
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = ["//lldb:Host"],
 )
 
@@ -286,10 +283,7 @@ objc_library(
     copts = OBJCPP_COPTS,
     non_arc_srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [
         ":PluginPlatformMacOSXObjCXXHeaders",
         "//lldb:Host",
@@ -2232,10 +2226,7 @@ cc_library(
     srcs = glob(["Process/Linux/*.cpp"]),
     hdrs = glob(["Process/Linux/*.h"]),
     includes = [".."],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":PluginProcessPOSIX",
         ":PluginProcessUtility",
@@ -2336,10 +2327,7 @@ cc_library(
     hdrs = glob(["Process/MacOSX-Kernel/*.h"]),
     includes = [".."],
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [
         ":PluginDynamicLoaderDarwinKernel",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -2424,26 +2412,31 @@ cc_library(
 
 cc_library(
     name = "PluginProcessWindowsCommon",
-    srcs = glob(["Process/Windows/Common/*.cpp"]),
-    hdrs = glob([
-        "Process/Windows/Common/*.h",
-        "Process/Windows/Common/**/*.h",
-    ]),
-    includes = [".."],
-    target_compatible_with = select({
-        "@platforms//os:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
+    srcs = select({
+        "@platforms//os:windows": glob(["Process/Windows/Common/*.cpp"]),
+        "//conditions:default": [],
     }),
-    deps = [
-        ":PluginDynamicLoaderWindowsDYLD",
-        "//lldb:Breakpoint",
-        "//lldb:Core",
-        "//lldb:Headers",
-        "//lldb:Host",
-        "//lldb:Target",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
+    hdrs = select({
+        "@platforms//os:windows": glob([
+            "Process/Windows/Common/*.h",
+            "Process/Windows/Common/**/*.h",
+        ]),
+        "//conditions:default": [],
+    }),
+    includes = [".."],
+    deps = select({
+        "@platforms//os:windows": [
+            ":PluginDynamicLoaderWindowsDYLD",
+            "//lldb:Breakpoint",
+            "//lldb:Core",
+            "//lldb:Headers",
+            "//lldb:Host",
+            "//lldb:Target",
+            "//lldb:Utility",
+            "//llvm:Support",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 _DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in DEFAULT_PLUGINS]) + \

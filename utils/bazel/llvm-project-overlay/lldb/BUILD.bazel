@@ -264,9 +264,13 @@ cc_library(
             "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
             "//lldb/source/Plugins:PluginSymbolVendorMacOSX",
         ],
+        "//conditions:default": [],
+    }) + select({
         "@platforms//os:linux": [
             "//lldb/source/Plugins:PluginProcessLinux",
         ],
+        "//conditions:default": [],
+    }) + select({
         "@platforms//os:windows": [
             "//lldb/source/Plugins:PluginProcessWindowsCommon",
         ],
@@ -518,10 +522,7 @@ cc_library(
     ]),
     includes = ["source"],
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [":UtilityHeaders"],
 )
 
@@ -530,10 +531,7 @@ objc_library(
     copts = OBJCPP_COPTS,
     non_arc_srcs = glob(["source/Host/macosx/objcxx/*.mm"]),
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [
         ":Headers",
         ":HostMacOSXHeaders",
@@ -952,7 +950,12 @@ cc_binary(
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
-    ],
+    ] + select({
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
@@ -960,10 +963,7 @@ cc_library(
     hdrs = glob(["tools/debugserver/source/MacOSX/**/*.h"]),
     strip_include_prefix = "tools/debugserver/source/MacOSX",
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 cc_library(
@@ -971,10 +971,7 @@ cc_library(
     hdrs = glob(["tools/debugserver/source/**/*.h"]),
     strip_include_prefix = "tools/debugserver/source",
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [":DebugServerCommonMacOSXHeaders"],
 )
 
@@ -983,10 +980,7 @@ objc_library(
     copts = OBJCPP_COPTS,
     non_arc_srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [
         ":DebugServerCommonHeaders",
         ":DebugServerCommonMacOSXHeaders",
@@ -1025,10 +1019,7 @@ apple_genrule(
         "manual",
         "nobuildkite",
     ],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
 )
 
 expand_template(
@@ -1049,10 +1040,7 @@ cc_binary(
         "-Wno-vla-cxx-extension",
     ],
     tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     deps = [
         ":DebugServerCommon",
         ":DebugServerCommonHeaders",
@@ -1069,10 +1057,7 @@ apple_genrule(
         "manual",
         "nobuildkite",
     ],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    target_compatible_with = ["@platforms//os:macos"],
     tools = [
         "tools/debugserver/resources/debugserver-macosx-entitlements.plist",
     ],
@@ -1148,6 +1133,11 @@ cc_binary(
         ],
         "@platforms//os:macos": [
             "//lldb/source/Plugins:PluginObjectFileMachO",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
         ],
         "//conditions:default": [],
     }),
