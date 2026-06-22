@@ -24,6 +24,7 @@ add_orc_rt_unittest(CoreTests
   ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp
   ExecutorProcessInfoTest.cpp
+  InProcessControllerAccessTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   LockedAccessTest.cpp
@@ -32,7 +33,7 @@ add_orc_rt_unittest(CoreTests
   MemoryFlagsTest.cpp
   NativeDylibManagerTest.cpp
   NativeDylibManagerSPSCITest.cpp
-  QueueingTaskDispatcherTest.cpp
+  QueueingRunnerTest.cpp
   RTTITest.cpp
   ScopeExitTest.cpp
   SessionTest.cpp
@@ -44,7 +45,7 @@ add_orc_rt_unittest(CoreTests
   SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
   TaskGroupTest.cpp
-  ThreadPoolTaskDispatcherTest.cpp
+  ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp

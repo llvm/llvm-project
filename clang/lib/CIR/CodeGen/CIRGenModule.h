@@ -823,6 +823,9 @@ public:
     return *openMPRuntime;
   }
 
+  bool isPaddedAtomicType(QualType type);
+  bool isPaddedAtomicType(const AtomicType *type);
+
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
   }
