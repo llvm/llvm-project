@@ -11,9 +11,10 @@
 // Test the libc++ extension that std::ranges::transform_view and std::views::transform are marked as [[nodiscard]].
 
 #include <ranges>
+#include <utility>
 #include <functional>
 
-struct TestView : std::ranges::view_interface<TestView> {
+struct View : std::ranges::view_interface<View> {
   int* begin();
   char* begin() const;
   const int* end();
@@ -21,118 +22,68 @@ struct TestView : std::ranges::view_interface<TestView> {
 };
 
 void test() {
-  int range[] = {1, 2, 3};
-  auto f      = [](int i) { return i; };
+  auto v = View{} | std::views::transform(std::identity{});
 
-  auto identity_view     = TestView{} | std::views::transform(std::identity{});
-  auto transformed_range = range | std::views::transform(f);
-
-  const auto const_identity_view     = TestView{} | std::views::transform(std::identity{});
-  const auto const_transformed_range = range | std::views::transform(f);
-
-  auto it             = identity_view.begin();
-  const auto const_it = identity_view.begin();
-
-  auto transformed_range_sent             = transformed_range.end();
-  auto identity_view_sent                 = identity_view.end();
-  const auto const_transformed_range_sent = transformed_range.end();
-  const auto const_identity_view_sent     = identity_view.end();
+  // [range.transform.view]
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_it.base();
+  std::as_const(v).base();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move(v).base();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  it.base();
+  v.begin();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(identity_view, fn).base();
+  v.end();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).end();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  transformed_range.begin();
+  v.size();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).size();
+
+  // [range.transform.iterator]
+
+  auto it = v.base();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_transformed_range.begin();
+  std::as_const(it).base();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move(it).base();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  transformed_range.end();
+  *it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it[0];
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it + 0;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  0 + it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - 0;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - it;
+
+  // [range.transform.sentinel]
+
+  auto st = v.end();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  identity_view.end();
+  st.base();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - st;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  st - it;
+
+  // [range.transform.overview]
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_transformed_range.end();
+  std::views::transform(View{}, std::identity{});
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_identity_view.end();
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(f);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::transform(range, f);
-
-// expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_it[0];
-
-  {
-    // ===== Non-const views =====
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it + 1;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    1 + it;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it - 1;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it - it;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    *it;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it[0];
-  }
-
-  {
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    const_it + 1;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    1 + const_it;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    const_it - 1;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    const_it - const_it;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    *const_it;
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    const_it[0];
-  }
-
-  {
-    // Non-const sentinels
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    transformed_range_sent.base();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    identity_view_sent.base();
-  }
-
-  {
-    // ===== Const sentinels =====
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    const_transformed_range_sent.base();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    const_identity_view_sent.base();
-  }
+  std::views::transform(std::identity{});
 }
