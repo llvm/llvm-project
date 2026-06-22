@@ -75,16 +75,6 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static unsigned getGPRPairCopyOpcode(const RISCVSubtarget &ST) {
-  if (ST.hasStdExtZdinx())
-    return RISCV::FSGNJ_D_IN32X;
-
-  if (ST.hasStdExtP())
-    return RISCV::PADD_DW;
-
-  llvm_unreachable("Unhandled subtarget with paired move.");
-}
-
 static unsigned getCM_MVOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
   if (ST.hasStdExtZcmp())
     return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
@@ -186,25 +176,29 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
   // flag.
   MachineOperand PairedSource = *SecondPair.Source;
 
-  unsigned Opcode = getGPRPairCopyOpcode(*ST);
   for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
     if (It->readsRegister(PairedSource.getReg(), TRI))
       PairedSource.setIsKill(false);
 
-  Register SrcReg1, SrcReg2, DestReg;
   unsigned GPRPairIdx =
       RegPairIsEven ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
-  SrcReg1 = TRI->getMatchingSuperReg(FirstPair.Source->getReg(), GPRPairIdx,
-                                     &RISCV::GPRPairRegClass);
-  SrcReg2 = ST->hasStdExtZdinx() ? SrcReg1 : Register(RISCV::X0_Pair);
-  DestReg = TRI->getMatchingSuperReg(FirstPair.Destination->getReg(),
-                                     GPRPairIdx, &RISCV::GPRPairRegClass);
+  MCRegister SrcReg = TRI->getMatchingSuperReg(
+      FirstPair.Source->getReg(), GPRPairIdx, &RISCV::GPRPairRegClass);
+  MCRegister DestReg = TRI->getMatchingSuperReg(
+      FirstPair.Destination->getReg(), GPRPairIdx, &RISCV::GPRPairRegClass);
+  bool SrcKill = PairedSource.isKill() && FirstPair.Source->isKill();
 
-  BuildMI(*I->getParent(), I, DL, TII->get(Opcode), DestReg)
-      .addReg(SrcReg1, getKillRegState(PairedSource.isKill() &&
-                                       FirstPair.Source->isKill()))
-      .addReg(SrcReg2, getKillRegState(PairedSource.isKill() &&
-                                       FirstPair.Source->isKill()));
+  if (ST->hasStdExtZdinx()) {
+    BuildMI(*I->getParent(), I, DL, TII->get(RISCV::FSGNJ_D_IN32X), DestReg)
+        .addReg(SrcReg)
+        .addReg(SrcReg, getKillRegState(SrcKill));
+  } else if (ST->hasStdExtP()) {
+    BuildMI(*I->getParent(), I, DL, TII->get(RISCV::PADD_DW), DestReg)
+        .addReg(RISCV::X0_Pair)
+        .addReg(SrcReg, getKillRegState(SrcKill));
+  } else {
+    llvm_unreachable("Unhandled subtarget with paired move.");
+  }
 
   I->eraseFromParent();
   Paired->eraseFromParent();
