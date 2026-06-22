@@ -4545,6 +4545,27 @@ static Value *simplifyWithOpsReplaced(Value *V,
 
         return ConstantInt::get(I->getType(), 0);
       }
+
+      if (auto *MMI = dyn_cast<MinMaxIntrinsic>(II)) {
+        const APInt Identity = MMI->getIdentity();
+
+        Value *Result = nullptr;
+        if (match(NewOps[0], m_SpecificInt(Identity)))
+          Result = NewOps[1];
+        else if (match(NewOps[1], m_SpecificInt(Identity)))
+          Result = NewOps[0];
+
+        if (Result) {
+          if (II->hasPoisonGeneratingAnnotations()) {
+            if (!DropFlags)
+              return nullptr;
+
+            DropFlags->push_back(II);
+          }
+
+          return Result;
+        }
+      }
     }
 
     if (isa<GetElementPtrInst>(I)) {
@@ -6907,6 +6928,24 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
       return Constant::getNullValue(ReturnType);
+    break;
+  }
+  case Intrinsic::pdep: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
+    break;
+  }
+  case Intrinsic::pext: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
     break;
   }
   case Intrinsic::ptrmask: {

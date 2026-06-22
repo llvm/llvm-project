@@ -8,5 +8,6 @@
       "name": "test.exe"
     }
   ],
-  "target_triple": "arm64-macosx-apple"
+  "target_triple": "arm64-macosx-apple",
+  "type": "LUSummary"
 }
