@@ -27,8 +27,8 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
-void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
-    parser::ContextualMessages &messages, SemanticsContext &context) {
+void CheckImplicitInterfaceArgKeywords(
+    const evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
@@ -36,6 +36,11 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "Keyword '%s=' may not appear in a reference to a procedure with an implicit interface"_err_en_US,
         *kw);
   }
+}
+
+void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
+    parser::ContextualMessages &messages, SemanticsContext &context) {
+  CheckImplicitInterfaceArgKeywords(arg, messages);
   auto type{arg.GetType()};
   if (type) {
     if (type->IsAssumedType()) {
