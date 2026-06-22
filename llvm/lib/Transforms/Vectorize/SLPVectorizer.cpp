@@ -5347,14 +5347,9 @@ private:
 
   public:
     ScheduleBundle() : ScheduleEntity(Kind::ScheduleBundle) {}
-    ScheduleBundle(bool IsValid, bool NoInternalAlias)
-        : ScheduleEntity(Kind::ScheduleBundle), IsValid(IsValid),
-          NoInternalAlias(NoInternalAlias) {}
     static bool classof(const ScheduleEntity *Entity) {
       return Entity->getKind() == Kind::ScheduleBundle;
     }
-
-    bool NoInternalAlias = false;
 
     /// Verify basic self consistency properties
     void verify() const {
@@ -5372,14 +5367,6 @@ private:
                  "unexpected scheduled state");
         }
       }
-    }
-
-    /// Check to see if an instruction is present in this bundle
-    bool findInst(Instruction *I) {
-      return std::find_if(Bundle.begin(), Bundle.end(),
-                          [&](ScheduleEntity *SE) {
-                            return SE->getInst() == I;
-                          }) != Bundle.end();
     }
 
     /// Returns the number of unscheduled dependencies in the bundle.
@@ -6272,11 +6259,8 @@ private:
     /// \param VL The list of scalar instructions.
     /// \param S The state of the instructions.
     /// \param EI The edge in the SLP graph or the user node/operand number.
-    /// \param NoInternalAlias Ignore any schedule issues due to aliasing within
-    /// the bundle.
     ScheduleBundle &buildBundle(ArrayRef<Value *> VL,
-                                const InstructionsState &S, const EdgeInfo &EI,
-                                bool NoInternalAlias);
+                                const InstructionsState &S, const EdgeInfo &EI);
 
     /// Checks if a bundle of instructions can be scheduled, i.e. has no
     /// cyclic dependencies. This is only a dry-run, no instructions are
@@ -6285,8 +6269,7 @@ private:
     /// std::nullopt if \p VL is allowed to be scheduled.
     std::optional<ScheduleBundle *>
     tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
-                      const InstructionsState &S, const EdgeInfo &EI,
-                      bool NoInternalAlias);
+                      const InstructionsState &S, const EdgeInfo &EI);
 
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
@@ -12976,11 +12959,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
-  bool NoInternalAlias =
-      isa<StoreInst>(VL0) && State == TreeEntry::StridedVectorize;
   SetVector<Value *> UniqueValues(llvm::from_range, VL);
-  std::optional<ScheduleBundle *> BundlePtr = BS.tryScheduleBundle(
-      UniqueValues.getArrayRef(), this, S, UserTreeIdx, NoInternalAlias);
+  std::optional<ScheduleBundle *> BundlePtr =
+      BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S, UserTreeIdx);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -25074,10 +25055,9 @@ void BoUpSLP::optimizeGatherSequence() {
 }
 
 BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
-    ArrayRef<Value *> VL, const InstructionsState &S, const EdgeInfo &EI,
-    bool NoInternalAlias) {
-  auto &BundlePtr = ScheduledBundlesList.emplace_back(
-      std::make_unique<ScheduleBundle>(/*IsValid*/ true, NoInternalAlias));
+    ArrayRef<Value *> VL, const InstructionsState &S, const EdgeInfo &EI) {
+  auto &BundlePtr =
+      ScheduledBundlesList.emplace_back(std::make_unique<ScheduleBundle>());
   for (Value *V : VL) {
     if (S.isNonSchedulable(V))
       continue;
@@ -25107,8 +25087,7 @@ BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
 std::optional<BoUpSLP::ScheduleBundle *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S,
-                                            const EdgeInfo &EI,
-                                            bool NoInternalAlias) {
+                                            const EdgeInfo &EI) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
@@ -25476,7 +25455,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ReSchedule = true;
   }
 
-  ScheduleBundle &Bundle = buildBundle(VL, S, EI, NoInternalAlias);
+  ScheduleBundle &Bundle = buildBundle(VL, S, EI);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle.isReady()) {
     for (ScheduleEntity *BD : Bundle.getBundle()) {
@@ -25941,17 +25920,16 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
            (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
             SLP->isAliased(SrcLoc, SrcInst, DepDest->getInst())))) {
 
-        if (!Bundle.NoInternalAlias || !Bundle.findInst(DepDest->getInst())) {
-          // We increment the counter only if the locations are aliased
-          // (instead of counting all alias checks). This gives a better
-          // balance between reduced runtime and accurate dependencies.
-          NumAliased++;
+        // We increment the counter only if the locations are aliased
+        // (instead of counting all alias checks). This gives a better
+        // balance between reduced runtime and accurate dependencies.
+        NumAliased++;
 
-          DepDest->addMemoryDependency(BundleMember);
-          BundleMember->incDependencies();
-          if (!DepDest->isScheduled())
-            BundleMember->incrementUnscheduledDeps(1);
-        }
+        DepDest->addMemoryDependency(BundleMember);
+        BundleMember->incDependencies();
+        if (!DepDest->isScheduled())
+          BundleMember->incrementUnscheduledDeps(1);
+
         if (!DepDest->hasValidDependencies() ||
             (InsertInReadyList && DepDest->isReady()))
           WorkList.push_back(DepDest);
