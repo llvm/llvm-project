@@ -50,7 +50,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/TextEncoding.h"
 #include <cassert>
 #include <cstddef>
@@ -851,10 +850,6 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// This includes both the input charset converter and file tag converters.
   /// Maps from "source_encoding:target_encoding" to the converter.
   llvm::StringMap<std::unique_ptr<llvm::TextEncodingConverter>> ConverterCache;
-  
-  /// Read-write mutex to protect ConverterCache for thread-safe access.
-  /// Allows multiple concurrent readers while ensuring exclusive write access.
-  mutable llvm::sys::RWMutex ConverterCacheMutex;
 
 public:
   SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,

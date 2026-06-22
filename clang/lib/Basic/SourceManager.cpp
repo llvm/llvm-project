@@ -507,18 +507,7 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
     CacheKey += TargetEncoding;
   }
 
-  // First, try to find the converter with a read lock
-  {
-    llvm::sys::ScopedReader ReadLock(ConverterCacheMutex);
-    auto It = ConverterCache.find(CacheKey);
-    if (It != ConverterCache.end())
-      return It->second.get();
-  }
-
-  // Converter not found, acquire write lock to create it
-  llvm::sys::ScopedWriter WriteLock(ConverterCacheMutex);
-  
-  // Double-check that another thread didn't create it while we were waiting
+  // Check if converter already exists in cache
   auto It = ConverterCache.find(CacheKey);
   if (It != ConverterCache.end())
     return It->second.get();
