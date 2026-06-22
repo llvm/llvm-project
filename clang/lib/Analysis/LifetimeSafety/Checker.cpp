@@ -134,11 +134,10 @@ public:
       if (IsMoved)
         return;
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
-        // Track that this lifetimebound parameter correctly escapes.
-        bool isVerifiedEscape =
-            isa<ReturnEscapeFact>(OEF) ||
-            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD));
-        if (isVerifiedEscape)
+        // Track that this lifetimebound parameter correctly escapes
+        // (via return or via field assignment in a constructor).
+        if (isa<ReturnEscapeFact>(OEF) ||
+            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD)))
           VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
