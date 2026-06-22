@@ -7289,6 +7289,13 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       any_of(Args, IsaPred<PoisonValue>))
     return PoisonValue::get(ReturnType);
 
+  // Defer to ConstantFolding if all args are constants.
+  if (all_of(Args, IsaPred<Constant>))
+    if (Constant *C = ConstantFoldIntrinsic(
+            IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
+            ReturnType))
+      return C;
+
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.
   if (!NumOperands) {
