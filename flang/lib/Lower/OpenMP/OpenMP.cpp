@@ -53,6 +53,8 @@
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -783,6 +785,111 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
   }
 }
 
+// Translate a semantics-layer device_type to the MLIR enum used by
+// omp.groupprivate.
+static mlir::omp::DeclareTargetDeviceType
+toMLIRDeclareTargetDeviceType(Fortran::common::OmpDeviceType deviceType) {
+  switch (deviceType) {
+  case Fortran::common::OmpDeviceType::Any:
+    return mlir::omp::DeclareTargetDeviceType::any;
+  case Fortran::common::OmpDeviceType::Host:
+    return mlir::omp::DeclareTargetDeviceType::host;
+  case Fortran::common::OmpDeviceType::Nohost:
+    return mlir::omp::DeclareTargetDeviceType::nohost;
+  }
+  llvm_unreachable("invalid OmpDeviceType");
+}
+
+static void groupprivatizeVars(lower::AbstractConverter &converter,
+                               lower::pft::Evaluation &eval) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+  firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+
+  auto module = converter.getModuleOp();
+
+  // Create a groupprivate operation for the symbol.
+  auto genGroupprivateOp = [&](const semantics::Symbol &sym) -> mlir::Value {
+    std::string globalName = converter.mangleName(sym);
+    fir::GlobalOp global = module.lookupSymbol<fir::GlobalOp>(globalName);
+    if (!global)
+      return mlir::Value();
+
+    // The device_type modifier was recorded on the symbol during semantic
+    // analysis.
+    mlir::omp::DeclareTargetDeviceType deviceTypeEnum =
+        mlir::omp::DeclareTargetDeviceType::any;
+    Fortran::common::visit(
+        [&](auto &&details) {
+          using TypeD = llvm::remove_cvref_t<decltype(details)>;
+          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
+                                          TypeD>) {
+            if (auto dt = details.ompGroupprivateDeviceType())
+              deviceTypeEnum = toMLIRDeclareTargetDeviceType(*dt);
+          }
+        },
+        sym.GetUltimate().details());
+    mlir::omp::DeclareTargetDeviceTypeAttr deviceTypeAttr =
+        mlir::omp::DeclareTargetDeviceTypeAttr::get(firOpBuilder.getContext(),
+                                                    deviceTypeEnum);
+
+    // omp.groupprivate takes a flat symbol reference and returns
+    // the address of the per-contention group copy of the global variable.
+    return mlir::omp::GroupprivateOp::create(
+        firOpBuilder, currentLocation, global.resultType(), global.getSymbol(),
+        deviceTypeAttr);
+  };
+
+  llvm::SetVector<const semantics::Symbol *> groupprivateSyms;
+  converter.collectSymbolSet(eval, groupprivateSyms,
+                             semantics::Symbol::Flag::OmpGroupPrivate,
+                             /*collectSymbols=*/true,
+                             /*collectHostAssociatedSymbols=*/true);
+  llvm::SmallSet<semantics::SourceName, 8> groupprivateSymNames;
+
+  // For a COMMON block, the GroupprivateOp is generated for the block itself
+  // instead of its members.
+  llvm::SmallPtrSet<const semantics::Symbol *, 8> commonSyms;
+
+  for (const semantics::Symbol *sym : groupprivateSyms) {
+    mlir::Value symGroupprivateValue;
+    // The variable may be used more than once, and each reference has one
+    // symbol with the same name. Only do once for references of one variable.
+    if (!groupprivateSymNames.insert(sym->name()).second)
+      continue;
+
+    if (const semantics::Symbol *common =
+            semantics::FindCommonBlockContaining(sym->GetUltimate())) {
+      // Handle common block members: create groupprivate op for the entire
+      // common block, then compute member offset.
+      mlir::Value commonGroupprivateValue;
+      if (commonSyms.contains(common)) {
+        commonGroupprivateValue = converter.getSymbolAddress(*common);
+      } else {
+        commonGroupprivateValue = genGroupprivateOp(*common);
+        if (!commonGroupprivateValue)
+          continue;
+        converter.bindSymbol(*common, commonGroupprivateValue);
+        commonSyms.insert(common);
+      }
+      symGroupprivateValue = lower::genCommonBlockMember(
+          converter, currentLocation, sym->GetUltimate(),
+          commonGroupprivateValue, common->size());
+    } else {
+      symGroupprivateValue = genGroupprivateOp(*sym);
+    }
+
+    if (!symGroupprivateValue)
+      continue;
+
+    fir::ExtendedValue sexv = converter.getSymbolExtendedValue(*sym);
+    fir::ExtendedValue symGroupprivateExv =
+        getExtendedValue(sexv, symGroupprivateValue);
+    converter.bindSymbol(*sym, symGroupprivateExv);
+  }
+}
+
 static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
                                    mlir::Location loc, mlir::Value indexVal,
                                    const semantics::Symbol *sym) {
@@ -1342,6 +1449,10 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     }
   }
 
+  // TODO: groupprivate is currently only materialised for `teams` constructs.
+  if (info.dir == llvm::omp::Directive::OMPD_teams)
+    groupprivatizeVars(info.converter, info.eval);
+
   if (!info.genSkeletonOnly) {
     if (ConstructQueue::const_iterator next = std::next(item);
         next != queue.end()) {
@@ -1899,11 +2010,6 @@ genTargetClauses(lower::AbstractConverter &converter,
   cp.processThreadLimit(stmtCtx, clauseOps);
   cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
-
-  // `target private(..)` is only supported in delayed privatization mode.
-  if (!enableDelayedPrivatizationStaging)
-    cp.processTODO<clause::Firstprivate, clause::Private>(
-        loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -3030,6 +3136,11 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !symbolsWithDynamicSubstring.contains(&sym.GetUltimate()))
       return;
 
+    // Skip groupprivate symbols - they don't need to be mapped because
+    // groupprivate creates its own storage.
+    if (sym.GetUltimate().test(semantics::Symbol::Flag::OmpGroupPrivate))
+      return;
+
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
                                  hasDeviceAddrObjects, mapObjects,
                                  isDevicePtrObjects)) {
@@ -3349,6 +3460,9 @@ static mlir::omp::DistributeOp genStandaloneDistribute(
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
+  // Dynamic private arrays cannot safely be allocated in GPU scratch when the
+  // descriptor is captured through the distribute callback.
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&distributeClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -3543,6 +3657,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   DataSharingProcessor dsp(converter, semaCtx, doItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            /*useDelayedPrivatization=*/true, symTable);
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&parallelClauseOps);
 
   ObjectEntryBlockArgs parallelArgs;
@@ -4405,7 +4520,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                   defOp.u);
             },
             [&](const clause::ProcedureDesignator &pd) -> std::string {
-              return pd.v.sym()->name().ToString();
+              // Qualify the name with the scope in which the user-defined
+              // reduction is declared so that reductions with the same name
+              // in different scopes produce distinct omp.declare_reduction ops.
+              const semantics::Symbol *sym = pd.v.sym();
+              std::string name = sym->name().ToString();
+              return converter.mangleName(name, sym->GetUltimate().owner());
             },
         },
         redOp.u);
@@ -4585,7 +4705,7 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4624,7 +4744,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpGroupprivateDirective &directive) {
-  TODO(converter.getCurrentLocation(), "GROUPPRIVATE");
+  // The semantic analysis sets the flag and device_type on the
+  // symbols; omp.groupprivate is materialised by groupprivatizeVars.
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4646,49 +4767,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 }
 
 namespace {
-struct TargetOMPContext final : public llvm::omp::OMPContext {
-  TargetOMPContext(mlir::ModuleOp module,
-                   llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
-      // Metadirective lowering has no selected target device, so construct the
-      // context with an unknown device number. Target-device selectors are
-      // rejected before matching because OMPContext would otherwise describe
-      // the host device in this mode.
-      : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
-                   getOffloadTargetTriple(module),
-                   /*DeviceNum=*/-1),
-        targetFeatures(fir::getTargetFeatures(module)) {
-    for (llvm::omp::TraitProperty trait : constructTraits)
-      addTrait(trait);
-  }
-
-  bool matchesISATrait(llvm::StringRef rawString) const override {
-    if (!targetFeatures || targetFeatures.nullOrEmpty())
-      return false;
-    return targetFeatures.contains(("+" + rawString).str());
-  }
-
-private:
-  static bool isDeviceCompilation(mlir::ModuleOp module) {
-    return llvm::cast<mlir::omp::OffloadModuleInterface>(*module.getOperation())
-        .getIsTargetDevice();
-  }
-
-  static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
-    auto offloadMod =
-        llvm::cast<mlir::omp::OffloadModuleInterface>(*module.getOperation());
-    auto targetTriples = offloadMod.getTargetTriples();
-
-    if (!targetTriples.empty())
-      if (auto tripleAttr =
-              llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
-        return llvm::Triple(tripleAttr.getValue());
-
-    return llvm::Triple();
-  }
-
-  mlir::LLVM::TargetFeaturesAttr targetFeatures;
-};
-
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(
       const parser::OmpDirectiveSpecification *spec,
@@ -4706,21 +4784,6 @@ struct MetadirectiveCandidate {
 };
 } // namespace
 
-static void appendConstructTraits(
-    mlir::Operation *op,
-    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  if (mlir::isa<mlir::omp::WsloopOp>(op))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-  if (mlir::isa<mlir::omp::ParallelOp>(op))
-    constructTraits.push_back(
-        llvm::omp::TraitProperty::construct_parallel_parallel);
-  if (mlir::isa<mlir::omp::TeamsOp>(op))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
-  if (mlir::isa<mlir::omp::TargetOp>(op))
-    constructTraits.push_back(
-        llvm::omp::TraitProperty::construct_target_target);
-}
-
 static void genMetadirective(lower::AbstractConverter &converter,
                              lower::SymMap &symTable,
                              semantics::SemanticsContext &semaCtx,
@@ -4729,16 +4792,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  // Collect enclosing OpenMP operations so variants chosen by an outer
-  // metadirective are part of this metadirective's context. For example, an
-  // inner metadirective inside `target` and an outer-selected `parallel` must
-  // be able to match construct={target, parallel}.
-  for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
-       op = op->getParentOp())
-    appendConstructTraits(op, constructTraits);
-
-  std::reverse(constructTraits.begin(), constructTraits.end());
-  TargetOMPContext ompCtx(builder.getModule(), constructTraits);
+  collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
+                                  constructTraits);
+  FlangOMPContext ompCtx(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
   // A null directive specification represents either the implicit `nothing`
@@ -4919,7 +4975,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto selectBestCandidate =
       [](llvm::ArrayRef<unsigned> candidateIndices,
          llvm::ArrayRef<MetadirectiveCandidate> candidates,
-         const TargetOMPContext &ompCtx) -> std::optional<unsigned> {
+         const FlangOMPContext &ompCtx) -> std::optional<unsigned> {
     if (candidateIndices.empty())
       return std::nullopt;
     if (candidateIndices.size() == 1)
@@ -5300,9 +5356,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OmpUtilityDirective &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpUtilityDirective");
+                   const parser::OmpUtilityDirective &dir) {
+  common::visit(common::visitors{
+                    [&](const parser::OmpNothingDirective &) {
+                      // nothing-directive is a no-op (OpenMP 5.2 [8.4])
+                    },
+                    [&](const parser::OmpErrorDirective &) {
+                      if (!semaCtx.langOptions().OpenMPSimd)
+                        TODO(converter.getCurrentLocation(),
+                             "OmpErrorDirective");
+                    },
+                },
+                dir.u);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -5427,11 +5492,39 @@ void Fortran::lower::genOpenMPSymbolProperties(
   assert(var.hasSymbol() && "Expecting Symbol");
   const semantics::Symbol &sym = var.getSymbol();
 
+  if (sym.test(semantics::Symbol::Flag::OmpGroupPrivate))
+    lower::genGroupprivateOp(converter, var);
+
   if (sym.test(semantics::Symbol::Flag::OmpThreadprivate))
     lower::genThreadprivateOp(converter, var);
 
   if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
     lower::genDeclareTargetIntGlobal(converter, var);
+}
+
+void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
+                                       const lower::pft::Variable &var) {
+  const semantics::Symbol &sym = var.getSymbol();
+
+  // For common block members, the groupprivate op is generated for the entire
+  // common block in groupprivatizeVars, not for individual members here.
+  // The common block already has a global, so nothing to do here.
+  if (semantics::FindCommonBlockContaining(sym.GetUltimate()))
+    return;
+
+  // Handle non-global variables: local variables with the SAVE attribute can
+  // appear in a groupprivate directive. Promote them to fir.global so that
+  // omp.groupprivate can reference them by symbol name.
+  if (!var.isGlobal()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location currentLocation = converter.getCurrentLocation();
+    auto module = converter.getModuleOp();
+    std::string globalName = converter.mangleName(sym);
+    if (!module.lookupSymbol<fir::GlobalOp>(globalName))
+      globalInitialization(converter, firOpBuilder, sym, var, currentLocation);
+  }
+
+  // The actual omp.groupprivate operations are created by groupprivatizeVars.
 }
 
 void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,

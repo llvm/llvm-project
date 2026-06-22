@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # wasm inferiors are built with -fno-exceptions
 class CPPBreakpointTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -22,6 +23,7 @@ class CPPBreakpointTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24538, clang-cl does not support throw or catch",
     )
+    @expectedFailureAll(archs=["arm64e"])
     def test(self):
         """Test lldb exception breakpoint command for CPP."""
         self.build()

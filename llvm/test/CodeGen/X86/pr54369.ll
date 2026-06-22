@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=x86_64-- -O0 < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-- -O0 -mattr=+zu < %s | FileCheck %s -check-prefix=SETZUCC
 ; RUN: llc -mtriple=x86_64-- -O0 -mattr=+zu,+prefer-legacy-setcc < %s | FileCheck %s -check-prefix=NO-SETZUCC
+; RUN: llc -mtriple=x86_64-- -O0 -mcpu=novalake -mattr=-ndd,-egpr,-ccmp,-cf,-nf,-push2pop2,-ppx < %s | FileCheck %s -check-prefix=NO-SETZUCC
+; RUN: llc -mtriple=x86_64-- -O0 -mcpu=diamondrapids -mattr=-ndd,-egpr,-ccmp,-cf,-nf,-push2pop2,-ppx < %s | FileCheck %s -check-prefix=NO-SETZUCC
 
 define i64 @adder(i64 %lhs, i64 %rhs) {
 ; CHECK-LABEL: adder:

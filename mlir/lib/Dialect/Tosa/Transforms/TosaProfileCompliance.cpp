@@ -186,6 +186,14 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RowGatherOp op) {
+  addValue(op.getValues());
+  addValue(op.getIndices());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult
 ProfileInfoDepot::populateProfileInfo(tosa::RowGatherBlockScaledOp op) {
   for (Value value : op.getValues())
@@ -300,6 +308,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Tile)
   POPULATE_PROFILE_INFO_CUSTOM(Transpose)
   POPULATE_PROFILE_INFO_CUSTOM(Gather)
+  POPULATE_PROFILE_INFO_CUSTOM(RowGather)
   POPULATE_PROFILE_INFO_CUSTOM(RowGatherBlockScaled)
   POPULATE_PROFILE_INFO_CUSTOM(Scatter)
   POPULATE_PROFILE_INFO_CUSTOM(Resize)
