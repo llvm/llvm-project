@@ -19,6 +19,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "BitcodeEmitter.h"
+#include "ConstantExprLower.h"
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"

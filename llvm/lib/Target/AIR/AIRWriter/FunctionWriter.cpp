@@ -13,9 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AIRConstraints.h"
 #include "BitcodeEncoding.h"
 #include "MetadataWriter.h"
+#include "AIRConstraints.h"
 #include "ValueEnumerator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,7 +30,6 @@ using namespace llvm;
 namespace llvm {
 namespace metal {
 
-// Forward declaration
 void emitConstantsBlock(
     BitstreamWriter &W, ValueEnumerator &E,
     ArrayRef<const Constant *> Constants, unsigned CodeSize,
@@ -54,17 +53,12 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
     }
   }
 
-  // Build local value ID map
   DenseMap<const Value *, unsigned> LocalMap;
   unsigned NextID = E.globalValues.size() + E.moduleConstants.size();
 
   for (auto &Arg : F.args())
     LocalMap[&Arg] = NextID++;
 
-  // Collect function-level constants - include constants even if they're
-  // also module constants. AIR v1 bitcode requires function-level
-  // constant entries; referencing module constants directly from function
-  // instructions causes GPU JIT materializeAll failures.
   SmallVector<const Constant *, 32> FuncConsts;
   auto CollectConst = [&](const Value *Op) {
     if (auto *C = dyn_cast<Constant>(Op))
@@ -74,13 +68,13 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         FuncConsts.push_back(C);
       }
   };
+
   DenseMap<const Constant *, unsigned> PoisonPtrTypeIdx;
   for (const BasicBlock *BB : BBOrder)
     for (auto &I : *BB) {
       for (auto &Op : I.operands())
         CollectConst(Op);
-      // The shuffle mask is not an operand in-memory but is referenced by
-      // the INST_SHUFFLEVEC record like one.
+
       if (auto *SV = dyn_cast<ShuffleVectorInst>(&I))
         CollectConst(SV->getShuffleMaskForBitcode());
       if (auto *CI = dyn_cast<CallInst>(&I)) {
@@ -91,6 +85,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
               if (isa<UndefValue>(AC) && AC->getType()->isPointerTy())
                 PoisonPtrTypeIdx.try_emplace(AC, It->second[J]);
       }
+
       if (auto *SI = dyn_cast<StoreInst>(&I)) {
         if (auto *PC = dyn_cast<Constant>(SI->getPointerOperand()))
           if (isa<UndefValue>(PC))
@@ -112,7 +107,6 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
       }
     }
 
-  // Instruction results
   for (const BasicBlock *BB : BBOrder)
     for (auto &I : *BB)
       if (!I.getType()->isVoidTy())
@@ -130,21 +124,17 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
     return 0;
   };
 
-  // Relative value IDs (current instruction ID minus referenced value ID)
   unsigned CurInstID = E.globalValues.size() + E.moduleConstants.size() +
                        F.arg_size() + FuncConsts.size();
   auto GetID = [&](const Value *V) -> unsigned {
     return CurInstID - GetAbsID(V);
   };
 
-  // DECLAREBLOCKS
   SmallVector<uint64_t, 1> DV = {BBOrder.size()};
   W.EmitRecord(bitc::FUNC_CODE_DECLAREBLOCKS, DV);
 
-  // Function constants
   emitConstantsBlock(W, E, FuncConsts, 5, &PoisonPtrTypeIdx);
 
-  // BB index helper
   SmallVector<const BasicBlock *, 8> BBList(BBOrder.begin(), BBOrder.end());
   auto BBIdx = [&](const BasicBlock *BB) -> unsigned {
     for (unsigned I = 0; I < BBList.size(); I++)
@@ -153,9 +143,6 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
     return 0;
   };
 
-  // Emit instructions. Track (InstrIdx, Inst*) for any inst with attached MD;
-  // InstrIdx is 0-based across the emitted stream so the reader (which builds
-  // an InstructionList in parallel) can index it via Record[0].
   SmallVector<std::pair<unsigned, const Instruction *>, 8> Attached;
   unsigned EmittedIdx = 0;
   for (const BasicBlock *BB : BBOrder) {
@@ -171,8 +158,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         W.EmitRecord(bitc::FUNC_CODE_INST_BINOP, V);
       } else if (auto *CI = dyn_cast<CastInst>(&I)) {
         V.push_back(GetID(CI->getOperand(0)));
-        // For casts producing pointers, use PTM-inferred pointee
-        // (AIR v1 needs correct typed pointer per value usage)
+
         if (CI->getType()->isPointerTy()) {
           V.push_back(E.ptrTypeIdxForValue(CI));
         } else {
@@ -182,8 +168,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         W.EmitRecord(bitc::FUNC_CODE_INST_CAST, V);
       } else if (auto *LI = dyn_cast<LoadInst>(&I)) {
         V.push_back(GetID(LI->getPointerOperand()));
-        // For loads producing pointer types, use per-value pointee
-        // (same rationale as PHI - avoid single-pointee-per-AS mismatch)
+
         if (LI->getType()->isPointerTy())
           V.push_back(E.ptrTypeIdxForValue(LI));
         else
@@ -199,41 +184,13 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         W.EmitRecord(bitc::FUNC_CODE_INST_STORE, V);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         V.push_back(GEP->isInBounds() ? 1 : 0);
-        // AIR GPU JIT requires GEP source type to match pointer's pointee
-        // type. For device (AS 1) pointers collapsed to float*, remap i32
-        // GEP source type to float (same 4-byte stride) - but ONLY when
-        // all terminal users (following GEP chains) consume float. If any
-        // terminal user is a non-float load/store/atomic, keep i32.
+
         Type *GepSrcTy = GEP->getSourceElementType();
         if (GEP->getPointerAddressSpace() == metal::AS::Device &&
             GepSrcTy->isIntegerTy(32)) {
-          // Walk GEP chains to find terminal (non-GEP) users
-          bool AllTerminalFloat = true;
-          SmallVector<const GetElementPtrInst *, 8> Worklist;
-          Worklist.push_back(GEP);
-          while (!Worklist.empty() && AllTerminalFloat) {
-            auto *G = Worklist.pop_back_val();
-            for (auto *U : G->users()) {
-              if (auto *SubGEP = dyn_cast<GetElementPtrInst>(U)) {
-                Worklist.push_back(SubGEP);
-              } else if (auto *LI = dyn_cast<LoadInst>(U)) {
-                if (!LI->getType()->isFloatTy()) {
-                  AllTerminalFloat = false;
-                  break;
-                }
-              } else if (auto *SI = dyn_cast<StoreInst>(U)) {
-                if (!SI->getValueOperand()->getType()->isFloatTy()) {
-                  AllTerminalFloat = false;
-                  break;
-                }
-              } else {
-                AllTerminalFloat = false;
-                break;
-              }
-            }
-          }
-          if (AllTerminalFloat)
-            GepSrcTy = Type::getFloatTy(F.getContext());
+          if (auto *PtmTy = E.PTM.get(const_cast<GetElementPtrInst *>(GEP)))
+            if (PtmTy->isFloatTy())
+              GepSrcTy = PtmTy;
         }
         V.push_back(E.typeIdx(GepSrcTy));
         for (auto &Op : GEP->operands())
@@ -265,6 +222,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
           V.push_back(Idx);
         W.EmitRecord(bitc::FUNC_CODE_INST_EXTRACTVAL, V);
       } else if (auto *Sel = dyn_cast<SelectInst>(&I)) {
+
         V.push_back(GetID(Sel->getTrueValue()));
         V.push_back(GetID(Sel->getFalseValue()));
         V.push_back(GetID(Sel->getCondition()));
@@ -278,21 +236,16 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         V.push_back(Cmp->getPredicate());
         W.EmitRecord(bitc::FUNC_CODE_INST_CMP2, V);
       } else if (auto *PN = dyn_cast<PHINode>(&I)) {
-        // For pointer-typed PHIs, use per-value pointee type from PTM
-        // to avoid mismatch when different AS1 params have different
-        // pointee types (e.g., half* vs float*). The generic typeIdx()
-        // returns a single pointee per address space, which is wrong
-        // when the PHI's incoming values have a different pointee.
+
         if (PN->getType()->isPointerTy())
           V.push_back(E.ptrTypeIdxForValue(PN));
         else
           V.push_back(E.typeIdx(PN->getType()));
         for (unsigned J = 0; J < PN->getNumIncomingValues(); J++) {
-          // PHI uses signed relative IDs (back-edge values have higher absID
-          // than current, producing negative relative ID = forward reference)
+
           int64_t RelID =
               (int64_t)CurInstID - (int64_t)GetAbsID(PN->getIncomingValue(J));
-          // Signed VBR: positive n → 2n, negative n → (-2n)+1
+
           uint64_t Encoded = (RelID >= 0) ? ((uint64_t)RelID << 1)
                                           : ((uint64_t)(-RelID) << 1) | 1;
           V.push_back(Encoded);
@@ -314,15 +267,13 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
       } else if (isa<UnreachableInst>(&I)) {
         W.EmitRecord(bitc::FUNC_CODE_INST_UNREACHABLE, V);
       } else if (auto *CI = dyn_cast<CallInst>(&I)) {
-        // CALL: [paramattr, cc_flags, fnty, fnid, ...args, [sentinel]]
-        // MMA load calls need paramattr=1 (nocapture+readonly on ptr param)
+
         bool IsMMALoadCall = false;
         if (auto *Callee = CI->getCalledFunction())
           IsMMALoadCall =
               Callee->getName().starts_with("air.simdgroup_matrix_8x8_load");
         V.push_back(IsMMALoadCall ? 1 : 0);
 
-        // Detect MMA intrinsics that need operand bundle encoding
         bool IsMMAWithBundles = false;
         if (auto *Callee = CI->getCalledFunction()) {
           StringRef Name = Callee->getName();
@@ -336,13 +287,13 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
           Flags |= 1;
         if (CI->getCallingConv() != CallingConv::C)
           Flags |= (uint64_t)CI->getCallingConv() << 1;
-        Flags |= (1 << 15); // explicit function type
+        Flags |= (1 << 15);
         if (IsMMAWithBundles)
-          Flags |= (1 << 17); // operand bundles
+          Flags |= (1 << 17);
         V.push_back(Flags);
 
         if (IsMMAWithBundles) {
-          // MMA bundle encoding: sentinel 254, then function type, then callee
+
           V.push_back(254);
           V.push_back(E.typeIdx(CI->getFunctionType()));
         } else {
@@ -354,12 +305,11 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
           V.push_back(GetID(CI->getArgOperand(J)));
         W.EmitRecord(bitc::FUNC_CODE_INST_CALL, V);
       } else if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-        // For event storage allocas (alloca ptr addrspace(3)), the
-        // allocated type must be event_t*3, not the default float*3.
+
         Type *AllocTy = AI->getAllocatedType();
         if (AllocTy->isPointerTy() && AllocTy->getPointerAddressSpace() == 3) {
           if (auto *EvTy =
-                  StructType::getTypeByName(AI->getContext(), "event_t"))
+                  StructType::getTypeByName(AI->getContext(), kEventTypeName))
             V.push_back(
                 E.ptrTypeIdx(PointerType::get(AI->getContext(), 3), EvTy));
           else
@@ -372,9 +322,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         V.push_back((1 << 6) | (Log2_32(AI->getAlign().value()) + 1));
         W.EmitRecord(bitc::FUNC_CODE_INST_ALLOCA, V);
       } else {
-        // Emitting nothing here while CurInstID still advances silently
-        // desynchronizes every later relative operand ID in the bitstream
-        // (reader-side "Invalid record" far from the cause). Fail loud.
+
         report_fatal_error(Twine("AIRWriter: unhandled instruction '") +
                            I.getOpcodeName() + "' in function '" + F.getName() +
                            "'");
@@ -389,7 +337,6 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
     }
   }
 
-  // E2b: per-instruction metadata attachments (alias.scope, noalias, tbaa).
   if (!Attached.empty()) {
     W.EnterSubblock(bitc::METADATA_ATTACHMENT_ID, 3);
     SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
@@ -411,5 +358,5 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
   W.ExitBlock();
 }
 
-} // namespace metal
-} // namespace llvm
+}
+}

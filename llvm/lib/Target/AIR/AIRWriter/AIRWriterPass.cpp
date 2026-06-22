@@ -9,6 +9,7 @@
 #include "AIRWriterPass.h"
 #include "AIRLibWriter.h"
 #include "BitcodeEmitter.h"
+#include "ConstantExprLower.h"
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"

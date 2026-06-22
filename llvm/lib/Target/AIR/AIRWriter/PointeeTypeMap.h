@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -139,9 +140,8 @@ private:
 // call it directly.
 PointeeTypeMap buildPointeeTypeMap(llvm::Module &M);
 
-// ── LLVM Analysis wrapper ────────────────────────────────────────────────
-// Shared across passes via the AnalysisManager; delegates to
-// buildPointeeTypeMap.
+inline constexpr llvm::StringRef kEventTypeName = "event_t";
+llvm::StructType *getOrCreateEventType(llvm::LLVMContext &Ctx);
 
 struct PointeeTypeAnalysis : llvm::AnalysisInfoMixin<PointeeTypeAnalysis> {
   using Result = PointeeTypeMap;

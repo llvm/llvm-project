@@ -16,6 +16,8 @@
 
 #include "PointeeTypeMap.h"
 #include "AIRConstraints.h"
+#include "CoopTensorLowering.h"
+#include "PointeeRules.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 
@@ -26,30 +28,13 @@ namespace metal {
 
 AnalysisKey PointeeTypeAnalysis::Key;
 
-static bool isIntegerDevicePointer(Value *Ptr);
-
-static Type *atomicPointeeFromUsers(Value *Ptr) {
-  for (auto *U : Ptr->users()) {
-    auto *CI = dyn_cast<CallInst>(U);
-    if (!CI || !CI->getCalledFunction())
-      continue;
-    StringRef Name = CI->getCalledFunction()->getName();
-    if (!Name.starts_with("air.atomic."))
-      continue;
-    if (CI->arg_size() == 0 || CI->getArgOperand(0) != Ptr)
-      continue;
-    if (Name.ends_with(".i32"))
-      return Type::getInt32Ty(Ptr->getContext());
-    if (Name.ends_with(".f32"))
-      return Type::getFloatTy(Ptr->getContext());
-  }
-  return nullptr;
+StructType *getOrCreateEventType(LLVMContext &Ctx) {
+  if (StructType *EventTy = StructType::getTypeByName(Ctx, kEventTypeName))
+    return EventTy;
+  return StructType::create(Ctx, kEventTypeName);
 }
 
-// ── Infer pointee type from usage ────────────────────────────────────────
-//
-// Recurses through load/store/GEP usage, then falls back to GEP source type
-// and atomic intrinsic name inference.
+static bool isIntegerDevicePointer(Value *Ptr);
 
 Type *PointeeTypeMap::inferFromUsage(Value *Ptr) {
   SmallPtrSet<Value *, 8> Visited;
@@ -128,54 +113,19 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr,
     if (auto *CI = dyn_cast<CallInst>(U)) {
       if (auto *Callee = CI->getCalledFunction()) {
         StringRef Name = Callee->getName();
-        // The simdgroup-matrix intrinsic's pointer suffix is definitive
-        // element-type evidence — byte-form GEP source types are mere
-        // addressing artifacts and must not outvote it (bf16 before f16:
-        // substring overlap).
-        if (Name.starts_with("air.simdgroup_matrix_8x8_")) {
-          auto &Ctx = Ptr->getContext();
-          if (Name.contains("p1bf16") || Name.contains("p3bf16"))
-            return Type::getBFloatTy(Ctx);
-          if (Name.contains("p1f16") || Name.contains("p3f16"))
-            return Type::getHalfTy(Ctx);
-          if (Name.contains("p1i8") || Name.contains("p3i8"))
-            return Type::getInt8Ty(Ctx);
-          if (Name.contains("p1f32") || Name.contains("p3f32"))
-            return Type::getFloatTy(Ctx);
-        }
-        if (Name.starts_with("air.init_strided_private_tensor") ||
-            Name.starts_with("air.slice_private_tensor") ||
-            Name.starts_with("air.get_extent_private_tensor")) {
+        auto &Ctx = Ptr->getContext();
+        if (Type *Elem = mmaElemFromName(Name, Ctx))
+          return Elem;
+        {
           unsigned ArgNo = ~0u;
           for (unsigned J = 0; J < CI->arg_size(); ++J)
             if (CI->getArgOperand(J) == Ptr) {
               ArgNo = J;
               break;
             }
-          bool IsHandle =
-              (ArgNo == 0) ||
-              (ArgNo == 1 && Name.starts_with("air.slice_private_tensor"));
-          if (IsHandle) {
-            auto &Ctx = Ptr->getContext();
-            StructType *TT = StructType::getTypeByName(Ctx, "struct._tensor_t");
-            if (!TT)
-              TT = StructType::create(Ctx, "struct._tensor_t");
-            return TT;
-          }
-          return Type::getInt8Ty(Ptr->getContext());
+          if (Type *Want = tensorHandlePointee(Name, ArgNo, Ptr, Ctx))
+            return Want;
         }
-        if (Name.starts_with("air.get_descriptor_size_tensor"))
-          return Type::getInt8Ty(Ptr->getContext());
-        if (Name.starts_with("__tensorops_impl_matmul2d")) {
-          if (CI->arg_size() && CI->getArgOperand(0) == Ptr) {
-            if (auto *AI = dyn_cast<AllocaInst>(Ptr->stripPointerCasts()))
-              return AI->getAllocatedType();
-          }
-          return Type::getInt8Ty(Ptr->getContext());
-        }
-        // Only use atomic type if the pointer is NOT a GEP result.
-        // GEP results must keep their source element type for consistency;
-        // the atomic type mismatch is handled by inserting ptrtoint+inttoptr.
         if (!isa<GetElementPtrInst>(Ptr) && Name.starts_with("air.atomic.")) {
           if (Name.ends_with(".i32"))
             return Type::getInt32Ty(Ptr->getContext());
@@ -457,9 +407,7 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
 
   // Phase 7: Async copy overrides (AFTER MMA collapse, re-applies i8*)
   if (HasAsyncCopy) {
-    StructType *EventTy = StructType::getTypeByName(M.getContext(), "event_t");
-    if (!EventTy)
-      EventTy = StructType::create(M.getContext(), "event_t");
+    StructType *EventTy = getOrCreateEventType(M.getContext());
 
     for (auto &F : M) {
       if (!F.isDeclaration())
@@ -528,37 +476,6 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
         }
   }
 
-  // Phase 8: Fix up ptr-to-ptr bitcasts for typed pointer transitions.
-  // Some upstream passes leave identity bitcasts (ptr→ptr) before non-float
-  // device loads from phi pointers; MMA collapse clobbers their PTM to float*.
-  // Re-infer from load/store usage.
-  for (auto &F : M)
-    for (auto &BB : F)
-      for (auto &I : BB) {
-        auto *BC = dyn_cast<BitCastInst>(&I);
-        if (!BC || !BC->getType()->isPointerTy())
-          continue;
-        if (BC->getSrcTy() != BC->getDestTy())
-          continue;
-        if (BC->getType()->getPointerAddressSpace() != AS::Device)
-          continue;
-        for (auto *U : BC->users()) {
-          if (auto *LI = dyn_cast<LoadInst>(U)) {
-            if (!LI->getType()->isFloatTy()) {
-              PTM.set(BC, LI->getType());
-              break;
-            }
-          }
-          if (auto *SI = dyn_cast<StoreInst>(U)) {
-            if (SI->getPointerOperand() == BC &&
-                !SI->getValueOperand()->getType()->isFloatTy()) {
-              PTM.set(BC, SI->getValueOperand()->getType());
-              break;
-            }
-          }
-        }
-      }
-
   for (auto &F : M)
     for (auto &BB : F)
       for (auto &I : BB) {
@@ -567,17 +484,9 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
           continue;
         Value *TV = Sel->getTrueValue();
         Value *FV = Sel->getFalseValue();
-        Type *TT = PTM.get(TV);
-        Type *FT = PTM.get(FV);
-        if (TT == FT)
+        if (PTM.get(TV) == PTM.get(FV))
           continue;
-        Type *Unified = nullptr;
-        if (TT && !isa<IntToPtrInst>(TV))
-          Unified = TT;
-        else if (FT && !isa<IntToPtrInst>(FV))
-          Unified = FT;
-        else
-          Unified = TT ? TT : FT;
+        Type *Unified = requiredSelectPointee(Sel, PTM);
         if (!Unified)
           continue;
         PTM.set(TV, Unified);

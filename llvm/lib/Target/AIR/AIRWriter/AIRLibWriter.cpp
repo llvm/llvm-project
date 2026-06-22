@@ -23,6 +23,7 @@
 
 #include "AIRLibWriter.h"
 #include "BitcodeEmitter.h"
+#include "ConstantExprLower.h"
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"

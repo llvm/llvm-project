@@ -47,16 +47,6 @@ static bool normalizeAllocas(Module &M) {
   bool Changed = false;
   Type *I32 = Type::getInt32Ty(M.getContext());
 
-  // Strip 'disjoint' flag from 'or' instructions (AIR v1 bitcode).
-  for (Function &F : M)
-    for (BasicBlock &BB : F)
-      for (Instruction &I : BB)
-        if (auto *BO = dyn_cast<PossiblyDisjointInst>(&I))
-          if (BO->isDisjoint()) {
-            BO->setIsDisjoint(false);
-            Changed = true;
-          }
-
   // Hoist allocas from non-entry blocks to the entry block.
   for (Function &F : M) {
     if (F.isDeclaration())
