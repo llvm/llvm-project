@@ -278,7 +278,7 @@ struct BufferizationOptions {
   /// signal bufferization failure; returns a buffer-like type when
   /// reconciliation suceeded.
   using ReconcileBufferTypeMismatchFn = std::function<FailureOr<BufferLikeType>(
-      BufferLikeType x, BufferLikeType y, const BufferizationOptions &)>;
+      BufferLikeType, BufferLikeType, const BufferizationOptions &)>;
 
   BufferizationOptions();
 

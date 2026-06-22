@@ -2083,31 +2083,29 @@ test::TestTensorWithFutureLayoutOp::getBufferType(
       tensorType.getShape(), tensorType.getElementType(), layout));
 }
 
-::mlir::LogicalResult test::TestForceNewLayoutOp::bufferize(
-    ::mlir::RewriterBase &rewriter,
-    const ::mlir::bufferization::BufferizationOptions &options,
-    ::mlir::bufferization::BufferizationState &state) {
-  auto buffer =
-      mlir::bufferization::getBuffer(rewriter, getInput(), options, state);
-  if (mlir::failed(buffer))
+LogicalResult test::TestForceNewLayoutOp::bufferize(
+    RewriterBase &rewriter, const bufferization::BufferizationOptions &options,
+    bufferization::BufferizationState &state) {
+  auto buffer = bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (failed(buffer))
     return failure();
 
   const auto bufferizedOutType =
-      mlir::bufferization::getBufferType(getOutput(), options, state);
-  if (mlir::failed(bufferizedOutType))
+      bufferization::getBufferType(getOutput(), options, state);
+  if (failed(bufferizedOutType))
     return failure();
 
   auto dummyMemrefOp = test::TestDummyMemrefOp::create(
       rewriter, getLoc(), *bufferizedOutType, *buffer);
-  mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
-                                                     dummyMemrefOp.getResult());
-  return mlir::success();
+  bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                               dummyMemrefOp.getResult());
+  return success();
 }
 
-mlir::FailureOr<mlir::bufferization::BufferLikeType>
+FailureOr<bufferization::BufferLikeType>
 test::TestForceNewLayoutOp::getBufferType(
-    mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
-    const mlir::bufferization::BufferizationState &,
+    mlir::Value value, const bufferization::BufferizationOptions &options,
+    const bufferization::BufferizationState &,
     llvm::SmallVector<::mlir::Value> &) {
   auto tensorType = dyn_cast<RankedTensorType>(value.getType());
   if (!tensorType)

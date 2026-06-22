@@ -4206,11 +4206,9 @@ def TestTensorWithFutureLayoutOp
                    "bufferizesToMemoryWrite", "getAliasingValues",
                    "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
   let description = [{
-    A tensor creation operation that forces a specific `TestMemRefLayoutAttr`
-    layout  to be set during bufferization into a memref. In tensor world, this
-    op does nothing encoding/layout wise. Thus, it allows to create memref
-    layout mismatches that can later be resolved by the bufferization framework
-    while keeping tensor IR valid.
+    A tensor operation that creates a new value and then forces a specific
+    `TestMemRefLayoutAttr` layout during bufferization into a memref. In tensor
+    world, this op does nothing encoding/layout wise.
   }];
 
   let arguments = (ins TestMemRefLayoutAttr:$layout);
@@ -4251,15 +4249,16 @@ def TestForceNewLayoutOp
                    "bufferizesToMemoryWrite", "getAliasingValues",
                    "getAliasingOpOperands"]>]> {
   let description = [{
-    A tensor operation that forces a specific `TestMemRefLayoutAttr` to be set
-    during bufferization into a memref. In tensor world, this op does nothing
-    encoding/layout wise. Thus, it allows to create memref layout mismatches
-    that can later be resolved by the bufferization framework while keeping
-    tensor IR valid.
+    A tensor operation that modifies a pre-existing value and then forces a
+    specific `TestMemRefLayoutAttr` to be set during bufferization into a
+    memref. In tensor world, this op does nothing encoding/layout wise. It is
+    similar to TestTensorWithFutureLayoutOp, but it keeps the IR values
+    "connected" which can be particularly useful in e.g. SCF loop's body (one
+    can modify an initArg's layout and yield the new-layout value).
   }];
 
   let arguments = (ins
-    Arg<AnyRankedTensor>:$input,
+    AnyRankedTensor:$input,
     TestMemRefLayoutAttr:$layout
   );
   let results = (outs AnyRankedTensor:$output);
