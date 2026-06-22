@@ -182,18 +182,6 @@ void ExecutableFileMemoryManager::updateSection(
            << " with size " << Size << ", alignment " << Alignment << " at "
            << Contents << ", ID = " << SectionID << "\n";
   });
-
-static constexpr char kOrgPrefix[] = ".bolt.org";
-const bool IsOrgByJL   = JLSection.getName().starts_with(kOrgPrefix);
-const bool IsOrgByName = SectionName.starts_with(OrgSecPrefix);
-
-if (BC.isPPC64() && (IsOrgByJL || IsOrgByName)) {
-  LLVM_DEBUG(dbgs() << "[sect] skip setSectionID for backup section  JL='"
-                    << JLSection.getName() << "'  Name='" << SectionName << "'  BS='"
-                    << Section->getName() << "'\n");
-  return;   // never assign a code SectionID to backups
-}
-
   Section->setSectionID(SectionID);
 }
 
