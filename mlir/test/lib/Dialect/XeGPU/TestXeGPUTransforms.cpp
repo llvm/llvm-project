@@ -456,7 +456,7 @@ struct TestXeGPUCoalesceGatherScatter
   }
 
   StringRef getDescription() const final {
-    return "Test driver that turns the contiguity attribute into a lane_data "
+    return "Test driver that turns the chunk_size attribute into a lane_data "
            "layout on gather/scatter ops.";
   }
 
@@ -477,7 +477,7 @@ struct TestXeGPUCoalesceGatherScatter
 
   Option<bool> analyzeOnly{
       *this, "analyze-only",
-      llvm::cl::desc("Only run the analysis (stamp the contiguity attribute); "
+      llvm::cl::desc("Only run the analysis (stamp the chunk_size attribute); "
                      "do not apply."),
       llvm::cl::init(false)};
 
@@ -509,16 +509,16 @@ private:
     return xegpu::LayoutAttr::get(ctx, instData, laneLayout, laneData);
   }
 
-  /// Minimal driver: read the `contiguity` attribute the analysis stamped and
+  /// Minimal driver: read the `chunk_size` attribute the analysis stamped and
   /// turn it into a `lane_data` layout. This is only a stand-in for the real
   /// consumer (layout propagation) so the analysis output can be checked
   /// end-to-end; it handles just the simple power-of-two case.
   template <typename OpTy>
   static void applyContiguity(OpTy op, unsigned maxChunkSize) {
-    std::optional<uint64_t> contiguity = op.getContiguity();
+    std::optional<uint64_t> contiguity = op.getChunkSize();
     if (!contiguity)
       return;
-    op.removeContiguityAttr();
+    op.removeChunkSizeAttr();
 
     auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
     auto valueTy = op.getValueType();

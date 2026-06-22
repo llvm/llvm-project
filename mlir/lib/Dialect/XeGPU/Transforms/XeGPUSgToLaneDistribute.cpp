@@ -543,7 +543,8 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
       return failure();
 
     // Check that leading dimensions are unit.
-    int chunkSize = op.getChunkSize().value_or(1);
+    int chunkSize =
+        xegpu::getGatherScatterPayloadChunk(origResultTy, op.getMaskType());
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
     ArrayRef<int64_t> shape = origResultTy.getShape();
     if (llvm::any_of(
@@ -581,8 +582,8 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     Value distSource = adaptor.getSource();
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
-        distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
-        op.getL3HintAttr(), /*layout=*/nullptr, /*contiguity=*/nullptr);
+        distMask, op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+        /*layout=*/nullptr, /*contiguity=*/nullptr);
 
     Value result = newOp->getResult(0);
     if (distResultTy1D != distResultTy)
@@ -1071,7 +1072,8 @@ struct SgToLaneStoreScatter
       return failure();
 
     // Check that all leading dimensions are unit dimensions.
-    int chunkSize = op.getChunkSize().value_or(1);
+    int chunkSize =
+        xegpu::getGatherScatterPayloadChunk(origValueTy, op.getMaskType());
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
     ArrayRef<int64_t> shape = origValueTy.getShape();
     if (llvm::any_of(shape.take_front(origValueTy.getRank() - effectiveVecRank),
@@ -1112,10 +1114,9 @@ struct SgToLaneStoreScatter
 
     Value distDest = adaptor.getDest();
     xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
-                                  distOffsets, distMask, op.getChunkSizeAttr(),
-                                  op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr(), /*layout=*/nullptr,
-                                  /*contiguity=*/nullptr);
+                                  distOffsets, distMask, op.getL1HintAttr(),
+                                  op.getL2HintAttr(), op.getL3HintAttr(),
+                                  /*layout=*/nullptr, /*contiguity=*/nullptr);
     rewriter.eraseOp(op);
     return success();
   }

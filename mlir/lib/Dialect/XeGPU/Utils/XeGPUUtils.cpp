@@ -40,6 +40,20 @@ SmallVector<Value> xegpu::flattenValues(ArrayRef<ValueRange> values) {
   return result;
 }
 
+int64_t xegpu::getGatherScatterPayloadChunk(VectorType valueTy, Type maskTy) {
+  if (!valueTy)
+    return 1;
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  int64_t maskSize = maskVecTy ? maskVecTy.getNumElements() : 1;
+  int64_t valueSize = valueTy.getNumElements();
+  if (valueTy.getRank() >= 2)
+    return maskSize == valueSize ? 1 : valueTy.getShape().back();
+  // 1D value: a size-1 (or scalar) mask denotes a single work item performing a
+  // chunked load/store, so the whole vector is the chunk; a wider mask denotes
+  // one element per lane (chunk size 1).
+  return maskSize == 1 ? valueSize : 1;
+}
+
 FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
@@ -237,7 +251,8 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
 
     if (isa<xegpu::StoreScatterOp>(op)) {
       xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
+      int chunkSize = xegpu::getGatherScatterPayloadChunk(store.getValueType(),
+                                                          store.getMaskType());
       if (layout && idx >= 2 && chunkSize > 1)
         return layout.dropDims(llvm::to_vector(
             llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
@@ -245,7 +260,8 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     }
     if (isa<xegpu::LoadGatherOp>(op)) {
       xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
+      int chunkSize = xegpu::getGatherScatterPayloadChunk(load.getValueType(),
+                                                          load.getMaskType());
       if (layout && idx >= 1 && chunkSize > 1)
         return layout.dropDims(llvm::to_vector(
             llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));

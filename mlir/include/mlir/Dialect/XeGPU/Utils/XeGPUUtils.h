@@ -41,6 +41,30 @@ namespace xegpu {
 /// Flatten a set of ValueRange into a single SmallVector<Value>
 SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
 
+/// Returns the payload chunk size of a gather/scatter op (`xegpu.load` /
+/// `xegpu.store`): the number of contiguous elements that a single lane
+/// (work item) loads or stores.
+///
+/// The chunk size is not stored anywhere; it is derived from the value and mask
+/// types. The idea is simple: the mask has exactly one element per lane, so
+/// dividing the total number of value elements by the number of mask elements
+/// gives the elements-per-lane, i.e. the chunk size.
+///
+///     chunkSize = valueElements / maskElements
+///
+/// (A scalar value or scalar mask counts as 1 element.) Worked examples:
+///
+///   | value type    | mask type   | lanes | chunk | meaning                 |
+///   |---------------|-------------|-------|-------|-------------------------|
+///   | f32 (scalar)  | i1 (scalar) |   1   |   1   | one lane, one element   |
+///   | vector<16xf32>| vector<16xi1|  16   |   1   | 16 lanes, 1 elem each   |
+///   | vector<8xf32> | i1 (scalar) |   1   |   8   | one lane, 8-elem chunk  |
+///   | vector<16x8xf32>| vector<16xi1| 16  |   8   | 16 lanes, 8-elem chunk  |
+///
+/// So a chunk > 1 means each lane accesses a contiguous run of that many
+/// elements; a chunk of 1 means one element per lane.
+int64_t getGatherScatterPayloadChunk(VectorType valueTy, Type maskTy);
+
 /// If tensor descriptor has a layout attribute it is used in SIMT mode.
 /// In this mode, the distributed vector shape is determined as follows:
 /// Definitions:

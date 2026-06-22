@@ -731,12 +731,16 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
         mask is a vector of size equal to the subgroup size, or 1 at lane level.
         scalar mask is also valid for lane level.
 
-    - `chunk_size`: [optional] represents contiguous number of elements to load from per work item.
-
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
       of load. Only valid at workgroup and subgroup levels.
+
+    - `chunk_size`: [optional] An I64 attribute describing the contiguity of the
+      `offsets`: the innermost `offsets` dimension is contiguous in runs of
+      `chunk_size` elements (so `chunk_size` must be >= 2 and must divide that
+      dimension). It is a hint used by layout propagation / coalescing; it does
+      not change the loaded data. Only valid on the vector-offsets form.
 
     Results:
     - `res`: represents loaded data
@@ -756,8 +760,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   ```
 
   Example 2 (lane level):
-  lane level only accepts the offsets variant. chunk_size can be inferred from result
-  type. In this example, chunk_size is 8.
+  lane level only accepts the offsets variant. The number of contiguous elements
+  loaded per work item is inferred from the result type; in this example it is 8.
   ```mlir
     %2 = xegpu.load %1[%2], %0 <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
@@ -769,12 +773,12 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
   let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
       OptionalAttr<DistributeLayoutAttr>:$layout,
-      OptionalAttr<I64Attr>:$contiguity);
+      OptionalAttr<I64Attr>:$chunk_size);
   let results = (outs XeGPU_ValueOrScalarType:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -815,13 +819,11 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
@@ -862,12 +864,17 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
         mask is a vector of size equal to the subgroup size, or 1 at lane level.
         scalar mask is also valid for lane level.
 
-    - `chunk_size`: [optional] represents contiguous number of elements to store to per work item.
-
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
       to be stored. Only valid at workgroup and subgroup levels.
+
+    - `chunk_size`: [optional] An I64 attribute describing the contiguity of the
+      `offsets`, analogously to `load`: the innermost `offsets` dimension is
+      contiguous in runs of `chunk_size` elements (so `chunk_size` must be >= 2
+      and must divide that dimension). It is a hint used by layout propagation /
+      coalescing; it does not change the stored data. Only valid on the
+      vector-offsets form.
 
 
   Example 1 (Subgroup level):
@@ -886,8 +893,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   ```
 
   Example 2 (Lane level):
-  Lane level IR only accepts the offsets variant. chunk_size can be inferred from value
-  type. In this example, chunk_size is 8.
+  Lane level IR only accepts the offsets variant. The number of contiguous elements
+  stored per work item is inferred from the value type; in this example it is 8.
   ```mlir
     xegpu.store %0, %1[%2], %3 <{l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
@@ -900,12 +907,12 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let arguments = (ins XeGPU_ValueOrScalarType:$value,
       XeGPU_GatherScatterBaseAddrType:$dest,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
       OptionalAttr<DistributeLayoutAttr>:$layout,
-      OptionalAttr<I64Attr>:$contiguity);
+      OptionalAttr<I64Attr>:$chunk_size);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
@@ -945,13 +952,11 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,

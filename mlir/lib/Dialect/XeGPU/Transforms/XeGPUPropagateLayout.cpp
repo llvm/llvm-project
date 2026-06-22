@@ -1218,7 +1218,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   if (!uArch)
     return;
   VectorType resVecTy = load.getValueType();
-  int chunkSize = load.getChunkSize().value_or(1);
+  int chunkSize =
+      xegpu::getGatherScatterPayloadChunk(resVecTy, load.getMaskType());
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
   if (!resLayoutInfo.isAssigned())
@@ -1283,7 +1284,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (!uArch)
     return;
   VectorType srcVecTy = storeScatter.getValueType();
-  int chunkSize = storeScatter.getChunkSize().value_or(1);
+  int chunkSize =
+      xegpu::getGatherScatterPayloadChunk(srcVecTy, storeScatter.getMaskType());
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;

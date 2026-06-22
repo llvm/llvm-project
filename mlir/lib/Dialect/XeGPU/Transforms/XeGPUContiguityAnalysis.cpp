@@ -872,7 +872,7 @@ using ::mlir::xegpu::detail::axis_dataflow::AxisInfoLattice;
 // Analysis driver.
 //===----------------------------------------------------------------------===//
 
-/// Stamp a `contiguity` attribute on `op` recording the inner-dim contiguity
+/// Stamp a `chunk_size` attribute on `op` recording the inner-dim contiguity
 /// computed by the analysis. The contiguity is a target-independent property
 /// of the offsets.
 template <typename OpTy>
@@ -880,9 +880,9 @@ static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
   auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
   if (!offsetsTy || offsetsTy.getNumElements() <= 1)
     return;
-  // A pre-existing `contiguity` (user-authored, or stamped by an earlier run)
+  // A pre-existing `chunk_size` (user-authored, or stamped by an earlier run)
   // takes precedence; leave it untouched so the analysis is idempotent.
-  if (op.getContiguity())
+  if (op.getChunkSize())
     return;
   const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
   if (!lat || !lat->getValue().isInitialized())
@@ -898,7 +898,7 @@ static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
     --contiguity;
   if (contiguity < 2)
     return;
-  op.setContiguity(contiguity);
+  op.setChunkSize(contiguity);
 }
 
 } // namespace
