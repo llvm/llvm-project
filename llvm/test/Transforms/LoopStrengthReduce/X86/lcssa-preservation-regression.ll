@@ -171,15 +171,11 @@ define i32 @regression4() {
 ; CHECK:       [[WHILE_COND_OUTER]]:
 ; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
 ; CHECK:       [[WHILE_COND]]:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[WHILE_COND_OUTER]] ], [ [[ADD5:%.*]], %[[WHILE_COND]] ]
-; CHECK-NEXT:    [[ADD5]] = add i32 [[PHI3]], 1
 ; CHECK-NEXT:    br i1 false, label %[[WHILE_COND]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[PHI3_LCSSA1:%.*]] = phi i32 [ [[PHI3]], %[[WHILE_COND]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[PHI3_LCSSA1]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[LSR_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i32 [[LSR_IV]], 0
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -1
 ; CHECK-NEXT:    br i1 false, label %[[WHILE_COND_OUTER_LOOPEXIT]], label %[[FOR_BODY]]
