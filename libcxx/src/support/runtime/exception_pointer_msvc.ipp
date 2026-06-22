@@ -10,8 +10,9 @@
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmultichar")
 
 #include <__exception/exception_ptr.h>
-#include <__memory/shared_ptr.h>
+#include <__memory/shared_count.h>
 #include <cstdlib>
+#include <cstring>
 
 #include <Unknwn.h>
 #include <Windows.h>
@@ -28,10 +29,6 @@ struct _ThrowInfo;
 
 extern "C" _LIBCPP_CRT_FUNC void* __cdecl __AdjustPointer(void*, const PMD&);
 extern "C" _LIBCPP_CRT_FUNC void** __cdecl __current_exception();
-
-static_assert(sizeof(std::exception_ptr) == sizeof(std::shared_ptr<const _EXCEPTION_RECORD>) &&
-                  alignof(std::exception_ptr) == alignof(std::shared_ptr<const _EXCEPTION_RECORD>),
-              "std::exception_ptr and std::shared_ptr<const _EXCEPTION_RECORD> must have the same layout.");
 
 namespace {
 
@@ -147,18 +144,22 @@ void __copy_exception_object(void* __dest, const void* __src, const CatchableTyp
   }
 }
 
-template <class _StaticEx>
-class __exception_ptr_static final : public std::__shared_weak_count {
-private:
-  void __on_zero_shared() noexcept override {}
-  void __on_zero_shared_weak() noexcept override {}
+struct __exception_ptr_storage : public std::__shared_count {
+  _EXCEPTION_RECORD __record_;
+  explicit __exception_ptr_storage(long __refs = 0) noexcept : std::__shared_count(__refs) {}
+};
 
-public:
-  __exception_ptr_static() noexcept : std::__shared_weak_count(0) {
-    __populate_cpp_exception_record(__record_, &__ex_, static_cast<ThrowInfo*>(std::__GetExceptionInfo(__ex_)));
+template <class _StaticEx>
+struct __exception_ptr_static final : public __exception_ptr_storage {
+  _StaticEx __ex_;
+
+  __exception_ptr_static() noexcept : __exception_ptr_storage(0) {
+    __populate_cpp_exception_record(__record_, &__ex_, static_cast<ThrowInfo*>(__GetExceptionInfo(__ex_)));
   }
 
-  static std::shared_ptr<const _EXCEPTION_RECORD> __get() noexcept {
+  void __on_zero_shared() noexcept override {}
+
+  static __exception_ptr_storage* __get() noexcept {
     struct __container {
       union {
         __exception_ptr_static __instance_;
@@ -167,100 +168,76 @@ public:
       ~__container() {}
     };
     static __container __storage;
-    __storage.__instance_.__add_shared();
-    return std::shared_ptr<const _EXCEPTION_RECORD>::__create_with_control_block(
-        &__storage.__instance_.__record_, &__storage.__instance_);
+    return &__storage.__instance_;
   }
-
-  _EXCEPTION_RECORD __record_;
-  _StaticEx __ex_;
 };
 
-class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) __exception_ptr_normal final : public std::__shared_weak_count {
-private:
-  void __on_zero_shared() noexcept override {
-    const auto& __cpp_eh_record = reinterpret_cast<EHExceptionRecord&>(__record_);
-
-    if (!PER_IS_MSVC_PURE_OR_NATIVE_EH(&__cpp_eh_record)) {
-      return;
-    }
-
-    const auto __throw_info = __cpp_eh_record.params.pThrowInfo;
-    if (!__throw_info) {
-      std::abort();
-    }
-
-    if (!__cpp_eh_record.params.pExceptionObject) {
-      return;
-    }
-
-#if _EH_RELATIVE_TYPEINFO
-    const auto __throw_image_base = reinterpret_cast<uintptr_t>(__cpp_eh_record.params.pThrowImageBase);
-    const auto __catchable_type_array = reinterpret_cast<const CatchableTypeArray*>(
-        static_cast<uintptr_t>(__throw_info->pCatchableTypeArray) + __throw_image_base);
-    const auto __type = reinterpret_cast<CatchableType*>(
-        static_cast<uintptr_t>(__catchable_type_array->arrayOfCatchableTypes[0]) + __throw_image_base);
-#else
-    const auto __type = __throw_info->pCatchableTypeArray->arrayOfCatchableTypes[0];
-#endif
-
-    if (__throw_info->pmfnUnwind) {
-#if _EH_RELATIVE_TYPEINFO
-      __call_member_function_0(__cpp_eh_record.params.pExceptionObject,
-                               reinterpret_cast<void*>(__throw_info->pmfnUnwind + __throw_image_base));
-#else
-      __call_member_function_0(__cpp_eh_record.params.pExceptionObject, __throw_info->pmfnUnwind);
-#endif
-    } else if (__type->properties & CT_IsWinRTHandle) {
-      const auto __unknown = *static_cast<IUnknown* const*>(__cpp_eh_record.params.pExceptionObject);
-      if (__unknown) {
-        __unknown->Release();
-      }
-    }
-  }
-
-  void __on_zero_shared_weak() noexcept override {
-    std::free(this);
-  }
-
-public:
-  explicit __exception_ptr_normal(const _EXCEPTION_RECORD& __record) noexcept : std::__shared_weak_count(0) {
+struct alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) __exception_ptr_normal final : public __exception_ptr_storage {
+  explicit __exception_ptr_normal(const _EXCEPTION_RECORD& __record) noexcept : __exception_ptr_storage(0) {
     __copy_exception_record(__record_, __record);
   }
 
-  _EXCEPTION_RECORD __record_;
+  void __on_zero_shared() noexcept override {
+    const auto& __cpp_eh_record = reinterpret_cast<EHExceptionRecord&>(__record_);
+    if (PER_IS_MSVC_PURE_OR_NATIVE_EH(&__cpp_eh_record)) {
+      const auto* __throw_info = __cpp_eh_record.params.pThrowInfo;
+      if (__throw_info && __cpp_eh_record.params.pExceptionObject) {
+#if _EH_RELATIVE_TYPEINFO
+        const auto __throw_image_base = reinterpret_cast<uintptr_t>(__cpp_eh_record.params.pThrowImageBase);
+        const auto* __catchable_type_array = reinterpret_cast<const CatchableTypeArray*>(
+            static_cast<uintptr_t>(__throw_info->pCatchableTypeArray) + __throw_image_base);
+        const auto* __type = reinterpret_cast<CatchableType*>(
+            static_cast<uintptr_t>(__catchable_type_array->arrayOfCatchableTypes[0]) + __throw_image_base);
+#else
+        const auto* __type = __throw_info->pCatchableTypeArray->arrayOfCatchableTypes[0];
+#endif
+        if (__throw_info->pmfnUnwind) {
+#if _EH_RELATIVE_TYPEINFO
+          __call_member_function_0(__cpp_eh_record.params.pExceptionObject,
+                                   reinterpret_cast<void*>(__throw_info->pmfnUnwind + __throw_image_base));
+#else
+          __call_member_function_0(__cpp_eh_record.params.pExceptionObject, __throw_info->pmfnUnwind);
+#endif
+        } else if (__type->properties & CT_IsWinRTHandle) {
+          const auto* __unknown = *static_cast<IUnknown* const*>(__cpp_eh_record.params.pExceptionObject);
+          if (__unknown) {
+            const_cast<IUnknown*>(__unknown)->Release();
+          }
+        }
+      }
+    }
+    std::free(this);
+  }
 };
 
 static_assert(sizeof(__exception_ptr_normal) % __STDCPP_DEFAULT_NEW_ALIGNMENT__ == 0,
               "Exception in exception_ptr would be constructed with the wrong alignment");
 
 void __assign_seh_exception_ptr_from_record(
-    std::shared_ptr<const _EXCEPTION_RECORD>& __dest, const _EXCEPTION_RECORD& __record, void* const __rx_raw) noexcept {
+    void*& __dest, const _EXCEPTION_RECORD& __record, void* const __rx_raw) noexcept {
   if (!__rx_raw) {
     __dest = __exception_ptr_static<std::bad_alloc>::__get();
     return;
   }
 
-  const auto __rx = ::new (__rx_raw) __exception_ptr_normal(__record);
-  __dest          = std::shared_ptr<const _EXCEPTION_RECORD>::__create_with_control_block(&__rx->__record_, __rx);
+  __dest = ::new (__rx_raw) __exception_ptr_normal(__record);
 }
 
-void __assign_cpp_exception_ptr_from_record(
-    std::shared_ptr<const _EXCEPTION_RECORD>& __dest, const EHExceptionRecord& __record) noexcept {
-  const auto __throw_info = __record.params.pThrowInfo;
+void __assign_cpp_exception_ptr_from_record(void*& __dest, const EHExceptionRecord& __record) noexcept {
+  const auto* __throw_info = __record.params.pThrowInfo;
 #if _EH_RELATIVE_TYPEINFO
   const auto __throw_image_base = reinterpret_cast<uintptr_t>(__record.params.pThrowImageBase);
-  const auto __catchable_type_array = reinterpret_cast<const CatchableTypeArray*>(
+  const auto* __catchable_type_array = reinterpret_cast<const CatchableTypeArray*>(
       static_cast<uintptr_t>(__throw_info->pCatchableTypeArray) + __throw_image_base);
-  const auto __type = reinterpret_cast<CatchableType*>(
+  const auto* __type = reinterpret_cast<CatchableType*>(
       static_cast<uintptr_t>(__catchable_type_array->arrayOfCatchableTypes[0]) + __throw_image_base);
 #else
-  const auto __type = __throw_info->pCatchableTypeArray->arrayOfCatchableTypes[0];
+  const auto* __type = __throw_info->pCatchableTypeArray->arrayOfCatchableTypes[0];
 #endif
 
   const auto __except_obj_size = static_cast<size_t>(__type->sizeOrOffset);
   const auto __alloc_size      = sizeof(__exception_ptr_normal) + __except_obj_size;
-  auto __rx_raw                = std::malloc(__alloc_size);
+  auto* __rx_raw               = std::malloc(__alloc_size);
   if (!__rx_raw) {
     __dest = __exception_ptr_static<std::bad_alloc>::__get();
     return;
@@ -276,10 +253,10 @@ void __assign_cpp_exception_ptr_from_record(
 #endif
     );
 
-    const auto __rx = ::new (__rx_raw) __exception_ptr_normal(reinterpret_cast<const _EXCEPTION_RECORD&>(__record));
-    reinterpret_cast<EHExceptionRecord&>(__rx->__record_).params.pExceptionObject =
+    const auto* __rx = ::new (__rx_raw) __exception_ptr_normal(reinterpret_cast<const _EXCEPTION_RECORD&>(__record));
+    reinterpret_cast<EHExceptionRecord&>(const_cast<__exception_ptr_normal*>(__rx)->__record_).params.pExceptionObject =
         static_cast<__exception_ptr_normal*>(__rx_raw) + 1;
-    __dest = std::shared_ptr<const _EXCEPTION_RECORD>::__create_with_control_block(&__rx->__record_, __rx);
+    __dest = const_cast<__exception_ptr_normal*>(__rx);
   } catch (...) {
     const auto* __inner_record_ptr = __get_current_exception();
     if (!__inner_record_ptr) {
@@ -301,15 +278,15 @@ void __assign_cpp_exception_ptr_from_record(
       return;
     }
 
-    const auto __inner_throw = __inner_record.params.pThrowInfo;
+    const auto* __inner_throw = __inner_record.params.pThrowInfo;
 #if _EH_RELATIVE_TYPEINFO
     const auto __inner_throw_image_base = reinterpret_cast<uintptr_t>(__inner_record.params.pThrowImageBase);
-    const auto __inner_catchable_type_array = reinterpret_cast<const CatchableTypeArray*>(
+    const auto* __inner_catchable_type_array = reinterpret_cast<const CatchableTypeArray*>(
         static_cast<uintptr_t>(__inner_throw->pCatchableTypeArray) + __inner_throw_image_base);
-    const auto __inner_type = reinterpret_cast<CatchableType*>(
+    const auto* __inner_type = reinterpret_cast<CatchableType*>(
         static_cast<uintptr_t>(__inner_catchable_type_array->arrayOfCatchableTypes[0]) + __inner_throw_image_base);
 #else
-    const auto __inner_type = __inner_throw->pCatchableTypeArray->arrayOfCatchableTypes[0];
+    const auto* __inner_type = __inner_throw->pCatchableTypeArray->arrayOfCatchableTypes[0];
 #endif
 
     const auto __inner_except_size = static_cast<size_t>(__inner_type->sizeOrOffset);
@@ -338,60 +315,50 @@ void __assign_cpp_exception_ptr_from_record(
       return;
     }
 
-    const auto __rx =
+    const auto* __rx =
         ::new (__rx_raw) __exception_ptr_normal(reinterpret_cast<const _EXCEPTION_RECORD&>(__inner_record));
-    reinterpret_cast<EHExceptionRecord&>(__rx->__record_).params.pExceptionObject =
+    reinterpret_cast<EHExceptionRecord&>(const_cast<__exception_ptr_normal*>(__rx)->__record_).params.pExceptionObject =
         static_cast<__exception_ptr_normal*>(__rx_raw) + 1;
-    __dest = std::shared_ptr<const _EXCEPTION_RECORD>::__create_with_control_block(&__rx->__record_, __rx);
+    __dest = const_cast<__exception_ptr_normal*>(__rx);
   }
-}
-
-inline std::shared_ptr<const _EXCEPTION_RECORD>& __to_shared(std::exception_ptr& __ptr) noexcept {
-  return *reinterpret_cast<std::shared_ptr<const _EXCEPTION_RECORD>*>(&__ptr);
-}
-
-inline const std::shared_ptr<const _EXCEPTION_RECORD>& __to_shared(const std::exception_ptr& __ptr) noexcept {
-  return *reinterpret_cast<const std::shared_ptr<const _EXCEPTION_RECORD>*>(&__ptr);
 }
 
 } // namespace
 
 namespace std {
 
-exception_ptr::exception_ptr() noexcept {
-  ::new (this) shared_ptr<const _EXCEPTION_RECORD>();
-}
-exception_ptr::exception_ptr(nullptr_t) noexcept {
-  ::new (this) shared_ptr<const _EXCEPTION_RECORD>();
-}
-
-exception_ptr::exception_ptr(const exception_ptr& __other) noexcept {
-  ::new (this) shared_ptr<const _EXCEPTION_RECORD>(__to_shared(__other));
-}
-exception_ptr& exception_ptr::operator=(const exception_ptr& __other) noexcept {
-  __to_shared(*this) = __to_shared(__other);
-  return *this;
-}
-
-exception_ptr& exception_ptr::operator=(nullptr_t) noexcept {
-  __to_shared(*this) = nullptr;
-  return *this;
-}
-
 exception_ptr::~exception_ptr() noexcept {
-  __to_shared(*this).~shared_ptr();
+  if (__ptr_) {
+    static_cast<__shared_count*>(__ptr_)->__release_shared();
+  }
 }
 
-exception_ptr::operator bool() const noexcept {
-  return static_cast<bool>(__to_shared(*this));
+exception_ptr::exception_ptr(const exception_ptr& __other) noexcept : __ptr_(__other.__ptr_) {
+  if (__ptr_) {
+    static_cast<__shared_count*>(__ptr_)->__add_shared();
+  }
 }
 
-bool operator==(const exception_ptr& __x, const exception_ptr& __y) noexcept {
-  return __to_shared(__x) == __to_shared(__y);
+exception_ptr& exception_ptr::operator=(const exception_ptr& __other) noexcept {
+  if (__ptr_ != __other.__ptr_) {
+    if (__other.__ptr_) {
+      static_cast<__shared_count*>(__other.__ptr_)->__add_shared();
+    }
+    if (__ptr_) {
+      static_cast<__shared_count*>(__ptr_)->__release_shared();
+    }
+    __ptr_ = __other.__ptr_;
+  }
+  return *this;
 }
 
-void swap(exception_ptr& __lhs, exception_ptr& __rhs) noexcept {
-  __to_shared(__lhs).swap(__to_shared(__rhs));
+exception_ptr exception_ptr::__from_native_exception_pointer(void* __p) noexcept {
+  exception_ptr __ret;
+  __ret.__ptr_ = __p;
+  if (__ret.__ptr_) {
+    static_cast<__shared_count*>(__ret.__ptr_)->__add_shared();
+  }
+  return __ret;
 }
 
 exception_ptr __copy_exception_ptr(void* __except, const void* __ptr) {
@@ -402,7 +369,7 @@ exception_ptr __copy_exception_ptr(void* __except, const void* __ptr) {
 
   _EXCEPTION_RECORD __record;
   __populate_cpp_exception_record(__record, __except, static_cast<ThrowInfo*>(const_cast<void*>(__ptr)));
-  __assign_cpp_exception_ptr_from_record(__to_shared(__ret), reinterpret_cast<const EHExceptionRecord&>(__record));
+  __assign_cpp_exception_ptr_from_record(__ret.__ptr_, reinterpret_cast<const EHExceptionRecord&>(__record));
   return __ret;
 }
 
@@ -414,12 +381,11 @@ exception_ptr current_exception() noexcept {
     return __ret;
   }
 
-  auto& __dest = __to_shared(__ret);
   if (PER_IS_MSVC_PURE_OR_NATIVE_EH(__record)) {
-    __assign_cpp_exception_ptr_from_record(__dest, *__record);
+    __assign_cpp_exception_ptr_from_record(__ret.__ptr_, *__record);
   } else {
     __assign_seh_exception_ptr_from_record(
-        __dest, reinterpret_cast<const _EXCEPTION_RECORD&>(*__record), std::malloc(sizeof(__exception_ptr_normal)));
+        __ret.__ptr_, reinterpret_cast<const _EXCEPTION_RECORD&>(*__record), std::malloc(sizeof(__exception_ptr_normal)));
   }
   return __ret;
 }
@@ -429,20 +395,21 @@ exception_ptr current_exception() noexcept {
     throw bad_exception();
   }
 
-  auto __record_copy = *__to_shared(__p);
+  auto* __rep = static_cast<__exception_ptr_storage*>(__p.__ptr_);
+  auto __record_copy = __rep->__record_;
   auto& __cpp_record = reinterpret_cast<EHExceptionRecord&>(__record_copy);
   if (PER_IS_MSVC_PURE_OR_NATIVE_EH(&__cpp_record)) {
-    const auto __throw_info = __cpp_record.params.pThrowInfo;
+    const auto* __throw_info = __cpp_record.params.pThrowInfo;
     if (!__cpp_record.params.pExceptionObject || !__throw_info || !__throw_info->pCatchableTypeArray) {
       std::abort();
     }
 
 #if _EH_RELATIVE_TYPEINFO
     const auto __throw_image_base = reinterpret_cast<uintptr_t>(__cpp_record.params.pThrowImageBase);
-    const auto __catchable_type_array =
+    const auto* __catchable_type_array =
         reinterpret_cast<const CatchableTypeArray*>(__throw_image_base + __throw_info->pCatchableTypeArray);
 #else
-    const auto __catchable_type_array = __throw_info->pCatchableTypeArray;
+    const auto* __catchable_type_array = __throw_info->pCatchableTypeArray;
 #endif
 
     if (__catchable_type_array->nCatchableTypes <= 0) {
@@ -450,10 +417,10 @@ exception_ptr current_exception() noexcept {
     }
 
 #if _EH_RELATIVE_TYPEINFO
-    const auto __type = reinterpret_cast<CatchableType*>(
+    const auto* __type = reinterpret_cast<CatchableType*>(
         static_cast<uintptr_t>(__catchable_type_array->arrayOfCatchableTypes[0]) + __throw_image_base);
 #else
-    const auto __type = __throw_info->pCatchableTypeArray->arrayOfCatchableTypes[0];
+    const auto* __type = __throw_info->pCatchableTypeArray->arrayOfCatchableTypes[0];
 #endif
 
 #pragma warning(suppress : 6255)
