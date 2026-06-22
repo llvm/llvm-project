@@ -360,6 +360,112 @@ define <32 x i8> @test_divconstant_32i8(<32 x i8> %a) nounwind {
 }
 
 ;
+; udiv by variable
+;
+
+define <8 x i32> @test_divv_8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
+; AVX1-LABEL: test_divv_8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpextrd $1, %xmm3, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    movl %eax, %ecx
+; AVX1-NEXT:    vmovd %xmm2, %eax
+; AVX1-NEXT:    vmovd %xmm3, %esi
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %esi
+; AVX1-NEXT:    vmovd %eax, %xmm4
+; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
+; AVX1-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm3, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
+; AVX1-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm3, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm1, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    movl %eax, %ecx
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vmovd %xmm1, %esi
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %esi
+; AVX1-NEXT:    vmovd %eax, %xmm3
+; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
+; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; AVX1-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    divl %ecx
+; AVX1-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_divv_8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX2-NEXT:    vpextrd $1, %xmm3, %ecx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %ecx
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    vmovd %xmm2, %eax
+; AVX2-NEXT:    vmovd %xmm3, %esi
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %esi
+; AVX2-NEXT:    vmovd %eax, %xmm4
+; AVX2-NEXT:    vpinsrd $1, %ecx, %xmm4, %xmm4
+; AVX2-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm3, %ecx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %ecx
+; AVX2-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
+; AVX2-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX2-NEXT:    vpextrd $3, %xmm3, %ecx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %ecx
+; AVX2-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
+; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %ecx
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vmovd %xmm1, %esi
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %esi
+; AVX2-NEXT:    vmovd %eax, %xmm3
+; AVX2-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
+; AVX2-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %ecx
+; AVX2-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; AVX2-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    divl %ecx
+; AVX2-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %res = udiv <8 x i32> %a, %b
+  ret <8 x i32> %res
+}
+
+;
 ; urem by 7
 ;
 
