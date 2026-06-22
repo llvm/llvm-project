@@ -14,19 +14,19 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250         < %s  | FileCheck -check-prefixes=GFX,GFX-SDAG,GFX1250-SDAG         %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx12-generic   < %s  | FileCheck -check-prefixes=GFX,GFX-SDAG,GFX12-GENERIC-SDAG   %s
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx9-generic    < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX9-GENERIC-ISEL    %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx906          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX906-ISEL          %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX908-ISEL          %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX90a-ISEL          %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx9-4-generic  < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX9-4-GENERIC-ISEL  %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX942-ISEL          %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX950-ISEL          %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx10-1-generic < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX10-1-GENERIC-ISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1012         < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX1012-ISEL         %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx10-3-generic < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX10-3-GENERIC-ISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx11-generic   < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX11-GENERIC-ISEL   %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250         < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX1250-ISEL         %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx12-generic   < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX12-GENERIC-ISEL   %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx9-generic    < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX9-GENERIC-ISEL    %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx906          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX906-ISEL          %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx908          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX908-ISEL          %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx90a          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX90a-ISEL          %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx9-4-generic  < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX9-4-GENERIC-ISEL  %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX942-ISEL          %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950          < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX950-ISEL          %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx10-1-generic < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX10-1-GENERIC-ISEL %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1012         < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX1012-ISEL         %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx10-3-generic < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX10-3-GENERIC-ISEL %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx11-generic   < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX11-GENERIC-ISEL   %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250         < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX1250-ISEL         %s
+; RxUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx12-generic   < %s  | FileCheck -check-prefixes=GFX,GFX-ISEL,GFX12-GENERIC-ISEL   %s
 
 ;;==============================================================================
 ;; A few basic test cases

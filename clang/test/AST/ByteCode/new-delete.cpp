@@ -1254,6 +1254,19 @@ namespace AllocInBase {
                    // both-note {{pointer to heap-allocated object is not a constant expression}}
 }
 
+namespace FreeNonBlockPointer {
+  extern int f();
+
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  constexpr int foo() {
+    int *p;
+    p = fold((int*)(void*)f);
+    delete p;
+    return 10;
+  }
+  static_assert(foo() == 10); // both-error {{not an integral constant expression}}
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

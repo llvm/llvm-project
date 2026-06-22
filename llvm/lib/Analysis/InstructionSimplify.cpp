@@ -6553,8 +6553,9 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
-                                    FastMathFlags FMF, const SimplifyQuery &Q) {
+static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
+                                     FastMathFlags FMF,
+                                     const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
   if (isIdempotent(IID))
     if (auto *II = dyn_cast<IntrinsicInst>(Op0))
@@ -6879,9 +6880,9 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
-Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1, FastMathFlags FMF,
-                                     const SimplifyQuery &Q) {
+static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1, FastMathFlags FMF,
+                                      const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
