@@ -1035,8 +1035,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  setTargetDAGCombine({
-                       ISD::ABS,
+  setTargetDAGCombine({ISD::ABS,
                        ISD::ADD,
                        ISD::PTRADD,
                        ISD::SUB,
