@@ -440,7 +440,7 @@ LogicalResult MaskLoadOpConversion::matchAndRewrite(
     alignment = *align;
   rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
       op, resultType, adaptor.getPtr(), adaptor.getMask(),
-      adaptor.getPassthrough(), alignment);
+      adaptor.getPassthrough(), alignment, op.getNontemporal());
   return success();
 }
 
