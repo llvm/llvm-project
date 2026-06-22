@@ -6023,7 +6023,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
   if (JA->getOffloadingDeviceKind() != Action::OFK_None) {
     const ToolChain *TC = JA->getOffloadingToolChain();
     OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-        JA->getOffloadingDeviceKind(), TC ? TC->getTripleString() : "",
+        JA->getOffloadingDeviceKind(), TC ? TC->getEffectiveTriple().str() : "",
         /*CreatePrefixForHost=*/false);
     if (const char *Arch = JA->getOffloadingArch()) {
       OffloadingPrefix += "-";
