@@ -6688,8 +6688,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 
-  if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter))
-    CmdArgs.push_back("-fexperimental-new-constant-interpreter");
+  if (CLANG_USE_EXPERIMENTAL_CONST_INTERP) {
+    Args.ClaimAllArgs(options::OPT_fexperimental_new_constant_interpreter);
+    Args.AddLastArg(CmdArgs,
+                    options::OPT_fno_experimental_new_constant_interpreter);
+  } else {
+    Args.ClaimAllArgs(options::OPT_fno_experimental_new_constant_interpreter);
+    Args.AddLastArg(CmdArgs,
+                    options::OPT_fexperimental_new_constant_interpreter);
+  }
 
   if (Arg *A = Args.getLastArg(options::OPT_fbracket_depth_EQ)) {
     CmdArgs.push_back("-fbracket-depth");
@@ -9388,9 +9395,11 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     }
     Triples += Action::GetOffloadKindName(CurKind);
     Triples += '-';
-    Triples +=
-        CurTC->getTriple().normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-    if (CurKind != Action::OFK_Host &&
+    Triples += llvm::Triple(CurTC->ComputeEffectiveClangTriple(
+                                TCArgs, CurDep->getOffloadingArch()))
+                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+
+    if ((CurKind != Action::OFK_Host) &&
         !StringRef(CurDep->getOffloadingArch()).empty()) {
       Triples += '-';
       Triples += CurDep->getOffloadingArch();
@@ -9466,9 +9475,12 @@ void OffloadBundler::ConstructJobMultipleOutputs(
     auto &Dep = DepInfo[I];
     Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
     Triples += '-';
-    Triples += Dep.DependentToolChain->getTriple().normalize(
-        llvm::Triple::CanonicalForm::FOUR_IDENT);
-    if (Dep.DependentOffloadKind != Action::OFK_Host &&
+    Triples += llvm::Triple(Dep.DependentToolChain->ComputeEffectiveClangTriple(
+                                TCArgs, Dep.DependentBoundArch))
+                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+
+    if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
+         Dep.DependentOffloadKind == Action::OFK_Cuda) &&
         !Dep.DependentBoundArch.empty()) {
       Triples += '-';
       Triples += Dep.DependentBoundArch;
@@ -9537,7 +9549,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     // linker wrapper.
     SmallVector<std::string> Parts{
         "file=" + File.str(),
-        "triple=" + TC->getTripleString().str(),
+        "triple=" + TC->ComputeEffectiveClangTriple(TCArgs, Arch),
         "arch=" + (Arch.empty() ? "generic" : Arch.str()),
         "kind=" + Kind.str(),
     };
