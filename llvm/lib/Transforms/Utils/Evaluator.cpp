@@ -483,8 +483,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         // Resolve function pointers.
         SmallVector<Constant *, 8> Formals;
         Function *Callee = getCalleeWithFormalArgs(CB, Formals);
-        if (!Callee || Callee->isInterposable() ||
-            Callee->hasFnAttribute(Attribute::NoIPA)) {
+        if (!Callee || Callee->isInterposable()) {
           LLVM_DEBUG(dbgs() << "Can not resolve function pointer.\n");
           return false; // Cannot resolve.
         }

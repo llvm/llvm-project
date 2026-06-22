@@ -136,7 +136,7 @@ private:
   /// Returns true if the definition of this global may be replaced by a
   /// differently optimized variant of the same source level function at link
   /// time.
-  bool mayBeDerefinedOrNoIPA() const {
+  bool mayBeDerefined() const {
     switch (getLinkage()) {
     case WeakODRLinkage:
     case LinkOnceODRLinkage:
@@ -155,7 +155,7 @@ private:
       // nobuiltin due to attributes at call-sites. To avoid applying IPO based
       // on nobuiltin semantics, treat such function definitions as maybe
       // derefined.
-      return isInterposable() || isNobuiltinFnDef() || isNoipaFnDef();
+      return isInterposable() || isNobuiltinFnDef();
     }
 
     llvm_unreachable("Fully covered switch above!");
@@ -493,7 +493,9 @@ public:
   /// interposable (see \c isInterposable), since in such cases the currently
   /// visible variant is *a* correct implementation of the original source
   /// function; it just isn't the *only* correct implementation.
-  bool isDefinitionExact() const { return !mayBeDerefinedOrNoIPA(); }
+  bool isDefinitionExact() const {
+    return !mayBeDerefined();
+  }
 
   /// Return true if this global has an exact defintion.
   bool hasExactDefinition() const {
@@ -508,8 +510,12 @@ public:
   /// Return true if this global's definition can be substituted with an
   /// *arbitrary* definition at link time or load time. We cannot do any IPO or
   /// inlining across interposable call edges, since the callee can be
-  /// replaced with something arbitrary.
-  LLVM_ABI bool isInterposable() const;
+  /// replaced with something arbitrary. For most IPO passes, the `noipa`
+  /// attribute on a function definition is also treated as if it were
+  /// interposable (and thus blocking interprocedural analysis). Passes
+  /// which already have their own distinct control attributes (e.g. inlining)
+  /// may set `CheckNoIPA = false` when calling this.
+  LLVM_ABI bool isInterposable(bool CheckNoIPA = true) const;
   LLVM_ABI bool canBenefitFromLocalAlias() const;
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }

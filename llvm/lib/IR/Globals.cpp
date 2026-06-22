@@ -113,7 +113,9 @@ GlobalObject::~GlobalObject() {
   setComdat(nullptr);
 }
 
-bool GlobalValue::isInterposable() const {
+bool GlobalValue::isInterposable(bool CheckNoIPA) const {
+  if (CheckNoIPA && isNoipaFnDef())
+    return true;
   if (isInterposableLinkage(getLinkage()))
     return true;
   return !isDSOLocal() && getParent() &&

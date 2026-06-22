@@ -2455,9 +2455,6 @@ static Function *hasSideeffectFreeStaticResolution(GlobalIFunc &IF) {
   if (Resolver->isInterposable())
     return nullptr;
 
-  if (Resolver->hasFnAttribute(Attribute::NoIPA))
-    return nullptr;
-
   // Only handle functions that have been optimized into a single basic block.
   auto It = Resolver->begin();
   if (++It != Resolver->end())
@@ -2576,9 +2573,6 @@ static bool OptimizeNonTrivialIFuncs(
       continue;
 
     if (Resolver->isInterposable())
-      continue;
-
-    if (Resolver->hasFnAttribute(Attribute::NoIPA))
       continue;
 
     SmallVector<Function *> Versions;
