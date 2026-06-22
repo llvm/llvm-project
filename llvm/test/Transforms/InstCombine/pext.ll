@@ -102,3 +102,82 @@ define i64 @test_pext_64_constant_fold_2() nounwind readnone {
   ret i64 %1
 }
 
+define i32 @test_pext_and_constant_supermask_32(i32 %x) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_constant_supermask_32(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %and = and i32 %x, 255
+  %1 = tail call i32 @llvm.pext.i32(i32 %and, i32 42)
+  ret i32 %1
+}
+
+define i64 @test_pext_and_constant_supermask_64(i64 %x) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_constant_supermask_64(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.pext.i64(i64 [[X:%.*]], i64 42)
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %and = and i64 %x, 255
+  %1 = tail call i64 @llvm.pext.i64(i64 %and, i64 42)
+  ret i64 %1
+}
+
+define i32 @test_pext_and_known_zero_mask_32(i32 %x, i32 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_known_zero_mask_32(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], 42
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 [[M]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %m = and i32 %y, 42
+  %and = and i32 %x, 63
+  %1 = tail call i32 @llvm.pext.i32(i32 %and, i32 %m)
+  ret i32 %1
+}
+
+define i32 @test_pext_and_known_zero_mask_multi_use_32(i32 %x, i32 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_known_zero_mask_multi_use_32(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[Y:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[PEXT:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X]], i32 [[M]])
+; CHECK-NEXT:    [[USE:%.*]] = add nuw nsw i32 [[AND]], [[PEXT]]
+; CHECK-NEXT:    ret i32 [[USE]]
+;
+  %m = and i32 %y, 42
+  %and = and i32 %x, 63
+  %pext = tail call i32 @llvm.pext.i32(i32 %and, i32 %m)
+  %use = add i32 %and, %pext
+  ret i32 %use
+}
+
+define i32 @test_pext_and_constant_mask_32(i32 %x) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_constant_mask_32(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %and = and i32 %x, 42
+  %1 = tail call i32 @llvm.pext.i32(i32 %and, i32 42)
+  ret i32 %1
+}
+
+define i32 @test_pext_and_unknown_mask_32(i32 %x, i32 %m) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_unknown_mask_32(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.pext.i32(i32 [[AND]], i32 [[M:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %and = and i32 %x, 63
+  %1 = tail call i32 @llvm.pext.i32(i32 %and, i32 %m)
+  ret i32 %1
+}
+
+define i32 @test_pext_and_partial_demand_32(i32 %x) nounwind readnone {
+; CHECK-LABEL: @test_pext_and_partial_demand_32(
+; CHECK-NEXT:    [[PEXT:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 42)
+; CHECK-NEXT:    [[USE:%.*]] = and i32 [[PEXT]], 1
+; CHECK-NEXT:    ret i32 [[USE]]
+;
+  %and = and i32 %x, 2
+  %pext = tail call i32 @llvm.pext.i32(i32 %and, i32 42)
+  %use = and i32 %pext, 1
+  ret i32 %use
+}
