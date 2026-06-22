@@ -103,9 +103,6 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
   ::memset(&m_lsx, 0, sizeof(m_lsx));
   ::memset(&m_lasx, 0, sizeof(m_lasx));
 
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
-
   // Refer to:
   // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html#control-and-status-registers-related-to-watchpoints
   // 14 is just a maximum value, query hardware for actual watchpoint count.

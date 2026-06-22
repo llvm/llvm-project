@@ -5,42 +5,42 @@ struct NoCopyConstruct {};
 // int
 // CHECK: acc.private.recipe @privatization__ZTSi : !cir.ptr<!s32i> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.private.init"]
+// CHECK-NEXT: cir.alloca "openacc.private.init" {{.*}} : !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // float
 // CHECK-NEXT: acc.private.recipe @privatization__ZTSf : !cir.ptr<!cir.float> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.float> {{.*}}):
-// CHECK-NEXT: cir.alloca !cir.float, !cir.ptr<!cir.float>, ["openacc.private.init"]
+// CHECK-NEXT: cir.alloca "openacc.private.init" {{.*}} : !cir.ptr<!cir.float>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // NoCopyConstruct
 // CHECK-NEXT: acc.private.recipe @privatization__ZTS15NoCopyConstruct : !cir.ptr<!rec_NoCopyConstruct> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_NoCopyConstruct, !cir.ptr<!rec_NoCopyConstruct>, ["openacc.private.init"]
+// CHECK-NEXT: cir.alloca "openacc.private.init" {{.*}} : !cir.ptr<!rec_NoCopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // int[5] with 1 'bound'
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.private.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.private.init" {{.*}} : !cir.ptr<!cir.array<!s32i x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // float[5] with 1 'bound'
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_f : !cir.ptr<!cir.array<!cir.float x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.private.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.private.init" {{.*}} : !cir.ptr<!cir.array<!cir.float x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // NoCopyConstruct[5] with 1 'bound'
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["openacc.private.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.private.init" {{.*}} : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 
@@ -48,17 +48,17 @@ void acc_compute() {
   // CHECK: cir.func{{.*}} @acc_compute()
 
   int someInt;
-  // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["someInt"]
+  // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca "someInt" {{.*}} : !cir.ptr<!s32i>
   float someFloat;
-  // CHECK-NEXT: %[[SOMEFLOAT:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["someFloat"]
+  // CHECK-NEXT: %[[SOMEFLOAT:.*]] = cir.alloca "someFloat" {{.*}} : !cir.ptr<!cir.float>
   struct NoCopyConstruct noCopy;
-  // CHECK-NEXT: %[[NOCOPY:.*]] = cir.alloca !rec_NoCopyConstruct, !cir.ptr<!rec_NoCopyConstruct>, ["noCopy"]
+  // CHECK-NEXT: %[[NOCOPY:.*]] = cir.alloca "noCopy" {{.*}} : !cir.ptr<!rec_NoCopyConstruct>
   int someIntArr[5];
-  // CHECK-NEXT: %[[INTARR:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["someIntArr"]
+  // CHECK-NEXT: %[[INTARR:.*]] = cir.alloca "someIntArr" {{.*}} : !cir.ptr<!cir.array<!s32i x 5>>
   float someFloatArr[5];
-  // CHECK-NEXT: %[[FLOATARR:.*]] = cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["someFloatArr"]
+  // CHECK-NEXT: %[[FLOATARR:.*]] = cir.alloca "someFloatArr" {{.*}} : !cir.ptr<!cir.array<!cir.float x 5>>
   struct NoCopyConstruct noCopyArr[5];
-  // CHECK-NEXT: %[[NOCOPYARR:.*]] = cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["noCopyArr"]
+  // CHECK-NEXT: %[[NOCOPYARR:.*]] = cir.alloca "noCopyArr" {{.*}} : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
 
 #pragma acc parallel private(someInt)
   ;

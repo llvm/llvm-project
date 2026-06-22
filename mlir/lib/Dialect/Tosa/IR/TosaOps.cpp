@@ -662,6 +662,23 @@ static void printShapeToDiagnostic(InFlightDiagnostic &diag,
   llvm::interleaveComma(shape, diag, printDim);
 }
 
+static LogicalResult
+verifyOutputShapeCompatibleWithExpected(Operation *op, ShapedType outputType,
+                                        ArrayRef<int64_t> expectedShape,
+                                        StringRef outputName = "output") {
+  assert(outputType.hasRank() && "expected output type to be ranked");
+
+  if (succeeded(verifyCompatibleShape(outputType.getShape(), expectedShape)))
+    return success();
+
+  InFlightDiagnostic diag = op->emitOpError("expected ");
+  diag << outputName << " shape ";
+  printShapeToDiagnostic(diag, outputType.getShape());
+  diag << " to be compatible with inferred shape ";
+  printShapeToDiagnostic(diag, expectedShape);
+  return diag;
+}
+
 LogicalResult verifyConvOutputSize(
     Operation *op, const int64_t inputSize, const int64_t kernelSize,
     const int64_t outputSize, const int64_t padBefore, const int64_t padAfter,
@@ -692,6 +709,29 @@ LogicalResult verifyConvOutputSize(
            << "calculated=" << calculatedOutSize << ", expected=" << outputSize;
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// mxint8Type DenseElementTypeInterface implementation.
+//===----------------------------------------------------------------------===//
+size_t mlir::tosa::mxint8Type::getDenseElementBitSize() const { return 8; }
+
+Attribute
+mlir::tosa::mxint8Type::convertToAttribute(ArrayRef<char> rawData) const {
+  assert(rawData.size() == 1 && "expected 1 byte for tosa.mxint8 element");
+  const auto intType = IntegerType::get(getContext(), 8);
+  return intType.convertToAttribute(rawData);
+}
+
+LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
+    Attribute attr, SmallVectorImpl<char> &result) const {
+  const auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr)
+    return failure();
+  const Type attrType = intAttr.getType();
+  if (!attrType.isSignlessInteger(8))
+    return failure();
+  return cast<IntegerType>(attrType).convertFromAttribute(attr, result);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1033,18 +1073,18 @@ static LogicalResult verifyVariableOpErrorIf(T op, Type type, StringRef name) {
 }
 
 // verify that inType and outType have same element types
-template <typename T>
-static LogicalResult verifySameElementTypes(T op, Type aType, Type bType,
+static LogicalResult verifySameElementTypes(Operation *op, Type aType,
+                                            Type bType,
                                             StringRef aName = "input",
                                             StringRef bName = "output") {
   auto aTType = llvm::dyn_cast<TensorType>(aType);
   auto bTType = llvm::dyn_cast<TensorType>(bType);
   if (!aTType) {
-    op.emitOpError("expect shaped tensor for") << aName << ", got " << aType;
+    op->emitOpError("expect shaped tensor for") << aName << ", got " << aType;
     return failure();
   }
   if (!bTType) {
-    op.emitOpError("expect shaped tensor for") << bName << ", got" << bType;
+    op->emitOpError("expect shaped tensor for") << bName << ", got" << bType;
     return failure();
   }
   auto aElementType = aTType.getElementType();
@@ -1060,7 +1100,7 @@ static LogicalResult verifySameElementTypes(T op, Type aType, Type bType,
     // eg, not sure how to check quant::QuantizedType
     // this happens in test_conv2d_q_grouped_convolution in
     // tfl-to-tosa-pipeline.mlir
-    op.emitOpError("expect ")
+    op->emitOpError("expect ")
         << aName << " and " << bName << " to have same element type, got "
         << aElementType << " and " << bElementType;
     return failure();
@@ -1104,6 +1144,9 @@ static LogicalResult verifyPoolingOpImpl(Operation *op,
                                          ArrayRef<int64_t> strides,
                                          ArrayRef<int64_t> padding, Value input,
                                          Value output) {
+  if (failed(verifySameElementTypes(op, input.getType(), output.getType())))
+    return failure();
+
   const bool hasKernel = kernel.size() > 0;
   const bool hasStrides = strides.size() > 0;
   const bool hasPad = padding.size() > 0;
@@ -2542,6 +2585,10 @@ LogicalResult tosa::MulOp::verify() {
 
   const bool aHasRank = aType.hasRank();
   const bool bHasRank = bType.hasRank();
+
+  bool hasExpectedOutputShape = false;
+  SmallVector<int64_t> expectedOutputShape;
+
   if (aHasRank && bHasRank) {
     const int64_t aRank = aType.getRank();
     const int64_t bRank = bType.getRank();
@@ -2550,12 +2597,12 @@ LogicalResult tosa::MulOp::verify() {
              << aRank << " and " << bRank;
 
     // check for broadcast compatible shapes
-    SmallVector<int64_t> resultShape;
     if (!mlir::OpTrait::util::getBroadcastedShape(
-            aType.getShape(), bType.getShape(), resultShape))
+            aType.getShape(), bType.getShape(), expectedOutputShape))
       return emitOpError("a and b operands don't have broadcast-compatible "
                          "shapes, got ")
              << aType << " and " << bType;
+    hasExpectedOutputShape = true;
   }
 
   ShapedType resultType = cast<ShapedType>(output.getType());
@@ -2569,6 +2616,11 @@ LogicalResult tosa::MulOp::verify() {
   if (bHasRank && resultRank != bType.getRank())
     return emitOpError("result type has different rank than b, got ")
            << resultRank << " vs " << bType.getRank();
+
+  if (hasExpectedOutputShape &&
+      failed(verifyOutputShapeCompatibleWithExpected(getOperation(), resultType,
+                                                     expectedOutputShape)))
+    return failure();
 
   return success();
 }
@@ -3078,18 +3130,6 @@ static FailureOr<int64_t> getZeroPoint(Value val, bool signExtend) {
   return -1;
 }
 
-static FailureOr<int64_t> getConstantScalarIntValue(Value val) {
-  ElementsAttr attr;
-  if (!matchPattern(val, m_Constant(&attr)))
-    return failure();
-
-  if (!llvm::isa<IntegerType>(attr.getElementType()) ||
-      attr.getNumElements() != 1)
-    return failure();
-
-  return attr.getValues<APInt>()[0].getSExtValue();
-}
-
 template <typename T>
 static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
                                      const std::string &operand) {
@@ -3338,6 +3378,37 @@ LogicalResult tosa::GatherOp::inferReturnTypeComponents(
   return success();
 }
 
+LogicalResult tosa::RowGatherOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    RowGatherOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outputShape;
+  outputShape.resize(3, ShapedType::kDynamic);
+
+  const ShapeAdaptor valuesShape(adaptor.getValues().getType());
+  if (valuesShape.hasRank()) {
+    outputShape[0] = valuesShape.getDimSize(0);
+    outputShape[2] = valuesShape.getDimSize(2);
+  }
+
+  const ShapeAdaptor indicesShape(adaptor.getIndices().getType());
+  if (indicesShape.hasRank()) {
+    if (outputShape[0] == ShapedType::kDynamic)
+      outputShape[0] = indicesShape.getDimSize(0);
+
+    const FailureOr<int32_t> maybeRowCount =
+        getConstantScalarIntValue<int32_t>(adaptor.getRowCount());
+    if (succeeded(maybeRowCount)) {
+      const int64_t indicesW = indicesShape.getDimSize(1);
+      if (ShapedType::isStatic(indicesW))
+        outputShape[1] = indicesW * maybeRowCount.value();
+    }
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
 LogicalResult tosa::RowGatherBlockScaledOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     RowGatherBlockScaledOp::Adaptor adaptor,
@@ -3358,7 +3429,8 @@ LogicalResult tosa::RowGatherBlockScaledOp::inferReturnTypeComponents(
     if (dataShape[0] == ShapedType::kDynamic)
       dataShape[0] = indicesShape.getDimSize(0);
 
-    if (auto rowCount = getConstantScalarIntValue(adaptor.getRowCount());
+    if (auto rowCount =
+            getConstantScalarIntValue<int32_t>(adaptor.getRowCount());
         succeeded(rowCount) && rowCount.value() > 0) {
       const int64_t indicesW = indicesShape.getDimSize(1);
       if (ShapedType::isStatic(indicesW))
@@ -3429,6 +3501,58 @@ LogicalResult tosa::GatherOp::verify() {
   return success();
 }
 
+LogicalResult tosa::RowGatherOp::verify() {
+  if (failed(verifySameElementTypes(*this, /* inType = */ getValues().getType(),
+                                    /* outType = */ getOutput().getType())))
+    return failure();
+
+  const FailureOr<int32_t> maybeRowCount =
+      getConstantScalarIntValue<int32_t>(getRowCount());
+  if (succeeded(maybeRowCount) && maybeRowCount.value() <= 0)
+    return emitOpError() << "requires row_count to be > 0, got "
+                         << maybeRowCount.value();
+
+  int64_t n = ShapedType::kDynamic;
+  int64_t c = ShapedType::kDynamic;
+  int64_t w = ShapedType::kDynamic;
+
+  const ShapeAdaptor valuesShape(getValues().getType());
+  if (valuesShape.hasRank()) {
+    n = valuesShape.getDimSize(0);
+    c = valuesShape.getDimSize(2);
+  }
+
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  if (indicesShape.hasRank()) {
+    if (failed(tryUpdateDimOrFailure(*this, n, indicesShape.getDimSize(0),
+                                     "indices", "batch")))
+      return failure();
+    w = indicesShape.getDimSize(1);
+  }
+
+  const ShapeAdaptor outputShape(getOutput().getType());
+  if (outputShape.hasRank()) {
+    if (failed(tryUpdateDimOrFailure(*this, n, outputShape.getDimSize(0),
+                                     "output", "batch")) ||
+        failed(tryUpdateDimOrFailure(*this, c, outputShape.getDimSize(2),
+                                     "output", "channels")))
+      return failure();
+
+    if (succeeded(maybeRowCount) && maybeRowCount.value() > 0 &&
+        ShapedType::isStatic(w)) {
+      const int64_t expectedOutputRows = w * maybeRowCount.value();
+      if (ShapedType::isStatic(outputShape.getDimSize(1)) &&
+          outputShape.getDimSize(1) != expectedOutputRows)
+        return emitOpError()
+               << "requires output dimension to be equal to "
+                  "indices[1]*row_count ("
+               << expectedOutputRows << "), got " << outputShape.getDimSize(1);
+    }
+  }
+
+  return success();
+}
+
 LogicalResult tosa::RowGatherBlockScaledOp::verify() {
   const OperandRange values = getValues();
   const ResultRange output = getOutput();
@@ -3462,7 +3586,7 @@ LogicalResult tosa::RowGatherBlockScaledOp::verify() {
                                 "values[1]", "output[1]")))
     return failure();
 
-  if (auto rowCount = getConstantScalarIntValue(getRowCount());
+  if (auto rowCount = getConstantScalarIntValue<int32_t>(getRowCount());
       succeeded(rowCount) && rowCount.value() <= 0)
     return emitOpError() << "requires row_count to be > 0, got "
                          << rowCount.value();
@@ -3501,7 +3625,7 @@ LogicalResult tosa::RowGatherBlockScaledOp::verify() {
                                      "output[0]", "channels")))
       return failure();
 
-    if (auto rowCount = getConstantScalarIntValue(getRowCount());
+    if (auto rowCount = getConstantScalarIntValue<int32_t>(getRowCount());
         succeeded(rowCount) && rowCount.value() > 0 &&
         ShapedType::isStatic(w)) {
       const int64_t expectedOutputRows = w * rowCount.value();
@@ -3530,7 +3654,7 @@ LogicalResult tosa::RowGatherBlockScaledOp::verify() {
                                        "output[1]", "batch")))
         return failure();
 
-      if (auto rowCount = getConstantScalarIntValue(getRowCount());
+      if (auto rowCount = getConstantScalarIntValue<int32_t>(getRowCount());
           succeeded(rowCount) && rowCount.value() > 0 &&
           ShapedType::isStatic(w)) {
         const int64_t expectedOutputRows = w * rowCount.value();
@@ -4846,12 +4970,7 @@ LogicalResult TransposeConv2DOp::verify() {
 }
 
 LogicalResult RescaleOp::verify() {
-  auto inputType = llvm::dyn_cast<ShapedType>(getInput().getType());
-  if (!inputType) {
-    emitOpError("expect shaped tensor for input, got ") << getInput().getType();
-    return failure();
-  }
-
+  const auto inputType = llvm::cast<ShapedType>(getInput().getType());
   auto inputElementType =
       getStorageElementTypeOrSelf(inputType.getElementType());
   if (!mlir::isa<IntegerType>(inputElementType)) {
@@ -4860,13 +4979,7 @@ LogicalResult RescaleOp::verify() {
     return failure();
   }
 
-  auto outputType = llvm::dyn_cast<ShapedType>(getOutput().getType());
-  if (!outputType) {
-    emitOpError("expect shaped tensor for output, got ")
-        << getOutput().getType();
-    return failure();
-  }
-
+  const auto outputType = llvm::cast<ShapedType>(getOutput().getType());
   auto outputElementType =
       getStorageElementTypeOrSelf(outputType.getElementType());
   if (!mlir::isa<IntegerType>(outputElementType)) {
@@ -4891,19 +5004,7 @@ LogicalResult RescaleOp::verify() {
   if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
-  auto multiplierType = llvm::dyn_cast<ShapedType>(getMultiplier().getType());
-  if (!multiplierType) {
-    emitOpError("expect shaped tensor for multiplier, got ")
-        << getMultiplier().getType();
-    return failure();
-  }
-
-  auto shiftType = llvm::dyn_cast<ShapedType>(getShift().getType());
-  if (!shiftType) {
-    emitOpError("expect shaped tensor for shift, got ") << getShift().getType();
-    return failure();
-  }
-
+  const auto multiplierType = llvm::cast<ShapedType>(getMultiplier().getType());
   // multiplier element type must be i32 for scale32 = true
   if (getScale32() && !multiplierType.getElementType().isInteger(32)) {
     emitOpError("expect i32 element type for multiplier for scale32=true, got ")
@@ -4936,28 +5037,34 @@ LogicalResult RescaleOp::verify() {
     numChannels = inputType.getDimSize(inputType.getRank() - 1);
   }
 
-  if (!multiplierType.hasRank())
-    return success();
-
-  ArrayRef<int64_t> multiplierShape = multiplierType.getShape();
-  // multiplier input has rank 1 by dialect definition
-  if (multiplierShape[0] != ShapedType::kDynamic &&
-      multiplierShape[0] != numChannels) {
-    emitOpError("expect shape of { ")
-        << numChannels << " } for multiplier input, got { "
-        << multiplierShape[0] << " }";
-    return failure();
+  if (outputType.hasRank()) {
+    if (failed(verifyOutputShapeCompatibleWithExpected(
+            getOperation(), outputType, inputType.getShape())))
+      return failure();
   }
 
-  if (!shiftType.hasRank())
-    return success();
+  if (multiplierType.hasRank()) {
+    ArrayRef<int64_t> multiplierShape = multiplierType.getShape();
+    // multiplier input has rank 1 by dialect definition
+    if (multiplierShape[0] != ShapedType::kDynamic &&
+        multiplierShape[0] != numChannels) {
+      emitOpError("expect shape of { ")
+          << numChannels << " } for multiplier input, got { "
+          << multiplierShape[0] << " }";
+      return failure();
+    }
+  }
 
-  ArrayRef<int64_t> shiftShape = shiftType.getShape();
-  // shift input has rank 1 by dialect definition
-  if (shiftShape[0] != ShapedType::kDynamic && shiftShape[0] != numChannels) {
-    emitOpError("expect shape of { ")
-        << numChannels << " } for shift input, got { " << shiftShape[0] << " }";
-    return failure();
+  const auto shiftType = llvm::cast<ShapedType>(getShift().getType());
+  if (shiftType.hasRank()) {
+    ArrayRef<int64_t> shiftShape = shiftType.getShape();
+    // shift input has rank 1 by dialect definition
+    if (shiftShape[0] != ShapedType::kDynamic && shiftShape[0] != numChannels) {
+      emitOpError("expect shape of { ")
+          << numChannels << " } for shift input, got { " << shiftShape[0]
+          << " }";
+      return failure();
+    }
   }
 
   return success();
@@ -5430,12 +5537,7 @@ LogicalResult WhileOp::verify() {
 }
 
 LogicalResult ReverseOp::verify() {
-  if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
-                             /* outType = */ getOutput().getType())
-          .failed())
-    return failure();
   TensorType inputType = getInput1().getType();
-  TensorType outputType = getOutput().getType();
   int32_t reverseAxis = getAxis();
 
   if (reverseAxis < 0)
@@ -5449,16 +5551,7 @@ LogicalResult ReverseOp::verify() {
              << inputRank << ") to be larger than reverse axis (" << reverseAxis
              << ")";
   }
-  if (outputType.hasRank()) {
-    int64_t outputRank = outputType.getRank();
-    if (inputType.hasRank() && outputRank != inputType.getRank())
-      return emitOpError(
-          "expect output tensor rank to be equal to input tensor rank");
-    if (reverseAxis >= outputRank && (reverseAxis != 0 || outputRank != 0))
-      return emitOpError("expect output tensor rank (")
-             << outputRank << ") to be larger than reverse axis ("
-             << reverseAxis << ")";
-  }
+
   return success();
 }
 

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -932,17 +933,15 @@ static void filterFunctions(T &ProfileMap) {
   std::string NegativeMD5Name =
       std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
 
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
-    auto Tmp = I++;
-    const auto &FuncName = getFuncName(*Tmp);
+  ProfileMap.remove_if([&](const auto &Entry) {
+    const auto &FuncName = getFuncName(Entry);
     // Negative filter has higher precedence than positive filter.
-    if ((hasNegativeFilter &&
-         (NegativePattern.match(FuncName) ||
-          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
-        (hasFilter && !(Pattern.match(FuncName) ||
-                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
-      ProfileMap.erase(Tmp);
-  }
+    return (hasNegativeFilter &&
+            (NegativePattern.match(FuncName) ||
+             (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
+           (hasFilter && !(Pattern.match(FuncName) ||
+                           (FunctionSamples::UseMD5 && MD5Name == FuncName)));
+  });
 
   llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
                << "in the original profile are filtered.\n";
@@ -2047,8 +2046,7 @@ public:
   /// Load profiles specified by BaseFilename and TestFilename.
   std::error_code loadProfiles();
 
-  using FuncSampleStatsMap =
-      std::unordered_map<SampleContext, FuncSampleStats, SampleContext::Hash>;
+  using FuncSampleStatsMap = DenseMap<SampleContext, FuncSampleStats>;
 
 private:
   SampleOverlapStats ProfOverlap;
@@ -2209,7 +2207,7 @@ void SampleOverlapAggregator::getHotFunctions(
     uint64_t HotThreshold) const {
   for (const auto &F : ProfStats) {
     if (isFunctionHot(F.second, HotThreshold))
-      HotFunc.emplace(F.first, F.second);
+      HotFunc.try_emplace(F.first, F.second);
   }
 }
 
@@ -2436,12 +2434,10 @@ double SampleOverlapAggregator::computeSampleFunctionOverlap(
 void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
   using namespace sampleprof;
 
-  std::unordered_map<SampleContext, const FunctionSamples *,
-                     SampleContext::Hash>
-      BaseFuncProf;
+  DenseMap<SampleContext, const FunctionSamples *> BaseFuncProf;
   const auto &BaseProfiles = BaseReader->getProfiles();
   for (const auto &BaseFunc : BaseProfiles) {
-    BaseFuncProf.emplace(BaseFunc.second.getContext(), &(BaseFunc.second));
+    BaseFuncProf.try_emplace(BaseFunc.second.getContext(), &(BaseFunc.second));
   }
   ProfOverlap.UnionCount = BaseFuncProf.size();
 
@@ -2559,7 +2555,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, BaseHotThreshold);
     ProfOverlap.BaseSample += FuncStats.SampleSum;
-    BaseStats.emplace(I.second.getContext(), FuncStats);
+    BaseStats.try_emplace(I.second.getContext(), FuncStats);
   }
 
   const auto &TestProf = TestReader->getProfiles();
@@ -2568,7 +2564,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, TestHotThreshold);
     ProfOverlap.TestSample += FuncStats.SampleSum;
-    TestStats.emplace(I.second.getContext(), FuncStats);
+    TestStats.try_emplace(I.second.getContext(), FuncStats);
   }
 
   ProfOverlap.BaseName = StringRef(BaseFilename);

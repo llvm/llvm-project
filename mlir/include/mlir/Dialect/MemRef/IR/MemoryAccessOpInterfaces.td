@@ -34,8 +34,8 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
   let methods =
     [InterfaceMethod<
       /*desc=*/[{
-        Return the accessed memref. If the operation is still in tensor form, return
-        the null value.
+        Return the accessed memref. If the operation is not accessing memory through
+        a memref in its current form, return the null value.
       }],
       /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
       /*methodName=*/"getAccessedMemref",
@@ -53,7 +53,11 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{
         Return the shape of the portion of the memref that is being accessed by
-        this operation, if known, ignoring leading unit dimensions.
+        this operation, if known. This shape describes the access dimensions
+        whose strides are semantically important for this operation.
+        Implementations shall omit dimensions whose strides do not affect the
+        operation semantics. (In particular, if an operation will access one
+        element of the base memref, this method should return `{}`.)
 
         Reindexing transformations may not modify the *strides* of the trailing
         N dimensions, where N is the size returned value, and should ensure that
@@ -136,7 +140,8 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
   let methods =
     [InterfaceMethod<
       /*desc=*/[{
-        Return the source memref for this copy operation.
+        Return the source memref for this copy operation. If the operation is not
+        currently copying from a memref source, return the null value.
       }],
       /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
       /*methodName=*/"getSrc",
@@ -153,7 +158,8 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
       /*args=*/(ins)>,
     InterfaceMethod<
       /*desc=*/[{
-        Return the destination memref for this copy operation.
+        Return the destination memref for this copy operation. If the operation is
+        not currently copying to a memref destination, return the null value.
       }],
       /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
       /*methodName=*/"getDst",
@@ -190,7 +196,33 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
       /*methodName=*/"setMemrefsAndIndices",
       /*args=*/(ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newSrc,
         "::mlir::ValueRange":$newSrcIndices, "::mlir::Value":$newDst,
-        "::mlir::ValueRange":$newDstIndices)>];
+        "::mlir::ValueRange":$newDstIndices)>,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return true if, either by definition or due to some attribute, it's
+        known that the source indices are non-negative and less than the size of
+        the dimension they index.
+      }],
+      /*retType=*/"bool",
+      /*methodName=*/"hasInboundsSrcIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return true;
+      }]>,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return true if, either by definition or due to some attribute, it's
+        known that the destination indices are non-negative and less than the
+        size of the dimension they index.
+      }],
+      /*retType=*/"bool",
+      /*methodName=*/"hasInboundsDstIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return true;
+      }]>];
   let verify = [{
     return ::mlir::memref::detail::verifyIndexedMemCopyOpInterface($_op);
   }];

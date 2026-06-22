@@ -1,5 +1,5 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
 ; This test ensures that a library shader with a UAV gets the module and
 ; shader feature flag UAVsAtEveryStage when the DXIL validator version is < 1.8

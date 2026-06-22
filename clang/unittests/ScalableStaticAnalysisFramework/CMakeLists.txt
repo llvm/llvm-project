@@ -1,6 +1,9 @@
 add_distinct_clang_unittest(ClangScalableAnalysisTests
+  Analyses/PointerFlow/PointerFlowTest.cpp
+  Analyses/PointerFlow/PointerFlowWPATest.cpp
   Analyses/CallGraph/CallGraphExtractorTest.cpp
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
+  Analyses/UnsafeBufferUsage/UnsafeBufferUsageWPATest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityIdTableTest.cpp
@@ -10,6 +13,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
   Frontend/TUSummaryExtractorFrontendActionTest.cpp
+  LUSummaryTest.cpp
   ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
@@ -20,11 +24,14 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Serialization/JSONFormatTest/JSONFormatTest.cpp
   Serialization/JSONFormatTest/LUSummaryTest.cpp
   Serialization/JSONFormatTest/TUSummaryTest.cpp
+  SourceTransformation/EmitterTest.cpp
+  SourceTransformation/RegistryTest.cpp
   SummaryData/SummaryDataTest.cpp
   SummaryNameTest.cpp
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
   WholeProgramAnalysis/AnalysisDriverTest.cpp
+  WholeProgramAnalysis/UnsafeBufferReachableAnalysisTest.cpp
 
   CLANG_LIBS
   clangAST
@@ -34,8 +41,10 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangSerialization
   clangTooling
+  clangToolingCore
 
   LINK_LIBS
   LLVMTestingSupport
@@ -43,4 +52,5 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   LLVM_COMPONENTS
   FrontendOpenMP
   Support
+  TargetParser
   )

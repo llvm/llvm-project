@@ -30,6 +30,10 @@ namespace acc {
 mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 
 /// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns it.
+mlir::Value getACCOperandForBlockArg(mlir::Value v);
+
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
 /// nullptr. Otherwise maps the block argument to its operand and returns the
 /// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
 mlir::Operation *getACCDataClauseOpForBlockArg(mlir::Value v);
@@ -78,7 +82,9 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 
 /// Check if a value represents device data.
 /// This checks if the value represents device data via the
-/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces.
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces,
+/// and whether the defining operation carries `acc.declare` with the deviceptr
+/// clause.
 /// \param val The value to check
 /// \return true if the value is device data, false otherwise
 bool isDeviceValue(mlir::Value val);

@@ -577,6 +577,14 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
 
+  // Add [[clang::unsafe_buffer_usage]]
+  if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
+    handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+                                           getPlaceholderAttrInfo());
+    });
+  }
+
   // Parameters.
   unsigned NumParams = FD ? FD->getNumParams() : MD->param_size();
 
@@ -990,6 +998,9 @@ UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
 void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
+  auto Readers = APINotes.findAPINotes(D->getLocation());
+  if (Readers.empty())
+    return;
 
   auto *DC = D->getDeclContext();
   // Globals.
@@ -999,7 +1010,7 @@ void Sema::ProcessAPINotes(Decl *D) {
         UnwindNamespaceContext(DC, APINotes);
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info =
             Reader->lookupGlobalVariable(VD->getName(), APINotesContext);
         ProcessVersionedAPINotes(*this, VD, Info);
@@ -1011,7 +1022,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Global functions.
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
-        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
           ProcessVersionedAPINotes(*this, FD, Info);
@@ -1023,7 +1034,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C classes.
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupObjCClassInfo(Class->getName());
         ProcessVersionedAPINotes(*this, Class, Info);
       }
@@ -1033,7 +1044,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C protocols.
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupObjCProtocolInfo(Protocol->getName());
         ProcessVersionedAPINotes(*this, Protocol, Info);
       }
@@ -1075,7 +1086,7 @@ void Sema::ProcessAPINotes(Decl *D) {
             T.split(), getASTContext().getPrintingPolicy());
       }
 
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         if (auto ParentTag = dyn_cast<TagDecl>(Tag->getDeclContext()))
           APINotesContext = UnwindTagContext(ParentTag, APINotes);
         auto Info = Reader->lookupTag(LookupName, APINotesContext);
@@ -1087,7 +1098,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Typedefs
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupTypedef(Typedef->getName(), APINotesContext);
         ProcessVersionedAPINotes(*this, Typedef, Info);
       }
@@ -1100,7 +1111,7 @@ void Sema::ProcessAPINotes(Decl *D) {
   if (DC->getRedeclContext()->isFileContext() ||
       DC->getRedeclContext()->isExternCContext()) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         auto Info = Reader->lookupEnumConstant(EnumConstant->getName());
         ProcessVersionedAPINotes(*this, EnumConstant, Info);
       }
@@ -1153,7 +1164,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C methods.
     if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         if (auto Context = GetContext(Reader)) {
           // Map the selector.
           Selector Sel = Method->getSelector();
@@ -1198,7 +1209,7 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (!isa<CXXConstructorDecl>(CXXMethod) &&
           !isa<CXXDestructorDecl>(CXXMethod) &&
           !isa<CXXConversionDecl>(CXXMethod)) {
-        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        for (auto Reader : Readers) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             std::string MethodName;
             if (CXXMethod->isOverloadedOperator())
@@ -1217,7 +1228,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     if (auto Field = dyn_cast<FieldDecl>(D)) {
       if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
-        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+        for (auto Reader : Readers) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             auto Info = Reader->lookupField(Context->id, Field->getName());
             ProcessVersionedAPINotes(*this, Field, Info);
@@ -1227,7 +1238,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     }
 
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto Reader : Readers) {
         if (auto Context = UnwindTagContext(TagContext, APINotes)) {
           auto Info = Reader->lookupTag(Tag->getName(), Context);
           ProcessVersionedAPINotes(*this, Tag, Info);
