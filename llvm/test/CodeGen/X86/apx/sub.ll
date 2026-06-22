@@ -1182,7 +1182,7 @@ define fastcc void @fold_with_physical_reg(ptr %arg0, i64 %arg1, ptr %arg2, i1 %
 ; NF-NEXT:    pushq %r13 # encoding: [0x41,0x55]
 ; NF-NEXT:    pushq %r12 # encoding: [0x41,0x54]
 ; NF-NEXT:    pushq %rbx # encoding: [0x53]
-; NF-NEXT:    subq $24, %rsp # encoding: [0x48,0x83,0xec,0x18]
+; NF-NEXT:    {nf} subq $24, %rsp # encoding: [0x62,0xf4,0xfc,0x0c,0x83,0xec,0x18]
 ; NF-NEXT:    movl %ecx, %r14d # encoding: [0x41,0x89,0xce]
 ; NF-NEXT:    movq %rdx, %rbx # encoding: [0x48,0x89,0xd3]
 ; NF-NEXT:    movq %rsi, %r12 # encoding: [0x49,0x89,0xf4]

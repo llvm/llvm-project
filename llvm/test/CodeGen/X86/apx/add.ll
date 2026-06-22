@@ -1248,7 +1248,7 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NF-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
 ; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
 ; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NF-NEXT:    addq $8, %rsp # encoding: [0x48,0x83,0xc4,0x08]
+; NF-NEXT:    {nf} addq $8, %rsp # encoding: [0x62,0xf4,0xfc,0x0c,0x83,0xc4,0x08]
 ; NF-NEXT:    popq %rbx # encoding: [0x5b]
 ; NF-NEXT:    popq %r12 # encoding: [0x41,0x5c]
 ; NF-NEXT:    popq %r13 # encoding: [0x41,0x5d]

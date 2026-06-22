@@ -383,7 +383,11 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   }
 
   MachineInstrBuilder MI;
-  if (UseLEA) {
+  // Use NF (no-flags) variants when the target supports it, avoiding
+  // gratuitous EFLAGS clobber. Not on Windows where the OS epilogue unwinder
+  // doesn't recognize EVEX-encoded instructions.
+  bool UseNF = STI.hasNF() && !isWin64Prologue(*MBB.getParent());
+  if (UseLEA && !UseNF) {
     MI = addRegOffset(BuildMI(MBB, MBBI, DL,
                               TII.get(getLEArOpcode(Uses64BitFramePtr)),
                               StackPtr),
@@ -391,12 +395,16 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   } else {
     bool IsSub = Offset < 0;
     uint64_t AbsOffset = IsSub ? -Offset : Offset;
-    const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr)
-                               : getADDriOpcode(Uses64BitFramePtr);
+    const unsigned Opc =
+        IsSub ? (UseNF ? (unsigned)X86::SUB64ri32_NF
+                       : getSUBriOpcode(Uses64BitFramePtr))
+              : (UseNF ? (unsigned)X86::ADD64ri32_NF
+                       : getADDriOpcode(Uses64BitFramePtr));
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
              .addReg(StackPtr)
              .addImm(AbsOffset);
-    MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
+    if (!UseNF)
+      MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
   }
   return MI;
 }
@@ -432,7 +440,8 @@ int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   for (;;) {
     unsigned Opc = PI->getOpcode();
 
-    if ((Opc == X86::ADD64ri32 || Opc == X86::ADD32ri) &&
+    if ((Opc == X86::ADD64ri32 || Opc == X86::ADD32ri ||
+         Opc == X86::ADD64ri32_NF) &&
         PI->getOperand(0).getReg() == StackPtr) {
       assert(PI->getOperand(1).getReg() == StackPtr);
       Offset = PI->getOperand(2).getImm();
@@ -444,7 +453,8 @@ int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
                PI->getOperand(5).getReg() == X86::NoRegister) {
       // For LEAs we have: def = lea SP, FI, noreg, Offset, noreg.
       Offset = PI->getOperand(4).getImm();
-    } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB32ri) &&
+    } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB32ri ||
+                Opc == X86::SUB64ri32_NF) &&
                PI->getOperand(0).getReg() == StackPtr) {
       assert(PI->getOperand(1).getReg() == StackPtr);
       Offset = -PI->getOperand(2).getImm();
@@ -2625,7 +2635,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
           (Opc != X86::POP32r && Opc != X86::POP64r && Opc != X86::BTR64ri8 &&
            Opc != X86::ADD64ri32 && Opc != X86::POPP64r && Opc != X86::POP2 &&
            Opc != X86::POP2P && Opc != X86::LEA64r && Opc != X86::SEH_PushReg &&
-           Opc != X86::SEH_Push2Regs && Opc != X86::SEH_StackAlloc))
+           Opc != X86::SEH_Push2Regs && Opc != X86::SEH_StackAlloc &&
+           Opc != X86::ADD64ri32_NF))
         break;
       FirstCSPop = PI;
     }
@@ -2769,6 +2780,17 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
         // register).
         if (Opc == X86::POP2 || Opc == X86::POP2P)
           Offset += SlotSize;
+        BuildCFI(MBB, MBBI, DL,
+                 MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
+                 MachineInstr::FrameDestroy);
+      } else if (PI->getFlag(MachineInstr::FrameDestroy) &&
+                 PI->getOperand(0).getReg() == StackPtr &&
+                 (Opc == X86::ADD64ri32 || Opc == X86::ADD64ri32_NF ||
+                  Opc == X86::ADD32ri || Opc == X86::LEA64r)) {
+        int64_t SPAdj = Opc == X86::LEA64r
+                            ? PI->getOperand(4).getImm()
+                            : PI->getOperand(2).getImm();
+        Offset += SPAdj;
         BuildCFI(MBB, MBBI, DL,
                  MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
                  MachineInstr::FrameDestroy);
@@ -3029,6 +3051,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     }
   }
 
+  bool IsFPRemovedFromCSI = false;
   if (hasFP(MF)) {
     // emitPrologue always spills frame register the first thing.
     SpillSlotOffset -= SlotSize;
@@ -3049,6 +3072,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     for (unsigned i = 0; i < CSI.size(); ++i) {
       if (TRI->regsOverlap(CSI[i].getReg(), FPReg)) {
         CSI.erase(CSI.begin() + i);
+        IsFPRemovedFromCSI = true;
         break;
       }
     }
@@ -3069,14 +3093,11 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });
-    bool NeedPadding = (SpillSlotOffset % 16 != 0) && (NumCSGPR % 2 == 0);
-    bool UsePush2Pop2 = NeedPadding ? NumCSGPR > 2 : NumCSGPR > 1;
-    X86FI->setPadForPush2Pop2(NeedPadding && UsePush2Pop2);
-    NumRegsForPush2 = UsePush2Pop2 ? alignDown(NumCSGPR, 2) : 0;
-    if (X86FI->padForPush2Pop2()) {
-      SpillSlotOffset -= SlotSize;
-      MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
-    }
+    bool UsePush2Pop2 = !IsFPRemovedFromCSI ? NumCSGPR > 2 : NumCSGPR > 1;
+    NumRegsForPush2 =
+        UsePush2Pop2
+            ? alignDown(IsFPRemovedFromCSI ? NumCSGPR : NumCSGPR - 1, 2)
+            : 0;
   }
 
   // Assign slots for GPRs. It increases frame size.
@@ -3159,12 +3180,6 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  if (X86FI->padForPush2Pop2()) {
-    assert(SlotSize == 8 && "Unexpected slot size for padding!");
-    BuildMI(MBB, MI, DL, TII.get(X86::PUSH64r))
-        .addReg(X86::RAX, RegState::Undef)
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
 
   // Update LiveIn of the basic block and decide whether we can add a kill flag
   // to the use.
@@ -3342,13 +3357,6 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
       BuildMI(MBB, MI, DL, TII.get(getPOPOpcode(STI)), Reg)
           .setMIFlag(MachineInstr::FrameDestroy);
     }
-  }
-  if (X86FI->padForPush2Pop2()) {
-    if (IsWin64UnwindV3)
-      BuildMI(MBB, MI, DL, TII.get(X86::SEH_StackAlloc))
-          .addImm(SlotSize)
-          .setMIFlag(MachineInstr::FrameDestroy);
-    emitSPUpdate(MBB, MI, DL, SlotSize, /*InEpilogue=*/true);
   }
 
   return true;
