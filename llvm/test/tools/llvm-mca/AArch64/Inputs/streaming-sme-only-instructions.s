@@ -1,7 +1,7 @@
 // Instructions only available when in streaming SVE mode
 // and sent to CME.
 
-// Table 2-43: SVE2 and base A64 instructions added by SME.
+// SVE2 and base A64 instructions added by SME.
 bfmlslb z0.s, z1.h, z2.h
 bfmlslt z0.s, z1.h, z2.h
 fclamp z0.s, z1.s, z2.s
@@ -19,15 +19,15 @@ sqrshrn z0.b, {z0.s - z3.s}, #32
 sqrshrun z0.b, {z0.s - z3.s}, #32
 uqrshrn z0.b, {z0.s - z3.s}, #32
 
-// Table 2-44: SME and SME2 processing instructions.
+// SME and SME2 processing instructions.
 add za.s[w8, 0, vgx2], {z0.s, z1.s}
 sub za.s[w8, 0, vgx2], {z0.s, z1.s}
 add {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 addha za0.s, p0/m, p0/m, z0.s
 addva za0.s, p0/m, p0/m, z0.s
-bf1cvt z0.h, z0.b
+bf1cvt {z0.h - z1.h}, z0.b
 bf1cvtlt z0.h, z0.b
-bf2cvt z0.h, z0.b
+bf2cvt {z0.h - z1.h}, z0.b
 bf2cvtlt z0.h, z0.b
 bfadd za.h[w8, 0, vgx2], {z0.h, z1.h}
 bfcvt z0.h, {z0.s, z1.s}
@@ -137,8 +137,8 @@ zero {zt0}
 zip1 z0.s, z0.s, z0.s
 zip2 z0.s, z0.s, z0.s
 
-// Table 2-45: SME load instructions.
+// SME load instructions.
 ldr za[w12, #0], [x0]
 
-// Table 2-46: SME store instructions.
+// SME store instructions.
 str za[w12, #0], [x0]
