@@ -3274,11 +3274,7 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
     auto *LD = cast<LoadSDNode>(Load);
 
     // Create the byte-swapping load.
-    SDValue Ops[] = {
-        LD->getChain(),      // Chain
-        LD->getBasePtr(),    // Ptr
-        DAG.getValueType(VT) // VT
-    };
+    SDValue Ops[] = {LD->getChain(), LD->getBasePtr(), DAG.getValueType(VT)};
 
     SDValue BSLoad = DAG.getMemIntrinsicNode(
         IsLittleEndian ? SPISD::LOAD_BIG : SPISD::LOAD_LITTLE, DL,
