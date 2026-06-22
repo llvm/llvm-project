@@ -1,0 +1,15 @@
+# Upstream CI test suppressions.
+#
+# Entries use lit full test names (SuiteName :: path_in_suite).
+# Processed by run.sh into the LIT_UNSUPPORTED environment variable;
+# see llvm/utils/lit/lit/main.py mark_unsupported().
+#
+# Source: [AOCC-FLAKY] section of prj-essentials/devo/lit.blacklist.cfg
+
+# clang/test/Driver/sanitizer-ld.c
+Clang :: Driver/sanitizer-ld.c
+
+# compiler-rt/test/asan/TestCases/strcat-overlap.cpp
+# rhel8; i386-linux, i386-linux-dynamic unexpected failure.
+AddressSanitizer-i386-linux :: TestCases/strcat-overlap.cpp
+AddressSanitizer-i386-linux-dynamic :: TestCases/strcat-overlap.cpp

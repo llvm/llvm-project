@@ -81,4 +81,16 @@ execute_build() {
   python3 -u "${ess_dir}/build_essentials/aocc_build.py" "${build_args[@]}"
 }
 
+# Apply test suppressions via upstream lit's --unsupported mechanism.
+_suppress_file="${LLVM_GIT_DIR}/.amd-ci/upstream/lit_suppressions.txt"
+if test -f "${_suppress_file}"
+then
+  LIT_UNSUPPORTED="$(sed 's/^[[:space:]]*//' "${_suppress_file}" | grep -v '^#' | grep -v '^$' | paste -sd ';')"
+  if test -n "${LIT_UNSUPPORTED}"
+  then
+    export LIT_UNSUPPORTED
+    echo "LIT_UNSUPPORTED=${LIT_UNSUPPORTED}"
+  fi
+fi
+
 execute_build
