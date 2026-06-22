@@ -50,14 +50,13 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/TextEncoding.h"
 #include <cassert>
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
-#include <shared_mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -856,9 +855,9 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// Maps from "source_encoding:target_encoding" to the converter.
   llvm::StringMap<std::unique_ptr<llvm::TextEncodingConverter>> ConverterCache;
   
-  /// Shared mutex to protect ConverterCache for thread-safe access.
-  /// Uses shared_mutex to allow multiple concurrent readers.
-  mutable std::shared_mutex ConverterCacheMutex;
+  /// Read-write mutex to protect ConverterCache for thread-safe access.
+  /// Allows multiple concurrent readers while ensuring exclusive write access.
+  mutable llvm::sys::RWMutex ConverterCacheMutex;
 
 public:
   SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
