@@ -2920,6 +2920,22 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   FPOptions FPO;
   switch (BuiltinID) {
+  case Builtin::BI__builtin___get_unsafe_stack_start:
+  case Builtin::BI__builtin___get_unsafe_stack_bottom:
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << "__safestack_get_unsafe_stack_bottom";
+    break;
+  case Builtin::BI__builtin___get_unsafe_stack_top:
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << "__safestack_get_unsafe_stack_top";
+    break;
+  case Builtin::BI__builtin___get_unsafe_stack_ptr:
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << "__safestack_get_unsafe_stack_ptr";
+    break;
   case Builtin::BI__builtin_cpu_supports:
   case Builtin::BI__builtin_cpu_is:
     if (BuiltinCpu(*this, Context.getTargetInfo(), TheCall,
@@ -3685,6 +3701,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case Builtin::BI__builtin_elementwise_clmul:
+  case Builtin::BI__builtin_elementwise_pext:
+  case Builtin::BI__builtin_elementwise_pdep:
     if (BuiltinElementwiseMath(TheCall,
                                EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();

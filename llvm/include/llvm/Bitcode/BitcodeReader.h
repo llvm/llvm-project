@@ -84,6 +84,14 @@ struct ParserCallbacks {
   /// The MDType callback is called for every value in metadata.
   std::optional<MDTypeCallbackTy> MDType;
 
+  /// If true, do not auto-upgrade debug intrinsic calls (llvm.dbg.*) to
+  /// non-instruction debug records during bitcode read. This flag allows
+  /// direct manipulation of the old intrinsic-form debug info; beware that
+  /// LLVM does not support using these intrinsics any more. The caller is
+  /// responsible for performing the upgrade manually (e.g. via
+  /// Module::convertToNewDbgValues()).
+  bool SkipDebugIntrinsicUpgrade = false;
+
   ParserCallbacks() = default;
   explicit ParserCallbacks(DataLayoutCallbackFuncTy DataLayout)
       : DataLayout(DataLayout) {}

@@ -77,6 +77,7 @@ enum class VendorSignatures {
   UNKNOWN,
   GENUINE_INTEL,
   AUTHENTIC_AMD,
+  HYGON_GENUINE,
 };
 
 /// Returns the host CPU's vendor.

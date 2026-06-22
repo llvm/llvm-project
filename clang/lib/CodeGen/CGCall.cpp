@@ -2922,20 +2922,18 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     llvm::AttrBuilder &Attrs = ArgAttrs[IRArgs.first];
 
     QualType ThisTy = FI.arg_begin()->type.getTypePtr()->getPointeeType();
+    int64_t ThisSz = getMinimumObjectSize(ThisTy).getQuantity();
 
     if (!CodeGenOpts.NullPointerIsValid &&
         getTypes().getTargetAddressSpace(FI.arg_begin()->type) == 0) {
       Attrs.addAttribute(llvm::Attribute::NonNull);
-      Attrs.addDereferenceableAttr(getMinimumObjectSize(ThisTy).getQuantity());
+      Attrs.addDereferenceableAttr(ThisSz);
     } else {
       // FIXME dereferenceable should be correct here, regardless of
       // NullPointerIsValid. However, dereferenceable currently does not always
       // respect NullPointerIsValid and may imply nonnull and break the program.
       // See https://reviews.llvm.org/D66618 for discussions.
-      Attrs.addDereferenceableOrNullAttr(
-          getMinimumObjectSize(
-              FI.arg_begin()->type.castAs<PointerType>()->getPointeeType())
-              .getQuantity());
+      Attrs.addDereferenceableOrNullAttr(ThisSz);
     }
 
     llvm::Align Alignment =
@@ -5130,13 +5128,17 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
-      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue &&
-      !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
-    LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
-    assert(L.isSimple());
-    args.addUncopiedAggregate(L, type);
-    return;
+  if (HasAggregateEvalKind) {
+    auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+    if (ICE && ICE->getCastKind() == CK_LValueToRValue &&
+        ICE->getSubExpr()->getType().getAddressSpace() !=
+            LangAS::hlsl_constant &&
+        !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
+      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
+      assert(L.isSimple());
+      args.addUncopiedAggregate(L, type);
+      return;
+    }
   }
 
   args.add(EmitAnyExprToTemp(E), type);

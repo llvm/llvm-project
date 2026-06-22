@@ -2278,9 +2278,9 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     // Get the backedge taken count and truncate or extended to the AR type.
     Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 
-    CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
-                                            {AbsStep, TruncTripCount},
-                                            /*FMFSource=*/nullptr, "mul");
+    Value *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
+                                         {AbsStep, TruncTripCount},
+                                         /*FMFSource=*/nullptr, "mul");
     Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
     Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
 
@@ -2449,7 +2449,8 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS())) {
+      if (!SE.isKnownNonZero(D->getRHS()) ||
+          !SE.isGuaranteedNotToBePoison(D->getRHS())) {
         IsUnsafe = true;
         return false;
       }

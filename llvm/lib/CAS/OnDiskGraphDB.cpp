@@ -927,7 +927,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
           llvm::errc::illegal_byte_sequence,
           "bad record at 0x" +
               utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
+              Msg);
     };
 
     if (Record.Data.size() != sizeof(TrieRecord))
@@ -1003,7 +1003,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     auto dataError = [&](Twine Msg) {
       return createStringError(llvm::errc::illegal_byte_sequence,
                                "bad data for digest \'" + toHex(I->Hash) +
-                                   "\': " + Msg.str());
+                                   "\': " + Msg);
     };
     SmallVector<ArrayRef<uint8_t>> Refs;
     ArrayRef<char> StoredData;
@@ -1073,7 +1073,7 @@ Error OnDiskGraphDB::validateObjectID(ObjectID ExternalRef) const {
         llvm::errc::illegal_byte_sequence,
         "bad ref=0x" +
             utohexstr(ExternalRef.getOpaqueData(), /*LowerCase=*/true) + ": " +
-            Msg.str());
+            Msg);
   };
 
   if (ExternalRef.getOpaqueData() == 0)
@@ -1504,8 +1504,6 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I.Offset, Path);
 
-  auto BypassSandbox = sys::sandbox::scopedDisable();
-
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.
   Expected<MappedTempFile> File = createTempFile(Path, FileSize, Logger.get());
@@ -1548,6 +1546,8 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return Error::success();
   }
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Big leaf nodes.
   if (Refs.empty() && Data.size() > TrieRecord::MaxEmbeddedSize)

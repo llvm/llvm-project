@@ -291,7 +291,7 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
 // alignment of the return value based on the alignment of the argument.
 static CallInst *createNVVMInternalAddrspaceWrap(IRBuilder<> &IRB,
                                                  Argument &Arg) {
-  CallInst *ArgInParam = IRB.CreateIntrinsic(
+  CallInst *ArgInParam = IRB.CreateIntrinsicWithoutFolding(
       Intrinsic::nvvm_internal_addrspace_wrap,
       {IRB.getPtrTy(ADDRESS_SPACE_ENTRY_PARAM), Arg.getType()}, &Arg, {},
       Arg.getName() + ".param");
