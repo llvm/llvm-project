@@ -107,12 +107,13 @@ public:
   }
 
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-      BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const override;
+      llvm::StringRef BoundArch,
+      Action::OffloadKind DeviceOffloadingKind) const override;
 
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
 
@@ -177,7 +178,7 @@ public:
   unsigned GetDefaultDwarfVersion() const override { return 5; }
 
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   const char *getLinkerBaseName() const override { return "lld"; }

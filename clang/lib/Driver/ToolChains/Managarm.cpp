@@ -198,10 +198,11 @@ void Managarm::addLibStdCxxIncludePaths(
 }
 
 SanitizerMask
-Managarm::getSupportedSanitizers(BoundArch BA,
+Managarm::getSupportedSanitizers(StringRef BoundArch,
                                  Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::KernelAddress;

@@ -325,7 +325,8 @@ bool WebAssembly::SupportsProfiling() const { return false; }
 bool WebAssembly::HasNativeLLVMSupport() const { return true; }
 
 void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args, BoundArch BA,
+                                        ArgStringList &CC1Args,
+                                        StringRef BoundArch,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
@@ -571,8 +572,9 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 }
 
 SanitizerMask WebAssembly::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }

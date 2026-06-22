@@ -631,8 +631,9 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
 }
 
 SanitizerMask toolchains::MinGW::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -749,7 +750,7 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void toolchains::MinGW::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = DriverArgs.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none") {

@@ -732,9 +732,10 @@ Tool *AMDGPUToolChain::buildLinker() const {
 }
 
 DerivedArgList *
-AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
+AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL = Generic_ELF::TranslateArgs(Args, BA, DeviceOffloadKind);
+  DerivedArgList *DAL =
+      Generic_ELF::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
   if (!DAL) {
     DAL = new DerivedArgList(Args.getBaseArgs());
     for (Arg *A : Args)
@@ -771,10 +772,9 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
     }
   }
 
-  if (!BA.empty()) {
+  if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_mcpu_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ),
-                      BA.ArchName);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
   }
 
   AMDGPUToolChain::ParsedTargetIDType PTID = checkTargetID(*DAL);
@@ -840,9 +840,7 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
 
   if (JA.getOffloadingDeviceKind() == Action::OFK_HIP ||
       JA.getOffloadingDeviceKind() == Action::OFK_Cuda) {
-    BoundArch BA = JA.getOffloadingArch();
-    // FIXME: Missing conversion from OffloadArch to GPUKind
-    auto Arch = getProcessorFromTargetID(getTriple(), BA.ArchName);
+    auto Arch = getProcessorFromTargetID(getTriple(), JA.getOffloadingArch());
     auto Kind = llvm::AMDGPU::parseArchAMDGCN(Arch);
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
         DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
@@ -886,10 +884,10 @@ ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
 }
 
 DerivedArgList *
-ROCMToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
+ROCMToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                              Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL =
-      AMDGPUToolChain::TranslateArgs(Args, BA, DeviceOffloadKind);
+      AMDGPUToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
 
   // Filter out sanitizer coverage options that are not supported for AMDGPU.
   for (Arg *A : Args) {
@@ -910,7 +908,7 @@ ROCMToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
 
 void AMDGPUToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
@@ -1031,8 +1029,8 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
 
 void ROCMToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
-  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args, BA,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
                                          DeviceOffloadingKind);
 
   // For the OpenCL case where there is no offload target, accept -nostdlib to
@@ -1059,8 +1057,9 @@ void ROCMToolChain::addClangTargetOptions(
   // Get the device name and canonicalize it. For offload compilation,
   // BoundArch contains the full target ID. For non-offload (OpenCL),
   // fall back to -mcpu.
-  StringRef TargetID =
-      BA ? BA.ArchName : DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
+  StringRef TargetID = BoundArch.empty()
+                           ? DriverArgs.getLastArgValue(options::OPT_mcpu_EQ)
+                           : BoundArch;
   StringRef GpuArch = getProcessorFromTargetID(getTriple(), TargetID);
 
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(GpuArch);
@@ -1077,7 +1076,7 @@ void ROCMToolChain::addClangTargetOptions(
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, GpuArch, DeviceOffloadingKind,
-      getSanitizerArgs(DriverArgs, BoundArch{TargetID}, DeviceOffloadingKind)
+      getSanitizerArgs(DriverArgs, TargetID, DeviceOffloadingKind)
           .needsAsanRt()));
 
   for (auto [BCFile, Internalize] : BCLibs) {
@@ -1175,7 +1174,7 @@ ROCMToolChain::getCommonDeviceLibNames(
 
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, GPUArch, DeviceOffloadingKind,
-      getSanitizerArgs(DriverArgs, BoundArch(TargetID), DeviceOffloadingKind)
+      getSanitizerArgs(DriverArgs, TargetID, DeviceOffloadingKind)
           .needsAsanRt());
 }
 
@@ -1203,23 +1202,23 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
 }
 
 SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   SanitizerMask SupportedMask =
-      ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 
   // Address sanitizer is potentially supported, but depends on the exact target
   // arch xnack support.
-  if (!BA || isXnackAvailable(getTriple(), BA.ArchName))
+  if (BoundArch.empty() || isXnackAvailable(getTriple(), BoundArch))
     SupportedMask |= SanitizerKind::Address;
 
   return SupportedMask;
 }
 
 StringRef AMDGPUToolChain::getSanitizerRequirement(SanitizerMask Kinds,
-                                                   BoundArch BA) const {
+                                                   StringRef BoundArch) const {
   // Address sanitizer requires xnack+ feature
-  if ((Kinds & SanitizerKind::Address) && BA &&
-      !isXnackAvailable(getTriple(), BA.ArchName)) {
+  if ((Kinds & SanitizerKind::Address) && !BoundArch.empty() &&
+      !isXnackAvailable(getTriple(), BoundArch)) {
     return "xnack+";
   }
   return "";

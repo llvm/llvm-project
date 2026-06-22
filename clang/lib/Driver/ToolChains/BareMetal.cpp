@@ -351,7 +351,8 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
-                                      ArgStringList &CC1Args, BoundArch BA,
+                                      ArgStringList &CC1Args,
+                                      StringRef BoundArch,
                                       Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }
@@ -649,13 +650,14 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 // code, ignoring all runtime library support issues on the assumption that
 // baremetal targets typically implement their own runtime support.
 SanitizerMask
-BareMetal::getSupportedSanitizers(BoundArch BA,
+BareMetal::getSupportedSanitizers(StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
   const bool IsRISCV64 = getTriple().isRISCV64();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::PointerCompare;

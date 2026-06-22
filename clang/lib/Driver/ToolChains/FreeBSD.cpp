@@ -477,13 +477,14 @@ bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerMask
-FreeBSD::getSupportedSanitizers(BoundArch BA,
+FreeBSD::getSupportedSanitizers(StringRef BoundArch,
                                 Action::OffloadKind DeviceOffloadKind) const {
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsMIPS64 = getTriple().isMIPS64();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

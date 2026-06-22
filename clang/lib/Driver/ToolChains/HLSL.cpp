@@ -431,7 +431,7 @@ clang::driver::toolchains::HLSLToolChain::parseTargetProfile(
 }
 
 DerivedArgList *
-HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
+HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                              Action::OffloadKind DeviceOffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
 

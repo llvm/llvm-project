@@ -87,7 +87,7 @@ public:
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
   unsigned GetDefaultDwarfVersion() const override { return 4; }
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,

@@ -565,8 +565,9 @@ Tool *toolchains::PS5CPU::buildLinker() const {
 }
 
 SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -575,14 +576,15 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
 }
 
 SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers(BA, DeviceOffloadKind);
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      PS4PS5Base::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Thread;
   return Res;
 }
 
 void toolchains::PS4PS5Base::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadingKind) const {
   // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {

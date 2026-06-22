@@ -532,11 +532,12 @@ llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {
 }
 
 SanitizerMask
-NetBSD::getSupportedSanitizers(BoundArch BA,
+NetBSD::getSupportedSanitizers(StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
@@ -561,7 +562,7 @@ NetBSD::getSupportedSanitizers(BoundArch BA,
 }
 
 void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                   ArgStringList &CC1Args, BoundArch BA,
+                                   ArgStringList &CC1Args, StringRef BoundArch,
                                    Action::OffloadKind) const {
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())

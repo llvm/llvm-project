@@ -49,7 +49,7 @@ public:
                 const llvm::opt::ArgList &Args);
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   UnwindTableLevel
@@ -114,10 +114,10 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                                          BoundArch BA,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
@@ -126,7 +126,8 @@ public:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:

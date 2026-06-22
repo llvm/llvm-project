@@ -65,7 +65,7 @@ public:
                            llvm::opt::ArgStringList &CC1Args) const override;
 
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   const char *getDefaultLinker() const override;

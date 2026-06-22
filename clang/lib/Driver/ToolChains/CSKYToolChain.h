@@ -22,7 +22,8 @@ public:
                 const llvm::opt::ArgList &Args);
 
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                             llvm::opt::ArgStringList &CC1Args,
+                             llvm::StringRef BoundArch,
                              Action::OffloadKind) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;

@@ -77,12 +77,13 @@ public:
       const llvm::opt::ArgList &Args) const override;
 
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:

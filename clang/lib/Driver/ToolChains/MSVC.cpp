@@ -918,9 +918,8 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   return MSVT;
 }
 
-std::string
-MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args, BoundArch BA,
-                                           types::ID InputType) const {
+std::string MSVCToolChain::ComputeEffectiveClangTriple(
+    const ArgList &Args, llvm::StringRef BoundArch, types::ID InputType) const {
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
@@ -930,7 +929,7 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args, BoundArch BA,
   // For the rest of the triple, however, a computed architecture name may
   // be needed.
   llvm::Triple Triple(
-      ToolChain::ComputeEffectiveClangTriple(Args, BA, InputType));
+      ToolChain::ComputeEffectiveClangTriple(Args, BoundArch, InputType));
   if (Triple.getEnvironment() == llvm::Triple::MSVC) {
     StringRef ObjFmt = Triple.getEnvironmentName().split('-').second;
     if (ObjFmt.empty())
@@ -943,8 +942,9 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args, BoundArch BA,
 }
 
 SanitizerMask MSVCToolChain::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -1081,7 +1081,8 @@ static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
 
 llvm::opt::DerivedArgList *
 MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             BoundArch BA, Action::OffloadKind OFK) const {
+                             StringRef BoundArch,
+                             Action::OffloadKind OFK) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 
@@ -1136,7 +1137,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 void MSVCToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadKind) const {
   // MSVC STL kindly allows removing all usages of typeid by defining
   // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti

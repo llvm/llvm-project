@@ -147,7 +147,8 @@ protected:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 private:
@@ -250,7 +251,7 @@ public:
   bool HasNativeLLVMSupport() const override;
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsBlocksDefault() const override {
@@ -403,7 +404,7 @@ public:
   ~Darwin() override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                                          BoundArch BA,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
 
   /// @name Darwin Specific Toolchain Implementation
@@ -595,7 +596,8 @@ protected:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangCC1ASTargetOptions(
@@ -617,7 +619,7 @@ public:
   bool isCrossCompiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
@@ -654,7 +656,7 @@ public:
   bool SupportsEmbeddedBitcode() const override;
 
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 };
 
@@ -684,7 +686,8 @@ public:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,

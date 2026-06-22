@@ -78,7 +78,8 @@ public:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
@@ -104,7 +105,7 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
+  getDeviceLibs(const llvm::opt::ArgList &Args, llvm::StringRef BoundArch,
                 const Action::OffloadKind DeviceOffloadKind) const override;
 
   const ToolChain &HostTC;

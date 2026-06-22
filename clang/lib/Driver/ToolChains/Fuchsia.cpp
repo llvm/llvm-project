@@ -330,9 +330,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
-                                                 BoundArch BA,
+                                                 llvm::StringRef BoundArch,
                                                  types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, BA, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
   return Triple.str();
 }
 
@@ -366,7 +366,7 @@ ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
 }
 
 void Fuchsia::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args, BoundArch BA,
+                                    ArgStringList &CC1Args, StringRef BoundArch,
                                     Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
@@ -473,9 +473,10 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 SanitizerMask
-Fuchsia::getSupportedSanitizers(BoundArch BA,
+Fuchsia::getSupportedSanitizers(StringRef BoundArch,
                                 Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::HWAddress;
   Res |= SanitizerKind::PointerCompare;

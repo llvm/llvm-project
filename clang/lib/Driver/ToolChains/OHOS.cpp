@@ -380,9 +380,10 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
 }
 
 SanitizerMask
-OHOS::getSupportedSanitizers(BoundArch BA,
+OHOS::getSupportedSanitizers(StringRef BoundArch,
                              Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

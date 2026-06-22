@@ -10,7 +10,6 @@
 #define LLVM_CLANG_DRIVER_COMPILATION_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Util.h"
@@ -83,16 +82,16 @@ class Compilation {
   /// architecture, and device offload kind.
   struct TCArgsKey final {
     const ToolChain *TC = nullptr;
-    BoundArch BoundArchitecture;
+    StringRef BoundArch;
     Action::OffloadKind DeviceOffloadKind = Action::OFK_None;
 
-    TCArgsKey(const ToolChain *TC, BoundArch BA,
+    TCArgsKey(const ToolChain *TC, StringRef BoundArch,
               Action::OffloadKind DeviceOffloadKind)
-        : TC(TC), BoundArchitecture(BA), DeviceOffloadKind(DeviceOffloadKind) {}
+        : TC(TC), BoundArch(BoundArch), DeviceOffloadKind(DeviceOffloadKind) {}
 
     bool operator<(const TCArgsKey &K) const {
-      return std::tie(TC, BoundArchitecture, DeviceOffloadKind) <
-             std::tie(K.TC, K.BoundArchitecture, K.DeviceOffloadKind);
+      return std::tie(TC, BoundArch, DeviceOffloadKind) <
+             std::tie(K.TC, K.BoundArch, K.DeviceOffloadKind);
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
@@ -129,7 +128,7 @@ class Compilation {
 
   /// The bound architecture currently being built, if any. Set around
   /// ConstructJob calls so addCommand can stamp it onto each new Command.
-  BoundArch CurrentBoundArch;
+  StringRef CurrentBoundArch;
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
@@ -221,8 +220,8 @@ public:
     Jobs.addJob(std::move(Cmd));
   }
 
-  BoundArch getCurrentBoundArch() const { return CurrentBoundArch; }
-  void setCurrentBoundArch(BoundArch BA) { CurrentBoundArch = BA; }
+  StringRef getCurrentBoundArch() const { return CurrentBoundArch; }
+  void setCurrentBoundArch(StringRef Arch) { CurrentBoundArch = Arch; }
 
   llvm::opt::ArgStringList &getTempFiles() { return TempFiles; }
   const llvm::opt::ArgStringList &getTempFiles() const { return TempFiles; }
@@ -249,11 +248,11 @@ public:
   /// If a device offloading kind is specified, a translation specific for that
   /// kind is performed, if any.
   ///
-  /// \param BA - The bound architecture.
+  /// \param BoundArch - The bound architecture name, or 0.
   /// \param DeviceOffloadKind - The offload device kind that should be used in
   /// the translation, if any.
   const llvm::opt::DerivedArgList &
-  getArgsForToolChain(const ToolChain *TC, BoundArch BA,
+  getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
                       Action::OffloadKind DeviceOffloadKind);
 
   /// addTempFile - Add a file to remove on exit, and returns its

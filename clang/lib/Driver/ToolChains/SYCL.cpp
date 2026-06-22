@@ -128,15 +128,17 @@ SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void SYCLToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadingKind);
 }
 
 llvm::opt::DerivedArgList *
 SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             BoundArch BA,
+                             StringRef BoundArch,
                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL = HostTC.TranslateArgs(Args, BA, DeviceOffloadKind);
+  DerivedArgList *DAL =
+      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
 
   bool IsNewDAL = false;
   if (!DAL) {
@@ -172,10 +174,10 @@ SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   const OptTable &Opts = getDriver().getOpts();
-  if (BA) {
+  if (!BoundArch.empty()) {
     DAL->eraseArg(options::OPT_march_EQ);
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BA.ArchName);
+                      BoundArch);
   }
   return DAL;
 }

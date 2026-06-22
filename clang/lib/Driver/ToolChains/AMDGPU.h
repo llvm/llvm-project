@@ -116,12 +116,13 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -146,7 +147,7 @@ public:
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
   StringRef getSanitizerRequirement(SanitizerMask Kinds,
-                                    BoundArch BA) const override;
+                                    StringRef BoundArch) const override;
 
   /// Should skip argument.
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
@@ -184,7 +185,7 @@ protected:
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
 
   SanitizerMask
-  getSupportedSanitizers(BoundArch BA,
+  getSupportedSanitizers(StringRef BoundArch,
                          Action::OffloadKind DeviceOffloadKind) const override;
 };
 
@@ -194,12 +195,13 @@ public:
                 const llvm::opt::ArgList &Args);
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages

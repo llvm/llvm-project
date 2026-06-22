@@ -399,7 +399,7 @@ bool SanitizerArgs::needsLTO() const {
 SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
                              bool DiagnoseErrors, bool DiagnoseBoundArchErrors,
-                             BoundArch BA,
+                             StringRef BoundArch,
                              Action::OffloadKind DeviceOffloadKind) {
   SanitizerMask AllRemove;      // During the loop below, the accumulated set of
                                 // sanitizers disabled by the current sanitizer
@@ -416,13 +416,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask Kinds;
 
   // Figure out the base toolchain's sanitizer support so we can diagnose the
-  // diff for a specific BA.
+  // diff for a specific BoundArch.
   const SanitizerMask ToolChainSupported =
-      setGroupBits(TC.getSupportedSanitizers({}, DeviceOffloadKind));
+      setGroupBits(TC.getSupportedSanitizers("", DeviceOffloadKind));
 
   const SanitizerMask BoundArchSupported =
-      BA ? setGroupBits(TC.getSupportedSanitizers(BA, DeviceOffloadKind))
-         : ToolChainSupported;
+      BoundArch.empty() ? ToolChainSupported
+                        : setGroupBits(TC.getSupportedSanitizers(
+                              BoundArch, DeviceOffloadKind));
 
   CfiCrossDso = Args.hasFlag(options::OPT_fsanitize_cfi_cross_dso,
                              options::OPT_fno_sanitize_cfi_cross_dso, false);
@@ -566,7 +567,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         // Check if the toolchain provides a feature requirement hint for
         // any of the unsupported sanitizers
         StringRef Requirement =
-            TC.getSanitizerRequirement(ArchSpecificUnsupported, BA);
+            TC.getSanitizerRequirement(ArchSpecificUnsupported, BoundArch);
         if (!Requirement.empty()) {
           // Emit diagnostic with feature requirement
           //
@@ -578,7 +579,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         err_drv_unsupported_option_for_offload_arch_req_feature
                   : diag::
                         warn_drv_unsupported_option_for_offload_arch_req_feature)
-              << Arg->getAsString(Args) << BA.ArchName << Requirement;
+              << Arg->getAsString(Args) << BoundArch << Requirement;
         } else {
           // Fall back to generic diagnostic if no requirement was provided
           SanitizerSet UnsupportedSet;

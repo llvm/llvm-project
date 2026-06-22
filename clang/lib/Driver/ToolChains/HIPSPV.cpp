@@ -154,7 +154,7 @@ HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void HIPSPVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
 
   if (!HostTC) {
     assert(DeviceOffloadingKind == Action::OFK_None &&
@@ -162,7 +162,8 @@ void HIPSPVToolChain::addClangTargetOptions(
     return;
   }
 
-  HostTC->addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
+  HostTC->addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                DeviceOffloadingKind);
 
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
@@ -182,7 +183,7 @@ void HIPSPVToolChain::addClangTargetOptions(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
   for (const BitCodeLibraryInfo &BCFile :
-       getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind))
+       getDeviceLibs(DriverArgs, BoundArch, DeviceOffloadingKind))
     CC1Args.append(
         {"-mlink-builtin-bitcode", DriverArgs.MakeArgString(BCFile.Path)});
 }
@@ -244,7 +245,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPSPVToolChain::getDeviceLibs(
-    const llvm::opt::ArgList &DriverArgs, BoundArch BA,
+    const llvm::opt::ArgList &DriverArgs, llvm::StringRef BoundArch,
     const Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
@@ -308,7 +309,7 @@ HIPSPVToolChain::getDeviceLibs(
 }
 
 SanitizerMask HIPSPVToolChain::getSupportedSanitizers(
-    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   // The HIPSPVToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
   // toolchain. The HIPSPVToolChain will actually ignore any command line
@@ -321,8 +322,8 @@ SanitizerMask HIPSPVToolChain::getSupportedSanitizers(
 
   // FIXME: Be accurate and use DeviceOffloadKind.
   if (HostTC)
-    return HostTC->getSupportedSanitizers(BA, DeviceOffloadKind);
-  return ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
+    return HostTC->getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  return ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 }
 
 VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,

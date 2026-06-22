@@ -22,7 +22,7 @@ SPIRVOpenMPToolChain::SPIRVOpenMPToolChain(const Driver &D,
 
 void SPIRVOpenMPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
 
   if (DeviceOffloadingKind != Action::OFK_OpenMP)
     return;

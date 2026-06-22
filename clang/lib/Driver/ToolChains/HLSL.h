@@ -76,7 +76,7 @@ public:
   bool isPICDefaultForced() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
 

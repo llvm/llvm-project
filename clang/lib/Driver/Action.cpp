@@ -61,7 +61,7 @@ const char *Action::getClassName(ActionClass AC) {
   llvm_unreachable("invalid class");
 }
 
-void Action::propagateDeviceOffloadInfo(OffloadKind OKind, BoundArch OArch,
+void Action::propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch,
                                         const ToolChain *OToolChain) {
   // Offload action set its own kinds on their dependences.
   // But we still need to preserve OffloadingDeviceKind and OffloadingArch
@@ -92,7 +92,7 @@ void Action::propagateDeviceOffloadInfo(OffloadKind OKind, BoundArch OArch,
     A->propagateDeviceOffloadInfo(OffloadingDeviceKind, OArch, OToolChain);
 }
 
-void Action::propagateHostOffloadInfo(unsigned OKinds, BoundArch OArch) {
+void Action::propagateHostOffloadInfo(unsigned OKinds, const char *OArch) {
   // Offload action set its own kinds on their dependences.
   if (Kind == OffloadClass)
     return;
@@ -201,7 +201,7 @@ InputAction::InputAction(const Arg &_Input, types::ID _Type, StringRef _Id)
 
 void BindArchAction::anchor() {}
 
-BindArchAction::BindArchAction(Action *Input, BoundArch ArchName)
+BindArchAction::BindArchAction(Action *Input, StringRef ArchName)
     : Action(BindArchClass, Input), ArchName(ArchName) {}
 
 void OffloadAction::anchor() {}
@@ -211,7 +211,7 @@ OffloadAction::OffloadAction(const HostDependence &HDep)
   OffloadingArch = HDep.getBoundArch();
   ActiveOffloadKindMask = HDep.getOffloadKinds();
   HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
-                                             OffloadingArch);
+                                             HDep.getBoundArch());
 }
 
 OffloadAction::OffloadAction(const DeviceDependences &DDeps, types::ID Ty)
@@ -238,7 +238,6 @@ OffloadAction::OffloadAction(const HostDependence &HDep,
                              const DeviceDependences &DDeps)
     : Action(OffloadClass, HDep.getAction()), HostTC(HDep.getToolChain()),
       DevToolChains(DDeps.getToolChains()) {
-<<<<<<< HEAD
   auto &OKinds = DDeps.getOffloadKinds();
   auto &BArchs = DDeps.getBoundArchs();
 
@@ -256,12 +255,6 @@ OffloadAction::OffloadAction(const HostDependence &HDep,
   ActiveOffloadKindMask = HDep.getOffloadKinds();
   HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
                                              OffloadingArch);
-=======
-  // We use the kinds of the host dependence for this action.
-  BoundArch BA = HDep.getBoundArch();
-  ActiveOffloadKindMask = HDep.getOffloadKinds();
-  HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(), BA);
->>>>>>> 448b725bb78b
 
   // Add device inputs and propagate info to the device actions. Do work only if
   // we have dependencies.
@@ -346,19 +339,20 @@ OffloadAction::getSingleDeviceDependence(bool DoNotConsiderHostActions) const {
 }
 
 void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
-                                           BoundArch BA, OffloadKind OKind) {
+                                           const char *BoundArch,
+                                           OffloadKind OKind) {
   DeviceActions.push_back(&A);
   DeviceToolChains.push_back(&TC);
-  DeviceBoundArchs.push_back(BA);
+  DeviceBoundArchs.push_back(BoundArch);
   DeviceOffloadKinds.push_back(OKind);
 }
 
 void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
-                                           BoundArch BA,
+                                           const char *BoundArch,
                                            unsigned OffloadKindMask) {
   DeviceActions.push_back(&A);
   DeviceToolChains.push_back(&TC);
-  DeviceBoundArchs.push_back(BA);
+  DeviceBoundArchs.push_back(BoundArch);
 
   // Add each active offloading kind from a mask.
   for (OffloadKind OKind : {OFK_OpenMP, OFK_Cuda, OFK_HIP, OFK_SYCL})
@@ -367,9 +361,9 @@ void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
 }
 
 OffloadAction::HostDependence::HostDependence(Action &A, const ToolChain &TC,
-                                              BoundArch BA,
+                                              const char *BoundArch,
                                               const DeviceDependences &DDeps)
-    : HostAction(A), HostToolChain(TC), HostBoundArch(BA) {
+    : HostAction(A), HostToolChain(TC), HostBoundArch(BoundArch) {
   for (auto K : DDeps.getOffloadKinds())
     HostOffloadKinds |= K;
 }

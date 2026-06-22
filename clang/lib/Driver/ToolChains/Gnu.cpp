@@ -3500,7 +3500,8 @@ Generic_GCC::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 }
 
 llvm::opt::DerivedArgList *
-Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
+                           StringRef BoundArch,
                            Action::OffloadKind DeviceOffloadKind) const {
   if (DeviceOffloadKind == Action::OFK_None ||
       DeviceOffloadKind == Action::OFK_Host)
@@ -3528,13 +3529,13 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
   }
 
   // Add the bound architecture to the arguments list if present.
-  if (!BA.empty()) {
+  if (!BoundArch.empty()) {
     options::ID Opt = getTriple().isARM() || getTriple().isPPC() ||
                               getTriple().isAArch64() || getTriple().isAMDGPU()
                           ? options::OPT_mcpu_EQ
                           : options::OPT_march_EQ;
     DAL->eraseArg(Opt);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BA.ArchName);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BoundArch);
   }
 
   return DAL;
@@ -3543,7 +3544,8 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
 void Generic_ELF::anchor() {}
 
 void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args, BoundArch BA,
+                                        ArgStringList &CC1Args,
+                                        StringRef BoundArch,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
