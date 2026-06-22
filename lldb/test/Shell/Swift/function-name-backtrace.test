@@ -1,3 +1,4 @@
+# REQUIRES: swift
 # XFAIL: target-windows
 
 # Test Swift function name printing in backtraces.

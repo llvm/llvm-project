@@ -1,3 +1,4 @@
+# REQUIRES: swift
 # RUN: %lldb -s %s 2>&1 | FileCheck %s
 language swift demangle $s6Module3oneSiyF
 language swift demangle s6Module3twoyyF
