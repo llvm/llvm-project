@@ -676,7 +676,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
       if (ObjectMode == "64") {
         AT = Target.get64BitArchVariant().getArch();
-      } else if (ObjectMode == "32") {
+      } else if (ObjectMode == "32" || ObjectMode == "32_64" ||
+                 ObjectMode == "any") {
         AT = Target.get32BitArchVariant().getArch();
       } else {
         D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
