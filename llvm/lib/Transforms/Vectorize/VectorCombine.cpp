@@ -5914,25 +5914,16 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
 ///   bitreverse(bswap(x)) --> bitcast(bitreverse(bitcast(x)))
 bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   Value *X;
-  if (!match(&I, m_Intrinsic<Intrinsic::bitreverse>(
-                     m_Intrinsic<Intrinsic::bswap>(m_Value(X)))) &&
-      !match(&I, m_Intrinsic<Intrinsic::bswap>(
-                     m_Intrinsic<Intrinsic::bitreverse>(m_Value(X)))))
+  if (!match(&I, m_BitReverse(m_BSwap(m_Value(X)))) &&
+      !match(&I, m_BSwap(m_BitReverse(m_Value(X)))))
     return false;
 
   Type *Ty = I.getType();
   Type *I8Ty = Builder.getInt8Ty();
-  Type *NewVecTy;
-
-  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
-    unsigned ElementSize =
-        VecTy->getElementType()->getPrimitiveSizeInBits() / 8;
-    ElementCount NewVecCnt = VecTy->getElementCount() * ElementSize;
-    NewVecTy = VectorType::get(I8Ty, NewVecCnt);
-  } else {
-    unsigned TotalBits = Ty->getPrimitiveSizeInBits();
-    NewVecTy = VectorType::get(I8Ty, ElementCount::getFixed(TotalBits / 8));
-  }
+  TypeSize ElementSize = DL->getTypeStoreSize(Ty);
+  ElementCount NewVecCnt = ElementCount::get(ElementSize.getKnownMinValue(),
+                                             ElementSize.isScalable());
+  Type *NewVecTy = VectorType::get(I8Ty, NewVecCnt);
 
   auto II = cast<IntrinsicInst>(&I);
   auto InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
@@ -6266,6 +6257,10 @@ bool VectorCombine::run() {
     if (TryEarlyFoldsOnly)
       return false;
 
+    if (Opcode == Instruction::Call)
+      if (foldBitOrderReverseAndSwap(I))
+        return true;
+
     // Otherwise, try folds that improve codegen but may interfere with
     // early IR canonicalizations.
     // The type checking is for run-time efficiency. We can avoid wasting time
@@ -6324,10 +6319,6 @@ bool VectorCombine::run() {
         if (shrinkPhiOfShuffles(I))
           return true;
         break;
-      case Instruction::Call:
-        if (foldBitOrderReverseAndSwap(I))
-          return true;
-        break;
       default:
         if (shrinkType(I))
           return true;
@@ -6339,8 +6330,6 @@ bool VectorCombine::run() {
         if (foldShuffleFromReductions(I))
           return true;
         if (foldCastFromReductions(I))
-          return true;
-        if (foldBitOrderReverseAndSwap(I))
           return true;
         break;
       case Instruction::ExtractElement:
