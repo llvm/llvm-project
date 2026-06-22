@@ -178,8 +178,9 @@ static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of epilogue loops."));
 
-static cl::opt<unsigned> EpilogueVectorizationForceVF(
-    "epilogue-vectorization-force-VF", cl::init(1), cl::Hidden,
+static cl::opt<ElementCount> EpilogueVectorizationForceVF(
+    "epilogue-vectorization-force-VF", cl::init(ElementCount::getFixed(1)),
+    cl::Hidden,
     cl::desc("When epilogue vectorization is enabled, and a value greater than "
              "1 is specified, forces the given VF for all applicable epilogue "
              "loops."));
@@ -416,6 +417,13 @@ static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
     cl::Hidden,
     cl::desc("Enable vectorization of early exit loops with uncountable exits "
              "and side effects"));
+
+// Returns true if the epilogue VF has been set to a non-zero value other than
+// VF=1 (scalar).
+static bool hasForcedEpilogueVF() {
+  return EpilogueVectorizationForceVF.isNonZero() &&
+         EpilogueVectorizationForceVF != ElementCount::getFixed(1);
+}
 
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
@@ -3449,8 +3457,9 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     return nullptr;
   }
 
-  if (EpilogueVectorizationForceVF > 1) {
-    if (EpilogueVectorizationForceVF >=
+  if (hasForcedEpilogueVF()) {
+    if (estimateElementCount(EpilogueVectorizationForceVF,
+                             Config.getVScaleForTuning()) >=
         IC * estimateElementCount(MainLoopVF, Config.getVScaleForTuning())) {
       // Note that the main loop leaves IC * MainLoopVF iterations iff a scalar
       // epilogue is required, but then the epilogue loop also requires a scalar
@@ -3461,7 +3470,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
-    ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
+    ElementCount ForcedEC = EpilogueVectorizationForceVF;
     if (hasPlanWithVF(ForcedEC)) {
       std::unique_ptr<VPlan> Clone(getPlanFor(ForcedEC).duplicate());
       Clone->setVF(ForcedEC);
@@ -5521,8 +5530,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
-      ElementCount EpilogueUserVF =
-          ElementCount::getFixed(EpilogueVectorizationForceVF);
+      ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
@@ -5775,10 +5783,9 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && EpilogueVectorizationForceVF > 1) {
+  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
-    assert(VPlans[0]->getSingleVF() ==
-               ElementCount::getFixed(EpilogueVectorizationForceVF) &&
+    assert(VPlans[0]->getSingleVF() == EpilogueVectorizationForceVF &&
            "expected first plan to be for the forced epilogue VF");
     assert(VPlans[1]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
