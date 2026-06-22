@@ -15012,6 +15012,11 @@ static bool glvalueDenotesUninitStorage(const Expr *E) {
     return DeclDenotesUninit(ME->getMemberDecl()) ||
            (ME->isArrow() ? pointerRefersToUninitStorage(ME->getBase())
                           : glvalueDenotesUninitStorage(ME->getBase()));
+  // A call to a [[ref_to_uninit]]-returning reference function: the referent
+  // it returns is uninitialized. Mirrors the pointer recognizer's call arm.
+  if (const auto *CE = dyn_cast<CallExpr>(E))
+    if (const FunctionDecl *FD = CE->getDirectCallee())
+      return FD->hasAttr<RefToUninitAttr>();
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     return pointerRefersToUninitStorage(ASE->getBase());
 
@@ -15019,6 +15024,12 @@ static bool glvalueDenotesUninitStorage(const Expr *E) {
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_Deref)
       return pointerRefersToUninitStorage(UO->getSubExpr());
+
+  // A reference cast (an explicit cast yielding a glvalue) denotes the same
+  // storage as its operand; propagate. Symmetric to the pointer-cast arm.
+  if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
+    if (CE->getSubExpr()->isGLValue())
+      return glvalueDenotesUninitStorage(CE->getSubExpr());
 
   return false;
 }

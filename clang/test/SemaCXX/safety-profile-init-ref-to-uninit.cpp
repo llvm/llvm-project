@@ -13,6 +13,7 @@ int g_init = 0;
 [[uninitialized]] int g_uninit_arr[3];
 [[ref_to_uninit]] int *allocate(int n);
 [[ref_to_uninit]] void *alloc_void();
+[[ref_to_uninit]] int &get_uninit_ref();
 
 void test_pointer_target() {
   int *p1 [[ref_to_uninit]] = &g_uninit; // OK
@@ -77,6 +78,23 @@ void test_reference_target() {
   int &r6 [[ref_to_uninit]] = r1;       // OK: r1 refers to uninitialized memory
   int &r7 = r1;                         // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)r1; (void)r2; (void)r3; (void)r4; (void)r5; (void)r6; (void)r7; (void)p;
+}
+
+// A reference cast (an explicit cast yielding a glvalue) denotes the same
+// storage as its operand, and a [[ref_to_uninit]]-returning reference call
+// denotes uninitialized storage. Symmetric to the pointer side.
+void test_reference_casts() {
+  int &cr1 [[ref_to_uninit]] = static_cast<int &>(g_uninit); // OK
+  int &cr2 = static_cast<int &>(g_uninit);                    // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int &cr3 [[ref_to_uninit]] = (int &)g_init;                 // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+
+  int &gr1 [[ref_to_uninit]] = get_uninit_ref(); // OK
+  int &gr2 = get_uninit_ref();                    // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // Address of a reference cast routes back through the pointer recognizer.
+  int *p [[ref_to_uninit]] = &(int &)g_uninit; // OK
+
+  (void)cr1; (void)cr2; (void)cr3; (void)gr1; (void)gr2; (void)p;
 }
 
 void test_assignment() {
