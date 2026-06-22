@@ -8,9 +8,7 @@
 //
 // Private interface shared between the ROCm host-shadow drain
 // (InstrProfilingPlatformROCm.cpp) and the Linux-only supplemental
-// HSA-introspection drain (InstrProfilingPlatformROCmHSA.cpp). Not a public
-// runtime header; everything lives in the __prof_rocm namespace with
-// archive-internal linkage.
+// HSA-introspection drain (InstrProfilingPlatformROCmHSA.cpp).
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,9 +18,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-// Defined at global scope in InstrProfilingPlatformROCm.cpp. Forward-declared
-// here (not redefined) so the HSA drain can name it in prototypes; the HSA path
-// only ever passes a null group, so it never needs the full definition.
+// For prototype declarations
 struct OffloadSectionShadowGroup;
 
 namespace __prof_rocm {
@@ -47,11 +43,9 @@ struct UniqueFree {
 };
 
 // Grow a heap array (doubling from InitCap) to hold at least MinCount elements
-// of ElemSize bytes each. On success *Arr and *Cap are updated and the new tail
-// slots [old cap, new cap) are zeroed; on allocation failure the existing array
-// is left intact and -1 is returned (callers degrade gracefully rather than
-// crash). *Arr is type-erased: pass the address of the typed array pointer,
-// e.g. growArray((void **)&MI->TUs, &MI->CapTUs, ...).
+// of ElemSize bytes each.
+// Success: zero new memory, update pointer, return 0.
+// Failure: return -1, data is still intact.
 inline int growArray(void **Arr, int *Cap, int MinCount, int InitCap,
                      size_t ElemSize) {
   if (*Cap >= MinCount)
@@ -71,14 +65,8 @@ inline int growArray(void **Arr, int *Cap, int MinCount, int InitCap,
 
 // Set of (data, counters, names) device section-bounds tuples that have already
 // been drained. Both ROCm drains record here so each unique device counter set
-// is written exactly once -- across the host-shadow and supplemental HSA paths,
-// and across the multiple GPU agents that may share one code object. Backed by
-// growArray (doubling), so dedup never silently caps out; on allocation failure
-// record() is a no-op, so the worst case is draining a section twice rather
-// than crashing. Process-lifetime state: deliberately trivially destructible
-// and not freed by the runtime (a transient owner such as a unit test can free
-// .Items). Pure host logic; covered by
-// test/profile/instrprof-rocm-bounds-dedup.cpp.
+// is written exactly once.
+// See test/profile/instrprof-rocm-bounds-dedup.cpp.
 struct ProfBoundsSet {
   struct Tuple {
     const void *Data;
@@ -125,7 +113,7 @@ int memcpyDeviceToHost(void *Dst, const void *Src, size_t Size);
 int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
                             const ::OffloadSectionShadowGroup *Sections);
 
-#if defined(__linux__) && !defined(_WIN32)
+#if defined(__linux__)
 // Implemented in InstrProfilingPlatformROCmHSA.cpp.
 
 // Record a drained section-bounds tuple so the supplemental HSA pass skips any

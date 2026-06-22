@@ -16,11 +16,9 @@
 // ones the host-shadow pass missed (deduped by the section-bounds tuple). It
 // reuses processDeviceOffloadPrf() so the profraw layout is identical.
 //
-// HSA introspection is Linux-only; on any other target this is an empty TU.
-//
 //===----------------------------------------------------------------------===//
 
-#if defined(__linux__) && !defined(_WIN32)
+#if defined(__linux__)
 
 extern "C" {
 #include "InstrProfiling.h"
@@ -44,10 +42,7 @@ using namespace __prof_rocm;
 
 #ifdef PROFILE_VERIFY_HSA_ABI
 // When the real ROCm headers are available at build time (developer installs
-// and the downstream GPU CI), assert the mirror above still matches them. This
-// is never required to build -- on hosts without ROCm the macro is undefined
-// and the mirror stands alone (see find_package(hsa-runtime64) in
-// CMakeLists.txt).
+// and the downstream GPU CI), check that the mirror above still matches them.
 #include <hsa/hsa.h>
 #include <hsa/hsa_ven_amd_loader.h>
 
@@ -219,9 +214,8 @@ static const char ProfileSectionsSymbol[] = "__llvm_profile_sections";
 
 /* Dedup of drained section-bounds tuples, shared with the host-shadow path
  * (processDeviceOffloadPrf records here on every successful drain) so each
- * unique counter set is drained exactly once across both paths. ProfBoundsSet
- * (internal header) grows on demand so dedup never silently caps out, and is
- * unit-tested by test/profile/instrprof-rocm-bounds-dedup.cpp. */
+ * unique counter set is drained exactly once across both paths.
+ */
 static ProfBoundsSet SeenBounds;
 
 /* Has this bounds tuple already been drained? Pure check, no state mutation. */
@@ -442,9 +436,7 @@ int __prof_rocm::drainDevicesViaHsa(void) {
   if (isVerboseMode())
     PROF_NOTE("query_segment_descriptors: %zu segments\n", NumSegs);
 
-  /* Walk each unique (agent, executable) pair once. The seen-list grows on
-   * demand so dedup never silently caps out; if a grow ever fails under OOM the
-   * downstream SeenBounds dedup is the backstop against double-draining. */
+  // Walk each unique (agent, executable) pair once.
   struct SeenPair {
     uint64_t agent;
     uint64_t exec;

@@ -13,10 +13,7 @@
 // the drain needs are mirrored here under a prof_hsa_* prefix.
 //
 // Values mirror hsa/hsa.h and hsa/hsa_ven_amd_loader.h. These are part of HSA's
-// stable, versioned C ABI (libhsa-runtime64.so.1), so they do not shift. When
-// the real ROCm headers are available at build time the mirror is cross-checked
-// against them with static_asserts (see PROFILE_VERIFY_HSA_ABI in
-// InstrProfilingPlatformROCmHSA.cpp); update both together if HSA ever changes.
+// stable, versioned C ABI (libhsa-runtime64.so.1), so they do not shift.
 //
 //===----------------------------------------------------------------------===//
 
