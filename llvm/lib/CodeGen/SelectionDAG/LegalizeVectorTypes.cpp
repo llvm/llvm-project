@@ -7413,7 +7413,7 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
                                         WidenEC.multiplyCoefficientBy(Factor));
   SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
   for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
-    const SDValue &Op = N->getOperand(Idx);
+    const SDValue Op = N->getOperand(Idx);
     // Note that we insert these widened operands with offsets derived from
     // the original vector length.
     PackedWidenVec = DAG.getInsertSubvector(
@@ -7430,11 +7430,11 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   }
 
   SmallVector<EVT, 8> NewVTs(Factor, WidenVT);
-  SDNode *NewRes =
-      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, NewVTs, NewOps).getNode();
+  SDValue NewRes =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, NewVTs, NewOps);
   // Set the widened results manually.
   for (unsigned Idx = 0U; Idx < Factor; ++Idx)
-    SetWidenedVector(SDValue(N, Idx), SDValue(NewRes, Idx));
+    SetWidenedVector(SDValue(N, Idx), NewRes.getValue(Idx));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
