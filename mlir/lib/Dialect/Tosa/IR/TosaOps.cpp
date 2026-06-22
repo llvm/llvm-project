@@ -1073,18 +1073,18 @@ static LogicalResult verifyVariableOpErrorIf(T op, Type type, StringRef name) {
 }
 
 // verify that inType and outType have same element types
-template <typename T>
-static LogicalResult verifySameElementTypes(T op, Type aType, Type bType,
+static LogicalResult verifySameElementTypes(Operation *op, Type aType,
+                                            Type bType,
                                             StringRef aName = "input",
                                             StringRef bName = "output") {
   auto aTType = llvm::dyn_cast<TensorType>(aType);
   auto bTType = llvm::dyn_cast<TensorType>(bType);
   if (!aTType) {
-    op.emitOpError("expect shaped tensor for") << aName << ", got " << aType;
+    op->emitOpError("expect shaped tensor for") << aName << ", got " << aType;
     return failure();
   }
   if (!bTType) {
-    op.emitOpError("expect shaped tensor for") << bName << ", got" << bType;
+    op->emitOpError("expect shaped tensor for") << bName << ", got" << bType;
     return failure();
   }
   auto aElementType = aTType.getElementType();
@@ -1100,7 +1100,7 @@ static LogicalResult verifySameElementTypes(T op, Type aType, Type bType,
     // eg, not sure how to check quant::QuantizedType
     // this happens in test_conv2d_q_grouped_convolution in
     // tfl-to-tosa-pipeline.mlir
-    op.emitOpError("expect ")
+    op->emitOpError("expect ")
         << aName << " and " << bName << " to have same element type, got "
         << aElementType << " and " << bElementType;
     return failure();
@@ -1144,6 +1144,9 @@ static LogicalResult verifyPoolingOpImpl(Operation *op,
                                          ArrayRef<int64_t> strides,
                                          ArrayRef<int64_t> padding, Value input,
                                          Value output) {
+  if (failed(verifySameElementTypes(op, input.getType(), output.getType())))
+    return failure();
+
   const bool hasKernel = kernel.size() > 0;
   const bool hasStrides = strides.size() > 0;
   const bool hasPad = padding.size() > 0;

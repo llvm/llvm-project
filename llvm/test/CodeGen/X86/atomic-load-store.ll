@@ -657,6 +657,53 @@ define <2 x ptr> @atomic_vec2_ptr_align(ptr %x) nounwind {
   %ret = load atomic <2 x ptr>, ptr %x acquire, align 16
   ret <2 x ptr> %ret
 }
+
+define void @store_atomic_vec2_ptr_align(ptr %x, <2 x ptr> %v) nounwind {
+; CHECK-SSE2-O3-LABEL: store_atomic_vec2_ptr_align:
+; CHECK-SSE2-O3:       # %bb.0:
+; CHECK-SSE2-O3-NEXT:    pushq %rax
+; CHECK-SSE2-O3-NEXT:    movq %xmm0, %rsi
+; CHECK-SSE2-O3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-SSE2-O3-NEXT:    movq %xmm0, %rdx
+; CHECK-SSE2-O3-NEXT:    movl $3, %ecx
+; CHECK-SSE2-O3-NEXT:    callq __atomic_store_16@PLT
+; CHECK-SSE2-O3-NEXT:    popq %rax
+; CHECK-SSE2-O3-NEXT:    retq
+;
+; CHECK-SSE4-O3-LABEL: store_atomic_vec2_ptr_align:
+; CHECK-SSE4-O3:       # %bb.0:
+; CHECK-SSE4-O3-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-SSE4-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: store_atomic_vec2_ptr_align:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-SSE2-O0-LABEL: store_atomic_vec2_ptr_align:
+; CHECK-SSE2-O0:       # %bb.0:
+; CHECK-SSE2-O0-NEXT:    pushq %rax
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, %rsi
+; CHECK-SSE2-O0-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, %rdx
+; CHECK-SSE2-O0-NEXT:    movl $3, %ecx
+; CHECK-SSE2-O0-NEXT:    callq __atomic_store_16@PLT
+; CHECK-SSE2-O0-NEXT:    popq %rax
+; CHECK-SSE2-O0-NEXT:    retq
+;
+; CHECK-SSE4-O0-LABEL: store_atomic_vec2_ptr_align:
+; CHECK-SSE4-O0:       # %bb.0:
+; CHECK-SSE4-O0-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-SSE4-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: store_atomic_vec2_ptr_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    vmovdqa %xmm0, (%rdi)
+; CHECK-AVX-O0-NEXT:    retq
+  store atomic <2 x ptr> %v, ptr %x release, align 16
+  ret void
+}
+
 define <4 x ptr addrspace(270)> @atomic_vec4_ptr270(ptr %x) nounwind {
 ; CHECK-SSE2-O3-LABEL: atomic_vec4_ptr270:
 ; CHECK-SSE2-O3:       # %bb.0:
@@ -701,6 +748,52 @@ define <4 x ptr addrspace(270)> @atomic_vec4_ptr270(ptr %x) nounwind {
 ; CHECK-AVX-O0-NEXT:    retq
   %ret = load atomic <4 x ptr addrspace(270)>, ptr %x acquire, align 16
   ret <4 x ptr addrspace(270)> %ret
+}
+
+define void @store_atomic_vec4_ptr270_align(ptr %x, <4 x ptr addrspace(270)> %v) nounwind {
+; CHECK-SSE2-O3-LABEL: store_atomic_vec4_ptr270_align:
+; CHECK-SSE2-O3:       # %bb.0:
+; CHECK-SSE2-O3-NEXT:    pushq %rax
+; CHECK-SSE2-O3-NEXT:    movq %xmm0, %rsi
+; CHECK-SSE2-O3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-SSE2-O3-NEXT:    movq %xmm0, %rdx
+; CHECK-SSE2-O3-NEXT:    movl $3, %ecx
+; CHECK-SSE2-O3-NEXT:    callq __atomic_store_16@PLT
+; CHECK-SSE2-O3-NEXT:    popq %rax
+; CHECK-SSE2-O3-NEXT:    retq
+;
+; CHECK-SSE4-O3-LABEL: store_atomic_vec4_ptr270_align:
+; CHECK-SSE4-O3:       # %bb.0:
+; CHECK-SSE4-O3-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-SSE4-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: store_atomic_vec4_ptr270_align:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-SSE2-O0-LABEL: store_atomic_vec4_ptr270_align:
+; CHECK-SSE2-O0:       # %bb.0:
+; CHECK-SSE2-O0-NEXT:    pushq %rax
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, %rsi
+; CHECK-SSE2-O0-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, %rdx
+; CHECK-SSE2-O0-NEXT:    movl $3, %ecx
+; CHECK-SSE2-O0-NEXT:    callq __atomic_store_16@PLT
+; CHECK-SSE2-O0-NEXT:    popq %rax
+; CHECK-SSE2-O0-NEXT:    retq
+;
+; CHECK-SSE4-O0-LABEL: store_atomic_vec4_ptr270_align:
+; CHECK-SSE4-O0:       # %bb.0:
+; CHECK-SSE4-O0-NEXT:    movaps %xmm0, (%rdi)
+; CHECK-SSE4-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: store_atomic_vec4_ptr270_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    vmovdqa %xmm0, (%rdi)
+; CHECK-AVX-O0-NEXT:    retq
+  store atomic <4 x ptr addrspace(270)> %v, ptr %x release, align 16
+  ret void
 }
 
 define <2 x i32> @atomic_vec2_i32_align(ptr %x) {
@@ -1084,7 +1177,7 @@ define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
 ; CHECK-SSE4-O3-NEXT:    pextrq $1, %xmm0, %rcx
 ; CHECK-SSE4-O3-NEXT:    movq %xmm0, %rbx
 ; CHECK-SSE4-O3-NEXT:    .p2align 4
-; CHECK-SSE4-O3-NEXT:  .LBB39_1: # %atomicrmw.start
+; CHECK-SSE4-O3-NEXT:  .LBB41_1: # %atomicrmw.start
 ; CHECK-SSE4-O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-SSE4-O3-NEXT:    movq %xmm1, %rax
 ; CHECK-SSE4-O3-NEXT:    pextrq $1, %xmm1, %rdx
@@ -1092,7 +1185,7 @@ define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
 ; CHECK-SSE4-O3-NEXT:    movq %rdx, %xmm0
 ; CHECK-SSE4-O3-NEXT:    movq %rax, %xmm1
 ; CHECK-SSE4-O3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; CHECK-SSE4-O3-NEXT:    jne .LBB39_1
+; CHECK-SSE4-O3-NEXT:    jne .LBB41_1
 ; CHECK-SSE4-O3-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-SSE4-O3-NEXT:    popq %rbx
 ; CHECK-SSE4-O3-NEXT:    retq
@@ -1120,7 +1213,7 @@ define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
 ; CHECK-SSE4-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-SSE4-O0-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-SSE4-O0-NEXT:  .LBB39_1: # %atomicrmw.start
+; CHECK-SSE4-O0-NEXT:  .LBB41_1: # %atomicrmw.start
 ; CHECK-SSE4-O0-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-SSE4-O0-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-SSE4-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
@@ -1137,9 +1230,9 @@ define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
 ; CHECK-SSE4-O0-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-SSE4-O0-NEXT:    testb $1, %al
 ; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-SSE4-O0-NEXT:    jne .LBB39_2
-; CHECK-SSE4-O0-NEXT:    jmp .LBB39_1
-; CHECK-SSE4-O0-NEXT:  .LBB39_2: # %atomicrmw.end
+; CHECK-SSE4-O0-NEXT:    jne .LBB41_2
+; CHECK-SSE4-O0-NEXT:    jmp .LBB41_1
+; CHECK-SSE4-O0-NEXT:  .LBB41_2: # %atomicrmw.end
 ; CHECK-SSE4-O0-NEXT:    popq %rbx
 ; CHECK-SSE4-O0-NEXT:    retq
 ;
