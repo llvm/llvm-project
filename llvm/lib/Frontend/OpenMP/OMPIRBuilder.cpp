@@ -4779,6 +4779,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
           Builder.CreatePointerBitCastOrAddrSpaceCast(RL, CopyArg2Ty);
       // Use index 0 because there is no array of target values to index into,
       // there is only one thread-local memory slot.
+      // restoreIP above left a stale/empty debug location; this inlinable call
+      // to a debug-info-bearing helper needs one or the verifier rejects the
+      // module ("!dbg attachment points at wrong subprogram") after inlining.
+      Builder.SetCurrentDebugLocation(Loc.DL);
       Builder.CreateCall(
           *LtGCFunc, {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
       CopyScratchToListFunc = *GtLCFunc;
@@ -4806,10 +4810,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
   // Copy the writer thread's per-thread scratch result back into the original
   // red-list storage before the existing combine path reads RI.PrivateVariable.
-  if (ScratchForCopyBack)
+  // Set a debug location: this inlinable call to a debug-info-bearing helper
+  // needs one or the verifier rejects the module after inlining.
+  if (ScratchForCopyBack) {
+    Builder.SetCurrentDebugLocation(Loc.DL);
     Builder.CreateCall(
         CopyScratchToListFunc,
         {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
+  }
 
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
