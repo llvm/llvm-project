@@ -7,9 +7,6 @@
 ; ssat(X - Center) + Center, with Center = Lo + Width/2, guarded so that
 ; X - Center cannot signed-overflow.
 
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-
 ; A bare clamp to [-224, 31] (width 256). X is range-limited by the ashr, so
 ; X + 96 cannot overflow: clamp[-224,31] -> ssat8(X + 96) - 96.
 define i32 @offset_clamp_bare(i32 %x) {
@@ -82,5 +79,18 @@ define i32 @offset_clamp_non_pow2_width(i32 %x) {
   %s = ashr i32 %x, 8
   %lo = call i32 @llvm.smax.i32(i32 %s, i32 -100)
   %hi = call i32 @llvm.smin.i32(i32 %lo, i32 50)
+  ret i32 %hi
+}
+
+; Reversed bounds are a degenerate clamp. The modular APInt width would look
+; like a power of two, but this must not become an offset ssat.
+define i32 @offset_clamp_degenerate_bounds(i32 %x) {
+; CHECK-LABEL: offset_clamp_degenerate_bounds:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov.w r0, #-2147483648
+; CHECK-NEXT:    bx lr
+  %s = ashr i32 %x, 24
+  %lo = call i32 @llvm.smax.i32(i32 %s, i32 1)
+  %hi = call i32 @llvm.smin.i32(i32 %lo, i32 -2147483648)
   ret i32 %hi
 }

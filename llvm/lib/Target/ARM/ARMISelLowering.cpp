@@ -18096,10 +18096,12 @@ static SDValue PerformMinMaxToSatCombine(SDValue Op, SelectionDAG &DAG,
   if (Min.getOpcode() == ISD::SMAX)
     std::swap(Min, Max);
 
+  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX)
+    return SDValue();
+
   APInt MinC = Min.getConstantOperandAPInt(1);
   APInt MaxC = Max.getConstantOperandAPInt(1);
-
-  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX)
+  if (MaxC.sgt(MinC))
     return SDValue();
 
   SDLoc DL(Op);
@@ -18125,7 +18127,7 @@ static SDValue PerformMinMaxToSatCombine(SDValue Op, SelectionDAG &DAG,
   // The idea is to shift the input so that the clamp range is centered
   // around zero, apply ssat, and then shift the result back.
   //
-  // For example clamp(X, -118, 137) -> Width = 256,Center = 10, so it becomes
+  // For example clamp(X, -118, 137) -> Width = 256, Center = 10, so it becomes
   // ssat(X - 10, 8) + 10
 
   APInt Width = MinC - MaxC + 1;
