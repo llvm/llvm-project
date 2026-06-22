@@ -917,18 +917,10 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
   if (hasPreprocessor()) {
     InputEncoding = getLangOpts().InputEncoding;
     if (!InputEncoding.empty()) {
-      llvm::errs() << "DEBUG: Setting input charset converter: " << InputEncoding << " -> UTF-8\n";
       // Add the converter to SourceManager's cache
       auto ConverterOrErr = getSourceManager().getOrCreateConverter(InputEncoding, "UTF-8");
-      if (ConverterOrErr) {
-        llvm::errs() << "DEBUG: Input charset converter successfully added to cache\n";
-      } else {
-        llvm::errs() << "DEBUG: Failed to create input charset converter: "
-                     << ConverterOrErr.getError().message() << "\n";
-      }
       // If converter creation fails, the error will be reported when createFileID tries to use it
-    } else {
-      llvm::errs() << "DEBUG: No input charset converter specified\n";
+      (void)ConverterOrErr;
     }
   }
   
