@@ -12,7 +12,7 @@
 
 ; CHECK-DAG: OpCapability CooperativeMatrixKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_cooperative_matrix"
-; CHECK-DAG: {{%[0-9]+}} = OpTypeCooperativeMatrixKHR
+; CHECK-DAG: [[#]] = OpTypeCooperativeMatrixKHR
 
 ; A by-value parameter of the opaque type forces OpTypeCooperativeMatrixKHR into the
 ; module (referenced by OpTypeFunction, so it is not eliminated like an unused local).
