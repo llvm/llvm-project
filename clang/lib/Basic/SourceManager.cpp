@@ -640,29 +640,21 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   }
   if (!Ccsid->empty()) {
     // File has a tag, use the converter from SourceManager's cache
-    llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has tag encoding: " << *Ccsid << "\n";
     Converter = getOrCreateConverter(*Ccsid);
     if (!Converter) {
-      llvm::errs() << "DEBUG: Failed to get converter for file tag: " << Converter.getError().message() << "\n";
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
           << SourceFile.getName() << Converter.getError().message();
       return FileID();
     }
-    llvm::errs() << "DEBUG: Using file tag converter for " << SourceFile.getName() << "\n";
   } else if (!InputEncodingName.empty()) {
     // No file tag but -finput-charset conversion is desired.
     // Get the converter from the cache using the input encoding name.
-    llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has no tag, using input charset: " << InputEncodingName << "\n";
     Converter = getOrCreateConverter(InputEncodingName);
     if (!Converter) {
-      llvm::errs() << "DEBUG: Failed to get input charset converter: " << Converter.getError().message() << "\n";
       Diag.Report(SourceLocation(), diag::err_cannot_open_file)
           << SourceFile.getName() << Converter.getError().message();
       return FileID();
     }
-    llvm::errs() << "DEBUG: Using input charset converter for " << SourceFile.getName() << "\n";
-  } else {
-    llvm::errs() << "DEBUG: File " << SourceFile.getName() << " has no tag and no input charset specified - no conversion\n";
   }
 
   #ifndef NDEBUG
