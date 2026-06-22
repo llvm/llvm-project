@@ -631,12 +631,6 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
-static cl::opt<bool> NewRegBankSelect(
-    "new-reg-bank-select",
-    cl::desc("Run amdgpu-regbankselect and amdgpu-regbanklegalize instead of "
-             "regbankselect"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> HasClosedWorldAssumption(
     "amdgpu-link-time-closed-world",
     cl::desc("Whether has closed-world assumption at link time"),
