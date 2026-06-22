@@ -513,7 +513,7 @@ public:
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
 
-  /// Auxiliary triple for CUDA/HIP compilation.
+  /// Auxiliary triple for CUDA/HIP/SYCL compilation.
   std::string AuxTriple;
 
   /// Auxiliary target CPU for CUDA/HIP compilation.
@@ -549,6 +549,12 @@ public:
   /// The TU summary output file with the file extension representing the file
   /// format.
   std::string SSAFTUSummaryFile;
+
+  /// Stable identifier for this translation unit, used as the name of the
+  /// `CompilationUnit` `BuildNamespace` of every produced TU summary. The
+  /// caller (typically the build system) supplies a value that is constant
+  /// across stages of the SSAF pipeline.
+  std::string SSAFCompilationUnitId;
 
   /// Show available SSAF summary extractors.
   LLVM_PREFERRED_TYPE(bool)

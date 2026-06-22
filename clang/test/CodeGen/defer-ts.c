@@ -45,7 +45,7 @@ void f3(bool ret) {
   // CHECK:   %storedv = zext i1 %ret to i8
   // CHECK:   store i8 %storedv, ptr %ret.addr, align 1
   // CHECK:   %0 = load i8, ptr %ret.addr, align 1
-  // CHECK:   %loadedv = trunc i8 %0 to i1
+  // CHECK:   %loadedv = icmp ne i8 %0, 0
   // CHECK:   br i1 %loadedv, label %if.then, label %if.end
   // CHECK: if.then:
   // CHECK:   store i32 1, ptr %cleanup.dest.slot, align 4

@@ -1029,10 +1029,17 @@ void MemoryDependenceResults::setNonLocalPointerDepVisited(BasicBlock *BB,
   NonLocalPointerDepVisited[BB->getNumber()] = {V, NonLocalPointerDepEpoch};
 }
 
+bool MemoryDependenceResults::isNonLocalPointerDepVisited(
+    BasicBlock *BB) const {
+  return NonLocalPointerDepVisited[BB->getNumber()].second ==
+         NonLocalPointerDepEpoch;
+}
+
 Value *
 MemoryDependenceResults::lookupNonLocalPointerDepVisited(BasicBlock *BB) const {
-  auto &Entry = NonLocalPointerDepVisited[BB->getNumber()];
-  return Entry.second == NonLocalPointerDepEpoch ? Entry.first : nullptr;
+  assert(isNonLocalPointerDepVisited(BB) &&
+         "Visited value requested for unseen block");
+  return NonLocalPointerDepVisited[BB->getNumber()].first;
 }
 
 /// Perform a dependency query based on pointer/pointeesize starting at the end
@@ -1130,8 +1137,10 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // to ensure that if a block in the results set is in the visited set that
     // it was for the same pointer query.
     for (auto &Entry : *Cache) {
+      if (!isNonLocalPointerDepVisited(Entry.getBB()))
+        continue;
       Value *Prev = lookupNonLocalPointerDepVisited(Entry.getBB());
-      if (!Prev || Prev == Pointer.getAddr())
+      if (Prev == Pointer.getAddr())
         continue;
 
       // We have a pointer mismatch in a block.  Just return false, saying
@@ -1215,7 +1224,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     if (!SkipFirstBlock) {
       // Analyze the dependency of *Pointer in FromBB.  See if we already have
       // been here.
-      assert(lookupNonLocalPointerDepVisited(BB) &&
+      assert(isNonLocalPointerDepVisited(BB) &&
              "Should check 'visited' before adding to WL");
 
       // Get the dependency info for Pointer in BB.  If we have cached
@@ -1242,14 +1251,13 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       SmallVector<BasicBlock *, 16> NewBlocks;
       for (BasicBlock *Pred : PredCache.get(BB)) {
         // Verify that we haven't looked at this block yet.
-        Value *Prev = lookupNonLocalPointerDepVisited(Pred);
-        if (!Prev) {
+        if (!isNonLocalPointerDepVisited(Pred)) {
           setNonLocalPointerDepVisited(Pred, Pointer.getAddr());
           // First time we've looked at *PI.
           NewBlocks.push_back(Pred);
           continue;
         }
-
+        Value *Prev = lookupNonLocalPointerDepVisited(Pred);
         // If we have seen this block before, but it was with a different
         // pointer then we have a phi translation failure and we have to treat
         // this as a clobber.
@@ -1305,11 +1313,11 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // with PHI translation when a critical edge exists and the PHI node in
       // the successor translates to a pointer value different than the
       // pointer the block was first analyzed with.
-      Value *PrevVal = lookupNonLocalPointerDepVisited(Pred);
-      if (!PrevVal) {
+      if (!isNonLocalPointerDepVisited(Pred)) {
         setNonLocalPointerDepVisited(Pred, PredPtrVal);
         continue;
       }
+      Value *PrevVal = lookupNonLocalPointerDepVisited(Pred);
 
       // We found the pred; take it off the list of preds to visit.
       PredList.pop_back();

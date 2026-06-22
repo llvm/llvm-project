@@ -16,16 +16,12 @@
 
 #include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include <set>
 
 namespace llvm {
 class SPIRVSubtarget;
 
 class SPIRVTargetLowering : public TargetLowering {
   const SPIRVSubtarget &STI;
-
-  // Record of already processed machine functions
-  mutable std::set<const MachineFunction *> ProcessedMF;
 
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,
@@ -82,6 +78,10 @@ public:
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
   AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
+
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
+  }
 };
 } // namespace llvm
 

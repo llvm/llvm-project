@@ -91,7 +91,8 @@ static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
-         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64);
+         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64) ||
+         type == SHT_LLVM_CFI_JUMP_TABLE;
 }
 
 // Record that isec will be placed in the OutputSection. isec does not become
@@ -535,12 +536,6 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   bool nonZeroFiller = read32(ctx, filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
-
-  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
-    buf += encodeULEB128(crelHeader, buf);
-    memcpy(buf, crelBody.data(), crelBody.size());
-    return;
-  }
 
   auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();

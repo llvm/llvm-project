@@ -18,8 +18,6 @@ define void @function_0(i32 %val_i32_8, i32 %val_i32_9) {
 ; LEGACYPM-NEXT:    br label [[LOOP_4:%.*]]
 ; LEGACYPM:       loop_4:
 ; LEGACYPM-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BE_6:%.*]] ], [ 7851, [[PRHDR_LOOP_3]] ]
-; LEGACYPM-NEXT:    [[LOOP_CNT_I32_11:%.*]] = phi i32 [ 7850, [[PRHDR_LOOP_3]] ], [ [[VAL_I32_24:%.*]], [[BE_6]] ]
-; LEGACYPM-NEXT:    [[VAL_I32_24]] = add i32 [[LOOP_CNT_I32_11]], 1
 ; LEGACYPM-NEXT:    br i1 [[VAL_I1_22]], label [[BE_6]], label [[LOOP_EXIT_7SPLIT:%.*]]
 ; LEGACYPM:       bb_5:
 ; LEGACYPM-NEXT:    [[VAL_I32_40:%.*]] = mul i32 [[VAL_I32_9]], [[VAL_I32_24_LCSSA:%.*]]
@@ -28,14 +26,13 @@ define void @function_0(i32 %val_i32_8, i32 %val_i32_9) {
 ; LEGACYPM-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1
 ; LEGACYPM-NEXT:    br i1 [[VAL_I1_22]], label [[LOOP_4]], label [[BE_6_LOOP_EXIT_7_CRIT_EDGE:%.*]]
 ; LEGACYPM:       loop_exit_7split:
-; LEGACYPM-NEXT:    [[VAL_I32_24_LCSSA_PH:%.*]] = phi i32 [ [[VAL_I32_24]], [[LOOP_4]] ]
+; LEGACYPM-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i32 [ [[LSR_IV]], [[LOOP_4]] ]
 ; LEGACYPM-NEXT:    br label [[LOOP_EXIT_7:%.*]]
 ; LEGACYPM:       be_6.loop_exit_7_crit_edge:
 ; LEGACYPM-NEXT:    [[LSR_IV_LCSSA1:%.*]] = phi i32 [ [[LSR_IV]], [[BE_6]] ]
-; LEGACYPM-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[VAL_I32_24]], [[BE_6]] ]
 ; LEGACYPM-NEXT:    br label [[LOOP_EXIT_7]]
 ; LEGACYPM:       loop_exit_7:
-; LEGACYPM-NEXT:    [[VAL_I32_24_LCSSA]] = phi i32 [ [[LSR_IV_LCSSA1]], [[BE_6_LOOP_EXIT_7_CRIT_EDGE]] ], [ [[VAL_I32_24_LCSSA_PH]], [[LOOP_EXIT_7SPLIT]] ]
+; LEGACYPM-NEXT:    [[VAL_I32_24_LCSSA]] = phi i32 [ [[LSR_IV_LCSSA1]], [[BE_6_LOOP_EXIT_7_CRIT_EDGE]] ], [ [[LSR_IV_LCSSA]], [[LOOP_EXIT_7SPLIT]] ]
 ; LEGACYPM-NEXT:    br label [[BB_5:%.*]]
 ;
 ; NEWPM-LABEL: define void @function_0

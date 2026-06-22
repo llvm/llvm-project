@@ -1364,11 +1364,16 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // farther than to a predecessor, we need to reuse the code from GVN's PRE.
   // It requires domination tree analysis, so for this simple case it is an
   // overkill.
-  if (PredsScanned.size() != AvailablePreds.size() &&
-      !isSafeToSpeculativelyExecute(LoadI))
-    for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-        return false;
+  std::optional<bool> GuaranteedToTransfer;
+  auto CanSpeculateInto = [&](const BasicBlock *Pred) {
+    if (isSafeToSpeculativelyExecute(LoadI, Pred->getTerminator()))
+      return true;
+
+    if (!GuaranteedToTransfer)
+      GuaranteedToTransfer = isGuaranteedToTransferExecutionToSuccessor(
+          LoadBB->begin(), LoadI->getIterator());
+    return *GuaranteedToTransfer;
+  };
 
   // If there is exactly one predecessor where the value is unavailable, the
   // already computed 'OneUnavailablePred' block is it.  If it ends in an
@@ -1376,6 +1381,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   if (PredsScanned.size() == AvailablePreds.size()+1 &&
       OneUnavailablePred->getTerminator()->getNumSuccessors() == 1) {
     UnavailablePred = OneUnavailablePred;
+    if (!CanSpeculateInto(UnavailablePred))
+      return false;
   } else if (PredsScanned.size() != AvailablePreds.size()) {
     // Otherwise, we had multiple unavailable predecessors or we had a critical
     // edge from the one.
@@ -1389,8 +1396,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       if (isa<IndirectBrInst>(P->getTerminator()))
         return false;
 
-      if (!AvailablePredSet.count(P))
+      if (!AvailablePredSet.count(P)) {
+        if (!CanSpeculateInto(P))
+          return false;
         PredsToSplit.push_back(P);
+      }
     }
 
     // Split them out to their own block.
@@ -1982,14 +1992,19 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
     // block, and if so, record them in UsesToRename.
+
+    SmallVector<Instruction *> LifetimeMarkers;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
-      if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
-        if (UserPN->getIncomingBlock(U) == BB)
+      if (User->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(User);
+      } else {
+        if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
+          if (UserPN->getIncomingBlock(U) == BB)
+            continue;
+        } else if (User->getParent() == BB)
           continue;
-      } else if (User->getParent() == BB)
-        continue;
-
+      }
       UsesToRename.push_back(&U);
     }
 
@@ -2018,6 +2033,15 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       DbgVariableRecords.clear();
     }
 
+    // Lifetime markers cannot be rewritten through PHIs. If threading leaves
+    // one of them pointing at a PHI, drop the whole set.
+    bool HasPhiArg = any_of(LifetimeMarkers, [](Instruction *User) {
+      return isa<PHINode>(cast<CallBase>(User)->getOperand(0));
+    });
+    if (HasPhiArg) {
+      for (Instruction *User : LifetimeMarkers)
+        User->eraseFromParent();
+    }
     LLVM_DEBUG(dbgs() << "\n");
   }
 }
@@ -2689,11 +2713,22 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   BasicBlock::iterator BI = BB->begin();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
+
+  // Clone noalias scope declarations in the duplicated instructions. Otherwise
+  // the duplicate would share the original block's scopes, and alias analysis
+  // could conclude two accesses on different paths do not alias when they may.
+  SmallVector<MDNode *> NoAliasScopes;
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVMContext &Context = PredBB->getContext();
+  identifyNoAliasScopesToClone(BI, BB->end(), NoAliasScopes);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+
   // Clone the non-phi instructions of BB into PredBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
     Instruction *New = BI->clone();
     New->insertInto(PredBB, OldPredBranch->getIterator());
+    adaptNoAliasScopes(New, ClonedScopes, Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
@@ -2789,6 +2824,12 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   PredTerm->removeFromParent();
   PredTerm->insertInto(NewBB, NewBB->end());
   // Create a conditional branch and update PHI nodes.
+  //
+  // FIXME: We should `freeze` the condition before using it in a conditional
+  // branch, unless we can prove it's not poison: select-on-poison isn't UB,
+  // but branch-on-poison is.  But doing this causes performance regressions,
+  // and we haven't been able to find an end-to-end correctness issue it fixes.
+  // https://github.com/llvm/llvm-project/pull/199408#issuecomment-4545013881.
   auto *BI = CondBrInst::Create(SI->getCondition(), NewBB, BB, Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
   BI->copyMetadata(*SI, {LLVMContext::MD_prof});

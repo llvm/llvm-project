@@ -173,3 +173,41 @@ bool llvm::cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
                                      bool OrderedZeroSign) {
   return cannotOrderStrictlyGreaterImpl(RHS, LHS, true, OrderedZeroSign);
 }
+
+FPClassTest llvm::orderedStrictlyLess(FPClassTest Mask, bool OrderedZeroSign) {
+  // Ignores NaN
+  Mask &= ~fcNan;
+  // Since the classes are ordered bits, we can get all classes which are
+  // smaller than all classes in Known by setting all trailing 0 bits to 1,
+  // and setting the other bits to 0.
+  // This is done by counting the number of trailing 0 bits and creating a
+  // mask based on that.
+  // For example: 0b1111000000 = fcPositive
+  //           -> 0b0000111111 = fcNegative | fcNan
+  FPClassTest NewMask = static_cast<FPClassTest>(
+      maskTrailingOnes<unsigned>(countr_zero<unsigned>(Mask)) & fcAllFlags);
+  // Remove NaNs
+  NewMask &= ~fcNan;
+  // We cannot conclude that only one zero is smaller
+  // if the zeroes are not ordered
+  if (!OrderedZeroSign && ((NewMask & fcZero) != fcZero))
+    NewMask &= ~fcZero;
+  return NewMask;
+}
+
+FPClassTest llvm::orderedStrictlyGreater(FPClassTest Mask,
+                                         bool OrderedZeroSign) {
+  // Counting the number of leading 0 bits and create a mask based on that,
+  // removing the leading 1s that are outside the bitfield:
+  // For example: 0b0000111100 = fcNegative
+  //           -> 0b1111000000 = fcPositive
+  FPClassTest NewMask = static_cast<FPClassTest>(
+      maskLeadingOnes<unsigned>(countl_zero<unsigned>(Mask)) & fcAllFlags);
+  // Remove NaNs
+  NewMask &= ~fcNan;
+  // We cannot conclude that only one zero is greater
+  // if the zeroes are not ordered
+  if (!OrderedZeroSign && ((NewMask & fcZero) != fcZero))
+    NewMask &= ~fcZero;
+  return NewMask;
+}

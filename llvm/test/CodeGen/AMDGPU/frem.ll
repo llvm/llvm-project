@@ -17711,11 +17711,12 @@ define amdgpu_kernel void @frem_v2f64_const_zero_num(ptr addrspace(1) %out, ptr 
 ; GFX11-NEXT:    global_load_b128 v[1:4], v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 0, v[1:2]
+; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX11-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 0, v[3:4]
 ; GFX11-NEXT:    s_cselect_b32 s2, 0x7ff80000, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, v0
+; GFX11-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-NEXT:    s_and_b32 s3, vcc_lo, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s3, 0x7ff80000, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s3
@@ -17730,11 +17731,12 @@ define amdgpu_kernel void @frem_v2f64_const_zero_num(ptr addrspace(1) %out, ptr 
 ; GFX1150-NEXT:    global_load_b128 v[1:4], v0, s[2:3]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 0, v[1:2]
+; GFX1150-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1150-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX1150-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 0, v[3:4]
 ; GFX1150-NEXT:    s_cselect_b32 s2, 0x7ff80000, 0
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1150-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1150-NEXT:    s_and_b32 s3, vcc_lo, exec_lo
 ; GFX1150-NEXT:    s_cselect_b32 s3, 0x7ff80000, 0
 ; GFX1150-NEXT:    v_mov_b32_e32 v3, s3
@@ -17749,11 +17751,12 @@ define amdgpu_kernel void @frem_v2f64_const_zero_num(ptr addrspace(1) %out, ptr 
 ; GFX1200-NEXT:    global_load_b128 v[1:4], v0, s[2:3]
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 0, v[1:2]
+; GFX1200-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX1200-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX1200-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, 0, v[3:4]
 ; GFX1200-NEXT:    s_cselect_b32 s2, 0x7ff80000, 0
 ; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1200-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, v0
+; GFX1200-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1200-NEXT:    s_and_b32 s3, vcc_lo, exec_lo
 ; GFX1200-NEXT:    s_cselect_b32 s3, 0x7ff80000, 0
 ; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)

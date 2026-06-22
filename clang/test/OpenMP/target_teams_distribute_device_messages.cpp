@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -31,7 +31,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute device (S1) // expected-error {{'S1' does not refer to a value}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+#pragma omp target teams distribute device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target teams distribute device (-2) // OK: omp_invalid_device
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target teams distribute device (-1) // OK: omp_initial_device
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute device (-10u)
   for (i = 0; i < argc; ++i) foo();
