@@ -152,21 +152,21 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       SVal Result = svalBuilder.evalCast(evalBinOp(State, Op, V, RightV, CTy),
                                          B->getType(), CTy);
 
-      SVal LHSVal; // Value that will be stored at location specifed by LeftV.
+      SVal StoredInLeftV;
 
       if (Result.isUnknown()) {
         // The symbolic value is actually for the type of the left-hand side
         // expression, not the computation type, as this is the value the
         // LValue on the LHS will bind to.
-        LHSVal = svalBuilder.conjureSymbolVal(/*symbolTag=*/nullptr,
-                                              getCFGElementRef(), SF, LTy,
-                                              getNumVisitedCurrent());
+        StoredInLeftV = svalBuilder.conjureSymbolVal(
+            /*symbolTag=*/nullptr, getCFGElementRef(), SF, LTy,
+            getNumVisitedCurrent());
         // However, we need to convert the symbol to the computation type.
-        Result = svalBuilder.evalCast(LHSVal, CTy, LTy);
+        Result = svalBuilder.evalCast(StoredInLeftV, CTy, LTy);
       } else {
         // The left-hand side may bind to a different value then the
         // computation type.
-        LHSVal = svalBuilder.evalCast(Result, LTy, CTy);
+        StoredInLeftV = svalBuilder.evalCast(Result, LTy, CTy);
       }
 
       // In C++, assignment and compound assignment operators return an
@@ -176,7 +176,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       else
         State = State->BindExpr(B, SF, Result);
 
-      evalStore(Tmp2, B, LHS, N, State, LeftV, LHSVal);
+      evalStore(Tmp2, B, LHS, N, State, LeftV, StoredInLeftV);
     }
   }
 
