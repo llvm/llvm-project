@@ -103,7 +103,9 @@ public:
   static char ID;
 
   RegAllocScoring() : MachineFunctionPass(ID) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
     initializeRegAllocScoringPass(*PassRegistry::getPassRegistry());
+#endif
   }
 
   ~RegAllocScoring() override = default;
@@ -130,8 +132,10 @@ FunctionPass *createRegAllocScoringPass() { return new RegAllocScoring(); }
 
 } // namespace llvm
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
                 "Register Allocation Scoring Pass", false, false)
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 // ===================================
 // Common ML Advisor declarations

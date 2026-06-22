@@ -1103,11 +1103,13 @@ bool TargetPassConfig::addISelPasses() {
 }
 
 /// -regalloc=... command line option.
+#ifndef EJIT_TRIM_LLVM_BACKEND
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
 static cl::opt<RegisterRegAlloc::FunctionPassCtor, false,
                RegisterPassParser<RegisterRegAlloc>>
     RegAlloc("regalloc", cl::Hidden, cl::init(&useDefaultRegisterAllocator),
              cl::desc("Register allocator to use"));
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 /// Add the complete set of target-independent postISel code generator passes.
 ///
@@ -1361,6 +1363,7 @@ bool TargetPassConfig::getOptimizeRegAlloc() const {
   llvm_unreachable("Invalid optimize-regalloc state");
 }
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
 static llvm::once_flag InitializeDefaultRegisterAllocatorFlag;
@@ -1374,6 +1377,7 @@ static void initializeDefaultRegisterAllocatorOnce() {
   if (!RegisterRegAlloc::getDefault())
     RegisterRegAlloc::setDefault(RegAlloc);
 }
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 /// Instantiate the default register allocator pass for this target for either
 /// the optimized or unoptimized allocation path. This will be added to the pass
@@ -1384,10 +1388,14 @@ static void initializeDefaultRegisterAllocatorOnce() {
 /// allocation may still override this for per-target regalloc
 /// selection. But -regalloc=... always takes precedence.
 FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   if (Optimized)
     return createGreedyRegisterAllocator();
   else
     return createFastRegisterAllocator();
+#else
+  return createGreedyRegisterAllocator();
+#endif
 }
 
 /// Find and instantiate the register allocation pass requested by this target
@@ -1400,6 +1408,7 @@ FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
 /// FIXME: When MachinePassRegistry register pass IDs instead of function ptrs,
 /// this can be folded into addPass.
 FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   // Initialize the global default.
   llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
                   initializeDefaultRegisterAllocatorOnce);
@@ -1407,21 +1416,27 @@ FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
   RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
   if (Ctor != useDefaultRegisterAllocator)
     return Ctor();
-
+#endif // EJIT_TRIM_LLVM_BACKEND
   // With no -regalloc= override, ask the target for a regalloc pass.
   return createTargetRegisterAllocator(Optimized);
 }
 
 bool TargetPassConfig::isCustomizedRegAlloc() {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   return RegAlloc !=
          (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator;
+#else
+  return false;
+#endif
 }
 
 bool TargetPassConfig::addRegAssignAndRewriteFast() {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
       RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)
     reportFatalUsageError(
         "Must use fast (default) register allocator for unoptimized regalloc.");
+#endif // EJIT_TRIM_LLVM_BACKEND
 
   addPass(createRegAllocPass(false));
 
@@ -1441,16 +1456,22 @@ bool TargetPassConfig::addRegAssignAndRewriteOptimized() {
   // Finally rewrite virtual registers.
   addPass(&VirtRegRewriterID);
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
   // Regalloc scoring for ML-driven eviction - noop except when learning a new
   // eviction policy.
   addPass(createRegAllocScoringPass());
+#endif // EJIT_TRIM_LLVM_BACKEND
   return true;
 }
 
 /// Return true if the default global register allocator is in use and
 /// has not be overriden on the command line with '-regalloc=...'
 bool TargetPassConfig::usingDefaultRegAlloc() const {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   return RegAlloc.getNumOccurrences() == 0;
+#else
+  return true;
+#endif
 }
 
 /// Add the minimum set of target-independent passes that are required for

@@ -58,8 +58,10 @@ STATISTIC(NumCoalesced, "Number of copies coalesced");
 static cl::opt<bool> IgnoreMissingDefs("rafast-ignore-missing-defs",
                                        cl::Hidden);
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
                                      createFastRegisterAllocator);
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 namespace {
 
@@ -437,8 +439,10 @@ public:
 
 char RegAllocFast::ID = 0;
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
                 false)
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   assert(Reg.isVirtual());

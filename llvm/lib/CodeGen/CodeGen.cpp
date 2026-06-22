@@ -111,9 +111,11 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeProcessImplicitDefsPass(Registry);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeRABasicPass(Registry);
-  initializeRAGreedyLegacyPass(Registry);
   initializeRegAllocFastPass(Registry);
+#endif // EJIT_TRIM_LLVM_BACKEND
+  initializeRAGreedyLegacyPass(Registry);
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
   initializeRegisterCoalescerLegacyPass(Registry);
