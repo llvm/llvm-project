@@ -31573,13 +31573,10 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                      const Value *Rhs) const {
   using namespace llvm::PatternMatch;
 
-  // Do not fold floating-point conditions into an FCMP/FCCMP chain. FCCMP is
-  // never cheaper than the FCMP it would replace and is far costlier on some
-  // cores (e.g. 9 vs 3 cycles, and 3 pipes vs 1, on Ampere1), and unordered
-  // predicates expand a single merge into several FCCMPs (see
-  // branch-cond-split-fcmp.ll). The dependency-chain heuristic below cannot see
-  // that expansion, so keep floating-point conditions split into separate
-  // compares-and-branches, as the generic target default does.
+  // Keep floating-point conditions split rather than folding them into an
+  // FCMP/FCCMP chain: FCCMP is never cheaper than the FCMP it replaces, and
+  // unordered predicates expand one merge into several FCCMPs that the cost
+  // heuristic below cannot see (regressed branch-cond-split-fcmp.ll).
   if (isa<FCmpInst>(Lhs) || isa<FCmpInst>(Rhs))
     return {-1, -1, -1};
 
@@ -31609,19 +31606,12 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   };
 
   int BaseCost = BrMergingBaseCostThresh.getValue();
-  // CCMP is always available on AArch64 and folds the second compare and the
-  // branch into a single 1-cycle op (e.g. V2Write_1c_1F_1Flg on Neoverse V2),
-  // so merging is worth tolerating extra speculated work on the RHS dependency
-  // chain. The bias is that tolerance measured in TTI latency units: it stands
-  // in for the amortized cost of the branch the merge eliminates, i.e. roughly
-  // MispredictPenalty (~10 cycles on modern Arm cores) weighted by the branch's
-  // misprediction probability. With no profile, a branch is ~50/50, so the
-  // budget is ~MispredictPenalty/2; the default of 6 sits in the
-  // MispredictPenalty * [1/2 .. 1] band used elsewhere for this same tradeoff
-  // (EarlyIfConversion uses /2 or full, AArch64ConditionalCompares uses 3/4).
-  // The comparison is approximate -- those passes count scheduler cycles while
-  // this sums TTI latency units. The likely/unlikely biases below refine the
-  // misprediction estimate from BranchProbabilityInfo.
+  // CCMP folds the second compare and the branch into a single cheap op, so
+  // merging is worth tolerating extra speculated work on the RHS dependency
+  // chain. The bias budgets that tolerance in TTI latency units, standing in
+  // for the amortized cost of the eliminated branch (~MispredictPenalty weighted
+  // by misprediction probability; ~50/50 with no profile, hence the default 6
+  // ~= MispredictPenalty/2). The likely/unlikely biases below refine that.
   if (BaseCost >= 0)
     BaseCost += BrMergingCcmpBias;
 
