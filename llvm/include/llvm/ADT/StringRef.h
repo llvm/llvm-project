@@ -576,7 +576,7 @@ public:
   [[nodiscard]] LLVM_ABI std::string upper() const;
 
   /// Returns this StringRef or a default value if this StringRef is empty.
-  [[nodiscard]] StringRef value_if_empty(llvm::StringRef default_value) const {
+  [[nodiscard]] StringRef nonemptyOr(llvm::StringRef default_value) const {
     return empty() ? default_value : *this;
   }
 
