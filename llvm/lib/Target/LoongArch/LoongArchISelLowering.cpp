@@ -125,7 +125,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
-  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
@@ -256,6 +255,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::UINT_TO_FP, MVT::i64, Custom);
       }
     }
+
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   }
 
   // Set operations for 'D' feature.
@@ -4025,21 +4026,32 @@ SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
   SDValue Chain = Op.getOperand(0);
   SDValue RMValue = Op.getOperand(1);
 
+  // LLVM rounding mode encoding (0=RNE, 1=RTZ, 2=RUP, 3=RDN).
+  if (auto *CVal = dyn_cast<ConstantSDNode>(RMValue)) {
+    uint64_t RM = CVal->getZExtValue();
+    if (RM > 3) {
+      DAG.getContext()->emitError("invalid rounding mode");
+      return Chain;
+    }
+  }
+
   // Zero-extend i32 rounding mode to GRLenVT.
   RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, GRLenVT, RMValue);
 
-  // The rounding mode in FCSR0 occupies bits 1:0.
-  // LLVM rounding mode encoding (0=RNE,1=RTZ,2=RDN,3=RUP) matches
-  // the LoongArch FCSR hardware encoding, so no translation needed.
+  // The rounding mode in FCSR occupies bits 1:0.
+  // LLVM rounding mode encoding matches the LoongArch FCSR hardware
+  // encoding, so no translation needed.
   // We mask to 2 bits to guard against invalid values.
   RMValue = DAG.getNode(ISD::AND, DL, GRLenVT, RMValue,
                         DAG.getConstant(0x3, DL, GRLenVT));
 
   // Build MachineInstr node for WRFCSR (pseudo for MOVGR2FCSR).
   // WRFCSR takes (uimm2:$fcsr, GPR:$src).
-  SDValue FCSRNo = DAG.getTargetConstant(0, DL, GRLenVT); // FCSR0
+  // FCSR3 is an alias of the RM field; writing it avoids clobbering
+  // unrelated fields in FCSR0.
+  SDValue FCSRNo = DAG.getTargetConstant(3, DL, GRLenVT);
   MachineSDNode *RN = DAG.getMachineNode(LoongArch::WRFCSR, DL, MVT::Other,
-                                          FCSRNo, RMValue, Chain);
+                                         FCSRNo, RMValue, Chain);
   return SDValue(RN, 0);
 }
 
