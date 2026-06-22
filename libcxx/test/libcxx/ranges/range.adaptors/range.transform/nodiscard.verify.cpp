@@ -20,6 +20,9 @@ struct View : std::ranges::view_interface<View> {
   const int* end();
   const char* end() const;
 };
+static_assert(!std::ranges::common_range<View>);
+static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
 
 void test() {
   auto v = View{} | std::views::transform(std::identity{});
