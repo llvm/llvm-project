@@ -11694,11 +11694,15 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       EVT BVVT = BV.getValueType();
       unsigned EltSizeInBits = BVVT.getScalarSizeInBits();
       unsigned NumElts = BVVT.getVectorNumElements();
-      if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits) {
+      EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
+      // This fold builds a zext/trunc through IntEltVT. In the last DAG combine
+      // new nodes are legalized at once, so only do it there if IntEltVT is
+      // legal. Earlier combines are legalized again later.
+      if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits &&
+          (!LegalDAG || TLI.isTypeLegal(IntEltVT))) {
         SDValue LastElt = BV.getOperand(NumElts - 1);
         assert(LastElt.getScalarValueSizeInBits() >= EltSizeInBits &&
                "Expected BUILD_VECTOR operand as wide as element type");
-        EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
         LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
                                  LastElt);
         return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
