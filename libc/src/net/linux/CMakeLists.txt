@@ -1,0 +1,44 @@
+add_entrypoint_object(
+  if_indextoname
+  SRCS
+    if_indextoname.cpp
+  HDRS
+    ../if_indextoname.h
+  DEPENDS
+    libc.hdr.net_if_macros
+    libc.hdr.errno_macros
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_ifreq
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.null_check
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socket
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.errno.errno
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.string_utils
+)
+
+add_entrypoint_object(
+  if_nametoindex
+  SRCS
+    if_nametoindex.cpp
+  HDRS
+    ../if_nametoindex.h
+  DEPENDS
+    libc.hdr.net_if_macros
+    libc.hdr.errno_macros
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_ifreq
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.null_check
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socket
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.errno.errno
+    libc.src.string.memory_utils.inline_memcpy
+)
