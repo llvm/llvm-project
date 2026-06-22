@@ -160,6 +160,26 @@ gpu.func @arith_constant() {
   gpu.return
 }
 
+// A non-splat constant is distributed by extracting the element each lane owns
+// from the full constant (using the layout's distributed coordinates).
+// CHECK-LABEL: gpu.func @arith_constant_non_splat
+// CHECK: %[[CST:.*]] = arith.constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
+// CHECK: %[[LANE:.*]] = gpu.lane_id
+// CHECK: %[[ELEM:.*]] = vector.extract %[[CST]][%{{.*}}] : index from vector<16xindex>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[ELEM]] : index to vector<1xindex>
+// CHECK: gpu.return
+gpu.func @arith_constant_non_splat() {
+  %0 = arith.constant
+    {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+    dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xindex>
+  %cl0 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+    }> : vector<16xindex>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @prefetch_nd
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: xegpu.prefetch_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<16x16xf16>
