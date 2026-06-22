@@ -1019,31 +1019,24 @@ void VPlan::execute(VPTransformState *State) {
 
   State->CFG.DTU.flush();
 
-  VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
-  if (!Header)
-    return;
-
-  auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
-  BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-  // Fix the latch value of canonical, reduction and first-order recurrences
-  // phis in the vector loop.
-  for (VPRecipeBase &R : Header->phis()) {
-    // Skip phi-like recipes that generate their backedege values themselves.
-    if (isa<VPWidenPHIRecipe>(&R))
+  // Fix the latch (backedge) value of all header phis in all loop headers.
+  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry())) {
+    if (!VPBlockUtils::isHeader(VPB, State->VPDT))
       continue;
+    auto *Header = cast<VPBasicBlock>(VPB);
+    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
-    auto *PhiR = cast<VPSingleDefRecipe>(&R);
-    // VPInstructions currently model scalar Phis only.
-    bool NeedsScalar = isa<VPInstruction>(PhiR) ||
-                       (isa<VPReductionPHIRecipe>(PhiR) &&
-                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    for (VPRecipeBase &R : Header->phis()) {
+      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
+                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-    Value *Phi = State->get(PhiR, NeedsScalar);
-    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does
-    // not.
-    Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
-    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+      Value *Phi = State->get(PhiR, NeedsScalar);
+      Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
   }
 }
 
@@ -1123,7 +1116,7 @@ void VPlan::printLiveIns(raw_ostream &O) const {
   }
 
   O << "\n";
-  if (TripCount) {
+  if (TripCount && TripCount->getNumUsers() > 0) {
     if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);

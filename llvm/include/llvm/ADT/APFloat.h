@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -677,7 +678,7 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
-  APInt getNaNPayload() const;
+  LLVM_ABI APInt getNaNPayload() const;
 
 private:
   /// \name Simple Queries
@@ -925,7 +926,7 @@ public:
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
 
-  APInt getNaNPayload() const;
+  LLVM_ABI APInt getNaNPayload() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
@@ -1022,6 +1023,11 @@ struct fltSemantics {
 
   /* Whether the sign bit of this semantics is the most significant bit */
   bool hasSignBitInMSB = true;
+
+  /* Whether the format supports IEEE754 denormal representation.
+     If both hasDenormals and hasZero are false exponent 0 is assumed to be a
+     regular exponent instead of being reserved. This changes the bias by +1. */
+  bool hasDenormals = true;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1426,7 +1432,7 @@ public:
   ///
   /// If a floating-point exception occurs during conversion, then no error is
   /// returned, and the exception is indicated via opStatus.
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
@@ -1762,7 +1768,9 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
 
 /// Implement IEEE 754-2019 exp functions
 LLVM_READONLY
-APFloat exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven);
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

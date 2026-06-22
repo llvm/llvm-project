@@ -55,6 +55,15 @@ define dso_local tailcc void @void_test(i32, i32, i32, i32) {
 ;
 ; X86-LABEL: void_test:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    jmp void_test # TAILCALL
   entry:
    musttail call tailcc void @void_test( i32 %0, i32 %1, i32 %2, i32 %3)
@@ -68,8 +77,59 @@ define dso_local tailcc i1 @i1test(i32, i32, i32, i32) {
 ;
 ; X86-LABEL: i1test:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    jmp i1test # TAILCALL
   entry:
   %4 = musttail call tailcc i1 @i1test( i32 %0, i32 %1, i32 %2, i32 %3)
   ret i1 %4
+}
+
+; Regression test: musttail tailcc with non-forwarded stack args.
+declare tailcc void @f1_64(i64, i64, i64, i64, i64, i64, i64)
+
+define tailcc void @stack_arg_const_64(i64, i64, i64, i64, i64, i64, i64) {
+; X86-LABEL: stack_arg_const_64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $15, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $16, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $23, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1, %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    jmp f1_64@PLT # TAILCALL
+  musttail call tailcc void @f1_64(i64 1, i64 4, i64 8, i64 15, i64 16, i64 23, i64 42)
+  ret void
+}
+
+declare tailcc void @f1_32(i32, i32, i32, i32, i32, i32, i32)
+
+define tailcc void @stack_arg_const_32(i32, i32, i32, i32, i32, i32, i32) {
+; X86-LABEL: stack_arg_const_32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $8, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $15, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $16, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $23, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1, %ecx
+; X86-NEXT:    movl $4, %edx
+; X86-NEXT:    jmp f1_32@PLT # TAILCALL
+  musttail call tailcc void @f1_32(i32 1, i32 4, i32 8, i32 15, i32 16, i32 23, i32 42)
+  ret void
 }
