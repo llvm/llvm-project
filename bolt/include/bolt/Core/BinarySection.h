@@ -92,7 +92,8 @@ class BinarySection {
   StringRef OutputContents;     // Rewritten section contents.
   bool OwnsOutputContents =
       false; // Does this section own the memory for OutputContents?
-  bool OwnershipExplicit = false; // Was the ownership of OutputContents explicitly set?
+  bool OwnershipExplicit =
+      false; // Was the ownership of OutputContents explicitly set?
   const uint64_t SectionNumber;    // Order in which the section was created.
   std::string SectionID;           // Unique ID used for address mapping.
                                    // Set by ExecutableFileMemoryManager.
@@ -292,7 +293,8 @@ public:
   bool isReordered() const { return IsReordered; }
   bool isAnonymous() const { return IsAnonymous; }
   bool isBackupSection() const {
-    return llvm::StringRef(Name).starts_with(".bolt.org"); }
+    return llvm::StringRef(Name).starts_with(".bolt.org");
+  }
   bool isRelro() const { return IsRelro; }
   void setRelro() { IsRelro = true; }
   unsigned getELFType() const { return ELFType; }
@@ -468,10 +470,12 @@ public:
   void setOutputName(const Twine &Name) { OutputName = Name.str(); }
   void setExternallyOwnedContents() {
     OwnsOutputContents = false;
-    OwnershipExplicit = true;}
+    OwnershipExplicit = true;
+  }
   void setOwnedContents() {
     OwnsOutputContents = true;
-    OwnershipExplicit = true;}
+    OwnershipExplicit = true;
+  }
   void setAnonymous(bool Flag) { IsAnonymous = Flag; }
   bool isLinkOnly() const { return IsLinkOnly; }
   void setLinkOnly() { IsLinkOnly = true; }
@@ -510,11 +514,11 @@ public:
     // - section has a SectionRef (buffer owned by input file mapping)
     // - section is a backup section (buffer owned by original section)
     // - buffer is the same as original Contents (shared pointer)
-    if (!OwnershipExplicit){
-    OwnsOutputContents =
-        (NewData != nullptr) && !hasValidSectionID() && !hasSectionRef() &&
-        !isBackupSection() &&
-        (reinterpret_cast<const char *>(NewData) != Contents.data());
+    if (!OwnershipExplicit) {
+      OwnsOutputContents =
+          (NewData != nullptr) && !hasValidSectionID() && !hasSectionRef() &&
+          !isBackupSection() &&
+          (reinterpret_cast<const char *>(NewData) != Contents.data());
     }
   }
 

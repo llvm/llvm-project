@@ -49,14 +49,17 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -68,9 +71,6 @@
 #include <optional>
 #include <system_error>
 #include <unordered_map>
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Object/ELF.h"
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
@@ -820,7 +820,7 @@ Error RewriteInstance::run() {
     }
   }
 
-  if (opts::Instrument && !BC->IsStaticExecutable){
+  if (opts::Instrument && !BC->IsStaticExecutable) {
     if (Error E = discoverRtFiniAddress())
       return E;
   }
@@ -930,14 +930,14 @@ void RewriteInstance::discoverFileObjects() {
     return Section.isAllocatable();
   };
   auto checkSymbolInSection = [this](const SymbolInfo &S) {
-   // PPC64: .TOC. legitimately resides at .got + 0x8000 (ELFv2 ABI), which can be
-   // past the end of a small .got. It is not a stray symbol, so do not apply
-   // the AArch64-marker out-of-section workaround to it.
-   if (BC->isPPC64()) {
-     auto SymName = S.Symbol.getName();
-     if (SymName && *SymName == ".TOC.")
-       return true;   // treat as valid; do not ignore
-   }
+    // PPC64: .TOC. legitimately resides at .got + 0x8000 (ELFv2 ABI), which can
+    // be past the end of a small .got. It is not a stray symbol, so do not
+    // apply the AArch64-marker out-of-section workaround to it.
+    if (BC->isPPC64()) {
+      auto SymName = S.Symbol.getName();
+      if (SymName && *SymName == ".TOC.")
+        return true; // treat as valid; do not ignore
+    }
 
     // Sometimes, we encounter symbols with addresses outside their section. If
     // such symbols happen to fall into another section, they can interfere with
@@ -3619,8 +3619,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
         ReferencedSymbol = BC->registerNameAtAddress(
             Name, SymbolAddress, SymbolSize, SymbolAlignment, SymbolFlags);
       }
+    }
   }
-}
 
   auto checkMaxDataRelocations = [&]() {
     ++NumDataRelocations;
@@ -4734,9 +4734,9 @@ void RewriteInstance::mapCodeSectionsInPlace(
     const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
                                                    /*IsText=*/true,
                                                    /*IsAllocatable=*/true);
-  StringRef NewName = getBOLTTextSectionName();
-  LLVM_DEBUG(dbgs() << "[reg] creating section name=" << NewName
-                    << " flags=" << llvm::format_hex(Flags, 8) << "\n");
+    StringRef NewName = getBOLTTextSectionName();
+    LLVM_DEBUG(dbgs() << "[reg] creating section name=" << NewName
+                      << " flags=" << llvm::format_hex(Flags, 8) << "\n");
 
     BinarySection &Section =
       BC->registerOrUpdateSection(getBOLTTextSectionName(),
@@ -5191,9 +5191,10 @@ void RewriteInstance::finalizeSectionStringTable(ELFObjectFile<ELFT> *File) {
   uint8_t *DataCopy = new uint8_t[SHStrTabSize];
   memset(DataCopy, 0, SHStrTabSize);
   SHStrTab.write(DataCopy);
-  BinarySection &ShStrTabSec = BC->registerOrUpdateNoteSection(".shstrtab", DataCopy, SHStrTabSize,
-                                  /*Alignment=*/1,
-                                  /*IsReadOnly=*/true, ELF::SHT_STRTAB);
+  BinarySection &ShStrTabSec =
+      BC->registerOrUpdateNoteSection(".shstrtab", DataCopy, SHStrTabSize,
+                                      /*Alignment=*/1,
+                                      /*IsReadOnly=*/true, ELF::SHT_STRTAB);
   ShStrTabSec.setOwnedContents();
 }
 
@@ -5210,10 +5211,9 @@ void RewriteInstance::addBoltInfoSection() {
   const std::string BoltInfo =
       BinarySection::encodeELFNote("GNU", DescStr, 4 /*NT_GNU_GOLD_VERSION*/);
   BinarySection &BoltInfoSec = BC->registerOrUpdateNoteSection(
-    ".note.bolt_info", copyByteArray(BoltInfo),
-                                  BoltInfo.size(),
-                                  /*Alignment=*/1,
-                                  /*IsReadOnly=*/true, ELF::SHT_NOTE);
+      ".note.bolt_info", copyByteArray(BoltInfo), BoltInfo.size(),
+      /*Alignment=*/1,
+      /*IsReadOnly=*/true, ELF::SHT_NOTE);
   BoltInfoSec.setOwnedContents();
 }
 
@@ -6049,17 +6049,15 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
       });
 
   BinarySection &SymTabSec = BC->registerOrUpdateNoteSection(
-    SecName, copyByteArray(NewContents),
-                                  NewContents.size(),
-                                  /*Alignment=*/1,
-                                  /*IsReadOnly=*/true, ELF::SHT_SYMTAB);
+      SecName, copyByteArray(NewContents), NewContents.size(),
+      /*Alignment=*/1,
+      /*IsReadOnly=*/true, ELF::SHT_SYMTAB);
   SymTabSec.setOwnedContents();
 
   BinarySection &StrTabSec = BC->registerOrUpdateNoteSection(
-    StrSecName, copyByteArray(NewStrTab),
-                                  NewStrTab.size(),
-                                  /*Alignment=*/1,
-                                  /*IsReadOnly=*/true, ELF::SHT_STRTAB);
+      StrSecName, copyByteArray(NewStrTab), NewStrTab.size(),
+      /*Alignment=*/1,
+      /*IsReadOnly=*/true, ELF::SHT_STRTAB);
   StrTabSec.setOwnedContents();
 }
 
