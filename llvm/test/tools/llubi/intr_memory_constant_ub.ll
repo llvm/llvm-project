@@ -10,6 +10,6 @@ define void @main() {
 
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.memset.p0.i8(ptr @constant_dst, i8 0, i8 1, i1 false) at @main <stdin>:6
+; CHECK-NEXT: #0   call void @llvm.memset.p0.i8(ptr @constant_dst, i8 0, i8 1, i1 false) at @main
 ; CHECK-NEXT: Immediate UB detected: Try to write to a constant memory object: ptr 0x8 [@constant_dst].
 ; CHECK-NEXT: error: Execution of function 'main' failed.
