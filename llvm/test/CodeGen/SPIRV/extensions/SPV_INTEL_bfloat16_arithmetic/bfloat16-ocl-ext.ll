@@ -1,15 +1,21 @@
-; Without SPV_INTEL_bfloat16_arithmetic: report error.
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; CHECK-ERROR: LLVM ERROR: Extended instructions with bfloat16 arguments require the following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+; RUN: split-file %s %t
 
-; With the extension: emit OpExtInst with OpExtension
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s --check-prefixes=COMMON,CHECK-FABS
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s --check-prefixes=COMMON,CHECK-FABSV
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s --check-prefixes=COMMON,CHECK-ILOGB
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - | FileCheck %s --check-prefixes=COMMON,CHECK-ILOGBV
+; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %t/bf16_result.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESULT-ERROR
+; RESULT-ERROR:      error: <unknown>:0:0: in function test_fabs bfloat (bfloat): OpenCL Extended instructions with bfloat16 require the
+; RESULT-ERROR-SAME:   following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+
+; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %t/bf16_operand.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OPERAND-ERROR
+; OPERAND-ERROR:      error: <unknown>:0:0: in function test_ilogb i32 (bfloat): OpenCL Extended instructions with bfloat16 require the
+; OPERAND-ERROR-SAME:   following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - | FileCheck %s \
+; RUN:   --check-prefixes=COMMON,BF16_RESULT
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - | FileCheck %s \
+; RUN:   --check-prefixes=COMMON,BF16_OPERAND
 
 ; TODO: re-enable spirv-val once it can verify SPV_INTEL_bfloat16_arithmetic with bfloat16 type on ExtInst
-; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
+; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - -filetype=obj | spirv-val %}
+; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - -filetype=obj | spirv-val %}
 
 ; COMMON-NOT: OpCapability BFloat16ArithmeticINTEL
 ; COMMON-DAG: OpCapability BFloat16TypeKHR
@@ -18,55 +24,39 @@
 ; COMMON-DAG: [[EXTSET:%.*]] = OpExtInstImport "OpenCL.std"
 ; COMMON-DAG: [[BFLOAT:%.*]] = OpTypeFloat 16 0
 
-; Scalar bfloat16 result and argument.
-; CHECK-FABS: OpFunction [[BFLOAT]]
-; CHECK-FABS: [[X:%.*]] = OpFunctionParameter [[BFLOAT]]
-; CHECK-FABS: OpExtInst [[BFLOAT]] [[EXTSET]] fabs [[X]]
+; BF16_RESULT-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
+; BF16_RESULT: OpExtInst [[BFLOAT]] [[EXTSET]] fabs
+; BF16_RESULT: OpExtInst [[BFLOATV]] [[EXTSET]] fabs
+
+; BF16_OPERAND-DAG: [[INT:%.*]] = OpTypeInt 32 0
+; BF16_OPERAND-DAG: [[INTV:%.*]] = OpTypeVector [[INT]] 4
+; BF16_OPERAND: OpExtInst [[INT]] [[EXTSET]] ilogb
+; BF16_OPERAND: OpExtInst [[INTV]] [[EXTSET]] ilogb
+
+;--- bf16_result.ll
 define spir_func bfloat @test_fabs(bfloat %x) {
-entry:
   %r = call bfloat @llvm.fabs.bf16(bfloat %x)
   ret bfloat %r
 }
 
-declare bfloat @llvm.fabs.bf16(bfloat)
-
-; Vector bfloat16 result and argument.
-; CHECK-FABSV-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
-; CHECK-FABSV: OpFunction [[BFLOATV]]
-; CHECK-FABSV: [[XV:%.*]] = OpFunctionParameter [[BFLOATV]]
-; CHECK-FABSV: OpExtInst [[BFLOATV]] [[EXTSET]] fabs [[XV]]
 define spir_func <4 x bfloat> @test_fabsv(<4 x bfloat> %x) {
-entry:
   %r = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> %x)
   ret <4 x bfloat> %r
 }
 
+declare bfloat @llvm.fabs.bf16(bfloat)
 declare <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat>)
 
-; A non-bfloat16 (i32) result with a bfloat16 argument.
-; CHECK-ILOGB-DAG: [[INT:%.*]] = OpTypeInt 32 0
-; CHECK-ILOGB: OpFunction [[INT]]
-; CHECK-ILOGB: [[XI:%.*]] = OpFunctionParameter [[BFLOAT]]
-; CHECK-ILOGB: OpExtInst [[INT]] [[EXTSET]] ilogb [[XI]]
+;--- bf16_operand.ll
 define spir_func i32 @test_ilogb(bfloat %x) {
-entry:
-  %r = call i32 @_Z5ilogbDh(bfloat %x)
+  %r = call i32 @_Z5ilogbDF16_(bfloat %x)
   ret i32 %r
 }
 
-declare i32 @_Z5ilogbDh(bfloat)
-
-; Vector version of ilogb test.
-; CHECK-ILOGBV-DAG: [[INT:%.*]] = OpTypeInt 32 0
-; CHECK-ILOGBV-DAG: [[INTV:%.*]] = OpTypeVector [[INT]] 4
-; CHECK-ILOGBV-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
-; CHECK-ILOGBV: OpFunction [[INTV]]
-; CHECK-ILOGBV: [[XIV:%.*]] = OpFunctionParameter [[BFLOATV]]
-; CHECK-ILOGBV: OpExtInst [[INTV]] [[EXTSET]] ilogb [[XIV]]
 define spir_func <4 x i32> @test_ilogbv(<4 x bfloat> %x) {
-entry:
-  %r = call <4 x i32> @_Z5ilogbDv4_Dh(<4 x bfloat> %x)
+  %r = call <4 x i32> @_Z5ilogbDv4_DF16_(<4 x bfloat> %x)
   ret <4 x i32> %r
 }
 
-declare <4 x i32> @_Z5ilogbDv4_Dh(<4 x bfloat>)
+declare i32 @_Z5ilogbDF16_(bfloat)
+declare <4 x i32> @_Z5ilogbDv4_DF16_(<4 x bfloat>)

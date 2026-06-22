@@ -16,7 +16,8 @@
 
 // TODO: uses or report_fatal_error (which is also deprecated) /
 //       ReportFatalUsageError in this file should be refactored, as per LLVM
-//       best practices, to rely on the Diagnostic infrastructure.
+//       best practices, to rely on the Diagnostic infrastructure (such as the
+//       reportUnsupported function below).
 
 #include "SPIRVModuleAnalysis.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
@@ -55,6 +56,12 @@ char llvm::SPIRVModuleAnalysis::ID = 0;
 
 INITIALIZE_PASS(SPIRVModuleAnalysis, DEBUG_TYPE, "SPIRV module analysis", true,
                 true)
+
+static void reportUnsupported(const MachineInstr &MI, const char *Msg) {
+  const Function &Func = MI.getMF()->getFunction();
+  Func.getContext().diagnose(
+      DiagnosticInfoUnsupported(Func, Msg, MI.getDebugLoc()));
+}
 
 // Retrieve an unsigned from an MDNode with a list of them as operands.
 static unsigned getMetadataUInt(MDNode *MdNode, unsigned OpIndex,
@@ -1662,7 +1669,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     if (MI.getOperand(2).getImm() ==
         static_cast<int64_t>(SPIRV::InstructionSet::OpenCL_std)) {
-      MachineFunction *MF = const_cast<MachineFunction *>(MI.getMF());
+      const MachineFunction *MF = MI.getMF();
       const MachineRegisterInfo &MRI = MF->getRegInfo();
       SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
 
@@ -1678,16 +1685,16 @@ void addInstrRequirements(const MachineInstr &MI,
            ++I) {
         const MachineOperand &MO = MI.getOperand(I);
         if (MO.isReg())
-          UsesBFloat16 = IsBFloat16(GR->getResultType(MO.getReg(), MF));
+          UsesBFloat16 = IsBFloat16(GR->getResultType(
+              MO.getReg(), const_cast<MachineFunction *>(MF)));
       }
 
       if (UsesBFloat16) {
         if (!ST.canUseExtension(
                 SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
-          report_fatal_error(
-              "Extended instructions with bfloat16 arguments require the "
-              "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
-              false);
+          reportUnsupported(
+              MI, "OpenCL Extended instructions with bfloat16 require the "
+                  "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
         Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
       }
     }
