@@ -5973,19 +5973,20 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::expandBranchOnTwoConds, BestVPlan);
   // Convert loops with variable-length stepping after regions are dissolved.
   RUN_VPLAN_PASS(VPlanTransforms::convertToVariableLengthStep, BestVPlan);
-  // Remove dead back-edges for single-iteration loops with BranchOnCond(true).
-  // Only process loop latches to avoid removing edges from the middle block,
-  // which may be needed for epilogue vectorization.
-  VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/true);
-  VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
-  std::optional<uint64_t> MaxRuntimeStep;
-  if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
-    MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
-  VPlanTransforms::materializeVectorTripCount(
-      BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
-      MaxRuntimeStep);
-  VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
+  // Fold any remaining BranchOnCond with constant condition.
+  VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/false);
+  if (VectorPH->hasPredecessors()) {
+    VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+    std::optional<uint64_t> MaxRuntimeStep;
+    if (auto MaxVScale = getMaxVScale(*CM.TheFunction, CM.TTI))
+      MaxRuntimeStep =
+          uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
+    VPlanTransforms::materializeVectorTripCount(
+        BestVPlan, VectorPH, CM.foldTailByMasking(),
+        CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
+        MaxRuntimeStep);
+    VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
+  }
   // Limit expansions to VPInstruction to when not vectorizing the epilogue.
   // Currently this code path still relies on code re-using SCEVs expanded
   // directly to IR instructions.
@@ -7621,7 +7622,6 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
 
       RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) || IsFindIV) {
-        auto *ResumePhi = cast<PHINode>(ResumeV);
         VPValue *BypassOp = ResumeForEpi->getOperand(1);
         assert((isa<VPIRValue>(BypassOp) ||
                 VPlanPatternMatch::match(
@@ -7629,8 +7629,11 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                     m_VPInstruction<Instruction::Freeze>(m_VPValue()))) &&
                "expected live-in or Freeze");
         Value *StartV = BypassOp->getUnderlyingValue();
-        IRBuilder<> Builder(ResumePhi->getParent(),
-                            ResumePhi->getParent()->getFirstNonPHIIt());
+        BasicBlock::iterator InsertAt =
+            L->getLoopPreheader()->getFirstNonPHIIt();
+        if (auto *ResumeI = dyn_cast<Instruction>(ResumeV))
+          InsertAt = *ResumeI->getInsertionPointAfterDef();
+        IRBuilder<> Builder(InsertAt->getParent(), InsertAt);
 
         if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
           // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
@@ -7743,34 +7746,60 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   return InstsToMove;
 }
 
-static void
-fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
-                                VPlan &BestEpiPlan,
-                                ArrayRef<VPInstruction *> ResumeValues) {
+static void fixScalarResumeValuesFromBypass(
+    BasicBlock *BypassBlock, Loop *L, VPlan &BestEpiPlan,
+    ArrayRef<VPInstruction *> ResumeValues, BasicBlock *VecEpiloguePreHeader,
+    const DominatorTree &DT) {
   // Fix resume values from the additional bypass block.
   BasicBlock *PH = L->getLoopPreheader();
   for (auto *Pred : predecessors(PH)) {
     for (PHINode &Phi : PH->phis()) {
       if (Phi.getBasicBlockIndex(Pred) != -1)
         continue;
+      // BypassBlock may have been folded away by removeBranchOnConst; skip
+      // phis that no longer carry an incoming from it.
+      if (Phi.getBasicBlockIndex(BypassBlock) == -1)
+        continue;
       Phi.addIncoming(Phi.getIncomingValueForBlock(BypassBlock), Pred);
     }
   }
   auto *ScalarPH = cast<VPIRBasicBlock>(BestEpiPlan.getScalarPreheader());
-  if (ScalarPH->hasPredecessors()) {
+  BasicBlock *ScalarPHBB = ScalarPH->getIRBasicBlock();
+  if (ScalarPH->hasPredecessors() &&
+      is_contained(predecessors(ScalarPHBB), BypassBlock)) {
     // Fix resume values for inductions and reductions from the additional
     // bypass block using the incoming values from the main loop's resume phis.
     // ResumeValues correspond 1:1 with the scalar loop header phis.
     for (auto [ResumeV, HeaderPhi] :
-         zip(ResumeValues, BestEpiPlan.getScalarHeader()->phis())) {
-      auto *HeaderPhiR = cast<VPIRPhi>(&HeaderPhi);
-      auto *EpiResumePhi =
-          cast<PHINode>(HeaderPhiR->getIRPhi().getIncomingValueForBlock(PH));
+         zip_equal(ResumeValues, BestEpiPlan.getScalarHeader()->phis())) {
+      PHINode &IRHeaderPhi = cast<VPIRPhi>(&HeaderPhi)->getIRPhi();
+      Value *IncomingVal = IRHeaderPhi.getIncomingValueForBlock(PH);
+      auto *EpiResumePhi = dyn_cast<PHINode>(IncomingVal);
+      if (!EpiResumePhi) {
+        // Simplifications folded the resume phi to IncomingVal because all
+        // incomings shared a single VPValue. Recreate it so BypassBlock can
+        // carry a distinct value below.
+        assert(none_of(predecessors(ScalarPHBB),
+                       [&](BasicBlock *Pred) {
+                         return DT.dominates(VecEpiloguePreHeader, Pred);
+                       }) &&
+               "epilogue middle block already reaches scalar.ph");
+        EpiResumePhi =
+            PHINode::Create(IncomingVal->getType(), pred_size(ScalarPHBB),
+                            "resume", ScalarPHBB->getFirstNonPHIIt());
+        for (BasicBlock *Pred : predecessors(ScalarPHBB))
+          EpiResumePhi->addIncoming(IncomingVal, Pred);
+        IRHeaderPhi.setIncomingValueForBlock(PH, EpiResumePhi);
+      }
       if (EpiResumePhi->getBasicBlockIndex(BypassBlock) == -1)
         continue;
-      auto *MainResumePhi = cast<PHINode>(ResumeV->getUnderlyingValue());
-      EpiResumePhi->setIncomingValueForBlock(
-          BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
+      // If the resume phi was folded, ResumeV is the common incoming value.
+      Value *BypassIncoming = ResumeV->getUnderlyingValue();
+      assert(BypassIncoming && "no IR value");
+      if (auto *MainResumePhi = dyn_cast<PHINode>(BypassIncoming))
+        if (MainResumePhi->getBasicBlockIndex(BypassBlock) != -1)
+          BypassIncoming = MainResumePhi->getIncomingValueForBlock(BypassBlock);
+      EpiResumePhi->setIncomingValueForBlock(BypassBlock, BypassIncoming);
     }
   }
 }
@@ -7799,8 +7828,11 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
   // Helper to redirect an edge from \p BB to \p VecEpilogueIterationCountCheck
-  // to \p NewSucc instead, updating the DomTree.
+  // to \p NewSucc instead, updating the DomTree. No-op if \p BB doesn't branch
+  // there (e.g. its check folded by removeBranchOnConst).
   auto RedirectEdge = [&](BasicBlock *BB, BasicBlock *NewSucc) {
+    if (!is_contained(successors(BB), VecEpilogueIterationCountCheck))
+      return;
     BB->getTerminator()->replaceUsesOfWith(VecEpilogueIterationCountCheck,
                                            NewSucc);
     DTU.applyUpdates(
@@ -7808,7 +7840,10 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
          {DominatorTree::Insert, BB, NewSucc}});
   };
 
-  RedirectEdge(EPI.MainLoopIterationCountCheck, VecEpiloguePreHeader);
+  // If the main-loop bypass folded to unconditional, its only successor is
+  // the epilogue check and must be preserved.
+  if (isa<CondBrInst>(EPI.MainLoopIterationCountCheck->getTerminator()))
+    RedirectEdge(EPI.MainLoopIterationCountCheck, VecEpiloguePreHeader);
 
   BasicBlock *ScalarPH =
       cast<VPIRBasicBlock>(EpiPlan.getScalarPreheader())->getIRBasicBlock();
@@ -7835,18 +7870,14 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
         VecEpilogueIterationCountCheck->getSinglePredecessor(),
         VecEpilogueIterationCountCheck);
 
-    // If the phi doesn't have an incoming value from the
-    // EpilogueIterationCountCheck, we are done. Otherwise remove the
-    // incoming value and also those from other check blocks. This is needed
-    // for reduction phis only.
-    if (none_of(Phi->blocks(), [&](BasicBlock *IncB) {
-          return EPI.EpilogueIterationCountCheck == IncB;
-        }))
-      continue;
+    // The check blocks no longer reach the phi's new parent (their edges
+    // were redirected above or folded by removeBranchOnConst), so drop any
+    // stale incoming values still recorded for them.
     for (BasicBlock *BB :
          {EPI.EpilogueIterationCountCheck, SCEVCheckBlock, MemCheckBlock}) {
-      if (BB)
-        Phi->removeIncomingValue(BB);
+      if (!BB || Phi->getBasicBlockIndex(BB) == -1)
+        continue;
+      Phi->removeIncomingValue(BB);
     }
   }
 
@@ -7858,7 +7889,7 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
   // after executing the main loop. We need to update the resume values of
   // inductions and reductions during epilogue vectorization.
   fixScalarResumeValuesFromBypass(VecEpilogueIterationCountCheck, L, EpiPlan,
-                                  ResumeValues);
+                                  ResumeValues, VecEpiloguePreHeader, *DT);
 
   // Remove dead phis that were moved to the epilogue preheader but are unused
   // (e.g., resume phis for inductions not widened in the epilogue vector loop).
@@ -8318,23 +8349,33 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
     ++LoopsVectorized;
 
-    // Derive EPI fields from VPlan-generated IR.
+    // Skip epilogue if the main loop covered everything or the chain folded.
+    if (!BestMainPlan.getScalarPreheader()->hasPredecessors())
+      return true;
+
+    // Check chain: Entry -> [SCEV] -> [Mem] -> MainCheck -> VecPH. A check
+    // block is detached if removeBranchOnConst dropped its BranchOnCond before
+    // execution, leaving its UnreachableInst terminator.
     BasicBlock *EntryBB =
         cast<VPIRBasicBlock>(BestMainPlan.getEntry())->getIRBasicBlock();
     EntryBB->setName("iter.check");
     EPI.EpilogueIterationCountCheck = EntryBB;
-    // The check chain is: Entry -> [SCEV] -> [Mem] -> MainCheck -> VecPH.
-    // MainCheck is the non-bypass successor of the last runtime check block
-    // (or Entry if there are no runtime checks).
+
     BasicBlock *LastCheck = EntryBB;
-    if (BasicBlock *MemBB = Checks.getMemRuntimeChecks().second)
-      LastCheck = MemBB;
-    else if (BasicBlock *SCEVBB = Checks.getSCEVChecks().second)
-      LastCheck = SCEVBB;
+    auto IsLive = [](BasicBlock *BB) {
+      return BB && !isa<UnreachableInst>(BB->getTerminator());
+    };
+    if (BasicBlock *BB = Checks.getMemRuntimeChecks().second; IsLive(BB))
+      LastCheck = BB;
+    else if (BasicBlock *BB = Checks.getSCEVChecks().second; IsLive(BB))
+      LastCheck = BB;
+
     BasicBlock *ScalarPH = L->getLoopPreheader();
-    auto *BI = cast<CondBrInst>(LastCheck->getTerminator());
-    EPI.MainLoopIterationCountCheck =
-        BI->getSuccessor(BI->getSuccessor(0) == ScalarPH);
+    Instruction *BI = LastCheck->getTerminator();
+    EPI.MainLoopIterationCountCheck = BI->getSuccessor(
+        BI->getNumSuccessors() == 2 && BI->getSuccessor(0) == ScalarPH);
+    if (EPI.MainLoopIterationCountCheck == ScalarPH)
+      return true;
 
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
