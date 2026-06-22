@@ -77,3 +77,5 @@ class MemoryRegionInfoPacketsCached(TestBase):
 
         log_after_cmd = log_text.split("AFTER_STOP")[1]
         self.assertNotIn("qMemoryRegionInfo", log_after_cmd)
+
+        process.Kill()
