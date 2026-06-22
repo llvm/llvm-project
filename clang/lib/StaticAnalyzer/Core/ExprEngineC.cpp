@@ -127,8 +127,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     // Perform a load (the LHS).  This performs the checks for
     // null dereferences, and so on.
     ExplodedNodeSet Tmp;
-    SVal location = LeftV;
-    evalLoad(Tmp, B, LHS, N, State, location);
+    evalLoad(Tmp, B, LHS, N, State, LeftV);
 
     for (ExplodedNode *N : Tmp) {
       State = N->getState();
@@ -153,7 +152,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       SVal Result = svalBuilder.evalCast(evalBinOp(State, Op, V, RightV, CTy),
                                          B->getType(), CTy);
 
-      SVal LHSVal;
+      SVal LHSVal; // Value that will be stored at location specifed by LeftV.
 
       if (Result.isUnknown()) {
         // The symbolic value is actually for the type of the left-hand side
@@ -173,11 +172,11 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // In C++, assignment and compound assignment operators return an
       // lvalue.
       if (B->isGLValue())
-        State = State->BindExpr(B, SF, location);
+        State = State->BindExpr(B, SF, LeftV);
       else
         State = State->BindExpr(B, SF, Result);
 
-      evalStore(Tmp2, B, LHS, N, State, location, LHSVal);
+      evalStore(Tmp2, B, LHS, N, State, LeftV, LHSVal);
     }
   }
 
