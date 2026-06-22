@@ -5945,8 +5945,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                  PSE);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
-    RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
-                   /*OnlyLatches=*/false);
+    RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan);
   if (BestVPlan.getEntry()->getSingleSuccessor() ==
       BestVPlan.getScalarPreheader()) {
     // TODO: The vector loop would be dead, should not even try to vectorize.
@@ -5974,7 +5973,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Convert loops with variable-length stepping after regions are dissolved.
   RUN_VPLAN_PASS(VPlanTransforms::convertToVariableLengthStep, BestVPlan);
   // Fold any remaining BranchOnCond with constant condition.
-  VPlanTransforms::removeBranchOnConst(BestVPlan, /*OnlyLatches=*/false);
+  VPlanTransforms::removeBranchOnConst(BestVPlan);
   if (VectorPH->hasPredecessors()) {
     VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
     std::optional<uint64_t> MaxRuntimeStep;
@@ -5996,9 +5995,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::simplifyRecipes(BestVPlan);
   // Removing branches and incoming values may expose additional simplification
   // opportunities.
-  if (VPlanTransforms::removeBranchOnConst(BestVPlan,
-                                           /*OnlyLatches=*/EpilogueVecKind !=
-                                               EpilogueVectorizationKind::None))
+  if (VPlanTransforms::removeBranchOnConst(BestVPlan))
     VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
 
@@ -6837,7 +6834,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
-  RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
+  RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan);
 
   // Create partial reduction recipes for scaled reductions and transform
   // recipes to abstract recipes if it is legal and beneficial and clamp the

@@ -460,6 +460,90 @@ exit:
   ret i1 %select
 }
 
+; Constant trip count not a multiple of the main VF, so the epilogue is
+; vectorized and the main-loop resume phi folds to a single incoming value.
+define i32 @any_of_reduction_epilog_const_tc(ptr %src) {
+; CHECK-LABEL: define i32 @any_of_reduction_epilog_const_tc(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  iter.check:
+; CHECK-NEXT:    br label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; CHECK:       vector.main.loop.iter.check:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2]] = or <8 x i1> [[VEC_PHI]], [[TMP1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i32 1, i32 0
+; CHECK-NEXT:    br label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    br i1 true, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VEC_EPILOG_PH:%.*]], !prof [[PROF3]]
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[RDX_SELECT]], 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       vec.epilog.vector.body:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 16, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ [[BROADCAST_SPLAT]], [[VEC_EPILOG_PH]] ], [ [[TMP9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX1]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD3]], zeroinitializer
+; CHECK-NEXT:    [[TMP9]] = or <4 x i1> [[VEC_PHI2]], [[TMP8]]
+; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX1]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 16
+; CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP11]]
+; CHECK-NEXT:    [[RDX_SELECT5:%.*]] = select i1 [[TMP12]], i32 1, i32 0
+; CHECK-NEXT:    br label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       vec.epilog.scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 16, [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[RDX_SELECT]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[LOAD]], 0
+; CHECK-NEXT:    [[SELECT]] = select i1 [[ICMP]], i32 1, i32 [[RED]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 17
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SELECT_LCSSA:%.*]] = phi i32 [ [[SELECT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SELECT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %select, %loop ]
+  %gep = getelementptr inbounds i8, ptr %src, i64 %iv
+  %load = load i8, ptr %gep, align 1
+  %icmp = icmp eq i8 %load, 0
+  %select = select i1 %icmp, i32 1, i32 %red
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 17
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %select
+}
+
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -476,4 +560,7 @@ exit:
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META2]], [[META1]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META2]]}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]], [[META2]]}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META2]], [[META1]]}
 ;.
