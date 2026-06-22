@@ -1611,8 +1611,6 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
   return false;
 }
 
-// OpCooperativeMatrixLoad/StoreKHR need a pointer to the element type. If the
-// tile is an array, index to its first element; else return PtrReg unchanged.
 Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
                                                         MachineInstr &I) const {
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrReg);
@@ -1639,7 +1637,6 @@ Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
                  .addDef(NewPtr)
                  .addUse(GR.getSPIRVTypeID(ElemPtrType))
                  .addUse(PtrReg);
-  // OpPtrAccessChain takes a leading element operand to dereference Base.
   if (!IsLogical)
     MIB.addUse(Zero);
   MIB.addUse(Zero);
@@ -1648,7 +1645,6 @@ Register SPIRVInstructionSelector::coopMatrixElementPtr(Register PtrReg,
 }
 
 bool SPIRVInstructionSelector::selectCoopMatrixStore(MachineInstr &I) const {
-  // OpCooperativeMatrixStoreKHR ptr matrix memory_layout stride; no result.
   Register Ptr = coopMatrixElementPtr(I.getOperand(1).getReg(), I);
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(SPIRV::OpCooperativeMatrixStoreKHR));
@@ -4998,7 +4994,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
   }
   case Intrinsic::spv_cooperative_matrix_load:
-    // result = OpCooperativeMatrixLoadKHR ptr memory_layout stride
     return selectOpWithSrcs(ResVReg, ResType, I,
                             {coopMatrixElementPtr(I.getOperand(2).getReg(), I),
                              I.getOperand(3).getReg(),
@@ -5007,13 +5002,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_cooperative_matrix_store:
     return selectCoopMatrixStore(I);
   case Intrinsic::spv_cooperative_matrix_muladd:
-    // OpCooperativeMatrixMulAddKHR A B C; no operands literal for float matmul.
     return selectOpWithSrcs(ResVReg, ResType, I,
                             {I.getOperand(2).getReg(), I.getOperand(3).getReg(),
                              I.getOperand(4).getReg()},
                             SPIRV::OpCooperativeMatrixMulAddKHR);
   case Intrinsic::spv_cooperative_matrix_splat:
-    // OpCompositeConstruct from a scalar broadcasts the accumulator.
     return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
                             SPIRV::OpCompositeConstruct);
   case Intrinsic::spv_unref_global:
