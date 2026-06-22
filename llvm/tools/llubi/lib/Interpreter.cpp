@@ -699,54 +699,69 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return V.asInteger();
   }
 
-  AnyValue callMemTransferIntrinsic(ArrayRef<AnyValue> Args,
+  bool handlesMemoryIntrinsicAlignment(Intrinsic::ID IID, unsigned ArgNo) {
+    switch (IID) {
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
+    case Intrinsic::memmove:
+      return ArgNo == 0 || ArgNo == 1;
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline:
+      return ArgNo == 0;
+    default:
+      return false;
+    }
+  }
+
+  AnyValue callMemTransferIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args,
                                     Intrinsic::ID IID) {
-    if (Args[2].isPoison()) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Src = Args[1];
+    const AnyValue &Length = Args[2];
+    // TODO: Handle isvolatile argument.
+    if (Length.isPoison()) {
       reportImmediateUB() << "Memory transfer intrinsic with poison length.";
       return AnyValue::poison();
     }
 
-    const APInt &Length = Args[2].asInteger();
-    if (Length.getActiveBits() > 64) {
+    const APInt &LengthInt = Args[2].asInteger();
+    if (LengthInt.getActiveBits() > 64) {
       reportImmediateUB()
           << "Memory transfer intrinsic length overflows uint64_t.";
-      return AnyValue::poison();
+      return AnyValue();
     }
 
-    const uint64_t Len = Length.getZExtValue();
+    const uint64_t Len = LengthInt.getZExtValue();
     if (Len == 0)
       return AnyValue();
 
-    if (Args[0].isPoison()) {
+    if (Dest.isPoison()) {
       reportImmediateUB()
           << "Memory transfer intrinsic with poison destination pointer.";
-      return AnyValue::poison();
+      return AnyValue();
     }
 
-    if (Args[1].isPoison()) {
+    if (Src.isPoison()) {
       reportImmediateUB()
-          << "Memory copy intrinsic with poison source pointer.";
-      return AnyValue::poison();
+          << "Memory transfer intrinsic with poison source pointer.";
+      return AnyValue();
     }
 
-    const Pointer &DstPtr = Args[0].asPointer();
-    const Pointer &SrcPtr = Args[1].asPointer();
+    const Pointer &DstPtr = Dest.asPointer();
+    const Pointer &SrcPtr = Src.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    Align SrcAlign = CB.getParamAlign(1).valueOrOne();
 
     auto [SrcMO, SrcOffset] =
-        verifyMemAccess(SrcPtr, Len, Align(1), /*IsStore=*/false);
+        verifyMemAccess(SrcPtr, Len, SrcAlign, /*IsStore=*/false);
     if (!SrcMO)
       return AnyValue();
 
     auto [DstMO, DstOffset] =
-        verifyMemAccess(DstPtr, Len, Align(1), /*IsStore=*/true);
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
     if (!DstMO)
       return AnyValue();
-
-    if (DstMO->isConstant()) {
-      reportImmediateUB() << "Try to write to a constant memory object: "
-                          << DstPtr << ".";
-      return AnyValue::poison();
-    }
 
     if (IID == Intrinsic::memcpy || IID == Intrinsic::memcpy_inline) {
       if (SrcMO == DstMO && SrcOffset != DstOffset) {
@@ -755,7 +770,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         if (SrcOffset < DstEnd && DstOffset < SrcEnd) {
           reportImmediateUB()
               << "memcpy with overlapping source and destination.";
-          return AnyValue::poison();
+          return AnyValue();
         }
       }
     }
@@ -772,41 +787,40 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return AnyValue();
   }
 
-  AnyValue callMemSetIntrinsic(ArrayRef<AnyValue> Args) {
-    if (Args[2].isPoison()) {
+  AnyValue callMemSetIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Val = Args[1];
+    const AnyValue &Length = Args[2];
+
+    if (Length.isPoison()) {
       reportImmediateUB() << "memset called with poison length.";
-      return AnyValue::poison();
+      return AnyValue();
     }
 
-    const APInt &Length = Args[2].asInteger();
-    if (Length.getActiveBits() > 64) {
+    const APInt &LengthInt = Length.asInteger();
+    if (LengthInt.getActiveBits() > 64) {
       reportImmediateUB() << "memset called with length overflows uint64_t.";
-      return AnyValue::poison();
+      return AnyValue();
     }
 
-    const uint64_t Len = Length.getZExtValue();
+    const uint64_t Len = LengthInt.getZExtValue();
     if (Len == 0)
       return AnyValue();
 
-    if (Args[0].isPoison()) {
+    if (Dest.isPoison()) {
       reportImmediateUB() << "memset called with poison destination pointer.";
-      return AnyValue::poison();
+      return AnyValue();
     }
 
-    const Pointer &DstPtr = Args[0].asPointer();
+    const Pointer &DstPtr = Dest.asPointer();
 
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
     auto [DstMO, DstOffset] =
-        verifyMemAccess(DstPtr, Len, Align(1), /*IsStore=*/true);
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
     if (!DstMO)
       return AnyValue();
 
-    if (DstMO->isConstant()) {
-      reportImmediateUB() << "Try to write to a constant memory object: "
-                          << DstPtr << ".";
-      return AnyValue::poison();
-    }
-
-    Byte FillByte = Args[1].isPoison()
+    Byte FillByte = Val.isPoison()
                         ? Byte::poison()
                         : Byte::concrete(Args[1].asInteger().getZExtValue());
     fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
@@ -1617,13 +1631,11 @@ public:
     }
     case Intrinsic::memcpy:
     case Intrinsic::memcpy_inline:
-    case Intrinsic::memmove: {
-      return callMemTransferIntrinsic(Args, IID);
-    }
+    case Intrinsic::memmove:
+      return callMemTransferIntrinsic(CB, Args, IID);
     case Intrinsic::memset:
-    case Intrinsic::memset_inline: {
-      return callMemSetIntrinsic(Args);
-    }
+    case Intrinsic::memset_inline:
+      return callMemSetIntrinsic(CB, Args);
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -1657,7 +1669,8 @@ public:
   /// Handle both poison-generating and UB-implying attributes for parameters
   /// and return values.
   void handleAttributes(Type *Ty, AnyValue &V, AttributeSet AttrsAtCallSite,
-                        AttributeSet AttrsAtCallee) {
+                        AttributeSet AttrsAtCallee,
+                        bool HandleAlignAttr = true) {
     if (Ty->isIntOrIntVectorTy()) {
       if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::Range);
           CRAttr.isValid())
@@ -1679,7 +1692,7 @@ public:
           AttrsAtCallee.hasAttribute(Attribute::NonNull))
         applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
     }
-    if (Ty->isPtrOrPtrVectorTy()) {
+    if (HandleAlignAttr && Ty->isPtrOrPtrVectorTy()) {
       if (MaybeAlign Align = AttrsAtCallSite.getAlignment())
         applyAlignAttr(V, *Align);
       if (MaybeAlign Align = AttrsAtCallee.getAlignment())
@@ -1837,7 +1850,11 @@ public:
       // callee. We do it explicitly to avoid duplication.
       AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
       AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
-      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
+      bool HandleAlignAttr =
+          !Callee->isIntrinsic() ||
+          !handlesMemoryIntrinsicAlignment(Callee->getIntrinsicID(), I);
+      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee,
+                       HandleAlignAttr);
     }
 
     CurrentFrame->ResolvedCallee = Callee;

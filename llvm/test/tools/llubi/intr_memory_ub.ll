@@ -3,10 +3,6 @@
 ; RUN: sed 's/OP/memset_poison_dst/g' %s | not llubi --verbose 2>&1 | FileCheck %s --check-prefix=SET-DST
 ; RUN: sed 's/OP/memset_poison_len/g' %s | not llubi --verbose 2>&1 | FileCheck %s --check-prefix=SET-LEN
 
-declare void @llvm.memcpy.p0.p0.i8(ptr, ptr, i8, i1)
-declare void @llvm.memcpy.inline.p0.p0.i8(ptr, ptr, i8, i1)
-declare void @llvm.memset.p0.i8(ptr, i8, i8, i1)
-
 define void @main() {
   call void @OP()
   ret void
@@ -43,7 +39,7 @@ define void @memset_poison_len() {
 
 ; COPY-SRC: Entering function: main
 ; COPY-SRC: Entering function: memcpy_inline_poison_src
-; COPY-SRC: Immediate UB detected: Memory copy intrinsic with poison source pointer.
+; COPY-SRC: Immediate UB detected: Memory transfer intrinsic with poison source pointer.
 ; COPY-SRC: error: Execution of function 'main' failed.
 
 ; SET-DST: Entering function: main
