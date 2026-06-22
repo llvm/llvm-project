@@ -104,10 +104,9 @@ public:
       CASOutputs = llvm::makeIntrusiveRefCnt<llvm::cas::CASOutputBackend>(*CAS);
   }
 
-  Expected<std::optional<int>>
-  replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
-                     clang::cas::CompileJobCacheResult &Result,
-                     bool JustComputedResult);
+  Expected<bool> replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
+                                    clang::cas::CompileJobCacheResult &Result,
+                                    bool JustComputedResult);
 
 private:
   Expected<bool> tryReplayCachedResult(
@@ -127,10 +126,11 @@ private:
 
   /// Replay a cache hit.
   ///
-  /// Return status if should exit immediately, otherwise std::nullopt.
-  std::optional<int> replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
-                                        llvm::cas::ObjectRef ResultID,
-                                        bool JustComputedResult);
+  /// \returns an \c Error if there was a problem performing the replay, true if
+  /// the result was found and replayed, false otherwise.
+  Expected<bool> replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
+                                    llvm::cas::ObjectRef ResultID,
+                                    bool JustComputedResult);
 
   const bool ComputedJobNeedsReplay;
   std::optional<llvm::cas::CASID> &MCOutputID;
@@ -431,12 +431,8 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
       return std::move(E);
 
   // \c replayCachedResult emits remarks for a cache hit or miss.
-  std::optional<int> Status = replayCachedResult(ResultCacheKey, *ResultRef,
-                                                 /*JustComputedResult=*/false);
-  if (!Status)
-    return false; // cache miss.
-  assert(*Status == 0 && "Expected success status for a cache hit");
-  return true;
+  return replayCachedResult(ResultCacheKey, *ResultRef,
+                            /*JustComputedResult=*/false);
 }
 
 std::optional<int>
@@ -621,7 +617,7 @@ Expected<bool> CompileJobCache::maybeIngestNonVirtualOutputFromFileSystem(
   return false;
 }
 
-Expected<std::optional<int>> CompileJobCache::replayCachedResult(
+Expected<bool> CompileJobCache::replayCachedResult(
     std::shared_ptr<CompilerInvocation> Invok, StringRef WorkingDir,
     const llvm::cas::CASID &CacheKey, cas::CompileJobCacheResult &CachedResult,
     SmallVectorImpl<char> &DiagText, bool WriteOutputAsCASID,
@@ -666,11 +662,11 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   if (OutMCOutputID)
     *OutMCOutputID = std::move(MCOutputID);
 
-  std::optional<int> Ret;
+  bool Replayed;
   if (Error E = CachingOutputs
                     .replayCachedResult(CacheKey, CachedResult,
                                         /*JustComputedResult*/ false)
-                    .moveInto(Ret))
+                    .moveInto(Replayed))
     return std::move(E);
 
   if (Clang.getDiagnostics().hasErrorOccurred())
@@ -678,7 +674,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
                                    "error diagnostic during replay: " +
                                        DiagOS.str());
 
-  return Ret;
+  return Replayed;
 }
 
 Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
@@ -763,40 +759,33 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
   }
 
   // Replay / decanonicalize as necessary.
-  std::optional<int> Status = replayCachedResult(ResultCacheKey, *Result,
-                                                 /*JustComputedResult=*/true);
-  (void)Status;
-  assert(Status == std::nullopt);
+  Expected<bool> Replayed = replayCachedResult(ResultCacheKey, *Result,
+                                               /*JustComputedResult=*/true);
+  if (!Replayed)
+    return Replayed.takeError();
   return Error::success();
 }
 
 /// Replay a result after a cache hit.
-std::optional<int> ObjectStoreCachingOutputs::replayCachedResult(
+Expected<bool> ObjectStoreCachingOutputs::replayCachedResult(
     const llvm::cas::CASID &ResultCacheKey, llvm::cas::ObjectRef ResultID,
     bool JustComputedResult) {
   if (JustComputedResult && !WriteOutputAsCASID && !WriteOutputHashXAttr)
-    return std::nullopt;
+    return false;
 
-  // FIXME: Stop calling report_fatal_error().
   std::optional<clang::cas::CompileJobCacheResult> Result;
   clang::cas::CompileJobResultSchema Schema(*CAS);
   if (Error E = Schema.load(ResultID).moveInto(Result))
-    llvm::report_fatal_error(std::move(E));
+    return std::move(E);
 
-  std::optional<int> Ret;
-  // FIXME: Stop calling report_fatal_error().
-  if (Error E = replayCachedResult(ResultCacheKey, *Result, JustComputedResult)
-                    .moveInto(Ret))
-    llvm::report_fatal_error(std::move(E));
-
-  return Ret;
+  return replayCachedResult(ResultCacheKey, *Result, JustComputedResult);
 }
 
-Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
+Expected<bool> ObjectStoreCachingOutputs::replayCachedResult(
     const llvm::cas::CASID &ResultCacheKey,
     clang::cas::CompileJobCacheResult &Result, bool JustComputedResult) {
   if (JustComputedResult && !WriteOutputAsCASID && !WriteOutputHashXAttr)
-    return std::nullopt;
+    return false;
 
   llvm::cas::ObjectStore &CAS = Result.getCAS();
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
@@ -889,7 +878,7 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
   if (HasMissingOutput) {
     Diags.Report(diag::remark_compile_job_cache_miss)
         << ResultCacheKey.toString();
-    return std::nullopt;
+    return false;
   }
 
   if (!JustComputedResult) {
@@ -903,8 +892,8 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
   }
 
   if (JustComputedResult)
-    return std::nullopt;
-  return 0;
+    return false;
+  return true;
 }
 
 Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
