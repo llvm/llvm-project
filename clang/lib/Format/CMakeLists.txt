@@ -41,11 +41,19 @@ file(GLOB_RECURSE files
   ${CLANG_SOURCE_DIR}/unittests/Format/*.h
   )
 
+set(diff_cmd "diff" "-u")
+if(WIN32)
+  find_program(DIFF_EXE diff)
+  if(NOT DIFF_EXE)
+    set(diff_cmd "fc")
+  endif()
+endif()
+
 set(check_format_depends)
 set(i 0)
 foreach(file IN LISTS files)
   add_custom_command(OUTPUT check_format_depend_${i}
-    COMMAND clang-format ${file} | diff -u ${file} - &&
+    COMMAND clang-format ${file} | ${diff_cmd} ${file} - &&
             touch check_format_depend_${i}
     VERBATIM
     COMMENT "Checking format of ${file}"
