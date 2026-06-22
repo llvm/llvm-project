@@ -45,6 +45,12 @@ void initializeAIRLowerFNegLegacyPass(PassRegistry &);
 /// Pass to rewrite `fneg x` as `fsub -0.0, x`.
 ModulePass *createAIRLowerFNegLegacyPass();
 
+/// Initializer for the AIR legalize-unsupported-IR pass.
+void initializeAIRLegalizeUnsupportedIRLegacyPass(PassRegistry &);
+
+/// Pass to strip/lower constructs the AIR v1 bitcode + AGX JIT can't encode.
+ModulePass *createAIRLegalizeUnsupportedIRLegacyPass();
+
 /// Initializer for the AIR NaN-safe min/max pass.
 void initializeAIRNaNMinMaxLegacyPass(PassRegistry &);
 

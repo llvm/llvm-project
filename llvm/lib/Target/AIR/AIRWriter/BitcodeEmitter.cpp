@@ -17,7 +17,6 @@
 #include "BitcodeEncoding.h"
 #include "ConstantExprLower.h"
 #include "CoopTensorLowering.h"
-#include "IntegerLegalize.h"
 #include "LowerPointerVectors.h"
 #include "LowerVectorSelect.h"
 #include "MetadataWriter.h"
@@ -359,13 +358,7 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     W.ExitBlock();
 
     retagTensorOpsExternallyDefined(M);
-    stripLifetimeIntrinsics(M);
-    expandWideIntegers(M);
-    lowerFreezeInsts(M);
-    canonicalizeNNegZExt(M);
-    stripDisjointFlags(M);
     scalarizeBoolVectorCasts(M);
-    lowerCmpIntrinsics(M);
     lowerVectorPointerToInt(M);
     lowerVectorSelects(M);
     removeRedundantBitcasts(M, PTM);

@@ -1,30 +1,28 @@
-//===- IntegerLegalize.cpp - AGX-JIT integer/intrinsic legalization -------===//
+//===- AIRLegalizeUnsupportedIR.cpp - Strip unsupported IR ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Pre-serialization legalizations that bring integer arithmetic, freeze, and a
-// handful of intrinsics into the subset the AGX JIT and AIR v1 bitcode accept.
-// Each enforces a single AIR/AGX limitation; see the per-function notes.
-//
-//===----------------------------------------------------------------------===//
 
-#include "IntegerLegalize.h"
+#include "AIRLegalizeUnsupportedIR.h"
+#include "AIR.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
-namespace llvm {
-namespace metal {
+#define DEBUG_TYPE "air-legalize-unsupported-ir"
+
+namespace {
 
 void lowerCmpIntrinsics(Module &M) {
   for (auto &F : M) {
@@ -240,5 +238,33 @@ void stripDisjointFlags(Module &M) {
             BO->setIsDisjoint(false);
 }
 
+bool legalizeUnsupportedIR(Module &M) {
+  stripLifetimeIntrinsics(M);
+  expandWideIntegers(M);
+  lowerFreezeInsts(M);
+  canonicalizeNNegZExt(M);
+  stripDisjointFlags(M);
+  lowerCmpIntrinsics(M);
+  return true;
 }
+
+} // namespace
+
+PreservedAnalyses
+AIRLegalizeUnsupportedIRPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return legalizeUnsupportedIR(M) ? PreservedAnalyses::none()
+                                  : PreservedAnalyses::all();
+}
+
+bool AIRLegalizeUnsupportedIRLegacy::runOnModule(Module &M) {
+  return legalizeUnsupportedIR(M);
+}
+
+char AIRLegalizeUnsupportedIRLegacy::ID = 0;
+
+INITIALIZE_PASS(AIRLegalizeUnsupportedIRLegacy, DEBUG_TYPE,
+                "AIR Legalize Unsupported IR", false, false)
+
+ModulePass *llvm::createAIRLegalizeUnsupportedIRLegacyPass() {
+  return new AIRLegalizeUnsupportedIRLegacy();
 }

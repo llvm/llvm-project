@@ -24,6 +24,7 @@ add_llvm_target(AIRCodeGen
   LLVMToAIRIntrinsics.cpp
   AIRLowerAtomicRMW.cpp
   AIRLowerFNeg.cpp
+  AIRLegalizeUnsupportedIR.cpp
   AIRNaNMinMax.cpp
   AIRNormalizeAllocas.cpp
   AIRPrepare.cpp

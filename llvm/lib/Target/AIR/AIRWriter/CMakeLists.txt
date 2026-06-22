@@ -7,7 +7,6 @@ add_llvm_component_library(LLVMAIRWriter
   ConstantsWriter.cpp
   CoopTensorLowering.cpp
   FunctionWriter.cpp
-  IntegerLegalize.cpp
   LowerPointerVectors.cpp
   LowerVectorSelect.cpp
   MetadataWriter.cpp

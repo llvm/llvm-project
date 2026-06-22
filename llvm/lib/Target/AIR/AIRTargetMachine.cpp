@@ -28,6 +28,7 @@
 #include "LLVMToAIRIntrinsics.h"
 #include "AIRLowerAtomicRMW.h"
 #include "AIRLowerFNeg.h"
+#include "AIRLegalizeUnsupportedIR.h"
 #include "AIRNaNMinMax.h"
 #include "AIRNormalizeAllocas.h"
 #include "AIRPrepare.h"
@@ -79,6 +80,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRInlineNonKernelLegacyPass(*PR);
   initializeAIRDemoteF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
+  initializeAIRLegalizeUnsupportedIRLegacyPass(*PR);
   initializeAIRNaNMinMaxLegacyPass(*PR);
   initializeLLVMToAIRIntrinsicsLegacyPass(*PR);
   initializeAIRBarrierRenameLegacyPass(*PR);
@@ -147,6 +149,7 @@ public:
     addPass(createAIRInlineNonKernelLegacyPass());
     addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());
+    addPass(createAIRLegalizeUnsupportedIRLegacyPass());
     addPass(createAIRNaNMinMaxLegacyPass());
     addPass(createLLVMToAIRIntrinsicsLegacyPass());
     addPass(createAIRBarrierRenameLegacyPass());
