@@ -475,7 +475,18 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding,
   CacheKey += ":";
   CacheKey += TargetEncoding;
 
-  // Check if converter already exists in cache
+  // First, try to find the converter with a shared (read) lock
+  {
+    std::shared_lock<std::shared_mutex> ReadLock(ConverterCacheMutex);
+    auto It = ConverterCache.find(CacheKey);
+    if (It != ConverterCache.end())
+      return It->second.get();
+  }
+
+  // Converter not found, acquire exclusive (write) lock to create it
+  std::unique_lock<std::shared_mutex> WriteLock(ConverterCacheMutex);
+  
+  // Double-check that another thread didn't create it while we were waiting
   auto It = ConverterCache.find(CacheKey);
   if (It != ConverterCache.end())
     return It->second.get();
