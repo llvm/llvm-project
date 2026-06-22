@@ -3359,6 +3359,10 @@ void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
+  ifLeafs.clear();
+}
+
 // Clauses
 // Mainly categorized as
 // 1. Checks on 'OmpClauseList' from 'parse-tree.h'.
@@ -4317,6 +4321,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     return false;
   }};
 
+  // The directive-name to which the clause applies. [Note: The directive-
+  // name-modifier is not necessarily a valid directive name, but that's how
+  // it's currently modeled.]
+  // This will be set only after other checks pass to avoid emitting irrelevant
+  // diagnostics.
+  llvm::omp::Directive appliesTo{llvm::omp::Directive::OMPD_unknown};
+
   if (!OmpVerifyModifiers(
           x.v, llvm::omp::OMPC_if, GetContext().clauseSource, context_)) {
     return;
@@ -4334,12 +4345,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     std::string modName{desc.name.str()};
 
     if (!isConstituent(dir, sub)) {
-      context_
-          .Say(modifierSource,
-              "%s is not a constituent of the %s directive"_err_en_US, subName,
-              dirName)
-          .Attach(
-              GetContext().directiveSource, "Cannot apply to directive"_en_US);
+      context_.Say(modifierSource,
+          "%s is not a constituent of the %s directive"_err_en_US, subName,
+          dirName);
     } else {
       static llvm::omp::Directive valid45[]{
           llvm::omp::OMPD_cancel, //
@@ -4362,11 +4370,33 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
         context_.Say(modifierSource,
             "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
             ThisVersion(version), TryVersion(52));
-      } else if (!llvm::is_contained(valid45, sub) &&
+      } else if (version < 60 && !llvm::is_contained(valid45, sub) &&
           sub != llvm::omp::OMPD_simd && sub != llvm::omp::OMPD_teams) {
         context_.Say(modifierSource,
             "%s is not allowed as '%s' in %s"_err_en_US, subName, modName,
             ThisVersion(version));
+      } else {
+        appliesTo = sub;
+      }
+    }
+  } else {
+    appliesTo = GetContext().directive;
+  }
+
+  if (appliesTo != llvm::omp::Directive::OMPD_unknown) {
+    parser::CharBlock source{GetContext().clauseSource};
+    for (auto leaf : llvm::omp::getLeafConstructsOrSelf(appliesTo)) {
+      auto pair{ifLeafs.try_emplace(leaf, source)};
+      if (!pair.second) {
+        std::string ifName{GetUpperName(llvm::omp::Clause::OMPC_if, version)};
+        context_
+            .Say(source,
+                "At most one %s clause can apply to each directive constituent"_err_en_US,
+                ifName)
+            .Attach(pair.first->second,
+                "Previous %s clause applying to the %s constituent"_en_US,
+                ifName, GetUpperName(leaf, version));
+        break;
       }
     }
   }
