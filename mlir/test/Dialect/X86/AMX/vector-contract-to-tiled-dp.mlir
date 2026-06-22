@@ -2009,3 +2009,55 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+func.func @negative_no_read_op_source(%arg0: memref<16x64x32xbf16>, %arg1: memref<16x32x128xbf16>, %arg2: memref<64x32xf32>) {
+  %0 = ub.poison : f32
+  %1 = ub.poison : bf16
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c1 = arith.constant 1 : index
+  scf.for %arg3 = %c0 to %c64 step %c32 {
+    %2 = vector.transfer_read %arg2[%arg3, %c0], %0 {in_bounds = [true, true]} : memref<64x32xf32>, vector<16x16xf32>
+    %3 = vector.transfer_read %arg2[%arg3, %c16], %0 {in_bounds = [true, true]} : memref<64x32xf32>, vector<16x16xf32>
+    %4 = arith.addi %arg3, %c16 : index
+    %5 = vector.transfer_read %arg2[%4, %c0], %0 {in_bounds = [true, true]} : memref<64x32xf32>, vector<16x16xf32>
+    %6 = vector.transfer_read %arg2[%4, %c16], %0 {in_bounds = [true, true]} : memref<64x32xf32>, vector<16x16xf32>
+    %7:4 = scf.for %arg4 = %c0 to %c16 step %c1 iter_args(%arg5 = %2, %arg6 = %3, %arg7 = %5, %arg8 = %6) -> (vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>) {
+      %8 = vector.transfer_read %arg0[%arg4, %arg3, %c0], %1 {in_bounds = [true, true, true]} : memref<16x64x32xbf16>, vector<1x16x32xbf16>
+      %9 = vector.transfer_read %arg0[%arg4, %4, %c0], %1 {in_bounds = [true, true, true]} : memref<16x64x32xbf16>, vector<1x16x32xbf16>
+      %10 = vector.transfer_read %arg1[%arg4, %c0, %c0], %1 {in_bounds = [true, true, true]} : memref<16x32x128xbf16>, vector<1x32x16xbf16>
+      %11 = vector.transfer_read %arg1[%arg4, %c0, %c16], %1 {in_bounds = [true, true, true]} : memref<16x32x128xbf16>, vector<1x32x16xbf16>
+      %12 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %8, %10, %arg5 {unroll_shape = array<i64: 1, 16, 16, 32>} : vector<1x16x32xbf16>, vector<1x32x16xbf16> into vector<16x16xf32>
+      %13 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %8, %11, %arg6 {unroll_shape = array<i64: 1, 16, 16, 32>} : vector<1x16x32xbf16>, vector<1x32x16xbf16> into vector<16x16xf32>
+      %14 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %9, %10, %arg7 {unroll_shape = array<i64: 1, 16, 16, 32>} : vector<1x16x32xbf16>, vector<1x32x16xbf16> into vector<16x16xf32>
+      %15 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %9, %11, %arg8 {unroll_shape = array<i64: 1, 16, 16, 32>} : vector<1x16x32xbf16>, vector<1x32x16xbf16> into vector<16x16xf32>
+      scf.yield %12, %13, %14, %15 : vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>
+    }
+    vector.transfer_write %7#3, %arg2[%4, %c16] {in_bounds = [true, true]} : vector<16x16xf32>, memref<64x32xf32>
+    vector.transfer_write %7#2, %arg2[%4, %c0] {in_bounds = [true, true]} : vector<16x16xf32>, memref<64x32xf32>
+    vector.transfer_write %7#1, %arg2[%arg3, %c16] {in_bounds = [true, true]} : vector<16x16xf32>, memref<64x32xf32>
+    vector.transfer_write %7#0, %arg2[%arg3, %c0] {in_bounds = [true, true]} : vector<16x16xf32>, memref<64x32xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: @negative_no_read_op_source
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
