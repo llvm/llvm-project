@@ -2496,7 +2496,6 @@ bool Parser::trySkippingFunctionBody() {
 
   // We're in code-completion mode. Skip parsing for all function bodies unless
   // the body contains the code-completion point.
-
   TentativeParsingAction PA(*this);
   bool IsTryCatch = Tok.is(tok::kw_try);
   CachedTokens Toks;
