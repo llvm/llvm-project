@@ -1627,7 +1627,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIB.addDef(TRI->getReturnAddressReg(MF));
 
   if (!Info.IsConvergent)
-    MIB.setMIFlag(MachineInstr::NoConvergent);
+    MIB.setMIFlag(MachineInstr::OverrideConvergence);
 
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;

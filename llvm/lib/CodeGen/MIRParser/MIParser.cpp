@@ -1530,7 +1530,7 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_nsw) ||
          Token.is(MIToken::kw_exact) ||
          Token.is(MIToken::kw_nofpexcept) ||
-         Token.is(MIToken::kw_noconvergent) ||
+         Token.is(MIToken::kw_override_convergence) ||
          Token.is(MIToken::kw_unpredictable) ||
          Token.is(MIToken::kw_nneg) ||
          Token.is(MIToken::kw_disjoint) ||
@@ -1567,8 +1567,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NoFPExcept;
     if (Token.is(MIToken::kw_unpredictable))
       Flags |= MachineInstr::Unpredictable;
-    if (Token.is(MIToken::kw_noconvergent))
-      Flags |= MachineInstr::NoConvergent;
+    if (Token.is(MIToken::kw_override_convergence))
+      Flags |= MachineInstr::OverrideConvergence;
     if (Token.is(MIToken::kw_nneg))
       Flags |= MachineInstr::NonNeg;
     if (Token.is(MIToken::kw_disjoint))

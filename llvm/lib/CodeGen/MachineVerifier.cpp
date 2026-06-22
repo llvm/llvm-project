@@ -2339,9 +2339,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
        << MI->getNumOperands() << " given.\n";
   }
 
-  if (MI->getFlag(MachineInstr::NoConvergent) && !MCID.isConvergent())
-    report("NoConvergent flag expected only on convergent instructions.", MI);
-
   if (MI->isPHI()) {
     if (MF->getProperties().hasNoPHIs())
       report("Found PHI instruction with NoPHIs property set", MI);

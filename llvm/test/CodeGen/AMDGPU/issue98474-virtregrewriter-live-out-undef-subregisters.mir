@@ -508,7 +508,7 @@ body:             |
   ; CHECK-NEXT:   renamable $sgpr5 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
   ; CHECK-NEXT:   renamable $vcc = V_CMP_EQ_U64_e64 $sgpr4_sgpr5, killed $vgpr0_vgpr1, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr36_sgpr37 = S_AND_SAVEEXEC_B64 killed renamable $vcc, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0
+  ; CHECK-NEXT:   dead $sgpr30_sgpr31 = override_convergence SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0
   ; CHECK-NEXT:   renamable $vgpr1 = COPY $vgpr0, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 123, implicit $exec
   ; CHECK-NEXT:   $exec = S_XOR_B64 $exec, renamable $sgpr36_sgpr37, implicit-def dead $scc
@@ -554,7 +554,7 @@ body:             |
   bb.2:
     liveins: $vgpr63, $sgpr4_sgpr5:0x000000000000000F, $sgpr34_sgpr35, $sgpr36_sgpr37
 
-    dead $sgpr30_sgpr31 = noconvergent SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0
+    dead $sgpr30_sgpr31 = override_convergence SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0
     %3:vgpr_32 = COPY $vgpr0
     undef %0.sub0:vreg_64 = V_MOV_B32_e32 123, implicit $exec
     $exec = S_XOR_B64_term $exec, killed renamable $sgpr36_sgpr37, implicit-def dead $scc

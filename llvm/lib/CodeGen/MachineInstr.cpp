@@ -141,6 +141,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
 void MachineInstr::setDesc(const MCInstrDesc &TID) {
   if (getParent())
     getMF()->handleChangeDesc(*this, TID);
+  if (MCID->isConvergent() != TID.isConvergent())
+    clearFlag(OverrideConvergence);
   MCID = &TID;
   Opcode = TID.Opcode;
 }
@@ -1885,8 +1887,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
-  if (getFlag(MachineInstr::NoConvergent))
-    OS << "noconvergent ";
+  if (getFlag(MachineInstr::OverrideConvergence))
+    OS << "override_convergence ";
   if (getFlag(MachineInstr::NonNeg))
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
