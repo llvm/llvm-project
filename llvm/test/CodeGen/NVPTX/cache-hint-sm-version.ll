@@ -2,10 +2,10 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx74 | FileCheck %s --check-prefixes=SM60
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx74 | FileCheck %s --check-prefixes=SM70
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_75 -mattr=+ptx74 | FileCheck %s --check-prefixes=SM75
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 | FileCheck %s --check-prefixes=COMMON,SM80
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 | FileCheck %s --check-prefixes=SM80PLUS,SM80
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck %s --check-prefixes=SM80-PTX70
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx74 | FileCheck %s --check-prefixes=COMMON,SM86
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck %s --check-prefixes=COMMON,SM90
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx74 | FileCheck %s --check-prefixes=SM80PLUS,SM86
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck %s --check-prefixes=SM80PLUS,SM90
 
 ; Test SM version requirements for cache hints (from PTX ISA documentation):
 ; - L1::evict_* requires SM 70+
@@ -30,8 +30,8 @@ define i32 @test_load_l1_first(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_l1_first(
 ; SM75:    ld.global.L1::evict_first.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_l1_first(
-; COMMON:    ld.global.L1::evict_first.b32 %r1, [%rd1];
+; SM80PLUS-LABEL: test_load_l1_first(
+; SM80PLUS:    ld.global.L1::evict_first.b32 %r1, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_l1_first(
 ; SM80-PTX70:    ld.global.L1::evict_first.b32 %r1, [%rd1];
@@ -55,8 +55,8 @@ define i32 @test_load_l2_last(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_l2_last(
 ; SM75:    ld.global.L2::evict_last.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_l2_last(
-; COMMON:    ld.global.L2::evict_last.b32 %r1, [%rd1];
+; SM80PLUS-LABEL: test_load_l2_last(
+; SM80PLUS:    ld.global.L2::evict_last.b32 %r1, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_l2_last(
 ; SM80-PTX70:    ld.global.L2::evict_last.b32 %r1, [%rd1];
@@ -80,8 +80,8 @@ define i32 @test_load_prefetch_64(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_prefetch_64(
 ; SM75:    ld.global.L2::64B.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_prefetch_64(
-; COMMON:    ld.global.L2::64B.b32 %r1, [%rd1];
+; SM80PLUS-LABEL: test_load_prefetch_64(
+; SM80PLUS:    ld.global.L2::64B.b32 %r1, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_64(
 ; SM80-PTX70:    ld.global.L2::64B.b32 %r1, [%rd1];
@@ -105,8 +105,8 @@ define i32 @test_load_prefetch_128(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_prefetch_128(
 ; SM75:    ld.global.L2::128B.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_prefetch_128(
-; COMMON:    ld.global.L2::128B.b32 %r1, [%rd1];
+; SM80PLUS-LABEL: test_load_prefetch_128(
+; SM80PLUS:    ld.global.L2::128B.b32 %r1, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_128(
 ; SM80-PTX70:    ld.global.L2::128B.b32 %r1, [%rd1];
@@ -130,8 +130,8 @@ define i32 @test_load_prefetch_256(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_prefetch_256(
 ; SM75:    ld.global.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_prefetch_256(
-; COMMON:    ld.global.L2::256B.b32 %r1, [%rd1];
+; SM80PLUS-LABEL: test_load_prefetch_256(
+; SM80PLUS:    ld.global.L2::256B.b32 %r1, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_256(
 ; SM80-PTX70:    ld.global.L2::256B.b32 %r1, [%rd1];
@@ -156,9 +156,9 @@ define i32 @test_load_cache_hint(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_cache_hint(
 ; SM75:    ld.global.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_cache_hint(
-; COMMON:    mov.b64 %rd2, 12345;
-; COMMON:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM80PLUS-LABEL: test_load_cache_hint(
+; SM80PLUS:    mov.b64 %rd2, 12345;
+; SM80PLUS:    ld.global.L2::cache_hint.b32 %r1, [%rd1], %rd2;
 ;
 ; SM80-PTX70-LABEL: test_load_cache_hint(
 ; SM80-PTX70:    ld.global.b32 %r1, [%rd1];
@@ -183,9 +183,9 @@ define i32 @test_load_cache_hint_with_l1(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_cache_hint_with_l1(
 ; SM75:    ld.global.L1::evict_first.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_cache_hint_with_l1(
-; COMMON:    mov.b64 %rd2, 44445;
-; COMMON:    ld.global.L1::evict_first.L2::cache_hint.b32 %r1, [%rd1], %rd2;
+; SM80PLUS-LABEL: test_load_cache_hint_with_l1(
+; SM80PLUS:    mov.b64 %rd2, 44445;
+; SM80PLUS:    ld.global.L1::evict_first.L2::cache_hint.b32 %r1, [%rd1], %rd2;
 ;
 ; SM80-PTX70-LABEL: test_load_cache_hint_with_l1(
 ; SM80-PTX70:    ld.global.L1::evict_first.b32 %r1, [%rd1];
@@ -210,8 +210,8 @@ define i32 @test_load_prefetch_with_l1(ptr addrspace(1) %p) {
 ; SM75-LABEL: test_load_prefetch_with_l1(
 ; SM75:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
 ;
-; COMMON-LABEL: test_load_prefetch_with_l1(
-; COMMON:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
+; SM80PLUS-LABEL: test_load_prefetch_with_l1(
+; SM80PLUS:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
 ;
 ; SM80-PTX70-LABEL: test_load_prefetch_with_l1(
 ; SM80-PTX70:    ld.global.L1::evict_first.L2::128B.b32 %r1, [%rd1];
@@ -233,9 +233,9 @@ define void @test_store_cache_hint(ptr addrspace(1) %p, i32 %v) {
 ; SM75-LABEL: test_store_cache_hint(
 ; SM75:    st.global.b32 [%rd1], %r1;
 ;
-; COMMON-LABEL: test_store_cache_hint(
-; COMMON:    mov.b64 %rd2, 67890;
-; COMMON:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
+; SM80PLUS-LABEL: test_store_cache_hint(
+; SM80PLUS:    mov.b64 %rd2, 67890;
+; SM80PLUS:    st.global.L2::cache_hint.b32 [%rd1], %r1, %rd2;
 ;
 ; SM80-PTX70-LABEL: test_store_cache_hint(
 ; SM80-PTX70:    st.global.b32 [%rd1], %r1;
@@ -257,8 +257,8 @@ define void @test_store_l1_no_allocate(ptr addrspace(1) %p, i32 %v) {
 ; SM75-LABEL: test_store_l1_no_allocate(
 ; SM75:    st.global.L1::no_allocate.b32 [%rd1], %r1;
 ;
-; COMMON-LABEL: test_store_l1_no_allocate(
-; COMMON:    st.global.L1::no_allocate.b32 [%rd1], %r1;
+; SM80PLUS-LABEL: test_store_l1_no_allocate(
+; SM80PLUS:    st.global.L1::no_allocate.b32 [%rd1], %r1;
 ;
 ; SM80-PTX70-LABEL: test_store_l1_no_allocate(
 ; SM80-PTX70:    st.global.L1::no_allocate.b32 [%rd1], %r1;
