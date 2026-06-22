@@ -89,6 +89,40 @@ start:
   ret i1 %_0
 }
 
+define zeroext i1 @manual_i8x16_zero(<4 x i32> %a) {
+; CHECK-LABEL: manual_i8x16_zero:
+; CHECK:         .functype manual_i8x16_zero (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    i8x16.extract_lane_u 0
+; CHECK-NEXT:    i32.eqz
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %vec = bitcast <4 x i32> %a to <16 x i8>
+  %r = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %vec)
+  %cmp = icmp eq i8 %r, 0
+  ret i1 %cmp
+}
+
 define i1 @i16x8_any_true(<4 x i32> %a) {
 ; CHECK-LABEL: i16x8_any_true:
 ; CHECK:         .functype i16x8_any_true (v128) -> (i32)
