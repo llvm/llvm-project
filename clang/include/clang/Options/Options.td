@@ -2032,6 +2032,15 @@ def lifetime_safety_max_cfg_blocks
                "count exceeding this threshold. Specify 0 for no limit.">,
       MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
 
+def lifetime_safety_lifetimebound_macro
+    : Joined<["-"], "lifetime-safety-lifetimebound-macro=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<macro>">,
+      HelpText<"Use the given macro name when suggesting lifetimebound "
+               "attributes">,
+      MarshallingInfoString<LangOpts<"LifetimeSafetyLifetimeBoundMacro">>;
+
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
                   LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,

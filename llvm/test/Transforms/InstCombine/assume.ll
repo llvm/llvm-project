@@ -146,8 +146,7 @@ define void @align_with_constant_offset_0(ptr %ptr) {
 define void @align_with_constant_offset_1(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_1(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 9
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 1) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -159,8 +158,7 @@ define void @align_with_constant_offset_1(ptr %ptr) {
 define void @align_with_constant_offset_4(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_4(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -1049,8 +1047,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; CHECK-LABEL: @canonicalize_assume(
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0:%.*]], i64 16, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   %2 = getelementptr inbounds i32, ptr %0, i64 2
