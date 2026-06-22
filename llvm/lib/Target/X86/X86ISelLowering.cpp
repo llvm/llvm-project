@@ -54427,6 +54427,61 @@ static int getOneTrueElt(SDValue V) {
   return TrueIndex;
 }
 
+static std::optional<unsigned> getLowPrefixMaskNumElts(SDValue V) {
+  auto *BV = dyn_cast<BuildVectorSDNode>(V);
+  if (!BV || BV->getValueType(0).getVectorElementType() != MVT::i1)
+    return std::nullopt;
+
+  bool SeenFalse = false;
+  unsigned PrefixElts = 0;
+  unsigned NumElts = BV->getValueType(0).getVectorNumElements();
+  for (unsigned I = 0; I < NumElts; ++I) {
+    const SDValue &Op = BV->getOperand(I);
+    bool IsTrue = false;
+    if (!Op.isUndef()) {
+      auto *ConstNode = dyn_cast<ConstantSDNode>(Op);
+      if (!ConstNode)
+        return std::nullopt;
+      IsTrue = ConstNode->getAPIntValue().countr_one() >= 1;
+    }
+
+    if (IsTrue) {
+      if (SeenFalse)
+        return std::nullopt;
+      ++PrefixElts;
+      continue;
+    }
+    SeenFalse = true;
+  }
+
+  if (PrefixElts == 0 || PrefixElts == NumElts || !isPowerOf2_32(PrefixElts))
+    return std::nullopt;
+  return PrefixElts;
+}
+
+static EVT getNarrowLowPrefixVT(EVT VT, unsigned PrefixElts,
+                                SelectionDAG &DAG) {
+  if (!VT.isVector() || VT.isScalableVector() ||
+      PrefixElts >= VT.getVectorNumElements())
+    return EVT();
+
+  EVT NarrowVT =
+      EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), PrefixElts);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(NarrowVT))
+    return MVT::INVALID_SIMPLE_VALUE_TYPE;
+  return NarrowVT;
+}
+
+static MachineMemOperand *getNarrowMemOperand(MachineMemOperand *MMO,
+                                              EVT NarrowMemVT,
+                                              SelectionDAG &DAG) {
+  return DAG.getMachineFunction().getMachineMemOperand(
+      MMO->getPointerInfo(), MMO->getFlags(), NarrowMemVT.getStoreSize(),
+      MMO->getBaseAlign(), MMO->getAAInfo(), MMO->getRanges(),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
+}
+
 /// Given a masked memory load/store operation, return true if it has one mask
 /// bit set. If it has one mask bit set, then also return the memory address of
 /// the scalar element to load/store, the vector index to insert/extract that
@@ -54501,6 +54556,35 @@ reduceMaskedLoadToScalarLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
 }
 
 static SDValue
+reduceMaskedLoadToLowPrefixLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512() || !ML->isUnindexed() || ML->isExpandingLoad() ||
+      ML->getExtensionType() != ISD::NON_EXTLOAD)
+    return SDValue();
+
+  std::optional<unsigned> PrefixElts = getLowPrefixMaskNumElts(ML->getMask());
+  if (!PrefixElts)
+    return SDValue();
+
+  EVT VT = ML->getValueType(0);
+  EVT NarrowVT = getNarrowLowPrefixVT(VT, *PrefixElts, DAG);
+  EVT NarrowMemVT = getNarrowLowPrefixVT(ML->getMemoryVT(), *PrefixElts, DAG);
+  if (NarrowVT == MVT::INVALID_SIMPLE_VALUE_TYPE ||
+      NarrowMemVT == MVT::INVALID_SIMPLE_VALUE_TYPE)
+    return SDValue();
+
+  SDLoc DL(ML);
+  MachineMemOperand *MMO =
+      getNarrowMemOperand(ML->getMemOperand(), NarrowMemVT, DAG);
+  SDValue Load =
+      DAG.getLoad(NarrowVT, DL, ML->getChain(), ML->getBasePtr(), MMO);
+  SDValue Insert = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, ML->getPassThru(),
+                               Load, DAG.getIntPtrConstant(0, DL));
+  return DCI.CombineTo(ML, Insert, Load.getValue(1), true);
+}
+
+static SDValue
 combineMaskedLoadConstantMask(MaskedLoadSDNode *ML, SelectionDAG &DAG,
                               TargetLowering::DAGCombinerInfo &DCI) {
   assert(ML->isUnindexed() && "Unexpected indexed masked load!");
@@ -54562,6 +54646,10 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
     if (SDValue ScalarLoad =
             reduceMaskedLoadToScalarLoad(Mld, DAG, DCI, Subtarget))
       return ScalarLoad;
+
+    if (SDValue PrefixLoad =
+            reduceMaskedLoadToLowPrefixLoad(Mld, DAG, DCI, Subtarget))
+      return PrefixLoad;
 
     // TODO: Do some AVX512 subsets benefit from this transform?
     if (!Subtarget.hasAVX512())
@@ -54647,6 +54735,32 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
                       Alignment, MS->getMemOperand()->getFlags());
 }
 
+static SDValue
+reduceMaskedStoreToLowPrefixStore(MaskedStoreSDNode *MS, SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512() || !MS->isUnindexed() ||
+      MS->isCompressingStore() || MS->isTruncatingStore())
+    return SDValue();
+
+  std::optional<unsigned> PrefixElts = getLowPrefixMaskNumElts(MS->getMask());
+  if (!PrefixElts)
+    return SDValue();
+
+  EVT NarrowVT =
+      getNarrowLowPrefixVT(MS->getValue().getValueType(), *PrefixElts, DAG);
+  EVT NarrowMemVT = getNarrowLowPrefixVT(MS->getMemoryVT(), *PrefixElts, DAG);
+  if (NarrowVT == MVT::INVALID_SIMPLE_VALUE_TYPE ||
+      NarrowMemVT == MVT::INVALID_SIMPLE_VALUE_TYPE)
+    return SDValue();
+
+  SDLoc DL(MS);
+  SDValue Value = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT,
+                              MS->getValue(), DAG.getIntPtrConstant(0, DL));
+  MachineMemOperand *MMO =
+      getNarrowMemOperand(MS->getMemOperand(), NarrowMemVT, DAG);
+  return DAG.getStore(MS->getChain(), DL, Value, MS->getBasePtr(), MMO);
+}
+
 static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
@@ -54656,6 +54770,10 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG, Subtarget))
     return ScalarStore;
+
+  if (SDValue PrefixStore =
+          reduceMaskedStoreToLowPrefixStore(Mst, DAG, Subtarget))
+    return PrefixStore;
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
