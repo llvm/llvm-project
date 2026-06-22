@@ -31609,9 +31609,10 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // CCMP folds the second compare and the branch into a single cheap op, so
   // merging is worth tolerating extra speculated work on the RHS dependency
   // chain. The bias budgets that tolerance in TTI latency units, standing in
-  // for the amortized cost of the eliminated branch (~MispredictPenalty weighted
-  // by misprediction probability; ~50/50 with no profile, hence the default 6
-  // ~= MispredictPenalty/2). The likely/unlikely biases below refine that.
+  // for the amortized cost of the eliminated branch (~MispredictPenalty
+  // weighted by misprediction probability; ~50/50 with no profile, hence the
+  // default 6 ~= MispredictPenalty/2). The likely/unlikely biases below refine
+  // that.
   if (BaseCost >= 0)
     BaseCost += BrMergingCcmpBias;
 
