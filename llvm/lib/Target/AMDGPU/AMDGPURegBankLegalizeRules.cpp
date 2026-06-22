@@ -593,7 +593,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackAExt})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}})
-      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}});
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}})
+      .Any({{UniV2S64}, {{UniInVgprV2S64}, {VgprV2S64, VgprV2S64}}})
+      .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64, VgprV2S64}}});
 
   addRulesForGOpcs({G_UADDO, G_USUBO}, Standard)
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})

@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=VI %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -global-isel=1 -new-reg-bank-select < %s | FileCheck -enable-var-scope -check-prefix=SI-GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -global-isel=1 -new-reg-bank-select < %s | FileCheck -enable-var-scope -check-prefix=VI-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -global-isel=1 < %s | FileCheck -enable-var-scope -check-prefix=SI-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -global-isel=1 < %s | FileCheck -enable-var-scope -check-prefix=VI-GISEL %s
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone

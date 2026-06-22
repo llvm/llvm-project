@@ -273,6 +273,13 @@ struct BufferizationOptions {
   using DefaultMemorySpaceFn =
       std::function<std::optional<Attribute>(TensorLikeType t)>;
 
+  /// Resolve a mismatch between buffer types that were independently inferred,
+  /// which results in a conflict at the "merge" point. Returns `failure()` to
+  /// signal bufferization failure; returns a buffer-like type when
+  /// reconciliation suceeded.
+  using ReconcileBufferTypeMismatchFn = std::function<FailureOr<BufferLikeType>(
+      BufferLikeType, BufferLikeType, const BufferizationOptions &)>;
+
   BufferizationOptions();
 
   /// Try to cast the given op to BufferizableOpInterface if the op is allow
@@ -363,6 +370,16 @@ struct BufferizationOptions {
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
       [](TensorLikeType t) -> std::optional<Attribute> { return Attribute(); };
+
+  /// Hook to resolve a mismatch between conflicting buffer types that were
+  /// independently inferred and have to now "converge" to a common buffer type
+  /// (e.g. due to differences in iterations of a loop or branches of
+  /// if-statements). Depending on the situation and the types involved, this
+  /// may produce a "joined" type (e.g. a type combining properties of both), or
+  /// either one of the two types, etc. The default keeps the framework
+  /// behavior: promote to fully-dynamic layout on layout mismatch, fail on
+  /// memory-space mismatch.
+  ReconcileBufferTypeMismatchFn reconcileBufferTypeMismatchFn = nullptr;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.

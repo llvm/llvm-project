@@ -585,23 +585,10 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  PushContextAndClauseSets(
-      x.v.source, llvm::omp::Directive::OMPD_metadirective);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
-  dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(
-    const parser::OmpDelimitedMetadirectiveDirective &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
-}
-
-void OmpStructureChecker::Leave(
-    const parser::OmpDelimitedMetadirectiveDirective &) {
-  dirContext_.pop_back();
 }
 
 static const parser::traits::OmpContextSelectorSpecification *
@@ -742,13 +729,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.v.DirName()};
-  PushContextAndClauseSets(dirName.source, dirName.v);
   CheckOmpDeclareVariantDirective(x);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
-  dirContext_.pop_back();
 }
 
 } // namespace Fortran::semantics

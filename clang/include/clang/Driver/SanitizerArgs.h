@@ -8,6 +8,7 @@
 #ifndef LLVM_CLANG_DRIVER_SANITIZERARGS_H
 #define LLVM_CLANG_DRIVER_SANITIZERARGS_H
 
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Types.h"
@@ -87,7 +88,7 @@ public:
   /// Parses the sanitizer arguments from an argument list.
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                 bool DiagnoseErrors = true, bool DiagnoseBoundArchErrors = true,
-                StringRef BoundArch = "",
+                BoundArch BA = {},
                 Action::OffloadKind DeviceOffloadKind = Action::OFK_None);
 
   bool needsSharedRt() const { return SharedRuntime; }

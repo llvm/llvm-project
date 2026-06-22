@@ -904,11 +904,15 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
     are typically mapped directly to native device instructions, often resulting
     in better performance. However, the precision/error of these intrinsics
     are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled.
+    have the `afn` fastmath flag enabled. However, if the `convertToOCL` flag is
+    set then all supported math ops would be lowered to OpenCL math intrinsics.
   }];
-  let options = [Option<
-      "convertArith", "convert-arith", "bool", /*default=*/"true",
-      "Convert supported Arith ops (e.g. arith.divf) as well.">];
+  let options = [
+    Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">,
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"false",
+      "Convert supported Math ops to OCL intrinsics.">
+  ];
   let dependentDialects = [
     "arith::ArithDialect",
     "xevm::XeVMDialect",

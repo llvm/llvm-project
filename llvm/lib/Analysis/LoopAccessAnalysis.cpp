@@ -71,11 +71,11 @@ using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
-static cl::opt<unsigned, true>
-VectorizationFactor("force-vector-width", cl::Hidden,
-                    cl::desc("Sets the SIMD width. Zero is autoselect."),
-                    cl::location(VectorizerParams::VectorizationFactor));
-unsigned VectorizerParams::VectorizationFactor;
+static cl::opt<ElementCount, true>
+    VectorizationFactor("force-vector-width", cl::Hidden,
+                        cl::desc("Sets the SIMD width. Zero is autoselect."),
+                        cl::location(VectorizerParams::VectorizationFactor));
+ElementCount VectorizerParams::VectorizationFactor;
 
 static cl::opt<unsigned, true>
 VectorizationInterleave("force-vector-interleave", cl::Hidden,
@@ -2305,12 +2305,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
   // Bail out early if passed-in parameters make vectorization not feasible.
-  unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
-                           VectorizerParams::VectorizationFactor : 1);
+  unsigned MinForcedFactor =
+      std::max(1U, VectorizerParams::VectorizationFactor.getKnownMinValue());
   unsigned ForcedUnroll = (VectorizerParams::VectorizationInterleave ?
                            VectorizerParams::VectorizationInterleave : 1);
   // The minimum number of iterations for a vectorized/unrolled version.
-  unsigned MinNumIter = std::max(ForcedFactor * ForcedUnroll, 2U);
+  unsigned MinNumIter = std::max(MinForcedFactor * ForcedUnroll, 2U);
 
   // It's not vectorizable if the distance is smaller than the minimum distance
   // needed for a vectroized/unrolled version. Vectorizing one iteration in

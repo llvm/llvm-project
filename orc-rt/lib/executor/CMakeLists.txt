@@ -4,6 +4,7 @@ set(files
   SimpleSymbolTable.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
+  InProcessControllerAccess.cpp
   NativeDylibManager.cpp
   RTTI.cpp
   Service.cpp

@@ -1008,12 +1008,6 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; I64:       [[VECTOR_SCEVCHECK]]:
 ; I64-NEXT:    [[TMP0:%.*]] = trunc i32 [[STEP]] to i1
-; I64-NEXT:    [[MUL:%.*]] = call { i1, i1 } @llvm.umul.with.overflow.i1(i1 [[TMP0]], i1 false)
-; I64-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i1, i1 } [[MUL]], 0
-; I64-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i1, i1 } [[MUL]], 1
-; I64-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[MUL_RESULT]], i1 false
-; I64-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[MUL_OVERFLOW]]
-; I64-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[TMP0]]
 ; I64-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP0]] to i32
 ; I64-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP4]]
 ; I64-NEXT:    [[TMP5:%.*]] = sub i32 0, [[STEP]]
@@ -1026,7 +1020,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[TMP8]], 0
 ; I64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i1 [[TMP9]], i1 false
 ; I64-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW3]]
-; I64-NEXT:    [[TMP12:%.*]] = or i1 [[TMP3]], [[IDENT_CHECK]]
+; I64-NEXT:    [[TMP12:%.*]] = or i1 [[TMP0]], [[IDENT_CHECK]]
 ; I64-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[TMP11]]
 ; I64-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
@@ -1141,15 +1135,9 @@ define void @replicated_load_wide_store_derived_iv_zext_and2(ptr noalias %dst, p
 ; I64-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; I64:       [[VECTOR_SCEVCHECK]]:
 ; I64-NEXT:    [[TMP0:%.*]] = trunc i32 [[STEP]] to i1
-; I64-NEXT:    [[MUL:%.*]] = call { i1, i1 } @llvm.umul.with.overflow.i1(i1 [[TMP0]], i1 false)
-; I64-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i1, i1 } [[MUL]], 0
-; I64-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i1, i1 } [[MUL]], 1
-; I64-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[MUL_RESULT]], i1 false
-; I64-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[MUL_OVERFLOW]]
-; I64-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[TMP0]]
 ; I64-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP0]] to i32
 ; I64-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP4]]
-; I64-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[IDENT_CHECK]]
+; I64-NEXT:    [[TMP5:%.*]] = or i1 [[TMP0]], [[IDENT_CHECK]]
 ; I64-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
 ; I64-NEXT:    [[TMP6:%.*]] = shl i32 [[STEP]], 7

@@ -291,6 +291,27 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   return true;
 }
 
+// Create fake uses for compiler-generated internal variables that represent
+// values needed by a debugger.  This prevents values from being optimized out
+// such as the count and lower bound of dynamic arrays.
+template <typename Op>
+static void InsertFakeUseForDebugVar(mlir::OpBuilder &builder, Op declOp,
+                                     mlir::Value var) {
+  if (auto funcOp = declOp->template getParentOfType<mlir::func::FuncOp>()) {
+    if (declOp->getBlock() == &funcOp.getBody().front()) {
+      for (mlir::Block &block : funcOp.getBody()) {
+        if (auto returnOp =
+                mlir::dyn_cast<mlir::func::ReturnOp>(block.getTerminator())) {
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPoint(returnOp);
+          if (!fir::getIntIfConstant(var))
+            fir::FakeUseOp::create(builder, declOp.getLoc(), var);
+        }
+      }
+    }
+  }
+}
+
 template <typename Op>
 void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
                                            mlir::LLVM::DIFileAttr fileAttr,
@@ -307,22 +328,9 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
   if (dummyScope && declOp.getDummyScope() == dummyScope) {
     if (auto argNoOpt = declOp.getDummyArgNo()) {
       argNo = *argNoOpt;
-      if (emitFakeUseForArguments) {
+      if (emitFakeUseForDebugVars) {
         if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
-          if (auto funcOp =
-                  declOp->template getParentOfType<mlir::func::FuncOp>()) {
-            if (declOp->getBlock() == &funcOp.getBody().front()) {
-              for (mlir::Block &block : funcOp.getBody()) {
-                if (auto returnOp = mlir::dyn_cast<mlir::func::ReturnOp>(
-                        block.getTerminator())) {
-                  mlir::OpBuilder::InsertionGuard guard(builder);
-                  builder.setInsertionPoint(returnOp);
-                  fir::FakeUseOp::create(builder, declOp.getLoc(),
-                                         declOp.getMemref());
-                }
-              }
-            }
-          }
+          InsertFakeUseForDebugVar(builder, declOp, declOp.getMemref());
         }
       }
     }
@@ -330,6 +338,31 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
 
   auto tyAttr =
       typeGen.convertType(typeToConvert, fileAttr, scopeAttr, typeGenDeclOp);
+
+  if (emitFakeUseForDebugVars) {
+    // Create fake uses for internal variables that represent count and lower
+    // bound of dynamic arrays to ensure they are not optimized out.
+    if (auto arrayTy =
+            mlir::dyn_cast<mlir::LLVM::DICompositeTypeAttr>(tyAttr)) {
+      if (arrayTy.getTag() == llvm::dwarf::DW_TAG_array_type) {
+        if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
+          // Count is represented as a value in the shape attribute
+          for (auto val : declOp.getShape())
+            InsertFakeUseForDebugVar(builder, declOp, val);
+          // Lower bound is represented as a value in the shift attribute
+          for (auto val : declOp.getShift())
+            InsertFakeUseForDebugVar(builder, declOp, val);
+        }
+      }
+    }
+
+    // Create fake uses for the length of character arrays to ensure they
+    // are not optimized out.
+    if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
+      for (auto val : declOp.getTypeparams())
+        InsertFakeUseForDebugVar(builder, declOp, val);
+    }
+  }
 
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scopeAttr, mlir::StringAttr::get(context, name), fileAttr,

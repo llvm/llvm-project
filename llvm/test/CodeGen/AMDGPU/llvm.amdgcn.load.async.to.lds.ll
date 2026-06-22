@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s --check-prefix=GFX90A
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefix=GFX942
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s --check-prefix=GFX10
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefix=GFX942-GISEL
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefix=GFX942-GISEL
 
 ;; Note: load.async.to.lds is a wrapper intrinsic around underlying operations.
 ;; This is a bare-bones test to ensure that it lowers to the correct instructions.

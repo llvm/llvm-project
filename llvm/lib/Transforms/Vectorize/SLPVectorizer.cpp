@@ -30440,14 +30440,16 @@ public:
                      "op.rdx", ReductionOps);
     }
 
-    // Emit ordered reduction for the vectorized window.
+    // Emit ordered reduction for the vectorized window. The reduction only
+    // applies to floating point types.
+    assert(DestTy->isFPOrFPVectorTy() &&
+           SuccessRoot->getType()->isFPOrFPVectorTy() &&
+           "Expected floating point types for ordered reduction");
     Builder.SetCurrentDebugLocation(
         cast<Instruction>(ReductionRoot)->getDebugLoc());
-    if (VectorizedTree)
-      VectorizedTree =
-          emitReduction(SuccessRoot, Builder, TTI, DestTy, VectorizedTree);
-    else
-      VectorizedTree = emitReduction(SuccessRoot, Builder, TTI, DestTy);
+    VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
+                                    /*IsSigned=*/false, DestTy,
+                                    /*ReducedInTree=*/false, VectorizedTree);
 
     // Fold trailing scalars [SuccessStart+SuccessWidth, N).
     for (Value *RdxVal :
@@ -30490,13 +30492,16 @@ private:
   /// scale \p Scale and signedness \p IsSigned.
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
                         Value *Vec, unsigned Scale, bool IsSigned, Type *DestTy,
-                        bool ReducedInTree) {
+                        bool ReducedInTree, Value *Start = nullptr) {
     Value *Rdx;
     if (ReducedInTree) {
       Rdx = Vec;
-    } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
+    } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy);
+               VecTy && SLPReVec) {
       unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
+      assert(getNumElements(Vec->getType()) % DestTyNumElements == 0 &&
+             "Vec element count must be a multiple of DestTy element count");
       // e.g. Consider vector reduce add.
       // Initial reduction is
       // clang-format off
@@ -30515,7 +30520,7 @@ private:
       // %add0 = add <4 x i32> zeroinitializer, %A
       // %add1 = add <4 x i32> %add0, %B
       // clang-format on
-      Rdx = nullptr;
+      Rdx = Start;
       for (auto I : seq<unsigned>(VF)) {
         auto Position = I * DestTyNumElements;
         Value *SubVec =
@@ -30526,7 +30531,7 @@ private:
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
       }
     } else {
-      Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
+      Rdx = emitReduction(Vec, Builder, &TTI, DestTy, Start);
     }
     if (Rdx->getType() != DestTy)
       Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);

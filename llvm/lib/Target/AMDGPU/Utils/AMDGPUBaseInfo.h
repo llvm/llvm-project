@@ -1031,12 +1031,6 @@ bool isTrue16Inst(unsigned Opc);
 LLVM_READONLY
 FPType getFPDstSelType(unsigned Opc);
 
-LLVM_READONLY
-bool isInvalidSingleUseConsumerInst(unsigned Opc);
-
-LLVM_READONLY
-bool isInvalidSingleUseProducerInst(unsigned Opc);
-
 bool isDPMACCInstruction(unsigned Opc);
 
 LLVM_READONLY
@@ -1068,14 +1062,6 @@ std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef TupleString);
 /// width. Does not validate the number of registers exists in the class.
 std::tuple<char, unsigned, unsigned>
 parseAsmConstraintPhysReg(StringRef Constraint);
-
-/// \returns Integer value requested using \p F's \p Name attribute.
-///
-/// \returns \p Default if attribute is not present.
-///
-/// \returns \p Default and emits error if requested value cannot be converted
-/// to integer.
-int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
@@ -1443,8 +1429,6 @@ bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
 
-bool hasDynamicVGPR(const Function &F);
-
 // Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
 // the attribute is missing or its value is invalid.
 unsigned getDynamicVGPRBlockSize(const Function &F);
@@ -1808,11 +1792,6 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 /// instructions. Note that some forms of the instruction disallow negative
 /// offsets.
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
-
-/// \returns true if this offset is small enough to fit in the SMRD
-/// offset field.  \p ByteOffset should be the offset in bytes and
-/// not the encoded offset.
-bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
 inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {

@@ -2,13 +2,13 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 ; Test there's no verifier error if a function directly uses LDS and
@@ -18,7 +18,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 

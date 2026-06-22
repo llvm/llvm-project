@@ -2636,6 +2636,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
     SetAddressableBitMasks(addressable_bits);
 
+    m_last_stop_primary_tid = tid;
+
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
         exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
@@ -2684,7 +2686,14 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
     m_initial_tid = LLDB_INVALID_THREAD_ID;
+  } else if (m_last_stop_primary_tid != LLDB_INVALID_THREAD_ID &&
+             StateIsRunningState(m_last_broadcast_state)) {
+    if (ThreadSP primary_thread_sp =
+            m_thread_list.FindThreadByProtocolID(m_last_stop_primary_tid,
+                                                 /*can_update=*/false))
+      m_thread_list.SetSelectedThreadByID(primary_thread_sp->GetID());
   }
+  m_last_stop_primary_tid = LLDB_INVALID_THREAD_ID;
 
   // Let all threads recover from stopping and do any clean up based on the
   // previous thread state (if any).

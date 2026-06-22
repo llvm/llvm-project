@@ -604,6 +604,34 @@ define amdgpu_kernel void @v_sext_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
+define i32 @s_ext_cmp_ext(i32 %arg, float inreg %x) {
+; SI-LABEL: s_ext_cmp_ext:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_u32_f32_e32 v1, s16
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; SI-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: s_ext_cmp_ext:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_cvt_u32_f32_e32 v1, s16
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; VI-NEXT:    v_cndmask_b32_e64 v1, 0, -1, vcc
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %cvt = fptoui float %x to i32
+  %ne = icmp ne i32 %cvt, 0
+  %sext = sext i1 %ne to i32
+  %eq = icmp eq i32 %arg, %sext
+  %zext = zext i1 %eq to i32
+  ret i32 %zext
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #1 = { nounwind readnone }

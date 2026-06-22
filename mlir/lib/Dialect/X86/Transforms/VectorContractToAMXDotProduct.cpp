@@ -1064,6 +1064,10 @@ struct VectorContractToAMXDotProduct
           vectorOpRhs = readOp.getBase().getDefiningOp();
         });
 
+    if (!vectorOpLhs || !vectorOpRhs)
+      return rewriter.notifyMatchFailure(
+          contractOp, "Failed to find LHS or RHS read source operation");
+
     // Retrive all the contaction operation within the loop.
     SmallVector<vector::ContractionOp> ops;
     for (mlir::Operation &op : loopLists[0].getBody()->getOperations()) {

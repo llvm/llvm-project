@@ -711,7 +711,9 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   auto *M = SI->getModule();
   Type *NewTy = getCorrespondingIntegerType(SI->getValueOperand()->getType(),
                                             M->getDataLayout());
-  Value *NewVal = Builder.CreateBitCast(SI->getValueOperand(), NewTy);
+  Value *NewVal = SI->getValueOperand()->getType()->isPtrOrPtrVectorTy()
+                      ? Builder.CreatePtrToInt(SI->getValueOperand(), NewTy)
+                      : Builder.CreateBitCast(SI->getValueOperand(), NewTy);
 
   Value *Addr = SI->getPointerOperand();
 
@@ -2191,7 +2193,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (ValueOperand) {
     if (UseSizedLibcall) {
       Value *IntValue =
-          Builder.CreateBitOrPointerCast(ValueOperand, SizedIntTy);
+          Builder.CreateBitPreservingCastChain(DL, ValueOperand, SizedIntTy);
       Args.push_back(IntValue);
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());

@@ -106,8 +106,7 @@ void VEToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void VEToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args,
-                                        StringRef BoundArch,
+                                        ArgStringList &CC1Args, BoundArch BA,
                                         Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
   bool UseInitArrayDefault = true;

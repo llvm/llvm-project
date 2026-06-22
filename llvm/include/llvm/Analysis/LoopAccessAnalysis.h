@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <optional>
 #include <variant>
 
@@ -36,7 +37,7 @@ struct VectorizerParams {
   LLVM_ABI static const unsigned MaxVectorWidth;
 
   /// VF as overridden by the user.
-  LLVM_ABI static unsigned VectorizationFactor;
+  LLVM_ABI static ElementCount VectorizationFactor;
   /// Interleave factor as overridden by the user.
   LLVM_ABI static unsigned VectorizationInterleave;
   /// True if force-vector-interleave was specified by the user.

@@ -217,3 +217,28 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : TIIPredicate<"isBaseLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       LD,
+                       LW,
+                       LWU,
+                       LH,
+                       LHU,
+                       LB,
+                       LBU
+                     ]>>>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : TIIPredicate<"isBaseStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       SD,
+                       SW,
+                       SH,
+                       SB,
+                     ]>>>;

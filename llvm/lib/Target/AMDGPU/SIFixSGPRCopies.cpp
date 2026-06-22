@@ -182,6 +182,12 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  // Waterfall expansion may introduce Phi nodes and -verify-machineinstrs will
+  // fail.
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
+  }
 };
 
 } // end anonymous namespace

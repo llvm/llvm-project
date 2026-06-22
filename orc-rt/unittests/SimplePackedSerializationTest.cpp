@@ -119,6 +119,12 @@ TEST(SimplePackedSerializationTest, ExecutorAddr) {
   blobSerializationRoundTrip<SPSExecutorAddr>(A);
 }
 
+TEST(SimplePackedSerializationTest, ExecutorAddrRange) {
+  int X = 42;
+  ExecutorAddrRange R(ExecutorAddr::fromPtr(&X), ExecutorAddr::fromPtr(&X + 1));
+  blobSerializationRoundTrip<SPSExecutorAddrRange>(R);
+}
+
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   const char *HW = "Hello, world!";
   blobSerializationRoundTrip<SPSString, std::string_view>(std::string_view(HW));

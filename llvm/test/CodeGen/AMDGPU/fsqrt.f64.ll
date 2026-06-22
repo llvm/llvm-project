@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=pitcairn < %s | FileCheck -check-prefixes=GFX6,GFX6-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=pitcairn < %s | FileCheck -check-prefixes=GFX6,GFX6-GISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=pitcairn < %s | FileCheck -check-prefixes=GFX6,GFX6-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 
 define double @v_sqrt_f64(double %x) {
 ; GFX6-SDAG-LABEL: v_sqrt_f64:

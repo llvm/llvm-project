@@ -1291,10 +1291,10 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
-      if (R.getNumOperands() != 2)
-        return nullptr;
-      unsigned ID = OpcodeOrIID->second;
-      return Folder.FoldBinaryIntrinsic(ID, Ops[0], Ops[1], R.getScalarType());
+      auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(&R);
+      return Folder.FoldIntrinsic(OpcodeOrIID->second, Ops, R.getScalarType(),
+                                  RFlags ? RFlags->getFastMathFlagsOrNone()
+                                         : FastMathFlags());
     }
     unsigned Opcode = OpcodeOrIID->second;
     if (Instruction::isBinaryOp(Opcode))

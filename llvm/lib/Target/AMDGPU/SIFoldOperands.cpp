@@ -1098,6 +1098,9 @@ SIFoldOperandsImpl::isRegSeqSplat(MachineInstr &RegSeq) const {
         TRI->getChannelFromSubReg(SubReg1))
       return {};
 
+    if (TRI->getSubRegIdxSize(SubReg0) != 32)
+      return {};
+
     int64_t MergedVal = Make_64(Op1->getImm(), Op0->getImm());
     if (I == 0)
       SplatVal64 = MergedVal;

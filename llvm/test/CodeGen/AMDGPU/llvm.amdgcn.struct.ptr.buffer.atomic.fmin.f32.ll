@@ -461,51 +461,50 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX10-LABEL: struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_voffset_fmin__sgpr_soffset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s5, exec_lo
+; GFX10-NEXT:    s_mov_b32 s8, exec_lo
+; GFX10-NEXT:    s_mov_b32 s9, s8
 ; GFX10-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s9, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s10, v3
-; GFX10-NEXT:    v_readfirstlane_b32 s11, v4
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[8:9], v[1:2]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s4, s[10:11], v[3:4]
-; GFX10-NEXT:    s_and_b32 s4, vcc_lo, s4
-; GFX10-NEXT:    s_and_saveexec_b32 s4, s4
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s6, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s7, v4
+; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[1:2]
+; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[3:4]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_atomic_fmin v0, v[5:6], s[8:11], s16 idxen offen offset:256 glc
+; GFX10-NEXT:    buffer_atomic_fmin v0, v[5:6], s[4:7], s16 idxen offen offset:256 glc
+; GFX10-NEXT:    s_andn2_wrexec_b32 s9, s9
 ; GFX10-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX10-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s5
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10-NEXT:    s_mov_b32 exec_lo, s8
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_voffset_fmin__sgpr_soffset:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s2, exec_lo
+; GFX11-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b32 s2, s1
 ; GFX11-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
-; GFX11-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[3:4]
-; GFX11-NEXT:    s_and_b32 s1, vcc_lo, s1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[1:2]
+; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[3:4]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_min_f32 v0, v[5:6], s[4:7], s0 idxen offen offset:256 glc
+; GFX11-NEXT:    s_and_not1_wrexec_b32 s2, s2
 ; GFX11-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX11-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX11-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-NEXT:  ; %bb.2:
-; GFX11-NEXT:    s_mov_b32 exec_lo, s2
+; GFX11-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -516,7 +515,9 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1200-NEXT:    s_mov_b32 s1, exec_lo
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 s2, s1
 ; GFX1200-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1200-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX1200-NEXT:    v_readfirstlane_b32 s5, v2
@@ -524,20 +525,18 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX1200-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1200-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
-; GFX1200-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[3:4]
-; GFX1200-NEXT:    s_and_b32 s1, vcc_lo, s1
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX1200-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[1:2]
+; GFX1200-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[3:4]
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-NEXT:    buffer_atomic_min_num_f32 v0, v[5:6], s[4:7], s0 idxen offen offset:256 th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    s_and_not1_wrexec_b32 s2, s2
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX1200-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX1200-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX1200-NEXT:  ; %bb.2:
-; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1200-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_voffset_fmin__sgpr_soffset:
@@ -547,28 +546,27 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__vgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_dual_mov_b32 v8, v5 :: v_dual_mov_b32 v5, v4
 ; GFX1250-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_add_nc_u32 v9, 0x100, v6
-; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1250-NEXT:    s_mov_b32 s1, exec_lo
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_mov_b32 s2, s1
 ; GFX1250-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX1250-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX1250-NEXT:    v_readfirstlane_b32 s6, v4
 ; GFX1250-NEXT:    v_readfirstlane_b32 s7, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
-; GFX1250-NEXT:    v_cmp_eq_u64_e64 s1, s[6:7], v[4:5]
-; GFX1250-NEXT:    s_and_b32 s1, vcc_lo, s1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[2:3]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_min_num_f32 v0, v[8:9], s[4:7], s0 idxen offen th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_and_not1_wrexec_b32 s2, s2
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX1250-NEXT:  ; %bb.2:
-; GFX1250-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 256
@@ -637,60 +635,57 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX10-LABEL: struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset_fmin__vgpr_soffset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s6, exec_lo
+; GFX10-NEXT:    s_mov_b32 s8, exec_lo
+; GFX10-NEXT:    s_mov_b32 s9, s8
 ; GFX10-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    v_readfirstlane_b32 s8, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s9, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s10, v3
-; GFX10-NEXT:    v_readfirstlane_b32 s11, v4
-; GFX10-NEXT:    v_readfirstlane_b32 s7, v7
-; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[8:9], v[1:2]
-; GFX10-NEXT:    v_cmp_eq_u64_e64 s4, s[10:11], v[3:4]
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s5, s7, v7
-; GFX10-NEXT:    s_and_b32 s4, vcc_lo, s4
-; GFX10-NEXT:    s_and_b32 s4, s4, s5
-; GFX10-NEXT:    s_and_saveexec_b32 s4, s4
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX10-NEXT:    v_readfirstlane_b32 s6, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s7, v4
+; GFX10-NEXT:    v_readfirstlane_b32 s10, v7
+; GFX10-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
+; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[1:2]
+; GFX10-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[3:4]
+; GFX10-NEXT:    v_cmpx_eq_u32_e32 s10, v7
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    buffer_atomic_fmin v0, v[5:6], s[8:11], s7 idxen offen offset:256 glc
+; GFX10-NEXT:    buffer_atomic_fmin v0, v[5:6], s[4:7], s10 idxen offen offset:256 glc
+; GFX10-NEXT:    s_andn2_wrexec_b32 s9, s9
 ; GFX10-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX10-NEXT:    ; implicit-def: $vgpr7
 ; GFX10-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX10-NEXT:  ; %bb.2:
-; GFX10-NEXT:    s_mov_b32 exec_lo, s6
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10-NEXT:    s_mov_b32 exec_lo, s8
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset_fmin__vgpr_soffset:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s2, exec_lo
-; GFX11-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX11-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX11-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX11-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX11-NEXT:    v_readfirstlane_b32 s7, v4
-; GFX11-NEXT:    v_readfirstlane_b32 s3, v7
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
-; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    s_and_b32 s0, s0, s1
+; GFX11-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX11-NEXT:    s_mov_b32 s5, s4
+; GFX11-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v4
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v7
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[1:2]
+; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[3:4]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 s6, v7
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_atomic_min_f32 v0, v[5:6], s[4:7], s3 idxen offen offset:256 glc
+; GFX11-NEXT:    buffer_atomic_min_f32 v0, v[5:6], s[0:3], s6 idxen offen offset:256 glc
+; GFX11-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX11-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX11-NEXT:    ; implicit-def: $vgpr7
 ; GFX11-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX11-NEXT:  ; %bb.2:
-; GFX11-NEXT:    s_mov_b32 exec_lo, s2
+; GFX11-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -701,33 +696,31 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1200-NEXT:    s_mov_b32 s4, exec_lo
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX1200-NEXT:    s_mov_b32 s5, s4
 ; GFX1200-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX1200-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX1200-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX1200-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX1200-NEXT:    v_readfirstlane_b32 s7, v4
-; GFX1200-NEXT:    v_readfirstlane_b32 s3, v7
+; GFX1200-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX1200-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX1200-NEXT:    v_readfirstlane_b32 s2, v3
+; GFX1200-NEXT:    v_readfirstlane_b32 s3, v4
+; GFX1200-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
+; GFX1200-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[1:2]
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1200-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; GFX1200-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-NEXT:    s_and_b32 s0, s0, s1
-; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX1200-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX1200-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[3:4]
+; GFX1200-NEXT:    v_cmpx_eq_u32_e32 s6, v7
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
-; GFX1200-NEXT:    buffer_atomic_min_num_f32 v0, v[5:6], s[4:7], s3 idxen offen offset:256 th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    buffer_atomic_min_num_f32 v0, v[5:6], s[0:3], s6 idxen offen offset:256 th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX1200-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX1200-NEXT:    ; implicit-def: $vgpr7
 ; GFX1200-NEXT:    ; implicit-def: $vgpr5_vgpr6
-; GFX1200-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1200-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX1200-NEXT:  ; %bb.2:
-; GFX1200-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1200-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1200-NEXT:    s_wait_loadcnt 0x0
+; GFX1200-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_voffset_fmin__vgpr_soffset:
@@ -737,33 +730,30 @@ define float @struct_ptr_buffer_atomic_fmin_f32_ret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX1250-NEXT:    v_dual_mov_b32 v8, v5 :: v_dual_mov_b32 v5, v4
 ; GFX1250-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_add_nc_u32 v9, 0x100, v6
-; GFX1250-NEXT:    s_mov_b32 s2, exec_lo
-; GFX1250-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX1250-NEXT:    v_readfirstlane_b32 s5, v3
-; GFX1250-NEXT:    v_readfirstlane_b32 s6, v4
-; GFX1250-NEXT:    v_readfirstlane_b32 s7, v5
-; GFX1250-NEXT:    v_readfirstlane_b32 s3, v7
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
-; GFX1250-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[4:5]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
-; GFX1250-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX1250-NEXT:    s_and_b32 s0, s0, s1
+; GFX1250-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX1250-NEXT:    s_mov_b32 s5, s4
+; GFX1250-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_4)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1250-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX1250-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX1250-NEXT:    v_readfirstlane_b32 s6, v7
+; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[2:3]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
+; GFX1250-NEXT:    v_cmpx_eq_u32_e32 s6, v7
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    buffer_atomic_min_num_f32 v0, v[8:9], s[4:7], s3 idxen offen th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    buffer_atomic_min_num_f32 v0, v[8:9], s[0:3], s6 idxen offen th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GFX1250-NEXT:    ; implicit-def: $vgpr7
 ; GFX1250-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX1250-NEXT:  ; %bb.2:
-; GFX1250-NEXT:    s_mov_b32 exec_lo, s2
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %voffset.add = add i32 %voffset, 256

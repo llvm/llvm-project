@@ -6,11 +6,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX1100-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-SDAG %s
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx906  < %s | FileCheck -check-prefix=GFX906-ISEL  %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck -check-prefix=GFX942-ISEL  %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck -check-prefix=GFX1012-ISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX1100-ISEL %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx906  < %s | FileCheck -check-prefix=GFX906-ISEL  %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942  < %s | FileCheck -check-prefix=GFX942-ISEL  %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck -check-prefix=GFX1012-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX1100-ISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-ISEL %s
 
 ;;==============================================================================
 ;; A few basic test cases

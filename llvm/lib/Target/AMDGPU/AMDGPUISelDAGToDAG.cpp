@@ -554,13 +554,16 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
+  unsigned EltSizeInRegs = EltVT.getSizeInBits() / 32;
+  assert(IsGCN || EltSizeInRegs == 1);
   for (unsigned i = 0; i < NOps; i++) {
     // XXX: Why is this here?
     if (isa<RegisterSDNode>(N->getOperand(i))) {
       IsRegSeq = false;
       break;
     }
-    unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(i)
+    unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(
+                               i * EltSizeInRegs, EltSizeInRegs)
                          : R600RegisterInfo::getSubRegFromChannel(i);
     RegSeqArgs[1 + (2 * i)] = N->getOperand(i);
     RegSeqArgs[1 + (2 * i) + 1] = CurDAG->getTargetConstant(Sub, DL, MVT::i32);
@@ -571,7 +574,8 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     MachineSDNode *ImpDef = CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                    DL, EltVT);
     for (unsigned i = NOps; i < NumVectorElts; ++i) {
-      unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(i)
+      unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(
+                                 i * EltSizeInRegs, EltSizeInRegs)
                            : R600RegisterInfo::getSubRegFromChannel(i);
       RegSeqArgs[1 + (2 * i)] = SDValue(ImpDef, 0);
       RegSeqArgs[1 + (2 * i) + 1] =
@@ -691,19 +695,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   switch (Opc) {
   default:
     break;
-  // We are selecting i64 ADD here instead of custom lower it during
-  // DAG legalization, so we can fold some i64 ADDs used for address
-  // calculation into the LOAD and STORE instructions.
-  case ISD::ADDC:
-  case ISD::ADDE:
-  case ISD::SUBC:
-  case ISD::SUBE: {
-    if (N->getValueType(0) != MVT::i64)
-      break;
-
-    SelectADD_SUB_I64(N);
-    return;
-  }
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
     if (N->getValueType(0) == MVT::i64) {
@@ -751,11 +742,12 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     }
 
     const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    assert(VT.getVectorElementType().bitsEq(MVT::i32));
+    EVT EltTy = VT.getVectorElementType();
+    assert(EltTy.bitsEq(MVT::i32) || EltTy.bitsEq(MVT::i64));
+    unsigned VecInBits = NumVectorElts * EltTy.getScalarSizeInBits();
     const TargetRegisterClass *RegClass =
-        N->isDivergent()
-            ? TRI->getDefaultVectorSuperClassForBitWidth(NumVectorElts * 32)
-            : SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32);
+        N->isDivergent() ? TRI->getDefaultVectorSuperClassForBitWidth(VecInBits)
+                         : SIRegisterInfo::getSGPRClassForBitWidth(VecInBits);
 
     SelectBuildVector(N, RegClass->getID());
     return;
@@ -1055,78 +1047,6 @@ SDValue AMDGPUDAGToDAGISel::getMaterializedScalarImm32(int64_t Val,
     AMDGPU::S_MOV_B32, DL, MVT::i32,
     CurDAG->getTargetConstant(Val, DL, MVT::i32));
   return SDValue(Mov, 0);
-}
-
-// Keep this as a fallback for i64 ADDC/ADDE/SUBC/SUBE glue nodes. Wide integer
-// add/sub should normally expand through the explicit carry nodes handled in
-// SelectAddcSubbI64.
-void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
-  SDLoc DL(N);
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-
-  unsigned Opcode = N->getOpcode();
-  bool ConsumeCarry = (Opcode == ISD::ADDE || Opcode == ISD::SUBE);
-  bool ProduceCarry =
-      ConsumeCarry || Opcode == ISD::ADDC || Opcode == ISD::SUBC;
-  bool IsAdd = Opcode == ISD::ADD || Opcode == ISD::ADDC || Opcode == ISD::ADDE;
-
-  SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
-  SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
-
-  SDNode *Lo0 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                       DL, MVT::i32, LHS, Sub0);
-  SDNode *Hi0 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                       DL, MVT::i32, LHS, Sub1);
-
-  SDNode *Lo1 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                       DL, MVT::i32, RHS, Sub0);
-  SDNode *Hi1 = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
-                                       DL, MVT::i32, RHS, Sub1);
-
-  SDVTList VTList = CurDAG->getVTList(MVT::i32, MVT::Glue);
-
-  static const unsigned OpcMap[2][2][2] = {
-      {{AMDGPU::S_SUB_U32, AMDGPU::S_ADD_U32},
-       {AMDGPU::V_SUB_CO_U32_e32, AMDGPU::V_ADD_CO_U32_e32}},
-      {{AMDGPU::S_SUBB_U32, AMDGPU::S_ADDC_U32},
-       {AMDGPU::V_SUBB_U32_e32, AMDGPU::V_ADDC_U32_e32}}};
-
-  unsigned Opc = OpcMap[0][N->isDivergent()][IsAdd];
-  unsigned CarryOpc = OpcMap[1][N->isDivergent()][IsAdd];
-
-  SDNode *AddLo;
-  if (!ConsumeCarry) {
-    SDValue Args[] = { SDValue(Lo0, 0), SDValue(Lo1, 0) };
-    AddLo = CurDAG->getMachineNode(Opc, DL, VTList, Args);
-  } else {
-    SDValue Args[] = { SDValue(Lo0, 0), SDValue(Lo1, 0), N->getOperand(2) };
-    AddLo = CurDAG->getMachineNode(CarryOpc, DL, VTList, Args);
-  }
-  SDValue AddHiArgs[] = {
-    SDValue(Hi0, 0),
-    SDValue(Hi1, 0),
-    SDValue(AddLo, 1)
-  };
-  SDNode *AddHi = CurDAG->getMachineNode(CarryOpc, DL, VTList, AddHiArgs);
-
-  SDValue RegSequenceArgs[] = {
-    CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, DL, MVT::i32),
-    SDValue(AddLo,0),
-    Sub0,
-    SDValue(AddHi,0),
-    Sub1,
-  };
-  SDNode *RegSequence = CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
-                                               MVT::i64, RegSequenceArgs);
-
-  if (ProduceCarry) {
-    // Replace the carry-use
-    ReplaceUses(SDValue(N, 1), SDValue(AddHi, 1));
-  }
-
-  // Replace the remaining uses.
-  ReplaceNode(N, RegSequence);
 }
 
 void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {

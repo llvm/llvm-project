@@ -1390,6 +1390,9 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     if (Ptr.isZero())
       return true;
 
+    if (!Ptr.isBlockPointer())
+      return false;
+
     // Remove base casts.
     QualType InitialType = Ptr.getType();
     Ptr = Ptr.expand().stripBaseCasts();
@@ -2019,9 +2022,11 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     return false;
   }
 
-  // TODO: Other checks?
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || !Ptr.getRecord())
     return false;
+
+  if (!Ptr.isInitialized())
+    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
 
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.

@@ -73,13 +73,12 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        llvm::StringRef BoundArch,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -102,7 +101,7 @@ public:
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
   StringRef getSanitizerRequirement(SanitizerMask Kinds,
-                                    StringRef BoundArch) const override;
+                                    BoundArch BA) const override;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -135,7 +134,7 @@ protected:
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
 };
 
@@ -145,13 +144,12 @@ public:
                 const llvm::opt::ArgList &Args);
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        llvm::StringRef BoundArch,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages
