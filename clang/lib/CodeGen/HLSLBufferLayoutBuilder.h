@@ -49,8 +49,10 @@ public:
   /// Lays out an array type following HLSL buffer rules.
   llvm::Type *layOutArray(const ConstantArrayType *AT);
 
-  /// Lays out a matrix type following HLSL buffer rules.
-  llvm::Type *layOutMatrix(const ConstantMatrixType *MT);
+  /// Lays out a matrix type following HLSL buffer rules. The QualType must
+  /// retain any `row_major`/`column_major` sugar so that the correct memory
+  /// orientation is used.
+  llvm::Type *layOutMatrix(QualType Ty);
 
   /// Lays out a type following HLSL buffer rules. Arrays and structures will be
   /// padded appropriately and nested objects will be converted as appropriate.

@@ -11,9 +11,11 @@
     ret void, !dbg !2
   }
 
-  !0 = distinct !DISubprogram(name: "foo", line: 3, scopeLine: 3)
+  !0 = distinct !DISubprogram(name: "foo", line: 3, scopeLine: 3, type: !4)
   !1 = !DILocation(line: 4, column: 14, scope: !0)
   !2 = !DILocation(line: 5, column: 3, scope: !0)
+  !3 = !{null}
+  !4 = !DISubroutineType(types: !3)
 
 ...
 ---

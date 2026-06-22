@@ -10,8 +10,8 @@
 
 #include "ObjCLanguage.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -192,7 +192,7 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (objc_method->IsClassMethod() || objc_method->IsInstanceMethod()) {
     if (!name_sans_category.empty())
-      variant_names.emplace_back(ConstString(name_sans_category.c_str()),
+      variant_names.emplace_back(ConstString(name_sans_category),
                                  lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;

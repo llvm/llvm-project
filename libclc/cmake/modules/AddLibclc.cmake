@@ -1,111 +1,157 @@
-# Converts a list of relative source paths to absolute paths and exports
-# it to the parent scope.
-macro(libclc_configure_source_list variable path)
-  set(${variable} ${ARGN})
-  list(TRANSFORM ${variable} PREPEND "${path}/")
-  set(${variable} ${${variable}} PARENT_SCOPE)
-endmacro()
-
-# Appends a compile option to the given source files. Paths are relative
-# to `path` and the property is set in the top-level libclc directory scope.
-macro(libclc_configure_source_options path option)
-  set(_option_srcs ${ARGN})
-  list(TRANSFORM _option_srcs PREPEND "${path}/")
-  set_property(SOURCE ${_option_srcs}
-    DIRECTORY ${LIBCLC_SOURCE_DIR}
-    APPEND PROPERTY COMPILE_OPTIONS ${option}
-  )
-endmacro()
-
-# Merges OpenCL C source file lists with priority deduplication.
+# Adds source files to a libclc builtin library target with deduplication. If a
+# source with the same basename already exists in the target's SOURCES property
+# the new file is skipped. This enables target-specific directories to override
+# generic implementations when they are included first.
 #
-# All arguments after the output variable name are treated as source file
-# paths. When multiple files share the same basename, the last occurrence
-# wins. This allows target-specific files to automatically override generic
-# ones.
-function(libclc_merge_sources output)
-  set(all_sources ${ARGN})
-  set(result)
-  set(seen_names)
+# Sources are specified as paths relative to CMAKE_CURRENT_SOURCE_DIR, or
+# relative to BASE_DIR if provided.
+function(libclc_add_sources target)
+  cmake_parse_arguments(ARG "" "BASE_DIR" "FILES" ${ARGN})
+  if(NOT ARG_BASE_DIR)
+    set(ARG_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
 
-  list(REVERSE all_sources)
-  foreach(f ${all_sources})
-    get_filename_component(name "${f}" NAME)
-    if(NOT name IN_LIST seen_names)
-      list(APPEND seen_names "${name}")
-      list(PREPEND result "${f}")
+  get_target_property(existing ${target} SOURCES)
+
+  set(seen)
+  foreach(file IN LISTS existing)
+    get_filename_component(name "${file}" NAME)
+    list(APPEND seen "${name}")
+  endforeach()
+
+  set(new_sources)
+  foreach(rel_src IN LISTS ARG_FILES)
+    get_filename_component(name "${rel_src}" NAME)
+    if(NOT name IN_LIST seen)
+      list(APPEND new_sources "${ARG_BASE_DIR}/${rel_src}")
+      list(APPEND seen "${name}")
     endif()
   endforeach()
 
-  set(${output} ${result} PARENT_SCOPE)
+  if(new_sources)
+    target_sources(${target} PRIVATE ${new_sources})
+    set(inc_dirs)
+    foreach(file IN LISTS new_sources)
+      get_filename_component(dir "${file}" DIRECTORY)
+      list(APPEND inc_dirs "${dir}")
+    endforeach()
+    list(REMOVE_DUPLICATES inc_dirs)
+    target_include_directories(${target} PRIVATE ${inc_dirs})
+  endif()
 endfunction()
 
-# Creates a static library target for libclc builtins. Derives include
-# directories to locate `.inc` files in the same directory.
-function(add_libclc_builtin_library target_name)
+# Appends a compile option to the given source files. Source paths are
+# relative to CMAKE_CURRENT_SOURCE_DIR. The property is set in the
+# top-level libclc directory scope.
+function(libclc_set_source_options option)
+  set(srcs ${ARGN})
+  list(TRANSFORM srcs PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+  set_property(SOURCE ${srcs}
+    DIRECTORY ${LIBCLC_SOURCE_DIR}
+    APPEND PROPERTY COMPILE_OPTIONS ${option}
+  )
+endfunction()
+
+# Creates an object library target for libclc builtins and configures its
+# compile options, include directories, and definitions. Subdirectories
+# populate sources via libclc_add_sources() after this call.
+function(libclc_add_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "FOLDER"
-    "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS"
+    "FOLDER;SOURCE_SUB_DIR"
+    "COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS"
     ${ARGN}
   )
 
-  set(_inc_dirs)
-  foreach(f ${ARG_SOURCES})
-    get_filename_component(dir ${f} DIRECTORY)
-    list(APPEND _inc_dirs ${dir})
-  endforeach()
-  list(REMOVE_DUPLICATES _inc_dirs)
+  if(NOT ARG_SOURCE_SUB_DIR)
+    message(FATAL_ERROR "SOURCE_SUB_DIR is required for libclc_add_builtin_library")
+  endif()
 
-  add_library(${target_name} STATIC ${ARG_SOURCES})
+  add_library(${target_name} OBJECT)
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
-  target_include_directories(${target_name} PRIVATE
-    ${ARG_INCLUDE_DIRS} ${_inc_dirs}
-  )
+  target_include_directories(${target_name} PRIVATE ${ARG_INCLUDE_DIRS})
   target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})
-  set_target_properties(${target_name} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER ${ARG_FOLDER}
+  set_target_properties(${target_name} PROPERTIES FOLDER ${ARG_FOLDER})
+
+  # Populate sources.
+  add_subdirectory(
+    ${LIBCLC_SOURCE_DIR}/${ARG_SOURCE_SUB_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/${target_name}
   )
 endfunction()
 
-# Links one or more libclc builtin libraries together, optionally
-# internalizing dependencies, then produces a final .bc or .spv file.
-function(link_libclc_builtin_library target_name)
+# Builds a builtin library from sources, links it with any internalized
+# dependencies, produces the final output file, and registers it for
+# installation.
+function(libclc_add_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;TARGET_TRIPLE;FOLDER;OUTPUT_FILENAME"
-    "LIBRARIES;INTERNALIZE_LIBRARIES;OPT_FLAGS"
+    "ARCH;TRIPLE;TARGET_TRIPLE;SOURCE_TARGET;SOURCE_SUB_DIR;OUTPUT_FILENAME;PARENT_TARGET"
+    "COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
 
+  if(NOT ARG_SOURCE_TARGET)
+    message(FATAL_ERROR "SOURCE_TARGET is required for libclc_add_library")
+  endif()
   if(NOT ARG_OUTPUT_FILENAME)
-    message(FATAL_ERROR "OUTPUT_FILENAME is required for link_libclc_builtin_library")
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for libclc_add_library")
   endif()
-  if(NOT ARG_LIBRARIES)
-    message(FATAL_ERROR "LIBRARIES is required for link_libclc_builtin_library")
+  if(NOT ARG_PARENT_TARGET)
+    message(FATAL_ERROR "PARENT_TARGET is required for libclc_add_library")
   endif()
+
+  libclc_add_builtin_library(${ARG_SOURCE_TARGET}
+    COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
+    INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
+    COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
+    SOURCE_SUB_DIR ${ARG_SOURCE_SUB_DIR}
+    FOLDER "libclc/Device IR/Intermediate"
+  )
 
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TARGET_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
 
-  set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
+  # Create a combined static archive from all object libraries for installation.
+  set(archive_target ${target_name}.a)
+  add_library(${archive_target} STATIC)
+  target_link_libraries(${archive_target} PRIVATE
+    ${ARG_SOURCE_TARGET} ${ARG_INTERNALIZE_LIBRARIES}
+  )
+  set_target_properties(${archive_target} PROPERTIES
+    OUTPUT_NAME ${ARG_OUTPUT_FILENAME}
+    PREFIX ""
+    ARCHIVE_OUTPUT_DIRECTORY ${library_dir}
+    FOLDER "libclc/Device IR/Library"
+  )
 
+  # Link the object files, using a temporary library for internalization.
+  set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
   set(link_cmd ${llvm-link_exe})
-  foreach(lib ${ARG_LIBRARIES})
-    list(APPEND link_cmd $<TARGET_FILE:${lib}>)
-  endforeach()
+  set(link_deps ${llvm-link_target})
+
+  add_library(${target_name}-src STATIC)
+  target_link_libraries(${target_name}-src PRIVATE ${ARG_SOURCE_TARGET})
+  set_target_properties(${target_name}-src PROPERTIES
+    FOLDER "libclc/Device IR/Library"
+  )
+  list(APPEND link_cmd $<TARGET_FILE:${target_name}-src>)
+  list(APPEND link_deps ${target_name}-src)
+
   if(ARG_INTERNALIZE_LIBRARIES)
     list(APPEND link_cmd --internalize --only-needed)
     foreach(lib ${ARG_INTERNALIZE_LIBRARIES})
-      list(APPEND link_cmd $<TARGET_FILE:${lib}>)
+      add_library(${target_name}-${lib} STATIC)
+      target_link_libraries(${target_name}-${lib} PRIVATE ${lib})
+      set_target_properties(${target_name}-${lib} PROPERTIES
+        FOLDER "libclc/Device IR/Library"
+      )
+      list(APPEND link_cmd $<TARGET_FILE:${target_name}-${lib}>)
+      list(APPEND link_deps ${target_name}-${lib})
     endforeach()
   endif()
   list(APPEND link_cmd -o ${linked_bc})
 
-  set(link_deps ${llvm-link_target}
-    ${ARG_LIBRARIES} ${ARG_INTERNALIZE_LIBRARIES}
-  )
   add_custom_command(OUTPUT ${linked_bc}
     COMMAND ${link_cmd}
     DEPENDS ${link_deps}
@@ -113,7 +159,7 @@ function(link_libclc_builtin_library target_name)
 
   string(REPLACE "-" ";" triple_parts "${ARG_TRIPLE}")
   list(GET triple_parts 2 triple_os)
-  if((ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv32 OR ARG_ARCH STREQUAL spirv64) AND NOT triple_os STREQUAL vulkan)
+  if(ARG_ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT triple_os STREQUAL vulkan)
     # SPIR-V targets produce a .spv file from the linked bitcode.
     set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
     if(LIBCLC_USE_SPIRV_BACKEND)
@@ -144,55 +190,12 @@ function(link_libclc_builtin_library target_name)
   add_custom_target(${target_name} ALL DEPENDS ${builtins_lib})
   set_target_properties(${target_name} PROPERTIES
     TARGET_FILE ${builtins_lib}
-    FOLDER ${ARG_FOLDER}
-  )
-endfunction()
-
-# Builds a builtins library from sources, links it with any internalized
-# dependencies via link_libclc_builtin_library, and adds a verification test
-# for unresolved symbols.
-function(add_libclc_library target_name)
-  cmake_parse_arguments(ARG
-    ""
-    "ARCH;TRIPLE;TARGET_TRIPLE;OUTPUT_FILENAME;PARENT_TARGET"
-    "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
-    ${ARGN}
-  )
-
-  if(NOT ARG_OUTPUT_FILENAME)
-    message(FATAL_ERROR "OUTPUT_FILENAME is required for add_libclc_library")
-  endif()
-  if(NOT ARG_PARENT_TARGET)
-    message(FATAL_ERROR "PARENT_TARGET is required for add_libclc_library")
-  endif()
-  if(NOT ARG_SOURCES)
-    message(FATAL_ERROR "SOURCES is required for add_libclc_library")
-  endif()
-
-  set(builtins_target ${target_name}_clc_builtins)
-  add_libclc_builtin_library(${builtins_target}
-    SOURCES ${ARG_SOURCES}
-    COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
-    INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
-    COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
-    FOLDER "libclc/Device IR/Intermediate"
-  )
-
-  link_libclc_builtin_library(${target_name}
-    ARCH ${ARG_ARCH}
-    TRIPLE ${ARG_TRIPLE}
-    TARGET_TRIPLE ${ARG_TARGET_TRIPLE}
-    LIBRARIES ${builtins_target}
-    INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
-    OPT_FLAGS ${ARG_OPT_FLAGS}
-    OUTPUT_FILENAME "${ARG_OUTPUT_FILENAME}"
     FOLDER "libclc/Device IR/Library"
   )
 
-  add_dependencies(${ARG_PARENT_TARGET} ${target_name})
-  set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
+  add_dependencies(${ARG_PARENT_TARGET} ${target_name} ${archive_target})
 
-  install(FILES ${builtins_file}
+  install(FILES ${builtins_lib} $<TARGET_FILE:${archive_target}>
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TARGET_TRIPLE}
     COMPONENT ${ARG_PARENT_TARGET}
   )

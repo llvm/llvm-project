@@ -30,9 +30,8 @@ namespace llvm {
 using stable_hash = uint64_t;
 
 inline stable_hash stable_hash_combine(ArrayRef<stable_hash> Buffer) {
-  const uint8_t *Ptr = reinterpret_cast<const uint8_t *>(Buffer.data());
-  size_t Size = Buffer.size() * sizeof(stable_hash);
-  return xxh3_64bits(ArrayRef<uint8_t>(Ptr, Size));
+  return xxh3_64bits(reinterpret_cast<const uint8_t *>(Buffer.data()),
+                     Buffer.size() * sizeof(stable_hash));
 }
 
 inline stable_hash stable_hash_combine(stable_hash A, stable_hash B) {

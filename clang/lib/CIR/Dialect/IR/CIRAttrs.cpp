@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -68,6 +69,13 @@ static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 
 static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
+
+static mlir::ParseResult
+parseDataMemberPath(mlir::AsmParser &parser,
+                    mlir::DenseI32ArrayAttr &memberPath);
+
+static void printDataMemberPath(mlir::AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath);
 
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
@@ -204,7 +212,7 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         mlir::Type type, ArrayAttr members) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
-    return emitError() << "expected !cir.record type";
+    return emitError() << "expected !cir.struct or !cir.union type";
 
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
@@ -259,6 +267,26 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
     p << "null";
   else
     p << value;
+}
+
+static ParseResult parseDataMemberPath(AsmParser &parser,
+                                       mlir::DenseI32ArrayAttr &memberPath) {
+  if (parser.parseOptionalKeyword("null").succeeded())
+    return success();
+
+  auto parsed = mlir::FieldParser<mlir::DenseI32ArrayAttr>::parse(parser);
+  if (mlir::failed(parsed))
+    return failure();
+  memberPath = *parsed;
+  return success();
+}
+
+static void printDataMemberPath(AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    p << "null";
+  else
+    p.printStrippedAttrOrType(memberPath);
 }
 
 //===----------------------------------------------------------------------===//
@@ -430,33 +458,112 @@ ConstComplexAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_CUDAVarRegistrationInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
+  p << "<" << getDeviceSideName();
+  p << ", " << stringifyEnum(getKind());
+  if (getIsExtern())
+    p << ", extern";
+  if (getIsConstant())
+    p << ", constant";
+  if (getIsManaged())
+    p << ", managed";
+  p << ">";
+}
+
+Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
+  if (parser.parseLess())
+    return {};
+
+  std::string deviceSideName;
+  if (parser.parseKeywordOrString(&deviceSideName)) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected device variable name");
+    return {};
+  }
+
+  if (parser.parseComma())
+    return {};
+
+  // Parse the device variable kind (Variable, Surface, Texture)
+  StringRef kindStr;
+  if (parser.parseKeyword(&kindStr))
+    return {};
+
+  std::optional<CUDADeviceVarKind> kind = symbolizeCUDADeviceVarKind(kindStr);
+  if (!kind) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "unknown device variable kind: ")
+        << kindStr;
+    return {};
+  }
+
+  // Parse optional flags: extern, constant, managed
+  bool isExtern = false;
+  bool isConstant = false;
+  bool isManaged = false;
+
+  while (parser.parseOptionalGreater().failed()) {
+    if (parser.parseComma())
+      return {};
+
+    StringRef flag;
+    if (parser.parseKeyword(&flag))
+      return {};
+
+    if (flag == "extern")
+      isExtern = true;
+    else if (flag == "constant")
+      isConstant = true;
+    else if (flag == "managed")
+      isManaged = true;
+    else {
+      parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
+      return {};
+    }
+  }
+
+  return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
+             isManaged);
+}
+
+//===----------------------------------------------------------------------===//
 // DataMemberAttr definitions
 //===----------------------------------------------------------------------===//
 
 LogicalResult
 DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        cir::DataMemberType ty,
-                       std::optional<unsigned> memberIndex) {
-  // DataMemberAttr without a given index represents a null value.
-  if (!memberIndex.has_value())
-    return success();
+                       mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    return success(); // null pointer — always valid
 
-  cir::RecordType recTy = ty.getClassTy();
-  if (recTy.isIncomplete())
-    return emitError()
-           << "incomplete 'cir.record' cannot be used to build a non-null "
-              "data member pointer";
+  if (memberPath.empty())
+    return emitError() << "#cir.data_member path must not be empty";
 
-  unsigned memberIndexValue = memberIndex.value();
-  if (memberIndexValue >= recTy.getNumElements())
-    return emitError()
-           << "member index of a #cir.data_member attribute is out of range";
+  mlir::Type currentTy = ty.getClassTy();
+  for (auto [step, idx] : llvm::enumerate(memberPath.asArrayRef())) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(currentTy);
+    if (!recTy)
+      return emitError() << "#cir.data_member path step " << step
+                         << " reaches a non-record type";
 
-  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
-  if (memberTy != ty.getMemberTy())
+    if (recTy.isIncomplete())
+      return success(); // cannot validate further; trust the builder
+
+    if (idx < 0 || static_cast<unsigned>(idx) >= recTy.getNumElements())
+      return emitError() << "#cir.data_member path index " << idx << " at step "
+                         << step << " is out of range";
+
+    currentTy = recTy.getMembers()[idx];
+  }
+
+  if (currentTy != ty.getMemberTy())
     return emitError()
-           << "member type of a #cir.data_member attribute must match the "
-              "attribute type";
+           << "member type of a #cir.data_member attribute must match "
+              "the attribute type";
 
   return success();
 }
@@ -692,7 +799,7 @@ LogicalResult cir::VTableAttr::verify(
     mlir::ArrayAttr data) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
-    return emitError() << "expected !cir.record type result";
+    return emitError() << "expected !cir.struct or !cir.union type result";
   if (sTy.getMembers().empty() || data.empty())
     return emitError() << "expected record type with one or more subtype";
 

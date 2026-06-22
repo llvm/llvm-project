@@ -66,8 +66,12 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
       case Fact::Kind::KillOrigin:
         CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
         break;
-      case Fact::Kind::MovedOrigin:
       case Fact::Kind::OriginEscapes:
+        // An escaping origin is read at the exit block but defined earlier, so
+        // it spans blocks and must participate in joins.
+        CheckOrigin(F->getAs<OriginEscapesFact>()->getEscapedOriginID());
+        break;
+      case Fact::Kind::MovedOrigin:
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
       case Fact::Kind::InvalidateOrigin:
@@ -198,6 +202,57 @@ public:
     return getLoans(getState(P), OID);
   }
 
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
+                       const LoanID TargetLoan) const {
+    assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
+           "TargetLoan must be present in the StartOID at the StartPoint");
+
+    OriginID CurrOID = StartOID;
+    llvm::SmallVector<OriginID> OriginFlowChain;
+    llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
+    const auto *StartIt = llvm::find(Facts, StartPoint);
+    assert(StartIt != Facts.end());
+
+    for (const Fact *F :
+         llvm::reverse(llvm::make_range(Facts.begin(), StartIt))) {
+      if (const auto *IF = F->getAs<IssueFact>())
+        if (IF->getLoanID() == TargetLoan) {
+          assert(IF->getOriginID() == CurrOID);
+          return OriginFlowChain;
+        }
+
+      const auto *OFF = F->getAs<OriginFlowFact>();
+      if (!OFF)
+        continue;
+      if (OFF->getDestOriginID() != CurrOID)
+        continue;
+
+      const OriginID SrcOriginID = OFF->getSrcOriginID();
+      if (!getLoans(SrcOriginID, OFF).contains(TargetLoan))
+        continue;
+      OriginFlowChain.push_back(SrcOriginID);
+      CurrOID = SrcOriginID;
+    }
+
+    // FIXME: Ideally, this return is unreachable and should be an assert
+    // because we expect to always finish at an IssueFact. But since current
+    // traversal is limited to a single CFG block, multi-block OriginFlowChain
+    // construction might miss the IssueFact. We should add llvm_unreachable
+    // here once multi-block support is implemented.
+    return {};
+  }
+
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan) const {
+    for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin())
+      if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
+        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan);
+
+    return {};
+  }
+
 private:
   /// Returns true if the origin is persistent (referenced in multiple blocks).
   bool isPersistent(OriginID OID) const {
@@ -246,5 +301,18 @@ LoanPropagationAnalysis::~LoanPropagationAnalysis() = default;
 
 LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
+}
+
+llvm::SmallVector<OriginID>
+LoanPropagationAnalysis::buildOriginFlowChain(ProgramPoint StartPoint,
+                                              const OriginID StartOID,
+                                              const LoanID TargetLoan) const {
+  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan);
+}
+
+llvm::SmallVector<OriginID>
+LoanPropagationAnalysis::buildOriginFlowChain(const UseFact *UF,
+                                              const LoanID TargetLoan) const {
+  return PImpl->buildOriginFlowChain(UF, TargetLoan);
 }
 } // namespace clang::lifetimes::internal

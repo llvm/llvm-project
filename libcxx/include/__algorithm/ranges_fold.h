@@ -23,6 +23,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
@@ -234,6 +235,30 @@ struct __fold_right {
 };
 
 inline constexpr auto fold_right = __fold_right();
+
+struct __fold_right_last {
+  template <bidirectional_iterator _Iter,
+            sentinel_for<_Iter> _Sp,
+            __indirectly_binary_right_foldable<iter_value_t<_Iter>, _Iter> _Func>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Iter __first, _Sp __last, _Func __func) {
+    using _Up = decltype(fold_right(__first, __last, iter_value_t<_Iter>(*__first), __func));
+
+    if (__first == __last)
+      return optional<_Up>();
+
+    _Iter __tail = ranges::prev(ranges::next(__first, __last));
+    return optional<_Up>(
+        in_place, ranges::fold_right(std::move(__first), __tail, iter_value_t<_Iter>(*__tail), std::move(__func)));
+  }
+
+  template <bidirectional_range _Range,
+            __indirectly_binary_right_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
+    return operator()(ranges::begin(__range), ranges::end(__range), std::ref(__func));
+  }
+};
+
+inline constexpr auto fold_right_last = __fold_right_last();
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23

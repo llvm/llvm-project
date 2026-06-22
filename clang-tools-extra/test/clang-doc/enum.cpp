@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
 // RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
-// RUN: clang-doc --format=md_mustache --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
+// RUN: clang-doc --format=md_mustache --pretty-json --doxygen --output=%t --executor=standalone %S/Inputs/enum.cpp
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=HTML-INDEX
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7Animals.html --check-prefix=HTML-ANIMAL
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM

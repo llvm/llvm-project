@@ -2953,7 +2953,10 @@ public:
   // Get the basename of the target's main executable if available, empty string
   // otherwise.
   std::string GetDefaultProcessName() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
     if (target == nullptr)
       return "";
 
@@ -2988,7 +2991,10 @@ public:
   }
 
   Target *GetTarget() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
 
     if (target != nullptr)
       return target;
@@ -3346,7 +3352,10 @@ public:
   // Methods for setting the default value of the fields.
 
   void SetArgumentsFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3356,7 +3365,10 @@ public:
   }
 
   void SetTargetEnvironmentFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3365,7 +3377,10 @@ public:
   }
 
   void SetInheritedEnvironmentFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3376,7 +3391,10 @@ public:
   }
 
   std::string GetDefaultWorkingDirectory() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return "";
 
@@ -3385,7 +3403,10 @@ public:
   }
 
   bool GetDefaultDisableASLR() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return false;
 
@@ -3393,7 +3414,10 @@ public:
   }
 
   bool GetDefaultDisableStandardIO() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return true;
 
@@ -3401,7 +3425,10 @@ public:
   }
 
   bool GetDefaultDetachOnError() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return true;
 
@@ -3412,7 +3439,10 @@ public:
   // ProcessLaunchInfo.
 
   void GetExecutableSettings(ProcessLaunchInfo &launch_info) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     ModuleSP executable_module = target->GetExecutableModule();
     llvm::StringRef target_settings_argv0 = target->GetArg0();
 
@@ -3428,7 +3458,10 @@ public:
   }
 
   void GetArguments(ProcessLaunchInfo &launch_info) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     Args arguments = m_arguments_field->GetArguments();
     launch_info.GetArguments().AppendArguments(arguments);
   }
@@ -3479,7 +3512,10 @@ public:
     if (!m_arch_field->IsSpecified())
       return;
 
-    TargetSP target_sp = m_debugger.GetSelectedTarget();
+    TargetSP target_sp = m_debugger
+                             .GetSelectedExecutionContext(
+                                 /*adopt_dummy_target=*/false)
+                             .GetTargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
     launch_info.GetArchitecture() = Platform::GetAugmentedArchSpec(
@@ -3520,7 +3556,11 @@ public:
   }
 
   void GetInheritTCC(ProcessLaunchInfo &launch_info) {
-    if (m_debugger.GetSelectedTarget()->GetInheritTCC())
+    if (Target *target = m_debugger
+                             .GetSelectedExecutionContext(
+                                 /*adopt_dummy_target=*/false)
+                             .GetTargetPtr();
+        target && target->GetInheritTCC())
       launch_info.GetFlags().Set(eLaunchFlagInheritTCCFromParent);
   }
 
@@ -3567,7 +3607,10 @@ public:
   }
 
   Target *GetTarget() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
 
     if (target == nullptr) {
       SetError("No target exists!");
@@ -5455,7 +5498,10 @@ public:
   ~BreakpointTreeDelegate() override = default;
 
   BreakpointSP GetBreakpoint(const TreeItem &item) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     BreakpointList &breakpoints = target->GetBreakpointList(false);
     return breakpoints.GetBreakpointAtIndex(item.GetIdentifier());
   }
@@ -5500,7 +5546,10 @@ public:
   ~BreakpointsTreeDelegate() override = default;
 
   bool TreeDelegateShouldDraw() override {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (!target)
       return false;
 
@@ -5512,7 +5561,10 @@ public:
   }
 
   void TreeDelegateGenerateChildren(TreeItem &item) override {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
 
     BreakpointList &breakpoints = target->GetBreakpointList(false);
     std::unique_lock<std::recursive_mutex> lock;

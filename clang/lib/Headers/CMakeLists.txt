@@ -55,6 +55,7 @@ set(arm_only_files
   )
 
 set(aarch64_only_files
+  arm64_neon.h
   arm64intr.h
   arm_neon_sve_bridge.h
   )
@@ -139,6 +140,7 @@ set(riscv_files
   riscv_corev_alu.h
   riscv_mips.h
   riscv_nds.h
+  riscv_packed_simd.h
   sifive_vector.h
   )
 

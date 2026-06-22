@@ -111,12 +111,12 @@ void Host::Kill(lldb::pid_t pid, int signo) {
     ::TerminateProcess(handle.get(), 1);
 }
 
-const char *Host::GetSignalAsCString(int signo) { return NULL; }
+const char *Host::GetSignalAsCString(int signo) { return nullptr; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
 
-  HMODULE hmodule = NULL;
+  HMODULE hmodule = nullptr;
   if (!::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                            (LPCTSTR)host_addr, &hmodule))
     return module_filespec;

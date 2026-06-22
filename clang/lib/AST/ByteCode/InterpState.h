@@ -54,8 +54,6 @@ public:
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override { return &BottomFrame; }
-
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 
@@ -127,6 +125,13 @@ public:
   /// diagnoses and returns \c false.
   bool noteStep(CodePtr OpPC);
 
+  bool initializingBlock(const Block *B) const {
+    for (PtrView V : InitializingPtrs)
+      if (V.block() == B)
+        return true;
+    return false;
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -164,6 +169,7 @@ public:
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+  bool PrevDiagsEmitted = false;
 #ifndef NDEBUG
   unsigned SpeculationDepth = 0;
 #endif
@@ -176,7 +182,7 @@ public:
 
   /// List of blocks we're currently running either constructors or destructors
   /// for.
-  llvm::SmallVector<const Block *> InitializingBlocks;
+  llvm::SmallVector<PtrView> InitializingPtrs;
 };
 
 class InterpStateCCOverride final {

@@ -16,6 +16,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
+#include "flang/Optimizer/Dialect/FIRBoxUtils.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -40,6 +41,8 @@ class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
 
+/// Default alignment (in bytes) applied to array globals.
+constexpr unsigned defaultArrayGlobalAlignment = 64;
 /// Get the integer type with a pointer size.
 inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   // TODO: Delay the need of such type until codegen or find a way to use
@@ -333,13 +336,15 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -732,6 +737,8 @@ private:
 
 namespace fir::factory {
 
+using fir::genDimInfoFromBox;
+
 //===----------------------------------------------------------------------===//
 // ExtendedValue inquiry helpers
 //===----------------------------------------------------------------------===//
@@ -901,16 +908,9 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value, mlir::Value zero);
 
-/// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
-/// component of integer 64, and the component is the C address. Get the C
-/// address.
+/// Get the C address from a type(C_PTR/C_FUNPTR/C_DEVPTR) entity.
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
-
-/// The type(C_DEVPTR) is defined as the derived type with only one
-/// component of C_PTR type. Get the C address from the C_PTR component.
-mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value cDevPtr, mlir::Type ty);
 
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
@@ -967,16 +967,6 @@ uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 ///   %result1 = arith.select %p4, %c0, %e1 : index
 llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
-
-/// Given \p box of type fir::BaseBoxType representing an array,
-/// the function generates code to fetch the lower bounds,
-/// the extents and the strides from the box. The values are returned via
-/// \p lbounds, \p extents and \p strides.
-void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value box,
-                       llvm::SmallVectorImpl<mlir::Value> *lbounds,
-                       llvm::SmallVectorImpl<mlir::Value> *extents,
-                       llvm::SmallVectorImpl<mlir::Value> *strides);
 
 /// Generate an LLVM dialect lifetime start marker at the current insertion
 /// point given an fir.alloca. Returns the value to be passed to the lifetime

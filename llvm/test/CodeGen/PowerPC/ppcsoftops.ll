@@ -219,10 +219,6 @@ define dso_local zeroext i32 @func(double noundef %0, double noundef %1) #0 {
 ; PPC-NEXT:    mflr 0
 ; PPC-NEXT:    stwu 1, -32(1)
 ; PPC-NEXT:    stw 0, 36(1)
-; PPC-NEXT:    # kill: def $r7 killed $r6
-; PPC-NEXT:    # kill: def $r7 killed $r5
-; PPC-NEXT:    # kill: def $r7 killed $r4
-; PPC-NEXT:    # kill: def $r7 killed $r3
 ; PPC-NEXT:    stw 4, 28(1)
 ; PPC-NEXT:    stw 3, 24(1)
 ; PPC-NEXT:    stw 6, 20(1)
@@ -323,8 +319,6 @@ define zeroext i1 @ppcf128_soften(ppc_fp128 %a) #0 {
 ; PPC-NEXT:    stw 5, 12(1) # 4-byte Folded Spill
 ; PPC-NEXT:    mr 5, 3
 ; PPC-NEXT:    lwz 3, 12(1) # 4-byte Folded Reload
-; PPC-NEXT:    # kill: def $r4 killed $r3
-; PPC-NEXT:    # kill: def $r4 killed $r5
 ; PPC-NEXT:    xoris 4, 5, 65520
 ; PPC-NEXT:    or 4, 3, 4
 ; PPC-NEXT:    cntlzw 4, 4

@@ -760,15 +760,15 @@ define <1 x i16> @LoadInst_dot_product_i16_v6(ptr %lhs_address, ptr %rhs_address
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <6 x i16>, ptr [[LHS_ADDRESS:%.*]], align 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x i16>, ptr [[RHS_ADDRESS:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i16, ptr [[RHS_ADDRESS]], i64 1
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds i16, ptr [[RHS_ADDRESS]], i64 1
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <1 x i16>, ptr [[VEC_GEP]], align 2
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i16, ptr [[RHS_ADDRESS]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds i16, ptr [[RHS_ADDRESS]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <1 x i16>, ptr [[VEC_GEP3]], align 4
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i16, ptr [[RHS_ADDRESS]], i64 3
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds i16, ptr [[RHS_ADDRESS]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x i16>, ptr [[VEC_GEP5]], align 2
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr i16, ptr [[RHS_ADDRESS]], i64 4
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds i16, ptr [[RHS_ADDRESS]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <1 x i16>, ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP9:%.*]] = getelementptr i16, ptr [[RHS_ADDRESS]], i64 5
+; CHECK-NEXT:    [[VEC_GEP9:%.*]] = getelementptr inbounds i16, ptr [[RHS_ADDRESS]], i64 5
 ; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <1 x i16>, ptr [[VEC_GEP9]], align 2
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x i16> [[COL_LOAD1]], <1 x i16> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <6 x i16> [[COL_LOAD]], i64 0

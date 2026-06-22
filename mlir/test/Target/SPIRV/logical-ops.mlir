@@ -101,6 +101,8 @@ spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage], []> {
     %16 = spirv.IsInf %arg1 : f32
     // CHECK: spirv.IsFinite
     %17 = spirv.IsFinite %arg0 : f32
+    // CHECK: spirv.IsNormal
+    %18 = spirv.IsNormal %arg0 : f32
     spirv.Return
   }
 }

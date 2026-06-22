@@ -64,3 +64,5 @@ declare void @_Z10sideeffectv()
 ; REUSE: attributes #[[ATTR1:[0-9]+]] = { cold minsize noreturn }
 ; REUSE: attributes #[[ATTR2]] = { noinline }
 ;.
+; REUSE: [[META0:![0-9]+]] = !{!"function_entry_count", i64 0}
+;.

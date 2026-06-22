@@ -5529,7 +5529,7 @@ void TypeSystemClang::ForEachEnumerator(
       for (enum_pos = enum_decl->enumerator_begin(),
           enum_end_pos = enum_decl->enumerator_end();
            enum_pos != enum_end_pos; ++enum_pos) {
-        ConstString name(enum_pos->getNameAsString().c_str());
+        ConstString name(enum_pos->getNameAsString());
         if (!callback(integer_type, name, enum_pos->getInitVal()))
           break;
       }

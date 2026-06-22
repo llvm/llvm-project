@@ -972,7 +972,7 @@ struct InvalidateAnalysisPass
 /// Because this preserves no analyses, any analysis passes queried after this
 /// pass runs will recompute fresh results.
 struct InvalidateAllAnalysesPass
-    : RequiredPassInfoMixin<InvalidateAllAnalysesPass> {
+    : OptionalPassInfoMixin<InvalidateAllAnalysesPass> {
   /// Run this pass over some unit of IR.
   template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
   PreservedAnalyses run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {

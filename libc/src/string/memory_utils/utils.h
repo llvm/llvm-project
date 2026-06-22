@@ -94,7 +94,9 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 #ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#if defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1100)
 #pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif // LIBC_COMPILER_IS_GCC && LIBC_COMPILER_GCC_VER >= 1100
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif // !LIBC_COMPILER_IS_MSVC
   for (size_t i = 0; i < Size; ++i)

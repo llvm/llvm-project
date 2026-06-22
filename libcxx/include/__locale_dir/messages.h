@@ -50,11 +50,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit messages(size_t __refs = 0) : locale::facet(__refs) {}
 
-  _LIBCPP_HIDE_FROM_ABI catalog open(const basic_string<char>& __nm, const locale& __loc) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI catalog open(const basic_string<char>& __nm, const locale& __loc) const {
     return do_open(__nm, __loc);
   }
 
-  _LIBCPP_HIDE_FROM_ABI string_type get(catalog __c, int __set, int __msgid, const string_type& __dflt) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type
+  get(catalog __c, int __set, int __msgid, const string_type& __dflt) const {
     return do_get(__c, __set, __msgid, __dflt);
   }
 

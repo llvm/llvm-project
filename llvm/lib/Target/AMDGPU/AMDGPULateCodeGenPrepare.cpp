@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -493,7 +494,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   if (LI.getAlign() < DL.getABITypeAlign(Ty))
     return false;
   // It should be uniform, i.e. a scalar load.
-  return UA.isUniform(&LI);
+  return UA.isUniformAtDef(&LI);
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
@@ -536,8 +537,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
       Offset - Adjust);
 
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
-  NewLd->copyMetadata(LI);
-  NewLd->setMetadata(LLVMContext::MD_range, nullptr);
+  AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
   unsigned ShAmt = Adjust * 8;
   Value *NewVal = IRB.CreateBitCast(

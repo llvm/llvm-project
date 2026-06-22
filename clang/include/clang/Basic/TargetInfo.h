@@ -1668,7 +1668,8 @@ public:
   bool isSEHTrySupported() const {
     return getTriple().isOSWindows() &&
            (getTriple().isX86() ||
-            getTriple().getArch() == llvm::Triple::aarch64);
+            getTriple().getArch() == llvm::Triple::aarch64 ||
+            getTriple().isThumb());
   }
 
   /// Return true if {|} are normal characters in the asm string.
@@ -1967,6 +1968,8 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+unsigned Microsoft64BitMinGlobalAlign(uint64_t TypeSize);
 
 namespace targets {
 std::unique_ptr<clang::TargetInfo>

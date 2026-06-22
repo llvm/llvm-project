@@ -2497,11 +2497,6 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
       func_name.SetValue(ConstString(name));
 
     FunctionSP func_sp;
-    std::unique_ptr<Declaration> decl_up;
-    if (decl_file || decl_line || decl_column)
-      decl_up = std::make_unique<Declaration>(
-          die.GetCU()->GetFile(decl_file.value_or(0)), decl_line.value_or(0),
-          decl_column.value_or(0));
 
     SymbolFileDWARF *dwarf = die.GetDWARF();
     // Supply the type _only_ if it has already been parsed

@@ -34,8 +34,8 @@ def IndexedAccessOpInterface : OpInterface<"IndexedAccessOpInterface"> {
   let methods =
     [InterfaceMethod<
       /*desc=*/[{
-        Return the accessed memref. If the operation is still in tensor form, return
-        the null value.
+        Return the accessed memref. If the operation is not accessing memory through
+        a memref in its current form, return the null value.
       }],
       /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
       /*methodName=*/"getAccessedMemref",
@@ -140,7 +140,8 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
   let methods =
     [InterfaceMethod<
       /*desc=*/[{
-        Return the source memref for this copy operation.
+        Return the source memref for this copy operation. If the operation is not
+        currently copying from a memref source, return the null value.
       }],
       /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
       /*methodName=*/"getSrc",
@@ -157,7 +158,8 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
       /*args=*/(ins)>,
     InterfaceMethod<
       /*desc=*/[{
-        Return the destination memref for this copy operation.
+        Return the destination memref for this copy operation. If the operation is
+        not currently copying to a memref destination, return the null value.
       }],
       /*retType=*/"::mlir::TypedValue<::mlir::MemRefType>",
       /*methodName=*/"getDst",
@@ -194,7 +196,33 @@ def IndexedMemCopyOpInterface : OpInterface<"IndexedMemCopyOpInterface"> {
       /*methodName=*/"setMemrefsAndIndices",
       /*args=*/(ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newSrc,
         "::mlir::ValueRange":$newSrcIndices, "::mlir::Value":$newDst,
-        "::mlir::ValueRange":$newDstIndices)>];
+        "::mlir::ValueRange":$newDstIndices)>,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return true if, either by definition or due to some attribute, it's
+        known that the source indices are non-negative and less than the size of
+        the dimension they index.
+      }],
+      /*retType=*/"bool",
+      /*methodName=*/"hasInboundsSrcIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return true;
+      }]>,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return true if, either by definition or due to some attribute, it's
+        known that the destination indices are non-negative and less than the
+        size of the dimension they index.
+      }],
+      /*retType=*/"bool",
+      /*methodName=*/"hasInboundsDstIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return true;
+      }]>];
   let verify = [{
     return ::mlir::memref::detail::verifyIndexedMemCopyOpInterface($_op);
   }];

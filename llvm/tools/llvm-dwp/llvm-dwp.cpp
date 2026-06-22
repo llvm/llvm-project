@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/DWP/DWP.h"
 #include "llvm/DWP/DWPError.h"
-#include "llvm/DWP/DWPStringPool.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"

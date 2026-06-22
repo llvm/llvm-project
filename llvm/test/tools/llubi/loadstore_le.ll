@@ -112,6 +112,15 @@ define void @main() {
   store {i8, i32} zeroinitializer, ptr %alloc_struct_padding
   %load_struct_noundef = load {i8, i32}, ptr %alloc_struct_padding, !noundef !{}
 
+  %alloc_ptr = alloca ptr
+  store ptr %alloc_ptr, ptr %alloc_ptr
+  ; It should recover the provenance.
+  %ptr_with_provenance = load ptr, ptr %alloc_ptr
+  %addr_bits = load i8, ptr %alloc_ptr
+  store i8 %addr_bits, ptr %alloc_ptr
+  ; The first byte is tainted. We cannot recover the provenance.
+  %ptr_without_provenance = load ptr, ptr %alloc_ptr
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -139,7 +148,7 @@ define void @main() {
 ; CHECK-NEXT:   %val11 = load i25, ptr %alloc, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr poison)
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr poison)
-; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0xC [alloc_lifetime]
+; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0x10 [alloc_lifetime (dead)]
 ; CHECK-NEXT:   %val12 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc_lifetime)
 ; CHECK-NEXT:   %val13 = load i32, ptr %alloc_lifetime, align 4 => i32 -289830082
@@ -154,46 +163,52 @@ define void @main() {
 ; CHECK-NEXT:   %val16 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   store i32 -524288, ptr %alloc, align 4
 ; CHECK-NEXT:   %val17 = load float, ptr %alloc, align 4 => float 0xFFF80000
-; CHECK-NEXT:   %alloc_vscale = alloca <vscale x 2 x i32>, align 8 => ptr 0x10 [alloc_vscale]
+; CHECK-NEXT:   %alloc_vscale = alloca <vscale x 2 x i32>, align 8 => ptr 0x18 [alloc_vscale]
 ; CHECK-NEXT:   %insert = insertelement <vscale x 1 x i32> poison, i32 1, i32 0 => { i32 1, poison, poison, poison }
 ; CHECK-NEXT:   %ones = shufflevector <vscale x 1 x i32> %insert, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer => { i32 1, i32 1, i32 1, i32 1 }
 ; CHECK-NEXT:   %twos = add <vscale x 1 x i32> %ones, %ones => { i32 2, i32 2, i32 2, i32 2 }
 ; CHECK-NEXT:   store <vscale x 1 x i32> %ones, ptr %alloc_vscale, align 4
-; CHECK-NEXT:   %gep3 = getelementptr <vscale x 1 x i32>, ptr %alloc_vscale, i64 1 => ptr 0x20 [alloc_vscale + 16]
+; CHECK-NEXT:   %gep3 = getelementptr <vscale x 1 x i32>, ptr %alloc_vscale, i64 1 => ptr 0x28 [alloc_vscale + 16]
 ; CHECK-NEXT:   store <vscale x 1 x i32> %twos, ptr %gep3, align 4
 ; CHECK-NEXT:   %val18 = load <vscale x 2 x i32>, ptr %alloc_vscale, align 8 => { i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2 }
-; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x30 [alloc_struct]
+; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x40 [alloc_struct]
 ; CHECK-NEXT:   store %struct { [2 x i16] [i16 1, i16 2], i64 3 }, ptr %alloc_struct, align 8
 ; CHECK-NEXT:   %val19 = load %struct, ptr %alloc_struct, align 8 => { { i16 1, i16 2 }, i64 3 }
 ; CHECK-NEXT:   %val20 = load i64, ptr %alloc_struct, align 8 => i64 -7172745523491635199
 ; CHECK-NEXT:   %val21 = load i64, ptr %alloc_struct, align 8 => i64 -3863260483603529727
-; CHECK-NEXT:   %alloc_struct_packed = alloca %struct.packed, align 8 => ptr 0x40 [alloc_struct_packed]
+; CHECK-NEXT:   %alloc_struct_packed = alloca %struct.packed, align 8 => ptr 0x58 [alloc_struct_packed]
 ; CHECK-NEXT:   store %struct.packed <{ [2 x i16] [i16 1, i16 2], i64 3 }>, ptr %alloc_struct_packed, align 1
 ; CHECK-NEXT:   %val22 = load %struct.packed, ptr %alloc_struct_packed, align 1 => { { i16 1, i16 2 }, i64 3 }
 ; CHECK-NEXT:   %val23 = load i64, ptr %alloc_struct_packed, align 8 => i64 12885032961
 ; CHECK-NEXT:   %val24 = load i64, ptr %alloc_struct_packed, align 8 => i64 12885032961
-; CHECK-NEXT:   %alloc_struct_vscale = alloca %struct.vscale, align 8 => ptr 0x50 [alloc_struct_vscale]
+; CHECK-NEXT:   %alloc_struct_vscale = alloca %struct.vscale, align 8 => ptr 0x68 [alloc_struct_vscale]
 ; CHECK-NEXT:   store %struct.vscale zeroinitializer, ptr %alloc_struct_vscale, align 4
-; CHECK-NEXT:   %gep4 = getelementptr <vscale x 1 x i32>, ptr %alloc_struct_vscale, i32 1 => ptr 0x60 [alloc_struct_vscale + 16]
+; CHECK-NEXT:   %gep4 = getelementptr <vscale x 1 x i32>, ptr %alloc_struct_vscale, i32 1 => ptr 0x78 [alloc_struct_vscale + 16]
 ; CHECK-NEXT:   store <vscale x 1 x i32> %ones, ptr %gep4, align 4
 ; CHECK-NEXT:   %val25 = load %struct.vscale, ptr %alloc_struct_vscale, align 4 => { { i32 0, i32 0, i32 0, i32 0 }, { i32 1, i32 1, i32 1, i32 1 } }
-; CHECK-NEXT:   %alloc_array = alloca [2 x i32], align 4 => ptr 0x70 [alloc_array]
+; CHECK-NEXT:   %alloc_array = alloca [2 x i32], align 4 => ptr 0x8C [alloc_array]
 ; CHECK-NEXT:   store [2 x i32] [i32 1, i32 2], ptr %alloc_array, align 4
 ; CHECK-NEXT:   %val26 = load [2 x i32], ptr %alloc_array, align 4 => { i32 1, i32 2 }
-; CHECK-NEXT:   %alloc_i1_vec = alloca <4 x i1>, align 1 => ptr 0x78 [alloc_i1_vec]
+; CHECK-NEXT:   %alloc_i1_vec = alloca <4 x i1>, align 1 => ptr 0x95 [alloc_i1_vec]
 ; CHECK-NEXT:   store <4 x i1> <i1 true, i1 false, i1 poison, i1 false>, ptr %alloc_i1_vec, align 1
 ; CHECK-NEXT:   %val27 = load <4 x i1>, ptr %alloc_i1_vec, align 1 => { T, F, poison, F }
 ; CHECK-NEXT:   %val28 = load i8, ptr %alloc_i1_vec, align 1 => poison
-; CHECK-NEXT:   %alloc_padding = alloca i31, align 4 => ptr 0x7C [alloc_padding]
+; CHECK-NEXT:   %alloc_padding = alloca i31, align 4 => ptr 0x98 [alloc_padding]
 ; CHECK-NEXT:   store i32 0, ptr %alloc_padding, align 4
-; CHECK-NEXT:   %alloc_padding_vec = alloca i64, align 8 => ptr 0x80 [alloc_padding_vec]
+; CHECK-NEXT:   %alloc_padding_vec = alloca i64, align 8 => ptr 0xA0 [alloc_padding_vec]
 ; CHECK-NEXT:   store { <6 x i5>, i32 } { <6 x i5> zeroinitializer, i32 -1 }, ptr %alloc_padding_vec, align 4
 ; CHECK-NEXT:   %load_agg = load { <6 x i5>, i32 }, ptr %alloc_padding_vec, align 4 => { { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }, i32 -1 }
 ; CHECK-NEXT:   %load_vec = load <6 x i5>, ptr %alloc_padding_vec, align 4 => { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }
 ; CHECK-NEXT:   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec, align 8 => poison
 ; CHECK-NEXT:   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec, align 8 => { poison, poison, poison }
-; CHECK-NEXT:   %alloc_struct_padding = alloca { i8, i32 }, align 8 => ptr 0x88 [alloc_struct_padding]
+; CHECK-NEXT:   %alloc_struct_padding = alloca { i8, i32 }, align 8 => ptr 0xB0 [alloc_struct_padding]
 ; CHECK-NEXT:   store { i8, i32 } zeroinitializer, ptr %alloc_struct_padding, align 4
 ; CHECK-NEXT:   %load_struct_noundef = load { i8, i32 }, ptr %alloc_struct_padding, align 4, !noundef !0 => { i8 0, i32 0 }
+; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0xC0 [alloc_ptr]
+; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC0 [alloc_ptr]
+; CHECK-NEXT:   %addr_bits = load i8, ptr %alloc_ptr, align 1 => i8 -64
+; CHECK-NEXT:   store i8 %addr_bits, ptr %alloc_ptr, align 1
+; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC0 [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

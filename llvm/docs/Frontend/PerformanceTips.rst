@@ -108,6 +108,10 @@ time (and you don't know which one), or if the value may contain uninitialized
 data. For instance, if a union may hold a pointer or another type, use byte
 types to load and store the value. Otherwise, use the specific type.
 
+Byte types are supported by both SelectionDAG and GlobalISel; at the
+IR-to-MIR boundary they are lowered as the equi-sized integer scalar, so the
+type's mid-end bit-level semantics are not preserved through codegen.
+
 Prefer zext over sext when legal
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

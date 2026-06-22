@@ -87,17 +87,19 @@ class MemProfContextDisambiguation
   std::unique_ptr<ICallPromotionAnalysis> ICallAnalysis;
 
 public:
+  LLVM_ABI
   MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr,
                                bool isSamplePGO = false);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  void run(ModuleSummaryIndex &Index,
-           function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-               isPrevailing,
-           LLVMContext &Ctx,
-           function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
-               nullptr);
+  LLVM_ABI void
+  run(ModuleSummaryIndex &Index,
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          isPrevailing,
+      LLVMContext &Ctx,
+      function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
+          nullptr);
 };
 
 /// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
@@ -106,7 +108,7 @@ public:
 /// transformations.
 class MemProfRemoveInfo : public OptionalPassInfoMixin<MemProfRemoveInfo> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

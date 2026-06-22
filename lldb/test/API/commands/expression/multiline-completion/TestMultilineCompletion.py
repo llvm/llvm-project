@@ -64,4 +64,3 @@ class MultilineCompletionTest(PExpectTest):
         self.child.expect_exact("only_local ")
         self.exit_expression_editor()
 
-        self.quit()

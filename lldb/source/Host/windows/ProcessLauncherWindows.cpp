@@ -114,7 +114,7 @@ ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
 llvm::Error ProcThreadAttributeList::SetupPseudoConsole(HPCON hPC) {
   BOOL ok = UpdateProcThreadAttribute(lpAttributeList, 0,
                                       PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
-                                      sizeof(hPC), NULL, NULL);
+                                      sizeof(hPC), nullptr, nullptr);
   if (!ok)
     return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
   return llvm::Error::success();
@@ -235,30 +235,26 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   PROCESS_INFORMATION pi = {};
 
   BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), pwcommandLine, NULL, NULL,
+      wexecutable.c_str(), pwcommandLine, nullptr, nullptr,
       /*bInheritHandles=*/!inherited_handles.empty() ||
           pty_mode != PseudoConsole::Mode::None,
       flags, environment.data(),
-      wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
+      wworkingDirectory.size() == 0 ? nullptr : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
-    error = Status(::GetLastError(), eErrorTypeWin32);
     // Note that error 50 ("The request is not supported") will occur if you
     // try debug a 64-bit inferior from a 32-bit LLDB.
-  }
-
-  if (result) {
-    // Do not call CloseHandle on pi.hProcess, since we want to pass that back
-    // through the HostProcess.
-    ::CloseHandle(pi.hThread);
-    if (pty_mode == PseudoConsole::Mode::Pipe)
-      launch_info.GetPTY().CloseAnonymousPipes();
-  }
-
-  if (!result)
+    error = Status(::GetLastError(), eErrorTypeWin32);
     return HostProcess();
+  }
+
+  // Do not call CloseHandle on pi.hProcess, since we want to pass that back
+  // through the HostProcess.
+  ::CloseHandle(pi.hThread);
+  if (pty_mode == PseudoConsole::Mode::Pipe)
+    launch_info.GetPTY().CloseAnonymousPipes();
 
   return HostProcess(pi.hProcess);
 }
@@ -337,7 +333,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
                                        int fd) {
   const FileAction *action = launch_info.GetFileActionForFD(fd);
   if (action == nullptr)
-    return NULL;
+    return nullptr;
   const std::string path = action->GetFileSpec().GetPath();
 
   return GetStdioHandle(path, fd);
@@ -346,7 +342,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
 HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
                                               int fd) {
   if (path.empty())
-    return NULL;
+    return nullptr;
   SECURITY_ATTRIBUTES secattr = {};
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
@@ -375,6 +371,6 @@ HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
   std::wstring wpath;
   llvm::ConvertUTF8toWide(path, wpath);
   HANDLE result = ::CreateFileW(wpath.c_str(), access, share, &secattr, create,
-                                flags, NULL);
-  return (result == INVALID_HANDLE_VALUE) ? NULL : result;
+                                flags, nullptr);
+  return (result == INVALID_HANDLE_VALUE) ? nullptr : result;
 }

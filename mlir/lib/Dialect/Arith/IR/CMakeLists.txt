@@ -1,6 +1,7 @@
 set(LLVM_OPTIONAL_SOURCES
   ArithOps.cpp
   ArithDialect.cpp
+  InferIntDivisibilityOpInterfaceImpl.cpp
   InferIntRangeInterfaceImpls.cpp
   ValueBoundsOpInterfaceImpl.cpp
   )
@@ -12,6 +13,7 @@ add_public_tablegen_target(MLIRArithCanonicalizationIncGen)
 add_mlir_dialect_library(MLIRArithDialect
   ArithOps.cpp
   ArithDialect.cpp
+  InferIntDivisibilityOpInterfaceImpl.cpp
   InferIntRangeInterfaceImpls.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -24,6 +26,7 @@ add_mlir_dialect_library(MLIRArithDialect
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
   MLIRDialect
+  MLIRInferIntDivisibilityOpInterface
   MLIRInferIntRangeCommon
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface

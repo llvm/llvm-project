@@ -684,6 +684,14 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       // This vreg no longer lives all of the way through opBlock.
       unsigned opBlockNum = opBlock.getNumber();
       LV->getVarInfo(SrcReg).AliveBlocks.reset(opBlockNum);
+    } else if (LV && SrcUndef &&
+               !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)] &&
+               !LV->isLiveOut(SrcReg, opBlock)) {
+      // For undef sources we don't need a kill marker, but the register may
+      // no longer be live through intermediate blocks after the PHI use is
+      // removed. Recompute its LiveVariables info to clear stale AliveBlocks.
+      if (MRI->getVRegDef(SrcReg))
+        LV->recomputeForSingleDefVirtReg(SrcReg);
     }
 
     if (LIS) {

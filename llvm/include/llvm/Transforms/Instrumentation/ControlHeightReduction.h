@@ -21,8 +21,8 @@ namespace llvm {
 class ControlHeightReductionPass
     : public OptionalPassInfoMixin<ControlHeightReductionPass> {
 public:
-  ControlHeightReductionPass();
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI ControlHeightReductionPass();
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 } // end namespace llvm
 

@@ -1276,7 +1276,7 @@ define <8 x i8> @uv8i8(<8 x i8> %d, <8 x i8> %e) {
 ; CHECK-GI-NEXT:    ushll v0.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-GI-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d5, v1.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s3
 ; CHECK-GI-NEXT:    mov w10, v0.s[1]
@@ -1436,8 +1436,8 @@ define <16 x i8> @uv16i8(<16 x i8> %d, <16 x i8> %e) {
 ; CHECK-GI-NEXT:    ushll v5.4s, v3.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v4.4s, v4.8h, #0
 ; CHECK-GI-NEXT:    ushll v6.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ext v18.16b, v3.16b, v3.16b, #8
-; CHECK-GI-NEXT:    ext v19.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d18, v3.d[1]
+; CHECK-GI-NEXT:    mov d19, v1.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    fmov w9, s5
 ; CHECK-GI-NEXT:    mov w12, v2.s[3]
@@ -1860,8 +1860,8 @@ define <32 x i8> @uv32i8(<32 x i8> %d, <32 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v20.h[1], w15
 ; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-GI-NEXT:    ushll v7.4s, v4.4h, #0
-; CHECK-GI-NEXT:    ext v29.16b, v4.16b, v4.16b, #8
-; CHECK-GI-NEXT:    ext v28.16b, v2.16b, v2.16b, #8
+; CHECK-GI-NEXT:    mov d29, v4.d[1]
+; CHECK-GI-NEXT:    mov d28, v2.d[1]
 ; CHECK-GI-NEXT:    umlsl v26.4s, v19.4h, v2.4h
 ; CHECK-GI-NEXT:    fmov w17, s7
 ; CHECK-GI-NEXT:    udiv w12, w12, w16
@@ -1937,8 +1937,8 @@ define <32 x i8> @uv32i8(<32 x i8> %d, <32 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v23.h[1], w23
 ; CHECK-GI-NEXT:    ushll v3.8h, v3.8b, #0
 ; CHECK-GI-NEXT:    ushll v18.4s, v7.4h, #0
-; CHECK-GI-NEXT:    ext v31.16b, v7.16b, v7.16b, #8
-; CHECK-GI-NEXT:    ext v30.16b, v3.16b, v3.16b, #8
+; CHECK-GI-NEXT:    mov d31, v7.d[1]
+; CHECK-GI-NEXT:    mov d30, v3.d[1]
 ; CHECK-GI-NEXT:    umlsl v27.4s, v22.4h, v3.4h
 ; CHECK-GI-NEXT:    fmov w25, s18
 ; CHECK-GI-NEXT:    mov w28, v18.s[3]
@@ -2668,7 +2668,7 @@ define <8 x i16> @uv8i16(<8 x i16> %d, <8 x i16> %e) {
 ; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    mov d5, v1.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    fmov w9, s3
 ; CHECK-GI-NEXT:    mov w10, v2.s[1]
@@ -2851,8 +2851,8 @@ define <16 x i16> @uv16i16(<16 x i16> %d, <16 x i16> %e) {
 ; CHECK-GI-NEXT:    ushll v4.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v5.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    ushll v6.4s, v3.4h, #0
-; CHECK-GI-NEXT:    ext v18.16b, v2.16b, v2.16b, #8
-; CHECK-GI-NEXT:    ext v19.16b, v3.16b, v3.16b, #8
+; CHECK-GI-NEXT:    mov d18, v2.d[1]
+; CHECK-GI-NEXT:    mov d19, v3.d[1]
 ; CHECK-GI-NEXT:    fmov w8, s4
 ; CHECK-GI-NEXT:    fmov w9, s5
 ; CHECK-GI-NEXT:    mov w12, v5.s[3]

@@ -20,7 +20,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -110,10 +110,10 @@ void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
   if (Imm != 0) {
     O << " offset:";
 
-    // GFX12 uses a 24-bit signed offset for VBUFFER.
+    // GFX12+ uses a 24-bit signed offset for VBUFFER.
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     bool IsVBuffer = Desc.TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF);
-    if (AMDGPU::isGFX12(STI) && IsVBuffer)
+    if (IsVBuffer && AMDGPU::isGFX12Plus(STI))
       O << formatDec(SignExtend32<24>(Imm));
     else
       printU16ImmDecOperand(MI, OpNo, O);
@@ -178,8 +178,7 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
   }
 
   if (Imm & CPol::GLC)
-    O << ((AMDGPU::isGFX940(STI) &&
-           !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
+    O << ((AMDGPU::isGFX940(STI) && !SIInstrFlags::isSMRD(MII, *MI)) ? " sc0"
                                                                      : " glc");
   if (Imm & CPol::SLC)
     O << (AMDGPU::isGFX940(STI) ? " nt" : " slc");
@@ -423,7 +422,7 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Opcode = MI->getOpcode();
-  auto Flags = MII.get(Opcode).TSFlags;
+  auto Flags = SIInstrFlags::getTSFlags(MII, Opcode);
   if (OpNo == 0) {
     if (Flags & SIInstrFlags::VOP3 && Flags & SIInstrFlags::DPP)
       O << "_e64_dpp";
@@ -873,11 +872,13 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    case AMDGPU::OPERAND_REG_IMM_V2INT64:
       printImmediate64(Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP64:
       printImmediate64(Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:

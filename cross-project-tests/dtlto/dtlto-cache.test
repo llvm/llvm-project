@@ -31,8 +31,8 @@ RUN:   -Wl,--thinlto-remote-compiler=%clang \
 RUN:   -Wl,--thinlto-cache-dir=cache.dir \
 RUN:   -Wl,--save-temps
 
-# Check that there are no backend compilation jobs occurred.
-RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx "\s*1"
+# At this point we expect full cache hits. Distributor will not be invoked and a Json file will not be created.
+RUN: not ls cache.dir/*.dist-file.json
 RUN: ls cache.dir | count 3
 
 RUN: %clang -O0 --target=x86_64-linux-gnu -flto=thin -c foo.c -o foo.O0.o

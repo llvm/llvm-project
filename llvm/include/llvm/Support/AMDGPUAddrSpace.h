@@ -87,6 +87,10 @@ enum : unsigned {
 } // end namespace AMDGPUAS
 
 namespace AMDGPU {
+// Identifies which FLAT address-space segment an instruction operates on.
+// Passed to helpers like isLegalFLATOffset / splitFlatOffset.
+enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
+
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;

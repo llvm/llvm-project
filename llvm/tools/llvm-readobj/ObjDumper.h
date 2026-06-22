@@ -15,11 +15,10 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
-
-#include <unordered_set>
 
 namespace llvm {
 namespace object {
@@ -99,7 +98,7 @@ public:
                                    cl::boolOrDefault PrintSectionMapping) {
     if (PrintProgramHeaders)
       printProgramHeaders();
-    if (PrintSectionMapping == cl::BOU_TRUE)
+    if (PrintSectionMapping == cl::boolOrDefault::BOU_TRUE)
       printSectionMapping();
   }
 
@@ -207,7 +206,7 @@ private:
   virtual void printProgramHeaders() {}
   virtual void printSectionMapping() {}
 
-  std::unordered_set<std::string> Warnings;
+  StringSet<> Warnings;
 };
 
 std::unique_ptr<ObjDumper> createCOFFDumper(const object::COFFObjectFile &Obj,

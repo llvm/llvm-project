@@ -1402,6 +1402,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   const APInt *C;
   unsigned BitWidth = Ty->getScalarSizeInBits();
 
+  // lshr 1, X --> zext (X == 0)
+  if (match(Op0, m_One()))
+    return new ZExtInst(Builder.CreateIsNull(Op1), Ty);
+
   // (iN (~X) u>> (N - 1)) --> zext (X > -1)
   if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
       match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)))

@@ -247,7 +247,7 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   // The clang executable path isn't required since the jobs the driver builds
   // will not be executed.
   std::unique_ptr<driver::Driver> NewDriver(new driver::Driver(
-      /* ClangExecutable= */ "", llvm::sys::getDefaultTargetTriple(),
+      /* DriverExecutable= */ "", llvm::sys::getDefaultTargetTriple(),
       Diagnostics));
   NewDriver->setCheckInputsExist(false);
 

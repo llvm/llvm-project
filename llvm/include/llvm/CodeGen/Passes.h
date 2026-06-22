@@ -556,13 +556,13 @@ LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
-LLVM_ABI FunctionPass *createBreakFalseDeps();
+LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 
 // This pass expands indirectbr instructions.
 LLVM_ABI FunctionPass *createIndirectBrExpandPass();
 
 /// Creates CFI Fixup pass. \see CFIFixup.cpp
-LLVM_ABI FunctionPass *createCFIFixup();
+LLVM_ABI FunctionPass *createCFIFixupLegacy();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();

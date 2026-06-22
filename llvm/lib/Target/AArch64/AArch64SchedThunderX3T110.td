@@ -27,7 +27,7 @@ def ThunderX3T110Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
 }

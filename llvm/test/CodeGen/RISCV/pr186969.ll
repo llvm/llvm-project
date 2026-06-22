@@ -14,10 +14,10 @@ define i1 @test() {
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    lui a0, 3
 ; CHECK-NEXT:    sb zero, 0(zero)
-; CHECK-NEXT:    li a1, 54
-; CHECK-NEXT:    addi a2, a0, 288
-; CHECK-NEXT:    sh a2, 0(sp)
-; CHECK-NEXT:    sb a1, 2(sp)
+; CHECK-NEXT:    addi a1, a0, 288
+; CHECK-NEXT:    li a2, 54
+; CHECK-NEXT:    sh a1, 0(sp)
+; CHECK-NEXT:    sb a2, 2(sp)
 ; CHECK-NEXT:    bnez zero, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %assertPassed44
 ; CHECK-NEXT:    lh a1, 0(zero)

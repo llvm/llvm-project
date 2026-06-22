@@ -72,10 +72,12 @@ attributes #0 = { nounwind readonly uwtable "less-precise-fpmad"="false" "frame-
 attributes #1 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }
 
-!1 = distinct !DISubprogram()
+!1 = distinct !DISubprogram(type: !67)
 
 !17 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: null)
 !45 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: null)
 !62 = !DILocalVariable(name: "arg", line: 4, arg: 2, scope: !1, type: !17)
 !64 = !{ptr undef}
 !65 = !DILocalVariable(name: "this", line: 13, arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !1, type: !45)
+!66 = !{null}
+!67 = !DISubroutineType(types: !66)

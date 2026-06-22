@@ -65,6 +65,12 @@ class TestToolBase(ToolBase):
             default=None,
             help="if passed, result names will include relative path from this directory",
         )
+        parser.add_argument(
+            "--use-script",
+            action="store_true",
+            default=False,
+            help="if passed, Dexter will look for a structured YAML script instead of dexter commands",
+        )
 
     def handle_options(self, defaults):
         options = self.context.options

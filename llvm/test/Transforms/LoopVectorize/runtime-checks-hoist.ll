@@ -969,12 +969,12 @@ define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; CHECK:       outer.loop:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, [[OUTER_LOOP_PRE]] ], [ [[OUTER_IV_NEXT:%.*]], [[INNER_LOOP_EXIT:%.*]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nsw i64 [[OUTER_IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul nsw i64 [[OUTER_IV]], [[TMP2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP15]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:

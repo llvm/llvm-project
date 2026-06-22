@@ -57,7 +57,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(1, s32, s64)
       .scalarSameSizeAs(0, 1);
 
-  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF}).lower();
+  getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON}).lower();
 
   getActionDefinitionsBuilder({G_ROTL, G_ROTR})
       .legalFor({{i32, i32}, {i64, i64}})

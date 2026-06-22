@@ -56,7 +56,8 @@ public:
   virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                          GEPNoWrapFlags NW) const = 0;
 
-  virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
+  virtual Value *FoldSelect(Value *C, Value *True, Value *False,
+                            FastMathFlags FMF = FastMathFlags()) const = 0;
 
   virtual Value *FoldExtractValue(Value *Agg,
                                   ArrayRef<unsigned> IdxList) const = 0;
@@ -75,9 +76,9 @@ public:
   virtual Value *FoldCast(Instruction::CastOps Op, Value *V,
                           Type *DestTy) const = 0;
 
-  virtual Value *
-  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                      Instruction *FMFSource = nullptr) const = 0;
+  virtual Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops,
+                               Type *Ty, FastMathFlags FMF = {},
+                               Function *CtxF = nullptr) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators

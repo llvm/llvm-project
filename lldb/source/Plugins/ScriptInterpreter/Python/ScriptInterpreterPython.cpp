@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Interfaces/ScriptInterpreterPythonInterfaces.h"

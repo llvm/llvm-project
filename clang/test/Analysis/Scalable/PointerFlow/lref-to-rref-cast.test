@@ -1,0 +1,41 @@
+// Test that entities representing references-to-pointers are
+// connected through 'fake_move' (my fake 'std::move').
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: split-file %s %t
+
+// Extract per-TU PointerFlow + UnsafeBufferUsage summaries.
+// RUN: %clang_cc1 -fsyntax-only %t/tu.cpp \
+// RUN:   --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage \
+// RUN:   --ssaf-tu-summary-file=%t/tu.summary.json \
+// RUN:   --ssaf-compilation-unit-id="tu-1"
+
+// Link into a single LU summary.
+// RUN: clang-ssaf-linker %t/tu.summary.json -o %t/lu.json
+
+// RUN: clang-ssaf-analyzer %t/lu.json -o %t/wpa.json \
+// RUN:   -a UnsafeBufferReachableAnalysisResult
+
+//--- tu.cpp
+constexpr int* &&fake_move(int* &arg) noexcept { //FIXME: after #198927, we can use template
+  return static_cast<int* &&>(arg);
+}
+
+void foo(int *p) {
+  int *&&rp = fake_move(p);
+  rp[5] = 0;
+}
+
+// Check that unsafe buffer propagates from 'rp' to 'p' by ensuring
+// that both 'rp' and 'p' are in the reachable set.
+
+// RUN: FileCheck %s --input-file=%t/wpa.json
+
+// CHECK-DAG: "id": [[RP_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "",[[:space:]]+"usr": "[^"]*}}@rp"
+// CHECK-DAG: "id": [[P_ID:[0-9]+]],{{([^]]|[[:space:]])+\],[[:space:]]+"suffix": "1",[[:space:]]+"usr": }}"c:@F@foo#*I#"
+
+// CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// CHECK-DAG: {{\{[[:space:]]+}}"@": [[RP_ID]]{{[[:space:]]+\},[[:space:]]+1[[:space:]]+\]}}
+// CHECK-DAG: {{\{[[:space:]]+}}"@": [[P_ID]]{{[[:space:]]+\},[[:space:]]+1[[:space:]]+\]}}
+// CHECK: "analysis_name"
+

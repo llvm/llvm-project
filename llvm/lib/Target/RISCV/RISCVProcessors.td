@@ -45,6 +45,8 @@ class RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   code PostRASchedDirection = TopDown;
+
+  bit IsJumpExpensive = false;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -58,7 +60,7 @@ def RISCVTuneInfoTable : GenericTable {
                 "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
                 "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
                 "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
-                "PostRASchedDirection"];
+                "PostRASchedDirection", "IsJumpExpensive"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -92,14 +94,16 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
                               TuneEnableSelectOptimize];
 
+// `generic-rv32`, and `generic-rv64` are expected to target
+// in-order application processors designed for general-purpose computing.
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
-                                       NoSchedModel,
+                                       SpacemitX60Model,
                                        [Feature32Bit,
                                         FeatureStdExtI],
                                        GenericTuneFeatures>,
                    GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
-                                       NoSchedModel,
+                                       SpacemitX60Model,
                                        [Feature64Bit,
                                         FeatureStdExtI],
                                        GenericTuneFeatures>,
@@ -107,6 +111,8 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
+// `generic-ooo` is expected to target out-of-order application processors designed
+// for general-purpose computing.
 def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 
@@ -587,29 +593,29 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        TuneVXRMPipelineFlush,
                                        TunePostRAScheduler]>;
 
-def SIFIVE_P870 : RISCVProcessorModel<"sifive-p870", SiFiveP800Model,
-                                      !listconcat(RVA23U64Features,
-                                      [FeatureStdExtZama16b,
-                                       FeatureStdExtZfh,
-                                       FeatureStdExtZifencei,
-                                       FeatureStdExtZkr,
-                                       FeatureStdExtZvfbfmin,
-                                       FeatureStdExtZvfbfwma,
-                                       FeatureStdExtZvfh,
-                                       FeatureStdExtZvknc,
-                                       FeatureStdExtZvkng,
-                                       FeatureStdExtZvksc,
-                                       FeatureStdExtZvksg,
-                                       FeatureStdExtZvl128b,
-                                       FeatureUnalignedScalarMem,
-                                       FeatureUnalignedVectorMem]),
-                                      [TuneNoDefaultUnroll,
-                                       TuneConditionalCompressedMoveFusion,
-                                       TuneLUIADDIFusion,
-                                       TuneAUIPCADDIFusion,
-                                       TuneNoSinkSplatOperands,
-                                       TuneVXRMPipelineFlush,
-                                       TunePostRAScheduler]>;
+def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
+                                       !listconcat(RVA23U64Features,
+                                       [FeatureStdExtZama16b,
+                                        FeatureStdExtZfh,
+                                        FeatureStdExtZifencei,
+                                        FeatureStdExtZkr,
+                                        FeatureStdExtZvfbfmin,
+                                        FeatureStdExtZvfbfwma,
+                                        FeatureStdExtZvfh,
+                                        FeatureStdExtZvknc,
+                                        FeatureStdExtZvkng,
+                                        FeatureStdExtZvksc,
+                                        FeatureStdExtZvksg,
+                                        FeatureStdExtZvl128b,
+                                        FeatureUnalignedScalarMem,
+                                        FeatureUnalignedVectorMem]),
+                                       [TuneNoDefaultUnroll,
+                                        TuneConditionalCompressedMoveFusion,
+                                        TuneLUIADDIFusion,
+                                        TuneAUIPCADDIFusion,
+                                        TuneNoSinkSplatOperands,
+                                        TuneVXRMPipelineFlush,
+                                        TunePostRAScheduler]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,

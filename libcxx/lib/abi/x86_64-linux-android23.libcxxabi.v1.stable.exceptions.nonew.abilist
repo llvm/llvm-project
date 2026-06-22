@@ -10,6 +10,7 @@
 {'is_defined': True, 'name': '_ZNKSt16nested_exception14rethrow_nestedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt18bad_variant_access4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt19bad_optional_access4whatEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt29__bad_variant_access_with_msg4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt20bad_array_new_length4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk110__time_put8__do_putEPcRS1_PK2tmcc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk110__time_put8__do_putEPwRS1_PK2tmcc', 'type': 'FUNC'}
@@ -1507,7 +1508,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk18ios_base7unitbufE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk18ios_base8internalE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk18ios_base8showbaseE', 'size': 4, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt6__ndk18ios_base9__xindex_E', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk18ios_base9basefieldE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk18ios_base9boolalphaE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk18ios_base9showpointE', 'size': 4, 'type': 'OBJECT'}
@@ -1838,6 +1838,7 @@
 {'is_defined': True, 'name': '_ZTISt16nested_exception', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt18bad_variant_access', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt19bad_optional_access', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTISt29__bad_variant_access_with_msg', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt20bad_array_new_length', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt8bad_cast', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt9bad_alloc', 'size': 24, 'type': 'OBJECT'}
@@ -2070,6 +2071,7 @@
 {'is_defined': True, 'name': '_ZTSSt16nested_exception', 'size': 21, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt18bad_variant_access', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt19bad_optional_access', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSSt29__bad_variant_access_with_msg', 'size': 34, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt20bad_array_new_length', 'size': 25, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt8bad_cast', 'size': 12, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt9bad_alloc', 'size': 13, 'type': 'OBJECT'}
@@ -2241,6 +2243,7 @@
 {'is_defined': True, 'name': '_ZTVSt16nested_exception', 'size': 32, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt18bad_variant_access', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt19bad_optional_access', 'size': 40, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVSt29__bad_variant_access_with_msg', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt20bad_array_new_length', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt8bad_cast', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt9bad_alloc', 'size': 40, 'type': 'OBJECT'}

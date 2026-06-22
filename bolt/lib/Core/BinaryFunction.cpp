@@ -111,11 +111,6 @@ static cl::opt<bool> NoScan(
         "slower binary)"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-    PreserveBlocksAlignment("preserve-blocks-alignment",
-                            cl::desc("try to preserve basic block alignment"),
-                            cl::cat(BoltOptCategory));
-
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -2351,7 +2346,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       // Always create new BB at branch destination.
       PrevBB = InsertBB ? InsertBB : PrevBB;
       InsertBB = addBasicBlockAt(LI->first, LI->second);
-      if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+      if (BC.PreserveBlocksAlignment && IsLastInstrNop)
         InsertBB->setDerivedAlignment();
 
       if (PrevBB)
@@ -2388,7 +2383,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           Label = BC.Ctx->createNamedTempSymbol("FT");
         }
         InsertBB = addBasicBlockAt(Offset, Label);
-        if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+        if (BC.PreserveBlocksAlignment && IsLastInstrNop)
           InsertBB->setDerivedAlignment();
         updateOffset(LastInstrOffset);
       }
@@ -2834,8 +2829,12 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -2975,8 +2974,12 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      return false;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3126,8 +3129,12 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
       break;
@@ -4845,7 +4852,9 @@ bool BinaryFunction::isAArch64Veneer() const {
 
 bool BinaryFunction::isPossibleVeneer() const {
   return BC.isAArch64() &&
-         (isAArch64Veneer() || getOneName().starts_with("__AArch64"));
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64") ||
+          getOneName().starts_with("e843419") ||
+          getOneName().starts_with("__CortexA53843419_"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,

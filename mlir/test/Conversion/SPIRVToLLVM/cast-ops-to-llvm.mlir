@@ -189,3 +189,58 @@ spirv.func @uconvert_vector(%arg0: vector<3xi32>, %arg1: vector<3xi64>) "None" {
   %1 = spirv.UConvert %arg1: vector<3xi64> to vector<3xi32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.ConvertPtrToU
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_ptr_to_u
+spirv.func @convert_ptr_to_u(%arg0 : !spirv.ptr<i32, Generic>) "None" {
+  // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr to i32
+  %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, Generic> to i32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ConvertUToPtr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_u_to_ptr
+spirv.func @convert_u_to_ptr(%arg0 : i32) "None" {
+  // CHECK: llvm.inttoptr %{{.*}} : i32 to !llvm.ptr
+  %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, Generic>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrCastToGeneric
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ptr_cast_to_generic
+spirv.func @ptr_cast_to_generic(%arg0 : !spirv.ptr<f32, CrossWorkgroup>) "None" {
+  // CHECK: llvm.addrspacecast %{{.*}} : !llvm.ptr to !llvm.ptr
+  %0 = spirv.PtrCastToGeneric %arg0 : !spirv.ptr<f32, CrossWorkgroup> to !spirv.ptr<f32, Generic>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GenericCastToPtr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @generic_cast_to_ptr
+spirv.func @generic_cast_to_ptr(%arg0 : !spirv.ptr<vector<2xi32>, Generic>) "None" {
+  // CHECK: llvm.addrspacecast %{{.*}} : !llvm.ptr to !llvm.ptr
+  %0 = spirv.GenericCastToPtr %arg0 : !spirv.ptr<vector<2xi32>, Generic> to !spirv.ptr<vector<2xi32>, CrossWorkgroup>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GenericCastToPtrExplicit
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @generic_cast_to_ptr_explicit
+spirv.func @generic_cast_to_ptr_explicit(%arg0 : !spirv.ptr<vector<2xi32>, Generic>) "None" {
+  // CHECK: llvm.addrspacecast %{{.*}} : !llvm.ptr to !llvm.ptr
+  %0 = spirv.GenericCastToPtrExplicit %arg0 : !spirv.ptr<vector<2xi32>, Generic> to !spirv.ptr<vector<2xi32>, CrossWorkgroup>
+  spirv.Return
+}

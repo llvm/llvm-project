@@ -10,7 +10,7 @@ define i32 @test(ptr noalias %p, ptr noalias %addr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <15 x i32> [[TMP0]], <15 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[P:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, <8 x ptr> [[TMP5]], <8 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, <8 x ptr> [[TMP5]], <8 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP6]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP7]])
 ; CHECK-NEXT:    ret i32 [[TMP8]]

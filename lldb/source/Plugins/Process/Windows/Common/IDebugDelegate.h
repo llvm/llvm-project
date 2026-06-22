@@ -24,7 +24,7 @@ class HostThread;
 // notification of events that happen in a debugged process.
 class IDebugDelegate {
 public:
-  virtual ~IDebugDelegate() {}
+  virtual ~IDebugDelegate() = default;
 
   virtual void OnExitProcess(uint32_t exit_code) = 0;
   virtual void OnDebuggerConnected(lldb::addr_t image_base) = 0;
@@ -35,7 +35,8 @@ public:
   virtual void OnLoadDll(const ModuleSpec &module_spec,
                          lldb::addr_t module_addr) = 0;
   virtual void OnUnloadDll(lldb::addr_t module_addr) = 0;
-  virtual void OnDebugString(const std::string &string) = 0;
+  virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                             uint16_t length_lower_word) = 0;
   virtual void OnDebuggerError(const Status &error, uint32_t type) = 0;
 };
 }

@@ -10,16 +10,14 @@ define double @test() {
 ; X86:       cond.true:
 ; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
 ; X86-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
+; X86-NEXT:    [[TMP3:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; X86-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; X86-NEXT:    [[TMP16:%.*]] = fmul <2 x double> [[TMP15]], zeroinitializer
 ; X86-NEXT:    [[TMP17:%.*]] = fmul <2 x double> [[TMP15]], zeroinitializer
-; X86-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; X86-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
 ; X86-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP4]], zeroinitializer
-; X86-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP4]], zeroinitializer
-; X86-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
-; X86-NEXT:    [[TMP8:%.*]] = fadd <2 x double> zeroinitializer, [[TMP7]]
-; X86-NEXT:    [[TMP9:%.*]] = fmul <2 x double> zeroinitializer, [[TMP7]]
+; X86-NEXT:    [[TMP8:%.*]] = fadd <2 x double> zeroinitializer, [[TMP5]]
+; X86-NEXT:    [[TMP9:%.*]] = fmul <2 x double> zeroinitializer, [[TMP5]]
 ; X86-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
 ; X86-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP2]]
 ; X86-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP10]], [[TMP2]]
@@ -44,16 +42,14 @@ define double @test() {
 ; AARCH64:       cond.true:
 ; AARCH64-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
 ; AARCH64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
+; AARCH64-NEXT:    [[TMP6:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
 ; AARCH64-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; AARCH64-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
 ; AARCH64-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
-; AARCH64-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; AARCH64-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], zeroinitializer
 ; AARCH64-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], zeroinitializer
-; AARCH64-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], zeroinitializer
-; AARCH64-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; AARCH64-NEXT:    [[TMP11:%.*]] = fadd <2 x double> zeroinitializer, [[TMP10]]
-; AARCH64-NEXT:    [[TMP12:%.*]] = fmul <2 x double> zeroinitializer, [[TMP10]]
+; AARCH64-NEXT:    [[TMP11:%.*]] = fadd <2 x double> zeroinitializer, [[TMP8]]
+; AARCH64-NEXT:    [[TMP12:%.*]] = fmul <2 x double> zeroinitializer, [[TMP8]]
 ; AARCH64-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 3>
 ; AARCH64-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP13]], [[TMP2]]
 ; AARCH64-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP13]], [[TMP2]]

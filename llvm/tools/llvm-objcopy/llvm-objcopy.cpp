@@ -132,6 +132,22 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   llvm_unreachable("unsupported output format");
 }
 
+/// Returns the format name string for explicit file formats (binary, ihex,
+/// srec). Returns "" for all other formats so callers can fall back to the
+/// input object's own format string (e.g. "elf64-x86-64").
+static StringRef toFileFormatName(FileFormat Fmt) {
+  switch (Fmt) {
+  case FileFormat::Binary:
+    return "binary";
+  case FileFormat::IHex:
+    return "ihex";
+  case FileFormat::SREC:
+    return "srec";
+  default:
+    return "";
+  }
+}
+
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
@@ -156,6 +172,11 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
       return createFileError(Config.InputFilename, BufOrErr.getError());
     MemoryBufferHolder = std::move(*BufOrErr);
 
+    if (Config.Verbose)
+      printCopyMessage(
+          Config.InputFilename, toFileFormatName(Config.InputFormat),
+          Config.OutputFilename, toFileFormatName(Config.OutputFormat));
+
     if (Config.InputFormat == FileFormat::Binary)
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         // Handle FileFormat::Binary.
@@ -175,10 +196,14 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     BinaryHolder = std::move(*BinaryOrErr);
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
-      // Handle Archive.
       if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
         return E;
     } else {
+      if (Config.Verbose)
+        printCopyMessage(Config.InputFilename,
+                         getObjectFormatName(*BinaryHolder.getBinary()),
+                         Config.OutputFilename,
+                         toFileFormatName(Config.OutputFormat));
       // Handle llvm::object::Binary.
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),

@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -Werror -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -Werror -fopenmp-version=52 -Wno-experimental-option
 
 ! Check for deprecation of master directive and its combined/composite variants
 

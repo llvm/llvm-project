@@ -4,7 +4,7 @@
 --- |
   define amdgpu_kernel void @agpr_spill_copy() #0 { ret void }
 
-  attributes #0 = { "amdgpu-waves-per-eu"="8,8" }
+  attributes #0 = { "amdgpu-waves-per-eu"="8,8" nounwind }
 ---
 name: agpr_spill_copy
 tracksRegLiveness: true

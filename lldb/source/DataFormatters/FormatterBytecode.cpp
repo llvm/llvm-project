@@ -10,6 +10,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -497,6 +498,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
           return index_or_err.takeError();
         break;
       }
+      case sel_get_parent: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        auto *parent = valobj->GetParent();
+        data.Push(parent ? parent->GetSP() : ValueObjectSP());
+        break;
+      }
       case sel_get_type: {
         TYPE_CHECK(Object);
         POP_VALOBJ(valobj);
@@ -567,6 +575,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto type = data.Pop<CompilerType>();
         POP_VALOBJ(valobj);
         data.Push(valobj->Cast(type));
+        break;
+      }
+      case sel_clone: {
+        TYPE_CHECK(Object, String);
+        auto new_name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->Clone(new_name));
         break;
       }
       case sel_strlen: {

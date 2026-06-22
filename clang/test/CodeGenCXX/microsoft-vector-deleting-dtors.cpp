@@ -7,12 +7,12 @@ struct Bird {
 };
 
 struct Parrot : public Bird {
-// X64: @[[ParrotVtable:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
-// X86: @[[ParrotVtable:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UAEPAXI@Z"] }, comdat($"??_7Parrot@@6B@")
-// CLANG21: @[[ParrotVtable:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_GParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
-// X64: @[[Bird:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
-// X86: @[[Bird:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UAEPAXI@Z"] }, comdat($"??_7Bird@@6B@")
-// CLANG21: @[[Bird:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_GBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
+// X64: @[[ParrotVtable:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
+// X86: @[[ParrotVtable:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UAEPAXI@Z"] }, comdat($"??_7Parrot@@6B@")
+// CLANG21: @[[ParrotVtable:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_GParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
+// X64: @[[Bird:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
+// X86: @[[Bird:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UAEPAXI@Z"] }, comdat($"??_7Bird@@6B@")
+// CLANG21: @[[Bird:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_GBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
   virtual ~Parrot() {}
 };
 

@@ -25,13 +25,13 @@ namespace LIBC_NAMESPACE_DECL {
 // TODO: support shared/recursive/robust mutexes.
 class Mutex final : private RawMutex {
   // Use bitfields to allow encoding more attributes.
-  // TODO: we may still need error checking or other flags and the robustness
-  //       and priority inheritance will need to be implemented.
+  // TODO: the robustness and priority inheritance will need to be implemented.
   //       See also https://github.com/llvm/llvm-project/issues/194396
   LIBC_PREFERED_TYPE(bool) unsigned int priority_inherit : 1;
   LIBC_PREFERED_TYPE(bool) unsigned int recursive : 1;
   LIBC_PREFERED_TYPE(bool) unsigned int robust : 1;
   LIBC_PREFERED_TYPE(bool) unsigned int pshared : 1;
+  LIBC_PREFERED_TYPE(bool) unsigned int error_checking : 1;
 
   // TLS address may not work across forked processes. Use thread id instead.
   cpp::Atomic<pid_t> owner;
@@ -47,22 +47,30 @@ class Mutex final : private RawMutex {
         return MutexError::OVERFLOW;
       lock_count++;
       return MutexError::NONE;
-    }
+    } else if (is_error_checking() && owner == internal::gettid())
+      return MutexError::DEADLOCK;
 
     MutexError res = do_lock();
-    if (is_recursive() && res == MutexError::NONE) {
-      owner = internal::gettid();
-      lock_count = 1;
+
+    if (res == MutexError::NONE) {
+      if (is_recursive()) {
+        owner = internal::gettid();
+        lock_count = 1;
+      } else if (is_error_checking()) {
+        owner = internal::gettid();
+      }
     }
+
     return res;
   }
 
 public:
   LIBC_INLINE constexpr Mutex(bool is_priority_inherit, bool is_recursive,
-                              bool is_robust, bool is_pshared)
+                              bool is_robust, bool is_pshared,
+                              bool is_error_checking = false)
       : RawMutex(), priority_inherit(is_priority_inherit),
         recursive(is_recursive), robust(is_robust), pshared(is_pshared),
-        owner(0), lock_count(0) {}
+        error_checking(is_error_checking), owner(0), lock_count(0) {}
 
   LIBC_INLINE static MutexError destroy(Mutex *lock) {
     LIBC_ASSERT(lock->owner == 0 && lock->lock_count == 0 &&
@@ -91,12 +99,21 @@ public:
   }
 
   LIBC_INLINE MutexError unlock() {
-    if (is_recursive() && owner == internal::gettid()) {
+    if (is_recursive()) {
+      // lock_count == 0 can happen if previous unlock is
+      // suspended before signal frame
+      if (owner != internal::gettid() || lock_count == 0)
+        return MutexError::UNLOCK_WITHOUT_LOCK;
+
       lock_count--;
       if (lock_count == 0)
         owner = 0;
       else
         return MutexError::NONE;
+    } else if (is_error_checking()) {
+      if (owner != internal::gettid())
+        return MutexError::UNLOCK_WITHOUT_LOCK;
+      owner = 0;
     }
     if (this->RawMutex::unlock(this->pshared))
       return MutexError::NONE;
@@ -113,11 +130,12 @@ public:
 
   LIBC_INLINE bool can_be_requeued() const {
     return !this->pshared && !this->robust && !this->recursive &&
-           !this->priority_inherit;
+           !this->priority_inherit && !this->error_checking;
   }
 
   LIBC_INLINE bool is_robust() const { return this->robust; }
   LIBC_INLINE bool is_recursive() const { return this->recursive; }
+  LIBC_INLINE bool is_error_checking() const { return this->error_checking; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL

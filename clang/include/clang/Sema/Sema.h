@@ -5100,11 +5100,13 @@ public:
   /// otherwise setting numParams to the appropriate value.
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
 
-  /// Create an CUDALaunchBoundsAttr attribute.
+  /// Create a CUDALaunchBoundsAttr attribute. By default, the function only
+  /// supports nvptx target architectures and skips MaxBlocks if it is previous
+  /// to sm_90. Use \p IgnoreArch to skip the architecture check.
   CUDALaunchBoundsAttr *CreateLaunchBoundsAttr(const AttributeCommonInfo &CI,
                                                Expr *MaxThreads,
-                                               Expr *MinBlocks,
-                                               Expr *MaxBlocks);
+                                               Expr *MinBlocks, Expr *MaxBlocks,
+                                               bool IgnoreArch = false);
 
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
@@ -7595,7 +7597,7 @@ public:
                            SourceLocation RBraceLoc);
 
   ExprResult BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
-                           SourceLocation RBraceLoc);
+                           SourceLocation RBraceLoc, bool IsExplicit);
 
   /// Binary Operators.  'Tok' is the token for the operator.
   ExprResult ActOnBinOp(Scope *S, SourceLocation TokLoc, tok::TokenKind Kind,
@@ -8574,6 +8576,9 @@ public:
 
   /// ActOnCXXBoolLiteral - Parse {true,false} literals.
   ExprResult ActOnCXXBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind);
+
+  /// Build a boolean-typed literal expression.
+  ExprResult BuildBoolLiteral(SourceLocation Loc, bool Value);
 
   /// ActOnCXXNullPtrLiteral - Parse 'nullptr'.
   ExprResult ActOnCXXNullPtrLiteral(SourceLocation Loc);
@@ -11336,10 +11341,6 @@ private:
   /// issuing a diagnostic and returning false if not.
   bool checkMustTailAttr(const Stmt *St, const Attr &MTA);
 
-  /// Check if the given expression contains 'break' or 'continue'
-  /// statement that produces control flow different from GCC.
-  void CheckBreakContinueBinding(Expr *E);
-
   ///@}
 
   //
@@ -11767,7 +11768,7 @@ public:
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
       SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
       TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11871,10 +11872,11 @@ public:
     return Arg;
   }
 
-  ExprResult BuildSubstNonTypeTemplateParmExpr(
-      Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
-      SourceLocation loc, TemplateArgument Replacement,
-      UnsignedOrNone PackIndex, bool Final);
+  ExprResult
+  BuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl, unsigned Index,
+                                    QualType ParamType, SourceLocation loc,
+                                    TemplateArgument Replacement,
+                                    UnsignedOrNone PackIndex, bool Final);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in
@@ -12230,8 +12232,7 @@ public:
   /// doesn't need to live too long. It would be useful if this function
   /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
-      NamedDecl *TemplateParam = nullptr);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -12643,10 +12644,9 @@ public:
   ///
   /// \param Loc The source location to use for the resulting template
   /// argument.
-  TemplateArgumentLoc
-  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
-                                SourceLocation Loc,
-                                NamedDecl *TemplateParam = nullptr);
+  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
+                                                    QualType NTTPType,
+                                                    SourceLocation Loc);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template
@@ -13273,9 +13273,6 @@ public:
       // We are substituting template arguments into a constraint expression.
       ConstraintSubstitution,
 
-      // We are normalizing a constraint expression.
-      ConstraintNormalization,
-
       // Instantiating a Requires Expression parameter clause.
       RequirementParameterInstantiation,
 
@@ -13492,12 +13489,6 @@ public:
     /// concept.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           ConstraintSubstitution, NamedDecl *Template,
-                          SourceRange InstantiationRange);
-
-    struct ConstraintNormalization {};
-    /// \brief Note that we are normalizing a constraint expression.
-    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          ConstraintNormalization, NamedDecl *Template,
                           SourceRange InstantiationRange);
 
     struct ParameterMappingSubstitution {};

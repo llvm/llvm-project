@@ -103,12 +103,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 // CHECK: kernel_environment =
-// CHECK-SAME: i32 24, i32 1024
+// CHECK-SAME: i32 24
 // CHECK: call void @[[OUTLINED:__omp_offloading_[A-Za-z0-9_.]*]]
-// CHECK: %[[MASTER:.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2
+// CHECK: %[[MASTER:.+]] = call i32 @__kmpc_gpu_xteam_reduce_nowait
 // CHECK: icmp eq i32 %[[MASTER]], 1
 // CHECK: i1 %{{.+}}, label %[[THEN:[A-Za-z0-9_.]*]], label %[[DONE:[A-Za-z0-9_.]*]]
 // CHECK: [[THEN]]:
+// CHECK-NEXT: call void @_omp_reduction_global_to_list_copy_func
 // CHECK-NEXT: %[[FINAL_LHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RESULT0:[A-Za-z0-9_.]*]] = fadd contract double %[[FINAL_LHS0]], %[[FINAL_RHS0]]

@@ -654,8 +654,8 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
   }
   Elts.push_back(ScalarExpr);
 
-  auto *InitList =
-      new (AST) InitListExpr(AST, SourceLocation(), Elts, SourceLocation());
+  auto *InitList = new (AST) InitListExpr(
+      AST, SourceLocation(), Elts, SourceLocation(), /*isExplicit=*/false);
   InitList->setType(ResultTy);
 
   ExprResult Cast = DeclBuilder.SemaRef.BuildCStyleCastExpr(
@@ -2167,6 +2167,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::completeDefinition() {
          "Definition must be started before completing it.");
 
   Record->completeDefinition();
+  Record->setIsHLSLBuiltinRecord(true);
   return *this;
 }
 

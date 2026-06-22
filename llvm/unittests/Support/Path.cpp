@@ -11,6 +11,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -2003,6 +2004,39 @@ TEST_F(FileSystemTest, OpenFileForRead) {
 #endif
 }
 
+TEST_F(FileSystemTest, SetLastAccessAndModificationTimeFile) {
+  int FD;
+  SmallString<64> Path;
+  ASSERT_NO_ERROR(fs::createTemporaryFile("set-mtime", "tmp", FD, Path));
+  FileRemover Cleanup(Path);
+  ::close(FD);
+
+  TimePoint<> When(std::chrono::seconds(1234567890));
+  ASSERT_NO_ERROR(fs::setLastAccessAndModificationTime(Path, When));
+
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(Twine(Path), Status));
+  EXPECT_EQ(std::chrono::time_point_cast<std::chrono::seconds>(When),
+            std::chrono::time_point_cast<std::chrono::seconds>(
+                Status.getLastModificationTime()));
+}
+
+TEST_F(FileSystemTest, SetLastAccessAndModificationTimeDirectory) {
+  SmallString<64> Dir;
+  ASSERT_NO_ERROR(fs::createUniqueDirectory("set-mtime-dir", Dir));
+
+  TimePoint<> When(std::chrono::seconds(1234567890));
+  ASSERT_NO_ERROR(fs::setLastAccessAndModificationTime(Dir, When));
+
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(Twine(Dir), Status));
+  EXPECT_EQ(std::chrono::time_point_cast<std::chrono::seconds>(When),
+            std::chrono::time_point_cast<std::chrono::seconds>(
+                Status.getLastModificationTime()));
+
+  ASSERT_NO_ERROR(fs::remove(Dir));
+}
+
 TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   std::string Buf(5, '?');
   Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
@@ -2790,9 +2824,12 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   if (!*Enabled)
     GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
 
+  const bool PreferForwardSlash = path::native("/") == "/";
+
   // Setup: A test directory longer than 8 characters for which a distinct
   // short 8.3 form name will be created on Windows. Typically, 123456~1.
-  constexpr const char *OneDir = "\\123456789"; // >8 chars
+  const char *OneDir =
+      PreferForwardSlash ? "/123456789" : "\\123456789"; // >8 chars
 
   // Setup: Create a path where even if all components were reduced to short 8.3
   // form names, the total length would exceed MAX_PATH.
@@ -2824,7 +2861,9 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   std::string DotAndDotDot = getShortPathName(WithDots);
   ASSERT_FALSE(DotAndDotDot.empty())
       << "Expected short 8.3 form path for test directory.";
-  auto ContainsDotAndDotDot = [](llvm::StringRef S) {
+  auto ContainsDotAndDotDot = [PreferForwardSlash](llvm::StringRef S) {
+    if (PreferForwardSlash)
+      return S.contains("/./") && S.contains("/../");
     return S.contains("\\.\\") && S.contains("\\..\\");
   };
   ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))

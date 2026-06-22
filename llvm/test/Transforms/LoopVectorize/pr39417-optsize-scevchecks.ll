@@ -6,14 +6,17 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; PR39417
 ; Check that the need for overflow check prevents vectorizing a loop with tiny
 ; trip count (which implies opt for size).
-define void @func_34() {
-; CHECK-LABEL: define void @func_34() {
+define void @func_34(ptr %dst) {
+; CHECK-LABEL: define void @func_34(
+; CHECK-SAME: ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[IV]], 16
 ; CHECK-NEXT:    [[STEP:%.*]] = ashr exact i32 [[SEXT]], 16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[STEP]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[STEP]], 1
 ; CHECK-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc i32 [[IV_NEXT]] to i16
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i16 [[IV_NEXT_TRUNC]], 3
@@ -28,6 +31,8 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %sext = shl i32 %iv, 16
   %step = ashr exact i32 %sext, 16
+  %gep = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 %step, ptr %gep, align 4
   %iv.next = add nsw i32 %step, 1
   %iv.next.trunc = trunc i32 %iv.next to i16
   %ec = icmp slt i16 %iv.next.trunc, 3

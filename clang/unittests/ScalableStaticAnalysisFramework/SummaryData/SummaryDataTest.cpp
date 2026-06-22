@@ -184,7 +184,8 @@ protected:
   std::unique_ptr<LUSummary> makeLUSummary() {
     NestedBuildNamespace NS(
         {BuildNamespace(BuildNamespaceKind::LinkUnit, "TestLU")});
-    return std::make_unique<LUSummary>(std::move(NS));
+    return std::make_unique<LUSummary>(llvm::Triple("arm64-apple-macosx"),
+                                       std::move(NS));
   }
 
   EntityId addEntity(LUSummary &LU, llvm::StringRef USR) {

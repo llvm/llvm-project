@@ -4287,6 +4287,304 @@
 // CHECK_ZNVER6_M64: #define __znver6 1
 // CHECK_ZNVER6_M64: #define __znver6__ 1
 
+// RUN: %clang -march=c86-4g-m4 -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM4_M32
+// CHECK_C864GM4_M32: #define __ADX__ 1
+// CHECK_C864GM4_M32: #define __AES__ 1
+// CHECK_C864GM4_M32: #define __AVX2__ 1
+// CHECK_C864GM4_M32: #define __AVX__ 1
+// CHECK_C864GM4_M32: #define __BMI2__ 1
+// CHECK_C864GM4_M32: #define __BMI__ 1
+// CHECK_C864GM4_M32: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM4_M32: #define __CLZERO__ 1
+// CHECK_C864GM4_M32: #define __CRC32__ 1
+// CHECK_C864GM4_M32: #define __F16C__ 1
+// CHECK_C864GM4_M32: #define __FMA__ 1
+// CHECK_C864GM4_M32: #define __FSGSBASE__ 1
+// CHECK_C864GM4_M32: #define __FXSR__ 1
+// CHECK_C864GM4_M32: #define __LZCNT__ 1
+// CHECK_C864GM4_M32: #define __MMX__ 1
+// CHECK_C864GM4_M32: #define __MOVBE__ 1
+// CHECK_C864GM4_M32: #define __MWAITX__ 1
+// CHECK_C864GM4_M32: #define __PCLMUL__ 1
+// CHECK_C864GM4_M32: #define __POPCNT__ 1
+// CHECK_C864GM4_M32: #define __PRFCHW__ 1
+// CHECK_C864GM4_M32: #define __RDRND__ 1
+// CHECK_C864GM4_M32: #define __RDSEED__ 1
+// CHECK_C864GM4_M32: #define __SHA__ 1
+// CHECK_C864GM4_M32: #define __SSE2_MATH__ 1
+// CHECK_C864GM4_M32: #define __SSE2__ 1
+// CHECK_C864GM4_M32: #define __SSE3__ 1
+// CHECK_C864GM4_M32: #define __SSE4A__ 1
+// CHECK_C864GM4_M32: #define __SSE4_1__ 1
+// CHECK_C864GM4_M32: #define __SSE4_2__ 1
+// CHECK_C864GM4_M32: #define __SSE_MATH__ 1
+// CHECK_C864GM4_M32: #define __SSE__ 1
+// CHECK_C864GM4_M32: #define __SSSE3__ 1
+// CHECK_C864GM4_M32: #define __XSAVEC__ 1
+// CHECK_C864GM4_M32: #define __XSAVEOPT__ 1
+// CHECK_C864GM4_M32: #define __XSAVES__ 1
+// CHECK_C864GM4_M32: #define __XSAVE__ 1
+// CHECK_C864GM4_M32: #define __c86_4g_m4__ 1
+// CHECK_C864GM4_M32: #define __i386 1
+// CHECK_C864GM4_M32: #define __i386__ 1
+// CHECK_C864GM4_M32: #define __tune_c86_4g_m4__ 1
+
+// RUN: %clang -march=c86-4g-m4 -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM4_M64
+// CHECK_C864GM4_M64: #define __ADX__ 1
+// CHECK_C864GM4_M64: #define __AES__ 1
+// CHECK_C864GM4_M64: #define __AVX2__ 1
+// CHECK_C864GM4_M64: #define __AVX__ 1
+// CHECK_C864GM4_M64: #define __BMI2__ 1
+// CHECK_C864GM4_M64: #define __BMI__ 1
+// CHECK_C864GM4_M64: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM4_M64: #define __CLZERO__ 1
+// CHECK_C864GM4_M64: #define __CRC32__ 1
+// CHECK_C864GM4_M64: #define __F16C__ 1
+// CHECK_C864GM4_M64: #define __FMA__ 1
+// CHECK_C864GM4_M64: #define __FSGSBASE__ 1
+// CHECK_C864GM4_M64: #define __FXSR__ 1
+// CHECK_C864GM4_M64: #define __LZCNT__ 1
+// CHECK_C864GM4_M64: #define __MMX__ 1
+// CHECK_C864GM4_M64: #define __MOVBE__ 1
+// CHECK_C864GM4_M64: #define __MWAITX__ 1
+// CHECK_C864GM4_M64: #define __PCLMUL__ 1
+// CHECK_C864GM4_M64: #define __POPCNT__ 1
+// CHECK_C864GM4_M64: #define __PRFCHW__ 1
+// CHECK_C864GM4_M64: #define __RDRND__ 1
+// CHECK_C864GM4_M64: #define __RDSEED__ 1
+// CHECK_C864GM4_M64: #define __SHA__ 1
+// CHECK_C864GM4_M64: #define __SSE2_MATH__ 1
+// CHECK_C864GM4_M64: #define __SSE2__ 1
+// CHECK_C864GM4_M64: #define __SSE3__ 1
+// CHECK_C864GM4_M64: #define __SSE4A__ 1
+// CHECK_C864GM4_M64: #define __SSE4_1__ 1
+// CHECK_C864GM4_M64: #define __SSE4_2__ 1
+// CHECK_C864GM4_M64: #define __SSE_MATH__ 1
+// CHECK_C864GM4_M64: #define __SSE__ 1
+// CHECK_C864GM4_M64: #define __SSSE3__ 1
+// CHECK_C864GM4_M64: #define __XSAVEC__ 1
+// CHECK_C864GM4_M64: #define __XSAVEOPT__ 1
+// CHECK_C864GM4_M64: #define __XSAVES__ 1
+// CHECK_C864GM4_M64: #define __XSAVE__ 1
+// CHECK_C864GM4_M64: #define __c86_4g_m4__ 1
+// CHECK_C864GM4_M64: #define __tune_c86_4g_m4__ 1
+// CHECK_C864GM4_M64: #define __x86_64 1
+// CHECK_C864GM4_M64: #define __x86_64__ 1
+
+// RUN: %clang -march=c86-4g-m6 -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM6_M32
+// CHECK_C864GM6_M32: #define __ADX__ 1
+// CHECK_C864GM6_M32: #define __AES__ 1
+// CHECK_C864GM6_M32: #define __AVX2__ 1
+// CHECK_C864GM6_M32: #define __AVX__ 1
+// CHECK_C864GM6_M32: #define __BMI2__ 1
+// CHECK_C864GM6_M32: #define __BMI__ 1
+// CHECK_C864GM6_M32: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM6_M32: #define __CLZERO__ 1
+// CHECK_C864GM6_M32: #define __CRC32__ 1
+// CHECK_C864GM6_M32: #define __F16C__ 1
+// CHECK_C864GM6_M32: #define __FMA__ 1
+// CHECK_C864GM6_M32: #define __FSGSBASE__ 1
+// CHECK_C864GM6_M32: #define __FXSR__ 1
+// CHECK_C864GM6_M32: #define __LZCNT__ 1
+// CHECK_C864GM6_M32: #define __MMX__ 1
+// CHECK_C864GM6_M32: #define __MOVBE__ 1
+// CHECK_C864GM6_M32: #define __MWAITX__ 1
+// CHECK_C864GM6_M32: #define __PCLMUL__ 1
+// CHECK_C864GM6_M32: #define __POPCNT__ 1
+// CHECK_C864GM6_M32: #define __PRFCHW__ 1
+// CHECK_C864GM6_M32: #define __RDRND__ 1
+// CHECK_C864GM6_M32: #define __RDSEED__ 1
+// CHECK_C864GM6_M32: #define __SHA__ 1
+// CHECK_C864GM6_M32: #define __SSE2_MATH__ 1
+// CHECK_C864GM6_M32: #define __SSE2__ 1
+// CHECK_C864GM6_M32: #define __SSE3__ 1
+// CHECK_C864GM6_M32: #define __SSE4A__ 1
+// CHECK_C864GM6_M32: #define __SSE4_1__ 1
+// CHECK_C864GM6_M32: #define __SSE4_2__ 1
+// CHECK_C864GM6_M32: #define __SSE_MATH__ 1
+// CHECK_C864GM6_M32: #define __SSE__ 1
+// CHECK_C864GM6_M32: #define __SSSE3__ 1
+// CHECK_C864GM6_M32: #define __XSAVEC__ 1
+// CHECK_C864GM6_M32: #define __XSAVEOPT__ 1
+// CHECK_C864GM6_M32: #define __XSAVES__ 1
+// CHECK_C864GM6_M32: #define __XSAVE__ 1
+// CHECK_C864GM6_M32: #define __c86_4g_m6__ 1
+// CHECK_C864GM6_M32: #define __i386 1
+// CHECK_C864GM6_M32: #define __i386__ 1
+// CHECK_C864GM6_M32: #define __tune_c86_4g_m6__ 1
+
+// RUN: %clang -march=c86-4g-m6 -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM6_M64
+// CHECK_C864GM6_M64: #define __ADX__ 1
+// CHECK_C864GM6_M64: #define __AES__ 1
+// CHECK_C864GM6_M64: #define __AVX2__ 1
+// CHECK_C864GM6_M64: #define __AVX__ 1
+// CHECK_C864GM6_M64: #define __BMI2__ 1
+// CHECK_C864GM6_M64: #define __BMI__ 1
+// CHECK_C864GM6_M64: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM6_M64: #define __CLZERO__ 1
+// CHECK_C864GM6_M64: #define __CRC32__ 1
+// CHECK_C864GM6_M64: #define __F16C__ 1
+// CHECK_C864GM6_M64: #define __FMA__ 1
+// CHECK_C864GM6_M64: #define __FSGSBASE__ 1
+// CHECK_C864GM6_M64: #define __FXSR__ 1
+// CHECK_C864GM6_M64: #define __LZCNT__ 1
+// CHECK_C864GM6_M64: #define __MMX__ 1
+// CHECK_C864GM6_M64: #define __MOVBE__ 1
+// CHECK_C864GM6_M64: #define __MWAITX__ 1
+// CHECK_C864GM6_M64: #define __PCLMUL__ 1
+// CHECK_C864GM6_M64: #define __POPCNT__ 1
+// CHECK_C864GM6_M64: #define __PRFCHW__ 1
+// CHECK_C864GM6_M64: #define __RDRND__ 1
+// CHECK_C864GM6_M64: #define __RDSEED__ 1
+// CHECK_C864GM6_M64: #define __SHA__ 1
+// CHECK_C864GM6_M64: #define __SSE2_MATH__ 1
+// CHECK_C864GM6_M64: #define __SSE2__ 1
+// CHECK_C864GM6_M64: #define __SSE3__ 1
+// CHECK_C864GM6_M64: #define __SSE4A__ 1
+// CHECK_C864GM6_M64: #define __SSE4_1__ 1
+// CHECK_C864GM6_M64: #define __SSE4_2__ 1
+// CHECK_C864GM6_M64: #define __SSE_MATH__ 1
+// CHECK_C864GM6_M64: #define __SSE__ 1
+// CHECK_C864GM6_M64: #define __SSSE3__ 1
+// CHECK_C864GM6_M64: #define __XSAVEC__ 1
+// CHECK_C864GM6_M64: #define __XSAVEOPT__ 1
+// CHECK_C864GM6_M64: #define __XSAVES__ 1
+// CHECK_C864GM6_M64: #define __XSAVE__ 1
+// CHECK_C864GM6_M64: #define __c86_4g_m6__ 1
+// CHECK_C864GM6_M64: #define __tune_c86_4g_m6__ 1
+// CHECK_C864GM6_M64: #define __x86_64 1
+// CHECK_C864GM6_M64: #define __x86_64__ 1
+
+// RUN: %clang -march=c86-4g-m7 -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM7_M32
+// CHECK_C864GM7_M32: #define __ADX__ 1
+// CHECK_C864GM7_M32: #define __AES__ 1
+// CHECK_C864GM7_M32: #define __AVX2__ 1
+// CHECK_C864GM7_M32: #define __AVX512BF16__ 1
+// CHECK_C864GM7_M32: #define __AVX512BITALG__ 1
+// CHECK_C864GM7_M32: #define __AVX512BW__ 1
+// CHECK_C864GM7_M32: #define __AVX512CD__ 1
+// CHECK_C864GM7_M32: #define __AVX512DQ__ 1
+// CHECK_C864GM7_M32: #define __AVX512F__ 1
+// CHECK_C864GM7_M32: #define __AVX512IFMA__ 1
+// CHECK_C864GM7_M32: #define __AVX512VBMI2__ 1
+// CHECK_C864GM7_M32: #define __AVX512VBMI__ 1
+// CHECK_C864GM7_M32: #define __AVX512VL__ 1
+// CHECK_C864GM7_M32: #define __AVX512VNNI__ 1
+// CHECK_C864GM7_M32: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_C864GM7_M32: #define __AVX__ 1
+// CHECK_C864GM7_M32: #define __BMI2__ 1
+// CHECK_C864GM7_M32: #define __BMI__ 1
+// CHECK_C864GM7_M32: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM7_M32: #define __CLWB__ 1
+// CHECK_C864GM7_M32: #define __CLZERO__ 1
+// CHECK_C864GM7_M32: #define __CRC32__ 1
+// CHECK_C864GM7_M32: #define __F16C__ 1
+// CHECK_C864GM7_M32: #define __FMA__ 1
+// CHECK_C864GM7_M32: #define __FSGSBASE__ 1
+// CHECK_C864GM7_M32: #define __FXSR__ 1
+// CHECK_C864GM7_M32: #define __GFNI__ 1
+// CHECK_C864GM7_M32: #define __LZCNT__ 1
+// CHECK_C864GM7_M32: #define __MMX__ 1
+// CHECK_C864GM7_M32: #define __MOVBE__ 1
+// CHECK_C864GM7_M32: #define __MWAITX__ 1
+// CHECK_C864GM7_M32: #define __PCLMUL__ 1
+// CHECK_C864GM7_M32: #define __POPCNT__ 1
+// CHECK_C864GM7_M32: #define __PRFCHW__ 1
+// CHECK_C864GM7_M32: #define __RDRND__ 1
+// CHECK_C864GM7_M32: #define __RDSEED__ 1
+// CHECK_C864GM7_M32: #define __SHA__ 1
+// CHECK_C864GM7_M32: #define __SSE2_MATH__ 1
+// CHECK_C864GM7_M32: #define __SSE2__ 1
+// CHECK_C864GM7_M32: #define __SSE3__ 1
+// CHECK_C864GM7_M32: #define __SSE4A__ 1
+// CHECK_C864GM7_M32: #define __SSE4_1__ 1
+// CHECK_C864GM7_M32: #define __SSE4_2__ 1
+// CHECK_C864GM7_M32: #define __SSE_MATH__ 1
+// CHECK_C864GM7_M32: #define __SSE__ 1
+// CHECK_C864GM7_M32: #define __SSSE3__ 1
+// CHECK_C864GM7_M32: #define __VAES__ 1
+// CHECK_C864GM7_M32: #define __VPCLMULQDQ__ 1
+// CHECK_C864GM7_M32: #define __WBNOINVD__ 1
+// CHECK_C864GM7_M32: #define __XSAVEC__ 1
+// CHECK_C864GM7_M32: #define __XSAVEOPT__ 1
+// CHECK_C864GM7_M32: #define __XSAVES__ 1
+// CHECK_C864GM7_M32: #define __XSAVE__ 1
+// CHECK_C864GM7_M32: #define __c86_4g_m7__ 1
+// CHECK_C864GM7_M32: #define __i386 1
+// CHECK_C864GM7_M32: #define __i386__ 1
+// CHECK_C864GM7_M32: #define __tune_c86_4g_m7__ 1
+
+// RUN: %clang -march=c86-4g-m7 -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_C864GM7_M64
+// CHECK_C864GM7_M64: #define __ADX__ 1
+// CHECK_C864GM7_M64: #define __AES__ 1
+// CHECK_C864GM7_M64: #define __AVX2__ 1
+// CHECK_C864GM7_M64: #define __AVX512BF16__ 1
+// CHECK_C864GM7_M64: #define __AVX512BITALG__ 1
+// CHECK_C864GM7_M64: #define __AVX512BW__ 1
+// CHECK_C864GM7_M64: #define __AVX512CD__ 1
+// CHECK_C864GM7_M64: #define __AVX512DQ__ 1
+// CHECK_C864GM7_M64: #define __AVX512F__ 1
+// CHECK_C864GM7_M64: #define __AVX512IFMA__ 1
+// CHECK_C864GM7_M64: #define __AVX512VBMI2__ 1
+// CHECK_C864GM7_M64: #define __AVX512VBMI__ 1
+// CHECK_C864GM7_M64: #define __AVX512VL__ 1
+// CHECK_C864GM7_M64: #define __AVX512VNNI__ 1
+// CHECK_C864GM7_M64: #define __AVX512VPOPCNTDQ__ 1
+// CHECK_C864GM7_M64: #define __AVX__ 1
+// CHECK_C864GM7_M64: #define __BMI2__ 1
+// CHECK_C864GM7_M64: #define __BMI__ 1
+// CHECK_C864GM7_M64: #define __CLFLUSHOPT__ 1
+// CHECK_C864GM7_M64: #define __CLWB__ 1
+// CHECK_C864GM7_M64: #define __CLZERO__ 1
+// CHECK_C864GM7_M64: #define __CRC32__ 1
+// CHECK_C864GM7_M64: #define __F16C__ 1
+// CHECK_C864GM7_M64: #define __FMA__ 1
+// CHECK_C864GM7_M64: #define __FSGSBASE__ 1
+// CHECK_C864GM7_M64: #define __FXSR__ 1
+// CHECK_C864GM7_M64: #define __GFNI__ 1
+// CHECK_C864GM7_M64: #define __LZCNT__ 1
+// CHECK_C864GM7_M64: #define __MMX__ 1
+// CHECK_C864GM7_M64: #define __MOVBE__ 1
+// CHECK_C864GM7_M64: #define __MWAITX__ 1
+// CHECK_C864GM7_M64: #define __PCLMUL__ 1
+// CHECK_C864GM7_M64: #define __POPCNT__ 1
+// CHECK_C864GM7_M64: #define __PRFCHW__ 1
+// CHECK_C864GM7_M64: #define __RDRND__ 1
+// CHECK_C864GM7_M64: #define __RDSEED__ 1
+// CHECK_C864GM7_M64: #define __SHA__ 1
+// CHECK_C864GM7_M64: #define __SSE2_MATH__ 1
+// CHECK_C864GM7_M64: #define __SSE2__ 1
+// CHECK_C864GM7_M64: #define __SSE3__ 1
+// CHECK_C864GM7_M64: #define __SSE4A__ 1
+// CHECK_C864GM7_M64: #define __SSE4_1__ 1
+// CHECK_C864GM7_M64: #define __SSE4_2__ 1
+// CHECK_C864GM7_M64: #define __SSE_MATH__ 1
+// CHECK_C864GM7_M64: #define __SSE__ 1
+// CHECK_C864GM7_M64: #define __SSSE3__ 1
+// CHECK_C864GM7_M64: #define __VAES__ 1
+// CHECK_C864GM7_M64: #define __VPCLMULQDQ__ 1
+// CHECK_C864GM7_M64: #define __WBNOINVD__ 1
+// CHECK_C864GM7_M64: #define __XSAVEC__ 1
+// CHECK_C864GM7_M64: #define __XSAVEOPT__ 1
+// CHECK_C864GM7_M64: #define __XSAVES__ 1
+// CHECK_C864GM7_M64: #define __XSAVE__ 1
+// CHECK_C864GM7_M64: #define __c86_4g_m7__ 1
+// CHECK_C864GM7_M64: #define __tune_c86_4g_m7__ 1
+// CHECK_C864GM7_M64: #define __x86_64 1
+// CHECK_C864GM7_M64: #define __x86_64__ 1
+
 
 // End X86/GCC/Linux tests ------------------
 
@@ -4628,13 +4926,13 @@
 
 // Begin r600 tests ----------------
 
-// RUN: %clang -march=amdgcn -E -dM %s -o - 2>&1 \
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target r600-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600
 // CHECK_R600: #define __R600__ 1
 // CHECK_R600-NOT: #define __HAS_FMAF__ 1
 
-// RUN: %clang -march=amdgcn -mcpu=cypress -E -dM %s -o - 2>&1 \
+// RUN: %clang -mcpu=cypress -E -dM %s -o - 2>&1 \
 // RUN:     -target r600-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1

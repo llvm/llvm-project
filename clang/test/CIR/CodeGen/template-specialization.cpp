@@ -13,7 +13,7 @@ class Templ<T, int>{};
 
 Templ<int, int> t;
 
-// CIR: !rec_Templ3Cint2C_int3E = !cir.record<class "Templ<int, int>" padded {!u8i}>
+// CIR: !rec_Templ3Cint2C_int3E = !cir.struct<class "Templ<int, int>" padded {!u8i}>
 // CIR: cir.global external @t = #cir.zero : !rec_Templ3Cint2C_int3E
 
 // LLVM: %"class.Templ<int, int>" = type { i8 }

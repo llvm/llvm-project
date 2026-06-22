@@ -1332,6 +1332,7 @@ func.func @_QPtest_dummy_scalar_pointer_optional(%arg0: !fir.ref<!fir.array<?xi3
 // CHECK: omp.parallel
 // CHECK-NEXT: omp.wsloop
 // CHECK-NEXT: omp.loop_nest
+omp.private {type = private} @_QFtest_omp_loop_wrapperEi_private_i32 : i32
 func.func @_QPtest_omp_loop_wrapper(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
   %c10_i32 = arith.constant 10 : i32
   %c1_i32 = arith.constant 1 : i32
@@ -2405,6 +2406,7 @@ func.func @test_acc_loop_nested_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>
 // CHECK-NEXT:        omp.loop_nest
 // CHECK:               scf.if
 // CHECK:                 fir.convert %[[ARG0]]
+omp.private {type = private} @_QFtestEi_private_i32 : i32
 func.func @test_omp_wsloop_nested_canMoveFromDescendant(%arg0: !fir.ref<!fir.array<10xf32>>) {
   %cst = arith.constant 1.000000e+00 : f32
   %c10_i32 = arith.constant 10 : i32

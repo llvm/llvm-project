@@ -527,24 +527,23 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; SVE-FIXED-NEXT:    movi v1.2d, #0000000000000000
 ; SVE-FIXED-NEXT:    index z3.h, #0, #1
-; SVE-FIXED-NEXT:    mov x11, sp
+; SVE-FIXED-NEXT:    ptrue p0.h, vl4
+; SVE-FIXED-NEXT:    mov x9, sp
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    mov v1.h[0], w0
 ; SVE-FIXED-NEXT:    mov v1.h[1], w1
 ; SVE-FIXED-NEXT:    mov v1.h[2], w2
 ; SVE-FIXED-NEXT:    shl v2.4h, v1.4h, #15
-; SVE-FIXED-NEXT:    fmov x8, d1
+; SVE-FIXED-NEXT:    orv h1, p0, z1.h
 ; SVE-FIXED-NEXT:    cmlt v2.4h, v2.4h, #0
-; SVE-FIXED-NEXT:    lsr x9, x8, #32
-; SVE-FIXED-NEXT:    orr w9, w8, w9
 ; SVE-FIXED-NEXT:    and v2.8b, v2.8b, v3.8b
-; SVE-FIXED-NEXT:    orr w8, w9, w8, lsr #16
-; SVE-FIXED-NEXT:    tst w8, #0x1
 ; SVE-FIXED-NEXT:    umaxv h2, v2.4h
-; SVE-FIXED-NEXT:    fmov w10, s2
-; SVE-FIXED-NEXT:    bfi x11, x10, #2, #2
-; SVE-FIXED-NEXT:    ldr w9, [x11]
-; SVE-FIXED-NEXT:    csinv w0, w9, wzr, ne
+; SVE-FIXED-NEXT:    fmov w8, s2
+; SVE-FIXED-NEXT:    bfi x9, x8, #2, #2
+; SVE-FIXED-NEXT:    ldr w8, [x9]
+; SVE-FIXED-NEXT:    fmov w9, s1
+; SVE-FIXED-NEXT:    tst w9, #0x1
+; SVE-FIXED-NEXT:    csinv w0, w8, wzr, ne
 ; SVE-FIXED-NEXT:    add sp, sp, #16
 ; SVE-FIXED-NEXT:    ret
   %res = call i32 @llvm.experimental.vector.extract.last.active.v3i32(<3 x i32> %a, <3 x i1> %c, i32 -1)

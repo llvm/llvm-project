@@ -29,8 +29,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace Fortran::frontend;
@@ -385,6 +385,8 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
   tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
+  tOpts.FunctionSections = CGOpts.FunctionSections;
+  tOpts.DataSections = CGOpts.DataSections;
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

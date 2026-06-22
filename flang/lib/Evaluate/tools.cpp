@@ -1210,8 +1210,7 @@ bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
     return details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Constant);
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device);
   }
   return false;
 }
@@ -2531,7 +2530,7 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
 bool IsBuiltinCPtr(const Symbol &symbol) {
   if (const DeclTypeSpec *declType = symbol.GetType()) {
     if (const DerivedTypeSpec *derived = declType->AsDerived()) {
-      return IsIsoCType(derived);
+      return IsIsoCType(derived) || IsBuiltinDerivedType(derived, "c_devptr");
     }
   }
   return false;

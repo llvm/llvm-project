@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Unit tests for union RecordType::getTypeSizeInBits.
+// Unit tests for UnionType: getTypeSizeInBits and isLayoutIdentical.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,8 +32,8 @@ protected:
 
 TEST_F(UnionTypeSizeTest, SizeInBitsNotBytes) {
   IntType i32 = IntType::get(&context, 32, true);
-  auto ty = RecordType::get(&context, getName("U"), RecordType::Union);
-  ty.complete({i32}, /*packed=*/false, /*padded=*/false);
+  auto ty = UnionType::get(&context, getName("U"));
+  ty.complete({i32}, /*packed=*/false, /*padding=*/mlir::Type{});
 
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
@@ -49,8 +49,8 @@ TEST_F(UnionTypeSizeTest, SizeInBitsNotBytes) {
 TEST_F(UnionTypeSizeTest, MultiMemberUnion) {
   IntType i32 = IntType::get(&context, 32, true);
   IntType i64 = IntType::get(&context, 64, true);
-  auto ty = RecordType::get(&context, getName("U2"), RecordType::Union);
-  ty.complete({i32, i64}, /*packed=*/false, /*padded=*/false);
+  auto ty = UnionType::get(&context, getName("U2"));
+  ty.complete({i32, i64}, /*packed=*/false, /*padding=*/mlir::Type{});
 
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
@@ -64,8 +64,8 @@ TEST_F(UnionTypeSizeTest, MultiMemberUnion) {
 }
 
 TEST_F(UnionTypeSizeTest, EmptyUnion) {
-  auto ty = RecordType::get(&context, getName("Empty"), RecordType::Union);
-  ty.complete({}, /*packed=*/false, /*padded=*/false);
+  auto ty = UnionType::get(&context, getName("Empty"));
+  ty.complete({}, /*packed=*/false, /*padding=*/mlir::Type{});
 
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
@@ -76,4 +76,34 @@ TEST_F(UnionTypeSizeTest, EmptyUnion) {
   EXPECT_EQ(size.getFixedValue(), 0u);
 
   module->erase();
+}
+
+TEST_F(UnionTypeSizeTest, IsLayoutIdenticalNoPadding) {
+  IntType i32 = IntType::get(&context, 32, true);
+  auto ty1 = UnionType::get(&context, getName("Ua"));
+  ty1.complete({i32}, /*packed=*/false, /*padding=*/mlir::Type{});
+  auto ty2 = UnionType::get(&context, getName("Ub"));
+  ty2.complete({i32}, /*packed=*/false, /*padding=*/mlir::Type{});
+  EXPECT_TRUE(ty1.isLayoutIdentical(ty2));
+}
+
+TEST_F(UnionTypeSizeTest, IsLayoutIdenticalDifferentPadding) {
+  IntType i32 = IntType::get(&context, 32, true);
+  IntType i8 = IntType::get(&context, 8, false);
+  IntType i16 = IntType::get(&context, 16, false);
+  auto ty1 = UnionType::get(&context, getName("Upad1"));
+  ty1.complete({i32}, /*packed=*/false, /*padding=*/i8);
+  auto ty2 = UnionType::get(&context, getName("Upad2"));
+  ty2.complete({i32}, /*packed=*/false, /*padding=*/i16);
+  EXPECT_FALSE(ty1.isLayoutIdentical(ty2));
+}
+
+TEST_F(UnionTypeSizeTest, IsLayoutIdenticalSamePadding) {
+  IntType i32 = IntType::get(&context, 32, true);
+  IntType i8 = IntType::get(&context, 8, false);
+  auto ty1 = UnionType::get(&context, getName("Upad3"));
+  ty1.complete({i32}, /*packed=*/false, /*padding=*/i8);
+  auto ty2 = UnionType::get(&context, getName("Upad4"));
+  ty2.complete({i32}, /*packed=*/false, /*padding=*/i8);
+  EXPECT_TRUE(ty1.isLayoutIdentical(ty2));
 }

@@ -41,23 +41,38 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     header.merge_yaml_files = yaml_data.get("merge_yaml_files", [])
 
     for macro_data in yaml_data.get("macros", []):
-        header.add_macro(
-            Macro(
-                macro_data["macro_name"],
-                macro_data.get("macro_value"),
-                macro_data.get("macro_header"),
-            )
+        macro = Macro(
+            macro_data["macro_name"],
+            macro_data.get("macro_value"),
+            macro_data.get("macro_header"),
         )
+        macro.standards = macro_data.get("standards", [])
+        header.add_macro(macro)
 
     types = yaml_data.get("types", [])
     sorted_types = sorted(types, key=lambda x: x["type_name"])
     for type_data in sorted_types:
-        header.add_type(Type(type_data["type_name"]))
+        type_name = type_data["type_name"]
+        type_guard = type_data.get("guard")
+        # If a type has a guard, the macro it references must exist in
+        # the same yaml file with a macro_header attribute.
+        if type_guard is not None and not any(
+            macro_data["macro_name"] == type_guard and "macro_header" in macro_data
+            for macro_data in yaml_data.get("macros", [])
+        ):
+            raise ValueError(
+                f"Type '{type_name}' has guard '{type_guard}' but no macro with "
+                f"macro_header '{type_guard}' was found in this file."
+            )
+
+        typ = Type(type_name, type_guard)
+        typ.standards = type_data.get("standards", [])
+        header.add_type(typ)
 
     for enum_data in yaml_data.get("enums", []):
-        header.add_enumeration(
-            Enumeration(enum_data["name"], enum_data.get("value", None))
-        )
+        enum = Enumeration(enum_data["name"], enum_data.get("value", None))
+        enum.standards = enum_data.get("standards", [])
+        header.add_enumeration(enum)
 
     functions = yaml_data.get("functions", [])
     if entry_points:
@@ -109,10 +124,9 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
     objects = yaml_data.get("objects", [])
     sorted_objects = sorted(objects, key=lambda x: x["object_name"])
     for object_data in sorted_objects:
-        header.add_object(
-            Object(object_data["object_name"], object_data["object_type"])
-        )
-
+        obj = Object(object_data["object_name"], object_data["object_type"])
+        obj.standards = object_data.get("standards", [])
+        header.add_object(obj)
     return header
 
 

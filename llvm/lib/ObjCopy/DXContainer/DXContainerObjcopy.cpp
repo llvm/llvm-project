@@ -64,7 +64,7 @@ static Error dumpPartToFile(StringRef PartName, StringRef Filename,
   // documentation on the DXContainer format can be found at
   // https://llvm.org/docs/DirectX/DXContainer.html.
 
-  if (PartName == "DXIL" || PartName == "STAT")
+  if (llvm::dxbc::isProgramPart(PartName) || PartName == "STAT")
     Contents = Contents.drop_front(sizeof(llvm::dxbc::ProgramHeader));
   if (Contents.empty())
     return createFileError(Filename, object_error::parse_failed,

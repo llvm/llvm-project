@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -191,6 +192,8 @@ protected:
           "'settings set' command requires a valid variable name");
       return;
     }
+
+    LLDB_LOG(GetLog(SystemLog::System), "settings set {0}", command);
 
     // A missing value corresponds to clearing the setting when "force" is
     // specified.
@@ -409,6 +412,7 @@ protected:
     if (args.empty()) {
       GetDebugger().DumpAllPropertyValues(&clean_ctx, out_file,
                                           OptionValue::eDumpGroupExport);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
 
@@ -419,6 +423,8 @@ protected:
         result.AppendError(error.AsCString());
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
 private:

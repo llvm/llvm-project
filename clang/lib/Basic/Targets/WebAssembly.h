@@ -69,6 +69,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -111,6 +112,8 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
+    if (T.getOS() == llvm::Triple::WASIp3)
+      HasLibcallThreadContext = true;
   }
 
   StringRef getABI() const override;
@@ -184,7 +187,7 @@ private:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return CCCR_Error;
+      return HasTailCall ? CCCR_OK : CCCR_Error;
     default:
       return CCCR_Warning;
     }

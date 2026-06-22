@@ -303,10 +303,12 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
 
-  unsigned DynamicVGPRBlockSize = 0;
+  std::optional<unsigned> DynamicVGPRBlockSize;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   unsigned NumKernargPreloadSGPRs = 0;
+
+  unsigned MinNumAGPRs = ~0u;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -360,11 +362,12 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
-    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
+    YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
 };
 
@@ -753,6 +756,16 @@ public:
                                 SGPRSaveKind::SPILL_TO_VGPR_LANE &&
                             SI.second.getIndex() == FI;
                    }) != PrologEpilogSGPRSpills.end();
+  }
+
+  // Remove if an entry created for \p Reg.
+  void removePrologEpilogSGPRSpillEntry(Register Reg) {
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    if (I == PrologEpilogSGPRSpills.end())
+      return;
+
+    PrologEpilogSGPRSpills.erase(I);
   }
 
   const PrologEpilogSGPRSaveRestoreInfo &

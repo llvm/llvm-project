@@ -16,7 +16,7 @@
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
     !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__) &&      \
     !defined(__wasi__) && !defined(__NVPTX__) && !defined(__AMDGPU__) &&    \
-    !defined(__SPIRV__)
+    !defined(__SPIRV__) && !defined(_AIX)
 #  error "This operating system is not supported"
 #endif
 
@@ -31,6 +31,12 @@
 #  define SANITIZER_LINUX 1
 #else
 #  define SANITIZER_LINUX 0
+#endif
+
+#if defined(_AIX)
+#  define SANITIZER_AIX 1
+#else
+#  define SANITIZER_AIX 0
 #endif
 
 #if defined(__GLIBC__)
@@ -152,7 +158,7 @@
 
 #define SANITIZER_POSIX                                       \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE || \
-   SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU)
+   SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU || SANITIZER_AIX)
 
 #if __LP64__ || defined(_WIN64)
 #  define SANITIZER_WORDSIZE 64
@@ -301,6 +307,12 @@
 #  define SANITIZER_LOONGARCH64 1
 #else
 #  define SANITIZER_LOONGARCH64 0
+#endif
+
+#if defined(__alpha__)
+#  define SANITIZER_ALPHA 1
+#else
+#  define SANITIZER_ALPHA 0
 #endif
 
 #if defined(__AMDGPU__)

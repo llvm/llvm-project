@@ -9,8 +9,8 @@ target triple = "x86_64-unknown-linux"
 !cfi.functions = !{!0, !1}
 !symvers = !{!3, !4}
 
-!0 = !{!"external_addrtaken", i8 0, !2}
-!1 = !{!"external_addrtaken2", i8 0, !2}
+!0 = !{!"external_addrtaken", i8 0, i64 16594175687743574550, !2}
+!1 = !{!"external_addrtaken2", i8 0, i64 2415377257478301385, !2}
 !2 = !{i64 0, !"typeid1"}
 !3 = !{!"external_addrtaken", !"alias1"}
 !4 = !{!"not_exported", !"alias2"}

@@ -84,8 +84,8 @@ void DebugContainerModeling::analyzerContainerDataField(const CallExpr *CE,
     if (Data) {
       SymbolRef Field = get(Data);
       if (Field) {
-        State = State->BindExpr(CE, C.getLocationContext(),
-                                nonloc::SymbolVal(Field));
+        State =
+            State->BindExpr(CE, C.getStackFrame(), nonloc::SymbolVal(Field));
 
         // Progpagate interestingness from the container's data (marked
         // interesting by an `ExprInspection` debug call to the container
@@ -105,8 +105,9 @@ void DebugContainerModeling::analyzerContainerDataField(const CallExpr *CE,
   }
 
   auto &BVF = C.getSValBuilder().getBasicValueFactory();
-  State = State->BindExpr(CE, C.getLocationContext(),
-                   nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
+  State =
+      State->BindExpr(CE, C.getStackFrame(),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))));
 }
 
 void DebugContainerModeling::analyzerContainerBegin(const CallExpr *CE,

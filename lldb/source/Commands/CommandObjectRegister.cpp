@@ -220,6 +220,8 @@ protected:
         }
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   class CommandOptions : public OptionGroup {

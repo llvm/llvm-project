@@ -10,6 +10,7 @@
 
 #include "flang/Runtime/exceptions.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Common/fp-control.h"
 #include <cfenv>
 #if defined(__aarch64__) && defined(__GLIBC__)
 #include <fpu_control.h>
@@ -88,6 +89,7 @@ uint32_t RTDEF(MapException)(uint32_t excepts) {
 // component; both are needed.
 
 void RTNAME(feclearexcept)(uint32_t excepts) {
+  FLANG_FP_TRAP_ON
   feclearexcept(excepts);
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() & ~(excepts & _MM_EXCEPT_MASK));
@@ -95,6 +97,7 @@ void RTNAME(feclearexcept)(uint32_t excepts) {
 }
 void RTDEF(feraiseexcept)(uint32_t excepts) {
 #if !defined(RT_DEVICE_COMPILATION)
+  FLANG_FP_TRAP_ON
   feraiseexcept(excepts);
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() | (excepts & _MM_EXCEPT_MASK));
@@ -102,6 +105,7 @@ void RTDEF(feraiseexcept)(uint32_t excepts) {
 #endif
 }
 uint32_t RTNAME(fetestexcept)(uint32_t excepts) {
+  FLANG_FP_TRAP_ON
 #if defined(_MM_EXCEPT_DENORM)
   return (_mm_getcsr() & _MM_EXCEPT_MASK & excepts) | fetestexcept(excepts);
 #else

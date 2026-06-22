@@ -212,15 +212,15 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-LARGE-NEXT:    .cfi_offset ra, -8
 ; RV64I-LARGE-NEXT:    li t0, 10
-; RV64I-LARGE-NEXT:    li t1, 9
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi1:
-; RV64I-LARGE-NEXT:    auipc a5, %pcrel_hi(.LCPI3_0)
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
+; RV64I-LARGE-NEXT:    li t1, 9
+; RV64I-LARGE-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64I-LARGE-NEXT:    li a0, 1
 ; RV64I-LARGE-NEXT:    li a1, 2
 ; RV64I-LARGE-NEXT:    li a2, 3
 ; RV64I-LARGE-NEXT:    li a3, 4
 ; RV64I-LARGE-NEXT:    li a4, 5
-; RV64I-LARGE-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi1)(a5)
 ; RV64I-LARGE-NEXT:    li a5, 6
 ; RV64I-LARGE-NEXT:    li a6, 7
 ; RV64I-LARGE-NEXT:    li a7, 8

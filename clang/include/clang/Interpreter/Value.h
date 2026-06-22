@@ -98,7 +98,7 @@ class REPL_EXTERNAL_VISIBILITY Value {
     REPL_BUILTIN_TYPES
 #undef X
     void *m_Ptr;
-    unsigned char m_RawBits[sizeof(long double) * 8]; // widest type
+    unsigned char m_RawBits[sizeof(long double)]; // widest typed member
   };
 
 public:
@@ -140,7 +140,10 @@ public:
 
   void *getPtr() const;
   void setPtr(void *Ptr) { Data.m_Ptr = Ptr; }
-  void setRawBits(void *Ptr, unsigned NBits = sizeof(Storage));
+  /// Copy `NBytes` bytes from `Ptr` into the raw storage. Default copies
+  /// the full Storage width. Used by the value printer to read a single
+  /// array element through a typed lens without an extra heap allocation.
+  void setRawBits(void *Ptr, unsigned NBytes = sizeof(Storage));
 
 #define X(type, name)                                                          \
   void set##name(type Val) { Data.m_##name = Val; }                            \

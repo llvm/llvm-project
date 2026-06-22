@@ -148,3 +148,6 @@ X test24() {
 // CHECK: _Z6test24v
 // CHECK-NOT: eh.resume
 // CHECK-NOT: unreachable
+
+/// Used to crash in codegen because the cast worked.
+auto MemcpySemantics = *(_Complex double *)&(float[2]){};

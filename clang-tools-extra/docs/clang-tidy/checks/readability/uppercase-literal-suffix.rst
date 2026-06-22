@@ -7,8 +7,6 @@ readability-uppercase-literal-suffix
 By default, only the suffixes that begin with ``l`` (``l``, ``ll``, ``lu``,
 ``llu``, but not ``u``, ``ul``, ``ull``) are diagnosed by that alias.
 
-`hicpp-uppercase-literal-suffix` redirects here as an alias for this check.
-
 Detects when the integral literal or floating point (decimal or hexadecimal)
 literal has a non-uppercase suffix and provides a fix-it hint with the
 uppercase suffix.

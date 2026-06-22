@@ -41,7 +41,7 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
 
 static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
   uint64_t Offset = 0;
-  DataExtractor AbbrevData(Abbrev, true, 0);
+  DataExtractor AbbrevData(Abbrev, true);
   while (AbbrevData.getULEB128(&Offset) != AbbrCode) {
     // Tag
     AbbrevData.getULEB128(&Offset);
@@ -83,19 +83,19 @@ getIndexedString(dwarf::Form Form, DataExtractor InfoData, uint64_t &InfoOffset,
         "DW_FORM_string, DW_FORM_strx, DW_FORM_strx1, DW_FORM_strx2, "
         "DW_FORM_strx3, DW_FORM_strx4, or DW_FORM_GNU_str_index.");
   }
-  DataExtractor StrOffsetsData(StrOffsets, true, 0);
+  DataExtractor StrOffsetsData(StrOffsets, true);
   uint64_t StrOffsetsOffset = 4 * StrIndex;
   StrOffsetsOffset += debugStrOffsetsHeaderSize(StrOffsetsData, Version);
 
   uint64_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
-  DataExtractor StrData(Str, true, 0);
+  DataExtractor StrData(Str, true);
   return StrData.getCStr(&StrOffset);
 }
 
 static Expected<CompileUnitIdentifiers>
 getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
                  StringRef Info, StringRef StrOffsets, StringRef Str) {
-  DataExtractor InfoData(Info, true, 0);
+  DataExtractor InfoData(Info, true);
   uint64_t Offset = Header.HeaderSize;
   if (Header.Version >= 5 && Header.UnitType != dwarf::DW_UT_split_compile)
     return make_error<DWPError>(
@@ -106,7 +106,7 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
   CompileUnitIdentifiers ID;
 
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
-  DataExtractor AbbrevData(Abbrev, true, 0);
+  DataExtractor AbbrevData(Abbrev, true);
   uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
@@ -258,7 +258,7 @@ static Error addAllTypesFromTypesSection(
   for (StringRef Types : TypesSections) {
     Out.switchSection(OutputSection);
     uint64_t Offset = 0;
-    DataExtractor Data(Types, true, 0);
+    DataExtractor Data(Types, true);
     while (Data.isValidOffset(Offset)) {
       UnitIndexEntry Entry = CUEntry;
       // Zero out the debug_info contribution
@@ -465,7 +465,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
   // Pre-reserve based on estimated string count to avoid rehashing.
   OffsetRemapping.reserve(CurStrSection.size() / 20);
 
-  DataExtractor Data(CurStrSection, true, 0);
+  DataExtractor Data(CurStrSection, true);
   uint64_t LocalOffset = 0;
   uint64_t PrevOffset = 0;
 
@@ -476,6 +476,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
   uint32_t OldOffsetSize = 4;
   uint32_t NewOffsetSize =
       StrOffsetsOptValue == Dwarf64StrOffsetsPromotion::Always ? 8 : 4;
+  Out.switchSection(DS_Str);
   while (const char *S = Data.getCStr(&LocalOffset)) {
     uint64_t NewOffset = Strings.getOffset(S, LocalOffset - PrevOffset);
     OffsetRemapping[PrevOffset] = NewOffset;
@@ -487,7 +488,7 @@ writeStringsAndOffsets(DWPWriter &Out, DWPStringPool &Strings,
     PrevOffset = LocalOffset;
   }
 
-  Data = DataExtractor(CurStrOffsetSection, true, 0);
+  Data = DataExtractor(CurStrOffsetSection, true);
 
   Out.switchSection(DS_StrOffsets);
 
@@ -732,7 +733,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
   StringRef FirstInput;
   bool AnySectionOverflow = false;
 
-  DWPStringPool Strings(Out.getSectionBuffer(DS_Str));
+  DWPStringPool Strings(Out);
 
   SmallVector<OwningBinary<object::ObjectFile>, 128> Objects;
   Objects.reserve(Inputs.size());
@@ -757,7 +758,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
     if (!MachineSet) {
       if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
         Out.setMachine(ELFObj->getEMachine());
-        Out.setOSABI(ELFObj->getOS());
+        Out.setOSABI(ELFObj->getEIdentOSABI());
       } else if (Obj.isWasm()) {
         Out.setIsWASM(true);
       }
@@ -919,7 +920,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
     StringRef DwpSingleInfoSection = CurInfoSection.front();
 
     DWARFUnitIndex CUIndex(DW_SECT_INFO);
-    DataExtractor CUIndexData(CurCUIndexSection, Obj.isLittleEndian(), 0);
+    DataExtractor CUIndexData(CurCUIndexSection, Obj.isLittleEndian());
     if (!CUIndex.parse(CUIndexData))
       return make_error<DWPError>("failed to parse cu_index");
     if (CUIndex.getVersion() != IndexVersion)
@@ -992,7 +993,7 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
       }
 
       DWARFUnitIndex TUIndex(TUSectionKind);
-      DataExtractor TUIndexData(CurTUIndexSection, Obj.isLittleEndian(), 0);
+      DataExtractor TUIndexData(CurTUIndexSection, Obj.isLittleEndian());
       if (!TUIndex.parse(TUIndexData))
         return make_error<DWPError>("failed to parse tu_index");
       if (TUIndex.getVersion() != IndexVersion)

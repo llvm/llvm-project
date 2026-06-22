@@ -26,13 +26,13 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> chmod(const char *path, mode_t mode) {
-#ifdef SYS_chmod
-  int ret = syscall_impl<int>(SYS_chmod, path, mode);
-#elif defined(SYS_fchmodat)
+#ifdef SYS_fchmodat
   int ret = syscall_impl<int>(SYS_fchmodat, AT_FDCWD, path, mode, 0);
 #elif defined(SYS_fchmodat2)
   int ret = syscall_impl<int>(SYS_fchmodat2, AT_FDCWD, path, mode, 0,
                               AT_SYMLINK_NOFOLLOW);
+#elif defined(SYS_chmod)
+  int ret = syscall_impl<int>(SYS_chmod, path, mode);
 #else
 #error "chmod, fchmodat and fchmodat2 syscalls not available."
 #endif

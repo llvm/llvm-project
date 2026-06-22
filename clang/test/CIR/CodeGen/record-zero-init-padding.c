@@ -35,10 +35,10 @@ void test_zero_init_padding(void) {
 }
 
 // Type definitions for anonymous structs with padding
-// CIR-DAG: !rec_anon_struct = !cir.record<struct  {!s8i, !u8i, !s16i, !cir.array<!u8i x 4>, !s64i}>
-// CIR-DAG: !rec_anon_struct1 = !cir.record<struct  {!s32i, !s8i, !cir.array<!u8i x 3>}>
-// CIR-DAG: !rec_anon_struct2 = !cir.record<struct  {!u8i, !cir.array<!u8i x 3>, !s32i}>
-// CIR-DAG: !rec_anon_struct3 = !cir.record<struct  {!s8i, !cir.array<!u8i x 3>, !s32i}>
+// CIR-DAG: !rec_anon_struct = !cir.struct<{!s8i, !u8i, !s16i, !cir.array<!u8i x 4>, !s64i}>
+// CIR-DAG: !rec_anon_struct1 = !cir.struct<{!s32i, !s8i, !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_anon_struct2 = !cir.struct<{!u8i, !cir.array<!u8i x 3>, !s32i}>
+// CIR-DAG: !rec_anon_struct3 = !cir.struct<{!s8i, !cir.array<!u8i x 3>, !s32i}>
 
 // paf: char + 3 bytes padding + int -> uses !rec_anon_struct3
 // CIR-DAG: cir.global "private" constant internal dso_local @test_zero_init_padding.paf = #cir.const_record<{

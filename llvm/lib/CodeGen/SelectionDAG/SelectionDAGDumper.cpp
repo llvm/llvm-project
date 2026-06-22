@@ -307,6 +307,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CLMUL:                      return "clmul";
   case ISD::CLMULR:                     return "clmulr";
   case ISD::CLMULH:                     return "clmulh";
+  case ISD::PEXT:                       return "pext";
+  case ISD::PDEP:                       return "pdep";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -436,6 +438,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FP_TO_BF16:                 return "fp_to_bf16";
   case ISD::STRICT_FP_TO_BF16:          return "strict_fp_to_bf16";
   case ISD::CONVERT_FROM_ARBITRARY_FP:  return "convert_from_arbitrary_fp";
+  case ISD::CONVERT_TO_ARBITRARY_FP:    return "convert_to_arbitrary_fp";
   case ISD::LROUND:                     return "lround";
   case ISD::STRICT_LROUND:              return "strict_lround";
   case ISD::LLROUND:                    return "llround";
@@ -517,13 +520,14 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";
+  case ISD::ABS_MIN_POISON:             return "abs_min_poison";
   case ISD::BITREVERSE:                 return "bitreverse";
   case ISD::BSWAP:                      return "bswap";
   case ISD::CTPOP:                      return "ctpop";
   case ISD::CTTZ:                       return "cttz";
-  case ISD::CTTZ_ZERO_UNDEF:            return "cttz_zero_undef";
+  case ISD::CTTZ_ZERO_POISON:           return "cttz_zero_poison";
   case ISD::CTLZ:                       return "ctlz";
-  case ISD::CTLZ_ZERO_UNDEF:            return "ctlz_zero_undef";
+  case ISD::CTLZ_ZERO_POISON:           return "ctlz_zero_poison";
   case ISD::CTLS:                       return "ctls";
   case ISD::PARITY:                     return "parity";
 

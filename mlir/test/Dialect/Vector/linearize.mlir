@@ -575,3 +575,31 @@ func.func @to_elements_2d(%arg0: vector<2x2xf32>) -> (f32, f32, f32, f32) {
   %0:4 = vector.to_elements %arg0 : vector<2x2xf32>
   return %0#0, %0#1, %0#2, %0#3 : f32, f32, f32, f32
 }
+
+// -----
+
+// CHECK-LABEL: linearize_vector_interleave
+// CHECK-SAME: (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<2x4xf32>) -> vector<2x8xf32>
+func.func @linearize_vector_interleave(%arg0: vector<2x4xf32>, %arg1: vector<2x4xf32>) -> vector<2x8xf32> {
+  // CHECK-DAG: %[[LHS:.*]] = vector.shape_cast %[[ARG0]] : vector<2x4xf32> to vector<8xf32>
+  // CHECK-DAG: %[[RHS:.*]] = vector.shape_cast %[[ARG1]] : vector<2x4xf32> to vector<8xf32>
+  // CHECK: %[[INTERLEAVE:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<8xf32> -> vector<16xf32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[INTERLEAVE]] : vector<16xf32> to vector<2x8xf32>
+  // CHECK: return %[[CAST]] : vector<2x8xf32>
+  %0 = vector.interleave %arg0, %arg1 : vector<2x4xf32> -> vector<2x8xf32>
+  return %0 : vector<2x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: linearize_vector_deinterleave
+// CHECK-SAME: (%[[ARG0:.*]]: vector<2x8xf32>) -> (vector<2x4xf32>, vector<2x4xf32>)
+func.func @linearize_vector_deinterleave(%arg0: vector<2x8xf32>) -> (vector<2x4xf32>, vector<2x4xf32>) {
+  // CHECK: %[[SRC:.*]] = vector.shape_cast %[[ARG0]] : vector<2x8xf32> to vector<16xf32>
+  // CHECK: %[[EVEN:.*]], %[[ODD:.*]] = vector.deinterleave %[[SRC]] : vector<16xf32> -> vector<8xf32>
+  // CHECK: %[[ODD_CAST:.*]] = vector.shape_cast %[[ODD]] : vector<8xf32> to vector<2x4xf32>
+  // CHECK: %[[EVEN_CAST:.*]] = vector.shape_cast %[[EVEN]] : vector<8xf32> to vector<2x4xf32>
+  // CHECK: return %[[EVEN_CAST]], %[[ODD_CAST]] : vector<2x4xf32>, vector<2x4xf32>
+  %even, %odd = vector.deinterleave %arg0 : vector<2x8xf32> -> vector<2x4xf32>
+  return %even, %odd : vector<2x4xf32>, vector<2x4xf32>
+}

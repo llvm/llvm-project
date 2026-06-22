@@ -58,6 +58,29 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
 }
 } // namespace mlir::dataflow
 
+/// Number of merge-site joins a single integer-range lattice element is
+/// allowed to absorb before `IntegerValueRangeLattice::join` forces it to
+/// its max as a sound over-approximation.
+///
+/// Trade-off: high enough that realistic loops with dynamic bounds (which
+/// typically converge to a tight range in a small number of merge
+/// iterations) are not widened prematurely; low enough that the +1
+/// ratchet pathology this widening exists to cut off (loop-carried ranges
+/// growing by one per worklist visit) terminates after at most this many
+/// extra solver iterations rather than ~2^31.
+static constexpr unsigned kIntegerRangeWideningBudget = 128;
+
+ChangeResult IntegerValueRangeLattice::join(const AbstractSparseLattice &rhs) {
+  ChangeResult changed = Lattice::join(rhs);
+  if (mergeChangeCount >= kIntegerRangeWideningBudget) {
+    return changed | Lattice::join(IntegerValueRange::getMaxRange(
+                         cast<Value>(getAnchor())));
+  }
+  if (changed == ChangeResult::Change)
+    ++mergeChangeCount;
+  return changed;
+}
+
 LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
@@ -82,23 +105,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
 
     LDBG() << "Inferred range " << attrs;
     IntegerValueRangeLattice *lattice = results[result.getResultNumber()];
-    IntegerValueRange oldRange = lattice->getValue();
-
-    ChangeResult changed = lattice->join(attrs);
-
-    // Catch loop results with loop variant bounds and conservatively make
-    // them [-inf, inf] so we don't circle around infinitely often (because
-    // the dataflow analysis in MLIR doesn't attempt to work out trip counts
-    // and often can't).
-    bool isYieldedResult = llvm::any_of(v.getUsers(), [](Operation *op) {
-      return op->hasTrait<OpTrait::IsTerminator>();
-    });
-    if (isYieldedResult && !oldRange.isUninitialized() &&
-        !(lattice->getValue() == oldRange)) {
-      LDBG() << "Loop variant loop result detected";
-      changed |= lattice->join(IntegerValueRange::getMaxRange(v));
-    }
-    propagateIfChanged(lattice, changed);
+    propagateIfChanged(lattice, lattice->join(attrs));
   };
 
   inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
@@ -132,23 +139,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
           std::distance(successor.getSuccessor()->getArguments().begin(), it);
       IntegerValueRangeLattice *lattice =
           nonSuccessorInputLattices[nonSuccessorInputIdx];
-      IntegerValueRange oldRange = lattice->getValue();
-
-      ChangeResult changed = lattice->join(attrs);
-
-      // Catch loop results with loop variant bounds and conservatively make
-      // them [-inf, inf] so we don't circle around infinitely often (because
-      // the dataflow analysis in MLIR doesn't attempt to work out trip counts
-      // and often can't).
-      bool isYieldedValue = llvm::any_of(v.getUsers(), [](Operation *op) {
-        return op->hasTrait<OpTrait::IsTerminator>();
-      });
-      if (isYieldedValue && !oldRange.isUninitialized() &&
-          !(lattice->getValue() == oldRange)) {
-        LDBG() << "Loop variant loop result detected";
-        changed |= lattice->join(IntegerValueRange::getMaxRange(v));
-      }
-      propagateIfChanged(lattice, changed);
+      propagateIfChanged(lattice, lattice->join(attrs));
     };
 
     inferrable.inferResultRangesFromOptional(argRanges, joinCallback);

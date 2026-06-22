@@ -11,7 +11,6 @@
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -381,7 +380,7 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
 
   return lldb::ChildCacheState::eRefetch;
 }

@@ -4825,7 +4825,7 @@ bool
 ARMBaseInstrInfo::isFpMLxInstruction(unsigned Opcode, unsigned &MulOpc,
                                      unsigned &AddSubOpc,
                                      bool &NegAcc, bool &HasLane) const {
-  DenseMap<unsigned, unsigned>::const_iterator I = MLxEntryMap.find(Opcode);
+  auto I = MLxEntryMap.find(Opcode);
   if (I == MLxEntryMap.end())
     return false;
 
@@ -5827,9 +5827,11 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
   } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
              LastInstrOpcode == ARM::BLX_noip || LastInstrOpcode == ARM::tBL ||
-             LastInstrOpcode == ARM::tBLXr ||
-             LastInstrOpcode == ARM::tBLXr_noip ||
-             LastInstrOpcode == ARM::tBLXi) {
+             LastInstrOpcode == ARM::tBLXi ||
+             ((LastInstrOpcode == ARM::tBLXr ||
+               LastInstrOpcode == ARM::tBLXr_noip) &&
+              ARM::tcGPRRegClass.contains(
+                  RepeatedSequenceLocs[0].back().getOperand(2).getReg()))) {
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = Costs.FrameThunk;
     SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);

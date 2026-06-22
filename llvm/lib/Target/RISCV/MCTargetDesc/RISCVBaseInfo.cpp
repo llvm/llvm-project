@@ -13,6 +13,7 @@
 
 #include "RISCVBaseInfo.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -59,6 +60,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
   bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
+  bool IsXCheriot = FeatureBits[RISCV::FeatureVendorXCheriot];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -72,11 +74,16 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (!IsRV64 && IsRVE && TargetABI != ABI_ILP32E &&
+  } else if (!IsRV64 && IsRVE && !IsXCheriot && TargetABI != ABI_ILP32E &&
              TargetABI != ABI_Unknown) {
     // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
     errs()
         << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
+    TargetABI = ABI_Unknown;
+  } else if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
+             TargetABI != ABI_Unknown) {
+    errs() << "Only the cheriot ABI is supported for XCheriot (ignoring "
+              "target-abi)\n";
     TargetABI = ABI_Unknown;
   } else if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
              TargetABI != ABI_Unknown) {
@@ -107,10 +114,18 @@ ABI getTargetABI(StringRef ABIName) {
                        .Case("ilp32f", ABI_ILP32F)
                        .Case("ilp32d", ABI_ILP32D)
                        .Case("ilp32e", ABI_ILP32E)
+                       .Case("il32pc64", ABI_IL32PC64)
+                       .Case("il32pc64f", ABI_IL32PC64F)
+                       .Case("il32pc64d", ABI_IL32PC64D)
+                       .Case("il32pc64e", ABI_IL32PC64E)
                        .Case("lp64", ABI_LP64)
                        .Case("lp64f", ABI_LP64F)
                        .Case("lp64d", ABI_LP64D)
                        .Case("lp64e", ABI_LP64E)
+                       .Case("l64pc128", ABI_L64PC128)
+                       .Case("l64pc128f", ABI_L64PC128F)
+                       .Case("l64pc128d", ABI_L64PC128D)
+                       .Case("cheriot", ABI_CHERIOT)
                        .Default(ABI_Unknown);
   return TargetABI;
 }

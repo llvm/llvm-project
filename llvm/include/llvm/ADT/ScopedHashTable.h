@@ -219,8 +219,7 @@ public:
   iterator end() { return iterator(nullptr); }
 
   iterator begin(const K &Key) {
-    typename DenseMap<K, ValTy*, KInfo>::iterator I =
-      TopLevelMap.find(Key);
+    auto I = TopLevelMap.find(Key);
     if (I == TopLevelMap.end()) return end();
     return iterator(I->second);
   }

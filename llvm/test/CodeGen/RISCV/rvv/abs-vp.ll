@@ -795,9 +795,9 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v24, v8, 0
+; CHECK-NEXT:    vrsub.vi v0, v16, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v24
-; CHECK-NEXT:    vrsub.vi v24, v16, 0
-; CHECK-NEXT:    vmax.vv v16, v16, v24
+; CHECK-NEXT:    vmax.vv v16, v16, v0
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i64:
@@ -815,9 +815,9 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64_unmasked(<vscale x 16 x i64> %va, i3
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v24, v8, 0
+; CHECK-NEXT:    vrsub.vi v0, v16, 0
 ; CHECK-NEXT:    vmax.vv v8, v8, v24
-; CHECK-NEXT:    vrsub.vi v24, v16, 0
-; CHECK-NEXT:    vmax.vv v16, v16, v24
+; CHECK-NEXT:    vmax.vv v16, v16, v0
 ; CHECK-NEXT:    ret
 ;
 ; ZVABD-LABEL: vp_abs_nxv16i64_unmasked:

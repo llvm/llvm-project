@@ -5,19 +5,18 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// PointerFlowAnalysis is a noop analysis.
-//
-// PointerFlowAnalysisResult is a map from EntityIds to
-// EdgeSets.
-//===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlowAnalysis.h"
 #include "SSAFAnalysesCommon.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlow.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlowFormat.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/DerivedAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/SummaryAnalysis.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
@@ -26,6 +25,11 @@ using namespace clang::ssaf;
 using namespace llvm;
 
 namespace {
+
+//===----------------------------------------------------------------------===//
+// PointerFlowAnalysis---converts PointerFlowEntitySummary(s) in an LUSummary to
+// a PointerFlowAnalysisResult
+//===----------------------------------------------------------------------===//
 
 // Serialized as a flat array of alternating [EntityId, EdgesArray, ...] pairs.
 json::Object
@@ -53,8 +57,9 @@ Expected<std::unique_ptr<AnalysisResult>> deserializePointerFlowAnalysisResult(
                                    PointerFlowAnalysisResultName.data());
 
   if (Content->size() % 2 != 0)
-    return makeSawButExpectedError(
-        *Content, "an even number of elements, got %lu", Content->size());
+    return makeSawButExpectedError(*Content,
+                                   "an even number of elements, got %lu",
+                                   static_cast<size_t>(Content->size()));
 
   std::map<EntityId, EdgeSet> Edges;
 
@@ -111,5 +116,7 @@ AnalysisRegistry::Add<PointerFlowAnalysis>
 
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int PointerFlowAnalysisAnchorSource = 0;
+} // namespace clang::ssaf

@@ -1,0 +1,7 @@
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: pack.o
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

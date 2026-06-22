@@ -14,6 +14,7 @@
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_sigaction.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -103,23 +104,20 @@ LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
   return true;
 }
 
-LIBC_INLINE int block_all_signals(sigset_t &set) {
+LIBC_INLINE ErrorOr<int> block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
-                                           &set, sizeof(sigset_t));
+  return linux_syscalls::rt_sigprocmask(SIG_BLOCK, &full, &set);
 }
 
-LIBC_INLINE int restore_signals(const sigset_t &set) {
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK,
-                                           &set, nullptr, sizeof(sigset_t));
+LIBC_INLINE ErrorOr<int> restore_signals(const sigset_t &set) {
+  return linux_syscalls::rt_sigprocmask(SIG_SETMASK, &set, nullptr);
 }
 
-LIBC_INLINE int unblock_signal(int signal) {
+LIBC_INLINE ErrorOr<int> unblock_signal(int signal) {
   sigset_t set = empty_set();
   if (!add_signal(set, signal))
-    return -EINVAL;
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_UNBLOCK,
-                                           &set, nullptr, sizeof(sigset_t));
+    return Error(EINVAL);
+  return linux_syscalls::rt_sigprocmask(SIG_UNBLOCK, &set, nullptr);
 }
 
 // This guard is used to:
@@ -144,13 +142,13 @@ public:
 
     // This uses a valid sigset_t size and internal storage. A failure here
     // would indicate a kernel ABI mismatch, which is not actionable here.
-    block_all_signals(old_mask);
+    (void)block_all_signals(old_mask);
   }
 
   LIBC_INLINE ~SigAbortGuard() {
     // This restores a previously saved mask from internal storage. A failure
     // here would likewise be a non-recoverable kernel ABI issue.
-    restore_signals(old_mask);
+    (void)restore_signals(old_mask);
     (void)abort_lock.unlock();
   }
 };

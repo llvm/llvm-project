@@ -33,10 +33,10 @@ FormatTokenLexer::FormatTokenLexer(
       LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
-      FormattingDisabled(false), FormatOffRegex(Style.OneLineFormatOffRegex),
-      MacroBlockBeginRegex(Style.MacroBlockBegin),
+      FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd), VerilogProtectedBlock(false) {
-  Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
+  Lex = std::make_unique<Lexer>(ID, SourceMgr.getBufferOrFake(ID), SourceMgr,
+                                LangOpts);
   Lex->SetKeepWhitespaceMode(true);
 
   for (const std::string &ForEachMacro : Style.ForEachMacros) {
@@ -87,12 +87,14 @@ FormatTokenLexer::FormatTokenLexer(
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(Tokens.empty());
   assert(FirstInLineIndex == 0);
+
   enum { FO_None, FO_CurrentLine, FO_NextLine } FormatOff = FO_None;
+  llvm::Regex FormatOffRegex(Style.OneLineFormatOffRegex);
   do {
     Tokens.push_back(getNextToken());
+
     auto &Tok = *Tokens.back();
-    const auto NewlinesBefore = Tok.NewlinesBefore;
-    switch (FormatOff) {
+    switch (const auto NewlinesBefore = Tok.NewlinesBefore; FormatOff) {
     case FO_NextLine:
       if (NewlinesBefore > 1) {
         FormatOff = FO_None;
@@ -124,13 +126,16 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
         }
       }
     }
+
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
     } else if (Style.isTextProto()) {
       tryParsePythonComment();
     }
+
     tryMergePreviousTokens();
+
     if (Style.isCSharp()) {
       // This needs to come after tokens have been merged so that C#
       // string literals are correctly identified.
@@ -139,9 +144,11 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       handleTableGenMultilineString();
       handleTableGenNumericLikeIdentifier();
     }
+
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
+
   if (Style.InsertNewlineAtEOF) {
     auto &TokEOF = *Tokens.back();
     if (TokEOF.NewlinesBefore == 0) {
@@ -149,6 +156,7 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       TokEOF.OriginalColumn = 0;
     }
   }
+
   return Tokens;
 }
 
@@ -1608,8 +1616,9 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
-                      Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
+  Lex = std::make_unique<Lexer>(SourceMgr.getLocForStartOfFile(ID), LangOpts,
+                                Buffer.begin(), Buffer.begin() + Offset,
+                                Buffer.end());
   Lex->SetKeepWhitespaceMode(true);
   TrailingWhitespace = 0;
 }

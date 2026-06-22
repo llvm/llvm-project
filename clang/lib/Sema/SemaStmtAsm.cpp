@@ -306,6 +306,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     std::string ConstraintStr =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
 
+    if (ConstraintStr.find('\0') != std::string::npos) {
+      Diag(Constraint->getBeginLoc(), diag::err_asm_constraint_embedded_null)
+          << /*output*/ 0;
+      return CreateGCCAsmStmt();
+    }
+
     TargetInfo::ConstraintInfo Info(ConstraintStr, OutputName);
     if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
         !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice)) {
@@ -395,6 +401,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     std::string ConstraintStr =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
+
+    if (ConstraintStr.find('\0') != std::string::npos) {
+      Diag(Constraint->getBeginLoc(), diag::err_asm_constraint_embedded_null)
+          << /*input*/ 1;
+      return CreateGCCAsmStmt();
+    }
 
     TargetInfo::ConstraintInfo Info(ConstraintStr, InputName);
     if (!Context.getTargetInfo().validateInputConstraint(OutputConstraintInfos,
@@ -502,6 +514,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     std::string Clobber =
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(ClobberExpr);
+
+    if (Clobber.find('\0') != std::string::npos) {
+      Diag(ClobberExpr->getBeginLoc(), diag::err_asm_constraint_embedded_null)
+          << /*clobber*/ 2;
+      return CreateGCCAsmStmt();
+    }
 
     if (!Context.getTargetInfo().isValidClobber(Clobber)) {
       targetDiag(ClobberExpr->getBeginLoc(),

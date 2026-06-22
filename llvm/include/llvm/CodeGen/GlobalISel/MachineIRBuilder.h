@@ -2061,9 +2061,10 @@ public:
     return buildInstr(TargetOpcode::G_CTLZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTLZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTLZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTLZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTTZ \p Op0, \p Src0
@@ -2071,9 +2072,10 @@ public:
     return buildInstr(TargetOpcode::G_CTTZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTTZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTLS \p Op0, \p Src0

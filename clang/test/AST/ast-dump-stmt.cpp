@@ -98,9 +98,9 @@ void TestUnionInitList()
 {
   U us[3] = {1};
 // CHECK: VarDecl {{.+}} <col:3, col:15> col:5 us 'U[3]' cinit
-// CHECK-NEXT: `-InitListExpr {{.+}} <col:13, col:15> 'U[3]'
-// CHECK-NEXT:   |-array_filler: InitListExpr {{.+}} <col:15> 'U' field Field {{.+}} 'i' 'int'
-// CHECK-NEXT:   `-InitListExpr {{.+}} <col:14> 'U' field Field {{.+}} 'i' 'int'
+// CHECK-NEXT: `-InitListExpr {{.+}} <col:13, col:15> 'U[3]' explicit
+// CHECK-NEXT:   |-array_filler: InitListExpr {{.+}} <col:15> 'U' field Field {{.+}} 'i' 'int' implicit
+// CHECK-NEXT:   `-InitListExpr {{.+}} <col:14> 'U' field Field {{.+}} 'i' 'int' implicit
 // CHECK-NEXT:     `-IntegerLiteral {{.+}} <col:14> 'int' 1
 }
 

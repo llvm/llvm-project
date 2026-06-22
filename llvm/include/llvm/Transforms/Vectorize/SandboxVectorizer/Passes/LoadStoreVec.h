@@ -28,7 +28,7 @@ class Instruction;
 class Scheduler;
 class Type;
 
-class LoadStoreVec final : public RegionPass {
+class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
   /// Checks legality of vectorization and \returns the vector type on success,
   /// nullopt otherwise.

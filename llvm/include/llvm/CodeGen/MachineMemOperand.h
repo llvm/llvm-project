@@ -356,7 +356,10 @@ public:
            LHS.getAAInfo() == RHS.getAAInfo() &&
            LHS.getRanges() == RHS.getRanges() &&
            LHS.getAlign() == RHS.getAlign() &&
-           LHS.getAddrSpace() == RHS.getAddrSpace();
+           LHS.getAddrSpace() == RHS.getAddrSpace() &&
+           LHS.getSuccessOrdering() == RHS.getSuccessOrdering() &&
+           LHS.getFailureOrdering() == RHS.getFailureOrdering() &&
+           LHS.getSyncScopeID() == RHS.getSyncScopeID();
   }
 
   friend bool operator!=(const MachineMemOperand &LHS,

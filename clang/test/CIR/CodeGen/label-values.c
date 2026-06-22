@@ -12,7 +12,7 @@ LABEL_A:
   return;
 }
 // CIR:  cir.func {{.*}} @A
-// CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+// CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCK:%.*]] = cir.block_address <@A, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) [[BLOCK]], [[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
@@ -54,7 +54,7 @@ LABEL_B:
 }
 
 // CIR:  cir.func {{.*}} @B()
-// CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+// CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.br ^bb1
 // CIR:   ^bb1: // 2 preds: ^bb0, ^bb2
 // CIR:    cir.label "LABEL_B"
@@ -155,9 +155,9 @@ LABEL_A:
 }
 
 // CIR:  cir.func {{.*}} @D
-// CIR:    %[[PTR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
-// CIR:    %[[PTR2:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr2", init]
-// CIR:    %[[PTR3:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr3", init]
+// CIR:    %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[PTR2:.*]] = cir.alloca "ptr2" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
+// CIR:    %[[PTR3:.*]] = cir.alloca "ptr3" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLK1:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) %[[BLK1]], %[[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLK2:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>

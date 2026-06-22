@@ -349,6 +349,7 @@ gpu.module @test_distribution {
       %6 = xegpu.load_nd %0[%c256] {layout =  #xegpu.layout<sg_layout = [8], sg_data = [16]>} : !xegpu.tensor_desc<256xf32> -> vector<256xf32>
       scf.yield %6, %4 : vector<256xf32>, i32
     }
+    xegpu.store_nd %3#0, %2[0] {layout = #xegpu.layout<sg_layout = [8], sg_data = [16]>} : vector<256xf32>, !xegpu.tensor_desc<256xf32>
     gpu.return
   }
 
@@ -371,7 +372,7 @@ gpu.module @test_distribution {
       // CHECK-SAME: vector<16xf32>, vector<16xf32>
       scf.yield %5 : vector<256xf32>
     }
-    xegpu.store_nd %4, %1[0]  : vector<256xf32>, !xegpu.tensor_desc<256xf32>
+    xegpu.store_nd %4, %1[0] {layout = #xegpu.layout<sg_layout = [8], sg_data = [16]>} : vector<256xf32>, !xegpu.tensor_desc<256xf32>
     gpu.return
   }
 

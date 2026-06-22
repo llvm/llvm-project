@@ -162,6 +162,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   llvm::for_each(M.functions(), recordGVSet);
   llvm::for_each(M.globals(), recordGVSet);
   llvm::for_each(M.aliases(), recordGVSet);
+  llvm::for_each(M.ifuncs(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.

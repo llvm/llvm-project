@@ -26,6 +26,19 @@ class SettingsCommandTestCase(TestBase):
             ],
         )
 
+    def test_apropos_searches_settings_paths(self):
+        """Test that 'apropos' command searches the components of the paths of
+        settings."""
+
+        self.expect(
+            "apropos 'qemu-user'",
+            substrs=[
+                "The following settings paths may relate to 'qemu-user':\n"
+                "  platform.plugin.qemu-user\n"
+                "\n"
+            ],
+        )
+
     def test_set_interpreter_repeat_prev_command(self):
         """Test the `interpreter.repeat-previous-command` setting."""
         self.build()

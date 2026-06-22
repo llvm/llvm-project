@@ -763,6 +763,10 @@ control the crash diagnostics.
    Like ``-fcrash-diagnostics-dir=<dir>``, specifies where to write the
    crash diagnostics files, but with lower precedence than the option.
 
+.. option:: -fcrash-diagnostics-tar=<path>
+
+  Specify where to write the crash diagnostics files as a tarball.
+
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is especially useful when trying to
 generate a reproducer for warnings or errors while using modules.
@@ -936,6 +940,8 @@ Clang options that don't fit neatly into other categories.
   * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
     aren't available. This is the default for arm64.
   * ``always`` - Always emit DWARF unwind regardless.
+  * ``dwarf-only`` - Always emit DWARF unwind, and force compact unwind to defer
+    to DWARF.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 
@@ -4188,6 +4194,11 @@ overrides these values.  It accepts a dotted version tuple, such as 19.00.23506.
 Changing the MSVC compatibility version makes clang behave more like that
 version of MSVC. For example, ``-fms-compatibility-version=19`` will enable
 C++14 features and define ``char16_t`` and ``char32_t`` as builtin types.
+
+For compatibility with existing MSVC behavior, ``-fms-compatibility`` also
+implicitly enables several other options, including ``-fno-strict-aliasing``,
+``-fwrapv`` and ``-fdelayed-template-parsing``. When MSVC compatibility is
+set to a version earlier than 19, it also enables ``-fno-threadsafe-statics``.
 
 .. _cxx:
 

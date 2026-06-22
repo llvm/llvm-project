@@ -28,6 +28,12 @@ int main(int argc, char** argv) {
   auto std_ranges_fold_left_first = [](auto first, auto last, auto, auto func) {
     return std::ranges::fold_left_first(first, last, func);
   };
+  auto std_ranges_fold_right = [](auto first, auto last, auto init, auto func) {
+    return std::ranges::fold_right(first, last, init, func);
+  };
+  auto std_ranges_fold_right_last = [](auto first, auto last, auto, auto func) {
+    return std::ranges::fold_right_last(first, last, func);
+  };
   // ranges::{fold_left,fold_left_first,fold_right,fold_right_last}
   {
     auto bm = []<class Container>(std::string name, auto fold) {
@@ -71,9 +77,13 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<unsigned int>>("rng::fold_left_first(deque<int>)", std_ranges_fold_left_first);
     bm.operator()<std::list<unsigned int>>("rng::fold_left_first(list<int>)", std_ranges_fold_left_first);
 
-    bm.operator()<std::vector<unsigned int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
-    bm.operator()<std::deque<unsigned int>>("rng::fold_right(deque<int>)", std::ranges::fold_right);
-    bm.operator()<std::list<unsigned int>>("rng::fold_right(list<int>)", std::ranges::fold_right);
+    bm.operator()<std::vector<unsigned int>>("rng::fold_right(vector<int>)", std_ranges_fold_right);
+    bm.operator()<std::deque<unsigned int>>("rng::fold_right(deque<int>)", std_ranges_fold_right);
+    bm.operator()<std::list<unsigned int>>("rng::fold_right(list<int>)", std_ranges_fold_right);
+
+    bm.operator()<std::vector<unsigned int>>("rng::fold_right_last(vector<int>)", std_ranges_fold_right_last);
+    bm.operator()<std::deque<unsigned int>>("rng::fold_right_last(deque<int>)", std_ranges_fold_right_last);
+    bm.operator()<std::list<unsigned int>>("rng::fold_right_last(list<int>)", std_ranges_fold_right_last);
   }
 
   benchmark::Initialize(&argc, argv);

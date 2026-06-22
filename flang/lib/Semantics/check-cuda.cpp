@@ -298,6 +298,10 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
       SemanticsContext &context, const parser::ContinueStmt &) {
     return {};
   }
+  static MaybeMsg WhyNotOk(SemanticsContext &, const parser::PauseStmt &) {
+    return parser::MessageFormattedText{
+        "device subprograms may not contain PAUSE statements"_err_en_US};
+  }
   static MaybeMsg WhyNotOk(SemanticsContext &context, const parser::IfStmt &x) {
     if (auto result{CheckUnwrappedExpr(
             context, std::get<parser::ScalarLogicalExpr>(x.t))}) {
@@ -664,6 +668,10 @@ static void CheckReduce(
         auto cat{type->category()};
         bool isOk{false};
         switch (op) {
+        case parser::ReductionOperator::Operator::Minus:
+          context.Say(var.thing.GetSource(),
+              "'-' is not a supported !$CUF KERNEL DO REDUCE operator"_err_en_US);
+          continue;
         case parser::ReductionOperator::Operator::Plus:
         case parser::ReductionOperator::Operator::Multiply:
         case parser::ReductionOperator::Operator::Max:

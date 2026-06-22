@@ -345,7 +345,7 @@ static void PrintFilename(raw_ostream &OS, StringRef Filename,
                           DependencyOutputFormat OutputFormat) {
   // Convert filename to platform native path
   llvm::SmallString<256> NativePath;
-  llvm::sys::path::native(Filename.str(), NativePath);
+  llvm::sys::path::native(Filename, NativePath);
 
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to

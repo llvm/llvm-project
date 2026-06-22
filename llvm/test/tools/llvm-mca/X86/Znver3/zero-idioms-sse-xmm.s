@@ -180,7 +180,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       xorps	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       xorps	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [1] Code Region
 
@@ -271,7 +271,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       xorpd	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       xorpd	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [2] Code Region
 
@@ -362,7 +362,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       andnps	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       andnps	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [3] Code Region
 
@@ -453,7 +453,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       andnpd	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       andnpd	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [4] Code Region
 
@@ -544,7 +544,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pxor	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       pxor	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [5] Code Region
 
@@ -635,7 +635,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pandn	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       pandn	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [6] Code Region
 
@@ -726,7 +726,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubb	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       psubb	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [7] Code Region
 
@@ -817,7 +817,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubw	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       psubw	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [8] Code Region
 
@@ -908,7 +908,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubd	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       psubd	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [9] Code Region
 
@@ -999,7 +999,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubq	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       psubq	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [10] Code Region
 
@@ -1090,7 +1090,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubsb	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       pxor	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [11] Code Region
 
@@ -1181,7 +1181,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubsw	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       pxor	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [12] Code Region
 
@@ -1272,7 +1272,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubusb	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       pxor	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [13] Code Region
 
@@ -1363,7 +1363,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       psubusw	%xmm1, %xmm1
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       pxor	%xmm0, %xmm1
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [14] Code Region
 
@@ -1454,7 +1454,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpgtb	%xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddb	%xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [15] Code Region
 
@@ -1545,7 +1545,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpgtw	%xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddw	%xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [16] Code Region
 
@@ -1636,7 +1636,7 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpgtd	%xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddd	%xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [17] Code Region
 
@@ -1727,4 +1727,4 @@ paddq %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpgtq	%xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddq	%xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>

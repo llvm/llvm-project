@@ -379,7 +379,7 @@ nub_process_t DNBProcessLaunch(
         // point and get reparented to someone else and never go away.
         DNBLog("Could not get task port for process, sending SIGKILL and "
                "exiting.");
-        kill(SIGKILL, pid);
+        kill(pid, SIGKILL);
 
         if (err_str && err_len > 0) {
           if (launch_err.AsString()) {

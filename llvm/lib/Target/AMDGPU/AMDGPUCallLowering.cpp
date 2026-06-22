@@ -1521,7 +1521,13 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
     Info.CallConv = F->getCallingConv();
   } else {
     assert(Callee.Regs.size() == 1 && "Too many regs for the callee");
-    Info.Callee = MachineOperand::CreateReg(Callee.Regs[0], false);
+    Register CalleeReg = Callee.Regs[0];
+    LLT CalleeTy = MIRBuilder.getMRI()->getType(CalleeReg);
+    Register UniformCallee =
+        MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, {CalleeTy})
+            .addReg(CalleeReg)
+            .getReg(0);
+    Info.Callee = MachineOperand::CreateReg(UniformCallee, false);
     Info.CallConv = CallingConv::AMDGPU_CS_Chain; // amdgpu_cs_chain_preserve
                                                   // behaves the same here.
   }

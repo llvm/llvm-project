@@ -41,15 +41,15 @@ llvm.func @_QQmain() {
 // CHECK: %[[LAST_MEMBER:.*]] = getelementptr inbounds [10 x i32], ptr %[[MEMBER_ACCESS_3]], i64 0, i64 1
 // CHECK: %[[FIRST_MEMBER:.*]] = getelementptr i32, ptr %[[MEMBER_ACCESS_1]], i64 1
 // CHECK: %[[FIRST_MEMBER_OFF:.*]] = ptrtoaddr ptr %[[FIRST_MEMBER]] to i64
-// CHECK: %[[SECOND_MEMBER_OFF:.*]] = ptrtoaddr ptr %[[LAST_MEMBER]] to i64
-// CHECK: %[[OFFLOAD_SIZE:.*]] = sub i64 %[[FIRST_MEMBER_OFF]], %[[SECOND_MEMBER_OFF]]
+// CHECK: %[[SECOND_MEMBER_OFF:.*]] = ptrtoaddr ptr %[[MEMBER_ACCESS_3]] to i64
+// CHECK: %[[MEMBER_DIFF:.*]] = sub i64 %[[FIRST_MEMBER_OFF]], %[[SECOND_MEMBER_OFF]]
 
 // CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
 // CHECK: %[[PTR_ARR:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// CHECK: store ptr %[[LAST_MEMBER]], ptr %[[PTR_ARR]], align 8
+// CHECK: store ptr %[[MEMBER_ACCESS_3]], ptr %[[PTR_ARR]], align 8
 // CHECK: %[[SIZE_ARR:.*]] = getelementptr inbounds [5 x i64], ptr %.offload_sizes, i32 0, i32 0
-// CHECK: store i64 %[[OFFLOAD_SIZE]], ptr %[[SIZE_ARR]], align 8
+// CHECK: store i64 %[[MEMBER_DIFF]], ptr %[[SIZE_ARR]], align 8
 
 // CHECK: %[[BASE_PTR_ARR_2:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_2]], align 8

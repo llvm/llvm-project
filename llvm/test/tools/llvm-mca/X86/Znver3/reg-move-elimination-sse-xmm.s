@@ -407,7 +407,7 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movaps	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       movaps	%xmm14, %xmm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       movaps	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -701,7 +701,7 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movups	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       movups	%xmm14, %xmm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       movups	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -995,7 +995,7 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movapd	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       movapd	%xmm14, %xmm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       movapd	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -1289,7 +1289,7 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movupd	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       movupd	%xmm14, %xmm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       movupd	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
@@ -1583,7 +1583,7 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movdqa	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       movdqa	%xmm14, %xmm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       movdqa	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
@@ -1877,4 +1877,4 @@ movdqu %xmm15, %xmm0
 # CHECK-NEXT: 13.    10    0.0    0.0    0.0       movdqu	%xmm13, %xmm14
 # CHECK-NEXT: 14.    10    0.0    0.0    0.0       movdqu	%xmm14, %xmm15
 # CHECK-NEXT: 15.    10    0.0    0.0    0.0       movdqu	%xmm15, %xmm0
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        160   0.0    0.0    0.0       <total>

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=powerpc64le -O0 < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff -O0 < %s | FileCheck %s --check-prefix=AIX
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small -O0 < %s | FileCheck %s --check-prefix=AIX
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -O0 < %s | FileCheck %s --check-prefix=AIX
 
 ; CHECK-LABEL: in_bounds:

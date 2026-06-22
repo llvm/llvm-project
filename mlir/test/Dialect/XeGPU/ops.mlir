@@ -346,6 +346,35 @@ gpu.func @simt_store_nd_2(%src: memref<24x32xf16>) {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @load_nd_3d
+gpu.func @load_nd_3d(%src: memref<4x8x16xf16>) {
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // CHECK: %{{.*}} = xegpu.load_nd %[[R0]][0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
+  %2 = xegpu.load_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @store_nd_3d
+gpu.func @store_nd_3d(%dst: memref<4x8x16xf16>) {
+  // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<4x8x16xf16>
+  %val = arith.constant dense<1.0> : vector<4x8x16xf16>
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  %1 = xegpu.create_nd_tdesc %dst : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // CHECK: xegpu.store_nd %[[C]], %[[R0]][0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<4x8x16xf16>, !xegpu.tensor_desc<4x8x16xf16>
+  xegpu.store_nd %val, %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<4x8x16xf16>, !xegpu.tensor_desc<4x8x16xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @prefetch_nd_3d
+gpu.func @prefetch_nd_3d(%src: memref<4x8x16xf16>) {
+  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  %1 = xegpu.create_nd_tdesc %src : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
+  // CHECK: xegpu.prefetch_nd %[[R0]][0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16>
+  xegpu.prefetch_nd %1[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16>
+  gpu.return
+}
+
 // CHECK: gpu.func @simt_load_4(%[[arg0:.*]]: memref<256xf16>, %[[arg1:.*]]: vector<1xindex>, %[[arg2:.*]]: vector<1xi1>) {
 gpu.func @simt_load_4(%arg0: memref<256xf16>, %arg1: vector<1xindex>, %arg2: vector<1xi1>) {
   // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
@@ -600,6 +629,41 @@ gpu.func @simt_store_matrix_vector(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @load_matrix_1d
+gpu.func @load_matrix_1d(%arg0: !xegpu.mem_desc<64xf16>) {
+  // CHECK: xegpu.load_matrix %{{.+}}[16] : !xegpu.mem_desc<64xf16> -> vector<16xf16>
+  %data = xegpu.load_matrix %arg0[16]: !xegpu.mem_desc<64xf16> -> vector<16xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @store_matrix_1d
+gpu.func @store_matrix_1d(%arg0: !xegpu.mem_desc<64xf16>, %arg1: vector<16xf16>) {
+  // CHECK: xegpu.store_matrix %{{.+}}, %{{.+}}[0] : vector<16xf16>, !xegpu.mem_desc<64xf16>
+  xegpu.store_matrix %arg1, %arg0[0]: vector<16xf16>, !xegpu.mem_desc<64xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @load_matrix_1d_block_io
+gpu.func @load_matrix_1d_block_io(%arg0: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>) {
+  // CHECK: xegpu.load_matrix %{{.+}}[0] <{subgroup_block_io}>: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>> -> vector<16xf16>
+  %data = xegpu.load_matrix %arg0[0] <{subgroup_block_io}>: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>> -> vector<16xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @store_matrix_1d_block_io
+gpu.func @store_matrix_1d_block_io(%arg0: !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>, %arg1: vector<16xf16>) {
+  // CHECK: xegpu.store_matrix %{{.+}}, %{{.+}}[0] <{subgroup_block_io}>: vector<16xf16>, !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>
+  xegpu.store_matrix %arg1, %arg0[0] <{subgroup_block_io}>: vector<16xf16>, !xegpu.mem_desc<64xf16, #xegpu.mem_layout<block = [16]>>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @simt_load_matrix_1d
+gpu.func @simt_load_matrix_1d(%arg0: !xegpu.mem_desc<64xf16>) {
+  // CHECK: xegpu.load_matrix %{{.+}}[0] : !xegpu.mem_desc<64xf16> -> vector<1xf16>
+  %data = xegpu.load_matrix %arg0[0]: !xegpu.mem_desc<64xf16> -> vector<1xf16>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @truncf
 gpu.func @truncf(%a: vector<8x16xf16>) {
   // CHECK: %{{.+}} = xegpu.truncf %{{.+}} : vector<8x16xf16> -> vector<8x16xf8E5M2>
@@ -609,10 +673,30 @@ gpu.func @truncf(%a: vector<8x16xf16>) {
 
 // CHECK-LABEL: gpu.func @dpas_mx
 gpu.func @dpas_mx(%a : vector<8x32xf8E5M2>, %b: vector<32x16xf8E5M2>, %acc: vector<8x16xbf16>, %a_scale: vector<8x1xf8E8M0FNU>, %b_scale: vector<1x16xf8E8M0FNU>) {
-  // CHECK: %{{.+}} = xegpu.dpas_mx %{{.+}}, %{{.+}}, %{{.+}} scale_a = %{{.+}} scale_b = %{{.+}} : vector<8x32xf8E5M2>, vector<32x16xf8E5M2>, vector<8x16xbf16>, vector<8x1xf8E8M0FNU>, vector<1x16xf8E8M0FNU> -> vector<8x16xbf16>
-  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %a_scale scale_b = %b_scale : vector<8x32xf8E5M2>, vector<32x16xf8E5M2>, vector<8x16xbf16>, vector<8x1xf8E8M0FNU>, vector<1x16xf8E8M0FNU> -> vector<8x16xbf16>
+  // CHECK: %{{.+}} = xegpu.dpas_mx %{{.+}}, %{{.+}}, %{{.+}} scale_a = %{{.+}} scale_b = %{{.+}} : (vector<8x32xf8E5M2>, vector<32x16xf8E5M2>, vector<8x16xbf16>, vector<8x1xf8E8M0FNU>, vector<1x16xf8E8M0FNU>) -> vector<8x16xbf16>
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %a_scale scale_b = %b_scale : (vector<8x32xf8E5M2>, vector<32x16xf8E5M2>, vector<8x16xbf16>, vector<8x1xf8E8M0FNU>, vector<1x16xf8E8M0FNU>) -> vector<8x16xbf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dpas_3d_batch
+gpu.func @dpas_3d_batch(%a : vector<4x8x16xf16>, %b: vector<4x16x16xf16>) {
+  // CHECK: %{{.+}} = xegpu.dpas %{{.+}}, %{{.+}} : vector<4x8x16xf16>, vector<4x16x16xf16> -> vector<4x8x16xf32>
+  %1 = xegpu.dpas %a, %b: vector<4x8x16xf16>, vector<4x16x16xf16> -> vector<4x8x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dpas_3d_batch_with_acc
+gpu.func @dpas_3d_batch_with_acc(%a : vector<4x8x16xf16>, %b: vector<4x16x16xf16>, %acc: vector<4x8x16xf32>) {
+  // CHECK: %{{.+}} = xegpu.dpas %{{.+}}, %{{.+}}, %{{.+}} : vector<4x8x16xf16>, vector<4x16x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
+  %1 = xegpu.dpas %a, %b, %acc : vector<4x8x16xf16>, vector<4x16x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dpas_mx_3d_batch
+gpu.func @dpas_mx_3d_batch(%a : vector<4x8x32xf8E5M2>, %b: vector<4x32x16xf8E5M2>, %acc: vector<4x8x16xbf16>, %a_scale: vector<4x8x1xf8E8M0FNU>, %b_scale: vector<4x1x16xf8E8M0FNU>) {
+  // CHECK: %{{.+}} = xegpu.dpas_mx %{{.+}}, %{{.+}}, %{{.+}} scale_a = %{{.+}} scale_b = %{{.+}} : (vector<4x8x32xf8E5M2>, vector<4x32x16xf8E5M2>, vector<4x8x16xbf16>, vector<4x8x1xf8E8M0FNU>, vector<4x1x16xf8E8M0FNU>) -> vector<4x8x16xbf16>
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %a_scale scale_b = %b_scale : (vector<4x8x32xf8E5M2>, vector<4x32x16xf8E5M2>, vector<4x8x16xbf16>, vector<4x8x1xf8E8M0FNU>, vector<4x1x16xf8E8M0FNU>) -> vector<4x8x16xbf16>
   gpu.return
 }
 
 }
-

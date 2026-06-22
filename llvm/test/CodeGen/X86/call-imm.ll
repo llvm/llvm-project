@@ -1,6 +1,7 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=static | FileCheck -check-prefix X86STA %s
 ; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic | FileCheck -check-prefix X86PIC %s
 ; RUN: llc < %s -mtriple=i386-pc-linux -relocation-model=dynamic-no-pic | FileCheck -check-prefix X86DYN %s
+; RUN: llc < %s -mtriple=i386-pc-linux -relocation-model=pic | FileCheck -check-prefix X86ELFPIC %s
 ; RUN: llc < %s -mtriple=i386-pc-win32 -relocation-model=static | FileCheck -check-prefix X86WINSTA %s
 
 ; Call to immediate is not safe on x86-64 unless we *know* that the
@@ -21,5 +22,6 @@ entry:
 ; X86STA: {{call.*12345678}}
 ; X86PIC-NOT: {{call.*12345678}}
 ; X86DYN: {{call.*12345678}}
+; X86ELFPIC: {{call.*[*]%eax}}
 ; X86WINSTA: {{call.*[*]%eax}}
 ; X64: {{call.*[*]%rax}}

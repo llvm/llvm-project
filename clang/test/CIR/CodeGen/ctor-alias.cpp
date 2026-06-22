@@ -16,7 +16,7 @@ B::B() {
 // OGCG: @_ZN1BC1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BC2Ev
 
 // CHECK: cir.func{{.*}} @_ZN1BC2Ev(%arg0: !cir.ptr<!rec_B>
-// CHECK:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["this", init]
+// CHECK:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_B>>
 // CHECK:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
 
@@ -37,7 +37,7 @@ void bar() {
 }
 
 // CHECK: cir.func{{.*}} @_Z3barv()
-// CHECK:   %[[B:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["b", init]
+// CHECK:   %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_B>
 // CHECK:   cir.call @_ZN1BC1Ev(%[[B]]) : (!cir.ptr<!rec_B> {{.*}}) -> ()
 // CHECK:   cir.return
 
@@ -61,7 +61,7 @@ void baz() {
 }
 
 // CHECK:   cir.func{{.*}} @_ZN5StrukC2Ev(%arg0: !cir.ptr<!rec_Struk>
-// CHECK:     %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>, ["this", init]
+// CHECK:     %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK:     cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK:     %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_Struk>>, !cir.ptr<!rec_Struk>
 // CHECK:     cir.return
@@ -69,7 +69,7 @@ void baz() {
 // CHECK-NOT:   cir.func{{.*}} @_ZN5StrukC1Ev
 
 // CHECK:   cir.func{{.*}} @_Z3bazv()
-// CHECK:     %[[S_ADDR:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["s", init]
+// CHECK:     %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_Struk>
 // CHECK:     cir.call @_ZN5StrukC2Ev(%[[S_ADDR]]) : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 
 // LLVM: define linkonce_odr void @_ZN5StrukC2Ev(ptr{{.*}} %[[THIS_ARG]])

@@ -60,6 +60,12 @@
 ; MULTIPLE-GRANULAR-PASSES-DAG: 11-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
 ; RUN: rm -rf %t/logs
 
+; Validate that analysis passes are excluded from dump.
+; RUN: opt %s -disable-output -passes='require<inline-advisor>,invalidate<inline-advisor>,no-op-module' -ir-dump-directory %t/logs -print-after=no-op-module
+; RUN: ls %t/logs | FileCheck %s --check-prefix=EXCLUDE-ANALYSIS-PASSES
+; RUN: ls %t/logs | count 1
+; EXCLUDE-ANALYSIS-PASSES: 1-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
+
 define void @foo() {
     ret void
 }

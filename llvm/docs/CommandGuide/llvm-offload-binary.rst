@@ -15,7 +15,16 @@ DESCRIPTION
 files into a single binary container. The resulting binary can then be embedded
 into the host section table to form a fat binary containing offloading code for
 different targets. Conversely, it can also extract previously bundled device
-images.
+images from offload binaries.
+
+When extracting images, if no :option:`--image` filters are specified, all
+offload images are automatically extracted with descriptive filenames. When
+:option:`--image` filters are provided, only matching images are extracted.
+
+The tool supports nested OffloadBinary format, where device images can be wrapped
+in an inner OffloadBinary container. When extracting, the tool automatically
+detects and unwraps nested OffloadBinary images, making the format transparent
+to users.
 
 The binary format begins with the magic bytes ``0x10FF10AD``, followed by a
 version and size. Each binary contains its own header, allowing tools to locate
@@ -32,12 +41,22 @@ EXAMPLE
   $ llvm-offload-binary -o out.bin \
         --image=file=input.o,triple=nvptx64,arch=sm_70
 
-  # Extract a matching image from a fat binary:
-  $ llvm-offload-binary in.bin \
-        --image=file=output.o,triple=nvptx64,arch=sm_70
+  # Extract all offload images from an executable (no filters):
+  $ llvm-offload-binary in.bin
+  # Output:
+  # Extracted: in-nvptx64-nvidia-cuda-sm_70.0.bc
+  # Extracted: in-spirv64-intel-unknown.0.spv
 
-  # Extract and archive images into a static library:
-  $ llvm-offload-binary in.bin --archive -o libdevice.a
+  # Extract only SPIR-V images using filters:
+  $ llvm-offload-binary in.bin --image=triple=spirv64-intel
+  # Output:
+  # Extracted: in-spirv64-intel-unknown.0.spv
+
+  # Extract filtered images to a specific file:
+  $ llvm-offload-binary in.bin --image=file=output.bc,arch=sm_70
+
+  # Extract filtered images to an archive:
+  $ llvm-offload-binary in.bin --image=file=output.a,triple=nvptx64 --archive
 
 OPTIONS
 -------
@@ -52,6 +71,12 @@ OPTIONS
   Specify a set of arbitrary key-value arguments describing an image.
   Commonly used optional keys include ``arch`` (e.g. ``sm_70`` for CUDA) and
   ``triple`` (e.g. nvptx64-nvidia-cuda).
+
+  When bundling, this option specifies images to include in the output binary.
+  When extracting, this option acts as a filter: only images matching the
+  specified keys are extracted. If no :option:`--image` options are provided
+  during extraction, all images are automatically extracted with descriptive
+  filenames.
 
 .. option:: -o <file>
 
@@ -179,7 +204,75 @@ The enumerated values for ``image kind`` and ``offload kind`` are:
    | OFK_SYCL   | 0x04  | The producer was SYCL                 |
    +------------+-------+---------------------------------------+
 
+COMMON WORKFLOWS
+----------------
+
+**Workflow 1: Explore Executable Contents**
+
+Extract all embedded offload images to see what's inside:
+
+.. code-block:: console
+
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64,spirv64-intel app.cpp -o myapp
+  $ llvm-offload-binary myapp
+  # Output:
+  # Extracted: myapp-nvptx64-nvidia-cuda-sm_70.0.bc
+  # Extracted: myapp-spirv64-intel-unknown.1.spv
+
+**Workflow 2: Extract Specific Target**
+
+Extract only images for a specific target:
+
+.. code-block:: console
+
+  $ llvm-offload-binary myapp --image=triple=spirv64-intel
+  # Output:
+  # Extracted: myapp-spirv64-intel-unknown.0.spv
+
+**Workflow 3: Create Device Image Archive**
+
+Extract filtered images into a static archive:
+
+.. code-block:: console
+
+  $ llvm-offload-binary myapp --image=file=nvptx.a,triple=nvptx64 --archive
+  $ ar t nvptx.a
+  # Shows extracted CUDA images
+
+**Workflow 4: Validate SPIR-V**
+
+Extract and validate SPIR-V binaries:
+
+.. code-block:: console
+
+  $ llvm-offload-binary myapp --image=triple=spirv64-intel
+  $ spirv-val myapp-spirv64-intel-unknown.0.spv
+  $ spirv-dis myapp-spirv64-intel-unknown.0.spv -o kernel.spvasm
+
+**Workflow 5: Bundle Multiple Targets**
+
+Create a fat binary from multiple device images:
+
+.. code-block:: console
+
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64 --offload-device-only kernel.cpp -o kernel_nvptx.bc
+  $ clang++ -fopenmp -fopenmp-targets=spirv64-intel --offload-device-only kernel.cpp -o kernel_spirv.bc
+  $ llvm-offload-binary -o bundle.bin \
+      --image=file=kernel_nvptx.bc,triple=nvptx64,arch=sm_70 \
+      --image=file=kernel_spirv.bc,triple=spirv64-intel
+
+**Workflow 6: Extract and Rebundle**
+
+Extract images from one binary and rebundle with modifications:
+
+.. code-block:: console
+
+  $ llvm-offload-binary old_app
+  $ llvm-offload-binary -o new_bundle.bin \
+      --image=file=old_app-nvptx64-nvidia-cuda-sm_70.0.bc,triple=nvptx64,arch=sm_70 \
+      --image=file=new_kernel.bc,triple=nvptx64,arch=sm_80
+
 SEE ALSO
 --------
 
-:manpage:`clang(1)`, :manpage:`llvm-objdump(1)`
+:manpage:`clang(1)`, :manpage:`llvm-objdump(1)`, :manpage:`spirv-val(1)`, :manpage:`spirv-dis(1)`

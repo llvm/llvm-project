@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -940,27 +941,19 @@ inline std::string &operator+=(std::string &buffer, StringRef string) {
 /// Compute a hash_code for a StringRef.
 [[nodiscard]] LLVM_ABI hash_code hash_value(StringRef S);
 
+/// Inline StringRef overloads of the xxhash entry points declared out-of-line
+/// in llvm/Support/xxhash.h. They live here so xxhash.h can stay free of ADT
+/// dependencies.
+inline uint64_t xxh3_64bits(StringRef data) {
+  return xxh3_64bits(reinterpret_cast<const uint8_t *>(data.data()),
+                     data.size());
+}
+
 // Provide DenseMapInfo for StringRefs.
 template <> struct DenseMapInfo<StringRef, void> {
-  static inline StringRef getEmptyKey() {
-    return StringRef(reinterpret_cast<const char *>(~static_cast<uintptr_t>(0)),
-                     0);
-  }
-
-  static inline StringRef getTombstoneKey() {
-    return StringRef(reinterpret_cast<const char *>(~static_cast<uintptr_t>(1)),
-                     0);
-  }
-
   LLVM_ABI static unsigned getHashValue(StringRef Val);
 
-  static bool isEqual(StringRef LHS, StringRef RHS) {
-    if (RHS.data() == getEmptyKey().data())
-      return LHS.data() == getEmptyKey().data();
-    if (RHS.data() == getTombstoneKey().data())
-      return LHS.data() == getTombstoneKey().data();
-    return LHS == RHS;
-  }
+  static bool isEqual(StringRef LHS, StringRef RHS) { return LHS == RHS; }
 };
 
 } // end namespace llvm

@@ -81,6 +81,7 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
   //  * the file extension (if the user didn't express any preference)
   // to decide whether to include them or not.
   if ((invoc.getPreprocessorOpts().macrosFlag == PPMacrosFlag::Include) ||
+      (invoc.getPreprocessorOpts().showMacros) ||
       (invoc.getPreprocessorOpts().macrosFlag == PPMacrosFlag::Unknown &&
        getCurrentInput().getMustBePreprocessed())) {
     invoc.setDefaultPredefinitions();

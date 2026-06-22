@@ -17,7 +17,7 @@ end module
 !UNPARSE: !$OMP THREADPRIVATE(/blk/, b)
 !UNPARSE: END MODULE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPThreadprivate -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpThreadprivateDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = threadprivate
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Name = 'blk'
 !PARSE-TREE: | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'b'

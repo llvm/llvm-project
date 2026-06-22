@@ -9,6 +9,7 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -29,16 +30,17 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   auto BaseFS = Service.getOpts().MakeVFS();
 
-  if (Service.getOpts().TraceVFS)
-    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+  if (Service.getOpts().TraceVFS) {
+    TracingFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
+    BaseFS = TracingFS;
+  }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-      Service.getSharedCache(), std::move(BaseFS));
+      Service, std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
-DependencyActionController::~DependencyActionController() = default;
 
 static bool createAndRunToolInvocation(
     ArrayRef<std::string> CommandLine, DependencyScanningAction &Action,
@@ -54,34 +56,27 @@ static bool createAndRunToolInvocation(
                               Diags.getClient());
 }
 
-bool DependencyScanningWorker::computeDependencies(
-    StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-    DependencyConsumer &DepConsumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  return computeDependencies(WorkingDirectory,
-                             ArrayRef<ArrayRef<std::string>>(CommandLine),
-                             DepConsumer, Controller, DiagConsumer, OverlayFS);
+IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+DependencyScanningWorker::makeEffectiveVFS(
+    StringRef WorkingDirectory,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) const {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = DepFS;
+  if (OverlayFS) {
+    auto NewFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(std::move(FS));
+    NewFS->pushOverlay(std::move(OverlayFS));
+    FS = std::move(NewFS);
+  }
+  FS->setCurrentWorkingDirectory(WorkingDirectory);
+  return FS;
 }
 
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
-  if (OverlayFS) {
-#ifndef NDEBUG
-    bool SawDepFS = false;
-    OverlayFS->visit(
-        [&](llvm::vfs::FileSystem &VFS) { SawDepFS |= &VFS == DepFS.get(); });
-    assert(SawDepFS && "OverlayFS not based on DepFS");
-#endif
-    FS = std::move(OverlayFS);
-  } else {
-    FS = DepFS;
-    FS->setCurrentWorkingDirectory(WorkingDirectory);
-  }
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
+  auto FS = makeEffectiveVFS(WorkingDirectory, std::move(OverlayFS));
 
   DependencyScanningAction Action(Service, WorkingDirectory, DepConsumer,
                                   Controller, DepFS);

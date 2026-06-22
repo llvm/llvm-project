@@ -62,13 +62,13 @@ public:
   }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
+
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
-  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -81,10 +81,8 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
   llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args,
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
-
-  SanitizerMask getSupportedSanitizers() const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,
@@ -92,8 +90,12 @@ public:
 
   unsigned GetDefaultDwarfVersion() const override { return 5; }
 
+  /// HIP uses LTO by default to link device bitcode.
+  LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
+
   const ToolChain &HostTC;
-  void checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
+  ParsedTargetIDType
+  checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
 
 protected:
   Tool *buildLinker() const override;
@@ -103,6 +105,9 @@ class LLVM_LIBRARY_VISIBILITY SPIRVAMDToolChain final : public ROCMToolChain {
 public:
   SPIRVAMDToolChain(const Driver &D, const llvm::Triple &Triple,
                     const llvm::opt::ArgList &Args);
+
+  /// SPIR-V uses LTO by default to link device bitcode.
+  LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
 
 protected:
   Tool *buildLinker() const override;

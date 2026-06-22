@@ -670,6 +670,17 @@ public:
     LDBG() << "checking the necessity of: " << barrier << " "
            << barrier.getLoc();
 
+    // Named barriers have precise arrival-count semantics; never eliminate.
+    if (barrier.getNamedBarrier()) {
+      LDBG() << "barrier is a named barrier, retain it";
+      return failure();
+    }
+
+    if (barrier.getScope() != gpu::BarrierScope::Workgroup) {
+      LDBG() << "barrier has non-workgroup scope, retain it";
+      return failure();
+    }
+
     std::optional<ArrayAttr> fencedMemSpaces = barrier.getAddressSpaces();
     if (fencedMemSpaces && fencedMemSpaces->empty()) {
       LDBG()

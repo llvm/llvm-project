@@ -21,6 +21,21 @@
 
 using namespace orc_rt;
 
+namespace {
+// Local aliases for brevity in test bodies.
+constexpr auto Req = NativeDylibManager::RequiredSymbol;
+constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
+} // namespace
+
+// Wrap a symbol-name string literal in the platform's linker-mangling.
+// NativeDylibManager::lookup takes linker-mangled names; on Darwin the
+// linker prefixes C names with '_'.
+#if defined(__APPLE__)
+#define MANGLED(name) "_" name
+#else
+#define MANGLED(name) name
+#endif
+
 #ifndef NDM_TEST_LIB_PATH
 #error                                                                         \
     "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
@@ -33,51 +48,38 @@ static Expected<void *> syncLoad(NativeDylibManager &NDM, std::string Path) {
   return std::move(*Result);
 }
 
-// Helper: synchronously run unload and return result.
-static Error syncUnload(NativeDylibManager &NDM, void *Handle) {
-  std::optional<Error> Result;
-  NDM.unload([&](Error R) { Result = std::move(R); }, Handle);
-  return std::move(*Result);
-}
-
 // Helper: synchronously run lookup and return results.
-static Expected<std::vector<void *>>
+static Expected<std::vector<std::optional<void *>>>
 syncLookup(NativeDylibManager &NDM, void *Handle,
-           std::vector<std::string> Names) {
-  std::optional<Expected<std::vector<void *>>> Result;
-  NDM.lookup([&](Expected<std::vector<void *>> R) { Result = std::move(R); },
-             Handle, std::move(Names));
+           NativeDylibManager::SymbolLookupSet Symbols) {
+  std::optional<Expected<std::vector<std::optional<void *>>>> Result;
+  NDM.lookup(
+      [&](Expected<std::vector<std::optional<void *>>> R) {
+        Result = std::move(R);
+      },
+      Handle, std::move(Symbols));
   return std::move(*Result);
 }
 
 TEST(NativeDylibManagerTest, Create) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_TRUE(!!NDM) << toString(NDM.takeError());
 }
 
-TEST(NativeDylibManagerTest, LoadAndUnload) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+TEST(NativeDylibManagerTest, Load) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
-  // Load the test library.
   auto LoadResult = syncLoad(*NDM, NDM_TEST_LIB_PATH);
   ASSERT_TRUE(!!LoadResult) << toString(LoadResult.takeError());
-  void *Handle = *LoadResult;
-  EXPECT_NE(Handle, nullptr);
-
-  // Unload it.
-  auto UnloadResult = syncUnload(*NDM, Handle);
-  EXPECT_FALSE(!!UnloadResult) << toString(std::move(UnloadResult));
+  EXPECT_NE(*LoadResult, nullptr);
 }
 
 TEST(NativeDylibManagerTest, LoadNonExistent) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -86,114 +88,111 @@ TEST(NativeDylibManagerTest, LoadNonExistent) {
   consumeError(LoadResult.takeError());
 }
 
-TEST(NativeDylibManagerTest, UnloadUnrecognizedHandle) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
-  void *Bogus = reinterpret_cast<void *>(0xDEADBEEF);
-  auto UnloadResult = syncUnload(*NDM, Bogus);
-  EXPECT_TRUE(!!UnloadResult);
-  consumeError(std::move(UnloadResult));
-}
+  // The global handle's value is implementation-defined, so verify by looking
+  // up through it.
+  auto LoadResult = syncLoad(*NDM, "");
+  ASSERT_TRUE(!!LoadResult) << toString(LoadResult.takeError());
+  void *Handle = *LoadResult;
 
-TEST(NativeDylibManagerTest, LoadSameLibraryTwice) {
-  // Loading the same library twice should succeed both times and return
-  // the same handle (since dlopen refcounts).
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = cantFail(NativeDylibManager::Create(S, ST));
-
-  auto R1 = syncLoad(*NDM, NDM_TEST_LIB_PATH);
-  ASSERT_TRUE(!!R1) << toString(R1.takeError());
-  void *H1 = *R1;
-
-  auto R2 = syncLoad(*NDM, NDM_TEST_LIB_PATH);
-  ASSERT_TRUE(!!R2) << toString(R2.takeError());
-  void *H2 = *R2;
-
-  EXPECT_EQ(H1, H2);
-
-  // Unload both references.
-  auto UR1 = syncUnload(*NDM, H1);
-  EXPECT_FALSE(!!UR1) << toString(std::move(UR1));
-  auto UR2 = syncUnload(*NDM, H2);
-  EXPECT_FALSE(!!UR2) << toString(std::move(UR2));
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("malloc"), Req}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 1U);
+  ASSERT_TRUE((*Result)[0].has_value())
+      << "malloc should be findable via the process's global lookup handle";
+  EXPECT_NE(*(*Result)[0], nullptr);
 }
 
 TEST(NativeDylibManagerTest, LookupSingleSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = cantFail(NativeDylibManager::Create(S, ST));
-
-  void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
-
-  auto Result = syncLookup(*NDM, Handle, {"NativeDylibManagerTestFunc"});
-  ASSERT_TRUE(!!Result) << toString(Result.takeError());
-  ASSERT_EQ(Result->size(), 1U);
-  EXPECT_NE((*Result)[0], nullptr);
-
-  // Verify the symbol points to the right function.
-  auto *Func = reinterpret_cast<int (*)()>((*Result)[0]);
-  EXPECT_EQ(Func(), 42);
-
-  auto UR = syncUnload(*NDM, Handle);
-  EXPECT_FALSE(!!UR) << toString(std::move(UR));
-}
-
-TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
   auto Result =
-      syncLookup(*NDM, Handle,
-                 {"NativeDylibManagerTestFunc", "NativeDylibManagerTestFunc2"});
+      syncLookup(*NDM, Handle, {{MANGLED("NativeDylibManagerTestFunc"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
-  ASSERT_EQ(Result->size(), 2U);
-  EXPECT_NE((*Result)[0], nullptr);
-  EXPECT_NE((*Result)[1], nullptr);
+  ASSERT_EQ(Result->size(), 1U);
+  ASSERT_TRUE((*Result)[0].has_value());
+  EXPECT_NE(*(*Result)[0], nullptr);
 
-  auto *Func1 = reinterpret_cast<int (*)()>((*Result)[0]);
-  auto *Func2 = reinterpret_cast<int (*)()>((*Result)[1]);
-  EXPECT_EQ(Func1(), 42);
-  EXPECT_EQ(Func2(), 7);
-
-  auto UR = syncUnload(*NDM, Handle);
-  EXPECT_FALSE(!!UR) << toString(std::move(UR));
+  // Verify the symbol points to the right function.
+  auto *Func = reinterpret_cast<int (*)()>(*(*Result)[0]);
+  EXPECT_EQ(Func(), 42);
 }
 
-TEST(NativeDylibManagerTest, LookupNonExistentSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {"no_such_symbol"});
+  auto Result = syncLookup(*NDM, Handle,
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("NativeDylibManagerTestFunc2"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
-  ASSERT_EQ(Result->size(), 1U);
-  EXPECT_EQ((*Result)[0], nullptr);
+  ASSERT_EQ(Result->size(), 2U);
+  ASSERT_TRUE((*Result)[0].has_value());
+  ASSERT_TRUE((*Result)[1].has_value());
+  EXPECT_NE(*(*Result)[0], nullptr);
+  EXPECT_NE(*(*Result)[1], nullptr);
 
-  auto UR = syncUnload(*NDM, Handle);
-  EXPECT_FALSE(!!UR) << toString(std::move(UR));
+  auto *Func1 = reinterpret_cast<int (*)()>(*(*Result)[0]);
+  auto *Func2 = reinterpret_cast<int (*)()>(*(*Result)[1]);
+  EXPECT_EQ(Func1(), 42);
+  EXPECT_EQ(Func2(), 7);
 }
 
-TEST(NativeDylibManagerTest, LookupOnUnrecognizedHandle) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
-  void *Bogus = reinterpret_cast<void *>(0xDEADBEEF);
-  auto Result = syncLookup(*NDM, Bogus, {"NativeDylibManagerTestFunc"});
-  EXPECT_FALSE(!!Result);
-  consumeError(Result.takeError());
+  void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
+
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("no_such_symbol"), Weak}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 1U);
+  ASSERT_TRUE((*Result)[0].has_value())
+      << "weak-missing symbol should be reported as a present optional";
+  EXPECT_EQ(*(*Result)[0], nullptr);
+}
+
+TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  SimpleSymbolTable ST;
+  auto NDM = cantFail(NativeDylibManager::Create(S, ST));
+
+  void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
+
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("no_such_symbol"), Req}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 1U);
+  EXPECT_FALSE((*Result)[0].has_value())
+      << "required-missing symbol should be reported as an empty optional";
+}
+
+TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  SimpleSymbolTable ST;
+  auto NDM = cantFail(NativeDylibManager::Create(S, ST));
+
+  void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
+
+  auto Result = syncLookup(*NDM, Handle,
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("no_such_symbol"), Weak}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 2U);
+  ASSERT_TRUE((*Result)[0].has_value());
+  EXPECT_NE(*(*Result)[0], nullptr);
+  ASSERT_TRUE((*Result)[1].has_value())
+      << "weak-missing symbol should be reported as a present optional";
+  EXPECT_EQ(*(*Result)[1], nullptr);
 }

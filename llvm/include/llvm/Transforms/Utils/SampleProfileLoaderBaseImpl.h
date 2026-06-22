@@ -163,9 +163,7 @@ public:
   }
 };
 
-
-
-extern cl::opt<bool> SampleProfileUseProfi;
+extern LLVM_ABI cl::opt<bool> SampleProfileUseProfi;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");

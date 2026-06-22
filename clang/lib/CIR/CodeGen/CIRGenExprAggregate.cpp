@@ -258,6 +258,36 @@ public:
 
       break;
     }
+
+    case CK_NonAtomicToAtomic:
+    case CK_AtomicToNonAtomic: {
+      bool isToAtomic = (e->getCastKind() == CK_NonAtomicToAtomic);
+      if (!isToAtomic) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "AggExprEmitter: CK_AtomicToNonAtomic");
+        return;
+      }
+
+      // Determine the atomic and value types.
+      QualType atomicType = e->getSubExpr()->getType();
+      QualType valueType = e->getType();
+      if (isToAtomic)
+        std::swap(atomicType, valueType);
+
+      assert(atomicType->isAtomicType());
+      assert(cgf.getContext().hasSameUnqualifiedType(
+          valueType, atomicType->castAs<AtomicType>()->getValueType()));
+
+      // Just recurse normally if we're ignoring the result or the
+      // atomic type doesn't change representation.
+      if (dest.isIgnored() || !cgf.cgm.isPaddedAtomicType(atomicType))
+        return Visit(e->getSubExpr());
+
+      cgf.cgm.errorNYI(
+          e->getSourceRange(),
+          "AggExprEmitter: AtomicCast not ignored and has padded atomic type");
+      return;
+    }
     case CK_LValueToRValue:
       // If we're loading from a volatile type, force the destination
       // into existence.
@@ -365,7 +395,7 @@ public:
       cgf.cgm.errorNYI(e->getBeginLoc(), "aggregate three-way comparison");
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
 
     if (e->getType()->isAnyComplexType())
       cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: complex type");
@@ -515,8 +545,11 @@ public:
   }
 
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitImplicitValueInitExpr");
+    QualType ty = e->getType();
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    AggValueSlot slot = ensureSlot(loc, ty);
+    emitNullInitializationToLValue(loc,
+                                   cgf.makeAddrLValue(slot.getAddress(), ty));
   }
   void VisitNoInitExpr(NoInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitNoInitExpr");
@@ -537,7 +570,7 @@ public:
   /// real initializer list.
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     ASTContext &ctx = cgf.getContext();
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
     LValue array = cgf.emitLValue(e->getSubExpr());
@@ -624,9 +657,7 @@ public:
     emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
-  void VisitCXXThrowExpr(const CXXThrowExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
-  }
+  void VisitCXXThrowExpr(const CXXThrowExpr *e) { cgf.emitCXXThrowExpr(e); }
   void VisitAtomicExpr(AtomicExpr *e) {
     RValue result = cgf.emitAtomicExpr(e);
     emitFinalDestCopy(e->getType(), result);
@@ -1125,11 +1156,10 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
           AggValueSlot::IsNotAliased,
           cgf.getOverlapForBaseInit(cxxrd, baseRD, false));
       cgf.emitAggExpr(args[curInitIndex++], aggSlot);
-      if (base.getType().isDestructedType()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "push deferred deactivation cleanup");
-        return;
-      }
+
+      if (QualType::DestructionKind dtorKind =
+              base.getType().isDestructedType())
+        cgf.pushDestroyAndDeferDeactivation(dtorKind, address, base.getType());
     }
   }
 

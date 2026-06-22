@@ -164,3 +164,32 @@ for.end:
   ret i1 %tobool313
 }
 
+; Switch with multiple edges to the same block: scalarizePHI must reuse
+; the same scalar value for duplicate predecessor entries.
+define void @scalarize_phi_switch_multi_edge(ptr %0, <16 x i64> %a3) {
+; CHECK-LABEL: @scalarize_phi_switch_multi_edge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i64> [[A3:%.*]], i64 0
+; CHECK-NEXT:    switch i33 0, label [[LBL_BR9:%.*]] [
+; CHECK-NEXT:      i33 -2547564735, label [[LBL_BR9]]
+; CHECK-NEXT:      i33 4, label [[LBL_BR9]]
+; CHECK-NEXT:    ]
+; CHECK:       lbl_br9:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TMP1]], [[ENTRY]] ], [ 0, [[LBL_BR9]] ], [ [[TMP1]], [[ENTRY]] ]
+; CHECK-NEXT:    store i64 [[TMP2]], ptr [[TMP0:%.*]], align 8
+; CHECK-NEXT:    br label [[LBL_BR9]]
+;
+entry:
+  switch i64 0, label %lbl_br9 [
+  i64 6042369857, label %lbl_br9
+  i64 4, label %lbl_br9
+  ]
+
+lbl_br9:
+  %a3.addr.1 = phi <16 x i64> [ %a3, %entry ], [ %a3, %entry ], [ %and, %lbl_br9 ], [ %a3, %entry ]
+  %vecext = extractelement <16 x i64> %a3.addr.1, i64 0
+  store i64 %vecext, ptr %0, align 8
+  %and = and <16 x i64> zeroinitializer, %a3.addr.1
+  br label %lbl_br9
+}
+

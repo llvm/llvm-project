@@ -306,8 +306,13 @@ public:
         // Fuchsia does not support replacing mappings by creating a new mapping
         // on top so we just do the two syscalls there.
         Entry.Time = 0;
-        mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
-                             Entry.CommitBase, MAP_NOACCESS, Entry.MemMap);
+        if (!mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
+                                  Entry.CommitBase, MAP_NOACCESS,
+                                  Entry.MemMap)) {
+          // A mmap failed, unmap and return.
+          unmapCallBack(Entry.MemMap);
+          return;
+        }
       } else {
         Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                          MAP_NOACCESS);
@@ -901,7 +906,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   const uptr AllocPos = roundDown(CommitBase + CommitSize - Size, Alignment);
   if (!mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0,
                             MemMap)) {
-    unmap(MemMap);
+    MemMap.unmap();
     return nullptr;
   }
   const uptr HeaderPos = AllocPos - getHeadersSize();

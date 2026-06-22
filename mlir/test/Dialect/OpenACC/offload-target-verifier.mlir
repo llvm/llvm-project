@@ -31,6 +31,22 @@ func.func @test_memref_f32() {
 
 // -----
 
+// Test memref live-in without data clause - should fail and print var name.
+func.func @test_memref_f32_with_var_name() {
+  // expected-note @below {{, name: my_scalar}}
+  %livein = memref.alloca() {acc.var_name = #acc.var_name<"my_scalar">} : memref<f32>
+  // expected-warning @below {{1 illegal live-in value(s)}}
+  acc.serial {
+    %load = memref.load %livein[] : memref<f32>
+    %accalloca = memref.alloca() : memref<f32>
+    memref.store %load, %accalloca[] : memref<f32>
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // Test memref with copyin data clause - should pass
 func.func @test_memref_f32_copyin() {
   %alloca = memref.alloca() : memref<f32>

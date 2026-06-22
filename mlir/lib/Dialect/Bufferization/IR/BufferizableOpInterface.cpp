@@ -225,7 +225,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     return failure();
   std::optional<Attribute> memorySpace = copyBufferType->getMemorySpace();
   if (!memorySpace)
-    memorySpace = options.defaultMemorySpaceFn(tensorType);
+    memorySpace =
+        options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType));
   if (memorySpace.has_value())
     allocTensorOp.setMemorySpaceAttr(memorySpace.value());
   return allocTensorOp.getResult();
@@ -346,6 +347,17 @@ bool OpFilter::isOpAllowed(Operation *op) const {
 
 namespace {
 
+// A helper overload for bufferization::getMemRefTypeWithFullyDynamicLayout().
+BaseMemRefType getMemRefTypeWithFullyDynamicLayout(ArrayRef<int64_t> shape,
+                                                   mlir::Type elementType,
+                                                   Attribute memorySpace) {
+  int64_t dynamicOffset = ShapedType::kDynamic;
+  SmallVector<int64_t> dynamicStrides(shape.size(), ShapedType::kDynamic);
+  auto stridedLayout = StridedLayoutAttr::get(elementType.getContext(),
+                                              dynamicOffset, dynamicStrides);
+  return MemRefType::get(shape, elementType, stridedLayout, memorySpace);
+}
+
 /// Default function arg type converter: Use a fully dynamic layout map.
 BufferLikeType
 defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
@@ -353,21 +365,40 @@ defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
                                 const BufferizationOptions &options) {
   if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
     return cast<BufferLikeType>(
-        getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace));
+        bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                           memorySpace));
   }
 
-  // If not builtin, fallback to TensorLikeType::getBufferType()
-  auto bufferType =
-      type.getBufferType(options, [&]() { return funcOp->emitError(); });
-  assert(succeeded(bufferType) &&
-         "a valid buffer is always expected at function boundary");
-  return *bufferType;
+  // If not builtin, fallback to unknown type conversion.
+  return options.unknownTypeConverterFn(type, memorySpace, options);
 }
 /// Default unknown type converter: Use a fully dynamic layout map.
-BaseMemRefType
-defaultUnknownTypeConverter(TensorType tensorType, Attribute memorySpace,
+BufferLikeType
+defaultUnknownTypeConverter(TensorLikeType tensorType, Attribute memorySpace,
                             const BufferizationOptions &options) {
-  return getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace);
+  return cast<BufferLikeType>(
+      bufferization::getMemRefTypeWithFullyDynamicLayout(
+          cast<TensorType>(tensorType), memorySpace));
+}
+
+/// Default reconcile hook: memory space mismatch is an error, layout mismatch
+/// is resolved by promoting to fully dynamic.
+FailureOr<BufferLikeType>
+defaultReconcileBufferTypeMismatch(BufferLikeType x, BufferLikeType y,
+                                   const BufferizationOptions &) {
+  const auto xMemRef = cast<BaseMemRefType>(x);
+  const auto yMemRef = cast<BaseMemRefType>(y);
+
+  if (xMemRef.getMemorySpace() != yMemRef.getMemorySpace())
+    return failure();
+
+  if (isa<UnrankedMemRefType>(xMemRef)) {
+    // unranked memrefs have no layout.
+    return x;
+  }
+
+  return cast<BufferLikeType>(::getMemRefTypeWithFullyDynamicLayout(
+      xMemRef.getShape(), xMemRef.getElementType(), xMemRef.getMemorySpace()));
 }
 
 } // namespace
@@ -375,7 +406,8 @@ defaultUnknownTypeConverter(TensorType tensorType, Attribute memorySpace,
 // Default constructor for BufferizationOptions.
 BufferizationOptions::BufferizationOptions()
     : functionArgTypeConverterFn(defaultFunctionArgTypeConverter),
-      unknownTypeConverterFn(defaultUnknownTypeConverter) {}
+      unknownTypeConverterFn(defaultUnknownTypeConverter),
+      reconcileBufferTypeMismatchFn(defaultReconcileBufferTypeMismatch) {}
 
 bool BufferizationOptions::isOpAllowed(Operation *op) const {
   // Special case: If function boundary bufferization is deactivated, do not
@@ -417,12 +449,8 @@ void BufferizationOptions::setFunctionBoundaryTypeConversion(
                                                              memorySpace));
     }
 
-    // If not builtin, fallback to TensorLikeType::getBufferType()
-    auto bufferType =
-        type.getBufferType(options, [&]() { return funcOp->emitError(); });
-    assert(succeeded(bufferType) &&
-           "a valid buffer is always expected at function boundary");
-    return *bufferType;
+    // If not builtin, fallback to unknown type conversion.
+    return options.unknownTypeConverterFn(type, memorySpace, options);
   };
   inferFunctionResultLayout =
       layoutMapOption == LayoutMapOption::InferLayoutMap;
@@ -739,9 +767,13 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
     return bufferizableOp.getBufferType(value, options, state, invocationStack);
 
   // Op is not bufferizable.
-  return cast<TensorLikeType>(value.getType()).getBufferType(options, [&]() {
-    return op->emitError();
-  });
+  auto memSpace =
+      options.defaultMemorySpaceFn(cast<TensorLikeType>(value.getType()));
+  if (!memSpace.has_value())
+    return op->emitError("could not infer memory space");
+
+  return options.unknownTypeConverterFn(cast<TensorLikeType>(value.getType()),
+                                        *memSpace, options);
 }
 
 bool bufferization::hasTensorSemantics(Operation *op) {
@@ -812,29 +844,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 // Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
 
-BaseMemRefType bufferization::getMemRefType(TensorType tensorType,
-                                            const BufferizationOptions &options,
-                                            MemRefLayoutAttrInterface layout,
-                                            Attribute memorySpace) {
-  // Case 1: Unranked memref type.
-  if (auto unrankedTensorType =
-          llvm::dyn_cast<UnrankedTensorType>(tensorType)) {
-    assert(!layout && "UnrankedTensorType cannot have a layout map");
-    return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
-                                   memorySpace);
-  }
-
-  // Case 2: Ranked memref type with specified layout.
-  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
-  if (layout) {
-    return MemRefType::get(rankedTensorType.getShape(),
-                           rankedTensorType.getElementType(), layout,
-                           memorySpace);
-  }
-
-  return options.unknownTypeConverterFn(tensorType, memorySpace, options);
-}
-
 BaseMemRefType
 bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
                                                    Attribute memorySpace) {
@@ -846,15 +855,8 @@ bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
   }
 
   // Case 2: Ranked memref type.
-  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
-  int64_t dynamicOffset = ShapedType::kDynamic;
-  SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
-                                      ShapedType::kDynamic);
-  auto stridedLayout = StridedLayoutAttr::get(tensorType.getContext(),
-                                              dynamicOffset, dynamicStrides);
-  return MemRefType::get(rankedTensorType.getShape(),
-                         rankedTensorType.getElementType(), stridedLayout,
-                         memorySpace);
+  return ::getMemRefTypeWithFullyDynamicLayout(
+      tensorType.getShape(), tensorType.getElementType(), memorySpace);
 }
 
 /// Return a MemRef type with a static identity layout (i.e., no layout map). If
@@ -980,8 +982,8 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
 
   // No further analysis is possible for a block argument.
   if (llvm::isa<BlockArgument>(value)) {
-    return cast<BufferLikeType>(
-        bufferization::getMemRefType(tensorType, options));
+    return options.unknownTypeConverterFn(cast<TensorLikeType>(tensorType),
+                                          /*memorySpace=*/nullptr, options);
   }
 
   // Value is an OpResult.
@@ -1001,12 +1003,12 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
   // If we do not know the memory space and there is no default memory space,
   // report a failure.
   auto memSpace =
-      options.defaultMemorySpaceFn(cast<TensorType>(value.getType()));
+      options.defaultMemorySpaceFn(cast<TensorLikeType>(tensorType));
   if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
-  return cast<BufferLikeType>(
-      getMemRefType(tensorType, options, /*layout=*/{}, *memSpace));
+  return options.unknownTypeConverterFn(cast<TensorLikeType>(tensorType),
+                                        *memSpace, options);
 }
 
 bool bufferization::detail::defaultIsRepetitiveRegion(

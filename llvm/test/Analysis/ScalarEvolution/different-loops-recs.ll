@@ -508,9 +508,9 @@ define void @test_06() {
 ; CHECK-NEXT:    %phi1 = phi i32 [ 10, %entry ], [ %phi1.inc, %loop1.exit ]
 ; CHECK-NEXT:    --> {10,+,1}<nuw><nsw><%loop1> U: [10,1000) S: [10,1000) Exits: 999 LoopDispositions: { %loop1: Computable, %loop2: Invariant }
 ; CHECK-NEXT:    %phi2 = phi i32 [ 20, %loop1 ], [ %phi2.inc, %loop2 ]
-; CHECK-NEXT:    --> {20,+,2}<nuw><nsw><%loop2> U: [20,999) S: [20,999) Exits: 998 LoopDispositions: { %loop2: Computable, %loop1: Variant }
+; CHECK-NEXT:    --> {20,+,2}<nuw><nsw><%loop2> U: [20,999) S: [20,999) Exits: 998 LoopDispositions: { %loop2: Computable, %loop1: Uniform }
 ; CHECK-NEXT:    %phi2.inc = add i32 %phi2, 2
-; CHECK-NEXT:    --> {22,+,2}<nuw><nsw><%loop2> U: [22,1001) S: [22,1001) Exits: 1000 LoopDispositions: { %loop2: Computable, %loop1: Variant }
+; CHECK-NEXT:    --> {22,+,2}<nuw><nsw><%loop2> U: [22,1001) S: [22,1001) Exits: 1000 LoopDispositions: { %loop2: Computable, %loop1: Uniform }
 ; CHECK-NEXT:    %phi1.inc = add i32 %phi1, 1
 ; CHECK-NEXT:    --> {11,+,1}<nuw><nsw><%loop1> U: [11,1001) S: [11,1001) Exits: 1000 LoopDispositions: { %loop1: Computable, %loop2: Invariant }
 ; CHECK-NEXT:    %phi3 = phi i32 [ 30, %loop1.exit ], [ %phi3.inc, %loop3 ]
@@ -590,9 +590,9 @@ define void @test_07() {
 ; CHECK-NEXT:    %phi1 = phi i32 [ 10, %loop3 ], [ %phi1.inc, %loop1.exit ]
 ; CHECK-NEXT:    --> {10,+,1}<nuw><nsw><%loop1> U: [10,11) S: [10,11) Exits: 10 LoopDispositions: { %loop1: Computable, %loop2: Invariant }
 ; CHECK-NEXT:    %phi2 = phi i32 [ 20, %loop1 ], [ %phi2.inc, %loop2 ]
-; CHECK-NEXT:    --> {20,+,2}<nuw><nsw><%loop2> U: [20,999) S: [20,999) Exits: 998 LoopDispositions: { %loop2: Computable, %loop1: Variant }
+; CHECK-NEXT:    --> {20,+,2}<nuw><nsw><%loop2> U: [20,999) S: [20,999) Exits: 998 LoopDispositions: { %loop2: Computable, %loop1: Uniform }
 ; CHECK-NEXT:    %phi2.inc = add i32 %phi2, 2
-; CHECK-NEXT:    --> {22,+,2}<nuw><nsw><%loop2> U: [22,1001) S: [22,1001) Exits: 1000 LoopDispositions: { %loop2: Computable, %loop1: Variant }
+; CHECK-NEXT:    --> {22,+,2}<nuw><nsw><%loop2> U: [22,1001) S: [22,1001) Exits: 1000 LoopDispositions: { %loop2: Computable, %loop1: Uniform }
 ; CHECK-NEXT:    %phi1.inc = add i32 %phi1, 1
 ; CHECK-NEXT:    --> {11,+,1}<nuw><nsw><%loop1> U: [11,12) S: [11,12) Exits: 11 LoopDispositions: { %loop1: Computable, %loop2: Invariant }
 ; CHECK-NEXT:    %s1 = add i32 %phi1, %phi2
@@ -820,11 +820,11 @@ define i64 @test_10(i32 %param) {
 ; CHECK-NEXT:    %uncle = phi i64 [ %uncle.outer.next, %uncle.loop.backedge ], [ 0, %outer.loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%uncle.loop> U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %uncle.loop: Computable, %loop1: Invariant }
 ; CHECK-NEXT:    %iv1 = phi i64 [ %iv1.next, %guarded ], [ 0, %uncle.loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop1> U: [0,3) S: [0,3) Exits: 2 LoopDispositions: { %loop1: Computable, %uncle.loop: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop1> U: [0,3) S: [0,3) Exits: 2 LoopDispositions: { %loop1: Computable, %uncle.loop: Uniform }
 ; CHECK-NEXT:    %iv1.trunc = trunc i64 %iv1 to i32
-; CHECK-NEXT:    --> {0,+,1}<%loop1> U: [0,3) S: [0,3) Exits: 2 LoopDispositions: { %loop1: Computable, %uncle.loop: Variant }
+; CHECK-NEXT:    --> {0,+,1}<%loop1> U: [0,3) S: [0,3) Exits: 2 LoopDispositions: { %loop1: Computable, %uncle.loop: Uniform }
 ; CHECK-NEXT:    %iv1.next = add nuw nsw i64 %iv1, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop1> U: [1,4) S: [1,4) Exits: 3 LoopDispositions: { %loop1: Computable, %uncle.loop: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop1> U: [1,4) S: [1,4) Exits: 3 LoopDispositions: { %loop1: Computable, %uncle.loop: Uniform }
 ; CHECK-NEXT:    %uncle.outer.next = add i64 %uncle, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%uncle.loop> U: [1,2) S: [1,2) Exits: <<Unknown>> LoopDispositions: { %uncle.loop: Computable, %loop1: Invariant }
 ; CHECK-NEXT:    %iv2 = phi i32 [ %iv2.next, %loop2 ], [ %param, %loop2.preheader ]
