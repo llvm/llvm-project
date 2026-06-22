@@ -1390,6 +1390,9 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     if (Ptr.isZero())
       return true;
 
+    if (!Ptr.isBlockPointer())
+      return false;
+
     // Remove base casts.
     QualType InitialType = Ptr.getType();
     Ptr = Ptr.expand().stripBaseCasts();
