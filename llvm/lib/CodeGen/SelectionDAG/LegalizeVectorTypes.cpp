@@ -3650,16 +3650,14 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
-  // EVL1 may equal NElts (V2 starts just past V1), so clamp to NElts.
-  unsigned EltSize = VT.getScalarSizeInBits() / 8;
+  SDValue EltByteSize =
+      DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
   SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
-  SDValue MaxElts = DAG.getElementCount(DL, PtrVT, VT.getVectorElementCount());
-  EVL1Ptr = DAG.getNode(ISD::UMIN, DL, PtrVT, EVL1Ptr, MaxElts);
-  SDValue StackPtr2 =
-      DAG.getMemBasePlusOffset(StackPtr,
-                               DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr,
-                                           DAG.getConstant(EltSize, DL, PtrVT)),
-                               DL);
+  SDValue EVL1Bytes = DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr, EltByteSize);
+  // Clip EVL1Bytes to make sure we stay within the stack object.
+  SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
+  EVL1Bytes = DAG.getNode(ISD::UMIN, DL, PtrVT, EVL1Bytes, VTBytes);
+  SDValue StackPtr2 = DAG.getMemBasePlusOffset(StackPtr, EVL1Bytes, DL);
   SDValue PoisonPtr = DAG.getPOISON(PtrVT);
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
