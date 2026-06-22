@@ -1436,28 +1436,30 @@ static MCRegister getLargestFPRegisterOrZero(const RISCVSubtarget &STI,
                                              const TargetRegisterInfo &TRI,
                                              MCRegister Reg) {
   if (!STI.hasStdExtF())
-    return 0;
+    return MCRegister();
 
-  TargetRegisterClass LargestFPRegClass = STI.getLargestFPRegClass().value();
+  TargetRegisterClass const *LargestFPRegClass = STI.getLargestFPRegClass();
+  assert(LargestFPRegClass);
 
-  if (LargestFPRegClass.contains(Reg))
+  if (LargestFPRegClass->contains(Reg))
     return Reg;
 
-  std::array<TargetRegisterClass, 3> RegisterClasses = {
-      RISCV::FPR16RegClass, RISCV::FPR32RegClass, RISCV::FPR64RegClass};
-  std::array<int, 3> SubIdx = {RISCV::sub_16, RISCV::sub_32, RISCV::sub_64};
+  std::array<TargetRegisterClass const *, 3> RegisterClasses = {
+      &RISCV::FPR16RegClass, &RISCV::FPR32RegClass, &RISCV::FPR64RegClass};
+  std::array<unsigned, 3> SubIdx = {RISCV::sub_16, RISCV::sub_32,
+                                    RISCV::sub_64};
 
-  for (unsigned i = 0; i < RegisterClasses.size(); ++i) {
-    if (RegisterClasses[i].contains(Reg)) {
+  for (auto [RegClass, SubReg] : zip(RegisterClasses, SubIdx)) {
+    if (RegClass->contains(Reg)) {
       if (MCRegister Super =
-              TRI.getMatchingSuperReg(Reg, SubIdx[i], &LargestFPRegClass))
+              TRI.getMatchingSuperReg(Reg, SubReg, LargestFPRegClass))
         return Super;
     }
   }
 
   // Reg is bigger than what's currently available for the target, we can ignore
   // it.
-  return 0;
+  return MCRegister();
 }
 
 void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
@@ -1478,10 +1480,10 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg))
-      FinalRegsToZero.set(Reg);
+      FinalRegsToZero.set(Reg.id());
     else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
-        FinalRegsToZero.set(MaybeReg);
+        FinalRegsToZero.set(MaybeReg.id());
     }
   }
 

@@ -868,7 +868,6 @@ def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU_INX $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZfinx, IsRV64]
 
 // Used by -fzero-call-used-regs to zero out registers.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
-    isCodeGenOnly = true in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def PseudoClearFPR32 : Pseudo<(outs FPR32:$rd), (ins), []>,
                        PseudoInstExpansion<(FMV_W_X FPR32:$rd, X0)>;

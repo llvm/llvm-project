@@ -635,7 +635,7 @@ bool RISCVExpandPseudo::expandPseudoClearFPR64(
   } else {
     BuildMI(MBB, MBBI, DL, TII->get(RISCV::FCVT_D_W), Dst)
         .addReg(RISCV::X0)
-        .addImm(RISCVFPRndMode::RTZ);
+        .addImm(RISCVFPRndMode::RNE);
   }
 
   MBBI->eraseFromParent();
