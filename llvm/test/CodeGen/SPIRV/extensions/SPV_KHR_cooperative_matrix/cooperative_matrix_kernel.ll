@@ -1,10 +1,5 @@
 ; A GLCompute kernel that runs a cooperative-matrix matmul tile against
-; descriptor-bound storage buffers under the Vulkan flavor. A and B are read-only
-; StorageBuffers and C a writable StorageBuffer, each a VulkanBuffer handle
-; decorated DescriptorSet and Binding and accessed through
-; llvm.spv.resource.handlefrombinding and getpointer. The kernel loads A (use 0)
-; and B (use 1) as cooperative matrices, mul-adds into a zero accumulator C
-; (use 2), and stores C. The module must pass spirv-val --target-env vulkan1.3.
+; descriptor-bound storage buffers under the Vulkan flavor
 
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan1.3-compute --spirv-ext=+SPV_KHR_cooperative_matrix,+SPV_KHR_vulkan_memory_model %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute --spirv-ext=+SPV_KHR_cooperative_matrix,+SPV_KHR_vulkan_memory_model %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
