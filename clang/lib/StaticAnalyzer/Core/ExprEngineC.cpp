@@ -52,10 +52,10 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
 
   // With both the LHS and RHS evaluated, process the operation itself.
   for (ExplodedNode *N : CheckedSet) {
-    ProgramStateRef state = N->getState();
+    ProgramStateRef State = N->getState();
     const StackFrame *SF = N->getStackFrame();
-    SVal LeftV = state->getSVal(LHS, SF);
-    SVal RightV = state->getSVal(RHS, SF);
+    SVal LeftV = State->getSVal(LHS, SF);
+    SVal RightV = State->getSVal(RHS, SF);
 
     BinaryOperator::Opcode Op = B->getOpcode();
 
@@ -68,7 +68,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Simulate the effects of a "store":  bind the value of the RHS
       // to the L-Value represented by the LHS.
       SVal ExprVal = B->isGLValue() ? LeftV : RightV;
-      evalStore(Tmp2, B, LHS, N, state->BindExpr(B, SF, ExprVal), LeftV,
+      evalStore(Tmp2, B, LHS, N, State->BindExpr(B, SF, ExprVal), LeftV,
                 RightV);
       continue;
     }
@@ -90,20 +90,20 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // sure that the members of temporaries have a valid 'this' pointer for
       // other checks.
       if (B->getOpcode() == BO_PtrMemD)
-        state = createTemporaryRegionIfNeeded(state, SF, LHS);
+        State = createTemporaryRegionIfNeeded(State, SF, LHS);
 
       // Process non-assignments except commas or short-circuited
       // logical expressions (LAnd and LOr).
-      SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
+      SVal Result = evalBinOp(State, Op, LeftV, RightV, B->getType());
       if (!Result.isUnknown()) {
-        state = state->BindExpr(B, SF, Result);
+        State = State->BindExpr(B, SF, Result);
       } else {
         // If we cannot evaluate the operation escape the operands.
-        state = escapeValues(state, LeftV, PSK_EscapeOther);
-        state = escapeValues(state, RightV, PSK_EscapeOther);
+        State = escapeValues(State, LeftV, PSK_EscapeOther);
+        State = escapeValues(State, RightV, PSK_EscapeOther);
       }
 
-      Bldr.generateNode(B, N, state);
+      Bldr.generateNode(B, N, State);
       continue;
     }
 
@@ -128,12 +128,12 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     // null dereferences, and so on.
     ExplodedNodeSet Tmp;
     SVal location = LeftV;
-    evalLoad(Tmp, B, LHS, N, state, location);
+    evalLoad(Tmp, B, LHS, N, State, location);
 
     for (ExplodedNode *N : Tmp) {
-      state = N->getState();
+      State = N->getState();
       const StackFrame *SF = N->getStackFrame();
-      SVal V = state->getSVal(LHS, SF);
+      SVal V = State->getSVal(LHS, SF);
 
       // Get the computation type.
       QualType CTy =
@@ -150,7 +150,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       V = svalBuilder.evalCast(V, CLHSTy, LTy);
 
       // Compute the result of the operation.
-      SVal Result = svalBuilder.evalCast(evalBinOp(state, Op, V, RightV, CTy),
+      SVal Result = svalBuilder.evalCast(evalBinOp(State, Op, V, RightV, CTy),
                                          B->getType(), CTy);
 
       SVal LHSVal;
@@ -173,11 +173,11 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // In C++, assignment and compound assignment operators return an
       // lvalue.
       if (B->isGLValue())
-        state = state->BindExpr(B, SF, location);
+        State = State->BindExpr(B, SF, location);
       else
-        state = state->BindExpr(B, SF, Result);
+        State = State->BindExpr(B, SF, Result);
 
-      evalStore(Tmp2, B, LHS, N, state, location, LHSVal);
+      evalStore(Tmp2, B, LHS, N, State, location, LHSVal);
     }
   }
 
