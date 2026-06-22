@@ -2669,6 +2669,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
+  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-to-size", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-value", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   if (Attrs.hasFnAttr("patchable-function-entry-section"))
