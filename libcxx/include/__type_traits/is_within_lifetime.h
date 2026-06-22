@@ -18,9 +18,9 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_is_within_lifetime)
-template <class _Tp>
+template <class _Up = void, class _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI consteval bool is_within_lifetime(const _Tp* __p) noexcept {
-  return __builtin_is_within_lifetime(__p);
+  return __builtin_is_within_lifetime(__p) && __builtin_constant_p(static_cast<const volatile _Up*>(__p) && true);
 }
 #endif
 
