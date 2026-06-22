@@ -4,9 +4,10 @@
 define double @test(double %m, double %a) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call fast double @llvm.maxnum.f64(double 0.000000e+00, double [[M:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fast double @llvm.maxnum.f64(double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.maxnum.f64(double [[TMP0]], double [[A:%.*]])
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.maxnum.f64(double [[TMP1]], double [[A1:%.*]])
+; CHECK-NEXT:    ret double [[TMP2]]
 ;
 entry:
   %c = tail call fast double @llvm.maxnum.f64(double %m, double 0.000000e+00)

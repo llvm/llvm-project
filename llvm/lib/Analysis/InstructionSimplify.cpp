@@ -7293,7 +7293,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (all_of(Args, IsaPred<Constant>))
     if (Constant *C = ConstantFoldIntrinsic(
             IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
-            ReturnType))
+            ReturnType, ExBehavior == fp::ebStrict))
       return C;
 
   // Most of the intrinsics with no operands have some kind of side effect.
@@ -7519,7 +7519,8 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
   }
   default: {
     // Use the default FP environment if none is found.
-    fp::ExceptionBehavior ExBehavior = fp::ebIgnore;
+    fp::ExceptionBehavior ExBehavior =
+        Call->isStrictFP() ? fp::ebStrict : fp::ebIgnore;
     RoundingMode Rounding = RoundingMode::NearestTiesToEven;
     if (auto *Constrained = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
       ExBehavior = Constrained->getExceptionBehavior().value_or(ExBehavior);
