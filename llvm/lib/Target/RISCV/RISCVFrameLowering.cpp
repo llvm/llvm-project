@@ -1479,9 +1479,9 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   BitVector FinalRegsToZero(TRI.getNumRegs());
 
   for (MCRegister Reg : RegsToZero.set_bits()) {
-    if (TRI.isGeneralPurposeRegister(MF, Reg))
+    if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       FinalRegsToZero.set(Reg.id());
-    else if (TRI.isFPRegister(Reg)) {
+    } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());
     }
