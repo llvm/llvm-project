@@ -38,22 +38,41 @@ extern uintptr_t __bss_size[];
 namespace {
 constexpr uint64_t PAGE_TABLE_ENTRY_COUNT = 512;
 constexpr uint64_t PAGE_TABLE_ALIGNMENT = 4096;
+constexpr uint64_t PAGE_TABLE_BLOCK_SHIFT = 30; // 1 GiB block entries.
 
 // Put the page table in a no-init section so it doesn't later get
 // zero-initialized.
-[[gnu::section(".noinit.page_table"), gnu::aligned(PAGE_TABLE_ALIGNMENT), gnu::used]]
-volatile uint64_t page_table[PAGE_TABLE_ENTRY_COUNT];
+[[gnu::section(".noinit.page_table"), gnu::aligned(PAGE_TABLE_ALIGNMENT),
+  gnu::used]] volatile uint64_t page_table[PAGE_TABLE_ENTRY_COUNT];
 
+// Return the base address of the combined stack/heap mapping used by
+// setup_mmu().
 uintptr_t get_stackheap_start() {
+  // __heap_start is weak. If no linker script defines it, its address resolves
+  // to zero; otherwise the symbol's address is the requested heap base.
   if (reinterpret_cast<uintptr_t>(&__heap_start))
     return reinterpret_cast<uintptr_t>(&__heap_start);
 
-  uintptr_t page = reinterpret_cast<uintptr_t>(&get_stackheap_start) >> 30;
-  return (page + 1) << 30;
+  // With no linker-provided heap base, choose the 1 GiB page after this startup
+  // code as the fallback stack/heap page. The page table maps memory in 1 GiB
+  // blocks, so the shifts below convert between addresses and 1 GiB page
+  // numbers:
+  //
+  //   address >> PAGE_TABLE_BLOCK_SHIFT  gives the page number
+  //   page << PAGE_TABLE_BLOCK_SHIFT     gives the page base address
+  //
+  // Choosing page + 1 reserves the next 1 GiB page after the executable image
+  // for writable stack/heap memory.
+  uintptr_t code_page = reinterpret_cast<uintptr_t>(&get_stackheap_start) >>
+                        PAGE_TABLE_BLOCK_SHIFT;
+
+  // code_page is the page containing this function. Use the next page for
+  // stack/heap, then convert that page number back to an address to return.
+  uintptr_t stackheap_address = (code_page + 1) << PAGE_TABLE_BLOCK_SHIFT;
+  return stackheap_address;
 }
 
 void setup_mmu() {
-  constexpr uint64_t PAGE_SHIFT = 30;
   constexpr uint64_t PAGE_TABLE_ENTRY = 0x405; // Index = 1, AF=1.
   // Map the stack/heap as normal memory, but mark it non-executable for both
   // privileged and unprivileged execution. This prevents accidentally executing
@@ -61,8 +80,13 @@ void setup_mmu() {
   constexpr uint64_t PAGE_TABLE_ENTRY_XN =
       PAGE_TABLE_ENTRY | (1ULL << 54) | (1ULL << 53);
 
-  uintptr_t start_page = reinterpret_cast<uintptr_t>(&setup_mmu) >> PAGE_SHIFT;
-  uintptr_t stackheap_page = get_stackheap_start() >> PAGE_SHIFT;
+  uintptr_t start_page =
+      reinterpret_cast<uintptr_t>(&setup_mmu) >> PAGE_TABLE_BLOCK_SHIFT;
+
+  // get_stackheap_start() returns the base address of the combined stack/heap
+  // region, for example 0x80000000. The page table needs an index, for example
+  // 2, so convert the address to a page number.
+  uintptr_t stackheap_page = get_stackheap_start() >> PAGE_TABLE_BLOCK_SHIFT;
 
   __asm__ volatile("tlbi vmalle1");
   __arm_wsr64("TTBR0_EL1", reinterpret_cast<uint64_t>(page_table));
@@ -73,10 +97,11 @@ void setup_mmu() {
   for (uint64_t page = 0; page < PAGE_TABLE_ENTRY_COUNT; ++page)
     page_table[page] = 0;
 
-  page_table[start_page] = PAGE_TABLE_ENTRY | (start_page << PAGE_SHIFT);
+  page_table[start_page] =
+      PAGE_TABLE_ENTRY | (start_page << PAGE_TABLE_BLOCK_SHIFT);
   if (start_page != stackheap_page)
     page_table[stackheap_page] =
-        PAGE_TABLE_ENTRY_XN | (stackheap_page << PAGE_SHIFT);
+        PAGE_TABLE_ENTRY_XN | (stackheap_page << PAGE_TABLE_BLOCK_SHIFT);
 
   __dsb(0xF);
 

@@ -35,15 +35,14 @@ extern uintptr_t __bss_size[];
 } // extern "C"
 
 namespace {
-#if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) &&              \
-    __ARM_ARCH >= 7
+#if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) && __ARM_ARCH >= 7
 constexpr uint32_t PAGE_TABLE_ENTRY_COUNT = 4096;
 constexpr uint32_t PAGE_TABLE_ALIGNMENT = 16384;
 
 // Put the page table in a no-init section so it doesn't later get
 // zero-initialized.
-[[gnu::section(".noinit.page_table"), gnu::aligned(PAGE_TABLE_ALIGNMENT), gnu::used]]
-volatile uint32_t page_table[PAGE_TABLE_ENTRY_COUNT];
+[[gnu::section(".noinit.page_table"), gnu::aligned(PAGE_TABLE_ALIGNMENT),
+  gnu::used]] volatile uint32_t page_table[PAGE_TABLE_ENTRY_COUNT];
 
 void setup_mmu() {
   constexpr uint32_t PAGE_SHIFT = 20;
@@ -188,8 +187,7 @@ namespace LIBC_NAMESPACE_DECL {
   __arm_wsr("CPSR_c", 0x13); // SVC
 #endif
 
-#if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) &&              \
-    __ARM_ARCH >= 7
+#if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) && __ARM_ARCH >= 7
   __arm_wsr("p15:0:c12:c0:0", reinterpret_cast<uint32_t>(&vector_table));
   setup_mmu();
 #endif
