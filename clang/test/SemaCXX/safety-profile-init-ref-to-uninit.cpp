@@ -217,3 +217,86 @@ void template_bad() {
   (void)p;
 }
 template void template_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_bad<int>' requested here}}
+
+// A default-initialized new-expression that leaves a scalar subobject
+// indeterminate (e.g. new int, new int[n], paper §1.2 / §4.3) is a source of
+// uninitialized free-store memory; new T(...), new T{...}, and a type with a
+// user-provided default constructor are initialized.
+namespace std { enum class byte : unsigned char {}; }
+
+struct NewAgg { int x; };
+struct NewWithCtor { NewWithCtor(); int x; };
+
+void test_new_scalar() {
+  int *n1 [[ref_to_uninit]] = new int;      // OK
+  int *n2 = new int;                         // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *n3 = new int(5);                      // OK
+  int *n4 = new int();                       // OK
+  int *n5 = new int{};                       // OK
+  int *n6 [[ref_to_uninit]] = new int(5);    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *n7 [[ref_to_uninit]] = new int();     // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)n1; (void)n2; (void)n3; (void)n4; (void)n5; (void)n6; (void)n7;
+}
+
+void test_new_array(int n) {
+  int *a1 [[ref_to_uninit]] = new int[10];   // OK
+  int *a2 = new int[10];                      // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *a3 [[ref_to_uninit]] = new int[n];     // OK
+  int *a4 = new int[n];                       // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)a1; (void)a2; (void)a3; (void)a4;
+}
+
+void test_new_class() {
+  NewWithCtor *c1 = new NewWithCtor;                    // OK: user-provided default ctor trusted
+  NewWithCtor *c2 [[ref_to_uninit]] = new NewWithCtor;  // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  NewAgg *a1 = new NewAgg;                               // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  NewAgg *a2 [[ref_to_uninit]] = new NewAgg;            // OK
+  std::byte *b1 = new std::byte;                         // OK: std::byte exemption inherited
+  std::byte *b2 [[ref_to_uninit]] = new std::byte;      // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)c1; (void)c2; (void)a1; (void)a2; (void)b1; (void)b2;
+}
+
+struct NewInFields {
+  int *p1 [[ref_to_uninit]] = new int; // OK
+  int *p2 = new int;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *p3 = new int(5);                 // OK
+};
+
+void test_new_assignment() {
+  int *p [[ref_to_uninit]] = new int;
+  p = new int;    // OK
+  p = new int(5); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *q = new int(0);
+  q = new int;    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  q = new int(0); // OK
+  (void)p; (void)q;
+}
+
+void test_new_call_arguments() {
+  take_uninit_ptr(new int);    // OK
+  take_uninit_ptr(new int(5)); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  take_ptr(new int);           // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_ptr(new int(5));        // OK
+}
+
+[[ref_to_uninit]] int *ret_new_uninit_ok() { return new int; } // OK
+[[ref_to_uninit]] int *ret_new_uninit_bad() {
+  return new int(5); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+int *ret_new_ptr_bad() {
+  return new int; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+int *ret_new_ptr_ok() { return new int(0); } // OK
+
+void test_new_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ref_to_uninit")]] int *s = new int; // OK: suppressed
+  (void)s;
+}
+
+template <typename T>
+void template_new_bad() {
+  T *p = new T; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
+template void template_new_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_new_bad<int>' requested here}}

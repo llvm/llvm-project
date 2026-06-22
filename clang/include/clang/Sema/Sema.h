@@ -1130,9 +1130,11 @@ public:
   /// syntactic form -- the address of, or a subobject of, a [[uninit]]
   /// entity; a value of a [[ref_to_uninit]] pointer/reference or array; a
   /// dereference of such a pointer; a cast of such a pointer to another pointer
-  /// type, or of such a glvalue to another reference; or a call to a
-  /// [[ref_to_uninit]]-returning function. Anything else is treated as
-  /// initialized (the trust model; no flow analysis).
+  /// type, or of such a glvalue to another reference; a call to a
+  /// [[ref_to_uninit]]-returning function; or a new-expression whose
+  /// default-initialization leaves the allocated object indeterminate (e.g.
+  /// new int). Anything else is treated as initialized (the trust model; no
+  /// flow analysis).
   bool refersToUninitializedMemory(const Expr *E, bool IsReference) const;
 
   /// std::init / ref_to_uninit (paper §5): check that the initialization of a

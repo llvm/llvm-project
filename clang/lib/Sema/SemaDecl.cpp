@@ -14952,22 +14952,22 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
 // analysis and no type-system tracking. Uninitialized storage is only ever
 // introduced by an explicit [[uninit]] / [[ref_to_uninit]] marker;
 // anything unrecognized is treated as initialized (the trust model).
-static bool glvalueDenotesUninitStorage(const Expr *E);
+static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E);
 
 // \p E is a pointer prvalue. True if it points to uninitialized storage.
-static bool pointerRefersToUninitStorage(const Expr *E) {
+static bool pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E) {
   if (!E)
     return false;
   E = E->IgnoreParenImpCasts();
 
   // Array-to-pointer decay has been stripped above, leaving the array glvalue.
   if (E->getType()->isArrayType())
-    return glvalueDenotesUninitStorage(E);
+    return glvalueDenotesUninitStorage(Ctx, E);
 
   // &G, where G denotes uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_AddrOf)
-      return glvalueDenotesUninitStorage(UO->getSubExpr());
+      return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr());
 
   // A value of a [[ref_to_uninit]] pointer, or a call to a
   // [[ref_to_uninit]]-returning function.
@@ -14979,19 +14979,35 @@ static bool pointerRefersToUninitStorage(const Expr *E) {
     if (const FunctionDecl *FD = CE->getDirectCallee())
       return FD->hasAttr<RefToUninitAttr>();
 
+  // A default-initialized new-expression (none init style: no initializer
+  // written) whose allocated type's default-initialization leaves a scalar
+  // subobject indeterminate produces uninitialized free-store memory (paper
+  // §1.2/§4.3), like a [[ref_to_uninit]] allocator. The style gates this rather
+  // than hasInitializer(), which is also true for new Agg -- default-
+  // initializing a class synthesizes a (possibly trivial) constructor call.
+  // new T(...) / new T{} are value- or list-initialized; a user-provided
+  // default constructor is trusted by defaultInitLeavesScalarIndeterminate.
+  if (const auto *NE = dyn_cast<CXXNewExpr>(E)) {
+    if (NE->getInitializationStyle() != CXXNewInitializationStyle::None)
+      return false;
+    llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
+    return defaultInitLeavesScalarIndeterminateImpl(
+        Ctx, NE->getAllocatedType(), /*HonorUninitMarkers=*/true, Visited);
+  }
+
   // Paper §4.3: a [[ref_to_uninit]] pointer cast to another pointer type is
   // itself [[ref_to_uninit]]. Implicit casts were already stripped above, so
   // this only looks through an explicit pointer-to-pointer cast; a pointer
   // manufactured from an integer (operand not a pointer) is not propagated.
   if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
     if (CE->getSubExpr()->getType()->isPointerType())
-      return pointerRefersToUninitStorage(CE->getSubExpr());
+      return pointerRefersToUninitStorage(Ctx, CE->getSubExpr());
 
   return false;
 }
 
 // \p E is a glvalue. True if it denotes uninitialized storage.
-static bool glvalueDenotesUninitStorage(const Expr *E) {
+static bool glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E) {
   if (!E)
     return false;
   E = E->IgnoreParenImpCasts();
@@ -15010,33 +15026,33 @@ static bool glvalueDenotesUninitStorage(const Expr *E) {
     // a->m reaches m through the pointer a (object *a); a.m through the
     // glvalue a.
     return DeclDenotesUninit(ME->getMemberDecl()) ||
-           (ME->isArrow() ? pointerRefersToUninitStorage(ME->getBase())
-                          : glvalueDenotesUninitStorage(ME->getBase()));
+           (ME->isArrow() ? pointerRefersToUninitStorage(Ctx, ME->getBase())
+                          : glvalueDenotesUninitStorage(Ctx, ME->getBase()));
   // A call to a [[ref_to_uninit]]-returning reference function: the referent
   // it returns is uninitialized. Mirrors the pointer recognizer's call arm.
   if (const auto *CE = dyn_cast<CallExpr>(E))
     if (const FunctionDecl *FD = CE->getDirectCallee())
       return FD->hasAttr<RefToUninitAttr>();
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-    return pointerRefersToUninitStorage(ASE->getBase());
+    return pointerRefersToUninitStorage(Ctx, ASE->getBase());
 
   // *p, where p points to uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_Deref)
-      return pointerRefersToUninitStorage(UO->getSubExpr());
+      return pointerRefersToUninitStorage(Ctx, UO->getSubExpr());
 
   // A reference cast (an explicit cast yielding a glvalue) denotes the same
   // storage as its operand; propagate. Symmetric to the pointer-cast arm.
   if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
     if (CE->getSubExpr()->isGLValue())
-      return glvalueDenotesUninitStorage(CE->getSubExpr());
+      return glvalueDenotesUninitStorage(Ctx, CE->getSubExpr());
 
   return false;
 }
 
 bool Sema::refersToUninitializedMemory(const Expr *E, bool IsReference) const {
-  return IsReference ? glvalueDenotesUninitStorage(E)
-                     : pointerRefersToUninitStorage(E);
+  return IsReference ? glvalueDenotesUninitStorage(Context, E)
+                     : pointerRefersToUninitStorage(Context, E);
 }
 
 void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
