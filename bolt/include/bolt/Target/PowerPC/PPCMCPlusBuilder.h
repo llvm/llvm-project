@@ -81,9 +81,8 @@ public:
   // Build a PPC64 call-stub as MCInsts; the stub tail-calls Target via CTR.
   // Out will receive: [std r2,24(r1)] (optional), address materialization into
   // r12, mtctr r12, bctr. No @toc* fixups are used.
-  void buildCallStubAbsolute(MCContext *Ctx,
-                                             const MCSymbol *TargetSym,
-                                             std::vector<MCInst> &Out) const;
+  void buildCallStubAbsolute(MCContext *Ctx, const MCSymbol *TargetSym,
+                             std::vector<MCInst> &Out) const;
 };
 
 } // namespace bolt
