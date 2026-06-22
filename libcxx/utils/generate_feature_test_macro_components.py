@@ -1523,6 +1523,13 @@ feature_test_macros = [
             "headers": ["variant"],
         },
         {
+            "name": "__cpp_lib_view_interface",
+            "values": {
+                "c++20": 202606,
+            },
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_void_t",
             "values": {"c++17": 201411},
             "headers": ["type_traits"],
