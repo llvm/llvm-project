@@ -1565,6 +1565,24 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       finalizeSynthetic(ctx, ctx.in.dynamic.get());
       changed |= (oldSize != ctx.in.dynamic->getSize());
     }
+
+    // .rela_iplt_{start,end} mark the start and the end of the section
+    // containing IRELATIVE relocations. Update them on each iteration because
+    // they might be affected by the above move of relocations from
+    // .relr.auth.dyn to .rela.dyn.
+    if (ctx.sym.relaIpltStart) {
+      auto &dyn = getIRelativeSection(ctx);
+      if (dyn.isNeeded()) {
+        SectionBase *oldSec = ctx.sym.relaIpltEnd->section;
+        uint64_t oldVal = ctx.sym.relaIpltEnd->value;
+        ctx.sym.relaIpltStart->section = &dyn;
+        ctx.sym.relaIpltEnd->section = &dyn;
+        ctx.sym.relaIpltEnd->value = dyn.getSize();
+        changed |= (oldSec != ctx.sym.relaIpltEnd->section ||
+                    oldVal != ctx.sym.relaIpltEnd->value);
+      }
+    }
+
     if (ctx.in.memtagGlobalDescriptors)
       changed |= ctx.in.memtagGlobalDescriptors->updateAllocSize(ctx);
     if (ctx.in.ehFrameHdr && ctx.in.ehFrameHdr->isNeeded())
@@ -2088,19 +2106,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
-
-  // .rela_iplt_{start,end} mark the start and the end of the section containing
-  // IRELATIVE relocations. This must be called after
-  // finalizeAddressDependentContent() because it might move relocations from
-  // .relr.auth.dyn to .rela.dyn.
-  if (ctx.sym.relaIpltStart) {
-    auto &dyn = getIRelativeSection(ctx);
-    if (dyn.isNeeded()) {
-      ctx.sym.relaIpltStart->section = &dyn;
-      ctx.sym.relaIpltEnd->section = &dyn;
-      ctx.sym.relaIpltEnd->value = dyn.getSize();
-    }
-  }
 
   // All information needed for OutputSection part of Map file is available.
   if (errCount(ctx))
