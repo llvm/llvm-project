@@ -834,7 +834,8 @@ void lifetimebound_multiple_args_definite() {
                       // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2'}}
                obj1,  // expected-warning {{local variable 'obj1' does not live long enough}}
                obj2); // expected-warning {{local variable 'obj2' does not live long enough}}
-  }                              // expected-note {{local variable 'obj1' is destroyed here}} expected-note {{local variable 'obj2' is destroyed here}}
+  }                              // expected-note {{local variable 'obj1' is destroyed here}} \
+                                 // expected-note {{local variable 'obj2' is destroyed here}}
   v.use();                       // expected-note 2 {{later used here}}
 }
 

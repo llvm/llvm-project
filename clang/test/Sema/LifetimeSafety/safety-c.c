@@ -95,8 +95,8 @@ void conditional_operator_lifetimebound(int cond) {
     int a, b;
     p = identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}}
                       : &b);  // expected-warning {{local variable 'b' does not live long enough}}
-  }                           // expected-note {{local variable 'a' is destroyed here}}
-                              // expected-note@-1 {{local variable 'b' is destroyed here}}
+  }                           // expected-note {{local variable 'a' is destroyed here}} \
+                              // expected-note {{local variable 'b' is destroyed here}}
   (void)*p;                   // expected-note 2 {{later used here}}
 }
 

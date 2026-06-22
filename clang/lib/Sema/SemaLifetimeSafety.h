@@ -424,7 +424,7 @@ public:
   }
 
 private:
-  void reportInvalidationNote(const Expr *InvalidationExpr,
+  void reportInvalidationSite(const Expr *InvalidationExpr,
                               StringRef InvalidatedSubject) {
     auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
                     ? diag::note_lifetime_safety_freed_here
