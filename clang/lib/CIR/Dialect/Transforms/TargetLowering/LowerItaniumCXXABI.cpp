@@ -202,10 +202,15 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
   } else {
     // Itanium C++ ABI 2.3:
     //   A pointer to data member is an offset from the base address of
-    //   the class object containing it, represented as a ptrdiff_t
-    unsigned memberIndex = attr.getMemberIndex().value();
-    memberOffset =
-        attr.getType().getClassTy().getElementOffset(layout, memberIndex);
+    //   the class object containing it, represented as a ptrdiff_t.
+    // Walk the GEP-style path, accumulating the byte offset at each step.
+    memberOffset = 0;
+    mlir::Type currentTy = attr.getType().getClassTy();
+    for (int32_t idx : attr.getPath()) {
+      auto recTy = mlir::cast<cir::RecordType>(currentTy);
+      memberOffset += static_cast<int64_t>(recTy.getElementOffset(layout, idx));
+      currentTy = recTy.getMembers()[idx];
+    }
   }
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);

@@ -20,6 +20,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -39,7 +41,8 @@ protected:
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
-      : TUSum(BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
+      : TUSum(llvm::Triple("arm64-apple-macosx"),
+              BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         Builder(TUSum) {}
 
   bool setUpTest(StringRef Code) {
@@ -684,4 +687,95 @@ TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
   ASSERT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"q", 1U}}));
 }
+
+//////////////////////////////////////////////////////////////
+// Template is ignored but instantiations are visited.      //
+//////////////////////////////////////////////////////////////
+
+TEST_F(UnsafeBufferUsageTest, FunctionTemplate) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    T* f(T *p) {
+      return &p[5];
+    }
+  )cpp"));
+  ASSERT_FALSE(findDeclByName("f", AST->getASTContext()));
+}
+
+TEST_F(UnsafeBufferUsageTest, MethodInClassTemplate) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    struct Wrapper {
+      T *ptr;
+      void set(T *p) { ptr = p[5]; }
+    };
+  )cpp"));
+  ASSERT_FALSE(findDeclByName("set", AST->getASTContext()));
+}
+
+TEST_F(UnsafeBufferUsageTest, FunctionTemplateInstantiation) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+  template<typename T>
+  void unsafe(T p) {
+    p[1] = p[2] + p[3];
+  }
+  
+  void f(int *p) {
+    unsafe(p);
+  }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("unsafe");
+
+  ASSERT_TRUE(Sum);
+  ASSERT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, MethodInClassTemplateInstantiation) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+  template<typename T>
+  struct UnsafeClass {
+    T p;
+    void unsafe_method() {
+       p[1] = p[2] + p[3];
+    }
+  };
+  
+  void f(int *p) {
+    UnsafeClass<int *> UC;
+
+    UC.unsafe_method();
+  }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("unsafe_method");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+// Robustness test: unsupported constructs will not cause crash
+#ifndef NDEBUG
+TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
+  // GNU statement expressions are not supported, but should not crash and
+  // should log a warning.
+  llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
+
+  llvm::setCurrentDebugType("ssaf-analyses");
+  testing::internal::CaptureStderr();
+
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int i) {
+      ({ int *p = 0; p; })[i];
+    }
+  )cpp"));
+
+  // The only unsafe pointer is unsupported, so no summary should be produced.
+  ASSERT_FALSE(getEntitySummary("foo"));
+  // Verify the warning was logged
+  EXPECT_TRUE(
+      StringRef(testing::internal::GetCapturedStderr())
+          .contains("attempt to translate StmtExpr to EntityPointerLevels"));
+}
+#endif
+
 } // namespace

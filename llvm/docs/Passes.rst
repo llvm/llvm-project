@@ -1001,12 +1001,6 @@ Utility Passes
 
 This section describes the LLVM Utility Passes.
 
-``deadarghaX0r``: Dead Argument Hacking (BUGPOINT USE ONLY; DO NOT USE)
------------------------------------------------------------------------
-
-Same as dead argument elimination, but deletes arguments to functions which are
-external.  This is only for use by `bugpoint`.
-
 ``extract-blocks``: Extract Basic Blocks From Module (for bugpoint use)
 -----------------------------------------------------------------------
 

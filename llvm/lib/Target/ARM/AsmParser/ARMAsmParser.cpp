@@ -11650,7 +11650,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
     SwitchMode();
 
   getTargetStreamer().emitCode16();
-  getParser().getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
+  getParser().getStreamer().emitCodeAlignment(Align(2), getSTI(), 0);
   return false;
 }
 
@@ -11663,7 +11663,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   if (isThumb())
     SwitchMode();
   getTargetStreamer().emitCode32();
-  getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
+  getParser().getStreamer().emitCodeAlignment(Align(4), getSTI(), 0);
   return false;
 }
 
@@ -12320,7 +12320,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
 
   assert(Section && "must have section to emit alignment");
   if (getContext().getAsmInfo().useCodeAlign(*Section))
-    getStreamer().emitCodeAlignment(Align(2), &getSTI());
+    getStreamer().emitCodeAlignment(Align(2), getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
 
@@ -12518,7 +12518,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (getContext().getAsmInfo().useCodeAlign(*Section))
-      getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
+      getStreamer().emitCodeAlignment(Align(4), getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);
     return false;

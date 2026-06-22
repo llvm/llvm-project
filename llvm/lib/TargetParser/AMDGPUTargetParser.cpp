@@ -58,6 +58,8 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchAMDGCN(StringRef CPU) {
 #define AMDGCN_GPU(NAME, ENUM, ISAVERSION, FEATURES) .Case(NAME, ENUM)
 #define AMDGCN_GPU_ALIAS(NAME, ENUM) .Case(NAME, ENUM)
 #include "llvm/TargetParser/AMDGPUTargetParser.def"
+      .Case("generic", AMDGPU::GPUKind::GK_GFX600)
+      .Case("generic-hsa", AMDGPU::GPUKind::GK_GFX700)
       .Default(AMDGPU::GPUKind::GK_NONE);
 }
 
@@ -203,6 +205,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
   case GK_GFX1251:
+    Features["gfx1251-gemm-insts"] = true;
+    [[fallthrough]];
   case GK_GFX1250:
     Features["swmmac-gfx1200-insts"] = true;
     Features["swmmac-gfx1250-insts"] = true;
