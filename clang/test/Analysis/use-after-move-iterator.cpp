@@ -5,7 +5,7 @@
 
 #include "Inputs/system-header-simulator-cxx.h"
 
-enum Target {MovedFromSource, Destination};
+enum Target {MovedFromSource, Destination, storeIterator};
 
 std::string gh137157_iteratorDerefList(Target trg) {
   std::list<std::string> l1;
@@ -20,6 +20,11 @@ std::string gh137157_iteratorDerefList(Target trg) {
     case Destination: {
       std::move(l1.begin(), l1.end(), std::back_inserter(l2));
       return *l2.cbegin(); // no-warning: only l1 was invalidated and not l2!
+    }
+    case storeIterator: {
+      auto it = l1.begin();
+      std::move(it, l1.end(), std::back_inserter(l2));
+      return *l1.cbegin(); // expected-warning {{Method called on moved-from object 'l1'}}
     }
   }
   return {};
@@ -38,6 +43,11 @@ std::string gh137157_iteratorDerefVector(Target trg) {
     case Destination: {
       std::move(l1.begin(), l1.end(), std::back_inserter(l2));
       return *l2.cbegin(); // no-warning: only l1 was invalidated and not l2!
+    }
+    case storeIterator: {
+      auto it = l1.begin();
+      std::move(it, l1.end(), std::back_inserter(l2));
+      return *l1.cbegin(); // expected-warning {{Method called on moved-from object 'l1'}}
     }
   }
   return {};
