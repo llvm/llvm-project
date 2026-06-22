@@ -9,8 +9,9 @@
 
 ; EPGR normally required unwind v3 info, but that changes the SEH directives
 ; that get emitted, so disable epgr so that we can validate diamondrapids
-; enables push2pop2
-; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids -mattr=-egpr | FileCheck %s --check-prefix=WIN-PPX
+; enables push2pop2. diamondrapids also enables +nf, so the prologue stack
+; adjustment uses an NF sub; use a separate prefix from the +ppx line above.
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids -mattr=-egpr | FileCheck %s --check-prefix=WIN-DR
 
 define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-REF-LABEL: csr6_alloc16:
@@ -199,11 +200,13 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN:       # %bb.0: # %entry
 ; WIN-NEXT:    pushq %r15
 ; WIN-NEXT:    .seh_pushreg %r15
-; WIN-NEXT:    push2 %r13, %r14
+; WIN-NEXT:    pushq %r14
 ; WIN-NEXT:    .seh_pushreg %r14
+; WIN-NEXT:    pushq %r13
 ; WIN-NEXT:    .seh_pushreg %r13
-; WIN-NEXT:    push2 %rbp, %r12
+; WIN-NEXT:    pushq %r12
 ; WIN-NEXT:    .seh_pushreg %r12
+; WIN-NEXT:    pushq %rbp
 ; WIN-NEXT:    .seh_pushreg %rbp
 ; WIN-NEXT:    pushq %rbx
 ; WIN-NEXT:    .seh_pushreg %rbx
@@ -218,8 +221,10 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-NEXT:    .seh_startepilogue
 ; WIN-NEXT:    addq $56, %rsp
 ; WIN-NEXT:    popq %rbx
-; WIN-NEXT:    pop2 %r12, %rbp
-; WIN-NEXT:    pop2 %r14, %r13
+; WIN-NEXT:    popq %rbp
+; WIN-NEXT:    popq %r12
+; WIN-NEXT:    popq %r13
+; WIN-NEXT:    popq %r14
 ; WIN-NEXT:    popq %r15
 ; WIN-NEXT:    .seh_endepilogue
 ; WIN-NEXT:    retq
@@ -229,11 +234,13 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX:       # %bb.0: # %entry
 ; WIN-PPX-NEXT:    pushp %r15
 ; WIN-PPX-NEXT:    .seh_pushreg %r15
-; WIN-PPX-NEXT:    push2p %r13, %r14
+; WIN-PPX-NEXT:    pushp %r14
 ; WIN-PPX-NEXT:    .seh_pushreg %r14
+; WIN-PPX-NEXT:    pushp %r13
 ; WIN-PPX-NEXT:    .seh_pushreg %r13
-; WIN-PPX-NEXT:    push2p %rbp, %r12
+; WIN-PPX-NEXT:    pushp %r12
 ; WIN-PPX-NEXT:    .seh_pushreg %r12
+; WIN-PPX-NEXT:    pushp %rbp
 ; WIN-PPX-NEXT:    .seh_pushreg %rbp
 ; WIN-PPX-NEXT:    pushp %rbx
 ; WIN-PPX-NEXT:    .seh_pushreg %rbx
@@ -248,12 +255,48 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX-NEXT:    .seh_startepilogue
 ; WIN-PPX-NEXT:    addq $56, %rsp
 ; WIN-PPX-NEXT:    popp %rbx
-; WIN-PPX-NEXT:    pop2p %r12, %rbp
-; WIN-PPX-NEXT:    pop2p %r14, %r13
+; WIN-PPX-NEXT:    popp %rbp
+; WIN-PPX-NEXT:    popp %r12
+; WIN-PPX-NEXT:    popp %r13
+; WIN-PPX-NEXT:    popp %r14
 ; WIN-PPX-NEXT:    popp %r15
 ; WIN-PPX-NEXT:    .seh_endepilogue
 ; WIN-PPX-NEXT:    retq
 ; WIN-PPX-NEXT:    .seh_endproc
+;
+; WIN-DR-LABEL: csr6_alloc16:
+; WIN-DR:       # %bb.0: # %entry
+; WIN-DR-NEXT:    pushp %r15
+; WIN-DR-NEXT:    .seh_pushreg %r15
+; WIN-DR-NEXT:    pushp %r14
+; WIN-DR-NEXT:    .seh_pushreg %r14
+; WIN-DR-NEXT:    pushp %r13
+; WIN-DR-NEXT:    .seh_pushreg %r13
+; WIN-DR-NEXT:    pushp %r12
+; WIN-DR-NEXT:    .seh_pushreg %r12
+; WIN-DR-NEXT:    pushp %rbp
+; WIN-DR-NEXT:    .seh_pushreg %rbp
+; WIN-DR-NEXT:    pushp %rbx
+; WIN-DR-NEXT:    .seh_pushreg %rbx
+; WIN-DR-NEXT:    {nf} subq $56, %rsp
+; WIN-DR-NEXT:    .seh_stackalloc 56
+; WIN-DR-NEXT:    .seh_endprologue
+; WIN-DR-NEXT:    #APP
+; WIN-DR-NEXT:    #NO_APP
+; WIN-DR-NEXT:    xorl %eax, %eax
+; WIN-DR-NEXT:    callq *%rax
+; WIN-DR-NEXT:    nop
+; WIN-DR-NEXT:    .seh_startepilogue
+; WIN-DR-NEXT:    addq $56, %rsp
+; WIN-DR-NEXT:    popp %rbx
+; WIN-DR-NEXT:    popp %rbp
+; WIN-DR-NEXT:    popp %r12
+; WIN-DR-NEXT:    popp %r13
+; WIN-DR-NEXT:    popp %r14
+; WIN-DR-NEXT:    popp %r15
+; WIN-DR-NEXT:    .seh_endepilogue
+; WIN-DR-NEXT:    retq
+; WIN-DR-NEXT:    .seh_endproc
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{r12},~{rbx},~{dirflag},~{fpsr},~{flags}"()
   %a = alloca [3 x ptr], align 8

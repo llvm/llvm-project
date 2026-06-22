@@ -384,9 +384,17 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
 
   MachineInstrBuilder MI;
   // Use NF (no-flags) variants when the target supports it, avoiding
-  // gratuitous EFLAGS clobber. Not on Windows where the OS epilogue unwinder
-  // doesn't recognize EVEX-encoded instructions.
-  bool UseNF = STI.hasNF() && !isWin64Prologue(*MBB.getParent());
+  // gratuitous EFLAGS clobber. The NF stack-adjust opcodes below are 64-bit
+  // (SUB64ri32_NF/ADD64ri32_NF), so don't use them for the x32 ABI where the
+  // stack pointer is 32-bit. On Windows whether NF is safe in the epilogue
+  // depends on how the OS unwinder reads the code: the prologue unwinder is
+  // data-driven (it walks the unwind codes and never disassembles the
+  // prologue), so NF is always safe there; but the v1/v2 epilogue unwinder
+  // disassembles the epilogue and doesn't recognize EVEX NF add/sub
+  // instructions, so only use NF in a Windows epilogue under unwind v3 (which
+  // encodes epilog operations declaratively and needs no disassembly).
+  bool UseNF = STI.hasNF() && Uses64BitFramePtr &&
+               !(InEpilogue && needsWin64NonV3EpilogueUnwind(*MBB.getParent()));
   if (UseLEA && !UseNF) {
     MI = addRegOffset(BuildMI(MBB, MBBI, DL,
                               TII.get(getLEArOpcode(Uses64BitFramePtr)),
@@ -395,11 +403,10 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   } else {
     bool IsSub = Offset < 0;
     uint64_t AbsOffset = IsSub ? -Offset : Offset;
-    const unsigned Opc =
-        IsSub ? (UseNF ? (unsigned)X86::SUB64ri32_NF
-                       : getSUBriOpcode(Uses64BitFramePtr))
-              : (UseNF ? (unsigned)X86::ADD64ri32_NF
-                       : getADDriOpcode(Uses64BitFramePtr));
+    const unsigned Opc = IsSub ? (UseNF ? (unsigned)X86::SUB64ri32_NF
+                                        : getSUBriOpcode(Uses64BitFramePtr))
+                               : (UseNF ? (unsigned)X86::ADD64ri32_NF
+                                        : getADDriOpcode(Uses64BitFramePtr));
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
              .addReg(StackPtr)
              .addImm(AbsOffset);
@@ -1483,6 +1490,14 @@ bool X86FrameLowering::has128ByteRedZone(const MachineFunction &MF) const {
 /// directives).
 bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
   return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+}
+
+bool X86FrameLowering::needsWin64NonV3EpilogueUnwind(
+    const MachineFunction &MF) const {
+  const Function &Fn = MF.getFunction();
+  if (!isWin64Prologue(MF) || !Fn.needsUnwindTableEntry())
+    return false;
+  return Fn.getParent()->getWinX64EHUnwindMode() != WinX64EHUnwindMode::V3;
 }
 
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
@@ -2787,9 +2802,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
                  PI->getOperand(0).getReg() == StackPtr &&
                  (Opc == X86::ADD64ri32 || Opc == X86::ADD64ri32_NF ||
                   Opc == X86::ADD32ri || Opc == X86::LEA64r)) {
-        int64_t SPAdj = Opc == X86::LEA64r
-                            ? PI->getOperand(4).getImm()
-                            : PI->getOperand(2).getImm();
+        int64_t SPAdj = Opc == X86::LEA64r ? PI->getOperand(4).getImm()
+                                           : PI->getOperand(2).getImm();
         Offset += SPAdj;
         BuildCFI(MBB, MBBI, DL,
                  MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
@@ -3089,7 +3103,12 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   // 3. When the number of CSR push is even, start to use push2 from the 1st
   //    push and make the stack 16B aligned before the push
   unsigned NumRegsForPush2 = 0;
-  if (STI.hasPush2Pop2() && getStackAlignment() >= 16) {
+  // push2/pop2 are EVEX-encoded. The Windows v1/v2 epilogue unwinder
+  // disassembles the epilogue and can't decode EVEX, and only unwind v3 emits
+  // the declarative .seh_push2regs, so don't use push2/pop2 when the function
+  // needs v1/v2 Win64 unwind info.
+  if (STI.hasPush2Pop2() && getStackAlignment() >= 16 &&
+      !needsWin64NonV3EpilogueUnwind(MF)) {
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });
