@@ -3580,18 +3580,17 @@ An error will be given if:
 def AMDGCNAVDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
-This attribute controls MakeAvailable and MakeVisible cache operations on
-AMDGPU synchronization operations. It takes a string argument specifying the
-mode.
 
-When placed on a statement containing a C/C++ atomic builtin call, the
-resulting atomic or fence instruction will carry ``!mmra !{!"amdgcn-av",
-!"<mode>"}`` metadata.
+This attribute controls availability and visibility as described in the
+`AMDGPU Memory Model <https://llvm.org/docs/AMDGPUMemoryModel.html>`__.
+When placed on a statement containing a C/C++ atomic builtin call, the resulting
+atomic or fence instruction carries the corresponding *AV Metadata*.
 
-The supported modes are:
+The attribute takes a string literal as an argument, which currently has only
+one supported value:
 
-- ``"none"``: Skip cache writeback (on release) and cache invalidation (on
-  acquire), while preserving memory ordering (waits).
+- ``"none"``: Disable MakeAvailable and MakeVisible semantics on release and
+  acquire operations respectively.
 
 .. code-block:: c++
 
