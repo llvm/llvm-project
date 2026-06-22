@@ -241,7 +241,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
     write32le(buf + 16, itype(ADDI, X_T0, X_T3, lo12(offset)));
     write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
     write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.is64 ? 8 : 4));
-    write32le(buf + 28, itype(JALR, 0, X_T2, 0));
+    write32le(buf + 28, itype(JALR, X_X0, X_T2, 0));
     return;
   }
 
@@ -274,7 +274,7 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
     //     jalr    t1, t2
     const uint32_t offset =
         sym.getGotPltVA(ctx) - (pltEntryAddr + 4 /* offset for lpad */);
-    write32le(buf + 0, utype(AUIPC, 0, 0)); // lpad 0
+    write32le(buf + 0, utype(AUIPC, X_X0, 0)); // lpad 0
     write32le(buf + 4, utype(AUIPC, X_T2, hi20(offset)));
     write32le(buf + 8, itype(ctx.arg.is64 ? LD : LW, X_T2, X_T2, lo12(offset)));
     write32le(buf + 12, itype(JALR, X_T1, X_T2, 0));
