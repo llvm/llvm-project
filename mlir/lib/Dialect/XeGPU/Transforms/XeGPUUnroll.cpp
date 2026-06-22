@@ -699,11 +699,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    int64_t chunkSize = 1;
-    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
-      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
-        chunkSize = intAttr.getInt();
-    }
+    int64_t chunkSize = op.getChunkSize();
 
     // Unroll mask and offsets with correct shape
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
@@ -721,7 +717,6 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       targetMaskShape.pop_back();
       int64_t blockedChunkSize = targetShape->back();
       int64_t numNewChunks = chunkSize / blockedChunkSize;
-      chunkSize = blockedChunkSize;
 
       convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
       convertedOffsetTypes = getUnrolledTypes(offsetsTy, targetMaskShape);
@@ -763,8 +758,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     SmallVector<Value> newOps;
     for (auto [o, m] : llvm::zip(convertedOffsets, convertedMasks)) {
       auto newOp = xegpu::LoadGatherOp::create(
-          rewriter, loc, newValueTy, op.getSource(), o, m,
-          rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
+          rewriter, loc, newValueTy, op.getSource(), o, m, op.getL1HintAttr(),
           op.getL2HintAttr(), op.getL3HintAttr(), layout);
       newOps.push_back(newOp);
     }
@@ -792,11 +786,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     if (!targetShape)
       return failure();
 
-    int64_t chunkSize = 1;
-    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
-      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
-        chunkSize = intAttr.getInt();
-    }
+    int64_t chunkSize = op.getChunkSize();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
@@ -811,7 +801,6 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       targetMaskShape.pop_back();
       int64_t blockedChunkSize = targetShape->back();
       int64_t numNewChunks = chunkSize / blockedChunkSize;
-      chunkSize = blockedChunkSize;
 
       convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
       convertedOffsetTypes = getUnrolledTypes(offsetsTy, targetMaskShape);
@@ -858,7 +847,6 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     for (auto [v, o, m] :
          llvm::zip(convertedValues, convertedOffsets, convertedMasks)) {
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
-                                    rewriter.getI64IntegerAttr(chunkSize),
                                     op.getL1HintAttr(), op.getL2HintAttr(),
                                     op.getL3HintAttr(), layout);
     }

@@ -233,7 +233,7 @@ func.func @load_gather_vc_3(%src: memref<?xf32>) {
   %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %mask = arith.constant dense<1>: vector<8xi1>
   // expected-error@+1 {{Mask should match value except the chunk size dim}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}>
+  %2 = xegpu.load %src[%offsets], %mask
       : memref<?xf32>, vector<4xindex>, vector<8xi1> -> vector<4x2xf32>
   return
 }
@@ -242,8 +242,8 @@ func.func @load_gather_vc_3(%src: memref<?xf32>) {
 func.func @load_gather_simt_1(%src: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = arith.constant dense<1>: vector<4xi1>
-  // expected-error@+1 {{value elements must match chunk size}}
-  %2 = xegpu.load %src[%0], %1 <{chunk_size = 2}>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  %2 = xegpu.load %src[%0], %1
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<6xf32>
   return
 }
@@ -265,7 +265,7 @@ func.func @store_scatter_vc_3(%dst: memref<?xf32>) {
   %1 = arith.constant dense<1>: vector<8xi1>
   %2 = arith.constant dense<2.9>: vector<4x2xf32>
   // expected-error@+1 {{Mask should match value except the chunk size dim}}
-  xegpu.store %2, %dst[%0], %1 <{chunk_size = 2}>
+  xegpu.store %2, %dst[%0], %1
       : vector<4x2xf32>, memref<?xf32>, vector<4xindex>, vector<8xi1>
   return
 }
@@ -275,8 +275,8 @@ func.func @store_scatter_simt_1(%dst: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = arith.constant dense<1>: vector<4xi1>
   %2 = arith.constant dense<2.9>: vector<6xf32>
-  // expected-error@+1 {{value elements must match chunk size}}
-  xegpu.store %2, %dst[%0], %1 <{chunk_size = 2}>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  xegpu.store %2, %dst[%0], %1
       : vector<6xf32>, memref<?xf32>, vector<4xindex>, vector<4xi1>
   return
 }
@@ -317,26 +317,6 @@ func.func @load_gather_offset_sg(%src: memref<?xf16>) {
 }
 
 // -----
-func.func @load_gather_offset_wi(%src: ui64) {
-  %mask = arith.constant dense<1>: vector<1xi1>
-  %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{value elements must match chunk size}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : ui64,  vector<1xindex>, vector<1xi1> -> vector<3xf32>
-  return
-}
-
-// -----
-func.func @store_scatter_offset_wi_1(%src: memref<?xf16>) {
-  %val = arith.constant dense<2.9>: vector<4xf16>
-  %offsets = arith.constant dense<[0]> : vector<1xindex>
-  %mask = arith.constant dense<1>: vector<1xi1>
-  // expected-error@+1 {{Mask should match value except the chunk size dim}}
-  xegpu.store %val, %src[%offsets], %mask
-        : vector<4xf16>, memref<?xf16>, vector<1xindex>, vector<1xi1>
-  return
-}
-
-// -----
 func.func @store_scatter_offset_wi_2(%src: memref<4x4xf16>) {
   %val = arith.constant dense<2.9>: vector<4xf16>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
@@ -363,16 +343,7 @@ func.func @load_gather_offset_wi_4(%src: !xegpu.tensor_desc<1x2xf16>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be 1D memref}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : !xegpu.tensor_desc<1x2xf16>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
-  return
-}
-
-// -----
-func.func @load_gather_offset_wi_2(%src: ui64) {
-  %mask = arith.constant dense<1>: vector<1xi1>
-  %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{value elements must match chunk size}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : ui64,  vector<1xindex>, vector<1xi1> -> vector<3xf16>
+  %2 = xegpu.load %src[%offsets], %mask : !xegpu.tensor_desc<1x2xf16>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
   return
 }
 
@@ -381,7 +352,7 @@ func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be 1D memref}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
+  %2 = xegpu.load %src[%offsets], %mask : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
   return
 }
 

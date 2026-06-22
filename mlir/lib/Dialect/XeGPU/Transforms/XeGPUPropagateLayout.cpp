@@ -1234,7 +1234,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   if (!uArch)
     return;
   VectorType resVecTy = load.getValueType();
-  int chunkSize = load.getChunkSize().value_or(1);
+  int chunkSize = load.getChunkSize();
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
   if (!resLayoutInfo.isAssigned())
@@ -1280,7 +1280,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (!uArch)
     return;
   VectorType srcVecTy = storeScatter.getValueType();
-  int chunkSize = storeScatter.getChunkSize().value_or(1);
+  int chunkSize = storeScatter.getChunkSize();
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;

@@ -237,7 +237,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
 
     if (isa<xegpu::StoreScatterOp>(op)) {
       xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
+      int chunkSize = store.getChunkSize();
       if (layout && idx >= 2 && chunkSize > 1)
         return layout.dropDims(llvm::to_vector(
             llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
@@ -245,7 +245,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     }
     if (isa<xegpu::LoadGatherOp>(op)) {
       xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
+      int chunkSize = load.getChunkSize();
       if (layout && idx >= 1 && chunkSize > 1)
         return layout.dropDims(llvm::to_vector(
             llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
