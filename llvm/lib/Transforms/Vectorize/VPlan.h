@@ -3468,6 +3468,9 @@ public:
   operand_range operandsWithoutMask() {
     return isPredicated() ? drop_end(operands()) : operands();
   }
+  const_operand_range operandsWithoutMask() const {
+    return isPredicated() ? drop_end(operands()) : operands();
+  }
 
   /// Returns the number of operands, excluding the mask if the recipe is
   /// predicated.
