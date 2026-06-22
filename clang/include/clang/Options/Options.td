@@ -2032,6 +2032,15 @@ def lifetime_safety_max_cfg_blocks
                "count exceeding this threshold. Specify 0 for no limit.">,
       MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
 
+def lifetime_safety_lifetimebound_macro
+    : Joined<["-"], "lifetime-safety-lifetimebound-macro=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<macro>">,
+      HelpText<"Use the given macro name when suggesting lifetimebound "
+               "attributes">,
+      MarshallingInfoString<LangOpts<"LifetimeSafetyLifetimeBoundMacro">>;
+
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
                   LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
@@ -2179,10 +2188,10 @@ def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of steps in constexpr function evaluation (0 = no limit)">,
   MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
-def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
-  HelpText<"Enable the experimental new constant interpreter">,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"EnableNewConstInterp">>;
+defm experimental_new_constant_interpreter : BoolFOption<"experimental-new-constant-interpreter",
+  LangOpts<"EnableNewConstInterp">, Default<"CLANG_USE_EXPERIMENTAL_CONST_INTERP">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 def fconstexpr_backtrace_limit_EQ : Joined<["-"], "fconstexpr-backtrace-limit=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of entries to print in a constexpr evaluation backtrace (0 = no limit)">,
@@ -4111,7 +4120,11 @@ def fopenmp_cuda_number_of_sm_EQ : Joined<["-"], "fopenmp-cuda-number-of-sm=">, 
 def fopenmp_cuda_blocks_per_sm_EQ : Joined<["-"], "fopenmp-cuda-blocks-per-sm=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams-reduction-recs-num=">, Group<f_Group>,
-  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+  Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Deprecated and ignored. The teams reduction buffer is sized "
+           "automatically at kernel launch to match the actual number of "
+           "teams; this flag is accepted for backwards compatibility only "
+           "and emits a deprecation warning when used.">;
 
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options

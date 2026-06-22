@@ -2,13 +2,13 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -global-isel=0 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-TRUE16,GFX11-TRUE16-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-TRUE16,GFX11-TRUE16-GISEL %s
+; RUN: llc -global-isel=1 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-TRUE16,GFX11-TRUE16-GISEL %s
 ; RUN: llc -global-isel=0 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-FAKE16,GFX11-FAKE16-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-FAKE16,GFX11-FAKE16-GISEL %s
+; RUN: llc -global-isel=1 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-FAKE16,GFX11-FAKE16-GISEL %s
 ; RUN: llc -global-isel=0 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-TRUE16,GFX12-TRUE16-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-TRUE16,GFX12-TRUE16-GISEL %s
+; RUN: llc -global-isel=1 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-TRUE16,GFX12-TRUE16-GISEL %s
 ; RUN: llc -global-isel=0 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-FAKE16,GFX12-FAKE16-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-FAKE16,GFX12-FAKE16-GISEL %s
+; RUN: llc -global-isel=1 -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12-FAKE16,GFX12-FAKE16-GISEL %s
 
 declare half @llvm.sqrt.f16(half %a)
 declare <2 x half> @llvm.sqrt.v2f16(<2 x half> %a)
