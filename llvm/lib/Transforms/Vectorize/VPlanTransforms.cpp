@@ -5425,7 +5425,8 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
         if (vputils::isSingleScalar(Def))
           continue;
 
-        // Permit recipes, some of whose users use the first lane only.
+        // Only introduce an Unpack if some, but not all, users use the first
+        // lane only.
         unsigned NumFirstLaneUsers = count_if(Def->users(), [&Def](VPUser *U) {
           return U->usesFirstLaneOnly(Def);
         });
