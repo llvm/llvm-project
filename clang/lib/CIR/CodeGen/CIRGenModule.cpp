@@ -2302,10 +2302,8 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
   const CIRGenRecordLayout &layout =
       getTypes().getCIRGenRecordLayout(currentClass);
 
-  for (const FieldDecl *fd : currentClass->fields()) {
-    if (fd != field)
-      continue;
-
+  // The field is declared directly in this class.
+  if (field->getParent() == currentClass) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
@@ -2324,14 +2322,28 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
     return true;
   }
 
+  // Otherwise search the base subobjects.  A virtual base only blocks lowering
+  // when the field actually lives within it; a virtual base elsewhere in the
+  // hierarchy must not stop us from reaching a member through a non-virtual
+  // path.
   for (const CXXBaseSpecifier &base : currentClass->bases()) {
-    if (base.isVirtual()) {
-      errorNYI(base.getBeginLoc(), "data member pointer through virtual base");
-      return false;
-    }
-
     const auto *baseDecl =
         cast<CXXRecordDecl>(base.getType()->getAsRecordDecl());
+
+    if (base.isVirtual()) {
+      // A pointer to a data member that traverses a virtual base is ill-formed,
+      // so this guard only fires defensively if the member is reached through
+      // the virtual base.  An unrelated virtual base is skipped so it does not
+      // block members reached through a non-virtual path.
+      llvm::SmallVector<int32_t> discardedPath;
+      if (findFieldMemberPath(baseDecl, field, discardedPath)) {
+        errorNYI(field->getLocation(),
+                 "data member pointer through virtual base");
+        return false;
+      }
+      continue;
+    }
+
     auto baseFieldIdx =
         static_cast<int32_t>(layout.getNonVirtualBaseCIRFieldNo(baseDecl));
     path.push_back(baseFieldIdx);

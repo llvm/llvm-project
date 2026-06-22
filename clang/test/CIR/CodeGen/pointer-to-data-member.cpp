@@ -44,11 +44,15 @@ int Point::*pt_member_nested_region = test1();
 // CIR-AFTER: cir.global external @p_inherit_single = #cir.int<0> : !s64i
 // CIR-AFTER: cir.global external @p_multi_inherit = #cir.int<8> : !s64i
 // CIR-AFTER: cir.global external @p_depth3 = #cir.int<8> : !s64i
+// CIR-AFTER: cir.global external @p_vbase_sibling_nv = #cir.int<8> : !s64i
+// CIR-AFTER: cir.global external @p_vbase_sibling_direct = #cir.int<12> : !s64i
 
 // LLVM: @pt_member_nested_region = global i64 -1, align 8
 // LLVM: @p_inherit_single = global i64 0, align 8
 // LLVM: @p_multi_inherit = global i64 8, align 8
 // LLVM: @p_depth3 = global i64 8, align 8
+// LLVM: @p_vbase_sibling_nv = global i64 8, align 8
+// LLVM: @p_vbase_sibling_direct = global i64 12, align 8
 // LLVM: define internal void @__cxx_global_var_init()
 // LLVM:   %[[MEMBER_PTR:.*]] = call i64 @_Z5test1v()
 // LLVM:   store i64 %[[MEMBER_PTR]], ptr @pt_member_nested_region, align 8
@@ -57,6 +61,8 @@ int Point::*pt_member_nested_region = test1();
 // OGCG: @p_inherit_single = global i64 0, align 8
 // OGCG: @p_multi_inherit = global i64 8, align 8
 // OGCG: @p_depth3 = global i64 8, align 8
+// OGCG: @p_vbase_sibling_nv = global i64 8, align 8
+// OGCG: @p_vbase_sibling_direct = global i64 12, align 8
 // OGCG emits __cxx_global_var_init between test1() and test2(). See checks below.
 
 struct InheritBase {
@@ -89,6 +95,19 @@ struct DepthC : DepthB { float z; };
 
 int DepthC::*p_depth3 = &DepthC::x;
 // CIR-BEFORE: cir.global external @p_depth3 = #cir.data_member<[0, 0, 1]> : !cir.data_member<!s32i in !rec_DepthC>
+
+struct VBaseField { int v; };
+struct NVBaseField { int x; };
+struct Diamond : virtual VBaseField, NVBaseField { int d; };
+
+// A virtual base elsewhere in the hierarchy must not block a member reached
+// through a non-virtual base.
+int Diamond::*p_vbase_sibling_nv = &NVBaseField::x;
+// CIR-BEFORE: cir.global external @p_vbase_sibling_nv = #cir.data_member<[1, 0]> : !cir.data_member<!s32i in !rec_Diamond>
+
+// A direct member of a class with a virtual base still resolves.
+int Diamond::*p_vbase_sibling_direct = &Diamond::d;
+// CIR-BEFORE: cir.global external @p_vbase_sibling_direct = #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_Diamond>
 
 // Checks for test1()
 
