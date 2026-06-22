@@ -297,6 +297,22 @@ func.func private @negative_copy_to_strided_non_identity_base(%src: memref<1x1xf
   return
 }
 
+// CHECK-LABEL: func.func private @negative_copy_to_strided_overlapping_result_dims(
+func.func private @negative_copy_to_strided_overlapping_result_dims(%src : memref<3x3xf32>,
+  %dst : memref<4x4xf32>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
+  %reinterpret_cast = memref.reinterpret_cast %dst
+    to offset: [0], sizes: [3, 3], strides: [1, 1]
+    : memref<4x4xf32> to memref<3x3xf32, strided<[1, 1]>>
+
+  // CHECK:      memref.copy %arg0, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %reinterpret_cast
+    : memref<3x3xf32> to memref<3x3xf32, strided<[1, 1]>>
+  return
+}
+
 // CHECK-LABEL: func.func private @negative_copy_to_strided_rank_change(
 func.func private @negative_copy_to_strided_rank_change(%src : memref<2x3xf32>,
   %dst : memref<6xf32>) {
