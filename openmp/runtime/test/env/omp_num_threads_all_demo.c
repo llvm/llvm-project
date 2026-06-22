@@ -7,14 +7,13 @@
 #include <omp.h>
 #include <stdio.h>
 
-extern const char *__kmpc_get_resolved_device_env(const char *name,
-                                                  int device_id);
+extern const char *__kmp_resolve_device_env(const char *name, int device_id);
 
 int main(void) {
   int host_max = omp_get_max_threads();
   printf("host omp_get_max_threads() = %d\n", host_max);
   for (int d = 0; d < 3; ++d) {
-    const char *v = __kmpc_get_resolved_device_env("OMP_NUM_THREADS", d);
+    const char *v = __kmp_resolve_device_env("OMP_NUM_THREADS", d);
     printf("device %d resolved OMP_NUM_THREADS = %s\n", d, v ? v : "(default)");
   }
   return 0;

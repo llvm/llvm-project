@@ -9,8 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern const char *__kmpc_get_resolved_device_env(const char *name,
-                                                  int device_id);
+extern const char *__kmp_resolve_host_env(const char *name);
 
 int main(void) {
   int max = omp_get_max_threads();
@@ -18,7 +17,7 @@ int main(void) {
     fprintf(stderr, "FAIL: omp_get_max_threads()=%d, expected 8\n", max);
     return 1;
   }
-  const char *host = __kmpc_get_resolved_device_env("OMP_NUM_THREADS", -1);
+  const char *host = __kmp_resolve_host_env("OMP_NUM_THREADS");
   if (host == NULL || strcmp(host, "8") != 0) {
     fprintf(stderr, "FAIL: host query expected '8' got '%s'\n",
             host ? host : "(null)");

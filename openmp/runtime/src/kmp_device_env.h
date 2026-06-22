@@ -46,10 +46,15 @@ extern "C" {
 //   0 -- not a device-scope variant; caller continues normal processing.
 int __kmp_device_env_record(char const *full_name, char const *value);
 
-// Resolve the effective string for `base_name` on `device_id` per the
-// precedence rules above. Pass `device_id == -1` to request the host;
-// any other negative value returns NULL (defensive). Returns NULL when no
-// source applies (caller falls back to its own default).
+// Resolve the effective string for `base_name` on the host device:
+//   <ENV> > <ENV>_ALL > NULL.
+// Host and device queries are intentionally separate functions so a caller
+// can never accidentally pass a non-host device id (or vice versa).
+char const *__kmp_resolve_host_env(char const *base_name);
+
+// Resolve the effective string for `base_name` on a non-host device:
+//   <ENV>_DEV_<d> > <ENV>_DEV > <ENV>_ALL > NULL.
+// `device_id` is 0-based and must be >= 0.
 char const *__kmp_resolve_device_env(char const *base_name, int device_id);
 
 // Record an unsuffixed `<ENV>=value` pair so the host query is consistent
