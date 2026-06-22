@@ -125,6 +125,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
+  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
@@ -613,6 +614,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return lowerSET_ROUNDING(Op, DAG);
   case ISD::WRITE_REGISTER:
     return lowerWRITE_REGISTER(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
@@ -4013,6 +4016,31 @@ SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
     return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 
   return Op;
+}
+
+SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue RMValue = Op.getOperand(1);
+
+  // Zero-extend i32 rounding mode to GRLenVT.
+  RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, GRLenVT, RMValue);
+
+  // The rounding mode in FCSR0 occupies bits 1:0.
+  // LLVM rounding mode encoding (0=RNE,1=RTZ,2=RDN,3=RUP) matches
+  // the LoongArch FCSR hardware encoding, so no translation needed.
+  // We mask to 2 bits to guard against invalid values.
+  RMValue = DAG.getNode(ISD::AND, DL, GRLenVT, RMValue,
+                        DAG.getConstant(0x3, DL, GRLenVT));
+
+  // Build MachineInstr node for WRFCSR (pseudo for MOVGR2FCSR).
+  // WRFCSR takes (uimm2:$fcsr, GPR:$src).
+  SDValue FCSRNo = DAG.getTargetConstant(0, DL, GRLenVT); // FCSR0
+  MachineSDNode *RN = DAG.getMachineNode(LoongArch::WRFCSR, DL, MVT::Other,
+                                          FCSRNo, RMValue, Chain);
+  return SDValue(RN, 0);
 }
 
 SDValue LoongArchTargetLowering::lowerWRITE_REGISTER(SDValue Op,
