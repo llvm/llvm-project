@@ -3617,8 +3617,7 @@ void X86FrameLowering::adjustForSegmentedStacks(
             Reg10)
         .addImm(StackSize);
     BuildMI(allocMBB, DL,
-            TII.get(X86::getMOVriOpcode(IsLP64,
-                                        X86FI->getArgumentStackSize())),
+            TII.get(X86::getMOVriOpcode(IsLP64, X86FI->getArgumentStackSize())),
             Reg11)
         .addImm(X86FI->getArgumentStackSize());
   } else {
