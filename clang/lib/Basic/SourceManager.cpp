@@ -483,9 +483,6 @@ ContentCache &SourceManager::createMemBufferContentCache(
 
 llvm::ErrorOr<llvm::TextEncodingConverter *>
 SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
-  // Target encoding is always UTF-8
-  llvm::StringRef TargetEncoding = "UTF-8";
-  
   // Use getKnownEncoding to get normalized encoding names
   std::optional<llvm::TextEncoding> SourceKnown =
       llvm::TextEncodingConverter::getKnownEncoding(SourceEncoding);
@@ -508,7 +505,7 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
 
   // Create a new converter
   llvm::ErrorOr<llvm::TextEncodingConverter> NewConverter =
-      llvm::TextEncodingConverter::create(SourceEncoding, TargetEncoding);
+      llvm::TextEncodingConverter::create(SourceEncoding, "UTF-8");
   
   if (!NewConverter)
     return NewConverter.getError();
