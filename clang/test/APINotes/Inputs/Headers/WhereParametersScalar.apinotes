@@ -1,0 +1,7 @@
+---
+Name: WhereParametersScalar
+Functions:
+- Name: makeWidget
+  Where:
+    Parameters: int
+  SwiftName: makeWidget(_:)

@@ -97,9 +97,10 @@ static void noteValueLocation(InterpState &S, const Block *B) {
 }
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
-                                     const ValueDecl *VD);
+                                     const ValueDecl *VD,
+                                     AccessKinds AK = AK_Read);
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
-                                const ValueDecl *D) {
+                                const ValueDecl *D, AccessKinds AK = AK_Read) {
   // This function tries pretty hard to produce a good diagnostic. Just skip
   // that if nobody will see it anyway.
   if (!S.diagnosing())
@@ -129,7 +130,7 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   }
 
   if (!D->getType().isConstQualified()) {
-    diagnoseNonConstVariable(S, OpPC, D);
+    diagnoseNonConstVariable(S, OpPC, D, AK);
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->getAnyInitializer()) {
       diagnoseMissingInitializer(S, OpPC, VD);
@@ -143,8 +144,13 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool isModification(AccessKinds AK) {
+  return AK == AK_Assign || AK == AK_Increment || AK == AK_Decrement ||
+         AK == AK_Construct || AK == AK_Destroy;
+}
+
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
-                                     const ValueDecl *VD) {
+                                     const ValueDecl *VD, AccessKinds AK) {
   if (!S.diagnosing())
     return;
 
@@ -168,8 +174,12 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
 
   if (VD->getType()->isIntegralOrEnumerationType()) {
-    S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
-    S.Note(VD->getLocation(), diag::note_declared_at);
+    if (isModification(AK)) {
+      S.FFDiag(Loc, diag::note_constexpr_modify_global);
+    } else {
+      S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    }
     return;
   }
 
@@ -558,8 +568,15 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-  QualType TargetQT = E->getType()->getPointeeType();
+  QualType ExprTy = E->getType();
+  if (ExprTy->isPointerOrReferenceType())
+    ExprTy = ExprTy->getPointeeType();
+
+  QualType TargetQT = ExprTy;
   QualType MostDerivedQT = Ptr.getDeclPtr().getType();
+
+  if (MostDerivedQT->isPointerOrReferenceType())
+    MostDerivedQT = MostDerivedQT->getPointeeType();
 
   S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
       << MostDerivedQT << TargetQT;
@@ -580,11 +597,44 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (S.initializingBlock(Ptr.block()))
-    return true;
+  for (PtrView V : llvm::reverse(S.InitializingPtrs)) {
+    if (V.block() != Ptr.block())
+      continue;
+    if (!V.getFieldDesc()->IsConst) {
+      // If the pointer being initialized is not declared as const,
+      // Ptr is const because of a parent of V, but that is irrelevant
+      // since V is being initialized and NOT const.
+      // This is fine, so return true.
+      return true;
+    }
+
+    // We know that Ptr is const because of a parent field and we also
+    // know that V is explicitly marked const.
+    // But since V is in InitializingPtrs, the fact that it is const doesn't
+    // matter and it is writable.
+    // What we now need to check is whether there is a pointer between Ptr and V
+    // that is marked const but NOT in InitializingPtrs. If that is the case,
+    // Ptr is currently not writable.
+    bool FoundProblem = false;
+    for (PtrView P = Ptr.view(); P != V; P = P.getBase()) {
+      if (P.getFieldDesc()->IsConst) {
+        FoundProblem = true;
+        break;
+      }
+    }
+
+    // We couldn't find any pointer that's explicitly marked const, so
+    // Ptr is writable right now.
+    if (!FoundProblem)
+      return true;
+    // We only need to find the right block once.
+    break;
+  }
 
   if (!S.checkingPotentialConstantExpression()) {
-    const QualType Ty = Ptr.getType();
+    QualType Ty = Ptr.getType();
+    if (!Ptr.getFieldDesc()->IsConst)
+      Ty.addConst();
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
   }
@@ -1226,7 +1276,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK) {
     return false;
 
   if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
-    return diagnoseUnknownDecl(S, OpPC, D);
+    return diagnoseUnknownDecl(S, OpPC, D, AK);
 
   if (AK == AK_Destroy || S.getLangOpts().CPlusPlus14) {
     const SourceInfo &E = S.Current->getSource(OpPC);
@@ -1578,9 +1628,6 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
     return true;
   }
 
-  if (isConstexprUnknown(Ptr))
-    return false;
-
   if (!Ptr.getFieldDesc()->isRecord()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
@@ -1799,6 +1846,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
   };
 
+  bool InstancePtrTracked = false;
   if (Func->hasThisPointer()) {
     size_t ArgSize = Func->getArgSize() + VarArgSize;
     size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
@@ -1841,7 +1889,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
 
-    if (Func->isConstructor() || Func->isDestructor())
+    InstancePtrTracked = (Func->isConstructor() || Func->isDestructor());
+    if (InstancePtrTracked)
       S.InitializingPtrs.push_back(ThisPtr.view());
   }
 
@@ -1868,7 +1917,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
   // Remove initializing  block again.
-  if (Func->isConstructor() || Func->isDestructor())
+  if (InstancePtrTracked)
     S.InitializingPtrs.pop_back();
 
   if (!Success) {
