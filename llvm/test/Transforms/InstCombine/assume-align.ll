@@ -74,8 +74,8 @@ if.end:                                           ; preds = %if.else, %if.then
 
 define void @f3(i64 %a, ptr %b) {
 ; CHECK-LABEL: @f3(
-; CHECK-NEXT:    [[C:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i64 4294967296) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B:%.*]], i64 4294967296) ]
+; CHECK-NEXT:    [[C:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = add i64 [[A:%.*]], [[C]]
 ; CHECK-NEXT:    call void @g(i64 [[D]])
 ; CHECK-NEXT:    ret void

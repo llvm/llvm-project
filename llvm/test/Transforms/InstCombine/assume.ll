@@ -12,8 +12,8 @@ declare void @use_i64(i64)
 
 define i32 @align_to_bundle(ptr %a) #0 {
 ; CHECK-LABEL: @align_to_bundle(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -26,8 +26,8 @@ define i32 @align_to_bundle(ptr %a) #0 {
 
 define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 ; CHECK-LABEL: @align_to_bundle_ptrtoaddr(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -40,8 +40,8 @@ define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
 
 define i32 @align_assume_trunc_cond(ptr %a) #0 {
 ; CHECK-LABEL: @align_assume_trunc_cond(
-; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 2) ]
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
@@ -102,10 +102,10 @@ entry:
 define void @align_with_offset_greater_than_align(ptr %ptr) {
 ; CHECK-LABEL: @align_with_offset_greater_than_align(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 2) ]
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
