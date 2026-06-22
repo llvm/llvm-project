@@ -35,7 +35,7 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[SCEVGEP8]], align 4
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 12
-; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[SCEVGEP7]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[SCEVGEP7]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DP_036]], align 4
 ; CHECK-NEXT:    [[CONV5:%.*]] = fptoui float [[TMP0]] to i32
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP4]], [[CONV5]]
@@ -49,7 +49,7 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[TMP6]], [[CONV10]]
 ; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[DP_036]], i64 12
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[SCEVGEP12]], align 4
-; CHECK-NEXT:    [[CONV13:%.*]] = fptoui float [[TMP13]] to i32
+; CHECK-NEXT:    [[CONV13:%.*]] = fptoui float [[TMP3]] to i32
 ; CHECK-NEXT:    [[OR14:%.*]] = or i32 [[TMP7]], [[CONV13]]
 ; CHECK-NEXT:    store i32 [[OR]], ptr [[DP_036]], align 4
 ; CHECK-NEXT:    [[SCEVGEP13:%.*]] = getelementptr i8, ptr [[DP_036]], i64 4

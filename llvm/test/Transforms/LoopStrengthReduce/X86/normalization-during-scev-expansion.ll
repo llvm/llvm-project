@@ -7,8 +7,8 @@ target triple = "x86_64-apple-macos"
 declare i1 @cond()
 
 define ptr @test(ptr %dst, i64 %v4, i64 %v5, i64 %v6, i64 %v7)  {
-; CHECK-LABEL: define ptr @test(
-; CHECK-SAME: ptr [[DST:%.*]], i64 [[V4:%.*]], i64 [[V5:%.*]], i64 [[V6:%.*]], i64 [[V7:%.*]]) {
+; CHECK-LABEL: define ptr @test
+; CHECK-SAME: (ptr [[DST:%.*]], i64 [[V4:%.*]], i64 [[V5:%.*]], i64 [[V6:%.*]], i64 [[V7:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[V5]], [[V4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
@@ -64,8 +64,8 @@ exit:
 }
 
 define i32 @test_pr63678(i1 %c) {
-; CHECK-LABEL: define i32 @test_pr63678(
-; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-LABEL: define i32 @test_pr63678
+; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_1_PREHEADER:%.*]]
 ; CHECK:       bb:
