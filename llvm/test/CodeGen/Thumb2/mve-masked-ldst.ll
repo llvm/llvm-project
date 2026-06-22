@@ -809,6 +809,7 @@ define void @foo_v4f32_v4f16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    vldr.16 s1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovx.f16 s2, s0
 ; CHECK-LE-NEXT:    vins.f16 s1, s2
+; CHECK-LE-NEXT:    @ implicit-def: $d1
 ; CHECK-LE-NEXT:    lsls r1, r1, #28
 ; CHECK-LE-NEXT:    bmi .LBB18_4
 ; CHECK-LE-NEXT:    b .LBB18_5
@@ -900,6 +901,7 @@ define void @foo_v4f32_v4f16(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-BE-NEXT:    vldr.16 s1, [r2, #4]
 ; CHECK-BE-NEXT:    vmovx.f16 s2, s0
 ; CHECK-BE-NEXT:    vins.f16 s1, s2
+; CHECK-BE-NEXT:    @ implicit-def: $d1
 ; CHECK-BE-NEXT:    lsls r1, r1, #31
 ; CHECK-BE-NEXT:    bne .LBB18_4
 ; CHECK-BE-NEXT:    b .LBB18_5
@@ -1000,6 +1002,7 @@ define void @foo_v4f32_v4f16_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-LE-NEXT:    vldr.16 s1, [r2, #4]
 ; CHECK-LE-NEXT:    vmovx.f16 s2, s0
 ; CHECK-LE-NEXT:    vins.f16 s1, s2
+; CHECK-LE-NEXT:    @ implicit-def: $d1
 ; CHECK-LE-NEXT:    lsls r1, r1, #28
 ; CHECK-LE-NEXT:    bmi .LBB19_4
 ; CHECK-LE-NEXT:    b .LBB19_5
@@ -1091,6 +1094,7 @@ define void @foo_v4f32_v4f16_unaligned(ptr %dest, ptr %mask, ptr %src) {
 ; CHECK-BE-NEXT:    vldr.16 s1, [r2, #4]
 ; CHECK-BE-NEXT:    vmovx.f16 s2, s0
 ; CHECK-BE-NEXT:    vins.f16 s1, s2
+; CHECK-BE-NEXT:    @ implicit-def: $d1
 ; CHECK-BE-NEXT:    lsls r1, r1, #31
 ; CHECK-BE-NEXT:    bne .LBB19_4
 ; CHECK-BE-NEXT:    b .LBB19_5

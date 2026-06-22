@@ -10,7 +10,7 @@
 # BB (bb.25)
 #
 # GCN-LABEL: bb.6:
-# GCN: successors: %bb.7(0x{{[0-9]+}}), %bb.18(0x{{[0-9]+}})
+# GCN: successors: %bb.[[EDGE:[0-9]+]](0x{{[0-9]+}}), %bb.18(0x{{[0-9]+}})
 # GCN: %{{[0-9]+}}:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %{{[0-9]+}}, 0, 0, 0, 0, implicit $exec
 #
 

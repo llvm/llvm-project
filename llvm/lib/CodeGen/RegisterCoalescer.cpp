@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterCoalescer.h"
+#include "PHIEliminationUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
@@ -23,8 +24,10 @@
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -125,6 +128,25 @@ namespace {
 
 class JoinVals;
 
+struct UndefPHIRepair {
+  MachineBasicBlock *PredMBB;
+  MachineBasicBlock *SuccMBB;
+  // The lanes that have a subrange PHI def in SuccMBB but are not live-out of
+  // PredMBB.
+  LaneBitmask LaneMask;
+};
+
+enum class SubRangeJoinResult {
+  /// No subranges were created or merged.
+  None,
+  /// One or both joined intervals already had subranges, so RHS subranges were
+  /// merged into LHS subranges.
+  JoinedSubRanges,
+  /// Subrange liveness was introduced while joining a source subregister into a
+  /// whole destination register. Only LHS-side subrange pruning is needed.
+  JoinedSubRegToWhole,
+};
+
 class RegisterCoalescer : private LiveRangeEdit::Delegate {
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -132,7 +154,9 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   const TargetInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
   SlotIndexes *SI = nullptr;
-  const MachineLoopInfo *Loops = nullptr;
+  MachineLoopInfo *Loops = nullptr;
+  MachineDominatorTree *DomTree = nullptr;
+  bool ChangedCFG = false;
   RegisterClassInfo RegClassInfo;
 
   /// Position and VReg of a PHI instruction during coalescing.
@@ -248,6 +272,44 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// Attempt joining two virtual registers. Return true on success.
   bool joinVirtRegs(CoalescerPair &CP);
 
+  /// Materialize undef subrange PHI inputs that coalescing made visible.
+  ///
+  /// A PHI value in a subrange means that every predecessor must provide a
+  /// value for that lane at the predecessor boundary. When a predecessor's
+  /// value is intentionally undef, the MIR needs an IMPLICIT_DEF in that
+  /// predecessor so LiveIntervals maintained here match the intervals that
+  /// would be recomputed from the rewritten MIR.
+  bool repairUndefSubRangePHIs(LiveInterval &LI);
+
+  /// Return true if coalescing \p CP could expose an undef subrange PHI repair
+  /// that would be impossible to recover from, for example if the repair would
+  /// need to split an edge which cannot be split.
+  bool hasUnsafeUndefPHIRepairAfterCoalescing(CoalescerPair &CP);
+
+  /// Return true if any repair for \p LI would be illegal to do, for example if
+  /// it would need an unavailable critical-edge split. If \p CP is set, reads
+  /// are interpreted as they would look after coalescing \p CP, before operands
+  /// have actually been rewritten.
+  /// \p TreatLiveOutAsMissing conservatively treats matching live-out subrange
+  /// PHI lanes as if shrinkToUses() had removed them.
+  bool hasUnavailableUndefPHIRepair(
+      LiveInterval &LI, const TargetRegisterClass *RC, LaneBitmask MaxMask,
+      const CoalescerPair *CP = nullptr,
+      LaneBitmask TreatLiveOutAsMissing = LaneBitmask::getNone());
+
+  /// Return lanes read in [Begin, End), after applying the virtual-register
+  /// substitutions that would be performed for \p CP.
+  LaneBitmask getReadLanesInRangeAfterCoalescing(
+      const CoalescerPair &CP, LaneBitmask MaxMask,
+      MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End);
+
+  /// Return the PHI-copy insertion point that would be used after coalescing
+  /// \p CP, before operands have actually been rewritten.
+  MachineBasicBlock::iterator
+  findPHICopyInsertPointAfterCoalescing(const CoalescerPair &CP,
+                                        MachineBasicBlock *MBB,
+                                        MachineBasicBlock *SuccMBB);
+
   /// If a live interval has many valnos and is coalesced with other
   /// live intervals many times, we regard such live interval as having
   /// high compile time cost.
@@ -264,6 +326,12 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   void mergeSubRangeInto(LiveInterval &LI, const LiveRange &ToMerge,
                          LaneBitmask LaneMask, CoalescerPair &CP,
                          unsigned DstIdx);
+
+  /// Perform the subrange construction and merging needed by joinVirtRegs().
+  SubRangeJoinResult mergeSubRangesForJoin(LiveInterval &LHS, LiveInterval &RHS,
+                                           CoalescerPair &CP,
+                                           bool TrackSubRegLiveness,
+                                           bool EmitDebug = true);
 
   /// Join the liveranges of two subregisters. Joins @p RRange into
   /// @p LRange, @p RRange may be invalid afterwards.
@@ -381,9 +449,11 @@ public:
   RegisterCoalescer() = default;
   RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
 
-  RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,
-                    const MachineLoopInfo *Loops)
-      : LIS(LIS), SI(SI), Loops(Loops) {}
+  RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI, MachineLoopInfo *Loops,
+                    MachineDominatorTree *DomTree)
+      : LIS(LIS), SI(SI), Loops(Loops), DomTree(DomTree) {}
+
+  bool changedCFG() const { return ChangedCFG; }
 
   bool run(MachineFunction &MF);
 };
@@ -415,6 +485,7 @@ INITIALIZE_PASS_BEGIN(RegisterCoalescerLegacy, "register-coalescer",
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescerLegacy, "register-coalescer",
                     "Register Coalescer", false, false)
 
@@ -593,14 +664,14 @@ bool CoalescerPair::isCoalescable(const MachineInstr *MI) const {
 }
 
 void RegisterCoalescerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
   AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addPreservedID(MachineDominatorsID);
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -2182,6 +2253,13 @@ bool RegisterCoalescer::joinCopy(
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
+  // If a later repair would need an unavailable edge split, leave the copy
+  // alone before joinIntervals() mutates the intervals and erases the copy.
+  if (hasUnsafeUndefPHIRepairAfterCoalescing(CP)) {
+    LLVM_DEBUG(dbgs() << "\tUnsafe undef PHI repair; skipping join.\n");
+    return false;
+  }
+
   // Okay, attempt to join these two intervals.  On failure, this returns false.
   // Otherwise, if one of the intervals being joined is a physreg, this method
   // always canonicalizes DstInt to be it.  The output "SrcInt" will not have
@@ -2270,6 +2348,15 @@ bool RegisterCoalescer::joinCopy(
   // is not up-to-date, need to update the merged live interval here.
   if (ToBeUpdated.count(CP.getSrcReg()))
     ShrinkMainRange = true;
+
+  if (!CP.isPhys()) {
+    LiveInterval &LI = LIS->getInterval(CP.getDstReg());
+    // Joining the intervals above can turn a previously implicit undef PHI
+    // operand into a lane-specific PHI value on DstReg. Repair before main
+    // range shrinking so shrinkToUses() does not see a PHI edge whose incoming
+    // lane value is still implicit in the MIR.
+    repairUndefSubRangePHIs(LI);
+  }
 
   if (ShrinkMainRange) {
     LiveInterval &LI = LIS->getInterval(CP.getDstReg());
@@ -3681,6 +3768,60 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
       *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
 }
 
+SubRangeJoinResult RegisterCoalescer::mergeSubRangesForJoin(
+    LiveInterval &LHS, LiveInterval &RHS, CoalescerPair &CP,
+    bool TrackSubRegLiveness, bool EmitDebug) {
+  const TargetRegisterClass *NewRC = CP.getNewRC();
+
+  if (RHS.hasSubRanges() || LHS.hasSubRanges()) {
+    BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
+
+    // Transform lanemasks from the LHS to masks in the coalesced register and
+    // create initial subranges if necessary.
+    unsigned DstIdx = CP.getDstIdx();
+    if (!LHS.hasSubRanges()) {
+      LaneBitmask Mask = DstIdx == 0 ? NewRC->getLaneMask()
+                                     : TRI->getSubRegIndexLaneMask(DstIdx);
+      // LHS must support subregs or we wouldn't be in this codepath.
+      assert(Mask.any());
+      LHS.createSubRangeFrom(Allocator, Mask, LHS);
+    } else if (DstIdx != 0) {
+      // Transform LHS lanemasks to new register class if necessary.
+      for (LiveInterval::SubRange &R : LHS.subranges())
+        R.LaneMask = TRI->composeSubRegIndexLaneMask(DstIdx, R.LaneMask);
+    }
+    if (EmitDebug)
+      LLVM_DEBUG(dbgs() << "\t\tLHST = " << printReg(CP.getDstReg()) << ' '
+                        << LHS << '\n');
+
+    // Determine lanemasks of RHS in the coalesced register and merge subranges.
+    unsigned SrcIdx = CP.getSrcIdx();
+    if (!RHS.hasSubRanges()) {
+      LaneBitmask Mask = SrcIdx == 0 ? NewRC->getLaneMask()
+                                     : TRI->getSubRegIndexLaneMask(SrcIdx);
+      mergeSubRangeInto(LHS, RHS, Mask, CP, DstIdx);
+    } else {
+      // Pair up subranges and merge.
+      for (LiveInterval::SubRange &R : RHS.subranges()) {
+        LaneBitmask Mask = TRI->composeSubRegIndexLaneMask(SrcIdx, R.LaneMask);
+        mergeSubRangeInto(LHS, R, Mask, CP, DstIdx);
+      }
+    }
+
+    return SubRangeJoinResult::JoinedSubRanges;
+  }
+
+  if (TrackSubRegLiveness && !CP.getDstIdx() && CP.getSrcIdx()) {
+    LHS.createSubRangeFrom(LIS->getVNInfoAllocator(), NewRC->getLaneMask(),
+                           LHS);
+    mergeSubRangeInto(LHS, RHS, TRI->getSubRegIndexLaneMask(CP.getSrcIdx()), CP,
+                      CP.getDstIdx());
+    return SubRangeJoinResult::JoinedSubRegToWhole;
+  }
+
+  return SubRangeJoinResult::None;
+}
+
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
   if (LI.valnos.size() < LargeIntervalSizeThreshold)
     return false;
@@ -3690,6 +3831,682 @@ bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
     return false;
   }
   return true;
+}
+
+static LaneBitmask
+getDefMaskForUndefPHIRepairSubReg(const TargetRegisterInfo &TRI,
+                                  LaneBitmask MaxMask, unsigned SubReg) {
+  // If no subregister is used, the mask is the full mask of the register class
+  // as given by MaxMask
+  if (SubReg == 0)
+    return MaxMask;
+
+  // Otherwise ask the target for the lane mask for the given subregister and
+  // make sure it is a subset of the maximum mask for the register class
+  LaneBitmask DefMask = TRI.getSubRegIndexLaneMask(SubReg);
+  return DefMask & MaxMask;
+}
+
+static bool getUndefPHIRepairSubRegIndexes(const TargetRegisterInfo &TRI,
+                                           const TargetRegisterClass *RC,
+                                           LaneBitmask MissingMask,
+                                           LaneBitmask AllowedMask,
+                                           SmallVectorImpl<unsigned> &Indexes) {
+  assert((MissingMask & ~AllowedMask).none() &&
+         "missing lanes must be legal to repair");
+
+  // Find the best subregister indexes to cover the missing lanes where each
+  // index covers as many missing lanes as possible, and as few extra lanes as
+  // possible. When legal single-lane indexes exist, this can fall back to one
+  // index per missing lane.
+  LaneBitmask LanesLeft = MissingMask;
+  while (LanesLeft.any()) {
+    unsigned BestIdx = 0;
+    unsigned BestCover = 0;
+    unsigned BestExtra = std::numeric_limits<unsigned>::max();
+
+    for (unsigned Idx = 1, E = TRI.getNumSubRegIndices(); Idx < E; ++Idx) {
+      // Skip subregister indexes that don't belong to the register class
+      if (TRI.getSubClassWithSubReg(RC, Idx) != RC)
+        continue;
+
+      LaneBitmask SubRegMask = TRI.getSubRegIndexLaneMask(Idx);
+      LaneBitmask Covered = SubRegMask & LanesLeft;
+
+      // The subregister doesn't cover any of the lanes we're still missing
+      if (Covered.none())
+        continue;
+
+      // The chosen subregister would clobber lanes that are not allowed to be
+      // defined by the repair
+      if ((SubRegMask & ~AllowedMask).any())
+        continue;
+
+      // Skip subregisters that overlap with missing lanes we have already
+      // covered with other subregisters
+      if ((SubRegMask & (MissingMask & ~LanesLeft)).any())
+        continue;
+
+      unsigned Cover = Covered.getNumLanes();
+      unsigned Extra = (SubRegMask & ~LanesLeft).getNumLanes();
+      if (Cover > BestCover || (Cover == BestCover && Extra < BestExtra)) {
+        BestIdx = Idx;
+        BestCover = Cover;
+        BestExtra = Extra;
+      }
+    }
+
+    if (BestIdx == 0)
+      return false;
+
+    Indexes.push_back(BestIdx);
+    LanesLeft &= ~TRI.getSubRegIndexLaneMask(BestIdx);
+  }
+
+  return true;
+}
+
+static void copyLiveInterval(LiveInterval &Dst, const LiveInterval &Src,
+                             BumpPtrAllocator &Allocator) {
+  Dst.assign(Src, Allocator);
+  for (const LiveInterval::SubRange &SR : Src.subranges())
+    Dst.createSubRangeFrom(Allocator, SR.LaneMask, SR);
+}
+
+static void addUndefPHIRepair(SmallVectorImpl<UndefPHIRepair> &Repairs,
+                              MachineBasicBlock *PredMBB,
+                              MachineBasicBlock *SuccMBB,
+                              LaneBitmask LaneMask) {
+  // A predecessor can be missing several lanes for the same successor PHI.
+  // Combining them lets us emit the fewest IMPLICIT_DEFs that cover the
+  // register class instead of repairing each subrange independently.
+  for (UndefPHIRepair &R : Repairs) {
+    if (R.PredMBB == PredMBB && R.SuccMBB == SuccMBB) {
+      R.LaneMask |= LaneMask;
+      return;
+    }
+  }
+  Repairs.push_back({PredMBB, SuccMBB, LaneMask});
+}
+
+static void collectUndefPHIRepairs(
+    LiveInterval &LI, const MachineRegisterInfo &MRI,
+    const SlotIndexes &Indexes, SmallVectorImpl<UndefPHIRepair> &Repairs,
+    LaneBitmask TreatLiveOutAsMissing = LaneBitmask::getNone()) {
+  LaneBitmask VRegMask = MRI.getMaxLaneMaskForVReg(LI.reg());
+
+  for (LiveInterval::SubRange &SR : LI.subranges()) {
+    if (SR.empty())
+      continue;
+
+    // Check if the lanes of this subrange are marked as undefined by a
+    // subregister read-undef definition. We can use that to determine whether
+    // a repair will really be needed further down
+    SmallVector<SlotIndex, 4> Undefs;
+    LaneBitmask UndefMask = SR.LaneMask & VRegMask;
+    if (UndefMask.any())
+      LI.computeSubRangeUndefs(Undefs, UndefMask, MRI, Indexes);
+
+    for (const VNInfo *VNI : SR.valnos) {
+      if (VNI->isUnused() || !VNI->isPHIDef())
+        continue;
+
+      MachineBasicBlock *MBB = Indexes.getMBBFromIndex(VNI->def);
+      for (MachineBasicBlock *PredMBB : MBB->predecessors()) {
+        SlotIndex PredEnd = Indexes.getMBBEndIdx(PredMBB);
+
+        // For the pre-coalescing check, treat any lane of this subrange that
+        // overlaps with TreatLiveOutAsMissing as missing
+        bool ForceMissing =
+            (SR.LaneMask & TreatLiveOutAsMissing & VRegMask).any();
+
+        // PHI subranges are live-in to the block only if the same lane is live
+        // out of each predecessor. A missing live-out lane means this edge has
+        // an undef PHI input that must be made explicit by an IMPLICIT_DEF
+        if (!ForceMissing && SR.liveAt(PredEnd.getPrevSlot()))
+          continue;
+
+        // No need to repair anything if the predecessor is dominated by all the
+        // blocks corresponding to the SlotIndexes in Undefs
+        if (!ForceMissing &&
+            LiveRangeCalc::isJointlyDominated(PredMBB, Undefs, Indexes))
+          continue;
+
+        LLVM_DEBUG({
+          if (ForceMissing)
+            dbgs() << "\t\tTreating shrink-marked PHI lanes as missing on "
+                   << printMBBReference(*PredMBB) << " -> "
+                   << printMBBReference(*MBB) << ": "
+                   << PrintLaneMask(SR.LaneMask & TreatLiveOutAsMissing &
+                                    VRegMask)
+                   << '\n';
+        });
+
+        addUndefPHIRepair(Repairs, PredMBB, MBB, SR.LaneMask);
+      }
+    }
+  }
+}
+
+static bool repairNeedsEdgeSplit(const LiveInterval &LI,
+                                 const SlotIndexes &Indexes,
+                                 const UndefPHIRepair &Repair) {
+  // No need to split if the edge recorded by Repair is the only outgoing edge
+  // from the predecessor
+  if (Repair.PredMBB->succ_size() <= 1)
+    return false;
+
+  // The predecessor has multiple successors. Inserting an IMPLICIT_DEF would
+  // affect all outgoing edges, not just the one edge whose PHI input is undef.
+  // If the main interval is live at the end of the predecessor, there is a real
+  // live out value for that vreg on some outgoing path. Require an edge split
+  // to avoid clobbering that value.
+  SlotIndex LastPredSlot = Indexes.getMBBEndIdx(Repair.PredMBB).getPrevSlot();
+  return LI.liveAt(LastPredSlot);
+}
+
+static bool containsPHIDef(const LiveRange &LR) {
+  for (const VNInfo *VNI : LR.valnos)
+    if (!VNI->isUnused() && VNI->isPHIDef())
+      return true;
+  return false;
+}
+
+static bool containsPHIDef(const LiveInterval &LI) {
+  if (containsPHIDef(static_cast<const LiveRange &>(LI)))
+    return true;
+  for (const LiveInterval::SubRange &SR : LI.subranges())
+    if (containsPHIDef(SR))
+      return true;
+  return false;
+}
+
+static bool getUndefPHIRepairSubRegsForRepair(
+    const TargetRegisterInfo &TRI, const TargetRegisterClass *RC,
+    LiveInterval &LI, const UndefPHIRepair &Repair, LaneBitmask MaxMask,
+    const SlotIndexes &Indexes, SmallVectorImpl<unsigned> &SubRegs) {
+
+  LaneBitmask MissingMask = Repair.LaneMask;
+  assert((MissingMask & ~MaxMask).none() &&
+         "Repair contains lanes outside the virtual register");
+
+  // If all lanes are missing, use the full register
+  if (MissingMask == MaxMask) {
+    SubRegs.push_back(0);
+    return true;
+  }
+
+  // Ask the target if it can cover the missing lanes with subregisters
+  if (TRI.getCoveringSubRegIndexes(RC, MissingMask, SubRegs))
+    return true;
+
+  SubRegs.clear();
+
+  // Find the lanes that are live-out of the predecessor
+  LaneBitmask LiveOutMask = LaneBitmask::getNone();
+  SlotIndex LastPredSlot = Indexes.getMBBEndIdx(Repair.PredMBB).getPrevSlot();
+  for (LiveInterval::SubRange &SR : LI.subranges()) {
+    if (!SR.empty() && SR.liveAt(LastPredSlot))
+      LiveOutMask |= SR.LaneMask;
+  }
+
+  // Try to build a set of subregisters that cover the missing lanes without
+  // clobbering any lanes that are live-out
+  LaneBitmask AllowedMask = MissingMask | (MaxMask & ~LiveOutMask);
+  return getUndefPHIRepairSubRegIndexes(TRI, RC, MissingMask, AllowedMask,
+                                        SubRegs);
+}
+
+static LaneBitmask getReadLanesInRange(const TargetRegisterInfo &TRI,
+                                       Register Reg, LaneBitmask MaxMask,
+                                       MachineBasicBlock::iterator Begin,
+                                       MachineBasicBlock::iterator End) {
+  // Find all lanes of Reg that are read in the range [Begin, End)
+  LaneBitmask ReadMask = LaneBitmask::getNone();
+  for (MachineInstr &MI : make_range(Begin, End)) {
+    if (MI.isDebugInstr())
+      continue;
+
+    for (const MachineOperand &MO : MI.operands()) {
+      // Skip operands that do not read Reg
+      if (!MO.isReg() || MO.getReg() != Reg || !MO.readsReg())
+        continue;
+
+      // Get the read lanes of Reg for this operand
+      unsigned SubReg = MO.getSubReg();
+      LaneBitmask OperandMask =
+          SubReg == 0 ? MaxMask
+                      : (TRI.getSubRegIndexLaneMask(SubReg) & MaxMask);
+      ReadMask |= OperandMask;
+
+      // If all lanes have been read, we can stop early
+      if (ReadMask == MaxMask)
+        return ReadMask;
+    }
+  }
+  return ReadMask;
+}
+
+LaneBitmask RegisterCoalescer::getReadLanesInRangeAfterCoalescing(
+    const CoalescerPair &CP, LaneBitmask MaxMask,
+    MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End) {
+  // Find reads of lanes between Begin and End, treating operands as if the
+  // coalescing of CP has already happened
+  LaneBitmask ReadMask = LaneBitmask::getNone();
+  for (MachineInstr &MI : make_range(Begin, End)) {
+    if (MI.isDebugInstr())
+      continue;
+
+    for (const MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.readsReg())
+        continue;
+
+      unsigned SubReg = 0;
+      if (MO.getReg() == CP.getDstReg()) {
+        SubReg = TRI->composeSubRegIndices(CP.getDstIdx(), MO.getSubReg());
+      } else if (MO.getReg() == CP.getSrcReg()) {
+        SubReg = TRI->composeSubRegIndices(CP.getSrcIdx(), MO.getSubReg());
+      } else {
+        // Skip registers that are not involved in the coalescing
+        continue;
+      }
+
+      LaneBitmask OperandMask =
+          SubReg == 0 ? MaxMask
+                      : (TRI->getSubRegIndexLaneMask(SubReg) & MaxMask);
+
+      ReadMask |= OperandMask;
+
+      // If all lanes have been read, we can stop early
+      if (ReadMask == MaxMask)
+        return ReadMask;
+    }
+  }
+  return ReadMask;
+}
+
+MachineBasicBlock::iterator
+RegisterCoalescer::findPHICopyInsertPointAfterCoalescing(
+    const CoalescerPair &CP, MachineBasicBlock *MBB,
+    MachineBasicBlock *SuccMBB) {
+  if (MBB->empty())
+    return MBB->begin();
+
+  // For ordinary successors, PHI copies are inserted before the terminators
+  bool EHPadSuccessor = SuccMBB->isEHPad();
+  if (!EHPadSuccessor && !SuccMBB->isInlineAsmBrIndirectTarget())
+    return MBB->getFirstTerminator();
+
+  // Model the def set after coalescing without rewriting operands. A def of
+  // either source register can become the coalesced register's edge value.
+  SmallPtrSet<MachineInstr *, 8> DefsInMBB;
+  auto AddDefs = [&](Register Reg) {
+    for (MachineInstr &MI : MRI->def_instructions(Reg))
+      if (MI.getParent() == MBB)
+        DefsInMBB.insert(&MI);
+  };
+  AddDefs(CP.getDstReg());
+  AddDefs(CP.getSrcReg());
+
+  MachineBasicBlock::iterator InsertPoint = MBB->begin();
+  for (auto I = MBB->rbegin(), E = MBB->rend(); I != E; ++I) {
+    // Keep the repair after the last coalesced-register def in this block.
+    if (DefsInMBB.contains(&*I)) {
+      InsertPoint = std::next(I.getReverse());
+      break;
+    }
+
+    // Match findPHICopyInsertPoint()'s special placement for EH and callbr
+    // successors while using the pre-coalescing source/destination registers.
+    if ((EHPadSuccessor && I->isCall()) ||
+        I->getOpcode() == TargetOpcode::INLINEASM_BR) {
+      InsertPoint = I.getReverse();
+      break;
+    }
+  }
+
+  // If no better insertion point was found, take the first valid insertion
+  // point after PHIs and labels
+  return MBB->SkipPHIsAndLabels(InsertPoint);
+}
+
+bool RegisterCoalescer::hasUnavailableUndefPHIRepair(
+    LiveInterval &LI, const TargetRegisterClass *RC, LaneBitmask MaxMask,
+    const CoalescerPair *CP, LaneBitmask TreatLiveOutAsMissing) {
+  if (!LI.hasSubRanges())
+    return false;
+
+  const SlotIndexes &Indexes = *LIS->getSlotIndexes();
+  SmallVector<UndefPHIRepair, 8> Repairs;
+  collectUndefPHIRepairs(LI, *MRI, Indexes, Repairs, TreatLiveOutAsMissing);
+  if (Repairs.empty())
+    return false;
+
+  for (const UndefPHIRepair &R : Repairs) {
+    SmallVector<unsigned, 4> SubRegs;
+    if (!getUndefPHIRepairSubRegsForRepair(*TRI, RC, LI, R, MaxMask, Indexes,
+                                           SubRegs)) {
+      // If we fail to find a set of subregisters that can cover the missing
+      // lanes without clobbering any lanes that live out of the predecessor,
+      // we cannot repair the undef PHI
+      return true;
+    }
+
+    // The insert point depends on whether we are doing the pre-coalescing check
+    // or the post-coalescing repair
+    MachineBasicBlock::iterator InsertPos =
+        CP ? findPHICopyInsertPointAfterCoalescing(*CP, R.PredMBB, R.SuccMBB)
+           : llvm::findPHICopyInsertPoint(R.PredMBB, R.SuccMBB, LI.reg());
+
+    // Same with the read lanes: if it's before coalescing we need to check the
+    // reads as if the coalescing had already happened, otherwise we check the
+    // actual reads
+    LaneBitmask ReadAfterInsert =
+        CP ? getReadLanesInRangeAfterCoalescing(*CP, MaxMask, InsertPos,
+                                                R.PredMBB->end())
+           : getReadLanesInRange(*TRI, LI.reg(), MaxMask, InsertPos,
+                                 R.PredMBB->end());
+
+    LaneBitmask ClobberedMask = LaneBitmask::getNone();
+    for (unsigned SubReg : SubRegs) {
+      ClobberedMask |=
+          getDefMaskForUndefPHIRepairSubReg(*TRI, MaxMask, SubReg) &
+          ReadAfterInsert;
+
+      // We can stop early if we find any lanes that would be clobbered by the
+      // repair
+      if (ClobberedMask.any())
+        break;
+    }
+
+    // We might need to split the edge to be able to repair the undef PHI, but
+    // splitting isn't always possible. If we can't split, we can't repair this
+    // PHI
+    bool NeedsEdgeSplit =
+        ClobberedMask.any() || repairNeedsEdgeSplit(LI, Indexes, R);
+    if (NeedsEdgeSplit && !R.PredMBB->canSplitCriticalEdge(R.SuccMBB, Loops))
+      return true;
+  }
+
+  // Either there's nothing to repair or all repairs are doable
+  return false;
+}
+
+bool RegisterCoalescer::hasUnsafeUndefPHIRepairAfterCoalescing(
+    CoalescerPair &CP) {
+  if (CP.isPhys())
+    return false;
+
+  const TargetRegisterClass *NewRC = CP.getNewRC();
+  if (!MRI->shouldTrackSubRegLiveness(*NewRC))
+    return false;
+
+  LiveInterval &RHS = LIS->getInterval(CP.getSrcReg());
+  LiveInterval &LHS = LIS->getInterval(CP.getDstReg());
+
+  if (!containsPHIDef(RHS) && !containsPHIDef(LHS))
+    return false;
+
+  // If joinVirtRegs() won't create or merge subranges, it can't expose a
+  // subrange PHI repair.
+  if (!RHS.hasSubRanges() && !LHS.hasSubRanges() &&
+      (CP.getDstIdx() || !CP.getSrcIdx()))
+    return false;
+
+  // Create temporary copies of the live intervals so we can check whether the
+  // coalescing would create unrepairable undef PHI values.
+  BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
+  LiveInterval TmpRHS(RHS.reg(), RHS.weight());
+  LiveInterval TmpLHS(LHS.reg(), LHS.weight());
+  copyLiveInterval(TmpRHS, RHS, Allocator);
+  copyLiveInterval(TmpLHS, LHS, Allocator);
+
+  SmallVector<VNInfo *, 16> NewVNInfo;
+  JoinVals RHSVals(TmpRHS, CP.getSrcReg(), CP.getSrcIdx(),
+                   LaneBitmask::getNone(), NewVNInfo, CP, LIS, TRI, false,
+                   true);
+  JoinVals LHSVals(TmpLHS, CP.getDstReg(), CP.getDstIdx(),
+                   LaneBitmask::getNone(), NewVNInfo, CP, LIS, TRI, false,
+                   true);
+
+  if (!LHSVals.mapValues(RHSVals) || !RHSVals.mapValues(LHSVals))
+    return false;
+  if (!LHSVals.resolveConflicts(RHSVals) || !RHSVals.resolveConflicts(LHSVals))
+    return false;
+
+  LaneBitmask TmpShrinkMask = LaneBitmask::getNone();
+  bool TmpShrinkMainRange = false;
+
+  // Merge the temporary live intervals. Suppress debug output since this is a
+  // pre-coalescing check and not the real coalescing
+  SubRangeJoinResult SubRangeJoin =
+      mergeSubRangesForJoin(TmpLHS, TmpRHS, CP,
+                            /*TrackSubRegLiveness=*/true, /*EmitDebug=*/false);
+  switch (SubRangeJoin) {
+  case SubRangeJoinResult::JoinedSubRanges:
+    LHSVals.pruneMainSegments(TmpLHS, TmpShrinkMainRange);
+    LHSVals.pruneSubRegValues(TmpLHS, TmpShrinkMask);
+    RHSVals.pruneSubRegValues(TmpLHS, TmpShrinkMask);
+    break;
+  case SubRangeJoinResult::JoinedSubRegToWhole:
+    LHSVals.pruneMainSegments(TmpLHS, TmpShrinkMainRange);
+    LHSVals.pruneSubRegValues(TmpLHS, TmpShrinkMask);
+    break;
+  case SubRangeJoinResult::None:
+    break;
+  }
+
+  // The real joinCopy() shrinks subranges marked in ShrinkMask before it
+  // repairs undef PHI inputs. We cannot call shrinkToUses() on the temporary
+  // intervals because that routine consults the current, not yet rewritten,
+  // MachineInstr operands. Conservatively treat those lanes as potentially
+  // missing on PHI edges so an unavailable repair is rejected before mutation.
+  return hasUnavailableUndefPHIRepair(TmpLHS, NewRC, NewRC->getLaneMask(), &CP,
+                                      TmpShrinkMask);
+}
+
+bool RegisterCoalescer::repairUndefSubRangePHIs(LiveInterval &LI) {
+  if (!LI.hasSubRanges())
+    return false;
+
+  const SlotIndexes &Indexes = *LIS->getSlotIndexes();
+  SmallVector<UndefPHIRepair, 8> Repairs;
+  collectUndefPHIRepairs(LI, *MRI, Indexes, Repairs);
+  if (Repairs.empty())
+    return false;
+
+  Register Reg = LI.reg();
+  BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
+  bool Changed = false;
+
+  for (const UndefPHIRepair &R : Repairs) {
+    LaneBitmask MissingMask = R.LaneMask;
+
+    SmallVector<unsigned, 4> SubRegs;
+    if (!getUndefPHIRepairSubRegsForRepair(*TRI, RC, LI, R, MaxMask, Indexes,
+                                           SubRegs))
+      llvm_unreachable(
+          "Unexpected repair failure due to missing subregister indexes. "
+          "Pre-coalescing check should have caught this.");
+
+    // Helper to keep the main range consistent with the inserted IMPLICIT_DEF
+    auto ExtendMainRange = [this, Reg, &LI, &Allocator](SlotIndex DefIdx,
+                                                        SlotIndex SegmentEnd) {
+      // The repair is inserted for a subrange PHI input, but the main range
+      // must also contain the new value so whole-register queries agree with
+      // the repaired subranges.
+      if (MachineInstr *DefMI = LIS->getInstructionFromIndex(DefIdx))
+        DefMI->clearRegisterDeads(Reg);
+
+      LiveRange::iterator I = LI.find(DefIdx);
+      if (I != LI.end() && I->contains(DefIdx)) {
+        // If a main-range value already starts at the repair def, just extend
+        // it to the edge boundary.
+        if (I->valno->def == DefIdx) {
+          if (I->end < SegmentEnd)
+            I->end = SegmentEnd;
+          return;
+        }
+
+        // Otherwise the repair def falls inside an existing main-range value.
+        // Split that value so the inserted IMPLICIT_DEF owns the PHI edge.
+        SlotIndex OldEnd = I->end;
+        VNInfo *OldVNI = I->valno;
+        I->end = DefIdx;
+        VNInfo *MainVNI = LI.getNextValue(DefIdx, Allocator);
+        LI.addSegment(LiveRange::Segment(DefIdx, SegmentEnd, MainVNI));
+        if (OldEnd > SegmentEnd)
+          LI.addSegment(LiveRange::Segment(SegmentEnd, OldEnd, OldVNI));
+
+        return;
+      }
+
+      // No main-range value covers the repair point, so create one for the
+      // inserted IMPLICIT_DEF.
+      VNInfo *MainVNI = LI.getNextValue(DefIdx, Allocator);
+      LI.addSegment(LiveRange::Segment(DefIdx, SegmentEnd, MainVNI));
+    };
+
+    MachineBasicBlock *InsertMBB = R.PredMBB;
+    MachineBasicBlock::iterator InsertPos =
+        llvm::findPHICopyInsertPoint(R.PredMBB, R.SuccMBB, Reg);
+
+    SlotIndex SegmentEnd = Indexes.getMBBEndIdx(R.PredMBB);
+    SlotIndex ClearSegmentStart;
+
+    // Check if there are any lanes of Reg that are read after the insert point
+    // and before the end of the predecessor block
+    LaneBitmask ReadAfterInsert =
+        getReadLanesInRange(*TRI, Reg, MaxMask, InsertPos, R.PredMBB->end());
+
+    // Do any of those reads overlap with lanes that would be clobbered by the
+    // inserted IMPLICIT_DEF, given the chosen subregister indexes? If so, we
+    // need to split the edge so that the inserted IMPLICIT_DEF is after the
+    // predecessor terminators and before the successor PHI.
+    LaneBitmask ClobberedMask = LaneBitmask::getNone();
+    for (unsigned SubReg : SubRegs)
+      ClobberedMask |=
+          getDefMaskForUndefPHIRepairSubReg(*TRI, MaxMask, SubReg) &
+          ReadAfterInsert;
+
+    bool NeedsEdgeSplit =
+        ClobberedMask.any() || repairNeedsEdgeSplit(LI, Indexes, R);
+    if (NeedsEdgeSplit) {
+      MachineBasicBlock::SplitCriticalEdgeAnalyses Analyses = {
+          LIS, LIS->getSlotIndexes(), nullptr, Loops};
+      MachineDomTreeUpdater MDTU(DomTree, nullptr,
+                                 MachineDomTreeUpdater::UpdateStrategy::Lazy);
+
+      MachineBasicBlock *EdgeMBB =
+          R.PredMBB->SplitCriticalEdge(R.SuccMBB, Analyses, nullptr, &MDTU);
+
+      if (!EdgeMBB)
+        llvm_unreachable(
+            "Unexpected repair failure. Cannot split edge to avoid clobbering "
+            "live lanes. Pre-coalescing check should have caught this.");
+
+      // The edge was split, so the insertion point is now in the new edge block
+      // and the segment end is the end of the edge block.
+      ChangedCFG = true;
+      InsertMBB = EdgeMBB;
+      InsertPos = EdgeMBB->getFirstTerminator();
+      SegmentEnd = Indexes.getMBBEndIdx(EdgeMBB);
+      ClearSegmentStart = Indexes.getMBBStartIdx(EdgeMBB);
+    }
+
+    // Carry out the actual repair by inserting IMPLICIT_DEF instructions for
+    // the missing lanes, using the chosen subregister indexes
+    for (unsigned SubReg : SubRegs) {
+      const MCInstrDesc &MCDesc = TII->get(TargetOpcode::IMPLICIT_DEF);
+      MachineInstrBuilder ImpDef =
+          BuildMI(*InsertMBB, InsertPos, DebugLoc(), MCDesc)
+              .addDef(Reg, RegState::NoFlags, SubReg);
+
+      SlotIndex DefIdx = LIS->InsertMachineInstrInMaps(*ImpDef).getRegSlot();
+      LaneBitmask DefMask =
+          getDefMaskForUndefPHIRepairSubReg(*TRI, MaxMask, SubReg);
+
+      // Mark the register as undef if there are no live values for the other
+      // lanes not touched by the IMPLICIT_DEF
+      bool ReadUndef = SubReg != 0 && LI.Query(DefIdx).valueIn() == nullptr;
+      if (ReadUndef)
+        ImpDef->setRegisterDefReadUndef(Reg);
+
+      auto Apply = [DefIdx, SegmentEnd, ClearSegmentStart,
+                    &Allocator](LiveInterval::SubRange &SR) {
+        // Remove any segments that were created by SplitCriticalEdge, as they
+        // will be replaced with the new segment created by the inserted
+        // IMPLICIT_DEF
+        if (ClearSegmentStart) {
+          LiveRange::iterator I = SR.find(ClearSegmentStart);
+          if (I != SR.end() &&
+              I->containsInterval(ClearSegmentStart, SegmentEnd))
+            SR.removeSegment(ClearSegmentStart, SegmentEnd);
+        }
+
+        // Skip subranges that are already live at the edge end
+        if (SR.liveAt(SegmentEnd.getPrevSlot()))
+          return;
+
+        assert(!SR.liveAt(DefIdx) &&
+               "Cannot insert undef PHI repair over a live lane");
+
+        // The new value only exists to satisfy the PHI edge. It must reach
+        // the edge end so the successor PHI has an incoming lane,
+        // but it must not extend earlier than the inserted IMPLICIT_DEF.
+        VNInfo *SRVNI = SR.getNextValue(DefIdx, Allocator);
+        SR.addSegment(LiveRange::Segment(DefIdx, SegmentEnd, SRVNI));
+      };
+
+      LI.refineSubRanges(Allocator, DefMask & MissingMask, Apply, Indexes,
+                         *TRI);
+
+      // Splitting the edge may have extended the main range through the new
+      // edge block. Whole-register and read-undef repairs replace that value
+      // instead of preserving any lanes from it, so remove the split-edge
+      // segment before adding the repair value below.
+      if (ClearSegmentStart && (SubReg == 0 || ReadUndef)) {
+        LiveRange::iterator I = LI.find(ClearSegmentStart);
+        if (I != LI.end() && I->containsInterval(ClearSegmentStart, SegmentEnd))
+          LI.removeSegment(ClearSegmentStart, SegmentEnd);
+      }
+      ExtendMainRange(DefIdx, SegmentEnd);
+
+      // Look for lanes that were neither missing nor live-out on the PHI edge,
+      // but were clobbered by the inserted IMPLICIT_DEF. Mark any such lanes as
+      // dead, so that they are not considered a live-out of the block
+      LaneBitmask ExtraDeadMask = DefMask & ~MissingMask;
+      if (ExtraDeadMask.any()) {
+        auto ApplyExtraDead = [DefIdx, SegmentEnd, ClearSegmentStart,
+                               &Allocator](LiveInterval::SubRange &SR) {
+          // Remove any segments that were created by SplitCriticalEdge, same as
+          // above
+          if (ClearSegmentStart) {
+            LiveRange::iterator I = SR.find(ClearSegmentStart);
+            if (I != SR.end() &&
+                I->containsInterval(ClearSegmentStart, SegmentEnd))
+              SR.removeSegment(ClearSegmentStart, SegmentEnd);
+          }
+
+          assert(!SR.liveAt(DefIdx) &&
+                 "Cannot insert undef PHI repair over a live lane");
+
+          // Create a new dead definition for the lane
+          SR.createDeadDef(DefIdx, Allocator);
+        };
+
+        LI.refineSubRanges(Allocator, ExtraDeadMask, ApplyExtraDead, Indexes,
+                           *TRI);
+      }
+
+      LLVM_DEBUG(dbgs() << "\t\tinserted undef PHI repair: " << *ImpDef);
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
@@ -3717,56 +4534,23 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     return false;
 
   // All clear, the live ranges can be merged.
-  if (RHS.hasSubRanges() || LHS.hasSubRanges()) {
-    BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
-
-    // Transform lanemasks from the LHS to masks in the coalesced register and
-    // create initial subranges if necessary.
-    unsigned DstIdx = CP.getDstIdx();
-    if (!LHS.hasSubRanges()) {
-      LaneBitmask Mask = DstIdx == 0 ? CP.getNewRC()->getLaneMask()
-                                     : TRI->getSubRegIndexLaneMask(DstIdx);
-      // LHS must support subregs or we wouldn't be in this codepath.
-      assert(Mask.any());
-      LHS.createSubRangeFrom(Allocator, Mask, LHS);
-    } else if (DstIdx != 0) {
-      // Transform LHS lanemasks to new register class if necessary.
-      for (LiveInterval::SubRange &R : LHS.subranges()) {
-        LaneBitmask Mask = TRI->composeSubRegIndexLaneMask(DstIdx, R.LaneMask);
-        R.LaneMask = Mask;
-      }
-    }
-    LLVM_DEBUG(dbgs() << "\t\tLHST = " << printReg(CP.getDstReg()) << ' ' << LHS
-                      << '\n');
-
-    // Determine lanemasks of RHS in the coalesced register and merge subranges.
-    unsigned SrcIdx = CP.getSrcIdx();
-    if (!RHS.hasSubRanges()) {
-      LaneBitmask Mask = SrcIdx == 0 ? CP.getNewRC()->getLaneMask()
-                                     : TRI->getSubRegIndexLaneMask(SrcIdx);
-      mergeSubRangeInto(LHS, RHS, Mask, CP, DstIdx);
-    } else {
-      // Pair up subranges and merge.
-      for (LiveInterval::SubRange &R : RHS.subranges()) {
-        LaneBitmask Mask = TRI->composeSubRegIndexLaneMask(SrcIdx, R.LaneMask);
-        mergeSubRangeInto(LHS, R, Mask, CP, DstIdx);
-      }
-    }
+  SubRangeJoinResult SubRangeJoin =
+      mergeSubRangesForJoin(LHS, RHS, CP, TrackSubRegLiveness);
+  switch (SubRangeJoin) {
+  case SubRangeJoinResult::JoinedSubRanges:
     LLVM_DEBUG(dbgs() << "\tJoined SubRanges " << LHS << "\n");
-
     // Pruning implicit defs from subranges may result in the main range
     // having stale segments.
     LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
-
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
     RHSVals.pruneSubRegValues(LHS, ShrinkMask);
-  } else if (TrackSubRegLiveness && !CP.getDstIdx() && CP.getSrcIdx()) {
-    LHS.createSubRangeFrom(LIS->getVNInfoAllocator(),
-                           CP.getNewRC()->getLaneMask(), LHS);
-    mergeSubRangeInto(LHS, RHS, TRI->getSubRegIndexLaneMask(CP.getSrcIdx()), CP,
-                      CP.getDstIdx());
+    break;
+  case SubRangeJoinResult::JoinedSubRegToWhole:
     LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
+    break;
+  case SubRangeJoinResult::None:
+    break;
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
@@ -4272,25 +5056,29 @@ RegisterCoalescerPass::run(MachineFunction &MF,
   MFPropsModifier _(*this, MF);
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto &Loops = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &DomTree = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
-  RegisterCoalescer Impl(&LIS, SI, &Loops);
+  RegisterCoalescer Impl(&LIS, SI, &Loops, &DomTree);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
+  if (!Impl.changedCFG()) {
+    PA.preserveSet<CFGAnalyses>();
+  }
   return PA;
 }
 
 bool RegisterCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto *DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   SlotIndexes *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  RegisterCoalescer Impl(LIS, SI, Loops);
+  RegisterCoalescer Impl(LIS, SI, Loops, DomTree);
   return Impl.run(MF);
 }
 
@@ -4314,6 +5102,7 @@ bool RegisterCoalescer::run(MachineFunction &fn) {
 
   MF = &fn;
   MRI = &fn.getRegInfo();
+  ChangedCFG = false;
   const TargetSubtargetInfo &STI = fn.getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();

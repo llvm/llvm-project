@@ -318,12 +318,12 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; R600-NEXT:     SETE_INT * T1.W, T1.W, 0.0,
 ; R600-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PS, 0.0,
 ; R600-NEXT:    ALU clause starting at 25:
-; R600-NEXT:     MOV T1.W, KC0[2].W,
-; R600-NEXT:     MOV * T2.W, KC0[3].Y,
-; R600-NEXT:     XOR_INT T0.X, PV.W, PS,
-; R600-NEXT:     MOV T1.W, KC0[3].X,
-; R600-NEXT:     MOV * T2.W, KC0[3].Z,
-; R600-NEXT:     XOR_INT * T0.Y, PV.W, PS,
+; R600-NEXT:     MOV * T1.W, KC0[3].X,
+; R600-NEXT:     MOV T0.Z, KC0[3].Z,
+; R600-NEXT:     MOV * T2.W, KC0[2].W,
+; R600-NEXT:     MOV * T3.W, KC0[3].Y,
+; R600-NEXT:     XOR_INT T0.X, T2.W, PV.W,
+; R600-NEXT:     XOR_INT * T0.Y, T1.W, T0.Z, BS:VEC_120/SCL_212
 ; R600-NEXT:    ALU clause starting at 31:
 ; R600-NEXT:     LSHR * T1.X, T0.W, literal.x,
 ; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)

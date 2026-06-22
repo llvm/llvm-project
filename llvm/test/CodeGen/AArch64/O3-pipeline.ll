@@ -185,6 +185,7 @@
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
+; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Instruction Scheduler
 ; CHECK-NEXT:       AArch64 Post Coalescer pass
 ; CHECK-NEXT:       Debug Variable Analysis

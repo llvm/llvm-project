@@ -348,6 +348,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
 ; CHECK-NEXT:    vldr.16 s22, [r0, #6]
 ; CHECK-NEXT:    vins.f16 s21, s22
+; CHECK-NEXT:    @ implicit-def: $d11
 ; CHECK-NEXT:  .LBB2_8: @ %else11
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
 ; CHECK-NEXT:    vcmp.u32 cs, q2, q4
@@ -397,6 +398,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    vldr.16 s21, [r0, #4]
 ; CHECK-NEXT:    vmovx.f16 s22, s0
 ; CHECK-NEXT:    vins.f16 s21, s22
+; CHECK-NEXT:    @ implicit-def: $d11
 ; CHECK-NEXT:    lsls r2, r2, #28
 ; CHECK-NEXT:    bmi .LBB2_7
 ; CHECK-NEXT:    b .LBB2_8
@@ -416,12 +418,14 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    vldr.16 s25, [r1, #4]
 ; CHECK-NEXT:    vmovx.f16 s26, s0
 ; CHECK-NEXT:    vins.f16 s25, s26
+; CHECK-NEXT:    @ implicit-def: $d13
 ; CHECK-NEXT:    lsls r2, r2, #28
 ; CHECK-NEXT:    bpl.w .LBB2_2
 ; CHECK-NEXT:  .LBB2_18: @ %cond.load23
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
 ; CHECK-NEXT:    vldr.16 s26, [r1, #6]
 ; CHECK-NEXT:    vins.f16 s25, s26
+; CHECK-NEXT:    @ implicit-def: $d13
 ; CHECK-NEXT:    b .LBB2_2
 ; CHECK-NEXT:  .LBB2_19: @ %middle.block
 ; CHECK-NEXT:    vdup.32 q0, r12

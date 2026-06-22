@@ -1995,7 +1995,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; EG-NEXT:    ALU 115, @251, KC0[], KC1[]
 ; EG-NEXT:    ALU 115, @367, KC0[], KC1[]
 ; EG-NEXT:    ALU_POP_AFTER 82, @483, KC0[], KC1[]
-; EG-NEXT:    ALU 20, @566, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 21, @566, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 12:
@@ -2003,10 +2003,10 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; EG-NEXT:    ALU clause starting at 14:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     OR_INT T2.W, T0.Y, T0.W,
-; EG-NEXT:     MOV * T1.W, literal.x,
+; EG-NEXT:     OR_INT T1.W, T0.Y, T0.W,
+; EG-NEXT:     MOV * T2.W, literal.x,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     SETNE_INT * T2.W, PV.W, 0.0,
+; EG-NEXT:     SETNE_INT * T1.W, PV.W, 0.0,
 ; EG-NEXT:     PRED_SETNE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
 ; EG-NEXT:    ALU clause starting at 20:
 ; EG-NEXT:     ASHR * T3.W, T0.W, literal.x,
@@ -2555,13 +2555,13 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; EG-NEXT:     XOR_INT * T0.W, PV.W, T1.W,
 ; EG-NEXT:     SUB_INT T0.W, PS, T1.W,
 ; EG-NEXT:     SUBB_UINT * T3.W, PV.W, T1.W,
-; EG-NEXT:     SUB_INT * T1.Y, PV.W, PS,
 ; EG-NEXT:     SUB_INT T1.X, T2.W, T1.W,
-; EG-NEXT:     MOV * T1.W, literal.x,
+; EG-NEXT:     MOV T2.W, literal.x,
+; EG-NEXT:     SUB_INT * T1.W, PV.W, PS,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 ; EG-NEXT:    ALU clause starting at 566:
 ; EG-NEXT:     MOV T0.W, KC0[2].Y,
-; EG-NEXT:     SETE_INT * T1.W, T1.W, 0.0,
+; EG-NEXT:     SETE_INT * T2.W, T2.W, 0.0,
 ; EG-NEXT:     PRED_SETNE_INT * Pred,PredicateBit (MASKED), PS, 0.0,
 ; EG-NEXT:     SUB_INT T1.W, 0.0, T0.Z, Pred_sel_zero
 ; EG-NEXT:     RECIP_UINT * T0.Y, T0.Z, Pred_sel_zero
@@ -2577,9 +2577,10 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; EG-NEXT:     SETGE_UINT T2.W, T1.W, T0.Z, Pred_sel_zero
 ; EG-NEXT:     SUB_INT * T3.W, T1.W, T0.Z, Pred_sel_zero
 ; EG-NEXT:     CNDE_INT T1.X, T2.W, T1.W, T3.W, Pred_sel_zero
-; EG-NEXT:     MOV * T1.Y, literal.x, Pred_sel_zero
+; EG-NEXT:     MOV * T1.W, literal.x, Pred_sel_zero
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T0.X, T0.W, literal.x,
+; EG-NEXT:     LSHR T0.X, T0.W, literal.x,
+; EG-NEXT:     MOV * T1.Y, T1.W, BS:VEC_120/SCL_212
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %den_ptr = getelementptr i64, ptr addrspace(1) %in, i64 1
   %num = load i64, ptr addrspace(1) %in

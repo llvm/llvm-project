@@ -1,0 +1,13 @@
+# RUN: llc -debug-only=regalloc -mtriple=x86_64-unknown-linux-gnu \
+# RUN:   -enable-subreg-liveness -verify-machineinstrs \
+# RUN:   -start-before=register-coalescer -stop-after=register-coalescer \
+# RUN:   %S/regcoalescer-undef-subrange-phi-split.mir -o /dev/null 2>&1 | FileCheck %s
+
+# Check that the pre-coalescing check treats shrink-marked subrange PHI lanes as
+# potentially missing before coalescing mutates the real intervals. Without
+# forwarding TmpShrinkMask into the unavailable-repair check, this line is not
+# emitted and the later unrepairable inlineasm-br edge can be missed.
+
+# CHECK: ********** Function: test_inlineasm_target
+# CHECK: Treating shrink-marked PHI lanes as missing on %bb.3 -> %bb.5: 0000000000000002
+# CHECK: Unsafe undef PHI repair; skipping join.
