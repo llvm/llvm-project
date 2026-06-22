@@ -3,8 +3,10 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @foo(ptr noalias %a, ptr noalias %b) #0 {
-; CHECK-LABEL: define void @foo(
+; VF is not scalable, but TC is. We can prove that TC > VF,
+; and hence, IV increment cannot unsigned-wrap.
+define void @iv_no_overflow(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @iv_no_overflow(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VS:%.*]] = tail call i32 @llvm.vscale.i32()
@@ -35,10 +37,10 @@ define void @foo(ptr noalias %a, ptr noalias %b) #0 {
 entry:
   %vs = tail call i32 @llvm.vscale.i32()
   %n = mul nuw nsw i32 %vs, 6
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.a = getelementptr inbounds nuw float, ptr %a, i32 %iv
   %la = load float, ptr %gep.a, align 4
   %gep.b = getelementptr inbounds nuw float, ptr %b, i32 %iv
@@ -47,15 +49,16 @@ for.body:
   store float %mul, ptr %gep.b, align 4
   %iv.next = add nuw nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, %n
-  br i1 %ec, label %exit, label %for.body
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
 }
 
-; TC * MaxVScale overflows
-define void @bar(ptr noalias %a, ptr noalias %b) #0 {
-; CHECK-LABEL: define void @bar(
+; VF is not scalable, but TC is. TC * MaxVScale overflows,
+; and hence IV increment does not have nuw.
+define void @tc_maxvscale_overflow(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc_maxvscale_overflow(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VS:%.*]] = tail call i32 @llvm.vscale.i32()
@@ -86,10 +89,10 @@ define void @bar(ptr noalias %a, ptr noalias %b) #0 {
 entry:
   %vs = tail call i32 @llvm.vscale.i32()
   %n = mul nuw nsw i32 %vs, 268435457
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body ]
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.a = getelementptr inbounds nuw float, ptr %a, i32 %iv
   %la = load float, ptr %gep.a, align 4
   %gep.b = getelementptr inbounds nuw float, ptr %b, i32 %iv
@@ -98,7 +101,7 @@ for.body:
   store float %mul, ptr %gep.b, align 4
   %iv.next = add nuw nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, %n
-  br i1 %ec, label %exit, label %for.body
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
