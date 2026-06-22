@@ -143,6 +143,9 @@ if config.sizeof_void_p == 8:
 if config.has_plugins:
     config.available_features.add("plugins")
 
+if config.link_llvm_dylib:
+    config.available_features.add("llvm-dylib")
+
 if config.build_examples:
     config.available_features.add("examples")
 
