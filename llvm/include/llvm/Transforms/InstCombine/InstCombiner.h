@@ -23,6 +23,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/FPTransformChecker.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Compiler.h"
@@ -117,6 +118,9 @@ protected:
   /// Source for annotation metadata, used by the IRBuilder inserter.
   Instruction *AnnotationMetadataSource = nullptr;
 
+  /// Helper for checking FP properties required for a transformation.
+  FPTransformChecker FPChecker;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, Function &F, AAResults *AA,
                AssumptionCache &AC, TargetLibraryInfo &TLI,
@@ -132,7 +136,7 @@ public:
         TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT), FPChecker(&F) {}
 
   virtual ~InstCombiner() = default;
 
@@ -375,6 +379,7 @@ public:
   }
   BlockFrequencyInfo *getBlockFrequencyInfo() const { return BFI; }
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
+  FPTransformChecker getFPChecker() const { return FPChecker; }
 
   // Call target specific combiners
   LLVM_ABI std::optional<Instruction *>

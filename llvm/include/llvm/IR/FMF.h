@@ -60,6 +60,8 @@ public:
   void clear() { Flags = 0; }
   void set() { Flags = AllFlagsMask; }
 
+  unsigned getAsOpaqueInt() const { return Flags; }
+
   /// Flag queries
   bool allowReassoc() const    { return 0 != (Flags & AllowReassoc); }
   bool noNaNs() const          { return 0 != (Flags & NoNaNs); }

@@ -31,6 +31,7 @@ add_llvm_component_library(LLVMCore
   DroppedVariableStatsIR.cpp
   EHPersonalities.cpp
   FPEnv.cpp
+  FPTransformChecker.cpp
   Function.cpp
   GCStrategy.cpp
   GVMaterializer.cpp

@@ -2072,9 +2072,9 @@ static Instruction *factorizeFAddFSub(BinaryOperator &I,
 }
 
 Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
-  if (Value *V = simplifyFAddInst(I.getOperand(0), I.getOperand(1),
-                                  I.getFastMathFlags(),
-                                  SQ.getWithInstruction(&I)))
+  if (Value *V =
+          simplifyFAddInst(I.getOperand(0), I.getOperand(1),
+                           FPTransformChecker(&I), SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (SimplifyAssociativeOrCommutative(I))
@@ -3144,8 +3144,8 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
 Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   Value *Op = I.getOperand(0);
 
-  if (Value *V = simplifyFNegInst(Op, I.getFastMathFlags(),
-                                  getSimplifyQuery().getWithInstruction(&I)))
+  if (Value *V =
+          simplifyFNegInst(Op, getSimplifyQuery().getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldFNegIntoConstant(I, DL))
@@ -3235,7 +3235,7 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
 
 Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   if (Value *V = simplifyFSubInst(I.getOperand(0), I.getOperand(1),
-                                  I.getFastMathFlags(),
+                                  FPTransformChecker(&I),
                                   getSimplifyQuery().getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 

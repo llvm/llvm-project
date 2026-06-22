@@ -15,6 +15,7 @@
 #define LLVM_IR_IRBUILDERFOLDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/FPTransformChecker.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -77,7 +78,7 @@ public:
                           Type *DestTy) const = 0;
 
   virtual Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops,
-                               Type *Ty, FastMathFlags FMF = {},
+                               Type *Ty, FPTransformChecker Checker = {},
                                Function *CtxF = nullptr) const = 0;
 
   //===--------------------------------------------------------------------===//
