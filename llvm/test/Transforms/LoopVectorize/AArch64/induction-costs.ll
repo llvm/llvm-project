@@ -204,10 +204,10 @@ exit:
 define void @wide_truncated_iv(ptr %dst) {
 ; CHECK-LABEL: define void @wide_truncated_iv(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:  [[ITER_CHECK:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -223,19 +223,14 @@ define void @wide_truncated_iv(ptr %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 192
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF8:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF8:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 192, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[VEC_EPILOG_RESUME_VAL]] to i8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[TMP3]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <8 x i8> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 192, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <8 x i8> [ <i8 -64, i8 -63, i8 -62, i8 -61, i8 -60, i8 -59, i8 -58, i8 -57>, %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX1]]
 ; CHECK-NEXT:    store <8 x i8> [[VEC_IND2]], ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], 8
@@ -243,9 +238,9 @@ define void @wide_truncated_iv(ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 200
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 192, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 192, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -254,7 +249,7 @@ define void @wide_truncated_iv(ptr %dst) {
 ; CHECK-NEXT:    store i8 [[TRUNC_IV]], ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 200
-; CHECK-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

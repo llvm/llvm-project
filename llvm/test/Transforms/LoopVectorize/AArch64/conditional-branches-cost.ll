@@ -250,9 +250,9 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT-LABEL: define void @latch_branch_cost(
 ; DEFAULT-SAME: ptr [[DST:%.*]]) {
 ; DEFAULT-NEXT:  [[ITER_CHECK:.*:]]
-; DEFAULT-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; DEFAULT-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; DEFAULT:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; DEFAULT-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
@@ -265,21 +265,20 @@ define void @latch_branch_cost(ptr %dst) {
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; DEFAULT-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; DEFAULT-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; DEFAULT:       [[VEC_EPILOG_ITER_CHECK]]:
-; DEFAULT-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
+; DEFAULT-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF5:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_PH]]:
-; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDEX1:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX1]]
 ; DEFAULT-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP8]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 4
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
 ; DEFAULT-NEXT:    br i1 [[TMP10]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; DEFAULT-NEXT:    br [[EXIT:label %.*]]
 ; DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; PRED-LABEL: define void @latch_branch_cost(

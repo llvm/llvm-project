@@ -11,12 +11,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-LABEL: define i32 @matrix_row_col(
 ; CHECK-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[J]] to i64
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -180,17 +180,15 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <8 x i32> [[TMP146]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <8 x i32> [[TMP147]], [[BIN_RDX7]]
 ; CHECK-NEXT:    [[TMP149:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX8]])
-; CHECK-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP171:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP153:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP149]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP171]], %[[VEC_EPILOG_PH]] ], [ [[TMP168:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP153]], %[[VEC_EPILOG_PH]] ], [ [[TMP168:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP173:%.*]] = add i64 [[INDEX9]], 1
 ; CHECK-NEXT:    [[TMP174:%.*]] = add i64 [[INDEX9]], 2
 ; CHECK-NEXT:    [[TMP175:%.*]] = add i64 [[INDEX9]], 3
@@ -216,17 +214,17 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-NEXT:    br i1 [[TMP169]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP170:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP168]])
-; CHECK-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[RESUME:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[RESUME13:%.*]] = phi i32 [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ [[TMP149]], %[[MIDDLE_BLOCK]] ], [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[ADD7_LCSSA]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[RESUME13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP150:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDVARS_IV]], i64 [[IDXPROM5]]
@@ -240,12 +238,12 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ;
 ; MAX-BW-LABEL: define i32 @matrix_row_col(
 ; MAX-BW-SAME: ptr readonly captures(none) [[DATA:%.*]], i32 [[I:%.*]], i32 [[J:%.*]]) #[[ATTR0:[0-9]+]] {
-; MAX-BW-NEXT:  [[ITER_CHECK:.*]]:
+; MAX-BW-NEXT:  [[ITER_CHECK:.*:]]
 ; MAX-BW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; MAX-BW-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[J]] to i64
-; MAX-BW-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; MAX-BW-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; MAX-BW:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; MAX-BW-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; MAX-BW-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MAX-BW:       [[VECTOR_PH]]:
 ; MAX-BW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAX-BW:       [[VECTOR_BODY]]:
@@ -409,17 +407,15 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; MAX-BW-NEXT:    [[BIN_RDX7:%.*]] = add <8 x i32> [[TMP146]], [[BIN_RDX]]
 ; MAX-BW-NEXT:    [[BIN_RDX8:%.*]] = add <8 x i32> [[TMP147]], [[BIN_RDX7]]
 ; MAX-BW-NEXT:    [[TMP149:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX8]])
-; MAX-BW-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; MAX-BW-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; MAX-BW:       [[VEC_EPILOG_ITER_CHECK]]:
-; MAX-BW-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; MAX-BW-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3:![0-9]+]]
 ; MAX-BW:       [[VEC_EPILOG_PH]]:
-; MAX-BW-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; MAX-BW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; MAX-BW-NEXT:    [[TMP171:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; MAX-BW-NEXT:    [[TMP153:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP149]], i32 0
 ; MAX-BW-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; MAX-BW:       [[VEC_EPILOG_VECTOR_BODY]]:
-; MAX-BW-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; MAX-BW-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP171]], %[[VEC_EPILOG_PH]] ], [ [[TMP168:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; MAX-BW-NEXT:    [[INDEX9:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; MAX-BW-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP153]], %[[VEC_EPILOG_PH]] ], [ [[TMP168:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; MAX-BW-NEXT:    [[TMP173:%.*]] = add i64 [[INDEX9]], 1
 ; MAX-BW-NEXT:    [[TMP174:%.*]] = add i64 [[INDEX9]], 2
 ; MAX-BW-NEXT:    [[TMP175:%.*]] = add i64 [[INDEX9]], 3
@@ -445,17 +441,17 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; MAX-BW-NEXT:    br i1 [[TMP169]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; MAX-BW:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; MAX-BW-NEXT:    [[TMP170:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP168]])
-; MAX-BW-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
+; MAX-BW-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MAX-BW:       [[VEC_EPILOG_SCALAR_PH]]:
-; MAX-BW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; MAX-BW-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; MAX-BW-NEXT:    [[RESUME:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ]
+; MAX-BW-NEXT:    [[RESUME13:%.*]] = phi i32 [ [[TMP149]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; MAX-BW-NEXT:    br label %[[FOR_BODY:.*]]
 ; MAX-BW:       [[FOR_COND_CLEANUP]]:
-; MAX-BW-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ [[TMP149]], %[[MIDDLE_BLOCK]] ], [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; MAX-BW-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], %[[FOR_BODY]] ], [ [[TMP170]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; MAX-BW-NEXT:    ret i32 [[ADD7_LCSSA]]
 ; MAX-BW:       [[FOR_BODY]]:
-; MAX-BW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; MAX-BW-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
+; MAX-BW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[RESUME]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; MAX-BW-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[RESUME13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD7]], %[[FOR_BODY]] ]
 ; MAX-BW-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDVARS_IV]]
 ; MAX-BW-NEXT:    [[TMP150:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; MAX-BW-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[INDVARS_IV]], i64 [[IDXPROM5]]

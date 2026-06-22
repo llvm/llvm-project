@@ -59,7 +59,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
 ; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
@@ -68,9 +68,9 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], 127
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX2:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX2:       [[VECTOR_PH]]:
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
@@ -111,11 +111,11 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX2-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX2:       [[MIDDLE_BLOCK]]:
-; AVX2-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX2-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX2:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3:![0-9]+]]
 ; AVX2:       [[VEC_EPILOG_PH]]:
-; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX2:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX2-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -131,7 +131,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 10000
 ; AVX2-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX2:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX2-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX2-NEXT:    br [[FOR_END:label %.*]]
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo1(
@@ -140,7 +140,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX512-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
@@ -149,9 +149,9 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], 255
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX512:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -192,11 +192,11 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX512-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX512:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
+; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
-; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX512-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -212,7 +212,7 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 10000
 ; AVX512-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br [[FOR_END:label %.*]]
 ; AVX512:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
@@ -286,7 +286,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
 ; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
 ; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
@@ -295,9 +295,9 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], 127
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX2:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX2:       [[VECTOR_PH]]:
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
@@ -338,11 +338,11 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX2-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX2:       [[MIDDLE_BLOCK]]:
-; AVX2-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX2-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX2:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3]]
 ; AVX2:       [[VEC_EPILOG_PH]]:
-; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX2:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX2-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -358,7 +358,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 10000
 ; AVX2-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; AVX2:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX2-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX2-NEXT:    br [[FOR_END:label %.*]]
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo1_addrspace1(
@@ -367,7 +367,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
 ; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX512-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
@@ -376,9 +376,9 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX512-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], 255
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX512:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -419,11 +419,11 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX512-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX512-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX512:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
-; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX512-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -439,7 +439,7 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX512-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 10000
 ; AVX512-NEXT:    br i1 [[TMP28]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br [[FOR_END:label %.*]]
 ; AVX512:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
@@ -523,7 +523,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
 ; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
@@ -532,9 +532,9 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], 127
 ; AVX2-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX2-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX2:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX2:       [[VECTOR_PH]]:
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
@@ -579,11 +579,11 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX2-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AVX2:       [[MIDDLE_BLOCK]]:
-; AVX2-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX2-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX2:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3]]
 ; AVX2:       [[VEC_EPILOG_PH]]:
-; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX2:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX2-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -600,7 +600,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 10000
 ; AVX2-NEXT:    br i1 [[TMP33]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; AVX2:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX2-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX2-NEXT:    br [[FOR_END:label %.*]]
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define void @foo2(
@@ -609,7 +609,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX512-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
@@ -618,9 +618,9 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], 255
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX512:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -665,11 +665,11 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX512-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX512:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
-; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX512-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -686,7 +686,7 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 10000
 ; AVX512-NEXT:    br i1 [[TMP33]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br [[FOR_END:label %.*]]
 ; AVX512:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
@@ -858,7 +858,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-LABEL: define void @foo3(
 ; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 80000
 ; AVX512-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 40000
@@ -870,9 +870,9 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; AVX512-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512-NEXT:    br i1 [[CONFLICT_RDX]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX512:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -917,11 +917,11 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 9984
 ; AVX512-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 false, [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX512:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF21:![0-9]+]]
+; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF21:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
-; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 9984, %[[VEC_EPILOG_ITER_CHECK]] ]
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; AVX512-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -938,7 +938,7 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT15]], 10000
 ; AVX512-NEXT:    br i1 [[TMP31]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 true, [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br [[FOR_END:label %.*]]
 ; AVX512:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
@@ -1995,9 +1995,9 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX2-LABEL: define i32 @reverse_gather(
 ; AVX2-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX2:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX2:       [[VECTOR_PH]]:
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
@@ -2120,18 +2120,16 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX2-NEXT:    [[TMP105:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX5]])
 ; AVX2-NEXT:    [[TMP106:%.*]] = freeze i1 [[TMP105]]
 ; AVX2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP106]], i32 0, i32 1
-; AVX2-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX2-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX2:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF33]]
+; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF33]]
 ; AVX2:       [[VEC_EPILOG_PH]]:
-; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 1, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX2-NEXT:    [[TMP107:%.*]] = icmp ne i32 [[BC_MERGE_RDX]], 1
+; AVX2-NEXT:    [[TMP107:%.*]] = icmp ne i32 [[RDX_SELECT]], 1
 ; AVX2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP107]], i64 0
 ; AVX2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX2:       [[VEC_EPILOG_VECTOR_BODY]]:
-; AVX2-NEXT:    [[INDEX6:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; AVX2-NEXT:    [[INDEX6:%.*]] = phi i32 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; AVX2-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i1> [ [[BROADCAST_SPLAT]], %[[VEC_EPILOG_PH]] ], [ [[TMP133:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; AVX2-NEXT:    [[TMP108:%.*]] = sub i32 100, [[INDEX6]]
 ; AVX2-NEXT:    [[TMP109:%.*]] = add i32 [[TMP108]], -1
@@ -2166,15 +2164,15 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX2-NEXT:    [[TMP135:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP133]])
 ; AVX2-NEXT:    [[TMP136:%.*]] = freeze i1 [[TMP135]]
 ; AVX2-NEXT:    [[RDX_SELECT9:%.*]] = select i1 [[TMP136]], i32 0, i32 1
-; AVX2-NEXT:    br i1 true, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX2-NEXT:    br [[EXIT:label %.*]]
 ; AVX2:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; AVX512-LABEL: define i32 @reverse_gather(
 ; AVX512-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; AVX512:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; AVX512-NEXT:    br label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -2220,18 +2218,16 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX512-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[BIN_RDX14]])
 ; AVX512-NEXT:    [[TMP17:%.*]] = freeze i1 [[TMP16]]
 ; AVX512-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP17]], i32 0, i32 1
-; AVX512-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; AVX512-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX512:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF51:![0-9]+]]
+; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF51:![0-9]+]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
-; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX512-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 1, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX512-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[BC_MERGE_RDX]], 1
+; AVX512-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[RDX_SELECT]], 1
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP18]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
-; AVX512-NEXT:    [[INDEX15:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX15:%.*]] = phi i32 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[VEC_PHI16:%.*]] = phi <4 x i1> [ [[BROADCAST_SPLAT]], %[[VEC_EPILOG_PH]] ], [ [[TMP36:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP19:%.*]] = sub i32 100, [[INDEX15]]
 ; AVX512-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
@@ -2260,7 +2256,7 @@ define i32 @reverse_gather(ptr %p) {
 ; AVX512-NEXT:    [[TMP38:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP36]])
 ; AVX512-NEXT:    [[TMP39:%.*]] = freeze i1 [[TMP38]]
 ; AVX512-NEXT:    [[RDX_SELECT20:%.*]] = select i1 [[TMP39]], i32 0, i32 1
-; AVX512-NEXT:    br i1 true, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; AVX512-NEXT:    br [[EXIT:label %.*]]
 ; AVX512:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:

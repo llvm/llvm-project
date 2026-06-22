@@ -113,16 +113,16 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-LABEL: define void @trunc_store(
 ; DEFAULT-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i16 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; DEFAULT-NEXT:  iter.check:
-; DEFAULT-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; DEFAULT-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; DEFAULT:       vector.memcheck:
 ; DEFAULT-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 1000
 ; DEFAULT-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 8
 ; DEFAULT-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; DEFAULT-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; DEFAULT-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; DEFAULT-NEXT:    br i1 [[FOUND_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; DEFAULT-NEXT:    br i1 [[FOUND_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; DEFAULT:       vector.main.loop.iter.check:
-; DEFAULT-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DEFAULT-NEXT:    br label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP2]], 4
@@ -152,9 +152,9 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; DEFAULT:       vec.epilog.iter.check:
 ; DEFAULT-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
-; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF12:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH:%.*]], !prof [[PROF12:![0-9]+]]
 ; DEFAULT:       vec.epilog.ph:
-; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <8 x i16> poison, i16 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT4]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6]]
@@ -172,9 +172,9 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT9]], 1000
 ; DEFAULT-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; DEFAULT:       vec.epilog.middle.block:
-; DEFAULT-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; DEFAULT-NEXT:    br label [[EXIT]]
 ; DEFAULT:       vec.epilog.scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[VECTOR_MEMCHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    br label [[LOOP:%.*]]
 ; DEFAULT:       loop:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

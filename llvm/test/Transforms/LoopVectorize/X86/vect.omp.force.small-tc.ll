@@ -21,9 +21,9 @@ target triple = "x86_64-unknown-linux"
 define void @vectorized(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
 ; CHECK-LABEL: @vectorized(
 ; CHECK-NEXT:  iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -51,14 +51,13 @@ define void @vectorized(ptr noalias nocapture %A, ptr noalias nocapture readonly
 ; CHECK-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP7]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK-NEXT:    br label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VEC_EPILOG_PH:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ 16, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX8]]
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP17]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX8]]
@@ -69,9 +68,9 @@ define void @vectorized(ptr noalias nocapture %A, ptr noalias nocapture readonly
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT11]], 20
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 16, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

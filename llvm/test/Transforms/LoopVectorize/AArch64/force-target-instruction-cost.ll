@@ -437,9 +437,9 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-LABEL: define void @interleave_group(
 ; COST1-SAME: ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
 ; COST1-NEXT:  [[ITER_CHECK:.*:]]
-; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; COST1-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; COST1:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; COST1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COST1:       [[VECTOR_PH]]:
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
@@ -455,18 +455,14 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; COST1-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; COST1:       [[MIDDLE_BLOCK]]:
-; COST1-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; COST1-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; COST1:       [[VEC_EPILOG_ITER_CHECK]]:
-; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3]]
 ; COST1:       [[VEC_EPILOG_PH]]:
-; COST1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; COST1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
-; COST1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; COST1-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; COST1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; COST1:       [[VEC_EPILOG_VECTOR_BODY]]:
-; COST1-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; COST1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST1-NEXT:    [[INDEX1:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 96, i64 97, i64 98, i64 99>, %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; COST1-NEXT:    [[TMP6:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 3)
 ; COST1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP6]], i64 0
 ; COST1-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
@@ -501,15 +497,15 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
 ; COST1-NEXT:    br i1 [[TMP23]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; COST1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; COST1-NEXT:    br i1 false, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; COST1-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; COST1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; COST10-LABEL: define void @interleave_group(
 ; COST10-SAME: ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
 ; COST10-NEXT:  [[ITER_CHECK:.*:]]
-; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; COST10-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; COST10:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; COST10-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COST10:       [[VECTOR_PH]]:
 ; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST10:       [[VECTOR_BODY]]:
@@ -521,18 +517,14 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST10-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; COST10-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; COST10:       [[MIDDLE_BLOCK]]:
-; COST10-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; COST10-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; COST10:       [[VEC_EPILOG_ITER_CHECK]]:
-; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF3]]
 ; COST10:       [[VEC_EPILOG_PH]]:
-; COST10-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; COST10-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
-; COST10-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; COST10-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; COST10-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; COST10:       [[VEC_EPILOG_VECTOR_BODY]]:
-; COST10-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; COST10-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST10-NEXT:    [[INDEX1:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST10-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 96, i64 97, i64 98, i64 99>, %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; COST10-NEXT:    [[TMP3:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 3)
 ; COST10-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
 ; COST10-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
@@ -567,7 +559,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST10-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
 ; COST10-NEXT:    br i1 [[TMP20]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; COST10:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; COST10-NEXT:    br i1 false, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; COST10-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; COST10:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
