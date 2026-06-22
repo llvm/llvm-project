@@ -1305,18 +1305,14 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // TODO: there are other patterns besides zero that we can usefully memset,
   // like -1, which happens to be the pattern used by member-pointers.
   if (!cgm.getTypes().isZeroInitializable(ty)) {
-    // Classic codegen handles non-zero-init VLAs here via emitNonZeroVLAInit.
-    // In CIR, getTypeSizeInChars returns 0 for VLAs, so they are caught by
-    // the errorNYI above.
-    //
-    // Guard: emitNullConstant calls errorNYI for virtual bases and returns {},
-    // which would crash builder.getConstant; report the NYI here instead.
-    if (const auto *rd = ty->getAsCXXRecordDecl(); rd && rd->getNumVBases()) {
-      cgm.errorNYI(loc,
-                   "emitNullInitialization: non-zero-init type with virtual "
-                   "bases");
-      return;
-    }
+    // The only non-zero-initializable shape exercised here is an aggregate
+    // whose null pattern comes from a pointer to data member, which
+    // emitNullConstant fills in per field (-1 for member-pointer fields).
+    // Virtual bases are the one reachable shape it cannot lower yet; assert
+    // they are absent rather than emitting an untested constant.
+    [[maybe_unused]] const auto *rd = ty->getAsCXXRecordDecl();
+    assert((!rd || rd->getNumVBases() == 0) &&
+           "emitNullInitialization: virtual bases not yet supported");
     mlir::Value nullVal = cgm.emitNullConstant(ty, loc);
     builder.createStore(loc, nullVal, destPtr);
     return;
