@@ -172,7 +172,8 @@ struct __cw_operators {
 
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator->*(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value->*_Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Lp::value->*_Rp::value)> {
     return {};
   }
 
