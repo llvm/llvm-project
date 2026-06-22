@@ -995,7 +995,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         opts.SampleProfileFile, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::SampleUse,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
-        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/false);
+        opts.DebugInfoForProfiling, opts.PseudoProbeForProfiling);
+  } else if (opts.PseudoProbeForProfiling) {
+    // -fpseudo-probe-for-profiling
+    pgoOpt = llvm::PGOOptions(
+        "", "", "", /*MemoryProfile=*/"", llvm::PGOOptions::NoAction,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling, true);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
