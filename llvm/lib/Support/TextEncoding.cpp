@@ -62,6 +62,17 @@ std::optional<TextEncoding> TextEncodingConverter::getKnownEncoding(StringRef Na
   return std::nullopt;
 }
 
+// Returns the canonical name for a known encoding.
+StringRef TextEncodingConverter::getKnownEncodingName(TextEncoding Encoding) {
+  switch (Encoding) {
+  case TextEncoding::UTF8:
+    return "UTF-8";
+  case TextEncoding::IBM1047:
+    return "IBM-1047";
+  }
+  llvm_unreachable("Invalid TextEncoding value");
+}
+
 [[maybe_unused]] static void HandleOverflow(size_t &Capacity, char *&Output,
                                             size_t &OutputLength,
                                             SmallVectorImpl<char> &Result) {

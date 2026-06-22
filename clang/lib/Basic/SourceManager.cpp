@@ -490,13 +490,10 @@ SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
   if (SourceKnown && *SourceKnown == llvm::TextEncoding::UTF8)
     return nullptr;
 
-  // Create a cache key using only source encoding
-  llvm::SmallString<64> CacheKey;
-  if (SourceKnown) {
-    CacheKey += llvm::Twine(static_cast<int>(*SourceKnown)).str();
-  } else {
-    CacheKey += SourceEncoding;
-  }
+  // Create a cache key using canonical encoding name
+  llvm::StringRef CacheKey = SourceKnown
+      ? llvm::TextEncodingConverter::getKnownEncodingName(*SourceKnown)
+      : SourceEncoding;
 
   // Check if converter already exists in cache
   auto It = ConverterCache.find(CacheKey);
