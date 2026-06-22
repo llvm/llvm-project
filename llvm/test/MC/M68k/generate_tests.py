@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 
+# ===-- generate_tests.py - Generate M68k tests ---------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===#
+#
+# This file generates some of the repetitive and error-prone encoding tests for
+# the M68k target.
+#
+# Currently generated:
+# - llvm/test/MC/M68k/MOVE.s
+#
+# ===----------------------------------------------------------------------===#
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum
