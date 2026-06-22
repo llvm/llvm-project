@@ -14979,6 +14979,14 @@ static bool pointerRefersToUninitStorage(const Expr *E) {
     if (const FunctionDecl *FD = CE->getDirectCallee())
       return FD->hasAttr<RefToUninitAttr>();
 
+  // Paper §4.3: a [[ref_to_uninit]] pointer cast to another pointer type is
+  // itself [[ref_to_uninit]]. Implicit casts were already stripped above, so
+  // this only looks through an explicit pointer-to-pointer cast; a pointer
+  // manufactured from an integer (operand not a pointer) is not propagated.
+  if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
+    if (CE->getSubExpr()->getType()->isPointerType())
+      return pointerRefersToUninitStorage(CE->getSubExpr());
+
   return false;
 }
 

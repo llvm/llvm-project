@@ -12,6 +12,7 @@ int g_init = 0;
 [[uninitialized]] int g_uninit;
 [[uninitialized]] int g_uninit_arr[3];
 [[ref_to_uninit]] int *allocate(int n);
+[[ref_to_uninit]] void *alloc_void();
 
 void test_pointer_target() {
   int *p1 [[ref_to_uninit]] = &g_uninit; // OK
@@ -31,6 +32,37 @@ void test_pointer_sources() {
   int *bad_from_call = allocate(3);                 // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   (void)base; (void)from_ptr; (void)from_array; (void)from_call;
   (void)bad_from_array; (void)bad_from_call;
+}
+
+// An explicit pointer-to-pointer cast of a [[ref_to_uninit]] pointer is itself
+// [[ref_to_uninit]] (paper §4.3); the cast does not launder the marking.
+void test_pointer_casts() {
+  void *vp [[ref_to_uninit]] = &g_uninit;
+  int *c1 [[ref_to_uninit]] = (int *)vp; // OK
+  int *c2 = (int *)vp;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  int *sc1 [[ref_to_uninit]] = static_cast<int *>(vp);      // OK
+  int *sc2 = static_cast<int *>(vp);                         // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *rc1 [[ref_to_uninit]] = reinterpret_cast<int *>(vp); // OK
+  int *rc2 = reinterpret_cast<int *>(vp);                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // An initialized pointer round-tripped through a cast stays initialized.
+  void *vi = &g_init;
+  int *ci1 = (int *)vi;                   // OK
+  int *ci2 [[ref_to_uninit]] = (int *)vi; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+
+  // Casting a [[ref_to_uninit]]-returning call result propagates the marking.
+  int *cc1 [[ref_to_uninit]] = (int *)alloc_void(); // OK
+  int *cc2 = (int *)alloc_void();                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // Trust model: a pointer manufactured from an integer is not propagated.
+  int *ti = reinterpret_cast<int *>(0xdeadbeef); // OK
+
+  // Deref of a cast routes back through the pointer recognizer.
+  int &dr [[ref_to_uninit]] = *(int *)vp; // OK
+
+  (void)c1; (void)c2; (void)sc1; (void)sc2; (void)rc1; (void)rc2;
+  (void)vi; (void)ci1; (void)ci2; (void)cc1; (void)cc2; (void)ti; (void)dr;
 }
 
 void test_reference_target() {
