@@ -68,7 +68,6 @@ class MemoryRegionInfoPacketsCached(TestBase):
         # Force lldb to walk all the stacks of all the threads.
         # Should not see any qMemoryRegionInfo packets.
         for th in process.threads:
-            th.GetNumFrames()
             for f in th.frames:
                 self.runCmd("memory region 0x%x" % f.GetSP())
 
