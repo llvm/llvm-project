@@ -4503,17 +4503,20 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  // BuiltinID has already been normalized (see getConstantEvaluatedBuiltinID),
-  // i.e. an auxiliary target builtin ID has been translated to its canonical
-  // value. The "is constant evaluated" check below needs the *raw* builtin ID
-  // so that aux-target IDs resolve into the correct (aux-target) builtin
-  // records; recover it from the call, falling back to BuiltinID for builtins
-  // emitted without a direct callee (e.g. operator new/delete).
-  unsigned RawBuiltinID = Call->getBuiltinCallee();
-  if (!RawBuiltinID)
-    RawBuiltinID = BuiltinID;
-  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(RawBuiltinID))
+  const ASTContext &ASTCtx = S.getASTContext();
+
+  // BuiltinID is the raw ID baked into the bytecode. The "is constant
+  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
+  // the correct (aux-target) builtin records.
+  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
+
+  // Normalize an auxiliary x86 target builtin ID to its canonical X86::BI*
+  // value so the target-specific cases below (and the handlers they call)
+  // match. This is a cheap integer operation (a single comparison for the
+  // common, target-independent case); we deliberately avoid re-deriving the ID
+  // from the call expression, which is comparatively slow.
+  BuiltinID = getConstantEvaluatedBuiltinID(ASTCtx, BuiltinID);
 
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {

@@ -10270,8 +10270,8 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
 }
 
 // Return the target builtin ID to dispatch on in the constant evaluators'
-// target-specific cases, or 0 if \p E does not name a builtin those cases
-// should handle.
+// target-specific cases, or 0 if \p BuiltinOp does not name a builtin those
+// cases should handle.
 //
 // Target-specific builtin IDs of different targets overlap (each target numbers
 // its builtins from Builtin::FirstTSBuiltin), so a target builtin ID is only
@@ -10281,11 +10281,12 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
 // know how to fold; otherwise an overlapping ID could be misinterpreted as an
 // unrelated builtin of another target.
 unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
-                                       const CallExpr *E) {
-  unsigned BuiltinOp = E->getBuiltinCallee();
-
+                                       unsigned BuiltinOp) {
   // Target-independent builtins have the same ID regardless of the target, so
-  // they can be dispatched as-is.
+  // they can be dispatched as-is. This is the common case and is intentionally
+  // kept to a single comparison so callers can use this on hot paths (e.g. the
+  // bytecode interpreter's builtin dispatch) without re-deriving the ID from
+  // the call expression.
   if (BuiltinOp < Builtin::FirstTSBuiltin)
     return BuiltinOp;
 
@@ -10314,6 +10315,11 @@ unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
   default:
     return 0;
   }
+}
+
+unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
+                                       const CallExpr *E) {
+  return getConstantEvaluatedBuiltinID(Ctx, E->getBuiltinCallee());
 }
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,

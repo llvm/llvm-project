@@ -5710,8 +5710,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (FuncDecl) {
-    if (unsigned BuiltinID =
-            getConstantEvaluatedBuiltinID(Ctx.getASTContext(), E))
+    if (unsigned BuiltinID = FuncDecl->getBuiltinID())
       return VisitBuiltinCallExpr(E, BuiltinID);
 
     // Calls to replaceable operator new/operator delete.

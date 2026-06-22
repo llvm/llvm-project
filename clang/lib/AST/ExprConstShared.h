@@ -80,10 +80,17 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
 
 /// Return the (normalized) builtin ID to dispatch on in the constant
-/// evaluators' target-specific cases, or 0 if \p E does not name a builtin
-/// those cases should handle. Translates an auxiliary target builtin ID back to
-/// its canonical value and only returns IDs for architectures the constant
+/// evaluators' target-specific cases, or 0 if the builtin is not one those
+/// cases should handle. Translates an auxiliary target builtin ID back to its
+/// canonical value and only returns IDs for architectures the constant
 /// evaluators can fold (currently x86/x86_64).
+///
+/// The ID-based overload performs no work beyond a single comparison for
+/// target-independent builtins, so it is suitable for hot paths (e.g. the
+/// bytecode interpreter's builtin dispatch) where re-deriving the ID from the
+/// call expression would be wasteful.
+unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
+                                       unsigned BuiltinID);
 unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
                                        const CallExpr *E);
 
