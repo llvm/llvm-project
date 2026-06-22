@@ -401,8 +401,7 @@ void NVPTXInstPrinter::printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
   bool IsCacheHintMode = NVPTX::isL2CacheHintMode(Hint);
 
   if (Modifier == "l1") {
-    auto L1 = NVPTX::decodeL1Eviction(Hint);
-    switch (L1) {
+    switch (NVPTX::decodeL1Eviction(Hint)) {
     case NVPTX::L1Eviction::Normal:
       return;
     case NVPTX::L1Eviction::Unchanged:
@@ -419,8 +418,7 @@ void NVPTXInstPrinter::printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
       return;
     }
   } else if (Modifier == "l2") {
-    auto L2 = NVPTX::decodeL2Eviction(Hint);
-    switch (L2) {
+    switch (NVPTX::decodeL2Eviction(Hint)) {
     case NVPTX::L2Eviction::Normal:
       break;
     case NVPTX::L2Eviction::First:
@@ -434,8 +432,7 @@ void NVPTXInstPrinter::printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
       O << ".L2::cache_hint";
     return;
   } else if (Modifier == "prefetch") {
-    auto Prefetch = NVPTX::decodeL2Prefetch(Hint);
-    switch (Prefetch) {
+    switch (NVPTX::decodeL2Prefetch(Hint)) {
     case NVPTX::L2Prefetch::None:
       return;
     case NVPTX::L2Prefetch::Bytes64:
