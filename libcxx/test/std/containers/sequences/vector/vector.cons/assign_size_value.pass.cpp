@@ -10,6 +10,8 @@
 
 // void assign(size_type n, const_reference v);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <vector>
 #include <algorithm>
 #include <cassert>

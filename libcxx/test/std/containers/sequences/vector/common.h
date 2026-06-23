@@ -22,6 +22,7 @@
 #include "count_new.h"
 #include "test_macros.h"
 
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
 struct throwing_t {
   int* throw_after_n_ = nullptr;
   throwing_t() { throw 0; }
@@ -53,6 +54,7 @@ struct throwing_t {
     return lhs.throw_after_n_ != rhs.throw_after_n_;
   }
 };
+#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
 
 #if TEST_STD_VER >= 11
 

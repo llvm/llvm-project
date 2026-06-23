@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: no-exceptions
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // Check that std::vector<T>::resize(size_type sz, const value_type& x) provides the strong exception guarantee
 // if T is Cpp17CopyInsertable.
 

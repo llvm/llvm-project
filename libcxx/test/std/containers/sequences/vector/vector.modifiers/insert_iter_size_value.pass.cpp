@@ -10,6 +10,8 @@
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <vector>
 #include <cassert>
 #include <cstddef>

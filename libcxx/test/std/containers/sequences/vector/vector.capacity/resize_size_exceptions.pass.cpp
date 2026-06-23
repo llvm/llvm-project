@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: no-exceptions
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // This test file validates that std::vector<T>::resize(size_type) provides the strong exception guarantee
 // if no exception is thrown by the move constructor of T during the resize call. It also checks that if
 // T's move constructor is not noexcept, resize provides only the basic exception guarantee.
