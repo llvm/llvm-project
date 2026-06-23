@@ -292,6 +292,15 @@ public:
     return Attach(new Message{std::forward<A>(args)...}); // reference-counted
   }
 
+  // During parsing (before ResolveProvenances) a message locates itself with a
+  // CharBlock into the cooked source; returns it when present.
+  std::optional<CharBlock> GetCookedSourceLocation() const {
+    if (const CharBlock *cb{std::get_if<CharBlock>(&location_)}) {
+      return *cb;
+    }
+    return std::nullopt;
+  }
+
   bool SortBefore(const Message &that) const;
   bool IsFatal() const;
   Severity severity() const;
