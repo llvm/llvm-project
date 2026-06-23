@@ -143,6 +143,14 @@ struct WMMAInstInfo {
 #define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
+using TargetIDSetting = AMDGPU::TargetIDSetting;
+using AMDGPUTargetID = AMDGPU::AMDGPUTargetID;
+
+/// Construct AMDGPUTargetID from MCSubtargetInfo. \p FeatureString is used to
+/// determine explicitly requested xnack/sramecc settings.
+AMDGPUTargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                                    StringRef FeatureString);
+
 namespace IsaInfo {
 
 enum {
@@ -151,112 +159,6 @@ enum {
   FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
   TRAP_NUM_SGPRS = 16
 };
-
-enum class TargetIDSetting { Unsupported, Any, Off, On };
-
-class AMDGPUTargetID {
-private:
-  GPUKind Arch;
-  std::string TargetTripleString;
-  TargetIDSetting XnackSetting;
-  TargetIDSetting SramEccSetting;
-  bool IsAMDHSA;
-
-public:
-  explicit AMDGPUTargetID(const MCSubtargetInfo &STI, StringRef FeatureString);
-
-  AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
-                 TargetIDSetting XnackSetting, TargetIDSetting SramEccSetting,
-                 bool IsAMDHSA);
-
-  ~AMDGPUTargetID() = default;
-
-  /// \return True if the current xnack setting is not "Unsupported".
-  bool isXnackSupported() const {
-    return XnackSetting != TargetIDSetting::Unsupported;
-  }
-
-  /// \returns True if the current xnack setting is "On" or "Any".
-  bool isXnackOnOrAny() const {
-    return XnackSetting == TargetIDSetting::On ||
-           XnackSetting == TargetIDSetting::Any;
-  }
-
-  /// \returns True if current xnack setting is "On" or "Off",
-  /// false otherwise.
-  bool isXnackOnOrOff() const {
-    return getXnackSetting() == TargetIDSetting::On ||
-           getXnackSetting() == TargetIDSetting::Off;
-  }
-
-  /// \returns The current xnack TargetIDSetting, possible options are
-  /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getXnackSetting() const { return XnackSetting; }
-
-  /// Sets xnack setting to \p NewXnackSetting.
-  void setXnackSetting(TargetIDSetting NewXnackSetting) {
-    XnackSetting = NewXnackSetting;
-  }
-
-  /// \return True if the current sramecc setting is not "Unsupported".
-  bool isSramEccSupported() const {
-    return SramEccSetting != TargetIDSetting::Unsupported;
-  }
-
-  /// \returns True if the current sramecc setting is "On" or "Any".
-  bool isSramEccOnOrAny() const {
-    return SramEccSetting == TargetIDSetting::On ||
-           SramEccSetting == TargetIDSetting::Any;
-  }
-
-  /// \returns True if current sramecc setting is "On" or "Off",
-  /// false otherwise.
-  bool isSramEccOnOrOff() const {
-    return getSramEccSetting() == TargetIDSetting::On ||
-           getSramEccSetting() == TargetIDSetting::Off;
-  }
-
-  /// \returns The current sramecc TargetIDSetting, possible options are
-  /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getSramEccSetting() const { return SramEccSetting; }
-
-  /// Sets sramecc setting to \p NewSramEccSetting.
-  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
-    SramEccSetting = NewSramEccSetting;
-  }
-
-  void setTargetIDFromTargetIDStream(StringRef TargetID);
-
-  GPUKind getGPUKind() const { return Arch; }
-
-  StringRef getTargetTripleString() const { return TargetTripleString; }
-
-  /// \returns True if this is an AMDHSA target.
-  bool isAMDHSA() const { return IsAMDHSA; }
-
-  /// Parse a target ID directive string (e.g.,
-  /// "amdgcn-amd-amdhsa--gfx1010:xnack-") and return an AMDGPUTargetID.
-  /// \returns AMDGPUTargetID or std::nullopt if malformed.
-  static std::optional<AMDGPUTargetID>
-  parseTargetIDString(StringRef TargetIDDirective);
-
-  /// Write string representation to \p OS
-  void print(raw_ostream &OS) const;
-
-  /// \returns String representation of an object.
-  std::string toString() const;
-
-  bool operator==(const AMDGPUTargetID &Other) const;
-  bool operator!=(const AMDGPUTargetID &Other) const {
-    return !(*this == Other);
-  }
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS,
-                               const AMDGPUTargetID &TargetID) {
-  TargetID.print(OS);
-  return OS;
-}
 
 /// \returns Instruction cache line size in bytes for given subtarget \p STI.
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
@@ -1930,8 +1832,7 @@ private:
 
 } // namespace AMDGPU
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AMDGPU::IsaInfo::TargetIDSetting S);
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S);
 
 } // end namespace llvm
 
