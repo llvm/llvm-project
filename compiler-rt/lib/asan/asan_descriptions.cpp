@@ -418,7 +418,8 @@ void StackAddressDescription::Print() const {
 }
 
 void HeapAddressDescription::Print() const {
-  if (alloc_tid == kInvalidTid) return;
+  if (alloc_tid == kInvalidTid)
+    return;
 
   PrintHeapChunkAccess(addr, chunk_access);
 

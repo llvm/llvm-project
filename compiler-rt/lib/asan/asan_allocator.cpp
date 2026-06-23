@@ -1521,10 +1521,12 @@ bool AsanHsaTranslateIpcCreate(void* ptr, size_t len, void** out_ptr,
   AsanChunk* m = ptr_
                      ? instance.GetAsanChunkByAddr(reinterpret_cast<uptr>(ptr_))
                      : nullptr;
-  if (!ptr_ || !m) return false;
+  if (!ptr_ || !m)
+    return false;
   uptr p = reinterpret_cast<uptr>(ptr);
   uptr p_ = reinterpret_cast<uptr>(ptr_);
-  if (p != p_ + kHsaPageSize || len != m->UsedSize()) return false;
+  if (p != p_ + kHsaPageSize || len != m->UsedSize())
+    return false;
   *out_ptr = ptr_;
   *out_len = get_allocator().GetActuallyAllocatedSize(ptr_);
   return true;
@@ -1532,7 +1534,8 @@ bool AsanHsaTranslateIpcCreate(void* ptr, size_t len, void** out_ptr,
 
 bool AsanHsaIsVmemFreeValid(void* ptr, uptr size) {
   void* p = get_allocator().GetBlockBegin(ptr);
-  if (!p) return false;
+  if (!p)
+    return false;
   uptr ptr_ = reinterpret_cast<uptr>(ptr);
   AsanChunk* m = reinterpret_cast<AsanChunk*>(ptr_ - kChunkHeaderSize);
   return m->Beg() == ptr_ && size == m->UsedSize();
@@ -1541,7 +1544,8 @@ bool AsanHsaIsVmemFreeValid(void* ptr, uptr size) {
 bool AsanHsaGetLiveMappingInfo(const void* ptr, void** map_base,
                                uptr* used_size, uptr* offset) {
   void* hsa_map_base = get_allocator().GetBlockBegin(ptr);
-  if (!hsa_map_base) return false;
+  if (!hsa_map_base)
+    return false;
   uptr user = reinterpret_cast<uptr>(ptr);
   AsanChunk* m = reinterpret_cast<AsanChunk*>(user - kChunkHeaderSize);
   if (atomic_load(&m->chunk_state, memory_order_acquire) != CHUNK_ALLOCATED ||

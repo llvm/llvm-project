@@ -41,7 +41,7 @@ class CombinedAllocator {
     secondary_.Init();
   }
 
-  void *Allocate(AllocatorCache *cache, uptr size, uptr alignment) {
+  void* Allocate(AllocatorCache* cache, uptr size, uptr alignment) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
@@ -64,7 +64,7 @@ class CombinedAllocator {
     // using a non-fixed base address). The secondary takes care of the
     // alignment without such requirement, and allocating 'size' would use
     // extraneous memory, so we employ 'original_size'.
-    void *res;
+    void* res;
     if (primary_.CanAllocate(size, alignment))
       res = cache->Allocate(&primary_, primary_.ClassID(size));
     else
@@ -130,8 +130,10 @@ class CombinedAllocator {
   // (via ForceLock). Uses GetBlockBeginFastLocked for the secondary check to
   // avoid re-acquiring the mutex already held by the caller.
   void* GetMetaDataFastLocked(const void* p) {
-    if (primary_.PointerIsMine(p)) return primary_.GetMetaData(p);
-    if (secondary_.GetBlockBeginFastLocked(p)) return secondary_.GetMetaData(p);
+    if (primary_.PointerIsMine(p))
+      return primary_.GetMetaData(p);
+    if (secondary_.GetBlockBeginFastLocked(p))
+      return secondary_.GetMetaData(p);
     return nullptr;
   }
 
@@ -143,7 +145,7 @@ class CombinedAllocator {
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(const void *p) {
+  void* GetBlockBeginFastLocked(const void* p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
     return secondary_.GetBlockBeginFastLocked(p);

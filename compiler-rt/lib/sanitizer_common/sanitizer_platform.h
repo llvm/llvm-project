@@ -322,7 +322,7 @@
 #endif
 
 #ifndef SANITIZER_AMDHSA
-#define SANITIZER_AMDHSA 0
+#  define SANITIZER_AMDHSA 0
 #endif
 
 #if defined(__NVPTX__)
