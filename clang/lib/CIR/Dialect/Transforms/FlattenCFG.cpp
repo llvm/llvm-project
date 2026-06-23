@@ -1297,7 +1297,7 @@ public:
             cir::LoadOp::create(rewriter, loc, destSlot, /*isDeref=*/false,
                                 /*isVolatile=*/false, /*isNontemporal=*/false,
                                 /*alignment=*/mlir::IntegerAttr(),
-                                cir::SyncScopeKindAttr(), cir::MemOrderAttr()
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
                                 /*invariant=*/false);
 
         // Create destination blocks for each exit and collect switch case info.

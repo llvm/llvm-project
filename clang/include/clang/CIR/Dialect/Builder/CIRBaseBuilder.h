@@ -230,12 +230,12 @@ public:
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
                          bool isVolatile = false, uint64_t alignment = 0,
-                         bool isNontemporal = false,
-                         bool isInvariant = false) {
+                         bool isNontemporal = false) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
-                               isNontemporal, alignmentAttr, cir::SyncScopeKindAttr{},
-                               cir::MemOrderAttr{}, isInvariant);
+                               isNontemporal, alignmentAttr,
+                               cir::SyncScopeKindAttr{}, cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
