@@ -186,6 +186,11 @@ public:
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *fd);
 
+  /// A builtin function is a freestanding function using the default
+  /// C conventions.
+  const CIRGenFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
+                                                       const CallArgList &args);
+
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
