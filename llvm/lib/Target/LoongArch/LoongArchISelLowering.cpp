@@ -207,8 +207,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
-  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
-
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETUGT, ISD::SETUGE,
       ISD::SETGE,  ISD::SETNE,  ISD::SETGT};
@@ -257,6 +255,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::UINT_TO_FP, MVT::i64, Custom);
       }
     }
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   }
 
   // Set operations for 'D' feature.
@@ -4021,9 +4020,6 @@ SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
 
 SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  if (!Subtarget.hasBasicF())
-    return Op.getOperand(0);
-
   MVT GRLenVT = Subtarget.getGRLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
