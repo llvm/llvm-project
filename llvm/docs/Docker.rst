@@ -126,7 +126,7 @@ Which image should I choose?
 ============================
 We currently provide two images: Debian12-based and nvidia-cuda-based. They
 differ in the base image that they use, i.e. they have a different set of
-preinstalled binaries. Debian8 is very minimal, nvidia-cuda is larger, but has
+preinstalled binaries. Debian12 is very minimal, nvidia-cuda is larger, but has
 preinstalled CUDA libraries and allows access to a GPU, installed on your
 machine.
 
