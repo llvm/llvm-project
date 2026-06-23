@@ -784,11 +784,11 @@ cc_test(
     name = "scalable_static_analysis_tests",
     size = "small",
     srcs = glob([
-        "ScalableStaticAnalysis/**/*.cpp",
-        "ScalableStaticAnalysis/**/*.h",
+        "ScalableStaticAnalysisFramework/**/*.cpp",
+        "ScalableStaticAnalysisFramework/**/*.h",
     ]),
-    features = ["-layering_check"],  # #include "../../lib/ScalableStaticAnalysis/Core/ModelStringConversions.h"
-    includes = ["ScalableStaticAnalysis"],
+    features = ["-layering_check"],  # #include "../../lib/ScalableStaticAnalysisFramework/Core/ModelStringConversions.h"
+    includes = ["ScalableStaticAnalysisFramework"],
     deps = [
         "//clang:ast",
         "//clang:ast_matchers",

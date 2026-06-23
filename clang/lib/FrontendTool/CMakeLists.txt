@@ -4,9 +4,9 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(link_libs
-  clangScalableStaticAnalysisAnalyses
-  clangScalableStaticAnalysisCore
-  clangScalableStaticAnalysisFrontend
+  clangScalableStaticAnalysisFrameworkAnalyses
+  clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkFrontend
   clangBasic
   clangCodeGen
   clangDriver

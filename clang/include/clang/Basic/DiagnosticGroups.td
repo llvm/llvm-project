@@ -1926,7 +1926,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 
 // Warnings related to the "Scalable Static Analysis Framework" - SSAF.
-def ScalableStaticAnalysis : DiagGroup<"scalable-static-analysis">;
+def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
 
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
