@@ -4047,10 +4047,10 @@ let TargetPrefix = "aarch64" in {
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti4_lane_zt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti6_zt
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty], [llvm_i32_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadOnly]>;
 
   // Lookup table expand two registers
   //
@@ -4071,7 +4071,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_lane_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti6_lane_x4_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
@@ -4084,12 +4084,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti6_zt_x4
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                              llvm_nxv16i8_ty, llvm_nxv16i8_ty],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadOnly]>;
 
 
   //
