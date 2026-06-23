@@ -168,7 +168,9 @@ def get_branches_found_in_previous_run(github_token: str) -> list[str]:
     ):
         if not workflow_run.status == "completed":
             continue
-        cutoff = datetime.datetime.now(datetime.timezone.utc) - timedelta(days=7)
+        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            days=7
+        )
         if workflow_run.run_started_at > cutoff:
             continue
         break
