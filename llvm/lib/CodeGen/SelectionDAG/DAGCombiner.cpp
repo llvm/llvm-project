@@ -20623,14 +20623,6 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FABS, DL, VT, {N0}))
     return C;
 
-  // fold (fabs (fpround x)) -> (fpround (fabs x))
-  if (N0.getOpcode() == ISD::FP_ROUND && N0.hasOneUse()) {
-    SDValue Abs = DAG.getNode(ISD::FABS, DL, N0.getOperand(0).getValueType(),
-                              N0.getOperand(0), N->getFlags());
-    return DAG.getNode(ISD::FP_ROUND, DL, VT, Abs, N0.getOperand(1),
-                       N0->getFlags());
-  }
-
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 

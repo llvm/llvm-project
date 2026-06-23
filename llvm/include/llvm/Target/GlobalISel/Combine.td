@@ -1052,27 +1052,6 @@ def fabs_fneg_fold: GICombineRule <
           (G_FABS $dst, $tmp)),
   (apply (G_FABS $dst, $x))>;
 
-// Fold (fabs (fptrunc x)) -> (fptrunc (fabs x)).
-def fabs_fptrunc_fold: GICombineRule <
-  (defs root:$dst),
-  (match (G_FPTRUNC $round, $src):$fptrunc,
-         (G_FABS $dst, $round):$fabs,
-         [{ return MRI.hasOneNonDBGUse(${round}.getReg()) &&
-                   Helper.isLegalOrBeforeLegalizer(
-                       {TargetOpcode::G_FABS,
-                        {MRI.getType(${src}.getReg())}}); }]),
-  (apply [{
-            Register Src = ${src}.getReg();
-            Helper.getBuilder().setInstrAndDebugLoc(*${fabs});
-            Register Abs = Helper.getBuilder()
-                               .buildFAbs(MRI.getType(Src), Src,
-                                          ${fabs}->getFlags())
-                               .getReg(0);
-            Helper.getBuilder().buildFPTrunc(${dst}.getReg(), Abs,
-                                             ${fptrunc}->getFlags());
-            ${fabs}->eraseFromParent();
-          }])>;
-
 // Fold (unmerge cst) -> cst1, cst2, ...
 def unmerge_cst_matchinfo : GIDefMatchData<"SmallVector<APInt, 8>">;
 def unmerge_cst : GICombineRule<
@@ -2640,7 +2619,6 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
     form_bitfield_extract, constant_fold_binops, constant_fold_fma,
     constant_fold_cast_op, constant_fold_unary_int_op, fabs_fneg_fold,
-    fabs_fptrunc_fold,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
