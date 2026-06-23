@@ -732,7 +732,7 @@ static void copyMetadataIfPresent(Function *From, Function *To,
 // For better debugability, under MergeFunctionsPDI, we do not modify G's
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
-  auto GEC = G->getEntryCount(/*AllowSynthetic=*/true);
+  std::optional<Function::ProfileCount> GEC = G->getEntryCount();
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
   std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
@@ -884,20 +884,14 @@ static void mergeEntryCountsInto(Function *F,
     return;
   uint64_t Sum = SaturatingAdd(FC ? FC->getCount() : uint64_t{0},
                                GC ? GC->getCount() : uint64_t{0});
-  Function::ProfileCountType PCT =
-      ((FC && FC->isSynthetic()) || (GC && GC->isSynthetic()))
-          ? Function::PCT_Synthetic
-          : Function::PCT_Real;
-  if (FC && FC->getType() != PCT) {
-    F->setMetadata(LLVMContext::MD_prof, nullptr);
-    F->setEntryCount(Function::ProfileCount(Sum, PCT));
-    return;
-  }
-  F->setEntryCount(Sum, PCT);
+  F->setEntryCount(Sum);
 }
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
+
+  std::optional<Function::ProfileCount> FEC = F->getEntryCount();
+  std::optional<Function::ProfileCount> GEC = G->getEntryCount();
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
@@ -924,8 +918,6 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
-    auto FEC = F->getEntryCount(/*AllowSynthetic=*/true);
-    auto GEC = G->getEntryCount(/*AllowSynthetic=*/true);
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
@@ -951,13 +943,12 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     else
       F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
+    // The private shared implementation accumulates both symbols' entries
+    // (FEC + GEC), while each ODR thunk retains its own per-symbol entry count.
     mergeEntryCountsInto(F, FEC, GEC);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
-    auto FEC = F->getEntryCount(/*AllowSynthetic=*/true);
-    auto GEC = G->getEntryCount(/*AllowSynthetic=*/true);
-
     // For better debugability, under MergeFunctionsPDI, we do not modify G's
     // call sites to point to F even when within the same translation unit.
     if (!G->isInterposable() && !MergeFunctionsPDI) {
