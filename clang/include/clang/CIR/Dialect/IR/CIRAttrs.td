@@ -538,45 +538,55 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "cir::DataMemberType">:$type,
                         OptionalParameter<
-                            "std::optional<unsigned>">:$member_index);
+                            "mlir::DenseI32ArrayAttr">:$member_path);
   let description = [{
     A data member attribute is a literal attribute that represents a constant
     pointer-to-data-member value.
 
-    The `member_index` parameter represents the index of the pointed-to member
-    within its containing record. It is an optional parameter; lack of this
-    parameter indicates a null pointer-to-data-member value.
+    The `member_path` parameter is a GEP-like sequence of field indices
+    navigating from `classTy` down to the pointed-to member.  An absent
+    `member_path` represents a null pointer-to-data-member.
 
-    Example:
+    Examples:
     ```
-    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+    // int Point::*p = &Point::z  (z is field 2)
+    #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_Point>
 
-    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    // int Derived::*p = &Derived::x  (Base subobject at [0], x at [0])
+    #cir.data_member<[0, 0]> : !cir.data_member<!s32i in !rec_Derived>
+
+    // null
+    #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
     ```
   }];
 
   let builders = [
+    // Null pointer-to-data-member.
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
-      return $_get(type.getContext(), type, std::nullopt);
+      return $_get(type.getContext(), type, mlir::DenseI32ArrayAttr{});
     }]>,
+    // Non-null pointer-to-data-member with an explicit field-index path.
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
-                                        "unsigned":$member_index), [{
-      return $_get(type.getContext(), type, member_index);
+                                       "llvm::ArrayRef<int32_t>":$path), [{
+      return $_get(type.getContext(), type,
+                   mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
   ];
 
-  // This attribute gets lowered during CXXABILowering
+  // This attribute gets lowered during CXXABILowering.
   let hasAttrToValueLowering = 0;
 
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
-    `<` ($member_index^):(`null`)? `>`
+    `<` custom<DataMemberPath>($member_path) `>`
   }];
 
   let extraClassDeclaration = [{
-    bool isNullPtr() const {
-      return !getMemberIndex().has_value();
+    bool isNullPtr() const { return !getMemberPath(); }
+    llvm::ArrayRef<int32_t> getPath() const {
+      assert(!isNullPtr() && "getPath() called on null data member pointer");
+      return getMemberPath().asArrayRef();
     }
   }];
 }
