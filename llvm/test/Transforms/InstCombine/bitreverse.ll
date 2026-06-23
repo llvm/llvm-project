@@ -534,3 +534,18 @@ define i64 @rev_all_operand64_multiuse_both(i64 %a, i64 %b) #0 {
 }
 
 declare i32 @llvm.bswap.i32(i32 %or11.i)
+
+
+define i16 @bit_swap(i16 %v3) {
+; CHECK-LABEL: @bit_swap(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[V3:%.*]], -32767
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[TMP1]])
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %conv = zext i16 %v3 to i32
+  %shl = shl i32 %conv, 15
+  %shr = ashr i32 %conv, 15
+  %or = or i32 %shl, %shr
+  %conv2 = trunc i32 %or to i16
+  ret i16 %conv2
+}
