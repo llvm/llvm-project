@@ -5148,3 +5148,177 @@ define <4 x i16> @test_pabdu_v4i16(<4 x i16> %a, <4 x i16> %b) {
   %res = call <4 x i16> @llvm.riscv.pabdu.v4i16(<4 x i16> %a, <4 x i16> %b)
   ret <4 x i16> %res
 }
+
+define <4 x i16> @test_pas_x_h(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pas_x_h:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pas.dhx a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pas_x_h:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pas.hx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pas.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_psa_x_h(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_psa_x_h:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psa.dhx a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psa_x_h:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psa.hx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psa.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_psas_x_h(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_psas_x_h:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psas.dhx a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psas_x_h:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psas.hx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.psas.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pssa_x_h(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pssa_x_h:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pssa.dhx a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssa_x_h:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pssa.hx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pssa.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_paas_x_h(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_paas_x_h:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paas.dhx a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paas_x_h:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paas.hx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.paas.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pasa_x_h(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pasa_x_h:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasa.dhx a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasa_x_h:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasa.hx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pasa.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_pas_x_w(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pas_x_w:
+; RV32:       # %bb.0:
+; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    sub a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pas_x_w:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pas.wx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pas.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_psa_x_w(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_psa_x_w:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sub a1, a1, a2
+; RV32-NEXT:    add a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psa_x_w:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psa.wx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.psa.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_psas_x_w(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_psas_x_w:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sadd a1, a1, a2
+; RV32-NEXT:    ssub a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_psas_x_w:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psas.wx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.psas.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pssa_x_w(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pssa_x_w:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ssub a1, a1, a2
+; RV32-NEXT:    sadd a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pssa_x_w:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pssa.wx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pssa.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_paas_x_w(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_paas_x_w:
+; RV32:       # %bb.0:
+; RV32-NEXT:    aadd a1, a1, a2
+; RV32-NEXT:    asub a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paas_x_w:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paas.wx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.paas.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pasa_x_w(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pasa_x_w:
+; RV32:       # %bb.0:
+; RV32-NEXT:    asub a1, a1, a2
+; RV32-NEXT:    aadd a0, a0, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasa_x_w:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasa.wx a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pasa.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}

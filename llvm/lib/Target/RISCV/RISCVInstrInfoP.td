@@ -1992,6 +1992,14 @@ let Predicates = [HasStdExtP] in {
   def : PatPSh1Add<PSH1ADD_H, XLenVecI16VT>;
   def : PatPSSh1SAdd<PSSH1SADD_H, XLenVecI16VT>;
 
+  // 16-bit exchanged add/sub patterns
+  def : PatGprGpr<int_riscv_pas,  PAS_HX,  XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_psa,  PSA_HX,  XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_psas, PSAS_HX, XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_pssa, PSSA_HX, XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_paas, PAAS_HX, XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_pasa, PASA_HX, XLenVecI16VT>;
+
   // 8-bit averaging patterns
   def : PatGprGpr<avgfloors, PAADD_B, XLenVecI8VT>;
   def : PatGprGpr<avgflooru, PAADDU_B, XLenVecI8VT>;
@@ -2279,6 +2287,14 @@ let append Predicates = [IsRV32] in {
   def : PatPSh1AddPair<PSH1ADD_DW, v2i32>;
   def : PatPSSh1SAddPair<PSSH1SADD_DW, v2i32>;
 
+  // 16-bit exchanged add/sub patterns
+  def : PatGprPairGprPair<int_riscv_pas,  PAS_DHX,  v4i16>;
+  def : PatGprPairGprPair<int_riscv_psa,  PSA_DHX,  v4i16>;
+  def : PatGprPairGprPair<int_riscv_psas, PSAS_DHX, v4i16>;
+  def : PatGprPairGprPair<int_riscv_pssa, PSSA_DHX, v4i16>;
+  def : PatGprPairGprPair<int_riscv_paas, PAAS_DHX, v4i16>;
+  def : PatGprPairGprPair<int_riscv_pasa, PASA_DHX, v4i16>;
+
   // 8-bit averaging patterns
   def : PatGprPairGprPair<avgfloors, PAADD_DB, v8i8>;
   def : PatGprPairGprPair<avgflooru, PAADDU_DB, v8i8>;
@@ -2501,6 +2517,14 @@ let append Predicates = [IsRV64] in {
   // 32-bit shift-add patterns
   def : PatPSh1Add<PSH1ADD_W, v2i32>;
   def : PatPSSh1SAdd<PSSH1SADD_W, v2i32>;
+
+  // 32-bit exchanged add/sub patterns
+  def : PatGprGpr<int_riscv_pas,  PAS_WX,  v2i32>;
+  def : PatGprGpr<int_riscv_psa,  PSA_WX,  v2i32>;
+  def : PatGprGpr<int_riscv_psas, PSAS_WX, v2i32>;
+  def : PatGprGpr<int_riscv_pssa, PSSA_WX, v2i32>;
+  def : PatGprGpr<int_riscv_paas, PAAS_WX, v2i32>;
+  def : PatGprGpr<int_riscv_pasa, PASA_WX, v2i32>;
 
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, PAADD_W, v2i32>;
