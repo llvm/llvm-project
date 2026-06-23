@@ -120,7 +120,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   findAffectedValues(CI, TTI, Affected);
 
   int ExpectedMatches = 0;
-  DenseMap<Value*, bool> VisitedAffected;
+  DenseMap<Value *, bool> VisitedAffected;
 
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
