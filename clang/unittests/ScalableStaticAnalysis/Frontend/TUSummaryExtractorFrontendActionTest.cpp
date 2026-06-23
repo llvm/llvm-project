@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Frontend/TUSummaryExtractorFrontendAction.h"
+#include "clang/ScalableStaticAnalysis/Frontend/TUSummaryExtractorFrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -14,10 +14,10 @@
 #include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormat.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormat.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -483,16 +483,14 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
   EXPECT_THAT(Log, Contains("Wrapped::Initialize"));
   EXPECT_THAT(Log, Contains("Wrapped::HandleTranslationUnit"));
 
-  EXPECT_THAT(
-      errorsMsgsOf(DiagBuf),
-      UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
-                           "'--ssaf-compilation-unit-id=' to be set"));
+  EXPECT_THAT(errorsMsgsOf(DiagBuf),
+              UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
+                                   "'--ssaf-compilation-unit-id=' to be set"));
 
   EXPECT_FALSE(llvm::sys::fs::exists(Output));
 }
 
-TEST_F(TUSummaryExtractorFrontendActionTest,
-       EmptyCompilationUnitIdDiagnoses) {
+TEST_F(TUSummaryExtractorFrontendActionTest, EmptyCompilationUnitIdDiagnoses) {
   std::string Output = makePath("output.MockSerializationFormat");
   Compiler->getSSAFOpts().TUSummaryFile = Output;
   Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
@@ -507,10 +505,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
   EXPECT_THAT(Log, Contains("Wrapped::Initialize"));
   EXPECT_THAT(Log, Contains("Wrapped::HandleTranslationUnit"));
 
-  EXPECT_THAT(
-      errorsMsgsOf(DiagBuf),
-      UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
-                           "'--ssaf-compilation-unit-id=' to be set"));
+  EXPECT_THAT(errorsMsgsOf(DiagBuf),
+              UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
+                                   "'--ssaf-compilation-unit-id=' to be set"));
 
   EXPECT_FALSE(llvm::sys::fs::exists(Output));
 }
