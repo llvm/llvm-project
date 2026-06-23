@@ -1097,15 +1097,15 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
-AMDGPUTargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
-                                    StringRef FeatureString) {
-  AMDGPUTargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                          STI.getFeatureBits().test(FeatureSupportsXNACK)
-                              ? TargetIDSetting::Any
-                              : TargetIDSetting::Unsupported,
-                          STI.getFeatureBits().test(FeatureSupportsSRAMECC)
-                              ? TargetIDSetting::Any
-                              : TargetIDSetting::Unsupported);
+TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                              StringRef FeatureString) {
+  TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
+                    STI.getFeatureBits().test(FeatureSupportsXNACK)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported,
+                    STI.getFeatureBits().test(FeatureSupportsSRAMECC)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported);
 
   // Check if xnack or sramecc is explicitly enabled or disabled.  In the
   // absence of the target features we assume we must generate code that can run

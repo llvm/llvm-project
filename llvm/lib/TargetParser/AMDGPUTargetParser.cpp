@@ -343,6 +343,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["swmmac-gfx1200-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
+  case GK_GFX1154:
   case GK_GFX1153:
   case GK_GFX1152:
   case GK_GFX1151:
@@ -673,9 +674,8 @@ AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   return {NO_ERROR, StringRef()};
 }
 
-AMDGPUTargetID::AMDGPUTargetID(GPUKind Arch, const Triple &TT,
-                               TargetIDSetting XnackSetting,
-                               TargetIDSetting SramEccSetting)
+TargetID::TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
+                   TargetIDSetting SramEccSetting)
     : Arch(Arch),
       TargetTripleString(TT.normalize(Triple::CanonicalForm::FOUR_IDENT)),
       XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
@@ -691,7 +691,7 @@ getTargetIDSettingFromFeatureString(StringRef FeatureString) {
   llvm_unreachable("Malformed feature string");
 }
 
-void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
+void TargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   SmallVector<StringRef, 3> TargetIDSplit;
   TargetID.split(TargetIDSplit, ':');
 
@@ -703,8 +703,8 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-std::optional<AMDGPUTargetID>
-AMDGPUTargetID::parseTargetIDString(StringRef TargetIDDirective) {
+std::optional<TargetID>
+TargetID::parseTargetIDString(StringRef TargetIDDirective) {
   // Split on '-' to get arch-vendor-os-environment-processor:features
   // There is a single dash separator after the 4-component triple
   SmallVector<StringRef, 5> Parts;
@@ -742,10 +742,10 @@ AMDGPUTargetID::parseTargetIDString(StringRef TargetIDDirective) {
       SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
   }
 
-  return AMDGPUTargetID(Arch, TT, XnackSetting, SramEccSetting);
+  return TargetID(Arch, TT, XnackSetting, SramEccSetting);
 }
 
-void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
+void TargetID::print(raw_ostream &StreamRep) const {
   StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
 
   if (IsAMDHSA) {
@@ -763,14 +763,14 @@ void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
   }
 }
 
-std::string AMDGPUTargetID::toString() const {
+std::string TargetID::toString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   OS << *this;
   return Str;
 }
 
-bool AMDGPUTargetID::operator==(const AMDGPUTargetID &Other) const {
+bool TargetID::operator==(const TargetID &Other) const {
   return Arch == Other.Arch && XnackSetting == Other.XnackSetting &&
          SramEccSetting == Other.SramEccSetting && IsAMDHSA == Other.IsAMDHSA &&
          TargetTripleString == Other.TargetTripleString;

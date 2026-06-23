@@ -228,13 +228,17 @@ static Error unbundleImages() {
       // ignore shared objects here.
       if (identify_magic(Binary->getImage()) == file_magic::elf_shared_object)
         continue;
-      // We handle the 'file' and 'kind' identifiers differently.
+      // We handle the 'file', 'kind', and 'member' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;
         if (Key == "file")
           return true;
         if (Key == "kind")
           return Binary->getOffloadKind() == getOffloadKind(Value);
+        if (Key == "member")
+          return sys::path::filename(
+                     Binary->getMemoryBufferRef().getBufferIdentifier()) ==
+                 Value;
         return Binary->getString(Key) == Value;
       });
       if (Match)

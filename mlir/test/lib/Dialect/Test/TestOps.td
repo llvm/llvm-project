@@ -1358,10 +1358,10 @@ def OpQ : TEST_Op<"op_q"> {
   let results = (outs AnyType);
 }
 
-// Test constant-folding a pattern that maps `(F32) -> SI32`.
+// Test constant-folding a pattern that maps `(F32) -> I32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
-  let results = (outs RankedTensorOf<[SI32]>:$result);
+  let results = (outs RankedTensorOf<[I32]>:$result);
 
   let assemblyFormat = [{
     $operand attr-dict `:` functional-type(operands, results)

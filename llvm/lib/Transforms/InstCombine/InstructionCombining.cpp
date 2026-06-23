@@ -5849,7 +5849,7 @@ bool InstCombinerImpl::run() {
           // removed.
           auto II = dyn_cast<IntrinsicInst>(User);
           if (II->getIntrinsicID() != Intrinsic::assume ||
-              !II->getOperandBundle("dereferenceable"))
+              !II->hasOperandBundle(LLVMContext::OB_Dereferenceable))
             continue;
         }
 

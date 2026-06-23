@@ -2411,7 +2411,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
                cast<Instruction>(I->user_back())->getOpcode() ==
                    Instruction::FAdd &&
                isa<ConstantFP>(Ops.back().Op) &&
-               cast<ConstantFP>(Ops.back().Op)->isExactlyValue(-1.0)) {
+               cast<ConstantFP>(Ops.back().Op)->isMinusOne()) {
       ValueEntry Tmp = Ops.pop_back_val();
       Ops.insert(Ops.begin(), Tmp);
     }

@@ -104,6 +104,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1151 < %s | FileCheck --check-prefixes=GFX1151 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1152 < %s | FileCheck --check-prefixes=GFX1152 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1153 < %s | FileCheck --check-prefixes=GFX1153 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1154 < %s | FileCheck --check-prefixes=GFX1154 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 < %s | FileCheck --check-prefixes=GFX1170 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1171 < %s | FileCheck --check-prefixes=GFX1171 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1172 < %s | FileCheck --check-prefixes=GFX1172 %s
@@ -208,6 +209,7 @@
 ; GFX1151: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1151"
 ; GFX1152: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1152"
 ; GFX1153: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1153"
+; GFX1154: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1154"
 ; GFX1170: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1170"
 ; GFX1171: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1171"
 ; GFX1172: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1172"

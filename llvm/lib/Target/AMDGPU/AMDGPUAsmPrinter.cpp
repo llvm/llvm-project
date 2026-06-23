@@ -1212,7 +1212,7 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       break;
 
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const AMDGPUTargetID &STMTargetID = STM.getTargetID();
+    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
     if (TSTargetID->isXnackSupported())
       if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());

@@ -1863,7 +1863,7 @@ define <4 x i16> @test_pssla_h(<4 x i16> %a, <4 x i16> %b) {
 ; RV32-NEXT:    pack a1, a7, t1
 ; RV32-NEXT:    merge a0, a4, t0
 ; RV32-NEXT:    merge a2, a0, a1
-; RV32-NEXT:    padd.dw a0, a2, zero
+; RV32-NEXT:    mvd a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pssla_h:
