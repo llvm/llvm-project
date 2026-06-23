@@ -28713,6 +28713,19 @@ namespace {
 class HorizontalReduction {
   using ReductionOpsType = SmallVector<Value *, 16>;
   using ReductionOpsListType = SmallVector<ReductionOpsType, 2>;
+  enum class ZeroTestLoweringKind {
+    BoolReduction,
+    Ctpop,
+  };
+  struct ZeroTestLoweringInfo {
+    ZeroTestLoweringKind Kind;
+    InstructionCost Cost;
+  };
+  struct ReductionZeroTestInfo {
+    ICmpInst *Cmp;
+    CmpPredicate Pred;
+  };
+
   ReductionOpsListType ReductionOps;
   /// List of possibly reduced values.
   SmallVector<SmallVector<Value *>> ReducedVals;
@@ -28742,6 +28755,107 @@ class HorizontalReduction {
   static bool isBoolLogicOp(Instruction *I) {
     return isa<SelectInst>(I) &&
            (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
+  }
+
+  std::optional<ReductionZeroTestInfo> matchReductionZeroTestUse() const {
+    auto *Root = dyn_cast<Instruction>(ReductionRoot);
+    if (!Root || !Root->getType()->isIntegerTy() || !Root->hasOneUse() ||
+        (RdxKind != RecurKind::Or && RdxKind != RecurKind::UMax))
+      return std::nullopt;
+
+    auto *Cmp = dyn_cast<ICmpInst>(*Root->user_begin());
+    CmpPredicate Pred;
+    if (!Cmp || !match(Cmp, m_c_ICmp(Pred, m_Specific(Root), m_ZeroInt())) ||
+        !ICmpInst::isEquality(Pred))
+      return std::nullopt;
+
+    return ReductionZeroTestInfo{Cmp, Pred};
+  }
+
+  static InstructionCost
+  getBoolReductionZeroTestCost(const TargetTransformInfo &TTI,
+                               FixedVectorType *VecTy, CmpPredicate Pred,
+                               TTI::TargetCostKind CostKind) {
+    auto *CmpTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
+    unsigned ReductionOpcode =
+        Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+    return TTI.getCmpSelInstrCost(Instruction::ICmp, VecTy, CmpTy, Pred,
+                                  CostKind) +
+           TTI.getArithmeticReductionCost(ReductionOpcode, CmpTy, {},
+                                          CostKind);
+  }
+
+  static InstructionCost
+  getCtpopZeroTestCost(const TargetTransformInfo &TTI, FixedVectorType *VecTy,
+                       CmpPredicate Pred, TTI::TargetCostKind CostKind) {
+    LLVMContext &Ctx = VecTy->getContext();
+    ElementCount EC = VecTy->getElementCount();
+    if (EC.isScalable())
+      return InstructionCost::getInvalid();
+
+    auto *CmpTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
+    auto *MaskIntTy = IntegerType::get(Ctx, EC.getFixedValue());
+    InstructionCost CmpCost = TTI.getCmpSelInstrCost(
+        Instruction::ICmp, VecTy, CmpTy, ICmpInst::ICMP_NE, CostKind);
+    InstructionCost BitcastCost = TTI.getCastInstrCost(
+        Instruction::BitCast, MaskIntTy, CmpTy, TTI::CastContextHint::None,
+        CostKind);
+    IntrinsicCostAttributes ICA(Intrinsic::ctpop, MaskIntTy, {MaskIntTy});
+    InstructionCost CtpopCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+    InstructionCost ScalarCmpCost = TTI.getCmpSelInstrCost(
+        Instruction::ICmp, MaskIntTy, Type::getInt1Ty(Ctx), Pred, CostKind);
+    return CmpCost + BitcastCost + CtpopCost + ScalarCmpCost;
+  }
+
+  static std::optional<ZeroTestLoweringInfo>
+  getBestReductionZeroTestLowering(const TargetTransformInfo &TTI,
+                                   FixedVectorType *VecTy, CmpPredicate Pred,
+                                   TTI::TargetCostKind CostKind) {
+    if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
+      return std::nullopt;
+
+    InstructionCost BoolCost =
+        getBoolReductionZeroTestCost(TTI, VecTy, Pred, CostKind);
+    InstructionCost CtpopCost =
+        getCtpopZeroTestCost(TTI, VecTy, Pred, CostKind);
+    if (!BoolCost.isValid() && !CtpopCost.isValid())
+      return std::nullopt;
+    if (!CtpopCost.isValid())
+      return ZeroTestLoweringInfo{ZeroTestLoweringKind::BoolReduction,
+                                  BoolCost};
+    if (!BoolCost.isValid())
+      return ZeroTestLoweringInfo{ZeroTestLoweringKind::Ctpop, CtpopCost};
+    if (CtpopCost < BoolCost)
+      return ZeroTestLoweringInfo{ZeroTestLoweringKind::Ctpop, CtpopCost};
+    return ZeroTestLoweringInfo{ZeroTestLoweringKind::BoolReduction, BoolCost};
+  }
+
+  static Value *createBoolReductionZeroTest(IRBuilderBase &Builder, Value *Vec,
+                                            CmpPredicate Pred) {
+    auto *VecTy = dyn_cast<VectorType>(Vec->getType());
+    if (!VecTy)
+      return nullptr;
+
+    Value *Cmp =
+        Builder.CreateICmp(Pred, Vec, Constant::getNullValue(VecTy));
+    RecurKind ReductionKind =
+        Pred == ICmpInst::ICMP_EQ ? RecurKind::And : RecurKind::Or;
+    return createSimpleReduction(Builder, Cmp, ReductionKind);
+  }
+
+  static Value *createCtpopZeroTest(IRBuilderBase &Builder, Value *Vec,
+                                    CmpPredicate Pred) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy)
+      return nullptr;
+
+    Type *MaskIntTy =
+        Builder.getIntNTy(VecTy->getElementCount().getFixedValue());
+    Value *LaneNonZero =
+        Builder.CreateICmpNE(Vec, Constant::getNullValue(VecTy));
+    Value *MaskBits = Builder.CreateBitCast(LaneNonZero, MaskIntTy);
+    Value *Pop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, MaskBits);
+    return Builder.CreateICmp(Pred, Pop, ConstantInt::get(MaskIntTy, 0));
   }
 
   /// Checks if instruction is associative and can be vectorized.
@@ -30224,7 +30338,59 @@ public:
     }
     VectorizedTree = ExtraReductions.front().second;
 
-    ReductionRoot->replaceAllUsesWith(VectorizedTree);
+    // Fold an eq/ne-zero test of a single integer reduction into a lane-wise
+    // comparison and an i1 reduction. For example, transform:
+    //   %r = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %v)
+    //   %cmp = icmp ne i8 %r, 0
+    // into:
+    //   %lanes = icmp ne <16 x i8> %v, zeroinitializer
+    //   %cmp = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %lanes)
+    bool ReplacedZeroTest = false;
+    if (auto ZeroTest = matchReductionZeroTestUse()) {
+      auto *Reduction = dyn_cast<IntrinsicInst>(VectorizedTree);
+      Intrinsic::ID ReductionID = RdxKind == RecurKind::Or
+                                      ? Intrinsic::vector_reduce_or
+                                      : Intrinsic::vector_reduce_umax;
+      if (Reduction && Reduction->getIntrinsicID() == ReductionID) {
+        Value *Vec = Reduction->getArgOperand(0);
+        auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+        if (VecTy && VecTy->getElementType()->isIntegerTy()) {
+          if (auto Lowering = getBestReductionZeroTestLowering(
+                  *TTI, VecTy, ZeroTest->Pred, TTI::TCK_RecipThroughput)) {
+            Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+            Builder.SetCurrentDebugLocation(ZeroTest->Cmp->getDebugLoc());
+            Value *NewReduction = nullptr;
+            switch (Lowering->Kind) {
+            case ZeroTestLoweringKind::BoolReduction:
+              NewReduction =
+                  createBoolReductionZeroTest(Builder, Vec, ZeroTest->Pred);
+              break;
+            case ZeroTestLoweringKind::Ctpop:
+              NewReduction = createCtpopZeroTest(Builder, Vec, ZeroTest->Pred);
+              break;
+            }
+            assert(NewReduction && "Expected valid zero-test lowering.");
+            NewReduction->takeName(ZeroTest->Cmp);
+            ZeroTest->Cmp->replaceAllUsesWith(NewReduction);
+            VectorizedTree = NewReduction;
+            salvageDebugInfo(*ZeroTest->Cmp);
+            ZeroTest->Cmp->dropAllReferences();
+            ZeroTest->Cmp->removeFromParent();
+            V.eraseInstruction(ZeroTest->Cmp);
+            V.eraseInstruction(Reduction);
+            // Reuse the count for the replaced reduction and account for the
+            // new vector compare.
+            ++NumVectorInstructions;
+            if (Lowering->Kind == ZeroTestLoweringKind::Ctpop)
+              NumVectorInstructions += 2;
+            ReplacedZeroTest = true;
+          }
+        }
+      }
+    }
+
+    if (!ReplacedZeroTest)
+      ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
     // The original scalar reduction is expected to have no remaining
     // uses outside the reduction tree itself.  Assert that we got this
@@ -30648,6 +30814,23 @@ private:
     // 2. The storage does not have any vector with full vector use (first
     // vector with full register use).
     bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
+    auto getReductionZeroTestCost = [&]() -> std::optional<InstructionCost> {
+      auto ZeroTest = matchReductionZeroTestUse();
+      // Direct generation below is limited to one vectorized reduction.
+      if (!ZeroTest || !DoesRequireReductionOp ||
+          this->ReducedVals.size() != 1 || isa<VectorType>(ScalarTy))
+        return std::nullopt;
+
+      auto *FixedVecTy = dyn_cast<FixedVectorType>(VectorTy);
+      if (!FixedVecTy || !FixedVecTy->getElementType()->isIntegerTy())
+        return std::nullopt;
+
+      auto Lowering = getBestReductionZeroTestLowering(
+          *TTI, FixedVecTy, ZeroTest->Pred, CostKind);
+      if (!Lowering)
+        return std::nullopt;
+      return Lowering->Cost;
+    };
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -30659,7 +30842,9 @@ private:
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+          if (auto ZeroTestCost = getReductionZeroTestCost()) {
+            VectorCost = *ZeroTestCost;
+          } else if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
@@ -30764,7 +30949,11 @@ private:
       Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
+          if (auto ZeroTestCost = getReductionZeroTestCost())
+            VectorCost = *ZeroTestCost;
+          else
+            VectorCost =
+                TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
         } else {
           // Check if the previous reduction already exists and account it as
           // series of operations + single reduction.
