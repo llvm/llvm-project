@@ -81,14 +81,13 @@ public:
   /// \returns true if finished successfully.
   bool finishComputedResult(CompilerInstance &Clang, bool Success);
 
-  static llvm::Expected<std::optional<int>>
-  replayCachedResult(std::shared_ptr<CompilerInvocation> Invok,
-                     StringRef WorkingDir, const llvm::cas::CASID &CacheKey,
-                     cas::CompileJobCacheResult &CachedResult,
-                     SmallVectorImpl<char> &DiagText,
-                     bool WriteOutputAsCASID = false,
-                     bool WriteOutputHashXAttr = false,
-                     std::optional<llvm::cas::CASID> *MCOutputID = nullptr);
+  /// \returns true if the result was found and replayed, false otherwise.
+  static llvm::Expected<bool> replayCachedResult(
+      std::shared_ptr<CompilerInvocation> Invok, StringRef WorkingDir,
+      const llvm::cas::CASID &CacheKey,
+      cas::CompileJobCacheResult &CachedResult, SmallVectorImpl<char> &DiagText,
+      bool WriteOutputAsCASID = false, bool WriteOutputHashXAttr = false,
+      std::optional<llvm::cas::CASID> *MCOutputID = nullptr);
 
   class CachingOutputs;
 

@@ -575,23 +575,20 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
   }
 
   SmallString<256> DiagText;
-  std::optional<int> Ret;
+  bool Replayed;
   bool WriteOutputAsCASID = Invok->getFrontendOpts().WriteOutputAsCASID;
   bool WriteOutputHashXAttr = Invok->getFrontendOpts().WriteOutputHashXAttr;
   if (Error E = CompileJobCache::replayCachedResult(
                     std::move(Invok), WorkingDirectory, WComp.CacheKey,
                     WComp.CachedResult, DiagText, WriteOutputAsCASID,
                     WriteOutputHashXAttr)
-                    .moveInto(Ret)) {
+                    .moveInto(Replayed)) {
     passAsCXError(std::move(E), OutError);
     return nullptr;
   }
 
-  if (!Ret)
+  if (!Replayed)
     return nullptr;
-  // If there was no CAS error and the compilation was cached it will be
-  // 'success', we don't cache compilation failures.
-  assert(*Ret == 0);
   return wrap(new WrappedReplayResult{std::move(DiagText)});
 }
 
