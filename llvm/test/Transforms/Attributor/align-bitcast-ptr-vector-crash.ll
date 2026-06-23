@@ -6,6 +6,7 @@ target datalayout = "e-p:64:64-p1:64:64:64:64-p2:64:64:64:16"
 ; Regression test for GitHub issue #165691.
 
 declare void @consume_as2(<1 x ptr addrspace(2)>)
+declare void @consume(<1 x ptr>)
 
 define void @ptr_vector_bitcast_base(<1 x ptr> %v) {
 ; CHECK-LABEL: define void @ptr_vector_bitcast_base(
@@ -44,5 +45,29 @@ define void @ptr_vector_addrspace_large_offset_gep(ptr %p) {
   %gep1 = getelementptr i8, <1 x ptr addrspace(1)> %vec1, i64 65536
   %v = addrspacecast <1 x ptr addrspace(1)> %gep1 to <1 x ptr addrspace(2)>
   call void @consume_as2(<1 x ptr addrspace(2)> %v)
+  ret void
+}
+
+define void @ptr_vector_callsite_arg_from_aligned_arg(ptr align 8 %p) {
+; CHECK-LABEL: define void @ptr_vector_callsite_arg_from_aligned_arg(
+; CHECK-SAME: ptr align 8 [[P:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = bitcast ptr [[P]] to <1 x ptr>
+; CHECK-NEXT:    call void @consume(<1 x ptr> align 8 [[V]])
+; CHECK-NEXT:    ret void
+;
+  %v = bitcast ptr %p to <1 x ptr>
+  call void @consume(<1 x ptr> %v)
+  ret void
+}
+
+define void @ptr_vector_callsite_arg_from_bitcast(ptr %p) {
+; CHECK-LABEL: define void @ptr_vector_callsite_arg_from_bitcast(
+; CHECK-SAME: ptr align 8 [[P:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = bitcast ptr [[P]] to <1 x ptr>
+; CHECK-NEXT:    call void @consume(<1 x ptr> align 8 [[V]])
+; CHECK-NEXT:    ret void
+;
+  %v = bitcast ptr %p to <1 x ptr>
+  call void @consume(<1 x ptr> align 8 %v)
   ret void
 }
