@@ -29,7 +29,7 @@
   }
   define void @zcmp_x26_forces_x27() { entry: unreachable }
   define void @save_restore_libcall() { entry: unreachable }
-  define void @interrupt_saves_all() "interrupt"="machine" { entry: unreachable }
+  define void @interrupt_saves_caller_saved() "interrupt"="machine" { entry: unreachable }
 ...
 
 ---
@@ -1178,7 +1178,7 @@ body: |
 ...
 
 ---
-name:            interrupt_saves_all
+name:            interrupt_saves_caller_saved
 tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
@@ -1187,7 +1187,7 @@ machineFunctionInfo:
   varArgsSaveSize: 0
 body: |
   bb.0:
-    ; RV64I-LABEL: name: interrupt_saves_all
+    ; RV64I-LABEL: name: interrupt_saves_caller_saved
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: $x2 = frame-setup ADDI $x2, -16
@@ -1201,7 +1201,7 @@ body: |
     ; RV64I-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; RV64I-NEXT: PseudoRET
     ;
-    ; RV64I-ZCMP-LABEL: name: interrupt_saves_all
+    ; RV64I-ZCMP-LABEL: name: interrupt_saves_caller_saved
     ; RV64I-ZCMP: liveins: $x10
     ; RV64I-ZCMP-NEXT: {{  $}}
     ; RV64I-ZCMP-NEXT: $x2 = frame-setup ADDI $x2, -16
@@ -1215,7 +1215,7 @@ body: |
     ; RV64I-ZCMP-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; RV64I-ZCMP-NEXT: PseudoRET
     ;
-    ; RV64I-FP-LABEL: name: interrupt_saves_all
+    ; RV64I-FP-LABEL: name: interrupt_saves_caller_saved
     ; RV64I-FP: liveins: $x1, $x10
     ; RV64I-FP-NEXT: {{  $}}
     ; RV64I-FP-NEXT: $x2 = frame-setup ADDI $x2, -32
@@ -1240,7 +1240,7 @@ body: |
     ; RV64I-FP-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; RV64I-FP-NEXT: PseudoRET
     ;
-    ; RV64I-ZCMP-FP-LABEL: name: interrupt_saves_all
+    ; RV64I-ZCMP-FP-LABEL: name: interrupt_saves_caller_saved
     ; RV64I-ZCMP-FP: liveins: $x1, $x10
     ; RV64I-ZCMP-FP-NEXT: {{  $}}
     ; RV64I-ZCMP-FP-NEXT: $x2 = frame-setup ADDI $x2, -32
@@ -1265,7 +1265,7 @@ body: |
     ; RV64I-ZCMP-FP-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; RV64I-ZCMP-FP-NEXT: PseudoRET
     ;
-    ; RV64I-SR-LABEL: name: interrupt_saves_all
+    ; RV64I-SR-LABEL: name: interrupt_saves_caller_saved
     ; RV64I-SR: liveins: $x10
     ; RV64I-SR-NEXT: {{  $}}
     ; RV64I-SR-NEXT: $x2 = frame-setup ADDI $x2, -16
