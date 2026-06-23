@@ -392,18 +392,19 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
                                  /*CopyDeducedArgs=*/false);
 }
 
-static CanQual<FunctionProtoType> GetCanonicalFunctionProto(Sema &S,
+static CanQual<FunctionProtoType> GetCanonicalFunctionProto(ASTContext &Context,
                                                             QualType Ty) {
-  return S.Context.getCanonicalType(Ty)->getAs<FunctionProtoType>();
+  return Context.getCanonicalType(Ty)->getAs<FunctionProtoType>();
 }
 
 static CanQual<FunctionProtoType>
-GetCanonicalFunctionProto(Sema &S, const FunctionDecl *FD) {
-  return GetCanonicalFunctionProto(S, FD->getType());
+GetCanonicalFunctionProto(ASTContext &Context, const FunctionDecl *FD) {
+  return GetCanonicalFunctionProto(Context, FD->getType());
 }
 
 static const TemplateSpecializationType *
-GetQualifierClassTemplateSpecializationType(Sema &S, NestedNameSpecifier NNS) {
+GetQualifierClassTemplateSpecializationType(ASTContext &Context,
+                                            NestedNameSpecifier NNS) {
   if (!NNS)
     return nullptr;
 
@@ -412,7 +413,7 @@ GetQualifierClassTemplateSpecializationType(Sema &S, NestedNameSpecifier NNS) {
     return nullptr;
 
   if (const auto *ICNT = Ty->getAs<InjectedClassNameType>())
-    Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(S.Context);
+    Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Context);
 
   const auto *TST = Ty->getAsNonAliasTemplateSpecializationType();
   if (TST && isa_and_nonnull<ClassTemplateDecl>(
@@ -585,8 +586,7 @@ static AccessResult IsDerivedFromInclusive(const CXXRecordDecl *Derived,
   return OnFailure;
 }
 
-static bool MightInstantiateTo(Sema &S, DeclContext *Context,
-                               DeclContext *Friend) {
+static bool MightInstantiateTo(DeclContext *Context, DeclContext *Friend) {
   if (Friend == Context)
     return true;
 
@@ -605,7 +605,7 @@ static bool MightInstantiateTo(Sema &S, DeclContext *Context,
 
 // Asks whether the type in 'context' can ever instantiate to the type
 // in 'friend'.
-static bool MightInstantiateTo(Sema &S, CanQualType Context, CanQualType Friend) {
+static bool MightInstantiateTo(CanQualType Context, CanQualType Friend) {
   if (Friend == Context)
     return true;
 
@@ -616,7 +616,7 @@ static bool MightInstantiateTo(Sema &S, CanQualType Context, CanQualType Friend)
   return true;
 }
 
-static bool MightInstantiateTo(Sema &S, CanQual<FunctionProtoType> Context,
+static bool MightInstantiateTo(CanQual<FunctionProtoType> Context,
                                CanQual<FunctionProtoType> Friend) {
   if (Friend.getQualifiers() != Context.getQualifiers())
     return false;
@@ -624,18 +624,17 @@ static bool MightInstantiateTo(Sema &S, CanQual<FunctionProtoType> Context,
   if (Friend->getNumParams() != Context->getNumParams())
     return false;
 
-  if (!MightInstantiateTo(S, Context->getReturnType(), Friend->getReturnType()))
+  if (!MightInstantiateTo(Context->getReturnType(), Friend->getReturnType()))
     return false;
 
   for (unsigned I = 0, E = Friend->getNumParams(); I != E; ++I)
-    if (!MightInstantiateTo(S, Context->getParamType(I),
-                            Friend->getParamType(I)))
+    if (!MightInstantiateTo(Context->getParamType(I), Friend->getParamType(I)))
       return false;
 
   return true;
 }
 
-static bool MightInstantiateTo(Sema &S, DeclarationName Context,
+static bool MightInstantiateTo(ASTContext &Ctx, DeclarationName Context,
                                DeclarationName Friend) {
   if (Context == Friend)
     return true;
@@ -647,36 +646,36 @@ static bool MightInstantiateTo(Sema &S, DeclarationName Context,
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
   case DeclarationName::CXXConversionFunctionName:
-    return MightInstantiateTo(
-        S, S.Context.getCanonicalType(Context.getCXXNameType()),
-        S.Context.getCanonicalType(Friend.getCXXNameType()));
+    return MightInstantiateTo(Ctx.getCanonicalType(Context.getCXXNameType()),
+                              Ctx.getCanonicalType(Friend.getCXXNameType()));
 
   default:
     return false;
   }
 }
 
-static bool MightInstantiateTo(Sema &S, FunctionDecl *Context,
+static bool MightInstantiateTo(ASTContext &Ctx, FunctionDecl *Context,
                                FunctionDecl *Friend) {
-  if (!MightInstantiateTo(S, Context->getDeclName(), Friend->getDeclName()))
+  if (!MightInstantiateTo(Ctx, Context->getDeclName(), Friend->getDeclName()))
     return false;
 
   DeclContext *ContextDC = Context->getDeclContext();
   DeclContext *FriendDC = Friend->getDeclContext();
 
   if (!FriendDC->isDependentContext() &&
-      !MightInstantiateTo(S, ContextDC, FriendDC))
+      !MightInstantiateTo(ContextDC, FriendDC))
     return false;
 
-  CanQual<FunctionProtoType> FriendTy = GetCanonicalFunctionProto(S, Friend);
-  CanQual<FunctionProtoType> ContextTy = GetCanonicalFunctionProto(S, Context);
+  CanQual<FunctionProtoType> FriendTy = GetCanonicalFunctionProto(Ctx, Friend);
+  CanQual<FunctionProtoType> ContextTy =
+      GetCanonicalFunctionProto(Ctx, Context);
 
-  return MightInstantiateTo(S, ContextTy, FriendTy);
+  return MightInstantiateTo(ContextTy, FriendTy);
 }
 
-static bool MightInstantiateTo(Sema &S, FunctionTemplateDecl *Context,
+static bool MightInstantiateTo(ASTContext &Ctx, FunctionTemplateDecl *Context,
                                FunctionTemplateDecl *Friend) {
-  return MightInstantiateTo(S, Context->getTemplatedDecl(),
+  return MightInstantiateTo(Ctx, Context->getTemplatedDecl(),
                             Friend->getTemplatedDecl());
 }
 
@@ -751,8 +750,7 @@ static AccessResult MatchesFriend(Sema &S,
 
     // If the class's context can't instantiate to the friend's
     // context, it can't be a dependent match.
-    if (!MightInstantiateTo(S, CTD->getDeclContext(),
-                            Friend->getDeclContext()))
+    if (!MightInstantiateTo(CTD->getDeclContext(), Friend->getDeclContext()))
       continue;
 
     // Otherwise, it's a dependent match.
@@ -774,7 +772,7 @@ static AccessResult MatchesFriend(Sema &S,
     if (Friend == *I)
       return AR_accessible;
 
-    if (EC.isDependent() && MightInstantiateTo(S, *I, Friend))
+    if (EC.isDependent() && MightInstantiateTo(S.Context, *I, Friend))
       OnFailure = AR_dependent;
   }
 
@@ -800,7 +798,7 @@ static AccessResult MatchesFriend(Sema &S,
     if (Friend == FTD)
       return AR_accessible;
 
-    if (EC.isDependent() && MightInstantiateTo(S, FTD, Friend))
+    if (EC.isDependent() && MightInstantiateTo(S.Context, FTD, Friend))
       OnFailure = AR_dependent;
   }
 
@@ -830,7 +828,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
   const auto *FriendTST =
-      GetQualifierClassTemplateSpecializationType(S, Qualifier);
+      GetQualifierClassTemplateSpecializationType(S.Context, Qualifier);
   if (!FriendTST)
     return MatchesFriend(S, EC, FriendCTD);
 
@@ -898,7 +896,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
   const auto *FriendTST = GetQualifierClassTemplateSpecializationType(
-      S, FriendFTD->getTemplatedDecl()->getQualifier());
+      S.Context, FriendFTD->getTemplatedDecl()->getQualifier());
   if (!FriendTST)
     return OnFailure;
 
@@ -925,7 +923,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
       continue;
 
     FunctionTemplateDecl *ContextFTD = TryGetFunctionTemplateDecl(FD);
-    if (ContextFTD && MightInstantiateTo(S, FriendFTD, ContextFTD))
+    if (ContextFTD && MightInstantiateTo(S.Context, FriendFTD, ContextFTD))
       return AR_accessible;
   }
 
@@ -937,8 +935,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
                                   FunctionDecl *FriendFD,
                                   TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
-  const auto *FriendTST =
-      GetQualifierClassTemplateSpecializationType(S, FriendFD->getQualifier());
+  const auto *FriendTST = GetQualifierClassTemplateSpecializationType(
+      S.Context, FriendFD->getQualifier());
   if (!FriendTST)
     return OnFailure;
 
@@ -960,7 +958,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   SourceLocation FriendLoc = FriendTD->getLocation();
 
   for (FunctionDecl *FD : EC.Functions) {
-    if (!MightInstantiateTo(S, FD->getDeclName(), FriendFD->getDeclName()))
+    if (!MightInstantiateTo(S.Context, FD->getDeclName(),
+                            FriendFD->getDeclName()))
       continue;
 
     SmallVector<TemplateArgument, 4> DeducedArgs;
@@ -969,7 +968,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
             FriendLoc, FailedTSC, DeducedArgs))
       continue;
 
-    CanQual<FunctionProtoType> ContextProto = GetCanonicalFunctionProto(S, FD);
+    CanQual<FunctionProtoType> ContextProto =
+        GetCanonicalFunctionProto(S.Context, FD);
     Sema::InstantiatingTemplate Inst(S, FriendFD->getLocation(), FriendCTD,
                                      DeducedArgs);
     if (Inst.isInvalid())
@@ -985,8 +985,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
       continue;
 
     CanQual<FunctionProtoType> FriendProto =
-        GetCanonicalFunctionProto(S, FriendType);
-    if (MightInstantiateTo(S, ContextProto, FriendProto))
+        GetCanonicalFunctionProto(S.Context, FriendType);
+    if (MightInstantiateTo(ContextProto, FriendProto))
       return AR_accessible;
   }
 
@@ -1029,7 +1029,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!NNS)
     return OnFailure;
 
-  const auto *TST = GetQualifierClassTemplateSpecializationType(S, NNS);
+  const auto *TST = GetQualifierClassTemplateSpecializationType(S.Context, NNS);
   if (!TST)
     return OnFailure;
 
