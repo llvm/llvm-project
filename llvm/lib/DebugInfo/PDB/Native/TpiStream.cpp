@@ -187,9 +187,11 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
   Expected<TagRecordHash> ForwardTRH = hashTagRecord(F);
   if (!ForwardTRH)
     return ForwardTRH.takeError();
+  TagRecord &ForwardTR = ForwardTRH->getRecord();
 
   uint32_t BucketIdx = ForwardTRH->FullRecordHash % Header->NumHashBuckets;
 
+  TypeIndex BestMatch = ForwardRefTI;
   for (TypeIndex TI : HashMap[BucketIdx]) {
     CVType CVT = Types->getType(TI);
     if (CVT.kind() != F.kind())
@@ -200,8 +202,13 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
       return FullTRH.takeError();
     if (ForwardTRH->FullRecordHash != FullTRH->FullRecordHash)
       continue;
-    TagRecord &ForwardTR = ForwardTRH->getRecord();
     TagRecord &FullTR = FullTRH->getRecord();
+
+    if (ForwardTR.hasUniqueName() && FullTR.hasUniqueName()) {
+      if (ForwardTR.getUniqueName() == FullTR.getUniqueName())
+        return TI;
+      continue;
+    }
 
     if (!ForwardTR.hasUniqueName()) {
       if (ForwardTR.getName() == FullTR.getName())
@@ -209,18 +216,12 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
       continue;
     }
 
-    if (!FullTR.hasUniqueName()) {
-      // `ForwardTR` does have a unique name, but the type we found doesn't.
-      // Remember this type, but look for better candidates in the bucket first.
-      if (ForwardTR.getName() == FullTR.getName())
-        ForwardRefTI = TI;
-      continue;
-    }
-
-    if (ForwardTR.getUniqueName() == FullTR.getUniqueName())
-      return TI;
+    // `ForwardTR` does have a unique name, but the type we found doesn't.
+    // Remember this type, but look for better candidates in the bucket first.
+    if (ForwardTR.getName() == FullTR.getName())
+      BestMatch = TI;
   }
-  return ForwardRefTI;
+  return BestMatch;
 }
 
 codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
