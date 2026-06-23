@@ -106,9 +106,12 @@ private:
   void HandleTranslationUnit(ASTContext &Ctx) override;
 
   TUSummary Summary;
-  TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
-  std::unique_ptr<SerializationFormat> Format;
+
+  /// Owned by the \c CompilerInstance.
   const SSAFOptions &Opts;
+
+  TUSummaryBuilder Builder = TUSummaryBuilder(Summary, Opts);
+  std::unique_ptr<SerializationFormat> Format;
 };
 } // namespace
 
@@ -141,7 +144,7 @@ TUSummaryRunner::TUSummaryRunner(llvm::Triple TargetTriple,
       Summary(std::move(TargetTriple),
               BuildNamespace(BuildNamespaceKind::CompilationUnit,
                              Opts.CompilationUnitId)),
-      Format(std::move(Format)), Opts(Opts) {
+      Opts(Opts), Format(std::move(Format)) {
   assert(this->Format);
   assert(!Opts.CompilationUnitId.empty());
 
