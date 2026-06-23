@@ -5343,6 +5343,9 @@ void Verifier::visitCallStackMetadata(MDNode *MD) {
 
 void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!memprof metadata should only exist on calls", &I);
+  if (isa<CallBase>(I))
+    Check(I.hasMetadata(LLVMContext::MD_callsite),
+          "!memprof metadata requires !callsite metadata", &I, MD);
   Check(MD->getNumOperands() >= 1,
         "!memprof annotations should have at least 1 metadata operand "
         "(MemInfoBlock)",
