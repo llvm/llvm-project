@@ -1931,6 +1931,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       op.getIsVolatile(), /*isNonTemporal=*/op.getIsNontemporal(),
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
       llvmSyncScope.value_or(std::string()));
+  if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
+    newLoad->setAttr("cir.riscv_nontemporal_domain", domain);
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1986,6 +1988,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
       op.getIsVolatile(),
       /*isNonTemporal=*/op.getIsNontemporal(), /*isInvariantGroup=*/false,
       memorder, llvmSyncScope.value_or(std::string()));
+  if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
+    storeOp->setAttr("cir.riscv_nontemporal_domain", domain);
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
