@@ -779,7 +779,6 @@ public:
 
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
-  void CreateSharedCacheInfoLLDBsVirtualMemory();
   bool CreateHostSharedCacheImageList();
 
   // These three ivars have an initial key of a shared cache UUID.
@@ -815,11 +814,7 @@ SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
 
   // Otherwise scan lldb's own shared cache, preferring the process snapshot
   // SPIs when the running dyld vends them.
-  if (CreateSharedCacheInfoWithInstrospectionSPIs())
-    return;
-
-  // Fall back to walking the shared cache mapping directly.
-  CreateSharedCacheInfoLLDBsVirtualMemory();
+  CreateSharedCacheInfoWithInstrospectionSPIs();
 }
 
 struct segment {
@@ -1057,41 +1052,6 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     m_uuid_map[m_host_uuid][entry->GetUUID()] = i;
   }
   return true;
-}
-
-// Index the binaries in lldb's own shared cache memory using
-// libdyld SPI available on macOS 10.13 or newer, add an entry to
-// m_caches.
-void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
-  llvm::sys::ScopedWriter guard(m_mutex);
-  size_t shared_cache_size;
-  uint8_t *shared_cache_start =
-      _dyld_get_shared_cache_range(&shared_cache_size);
-
-  // In macOS 26, a shared cache has around 3500 files.
-  m_file_infos[m_host_uuid].reserve(4000);
-
-  dyld_shared_cache_iterate_text(
-      m_host_uuid.GetBytes().data(),
-      ^(const dyld_shared_cache_dylib_text_info *info) {
-        lldb::DataBufferSP buffer_sp = std::make_shared<DataBufferUnowned>(
-            shared_cache_start + info->textSegmentOffset,
-            shared_cache_size - info->textSegmentOffset);
-        lldb::DataExtractorSP extractor_sp =
-            std::make_shared<DataExtractor>(buffer_sp);
-        ConstString filepath(info->path);
-        m_file_infos[m_host_uuid].push_back(SharedCacheImageInfo(
-            filepath, UUID(info->dylibUuid, 16), extractor_sp));
-      });
-
-  // std::vector of SharedCacheImageInfos has been fully populated, we can
-  // take pointers to the objects now.
-  size_t file_info_size = m_file_infos[m_host_uuid].size();
-  for (size_t i = 0; i < file_info_size; i++) {
-    SharedCacheImageInfo *entry = &m_file_infos[m_host_uuid][i];
-    m_filename_map[m_host_uuid][entry->GetFilename()] = i;
-    m_uuid_map[m_host_uuid][entry->GetUUID()] = i;
-  }
 }
 
 SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {
