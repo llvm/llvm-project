@@ -4047,14 +4047,19 @@ SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
   SDValue ShiftRight1 = DAG.getNode(ISD::SRL, DL, GRLenVT, RMValue,
                                     DAG.getConstant(1, DL, GRLenVT));
   SDValue SwapMask = DAG.getNode(ISD::AND, DL, GRLenVT,
-      DAG.getNode(ISD::XOR, DL, GRLenVT, ShiftRight1,
-                  DAG.getConstant(1, DL, GRLenVT)),
-      DAG.getConstant(1, DL, GRLenVT));
+                                 DAG.getNode(ISD::XOR, DL, GRLenVT, ShiftRight1,
+                                             DAG.getConstant(1, DL, GRLenVT)),
+                                 DAG.getConstant(1, DL, GRLenVT));
   RMValue = DAG.getNode(ISD::XOR, DL, GRLenVT, RMValue, SwapMask);
 
   // Mask to 2 bits to guard against invalid values.
   RMValue = DAG.getNode(ISD::AND, DL, GRLenVT, RMValue,
                         DAG.getConstant(0x3, DL, GRLenVT));
+
+  // The RM field in FCSR is at bits [9:8]. Shift the rounding mode value
+  // into position before writing via WRFCSR.
+  RMValue = DAG.getNode(ISD::SHL, DL, GRLenVT, RMValue,
+                        DAG.getConstant(8, DL, GRLenVT));
 
   // Build MachineInstr node for WRFCSR (pseudo for MOVGR2FCSR).
   // WRFCSR takes (uimm2:$fcsr, GPR:$src).
