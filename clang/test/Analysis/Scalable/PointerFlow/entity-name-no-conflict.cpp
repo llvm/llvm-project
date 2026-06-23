@@ -6,11 +6,14 @@
 // RUN:   --ssaf-compilation-unit-id="tu-1" \
 // RUN:   -mllvm -debug-only=ssaf-analyses 2>&1 | FileCheck %s
 
-// The two `Holder<decltype([]{})>` instantiations have distinct types but
-// produce colliding USRs for `reset`. The extractor must keep one summary and
-// drop the other with a diagnostic, instead of crashing.
+
+// The two `Holder<decltype([]{})>` instantiations are distinct types
+// (each lambda is its own closure record), but the USR generator
+// currently fails to distinguish them.
+
 
 // CHECK: dropping duplicate PointerFlow summary
+// FIXME: change to CHECK-NOT once the bug gets fixed
 
 template <class T>
 struct Holder {
