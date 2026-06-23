@@ -32,8 +32,7 @@ using namespace llvm::MachO;
 template <typename T>
 static bool ReadMachOCommand(DataExtractor &data, lldb::offset_t &offset,
                              T &cmd) {
-  static_assert(offsetof(T, cmd) == 0,
-                "T::cmd must be the first field");
+  static_assert(offsetof(T, cmd) == 0, "T::cmd must be the first field");
   static_assert(offsetof(T, cmdsize) == sizeof(uint32_t),
                 "T::cmdsize must immediately follow T::cmd");
   static_assert(std::is_same<decltype(T::cmd), uint32_t>::value,
