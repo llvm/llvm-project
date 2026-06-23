@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -668,4 +671,107 @@ AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     }
   }
   return {NO_ERROR, StringRef()};
+}
+
+AMDGPUTargetID::AMDGPUTargetID(GPUKind Arch, const Triple &TT,
+                               TargetIDSetting XnackSetting,
+                               TargetIDSetting SramEccSetting)
+    : Arch(Arch),
+      TargetTripleString(TT.normalize(Triple::CanonicalForm::FOUR_IDENT)),
+      XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
+      IsAMDHSA(TT.getOS() == Triple::AMDHSA) {}
+
+static TargetIDSetting
+getTargetIDSettingFromFeatureString(StringRef FeatureString) {
+  if (FeatureString.ends_with("-"))
+    return TargetIDSetting::Off;
+  if (FeatureString.ends_with("+"))
+    return TargetIDSetting::On;
+
+  llvm_unreachable("Malformed feature string");
+}
+
+void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
+  SmallVector<StringRef, 3> TargetIDSplit;
+  TargetID.split(TargetIDSplit, ':');
+
+  for (const auto &FeatureString : TargetIDSplit) {
+    if (FeatureString.starts_with("xnack"))
+      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
+    if (FeatureString.starts_with("sramecc"))
+      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
+  }
+}
+
+std::optional<AMDGPUTargetID>
+AMDGPUTargetID::parseTargetIDString(StringRef TargetIDDirective) {
+  // Split on '-' to get arch-vendor-os-environment-processor:features
+  // There is a single dash separator after the 4-component triple
+  SmallVector<StringRef, 5> Parts;
+  TargetIDDirective.split(Parts, '-', /*MaxSplit=*/4);
+  if (Parts.size() < 4)
+    return std::nullopt;
+
+  Triple TT(Parts[0], Parts[1], Parts[2], Parts[3]);
+  if (!TT.isAMDGCN())
+    return std::nullopt;
+
+  SmallVector<StringRef, 3> FeatureSplit;
+  Parts[4].split(FeatureSplit, ':');
+  if (FeatureSplit.empty())
+    return std::nullopt;
+
+  StringRef CPUName = FeatureSplit[0];
+
+  // Determine xnack/sramecc support based on the architecture attributes
+  GPUKind Arch = parseArchAMDGCN(CPUName);
+  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
+
+  TargetIDSetting XnackSetting = (ArchAttr & FEATURE_XNACK)
+                                     ? TargetIDSetting::Any
+                                     : TargetIDSetting::Unsupported;
+  TargetIDSetting SramEccSetting = (ArchAttr & FEATURE_SRAMECC)
+                                       ? TargetIDSetting::Any
+                                       : TargetIDSetting::Unsupported;
+
+  for (StringRef FeatureString :
+       ArrayRef<StringRef>(FeatureSplit).drop_front(1)) {
+    if (FeatureString.starts_with("xnack"))
+      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
+    else if (FeatureString.starts_with("sramecc"))
+      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
+  }
+
+  return AMDGPUTargetID(Arch, TT, XnackSetting, SramEccSetting);
+}
+
+void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
+  StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
+
+  if (IsAMDHSA) {
+    // sramecc.
+    if (getSramEccSetting() == TargetIDSetting::Off)
+      StreamRep << ":sramecc-";
+    else if (getSramEccSetting() == TargetIDSetting::On)
+      StreamRep << ":sramecc+";
+
+    // xnack.
+    if (getXnackSetting() == TargetIDSetting::Off)
+      StreamRep << ":xnack-";
+    else if (getXnackSetting() == TargetIDSetting::On)
+      StreamRep << ":xnack+";
+  }
+}
+
+std::string AMDGPUTargetID::toString() const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << *this;
+  return Str;
+}
+
+bool AMDGPUTargetID::operator==(const AMDGPUTargetID &Other) const {
+  return Arch == Other.Arch && XnackSetting == Other.XnackSetting &&
+         SramEccSetting == Other.SramEccSetting && IsAMDHSA == Other.IsAMDHSA &&
+         TargetTripleString == Other.TargetTripleString;
 }
