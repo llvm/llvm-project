@@ -2447,6 +2447,19 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (opts::AlignText < opts::AlignFunctions)
     opts::AlignText = (unsigned)opts::AlignFunctions;
 
+  // Mirror alignment-related command line options onto BinaryContext so passes
+  // and the emitter can read them via BC instead of touching opts::*.
+  BC->AlignText = opts::AlignText;
+  BC->AlignFunctions = opts::AlignFunctions;
+  BC->AlignBlocks = opts::AlignBlocks;
+  BC->AlignBlocksMinSize = opts::AlignBlocksMinSize;
+  BC->AlignBlocksThreshold = opts::AlignBlocksThreshold;
+  BC->AlignFunctionsMaxBytes = opts::AlignFunctionsMaxBytes;
+  BC->BlockAlignment = opts::BlockAlignment;
+  BC->PreserveBlocksAlignment = opts::PreserveBlocksAlignment;
+  BC->UseCompactAligner = opts::UseCompactAligner;
+  BC->X86AlignBranchBoundaryHotOnly = opts::X86AlignBranchBoundaryHotOnly;
+
   if (BC->isX86() && opts::Lite.getNumOccurrences() == 0 && !opts::StrictMode &&
       !opts::UseOldText)
     opts::Lite = true;
@@ -4323,7 +4336,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     const uint64_t CodeSize = EndAddress - StartAddress;
     if (CodeSize <= BC->OldTextSectionSize) {
       BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                 << Twine::utohexstr(opts::AlignText) << " alignment";
+                 << Twine::utohexstr(BC->AlignText) << " alignment";
       if (StartAddress != BC->OldTextSectionAddress)
         BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
       BC->outs() << '\n';
@@ -4331,7 +4344,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     } else {
       BC->errs() << "BOLT-WARNING: --use-old-text failed. The original .text "
                     "too small to fit the new code using 0x"
-                 << Twine::utohexstr(opts::AlignText) << " alignment. "
+                 << Twine::utohexstr(BC->AlignText) << " alignment. "
                  << CodeSize << " bytes needed, have " << BC->OldTextSectionSize
                  << " bytes available. Rebuilding without --use-old-text may "
                     "produce a smaller binary\n";
