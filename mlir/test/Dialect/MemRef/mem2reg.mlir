@@ -309,3 +309,16 @@ func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
   // CHECK: return %[[RESULT]] : i32
   return %result : i32
 }
+
+// -----
+
+// Make sure mem2reg does not crash on an alloca whose element count overflows
+// int64. https://github.com/llvm/llvm-project/issues/204297
+// CHECK-LABEL: func.func @alloca_element_count_overflow
+func.func @alloca_element_count_overflow() {
+  return
+^bb1(%0: index):
+  // CHECK: memref.alloca() : memref<9223372036854775807x3xi32>
+  %alloca = memref.alloca() : memref<9223372036854775807x3xi32>
+  return
+}
