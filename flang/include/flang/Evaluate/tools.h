@@ -1321,6 +1321,15 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   return false;
 }
 
+inline bool IsCUDAConstantSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Constant);
+  }
+  return false;
+}
+
 // Non-allocatable module-level managed/unified variables use pointer
 // indirection through a companion global in __nv_managed_data__.
 // Explicit data transfers (cudaMemcpy) must be avoided for these
@@ -1371,6 +1380,16 @@ inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
   return symbols.size();
 }
 
+template <typename A> inline int GetNbOfCUDAConstantSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDAConstantSymbol(sym)) {
+      symbols.insert(sym);
+    }
+  }
+  return symbols.size();
+}
+
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
@@ -1383,10 +1402,18 @@ template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int rhsNbConstantSymbols{GetNbOfCUDAConstantSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
+
+  // If only constant symbols are present on the rhs, and no device symbols on
+  // the lhs, then no data transfer is needed because the constant have a host
+  // value.
+  if (rhsNbConstantSymbols == rhsNbSymbols && !HasCUDADeviceAttrs(lhs)) {
+    return false;
+  }
 
   if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
       rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
