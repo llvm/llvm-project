@@ -138,12 +138,13 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
     // it will appear multiple times in Affected, but we may (depending on
     // how the results in AffectedValues.find_as(AV.Assume) are ordered)
     // nullify multiple instances of Elem.Assume during one iteration of the
-    // for loop below. The next iteration of the for loop may then find only a
-    // match to a different AssumeInst, resulting in an assertion failure.
-    for (ResultElem &Elem : AVI->second) {
+    // 'for (auto &AV : Affected)' loop below. The next iteration of that for
+    // loop may then find only a match to a different AssumeInst, resulting in
+    // an assertion failure. Avoid this by counting the number of expected
+    // matches.
+    for (ResultElem &Elem : AVI->second)
       if (Elem.Assume == CI)
         ExpectedMatches++;
-    }
   }
 
   for (auto &AV : Affected) {
