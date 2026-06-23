@@ -69,14 +69,14 @@ void OpenMPClauseEmitter::emitNYI(OpenMPNYIClauseList<NYIClauses...>,
       "the supported and not-yet-implemented clause lists must be disjoint");
 
   for (const OMPClause *c : clauses) {
-    if ((isa<NYIClauses>(c) || ...)) {
+    if (isa<NYIClauses...>(c)) {
       std::string msg =
           (llvm::Twine("OpenMP ") +
            llvm::omp::getOpenMPDirectiveName(directive).upper() + " '" +
            llvm::omp::getOpenMPClauseName(c->getClauseKind()) + "' clause")
               .str();
       cgm.errorNYI(c->getBeginLoc(), msg);
-    } else if (!(isa<SupportedClauses>(c) || ...)) {
+    } else if (!isa<SupportedClauses...>(c)) {
       // Unknown/illegal clause encountered.
       llvm_unreachable("unexpected OpenMP clause");
     }
