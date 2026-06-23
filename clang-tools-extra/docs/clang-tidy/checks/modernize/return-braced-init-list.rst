@@ -20,3 +20,8 @@ function definition and the return statement.
     Baz baz;
     return {baz};
   }
+
+The check is not applied when the constructed type has a
+``std::initializer_list`` constructor, since list-initialization would prefer
+that constructor and the braced form could therefore select a different
+constructor than the original call.
