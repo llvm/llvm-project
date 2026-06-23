@@ -119,6 +119,8 @@ ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
                              bool RequiresNullTerminator, bool IsVolatile,
                              bool IsText) {
+  llvm::errs() << "[DEBUG] FileSystem::getBufferForFile: Opening '" << Name
+               << "' in " << (IsText ? "TEXT" : "BINARY") << " mode\n";
   auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
@@ -194,11 +196,13 @@ class RealFile : public File {
   file_t FD;
   Status S;
   std::string RealName;
+  bool IsTextMode;
 
-  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName)
+  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName,
+           bool IsText)
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
-        RealName(NewRealPathName.str()) {
+        RealName(NewRealPathName.str()), IsTextMode(IsText) {
     assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
   }
 
@@ -213,6 +217,10 @@ public:
                                                    bool IsVolatile) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
+  bool isText() const override { return IsTextMode; }
+  bool realFileTextMismatch(bool RequestedIsText) const override {
+    return IsTextMode != RequestedIsText;
+  }
 };
 
 } // namespace
@@ -320,8 +328,9 @@ private:
         adjustPath(Name, Storage), Flags, &RealName);
     if (!FDOrErr)
       return errorToErrorCode(FDOrErr.takeError());
+    bool IsText = (Flags & sys::fs::OF_Text) != sys::fs::OF_None;
     return std::unique_ptr<File>(
-        new RealFile(*FDOrErr, Name.str(), RealName.str()));
+        new RealFile(*FDOrErr, Name.str(), RealName.str(), IsText));
   }
 
   struct WorkingDirectory {
@@ -348,6 +357,8 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
+  llvm::errs() << "[DEBUG] RealFileSystem::openFileForRead: Opening '"
+               << Name << "' in TEXT mode\n";
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   return openFileForReadWithFlags(Name, sys::fs::OF_Text);
@@ -355,6 +366,8 @@ RealFileSystem::openFileForRead(const Twine &Name) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  llvm::errs() << "[DEBUG] RealFileSystem::openFileForReadBinary: Opening '"
+               << Name << "' in BINARY mode\n";
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   return openFileForReadWithFlags(Name, sys::fs::OF_None);

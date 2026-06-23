@@ -539,15 +539,22 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
     FileSize = -1;
 
   StringRef Filename = FE.getName();
-  // If the file is already open, use the open file descriptor.
+  // If the file is already open, check if the mode matches.
   if (Entry->File) {
-    auto Result = Entry->File->getBuffer(Filename, FileSize,
-                                         RequiresNullTerminator, isVolatile);
+    // Check if the cached file's mode matches the requested mode
+    // Only perform mismatch recovery for real files
+    if (!Entry->File->realFileTextMismatch(IsText)) {
+      // Mode matches, use the cached file descriptor
+      auto Result = Entry->File->getBuffer(Filename, FileSize,
+                                           RequiresNullTerminator, isVolatile);
+      Entry->closeFile();
+      return Result;
+    }
+    // Mode mismatch - close the cached file and reopen with correct mode
     Entry->closeFile();
-    return Result;
   }
 
-  // Otherwise, open the file.
+  // Open the file with the requested mode.
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
                               RequiresNullTerminator, IsText);
 }
@@ -601,6 +608,8 @@ std::error_code FileManager::getStatValue(StringRef Path,
     //
     // Because of this, check to see if the file exists with 'open'.  If the
     // open succeeds, use fstat to get the stat info.
+    llvm::errs() << "[DEBUG] FileManager: Opening file '" << Path << "' in "
+                 << (IsText ? "TEXT" : "BINARY") << " mode\n";
     auto OwnedFile =
         IsText ? FS->openFileForRead(Path) : FS->openFileForReadBinary(Path);
 

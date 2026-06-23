@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManagerInternals.h"
+#include "clang/Lex/TextEncoding.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -120,7 +122,21 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // return paths.
   IsBufferInvalid = true;
 
-  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile);
+  // If a converter is set, open the file in binary mode to get raw bytes
+  // and avoid platform-specific auto-conversion (e.g., EBCDIC->ASCII on z/OS,
+  // CRLF->LF on Windows). The explicit converter will handle all transformations.
+  bool NeedsExplicitConversion = FileIDConverterInfo.getPointer() != nullptr;
+  bool IsText = !NeedsExplicitConversion;
+
+  llvm::errs() << "[DEBUG] ContentCache::getBufferOrNone: Opening file '"
+               << ContentsEntry->getName() << "' - "
+               << (IsText ? "TEXT mode (no converter)" : "BINARY mode (converter present)")
+               << "\n";
+
+  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile,
+                                           /*RequiresNullTerminator=*/true,
+                                           /*MaybeLimit=*/std::nullopt,
+                                           IsText);
 
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
@@ -136,7 +152,58 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
 
   Buffer = std::move(*BufferOrError);
 
-  // Check that the file's size fits in an 'unsigned' (with room for a
+  // Unless this is a named pipe (in which case we can handle a mismatch),
+  // check that the file's size is the same as in the file entry (which may
+  // have come from a stat cache).
+  assert(Buffer->getBufferSize() >= (size_t)ContentsEntry->getSize());
+  if (!ContentsEntry->isNamedPipe() &&
+      Buffer->getBufferSize() < (size_t)ContentsEntry->getSize()) {
+    Diag.Report(Loc, diag::err_file_modified) << ContentsEntry->getName();
+
+    return std::nullopt;
+  }
+
+  // Convert source from the input charset to UTF-8 if necessary.
+  llvm::TextEncodingConverter *Converter = FileIDConverterInfo.getPointer();
+  if (Converter) {
+    llvm::errs() << "[DEBUG] SourceManager: Using converter for file '"
+                 << ContentsEntry->getName() << "'\n";
+    StringRef OriginalBuf = Buffer->getBuffer();
+    llvm::errs() << "[DEBUG] SourceManager: Original buffer size: "
+                 << OriginalBuf.size() << " bytes\n";
+    llvm::SmallString<0> UTF8Buf;
+    UTF8Buf.reserve(OriginalBuf.size() + 1);
+
+    std::error_code EC = Converter->convert(OriginalBuf, UTF8Buf);
+    llvm::errs() << "[DEBUG] SourceManager: Conversion "
+                 << (EC ? "FAILED" : "succeeded")
+                 << ", UTF8 buffer size: " << UTF8Buf.size() << " bytes\n";
+    if (EC) {
+      // If conversion fails, emit a warning and fall back to interpreting the
+      // file as UTF-8 without conversion.
+      //
+      // This allows the compiler to accept system or third-party headers that
+      // are encoded in UTF-8 even if conversion to the option-specified input
+      // charset failed.
+      //
+      // Diagnostics already exist when files are not well-formed UTF-8.
+      //
+      // TODO: Add input byte offset information.
+      //
+      // TODO: Consider adjusting the message to omit the "interpreting as
+      // UTF-8" recovery description if the warning has been upgraded to an
+      // error.
+      Diag.Report(Loc, diag::warn_charset_conversion_failed)
+          << ContentsEntry->getName() << EC.message();
+    } else {
+      // TODO: Reclaim memory if the buffer size exceeds the content.
+      auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+          std::move(UTF8Buf), Buffer->getBufferIdentifier());
+      Buffer = std::move(NewBuf);  
+    }
+  }
+
+  // Check that the buffer's size fits in an 'unsigned' (with room for a
   // past-the-end value). This is deeply regrettable, but various parts of
   // Clang (including elsewhere in this file!) use 'unsigned' to represent file
   // offsets, line numbers, string literal lengths, and so on, and fail
@@ -151,22 +218,15 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
     return std::nullopt;
   }
 
-  // Unless this is a named pipe (in which case we can handle a mismatch),
-  // check that the file's size is the same as in the file entry (which may
-  // have come from a stat cache).
-  // The buffer will always be larger than the file size on z/OS in the presence
-  // of characters outside the base character set.
-  assert(Buffer->getBufferSize() >= (size_t)ContentsEntry->getSize());
-  if (!ContentsEntry->isNamedPipe() &&
-      Buffer->getBufferSize() < (size_t)ContentsEntry->getSize()) {
-    Diag.Report(Loc, diag::err_file_modified) << ContentsEntry->getName();
-
-    return std::nullopt;
-  }
-
-  // If the buffer is valid, check to see if it has a UTF Byte Order Mark
-  // (BOM).  We only support UTF-8 with and without a BOM right now.  See
-  // http://en.wikipedia.org/wiki/Byte_order_mark for more information.
+  // If the buffer is valid, check to see if it has a UTF Byte Order Mark (BOM)
+  // Note that any conversion requested using `-finput-charset` (if successful)
+  // has already occurred, so we are expecting UTF-8 with or without a BOM.
+  //
+  // In theory, if we see a non-UTF-8 BOM, we can assume that an appropriate
+  // conversion was not supplied via `-finput-charset` and we could try to
+  // convert based on the BOM.
+  //
+  // See http://en.wikipedia.org/wiki/Byte_order_mark for more information.
   StringRef BufStr = Buffer->getBuffer();
   const char *InvalidBOM = getInvalidBOM(BufStr);
 
@@ -537,15 +597,57 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 /// being \#included from the specified IncludePosition.
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
-                                   SrcMgr::CharacteristicKind FileCharacter,
+				   SrcMgr::CharacteristicKind FileCharacter,
+                                   llvm::TextEncodingConverter *Converter,
                                    int LoadedID,
                                    SourceLocation::UIntTy LoadedOffset) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
 
+  llvm::ErrorOr<std::string> Ccsid =
+      llvm::getEncodingNameFromFileTag(SourceFile.getName());
+  if (!Ccsid) {
+    Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+        << SourceFile.getName() << Ccsid.getError().message();
+    return FileID();
+  }
+  if (!Ccsid->empty()) {
+    llvm::errs() << "[DEBUG] SourceManager::createFileID: File '" << SourceFile.getName()
+                 << "' has encoding tag: '" << *Ccsid << "'\n";
+    llvm::ErrorOr<llvm::TextEncodingConverter *> FileTagConverter =
+      llvm::TextEncodingConverterCache::getOrCreateConverter(*Ccsid, "UTF-8");
+    if (FileTagConverter) {
+      Converter = *FileTagConverter;
+      llvm::errs() << "[DEBUG] SourceManager::createFileID: Converter obtained for '"
+                   << *Ccsid << "' -> UTF-8\n";
+    } else {
+      llvm::errs() << "[DEBUG] SourceManager::createFileID: Failed to get converter: "
+                   << FileTagConverter.getError().message() << "\n";
+    }
+  }
+
+  #ifndef NDEBUG
+  // Either the content cache has never been used for a FileID (and, if we are
+  // being asked to use a converter, there should be no valid buffer set up for
+  // it) or the conversion (or lack thereof) should be the same as that used
+  // previously.
+  auto [CacheConverter, CacheUsedByFileID] = IR.FileIDConverterInfo;
+  if (CacheUsedByFileID)
+    assert(CacheConverter == Converter);
+  else
+    assert(!Converter || IR.IsBufferInvalid || !IR.getBufferIfLoaded());
+#endif
+  
+  if (Converter) {
+    llvm::errs() << "[DEBUG] SourceManager::createFileID: Setting converter for file '"
+                 << SourceFile.getName() << "'\n";
+  }
+  IR.FileIDConverterInfo.setPointerAndInt(Converter, true);
+
   // If this is a named pipe, immediately load the buffer to ensure subsequent
   // calls to ContentCache::getSize() are accurate.
-  if (IR.ContentsEntry->isNamedPipe())
+  // Do the same if character-encoding conversion was requested.
+  if (IR.ContentsEntry->isNamedPipe() || Converter) 
     (void)IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
 
   return createFileIDImpl(IR, SourceFile.getName(), IncludePos, FileCharacter,
@@ -583,10 +685,12 @@ FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
 /// new FileID for the \p SourceFile.
 FileID
 SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
-                                 SrcMgr::CharacteristicKind FileCharacter) {
+                                 SrcMgr::CharacteristicKind FileCharacter,
+                                 llvm::TextEncodingConverter *Converter) {
   FileID ID = translateFile(SourceFile);
-  return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
-					  FileCharacter);
+  return ID.isValid() ? ID
+                      : createFileID(SourceFile, SourceLocation(),
+                                     FileCharacter, Converter);
 }
 
 /// createFileID - Create a new FileID for the specified ContentCache and
@@ -2340,8 +2444,8 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
       std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
-  FileID ID =
-      SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
+  FileID ID = SourceMgr->createFileID(
+      FE, SourceLocation(), clang::SrcMgr::C_User, /*Converter=*/nullptr);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }

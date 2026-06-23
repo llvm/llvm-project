@@ -105,6 +105,25 @@ inline ErrorOr<bool> needConversion(const Twine &FileName, const int FD = -1) {
   return false;
 }
 
+inline ErrorOr<std::string>
+getEncodingNameFromFileTag(const Twine &FileName, const int FD = -1) {
+#ifdef __MVS__
+  ErrorOr<__ccsid_t> TagOrErr = getzOSFileTag(FileName, FD);
+  if (!TagOrErr)
+    return TagOrErr.getError();
+
+  __ccsid_t Tag = *TagOrErr;
+  if (Tag == 0)
+    return std::string(); // Return empty string for no tag
+
+  char Buffer[16];
+  snprintf(Buffer, sizeof(Buffer), "%03d", Tag);
+  return std::string(Buffer);
+#else
+  return std::string(); // Return empty string for non-MVS platforms
+#endif
+}
+
 } /* namespace llvm */
 #endif /* __cplusplus */
 
