@@ -7623,7 +7623,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // Prevents cases such as:
   // 1, x + 0, x + 1, 2x + 0 from being recognized as legal RT strided as there
   // are 2 "0" and 2 "1" offsets and a stride of "x" between both offsets
-  SmallDenseSet<const SCEV *> BaseSCEVs;
+  SmallDenseSet<const SCEV *> StrideMultiples;
   for (auto [Idx, Ptr] : enumerate(PointerOps)) {
     const SCEV *PtrSCEV = SE->getSCEV(Ptr);
     if (!PtrSCEV)
@@ -7631,7 +7631,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
     const auto *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
     int64_t Offset = 0;
-    const SCEV *BaseSCEV = PtrSCEV;
+    const SCEV *StrideMultiple = PtrSCEV;
     if (Add) {
       // `Offset` is non-zero.
       for (int I : seq<int>(Add->getNumOperands())) {
@@ -7643,13 +7643,13 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
           Offset = 0;
           continue;
         }
-        BaseSCEV = SE->getMinusSCEV(BaseSCEV, SC);
+        StrideMultiple = SE->getMinusSCEV(StrideMultiple, SC);
         break;
       }
     }
     OffsetToPointerOpIdxMap[Offset].first.push_back(Ptr);
     OffsetToPointerOpIdxMap[Offset].second.push_back(Idx);
-    BaseSCEVs.insert(BaseSCEV);
+    StrideMultiples.insert(StrideMultiple);
   }
   unsigned NumOffsets = OffsetToPointerOpIdxMap.size();
 
@@ -7664,7 +7664,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     VecSz = Sz / NumOffsets;
   }
 
-  if (BaseSCEVs.size() != VecSz)
+  if (StrideMultiples.size() != VecSz)
     return false;
 
   if (NumOffsets > 1 || BaseTy->isVectorTy())
