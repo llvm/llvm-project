@@ -2139,11 +2139,7 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                              : ScalarCallCost * VF.getKnownMinValue() +
                                    getScalarizationOverhead(CI, VF);
 
-  // The call may also have a non-scalarized lowering at this VF, via a vector
-  // intrinsic or a vector library variant. computePredInstDiscount queries this
-  // cost (before the call's widening decision is made) to decide whether
-  // forcing a predicated tree of operations to scalar is profitable, so return
-  // the cheapest available lowering.
+  // The call may be vectorized at this VF, via a vector intrinsic or a vector library variant.
   if (getVectorIntrinsicIDForCall(CI, TLI))
     Cost = std::min(Cost, getVectorIntrinsicCost(CI, VF));
 
