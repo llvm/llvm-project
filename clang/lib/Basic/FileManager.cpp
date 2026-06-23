@@ -540,19 +540,10 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
 
   StringRef Filename = FE.getName();
 
-  // If the file is already open, check if the mode matches.
+  // If the file is already open, use the cached file descriptor.
   if (Entry->File) {
-    // Check if the cached file's mode matches the requested mode
-    // realFileTextMismatch returns true if there's a mismatch
-    if (Entry->File->realFileTextMismatch(IsText)) {
-      // Mode mismatch detected - fatal error
-      llvm::report_fatal_error(
-          "Text mode mismatch: file '" + Filename +
-          "' was previously accessed with a different text mode");
-    }
-    // Mode matches, use the cached file descriptor
     auto Result = Entry->File->getBuffer(Filename, FileSize,
-                                         RequiresNullTerminator, isVolatile);
+                                         RequiresNullTerminator, isVolatile, IsText);
     Entry->closeFile();
     return Result;
   }

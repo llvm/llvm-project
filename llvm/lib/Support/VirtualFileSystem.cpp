@@ -213,12 +213,10 @@ public:
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &Name,
                                                    int64_t FileSize,
                                                    bool RequiresNullTerminator,
-                                                   bool IsVolatile) override;
+                                                   bool IsVolatile,
+                                                   bool IsText) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
-  bool realFileTextMismatch(bool RequestedIsText) const override {
-    return BufferEverReturned && (IsTextMode != RequestedIsText);
-  }
 };
 
 } // namespace
@@ -244,10 +242,19 @@ ErrorOr<std::string> RealFile::getName() {
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 RealFile::getBuffer(const Twine &Name, int64_t FileSize,
-                    bool RequiresNullTerminator, bool IsVolatile) {
+                    bool RequiresNullTerminator, bool IsVolatile, bool IsText) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  
+  // Check if the cached file's mode matches the requested mode
+  // If buffer was previously returned and text mode differs, report fatal error
+  if (BufferEverReturned && (IsTextMode != IsText)) {
+    llvm::report_fatal_error(
+        "Text mode mismatch: file '" + Name.str() +
+        "' was previously accessed with a different text mode");
+  }
+  
   auto Result = MemoryBuffer::getOpenFile(FD, Name, FileSize,
                                           RequiresNullTerminator, IsVolatile);
   if (Result)
