@@ -30,26 +30,25 @@ define amdgpu_vs void @test(ptr addrspace(8) inreg %arg1, ptr addrspace(3) %arg2
 define amdgpu_vs void @test_2(ptr addrspace(8) inreg %arg1, i32 %arg2, i32 inreg %arg3, ptr addrspace(3) %arg4) {
 ; CHECK-LABEL: test_2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 20, v1
-; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 16, v1
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 28, v1
-; CHECK-NEXT:    v_add_i32_e32 v6, vcc, 24, v1
-; CHECK-NEXT:    v_add_i32_e32 v7, vcc, 12, v1
-; CHECK-NEXT:    v_add_i32_e32 v8, vcc, 8, v1
+; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 12, v1
+; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 8, v1
+; CHECK-NEXT:    v_add_i32_e32 v5, vcc, 4, v1
+; CHECK-NEXT:    v_add_i32_e32 v6, vcc, 28, v1
+; CHECK-NEXT:    v_add_i32_e32 v7, vcc, 24, v1
 ; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    v_add_i32_e32 v10, vcc, 4, v1
-; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    ds_read_b32 v5, v4
-; CHECK-NEXT:    ds_read_b32 v4, v6
-; CHECK-NEXT:    ds_read_b32 v9, v7
-; CHECK-NEXT:    ds_read_b32 v8, v8
-; CHECK-NEXT:    ds_read_b32 v7, v10
-; CHECK-NEXT:    ds_read_b32 v6, v1
+; CHECK-NEXT:    v_add_i32_e32 v9, vcc, 20, v1
+; CHECK-NEXT:    v_add_i32_e32 v10, vcc, 16, v1
+; CHECK-NEXT:    ds_read_b32 v4, v2
 ; CHECK-NEXT:    ds_read_b32 v3, v3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    tbuffer_store_format_xyzw v[6:9], v0, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen glc slc
+; CHECK-NEXT:    ds_read_b32 v2, v5
+; CHECK-NEXT:    ds_read_b32 v8, v6
+; CHECK-NEXT:    ds_read_b32 v7, v7
+; CHECK-NEXT:    ds_read_b32 v6, v9
+; CHECK-NEXT:    ds_read_b32 v5, v10
+; CHECK-NEXT:    ds_read_b32 v1, v1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v0, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:16 glc slc
+; CHECK-NEXT:    tbuffer_store_format_xyzw v[1:4], v0, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen glc slc
+; CHECK-NEXT:    tbuffer_store_format_xyzw v[5:8], v0, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:16 glc slc
 ; CHECK-NEXT:    s_endpgm
   %load = load <8 x float>, ptr addrspace(3) %arg4, align 4
   %vec1 = shufflevector <8 x float> %load, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
