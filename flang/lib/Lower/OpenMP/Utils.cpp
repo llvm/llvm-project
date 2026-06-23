@@ -1545,16 +1545,10 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
       box = fir::LoadOp::create(builder, loc, box);
   }
 
-  auto convertToIndex = [&](mlir::Value value) -> mlir::Value {
-    if (value.getType().isIndex())
-      return value;
-    return fir::ConvertOp::create(builder, loc, idxTy, value);
-  };
-
   auto lowerSubscriptToIndex = [&](const SubscriptExpr &expr) -> mlir::Value {
     mlir::Value value = fir::getBase(
         converter.genExprValue(toEvExpr(expr), stmtCtx, &loc));
-    return convertToIndex(value);
+    return builder.createConvert(loc, idxTy, value);
   };
 
   llvm::SmallVector<mlir::Value> bounds;
@@ -1562,8 +1556,8 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
   // Translate each Fortran subscript into an OpenMP map bound for the
   // corresponding array dimension.
   for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
-    mlir::Value baseLb =
-        convertToIndex(hlfir::genLBound(loc, builder, entity, dim));
+    mlir::Value baseLb = builder.createConvert(
+        loc, idxTy, hlfir::genLBound(loc, builder, entity, dim));
     mlir::Value extent;
     mlir::Value stride = one;
     bool strideInBytes = false;
@@ -1575,7 +1569,8 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
       stride = dimInfo.getByteStride();
       strideInBytes = true;
     } else {
-      extent = convertToIndex(hlfir::genExtent(loc, builder, entity, dim));
+      extent = builder.createConvert(
+          loc, idxTy, hlfir::genExtent(loc, builder, entity, dim));
     }
     mlir::Value lbound;
     mlir::Value ubound;
