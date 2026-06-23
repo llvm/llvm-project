@@ -444,11 +444,11 @@ public:
 private:
   struct LifetimeBoundMacroCache {
     bool IsBuilt = false;
-    llvm::SmallVector<const IdentifierInfo *> Candidates;
+    SmallVector<const IdentifierInfo *> Candidates;
   };
 
   void buildLifetimeBoundMacroCache(LifetimeBoundMacroCache &Cache,
-                                    llvm::ArrayRef<TokenValue> Tokens) {
+                                    ArrayRef<TokenValue> Tokens) {
     if (Cache.IsBuilt)
       return;
 
