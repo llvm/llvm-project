@@ -147,7 +147,6 @@ DebugLoc DebugLoc::getWithoutAtom() const {
   return DebugLoc(MDTuple::get(*IntCtx, {PrimaryNoAtom, IntMD}));
 }
 
-
 MDNode *DebugLoc::getInlinedAtScope() const {
   // Route through get() so a tuple-shaped (intermediate-location) DebugLoc is
   // unwrapped to its primary DILocation first; cast<DILocation>(Loc) would
