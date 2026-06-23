@@ -538,8 +538,9 @@ declare i32 @llvm.bswap.i32(i32 %or11.i)
 
 define i16 @bit_swap(i16 %v3) {
 ; CHECK-LABEL: @bit_swap(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[V3:%.*]], -32767
-; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[TMP1]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[V3:%.*]], 15
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[V3]], 15
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i16 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %conv = zext i16 %v3 to i32
