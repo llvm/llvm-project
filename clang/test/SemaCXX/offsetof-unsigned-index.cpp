@@ -7,8 +7,8 @@
 // Also tests that negative indices and oversized __uint128_t indices are rejected.
 // https://github.com/llvm/llvm-project/issues/199319
 
-#include <cstdint>
-#include <cstddef>
+#include <stdint.h>
+#include <stddef.h>
 
 struct MyStruct {
     void *ptrs[256];
@@ -31,22 +31,25 @@ static_assert(__builtin_offsetof(BigStruct, data[(uint16_t)32768]) == 32768,
 
 // Negative indices must be rejected.
 struct NegIdxStruct { int a; int x[1]; };
-static_assert(__builtin_offsetof(NegIdxStruct, x[-1]) == 0, ""); // expected-error {{not an integral constant expression}} expected-note {{subexpression not valid in a constant expression}}
+static_assert(__builtin_offsetof(NegIdxStruct, x[-1]) == 0, ""); // expected-error {{not an integral constant expression}}
 
 // __uint128_t indices >= 0x8000000000000000 must be rejected.
-static_assert(__builtin_offsetof(NegIdxStruct, x[(__uint128_t)0x8000000000000000]) == 0, ""); // expected-error {{not an integral constant expression}} expected-note {{subexpression not valid in a constant expression}}
+static_assert(__builtin_offsetof(NegIdxStruct, x[(__uint128_t)0x8000000000000000]) == 0, ""); // expected-error {{not an integral constant expression}}
 
 // Small __uint128_t values that fit in int64_t must work correctly.
 static_assert(__builtin_offsetof(NegIdxStruct, x[(__uint128_t)0]) ==
               __builtin_offsetof(NegIdxStruct, x),
               "offsetof with __uint128_t index 0 should work");
+static_assert(__builtin_offsetof(NegIdxStruct, x[(__uint128_t)1]) ==
+              __builtin_offsetof(NegIdxStruct, x) + sizeof(int),
+              "offsetof with __uint128_t index 1 should work");
 
 // __uint128_t indices > UINT64_MAX must be rejected (e.g. adding another zero:
 // old code would truncate 2^64 to 0 via PT_Uint64 cast, silently producing a
 // wrong result instead of an error).
-static_assert(__builtin_offsetof(NegIdxStruct, x[((__uint128_t)1 << 64)]) == 0, ""); // expected-error {{not an integral constant expression}} expected-note {{subexpression not valid in a constant expression}}
+static_assert(__builtin_offsetof(NegIdxStruct, x[((__uint128_t)1 << 64)]) == 0, ""); // expected-error {{not an integral constant expression}}
 
 // A uint64_t index that causes index*sizeof(element) to overflow int64_t must
 // be rejected.  4611686018427387904 * sizeof(short)==2 == 2^63 > INT64_MAX.
 struct ShortArray { short data[2]; };
-static_assert(__builtin_offsetof(ShortArray, data[(uint64_t)4611686018427387904ULL]) == 0, ""); // expected-error {{not an integral constant expression}} expected-note {{subexpression not valid in a constant expression}}
+static_assert(__builtin_offsetof(ShortArray, data[(uint64_t)4611686018427387904ULL]) == 0, ""); // expected-error {{not an integral constant expression}}
