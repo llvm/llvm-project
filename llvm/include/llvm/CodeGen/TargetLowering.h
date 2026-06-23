@@ -3605,6 +3605,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
+  /// scmp(x, 0) Can be specially lowered using bitwise shifts.
+  /// On some platforms, this is better than shifts or boolean arithmetic.
+  virtual bool preferBitwiseSignum() const { return false; }
+
   /// Should we prefer selects to doing arithmetic on boolean types
   virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
     return false;

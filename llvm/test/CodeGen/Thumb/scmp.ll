@@ -422,16 +422,10 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 define i8 @scmp_8_8_zero(i8 signext %x) nounwind {
 ; THUMB1-LABEL: scmp_8_8_zero:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    cmp r0, #0
-; THUMB1-NEXT:    bgt .LBB8_2
-; THUMB1-NEXT:  @ %bb.1:
-; THUMB1-NEXT:    movs r1, #0
-; THUMB1-NEXT:    b .LBB8_3
-; THUMB1-NEXT:  .LBB8_2:
-; THUMB1-NEXT:    movs r1, #1
-; THUMB1-NEXT:  .LBB8_3:
+; THUMB1-NEXT:    asrs r1, r0, #31
+; THUMB1-NEXT:    rsbs r0, r0, #0
 ; THUMB1-NEXT:    lsrs r0, r0, #31
-; THUMB1-NEXT:    subs r0, r1, r0
+; THUMB1-NEXT:    orrs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: scmp_8_8_zero:
@@ -460,16 +454,10 @@ define i8 @scmp_8_8_zero(i8 signext %x) nounwind {
 define i32 @scmp_32_32_zero(i32 %x) nounwind {
 ; THUMB1-LABEL: scmp_32_32_zero:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    cmp r0, #0
-; THUMB1-NEXT:    bgt .LBB9_2
-; THUMB1-NEXT:  @ %bb.1:
-; THUMB1-NEXT:    movs r1, #0
-; THUMB1-NEXT:    b .LBB9_3
-; THUMB1-NEXT:  .LBB9_2:
-; THUMB1-NEXT:    movs r1, #1
-; THUMB1-NEXT:  .LBB9_3:
+; THUMB1-NEXT:    asrs r1, r0, #31
+; THUMB1-NEXT:    rsbs r0, r0, #0
 ; THUMB1-NEXT:    lsrs r0, r0, #31
-; THUMB1-NEXT:    subs r0, r1, r0
+; THUMB1-NEXT:    orrs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: scmp_32_32_zero:
@@ -500,15 +488,10 @@ define i64 @scmp_64_64_zero(i64 %x) nounwind {
 ; THUMB1:       @ %bb.0:
 ; THUMB1-NEXT:    movs r2, #0
 ; THUMB1-NEXT:    rsbs r0, r0, #0
-; THUMB1-NEXT:    mov r0, r2
-; THUMB1-NEXT:    sbcs r0, r1
-; THUMB1-NEXT:    bge .LBB10_2
-; THUMB1-NEXT:  @ %bb.1:
-; THUMB1-NEXT:    movs r2, #1
-; THUMB1-NEXT:  .LBB10_2:
-; THUMB1-NEXT:    lsrs r0, r1, #31
-; THUMB1-NEXT:    subs r0, r2, r0
-; THUMB1-NEXT:    asrs r1, r0, #31
+; THUMB1-NEXT:    sbcs r2, r1
+; THUMB1-NEXT:    lsrs r0, r2, #31
+; THUMB1-NEXT:    asrs r1, r1, #31
+; THUMB1-NEXT:    orrs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: scmp_64_64_zero:

@@ -249,6 +249,8 @@ namespace llvm {
       return VT.isScalarInteger();
     }
 
+    bool preferBitwiseSignum() const override { return true; }
+
     SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG, bool LegalOps,
                                  bool OptForSize, NegatibleCost &Cost,
                                  unsigned Depth = 0) const override;
