@@ -155,6 +155,7 @@ ALL_TESTS=(
   ejit_config_api_test
   ejit_dump_test
   ejit_external_idx_test
+  ejit_fold_loop_test
   ejit_jit_verify_test
   ejit_lifecycle_test
   ejit_multidim_test
@@ -173,6 +174,7 @@ COMPILE_FLAGS[ejit_manual_register_test]="-mllvm -enable-ejit-global-ctors=false
 
 declare -A TEST_ARGS
 TEST_ARGS[ejit_complex_test]="0 1 2 3"
+TEST_ARGS[ejit_fold_loop_test]="0"
 TEST_ARGS[ejit_opt_level_test]="L2"
 TEST_ARGS[ejit_multiversion_test]="0 3 7"
 TEST_ARGS[ejit_jit_verify_test]="0 1 5"
