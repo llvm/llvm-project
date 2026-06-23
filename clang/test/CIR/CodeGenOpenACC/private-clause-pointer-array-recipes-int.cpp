@@ -9,7 +9,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!s32i>> 
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB1_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(4) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!s32i>
@@ -58,7 +58,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB2_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.ptr<!s32i>>
@@ -88,7 +88,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB1_CAST]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ARR_SIZE]] : !u64i
@@ -138,7 +138,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>>
 //
 // CHECK-NEXT: %[[UB3:.*]] = acc.get_upperbound %[[BOUND3]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB3_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB3]] : index to !u64i 
+// CHECK-NEXT: %[[UB3_CAST:.*]] = cir.builtin_int_cast %[[UB3]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB3_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
@@ -168,7 +168,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB2_CAST]], %[[UB3_CAST]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ARR_SIZE]] : !u64i
@@ -197,7 +197,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 // CHECK-NEXT: } 
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS2:.*]] = cir.mul %[[UB1_CAST]], %[[NUM_ELTS]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS2]], %[[ARR_SIZE]] : !u64i
@@ -240,7 +240,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB2_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
@@ -270,7 +270,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB1_CAST]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ARR_SIZE]] : !u64i
@@ -320,14 +320,14 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>> 
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: %[[TL_DEREF:.*]] = cir.ptr_stride %[[DECAY]], %[[ZERO]] : (!cir.ptr<!cir.ptr<!s32i>>, !u64i) -> !cir.ptr<!cir.ptr<!s32i>>
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB1_CAST]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: %[[ELT_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ELT_SIZE]] : !u64i
@@ -378,7 +378,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>> 
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<20> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB2_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(4) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.array<!s32i x 5>> 
@@ -428,14 +428,14 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>>
 //
 // CHECK-NEXT: %[[UB3:.*]] = acc.get_upperbound %[[BOUND3]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB3_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB3]] : index to !u64i 
+// CHECK-NEXT: %[[UB3_CAST:.*]] = cir.builtin_int_cast %[[UB3]] : index -> !u64i
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>> -> !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CHECK-NEXT: %[[TL_DEREF:.*]] = cir.ptr_stride %[[DECAY]], %[[ZERO]] : (!cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !u64i) -> !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB2_CAST]], %[[UB3_CAST]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ARR_SIZE]] : !u64i
@@ -465,7 +465,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS2:.*]] = cir.mul %[[UB1_CAST]], %[[NUM_ELTS]] : !u64i
 // CHECK-NEXT: %[[ELT_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS2]], %[[ELT_SIZE]] : !u64i
@@ -508,14 +508,14 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.ptr<!cir.ptr<!s32i>> x 5>> -> !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CHECK-NEXT: %[[TL_DEREF:.*]] = cir.ptr_stride %[[DECAY]], %[[ZERO]] : (!cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !u64i) -> !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB1_CAST]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ARR_SIZE]] : !u64i
@@ -565,7 +565,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>>
 //
 // CHECK-NEXT: %[[UB3:.*]] = acc.get_upperbound %[[BOUND3]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB3_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB3]] : index to !u64i 
+// CHECK-NEXT: %[[UB3_CAST:.*]] = cir.builtin_int_cast %[[UB3]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB3_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>
@@ -596,7 +596,7 @@ void do_things(unsigned A, unsigned B) {
 //
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB2_CAST]], %[[UB3_CAST]] : !u64i
 // CHECK-NEXT: %[[ELT_SIZE:.*]] = cir.const #cir.int<20> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ELT_SIZE]] : !u64i
@@ -639,7 +639,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB2_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>
@@ -669,7 +669,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB1_CAST]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<20> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS]], %[[ARR_SIZE]] : !u64i
@@ -721,7 +721,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>>>
 //
 // CHECK-NEXT: %[[UB3:.*]] = acc.get_upperbound %[[BOUND3]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB3_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB3]] : index to !u64i 
+// CHECK-NEXT: %[[UB3_CAST:.*]] = cir.builtin_int_cast %[[UB3]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<40> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB2_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>>
@@ -751,7 +751,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: } 
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS:.*]] = cir.mul %[[UB2_CAST]], %[[UB3_CAST]] : !u64i
 //
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
@@ -759,7 +759,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ZERO]] : (!cir.ptr<!cir.ptr<!s32i>>, !u64i) -> !cir.ptr<!cir.ptr<!s32i>>
 //
 // CHECK-NEXT: %[[UB1:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB1_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB1]] : index to !u64i 
+// CHECK-NEXT: %[[UB1_CAST:.*]] = cir.builtin_int_cast %[[UB1]] : index -> !u64i
 // CHECK-NEXT: %[[NUM_ELTS2:.*]] = cir.mul %[[UB1_CAST]], %[[NUM_ELTS]] : !u64i
 // CHECK-NEXT: %[[ELT_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[NUM_ELTS2]], %[[ELT_SIZE]] : !u64i
@@ -803,7 +803,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca "openacc.private.init" align(8) : !cir.ptr<!cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>>>
 //
 // CHECK-NEXT: %[[UB2:.*]] = acc.get_upperbound %[[BOUND2]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB2_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB2]] : index to !u64i 
+// CHECK-NEXT: %[[UB2_CAST:.*]] = cir.builtin_int_cast %[[UB2]] : index -> !u64i
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<40> : !u64i
 // CHECK-NEXT: %[[ALLOCA_SIZE:.*]] = cir.mul %[[UB2_CAST]], %[[ARR_SIZE]] : !u64i
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = cir.alloca "openacc.init.bounds" align(8) size(%[[ALLOCA_SIZE]]) : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 5>>
