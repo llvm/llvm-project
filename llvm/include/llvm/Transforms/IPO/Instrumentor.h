@@ -620,20 +620,21 @@ struct InstructionIO : public InstrumentationOpportunity {
     // Get the first opcode from the opcodes array.
     return Instruction::getOpcodeName(OpcodesArray[0]);
   }
-
-  LLVM_ABI static Value *getOpcode(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB);
-  LLVM_ABI static Value *getTypeSize(Value &V, Type &Ty,
-                                     InstrumentationConfig &IConf,
-                                     InstrumentorIRBuilderTy &IIRB);
-  LLVM_ABI static Value *getLeft(Value &V, Type &Ty,
-                                 InstrumentationConfig &IConf,
-                                 InstrumentorIRBuilderTy &IIRB);
-  LLVM_ABI static Value *getRight(Value &V, Type &Ty,
-                                  InstrumentationConfig &IConf,
-                                  InstrumentorIRBuilderTy &IIRB);
 };
+
+/// Common getters use across different instrumentation opportunities.
+///{
+LLVM_ABI Value *getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getTypeSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB);
+///}
 
 /// The instrumentation opportunity for functions.
 struct FunctionIO final : public InstrumentationOpportunity {

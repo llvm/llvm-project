@@ -905,40 +905,42 @@ static void readValuePack(const Range &R, Value &Pack,
   }
 }
 
-template <unsigned... Opcodes>
-Value *InstructionIO<Opcodes...>::getOpcode(Value &V, Type &Ty,
-                                            InstrumentationConfig &IConf,
-                                            InstrumentorIRBuilderTy &IIRB) {
+Value *llvm::instrumentor::getOpcode(Value &V, Type &Ty,
+                                     InstrumentationConfig &IConf,
+                                     InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   return getCI(&Ty, I.getOpcode());
 }
 
-template <unsigned... Opcodes>
-Value *InstructionIO<Opcodes...>::getTypeSize(Value &V, Type &Ty,
-                                              InstrumentationConfig &IConf,
-                                              InstrumentorIRBuilderTy &IIRB) {
+Value *llvm::instrumentor::getTypeSize(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   auto &DL = I.getDataLayout();
   return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
 }
 
-template <unsigned... Opcodes>
-Value *InstructionIO<Opcodes...>::getLeft(Value &V, Type &Ty,
-                                          InstrumentationConfig &IConf,
-                                          InstrumentorIRBuilderTy &IIRB) {
+Value *llvm::instrumentor::getLeft(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   return I.getOperand(0);
 }
 
-template <unsigned... Opcodes>
-Value *InstructionIO<Opcodes...>::getRight(Value &V, Type &Ty,
-                                           InstrumentationConfig &IConf,
-                                           InstrumentorIRBuilderTy &IIRB) {
+Value *llvm::instrumentor::getRight(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   if (I.getNumOperands() > 1)
     return I.getOperand(1);
   else
     return PoisonValue::get(&Ty);
+}
+
+Value *llvm::instrumentor::getTypeId(Value &V, Type &Ty,
+                                     InstrumentationConfig &IConf,
+                                     InstrumentorIRBuilderTy &IIRB) {
+  return getCI(&Ty, V.getType()->getTypeID());
 }
 
 /// FunctionIO
@@ -1037,11 +1039,6 @@ Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
                                   InstrumentorIRBuilderTy &IIRB) {
   auto &Fn = cast<Function>(V);
   return getCI(&Ty, Fn.getName() == "main");
-}
-
-static Value *getTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB) {
-  return getCI(&Ty, V.getType()->getTypeID());
 }
 
 /// UnreachableIO
