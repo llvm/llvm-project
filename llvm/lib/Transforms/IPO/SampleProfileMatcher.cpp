@@ -410,10 +410,13 @@ void SampleProfileMatcher::runStaleProfileMatching(
 
       FunctionId NewAnchor(
           FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+      auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
+      if (R != FuncProfileMatchCache.end() && R->second)
+        continue;
       FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
       NewFS.merge(*FSForMatching);
       FuncToProfileNameMap[Callee] = NewAnchor;
-      IRToProfileLocationMap = getIRToProfileLocationMap(NewFS);
+      FuncProfileMatchCache[{Callee, NewAnchor}] = true;
 
       // Update profile in the sample profile reader
       SampleProfileMap &Profiles = Reader.getProfiles();
