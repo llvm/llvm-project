@@ -5405,8 +5405,11 @@ struct AAAlignFloating : AAAlignImpl {
       if (!AA || (!Stripped && this == AA)) {
         int64_t Offset;
         unsigned Alignment = 1;
+        // Stripping can cross bitcasts into pointer vectors, but the alignment
+        // reasoning below applies only to scalar pointer bases.
         if (const Value *Base =
-                GetPointerBaseWithConstantOffset(&V, Offset, DL)) {
+                GetPointerBaseWithConstantOffset(&V, Offset, DL);
+            Base->getType()->isPointerTy()) {
           // TODO: Use AAAlign for the base too.
           Align PA = Base->getPointerAlignment(DL);
           // BasePointerAddr + Offset = Alignment * Q for some integer Q.
