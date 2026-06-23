@@ -4026,7 +4026,7 @@ SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
   SDValue Chain = Op.getOperand(0);
   SDValue RMValue = Op.getOperand(1);
 
-  // LLVM rounding mode encoding (0=RNE, 1=RTZ, 2=RUP, 3=RDN).
+  // LLVM rounding mode encoding: 0=RTZ, 1=RNE, 2=RUP, 3=RDN.
   if (auto *CVal = dyn_cast<ConstantSDNode>(RMValue)) {
     uint64_t RM = CVal->getZExtValue();
     if (RM > 3) {
@@ -4038,10 +4038,21 @@ SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
   // Zero-extend i32 rounding mode to GRLenVT.
   RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, GRLenVT, RMValue);
 
-  // The rounding mode in FCSR occupies bits 1:0.
-  // LLVM rounding mode encoding matches the LoongArch FCSR hardware
-  // encoding, so no translation needed.
-  // We mask to 2 bits to guard against invalid values.
+  // LLVM rounding mode encoding differs from LoongArch FCSR encoding:
+  //   LLVM: 0=RTZ, 1=RNE, 2=RUP, 3=RDN
+  //   FCSR: 0=RNE, 1=RZ,  2=RP,  3=RN
+  // Translate by swapping 0↔1 (XOR with 1 when RM < 2), keep 2 and 3.
+  //   0 (RTZ) → 1 (RZ), 1 (RNE) → 0 (RNE), 2 (RUP) → 2 (RP), 3 (RDN) → 3 (RN)
+  // Transformation: RM ^ (~(RM >> 1) & 1)
+  SDValue ShiftRight1 = DAG.getNode(ISD::SRL, DL, GRLenVT, RMValue,
+                                    DAG.getConstant(1, DL, GRLenVT));
+  SDValue SwapMask = DAG.getNode(ISD::AND, DL, GRLenVT,
+      DAG.getNode(ISD::XOR, DL, GRLenVT, ShiftRight1,
+                  DAG.getConstant(1, DL, GRLenVT)),
+      DAG.getConstant(1, DL, GRLenVT));
+  RMValue = DAG.getNode(ISD::XOR, DL, GRLenVT, RMValue, SwapMask);
+
+  // Mask to 2 bits to guard against invalid values.
   RMValue = DAG.getNode(ISD::AND, DL, GRLenVT, RMValue,
                         DAG.getConstant(0x3, DL, GRLenVT));
 
