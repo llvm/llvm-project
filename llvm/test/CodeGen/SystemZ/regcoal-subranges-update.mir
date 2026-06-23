@@ -25,11 +25,11 @@ body:             |
 
     ; CHECK-LABEL: name: main
     ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = LGHI 43
+    ; CHECK-NEXT: undef [[LGHI:%[0-9]+]].subreg_l32:gr64bit = MSR [[LGHI]].subreg_l32, [[LGHI]].subreg_l32
+    ; CHECK-NEXT: [[LGHI:%[0-9]+]].subreg_l32:gr64bit = AHIMux [[LGHI]].subreg_l32, 9, implicit-def dead $cc
     ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 43
-    ; CHECK-NEXT: undef [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = MSR [[LGHI1]].subreg_l32, [[LGHI1]].subreg_l32
-    ; CHECK-NEXT: [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = AHIMux [[LGHI1]].subreg_l32, 9, implicit-def dead $cc
-    ; CHECK-NEXT: undef [[LGFI:%[0-9]+]].subreg_l64:gr128bit = LGFI -245143785, implicit [[LGHI1]].subreg_l32
-    ; CHECK-NEXT: [[LGFI:%[0-9]+]]:gr128bit = DLGR [[LGFI]], [[LGHI]]
+    ; CHECK-NEXT: undef [[LGFI:%[0-9]+]].subreg_l64:gr128bit = LGFI -245143785, implicit [[LGHI]].subreg_l32
+    ; CHECK-NEXT: [[LGFI:%[0-9]+]]:gr128bit = DLGR [[LGFI]], [[LGHI1]]
     ; CHECK-NEXT: Return implicit [[LGFI]]
     %0:gr64bit = LGHI 43
     %1:gr32bit = COPY %0.subreg_l32
