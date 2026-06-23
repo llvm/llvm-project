@@ -75,8 +75,9 @@ void ProfileSummaryInfo::refresh(std::unique_ptr<ProfileSummary> &&Other) {
   computeThresholds();
 }
 
-std::optional<uint64_t> ProfileSummaryInfo::getProfileCount(
-    const CallBase &Call, BlockFrequencyInfo *BFI, bool AllowSynthetic) const {
+std::optional<uint64_t>
+ProfileSummaryInfo::getProfileCount(const CallBase &Call,
+                                    BlockFrequencyInfo *BFI) const {
   assert((isa<CallInst>(Call) || isa<InvokeInst>(Call)) &&
          "We can only get profile count for call/invoke instruction.");
   if (hasSampleProfile()) {
@@ -90,7 +91,7 @@ std::optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     return std::nullopt;
   }
   if (BFI)
-    return BFI->getBlockProfileCount(Call.getParent(), AllowSynthetic);
+    return BFI->getBlockProfileCount(Call.getParent());
   return std::nullopt;
 }
 
