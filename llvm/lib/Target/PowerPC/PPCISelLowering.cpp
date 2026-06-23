@@ -11923,6 +11923,10 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   FPClassTest Category = static_cast<FPClassTest>(RHSC);
   EVT VT = LHS.getValueType();
 
+  assert((VT == MVT::f32 || VT == MVT::f64 ||
+          ((VT == MVT::f128 || VT == MVT::ppcf128) && Subtarget.hasVSX() &&
+           Subtarget.useCRBits())) &&
+         "invalid customzie type for IS_FPCLASS.");
   // Handle ppcf128 by extracting the higher part
   if (VT == MVT::ppcf128) {
     // The higher part determines the value class.
@@ -11941,7 +11945,7 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   // - If value is NaN, the comparison is unordered (FU bit set)
   // - If value is not NaN, the comparison is equal (EQ bit set)
 
-  if ((Category & ~fcNan) != 0 && (Category != ~fcNan)) {
+  if ((Category & ~fcNan) && (Category != ~fcNan)) {
     // If not checking for NaN or non-NaN, we can't handle this without P9Vector
     return SDValue();
   }
