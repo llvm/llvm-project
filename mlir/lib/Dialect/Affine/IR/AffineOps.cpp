@@ -4993,11 +4993,12 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
                            ArrayRef<Attribute> dynamicBasis) {
   uint64_t dynamicBasisIndex = 0;
   for (Attribute basis : dynamicBasis) {
-    // Skip poison values: they don't have a concrete integer value, so erasing
-    // them from the dynamic operands would create an inconsistency between
-    // the static basis (which would still hold kDynamic) and the dynamic
-    // operand list (which would be one element shorter).
-    if (basis && isa<IntegerAttr>(basis)) {
+    // Only fold a dynamic basis operand into the static basis when it is a
+    // strictly positive constant. Poison and non-positive values are left
+    // dynamic: a statically non-positive basis is rejected by the verifier and
+    // would crash the constant folding below.
+    if (basis && isa<IntegerAttr>(basis) &&
+        cast<IntegerAttr>(basis).getInt() > 0) {
       mutableDynamicBasis.erase(dynamicBasisIndex);
     } else {
       ++dynamicBasisIndex;
@@ -5011,10 +5012,12 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
   SmallVector<int64_t> staticBasis;
   for (OpFoldResult basis : mixedBasis) {
     std::optional<int64_t> basisVal = getConstantIntValue(basis);
-    if (!basisVal)
-      staticBasis.push_back(ShapedType::kDynamic);
-    else
-      staticBasis.push_back(*basisVal);
+    // Keep already-static elements as-is; for dynamic operands only fold
+    // strictly positive constants in. This avoids a statically non-positive
+    // basis and keeps the kDynamic-marker count in sync with the dynamic
+    // operands retained above.
+    bool keepStatic = basisVal && (isa<Attribute>(basis) || *basisVal > 0);
+    staticBasis.push_back(keepStatic ? *basisVal : ShapedType::kDynamic);
   }
 
   return staticBasis;
