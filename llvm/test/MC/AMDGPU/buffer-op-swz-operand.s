@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1100 --show-inst < %s | FileCheck %s
 
-// CHECK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1100"
+// CHECK: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx1100"
 buffer_load_dwordx4 v[0:3], v0, s[0:3], 0, offen offset:4092 slc
 // CHECK: buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092 slc ; <MCInst #{{[0-9]+}} BUFFER_LOAD_DWORDX4_OFFEN_gfx11
 // CHECK-NEXT: ;  <MCOperand Reg:VGPR0_VGPR1_VGPR2_VGPR3>
