@@ -70,6 +70,13 @@ static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
 
 static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
+static mlir::ParseResult
+parseDataMemberPath(mlir::AsmParser &parser,
+                    mlir::DenseI32ArrayAttr &memberPath);
+
+static void printDataMemberPath(mlir::AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath);
+
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
@@ -260,6 +267,26 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
     p << "null";
   else
     p << value;
+}
+
+static ParseResult parseDataMemberPath(AsmParser &parser,
+                                       mlir::DenseI32ArrayAttr &memberPath) {
+  if (parser.parseOptionalKeyword("null").succeeded())
+    return success();
+
+  auto parsed = mlir::FieldParser<mlir::DenseI32ArrayAttr>::parse(parser);
+  if (mlir::failed(parsed))
+    return failure();
+  memberPath = *parsed;
+  return success();
+}
+
+static void printDataMemberPath(AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    p << "null";
+  else
+    p.printStrippedAttrOrType(memberPath);
 }
 
 //===----------------------------------------------------------------------===//
@@ -509,27 +536,34 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
 LogicalResult
 DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        cir::DataMemberType ty,
-                       std::optional<unsigned> memberIndex) {
-  // DataMemberAttr without a given index represents a null value.
-  if (!memberIndex.has_value())
-    return success();
+                       mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    return success(); // null pointer — always valid
 
-  cir::RecordType recTy = ty.getClassTy();
-  if (recTy.isIncomplete())
-    return emitError()
-           << "incomplete 'cir.record' cannot be used to build a non-null "
-              "data member pointer";
+  if (memberPath.empty())
+    return emitError() << "#cir.data_member path must not be empty";
 
-  unsigned memberIndexValue = memberIndex.value();
-  if (memberIndexValue >= recTy.getNumElements())
-    return emitError()
-           << "member index of a #cir.data_member attribute is out of range";
+  mlir::Type currentTy = ty.getClassTy();
+  for (auto [step, idx] : llvm::enumerate(memberPath.asArrayRef())) {
+    auto recTy = mlir::dyn_cast<cir::RecordType>(currentTy);
+    if (!recTy)
+      return emitError() << "#cir.data_member path step " << step
+                         << " reaches a non-record type";
 
-  mlir::Type memberTy = recTy.getMembers()[memberIndexValue];
-  if (memberTy != ty.getMemberTy())
+    if (recTy.isIncomplete())
+      return success(); // cannot validate further; trust the builder
+
+    if (idx < 0 || static_cast<unsigned>(idx) >= recTy.getNumElements())
+      return emitError() << "#cir.data_member path index " << idx << " at step "
+                         << step << " is out of range";
+
+    currentTy = recTy.getMembers()[idx];
+  }
+
+  if (currentTy != ty.getMemberTy())
     return emitError()
-           << "member type of a #cir.data_member attribute must match the "
-              "attribute type";
+           << "member type of a #cir.data_member attribute must match "
+              "the attribute type";
 
   return success();
 }

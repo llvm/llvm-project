@@ -363,6 +363,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
       setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
     }
+    setOperationAction(ISD::UINT_TO_FP, GRLenVT, Custom);
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
@@ -598,6 +599,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerConstantPool(Op, DAG);
   case ISD::FP_TO_SINT:
     return lowerFP_TO_SINT(Op, DAG);
+  case ISD::FP_TO_UINT:
+    return lowerFP_TO_UINT(Op, DAG);
   case ISD::BITCAST:
     return lowerBITCAST(Op, DAG);
   case ISD::UINT_TO_FP:
@@ -926,7 +929,7 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   // use floating point load from the constant pool.
   auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
   int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
-  if (InsNum > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
+  if (InsNum > MaterializeFPImmInsNum && !FPVal.isOne())
     return SDValue();
 
   switch (VT.getSimpleVT().SimpleTy) {
@@ -4103,11 +4106,33 @@ SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
 
 SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+  EVT Op0VT = Op0.getValueType();
+
+  if ((DAG.SignBitIsZero(Op0) || Op->getFlags().hasNonNeg()) &&
+      !isOperationLegal(ISD::UINT_TO_FP, Op0VT) &&
+      isOperationLegal(ISD::SINT_TO_FP, Op0VT))
+    return DAG.getNode(ISD::SINT_TO_FP, DL, VT, Op0);
+
+  if (Subtarget.hasExtLSX() && Op0VT == MVT::i64 &&
+      (VT == MVT::f32 || VT == MVT::f64)) {
+    Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, Op0);
+    SDValue Conv = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::v2f64, Op0);
+    Conv = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64, Conv,
+                       DAG.getIntPtrConstant(0, DL));
+    if (VT == MVT::f32)
+      Conv = DAG.getFPExtendOrRound(Conv, DL, VT);
+    return Conv;
+  }
+
+  if (!Subtarget.is64Bit() || !Subtarget.hasBasicF() || Subtarget.hasBasicD())
+    return SDValue();
+
   assert(Subtarget.is64Bit() && Subtarget.hasBasicF() &&
          !Subtarget.hasBasicD() && "unexpected target features");
 
-  SDLoc DL(Op);
-  SDValue Op0 = Op.getOperand(0);
   if (Op0->getOpcode() == ISD::AND) {
     auto *C = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
     if (C && C->getZExtValue() < UINT64_C(0xFFFFFFFF))
@@ -4199,6 +4224,30 @@ SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
   EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
   SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op0);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
+}
+
+SDValue LoongArchTargetLowering::lowerFP_TO_UINT(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  if (!Subtarget.hasExtLSX())
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+  EVT SrcVT = Src.getValueType();
+
+  if (VT != MVT::i64)
+    return SDValue();
+
+  if (SrcVT != MVT::f32 && SrcVT != MVT::f64)
+    return SDValue();
+
+  if (SrcVT == MVT::f32)
+    Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f64, Src);
+  Src = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, Src);
+  SDValue Conv = DAG.getNode(ISD::FP_TO_UINT, DL, MVT::v2i64, Src);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Conv,
+                     DAG.getIntPtrConstant(0, DL));
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
@@ -10515,7 +10564,7 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
     return false;
-  return (Imm.isZero() || Imm.isExactlyValue(1.0) || isFPImmVLDILegal(Imm, VT));
+  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT));
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {

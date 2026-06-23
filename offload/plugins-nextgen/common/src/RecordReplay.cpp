@@ -270,18 +270,24 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
-  // Add minimum and maximum for allowed number of teams. If zero, it means
+  // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t MinMaxBlocks = std::max(KernelArgs.UserNumBlocks[0], uint32_t(0));
   json::Array JsonTeamsLimits;
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
 
-  // Add minimum and maximum for allowed number of threads. If zero, it means
+  // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t UserThreads = std::max(KernelArgs.UserThreadLimit[0], uint32_t(0));
+  uint32_t MaxThreads = UserThreads
+                            ? std::min(UserThreads, Kernel.getMaxThreads())
+                            : Kernel.getMaxThreads();
+  assert(MaxThreads >= 0 && "MaxThreads must be greater than zero.");
   json::Array JsonThreadsLimits;
-  JsonThreadsLimits.push_back(uint32_t(KernelArgs.UserThreadLimit[0] > 0));
-  JsonThreadsLimits.push_back(KernelArgs.UserThreadLimit[0]);
+  JsonThreadsLimits.push_back(1);
+  JsonThreadsLimits.push_back(MaxThreads);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
@@ -338,23 +344,24 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   uint64_t RecordSize = CurrentSize;
   AllocationLock.unlock();
 
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
-  if (!DeviceMemoryMB)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                         "creating MemoryBuffer for device memory");
+  std::unique_ptr<WritableMemoryBuffer> DeviceMB;
+  if (RecordSize) {
+    DeviceMB = WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
+    if (!DeviceMB)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "creating MemoryBuffer for device memory");
 
-  if (auto Err = Device.dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
-                                     StartAddr, RecordSize, nullptr))
-    return Err;
-
-  StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), RecordSize);
+    if (auto Err = Device.dataRetrieve(DeviceMB->getBufferStart(), StartAddr,
+                                       RecordSize, nullptr))
+      return Err;
+  }
 
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
-  OS << DeviceMemory;
+  if (DeviceMB)
+    OS.write(DeviceMB->getBufferStart(), RecordSize);
   OS.close();
   return Plugin::success();
 }
@@ -389,13 +396,12 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
     NumGlobals++;
   }
 
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
+  auto GlobalsMB = WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
   if (!GlobalsMB)
     return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                          "creating MemoryBuffer for globals memory");
 
-  void *BufferPtr = GlobalsMB.get()->getBufferStart();
+  void *BufferPtr = GlobalsMB->getBufferStart();
   *((uint32_t *)(BufferPtr)) = NumGlobals;
   BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
@@ -418,16 +424,15 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
       return Err;
     BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
-  assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
+  assert(BufferPtr == GlobalsMB->getBufferEnd() &&
          "Buffer over or under-filled.");
   assert(TotalSize == (uint64_t)utils::getPtrDiff(
-                          BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+                          BufferPtr, GlobalsMB->getBufferStart()) &&
          "Buffer size mismatch.");
 
-  StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), TotalSize);
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
-  OS << GlobalsMemory;
+  OS.write(GlobalsMB->getBufferStart(), TotalSize);
   OS.close();
   return Plugin::success();
 }
