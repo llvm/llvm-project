@@ -710,6 +710,8 @@ public:
   void visitReturnInst(ReturnInst &RI) {
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
+    else
+      CurrentFrame->RetVal = AnyValue();
     CurrentFrame->State = FrameState::Exit;
     if (!Handler.onInstructionExecuted(RI, None))
       setFailed();
