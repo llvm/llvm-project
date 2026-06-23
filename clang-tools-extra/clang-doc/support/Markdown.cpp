@@ -65,14 +65,10 @@ static bool isThematicBreak(StringRef Line) {
   char Marker = Line.empty() ? '\0' : Line[0];
   if (Marker != '-' && Marker != '*' && Marker != '_')
     return false;
-  unsigned Count = 0;
-  for (char C : Line) {
-    if (C == Marker)
-      ++Count;
-    else if (C != ' ')
-      return false;
-  }
-  return Count >= 3;
+  // Only the marker and spaces may appear, with at least three markers.
+  const char Allowed[] = {Marker, ' '};
+  return Line.find_first_not_of(StringRef(Allowed, 2)) == StringRef::npos &&
+         Line.count(Marker) >= 3;
 }
 
 // Returns true if Line is a block quote line: it starts with "> ", or is a bare
@@ -160,10 +156,8 @@ private:
 
 // Returns the number of consecutive copies of C starting at S[Start].
 static size_t countRun(StringRef S, size_t Start, char C) {
-  size_t I = Start;
-  while (I < S.size() && S[I] == C)
-    ++I;
-  return I - Start;
+  size_t End = S.find_first_not_of(C, Start);
+  return (End == StringRef::npos ? S.size() : End) - Start;
 }
 
 // Strips one leading and one trailing space from a code span's content when
@@ -330,9 +324,7 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
   // Phase 2: match closers back to openers. OpenersBottom records, per closer
   // kind, how far back a failed search needs to look, keyed by delimiter char,
   // run length mod 3, and whether the closer can also open.
-  int OpenersBottom[12];
-  for (int &B : OpenersBottom)
-    B = -1;
+  SmallVector<int, 12> OpenersBottom(12, -1);
   auto bucket = [](const InlinePiece &P) {
     return (P.Ch == '_' ? 6 : 0) + (P.OrigLen % 3) * 2 + (P.CanOpen ? 1 : 0);
   };

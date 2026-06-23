@@ -1,4 +1,4 @@
-//===-- FuzzMarkdown.cpp - Fuzzer for the clang-doc Markdown parser -------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,19 +23,17 @@
 
 using namespace clang::doc::markdown;
 
-namespace {
-void visit(const MDNode *Node);
+static void visit(const MDNode *Node);
 
-void visitAll(llvm::ArrayRef<MDNode *> Nodes) {
+static void visitAll(llvm::ArrayRef<MDNode *> Nodes) {
   for (const MDNode *N : Nodes)
     visit(N);
 }
 
-// Touches Node->Kind and recurses into any children so the whole tree is read.
-void visit(const MDNode *Node) {
+// Recurses into a node's children so the whole tree is walked.
+static void visit(const MDNode *Node) {
   if (!Node)
     return;
-  (void)Node->Kind;
   if (const auto *P = llvm::dyn_cast<ParagraphNode>(Node))
     visitAll(P->Children);
   else if (const auto *H = llvm::dyn_cast<HeadingNode>(Node))
@@ -62,7 +60,6 @@ void visit(const MDNode *Node) {
         visitAll(Cell.Children);
   }
 }
-} // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   llvm::BumpPtrAllocator Arena;
