@@ -120,32 +120,20 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   findAffectedValues(CI, TTI, Affected);
 
   DenseMap<Value *, int> ExpectedMatches;
-  DenseMap<Value *, bool> VisitedAffected;
 
-  for (auto &AV : Affected) {
-    auto AVI = AffectedValues.find_as(AV.Assume);
-    if (AVI == AffectedValues.end())
-      continue;
-
-    if (VisitedAffected[AV.Assume])
-      continue;
-    VisitedAffected[AV.Assume] = true;
-
-    // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
-    //     call void @llvm.assume(i1 true)
-    //                   [ "dereferenceable"(ptr %arg1, i64 1),
-    //                     "align"(ptr %arg1, i64 8) ]
-    // it will appear multiple times in Affected, but we may (depending on
-    // how the results in AffectedValues.find_as(AV.Assume) are ordered)
-    // nullify multiple instances of Elem.Assume during one iteration of the
-    // 'for (auto &AV : Affected)' loop below. The next iteration of that for
-    // loop may then find only a match to a different AssumeInst, resulting in
-    // an assertion failure. Avoid this by counting the number of expected
-    // matches.
-    for (ResultElem &Elem : AVI->second)
-      if (Elem.Assume == CI)
-        ExpectedMatches[AV.Assume]++;
-  }
+  // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
+  //     call void @llvm.assume(i1 true)
+  //                   [ "dereferenceable"(ptr %arg1, i64 1),
+  //                     "align"(ptr %arg1, i64 8) ]
+  // it will appear multiple times in Affected, but we may (depending on
+  // how the results in AffectedValues.find_as(AV.Assume) are ordered)
+  // nullify multiple instances of Elem.Assume during one iteration of the
+  // 'for (auto &AV : Affected)' loop below. The next iteration of that for
+  // loop may then find only a match to a different AssumeInst, resulting in
+  // an assertion failure. Avoid this by counting the number of expected
+  // matches.
+  for (auto &AV : Affected)
+    ExpectedMatches[AV.Assume]++;
 
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
@@ -160,9 +148,9 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
 
         ExpectedMatches[AV.Assume]--;
         assert(ExpectedMatches[AV.Assume] >= 0);
-        // After ExpectedMatches == 0, we still need to iterate through this
-        // loop to determine the value of HasNonnull, to prevent prematurely
-        // AffectedValues.erase(AVI).
+        // After ExpectedMatches[AV.Assume] == 0, we still need to iterate
+        // through this loop to determine the value of HasNonnull, to avoid
+        // prematurely calling AffectedValues.erase(AVI).
       }
       HasNonnull |= !!Elem.Assume;
       if (HasNonnull && Found)
