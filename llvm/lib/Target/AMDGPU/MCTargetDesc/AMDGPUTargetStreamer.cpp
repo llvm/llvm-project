@@ -914,31 +914,31 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
 
   // xnack.
   switch (getTargetID()->getXnackSetting()) {
-  case AMDGPU::IsaInfo::TargetIDSetting::Unsupported:
+  case AMDGPU::TargetIDSetting::Unsupported:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Any:
+  case AMDGPU::TargetIDSetting::Any:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Off:
+  case AMDGPU::TargetIDSetting::Off:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::On:
+  case AMDGPU::TargetIDSetting::On:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4;
     break;
   }
   // sramecc.
   switch (getTargetID()->getSramEccSetting()) {
-  case AMDGPU::IsaInfo::TargetIDSetting::Unsupported:
+  case AMDGPU::TargetIDSetting::Unsupported:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Any:
+  case AMDGPU::TargetIDSetting::Any:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Off:
+  case AMDGPU::TargetIDSetting::Off:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::On:
+  case AMDGPU::TargetIDSetting::On:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4;
     break;
   }

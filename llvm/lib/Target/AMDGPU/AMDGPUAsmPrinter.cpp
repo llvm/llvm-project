@@ -198,7 +198,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's xnack settings are compatible with module's
   // xnack settings.
   if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getXnackSetting() !=
           getTargetStreamer()->getTargetID()->getXnackSetting()) {
     OutContext.reportError(
@@ -209,7 +209,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's sramecc settings are compatible with module's
   // sramecc settings.
   if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getSramEccSetting() !=
           getTargetStreamer()->getTargetID()->getSramEccSetting()) {
     OutContext.reportError(
@@ -1212,12 +1212,12 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       break;
 
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const IsaInfo::AMDGPUTargetID &STMTargetID = STM.getTargetID();
+    const AMDGPUTargetID &STMTargetID = STM.getTargetID();
     if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
     if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
 }
