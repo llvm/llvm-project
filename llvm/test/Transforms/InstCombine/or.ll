@@ -2389,10 +2389,7 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
 
 define i32 @signum_i32_or_lshr_neg(i32 %x) {
 ; CHECK-LABEL: @signum_i32_or_lshr_neg(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[ZGT0:%.*]] = lshr i32 [[NEG]], 31
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %signbit = ashr i32 %x, 31
@@ -2404,10 +2401,7 @@ define i32 @signum_i32_or_lshr_neg(i32 %x) {
 
 define i32 @signum_i32_or_lshr_neg_commuted(i32 %x) {
 ; CHECK-LABEL: @signum_i32_or_lshr_neg_commuted(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[ZGT0:%.*]] = lshr i32 [[NEG]], 31
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[ZGT0]], [[SIGNBIT]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X:%.*]], i32 0)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %signbit = ashr i32 %x, 31
@@ -2419,10 +2413,7 @@ define i32 @signum_i32_or_lshr_neg_commuted(i32 %x) {
 
 define <2 x i5> @signum_v2i5_or_lshr_neg(<2 x i5> %x) {
 ; CHECK-LABEL: @signum_v2i5_or_lshr_neg(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr <2 x i5> [[X:%.*]], splat (i5 4)
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i5> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[ZGT0:%.*]] = lshr <2 x i5> [[NEG]], splat (i5 4)
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i5> [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i5> @llvm.scmp.v2i5.v2i5(<2 x i5> [[X:%.*]], <2 x i5> zeroinitializer)
 ; CHECK-NEXT:    ret <2 x i5> [[R]]
 ;
   %signbit = ashr <2 x i5> %x, <i5 4, i5 4>

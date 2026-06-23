@@ -4687,6 +4687,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                      {X, Constant::getNullValue(Ty)}));
   }
 
+  // signum: or (ashr X, BW-1), (lshr (-X), BW-1) --> scmp(X, 0)
+  {
+    Value *X;
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    if (match(&I,
+              m_c_Or(m_AShr(m_Value(X), m_SpecificIntAllowPoison(BitWidth - 1)),
+                     m_LShr(m_Neg(m_Deferred(X)),
+                            m_SpecificIntAllowPoison(BitWidth - 1)))) &&
+        (Op0->hasOneUse() || Op1->hasOneUse()))
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(Ty, Intrinsic::scmp,
+                                     {X, Constant::getNullValue(Ty)}));
+  }
+
   return nullptr;
 }
 
