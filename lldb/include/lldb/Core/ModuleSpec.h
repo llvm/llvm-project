@@ -301,8 +301,7 @@ public:
       }
     }
     // Only match on load address if they both have a valid value.
-    if (m_load_addr.has_value() && 
-        match_module_spec.m_load_addr.has_value() &&
+    if (m_load_addr.has_value() && match_module_spec.m_load_addr.has_value() &&
         match_module_spec.GetLoadAddress() != GetLoadAddress())
       return false;
     return true;

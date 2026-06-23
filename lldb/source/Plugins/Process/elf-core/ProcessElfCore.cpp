@@ -395,7 +395,7 @@ bool ProcessElfCore::FindModuleUUID(ModuleSpec &spec) {
     // best way for us to find a module is by load address, so use this trick
     // if the load address is set in the module specification.
     if (std::optional<lldb::addr_t> load_addr = spec.GetLoadAddress()) {
-      if (std::optional<NT_FILE_Entry> nt = 
+      if (std::optional<NT_FILE_Entry> nt =
               GetNTFileEntryContainingAddress(*load_addr))
         path = nt->path;
     }
@@ -408,9 +408,8 @@ bool ProcessElfCore::FindModuleUUID(ModuleSpec &spec) {
     if (it != m_uuids.end()) {
       Log *log = GetLog(LLDBLog::Process);
       spec.GetUUID() = it->second;
-      LLDB_LOGF(log, 
-                "ProcessElfCore::FindModuleUUID() found UUID for %s: %s",
-                spec.GetFileSpec().GetPath().c_str(), 
+      LLDB_LOGF(log, "ProcessElfCore::FindModuleUUID() found UUID for %s: %s",
+                spec.GetFileSpec().GetPath().c_str(),
                 it->second.GetAsString().c_str());
     }
   }

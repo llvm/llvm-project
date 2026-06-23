@@ -1425,7 +1425,7 @@ public:
   ///
   /// \param [in,out] spec
   ///     A module specification with as much detail as possible about the
-  ///     module for which we are trying to find a UUID. The 
+  ///     module for which we are trying to find a UUID. The
   ///     ModuleSpec.m_file should be filled in. If a dynamic loader is
   ///     calling this, the load address of the module can be filled in as
   ///     well. Sometimes the file path for a library can be a symlink and
