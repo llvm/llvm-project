@@ -885,6 +885,7 @@ add_header_macro(
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
+    .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t
