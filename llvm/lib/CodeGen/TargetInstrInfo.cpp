@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -56,6 +57,19 @@ static cl::opt<unsigned int>
 static cl::opt<unsigned int> MaxAccumulatorWidth(
     "acc-max-width", cl::Hidden, cl::init(3),
     cl::desc("Maximum number of branches in the accumulator tree"));
+
+static cl::opt<unsigned> LargeIntervalSizeThreshold(
+    "large-interval-size-threshold", cl::Hidden,
+    cl::desc("If the valnos size of an interval is larger than the threshold, "
+             "it is regarded as a large interval. "),
+    cl::init(100));
+
+static cl::opt<unsigned> LargeIntervalFreqThreshold(
+    "large-interval-freq-threshold", cl::Hidden,
+    cl::desc("For a large interval, if it is coalesced with other live "
+             "intervals many times more than the threshold, stop its "
+             "coalescing to control the compile time. "),
+    cl::init(256));
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
@@ -2231,4 +2245,16 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 bool TargetInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
          (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
+}
+
+bool TargetInstrInfo::isHighCostLiveInterval(
+    LiveInterval &LI, DenseMap<Register, unsigned long> &LIVistCounter) const {
+  if (LI.valnos.size() < LargeIntervalSizeThreshold)
+    return false;
+  auto &Counter = LIVistCounter[LI.reg()];
+  if (Counter < LargeIntervalFreqThreshold) {
+    Counter++;
+    return false;
+  }
+  return true;
 }
