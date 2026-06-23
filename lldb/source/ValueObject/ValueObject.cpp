@@ -53,8 +53,8 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 #include <algorithm>
 #include <atomic>
@@ -2860,8 +2860,8 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     }
 
     ValueObjectSP result_sp = dwarf_symbol_file->ResolveImplicitPointer(
-        implicit_pointer.die_offset, implicit_pointer.byte_offset,
-        pointee_type, exe_ctx.GetBestExecutionContextScope(), GetVariable().get());
+        implicit_pointer.die_offset, implicit_pointer.byte_offset, pointee_type,
+        exe_ctx.GetBestExecutionContextScope(), GetVariable().get());
     if (!result_sp) {
       error = Status::FromErrorStringWithFormat(
           "cannot resolve DW_OP_implicit_pointer target DIE 0x%" PRIx64,

@@ -53,11 +53,10 @@ public:
   }
 
   MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
-  explicit MockDwarfDelegate(uint16_t version,
-                             llvm::dwarf::DwarfFormat dwarf_format =
-                                 llvm::dwarf::DWARF32)
-      : m_dwarf_version(version),
-        m_dwarf_format(dwarf_format) {}
+  explicit MockDwarfDelegate(
+      uint16_t version,
+      llvm::dwarf::DwarfFormat dwarf_format = llvm::dwarf::DWARF32)
+      : m_dwarf_version(version), m_dwarf_format(dwarf_format) {}
 
   uint16_t GetVersion() const override { return m_dwarf_version; }
   llvm::dwarf::DwarfFormat GetDwarfFormat() const override {
