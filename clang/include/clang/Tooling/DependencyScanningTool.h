@@ -117,6 +117,8 @@ public:
     return Worker.getTracingVFS();
   }
 
+  dependencies::DependencyScanningWorker &getWorker() { return Worker; }
+
 private:
   dependencies::DependencyScanningWorker Worker;
 
@@ -172,9 +174,8 @@ class CompilerInstanceWithContext {
   int32_t SrcLocOffset = 0;
 
   CompilerInstanceWithContext(dependencies::DependencyScanningWorker &Worker,
-                              StringRef CWD,
-                              const std::vector<std::string> &CMD)
-      : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
+                              StringRef CWD, ArrayRef<std::string> CMD)
+      : Worker(Worker), CWD(CWD), CommandLine(CMD.begin(), CMD.end()) {}
 
   bool initialize(dependencies::DependencyActionController &Controller,
                   std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
@@ -182,21 +183,23 @@ class CompilerInstanceWithContext {
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
 
 public:
-  /// @brief Initialize the tool's compiler instance from the commandline.
-  ///        The compiler instance only takes a `-cc1` job, so this method
-  ///        builds the `-cc1` job from the CommandLine input.
-  /// @param Tool The dependency scanning tool whose compiler instance
-  ///        with context is initialized.
+  /// @brief Initialize the tool's compiler instance from the cc1 commandline.
+  /// @param Worker The dependency scanning worker to initialize the compiler
+  ///        instance.
   /// @param CWD The current working directory.
-  /// @param CommandLine This command line may be a driver command or a cc1
-  ///        command.
-  /// @param DC A diagnostics consumer to report error if the initialization
-  ///        fails.
-  static std::optional<CompilerInstanceWithContext> initializeFromCommandline(
-      DependencyScanningTool &Tool, StringRef CWD,
-      ArrayRef<std::string> CommandLine,
-      dependencies::DependencyActionController &Controller,
-      DiagnosticConsumer &DC);
+  /// @param CC1CommandLine A cc1 command.
+  /// @param DiagEngineWithDiagOpts The diagnostic engine used during scan.
+  /// @param OverlayFS An overlay FS containing the input file, which may be
+  ///        from an in-memory buffer.
+  /// @param Controller A dependency action controller to gather some results.
+  static std::optional<CompilerInstanceWithContext>
+  initializeFromCC1Commandline(
+      dependencies::DependencyScanningWorker &Worker, StringRef CWD,
+      ArrayRef<std::string> CC1CommandLine,
+      std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
+          DiagEngineWithDiagOpts,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      dependencies::DependencyActionController &Controller);
 
   /// @brief Initializing the context and the compiler instance.
   ///        This method must be called before calling
