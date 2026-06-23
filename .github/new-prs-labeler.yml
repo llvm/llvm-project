@@ -1082,12 +1082,16 @@ backend:MIPS:
       - '**/*Mips*/**'
 
 backend:RISC-V:
+- all:
   - changed-files:
     - any-glob-to-any-file:
       - '**/*riscv*'
       - '**/*RISCV*'
       - '**/*riscv*/**'
       - '**/*RISCV*/**'
+    # Exclude tagging libc config changes
+    - all-globs-to-all-files:
+      - '!libc/config/**'
 
 backend:Xtensa:
   - changed-files:
