@@ -23,6 +23,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 
@@ -197,22 +199,11 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (FrameSize) {
-    unsigned Opcode;
-
-    // Select the optimal opcode depending on how big it is.
-    if (isUInt<6>(FrameSize) && STI.hasADDSUBIW()) {
-      Opcode = AVR::ADIWRdK;
-    } else {
-      Opcode = AVR::SUBIWRdK;
-      FrameSize = -FrameSize;
-    }
-
     // Restore the frame pointer by doing FP += <size>.
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
-                           .addReg(AVR::R29R28, RegState::Kill)
-                           .addImm(FrameSize);
-    // The SREG implicit def is dead.
-    MI->getOperand(3).setIsDead();
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::ADIWRdKP), AVR::R29R28)
+        .addReg(AVR::R29R28, RegState::Kill)
+        .addImm(FrameSize)
+        .setOperandDead(3); // implicit-def $sreg
   }
 
   // Write back R29R28 to SP and temporarily disable interrupts.
@@ -220,6 +211,32 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
       .addReg(AVR::R29R28, RegState::Kill);
 
   restoreStatusRegister(MF, MBB);
+}
+
+StackOffset AVRFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
+  int64_t Offset;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  switch (MFI.getStackID(FI)) {
+  case TargetStackID::Default:
+    Offset = MFI.getObjectOffset(FI) + MFI.getOffsetAdjustment() +
+             MFI.getStackSize() - getOffsetOfLocalArea() + 1;
+
+    assert(Offset > 0);
+    break;
+
+  case TargetStackID::AvrAlign:
+    Offset = MFI.getObjectOffset(FI);
+    assert(Offset >= 0);
+    break;
+
+  default:
+    llvm_unreachable("Unsupported stack!");
+  }
+
+  return StackOffset::getFixed(Offset);
 }
 
 // Return true if the specified function should have a dedicated frame
@@ -389,23 +406,12 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
     // with a few pop instructions instead of the 8-9 instructions now
     // required.
 
-    // Select the best opcode to adjust SP based on the offset size.
-    unsigned AddOpcode;
-
-    if (isUInt<6>(Amount) && STI.hasADDSUBIW()) {
-      AddOpcode = AVR::ADIWRdK;
-    } else {
-      AddOpcode = AVR::SUBIWRdK;
-      Amount = -Amount;
-    }
-
-    // Build the instruction sequence.
     BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
 
-    MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AddOpcode), AVR::R31R30)
-                            .addReg(AVR::R31R30, RegState::Kill)
-                            .addImm(Amount);
-    New->getOperand(3).setIsDead();
+    BuildMI(MBB, MI, DL, TII.get(AVR::ADIWRdKP), AVR::R31R30)
+        .addReg(AVR::R31R30, RegState::Kill)
+        .addImm(Amount)
+        .setOperandDead(3); // implicit-def $sreg
 
     BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
         .addReg(AVR::R31R30, RegState::Kill);
@@ -425,6 +431,7 @@ void AVRFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(AVR::R28);
   }
 }
+
 /// The frame analyzer pass.
 ///
 /// Scans the function for allocas and used arguments
@@ -444,8 +451,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
       // about fixed size allocas so do not give false positives if only
       // variable sized allocas are present.
       for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
-        // Variable sized objects have size 0.
-        if (MFI.getObjectSize(i)) {
+        if (!MFI.isVariableSizedObjectIndex(i) && !MFI.isDeadObjectIndex(i)) {
           AFI->setHasAllocas(true);
           break;
         }
