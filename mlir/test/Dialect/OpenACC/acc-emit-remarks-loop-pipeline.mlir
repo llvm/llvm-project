@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -acc-compute-lowering -acc-emit-remarks-loop --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s
 
-// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=parallel_gang_loop | Remark="!$acc loop gang(10) ! blockidx%x"
+// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=parallel_gang_loop | Remark="!$acc loop gang(10) ! blockidx.x"
 func.func @parallel_gang_loop(%buf: memref<1xi32>) {
   %c0 = arith.constant 0 : index
   %c1_i32 = arith.constant 1 : i32

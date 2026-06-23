@@ -39,7 +39,8 @@ namespace {
 static bool shouldEmitLoopRemarks(acc::ComputeRegionOp computeRegion) {
   StringRef origin = computeRegion.getOrigin();
   if (origin == acc::KernelsOp::getOperationName() ||
-      origin == acc::ParallelOp::getOperationName())
+      origin == acc::ParallelOp::getOperationName() ||
+      origin == acc::SerialOp::getOperationName())
     return true;
 
   if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
@@ -68,26 +69,32 @@ static std::string getACCParLevelName(acc::GPUParallelDimAttr parDim,
   return accName;
 }
 
-static std::string getGPUParDimName(acc::GPUParallelDimAttr parDim) {
+static std::string getGPUParDimName(acc::GPUParallelDimAttr parDim,
+                                    llvm::StringRef separator) {
+  auto formatDim = [&](llvm::StringRef prefix, char axis) {
+    return (prefix + separator).str() + axis;
+  };
+
   if (parDim.isThreadX())
-    return "threadidx%x";
+    return formatDim("threadidx", 'x');
   if (parDim.isThreadY())
-    return "threadidx%y";
+    return formatDim("threadidx", 'y');
   if (parDim.isThreadZ())
-    return "threadidx%z";
+    return formatDim("threadidx", 'z');
   if (parDim.isBlockX())
-    return "blockidx%x";
+    return formatDim("blockidx", 'x');
   if (parDim.isBlockY())
-    return "blockidx%y";
+    return formatDim("blockidx", 'y');
   if (parDim.isBlockZ())
-    return "blockidx%z";
+    return formatDim("blockidx", 'z');
   return {};
 }
 
 static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
                                   LoopLikeOpInterface loopOp,
                                   acc::OpenACCSupport &accSupport,
-                                  const acc::ACCToGPUMappingPolicy &policy) {
+                                  const acc::ACCToGPUMappingPolicy &policy,
+                                  llvm::StringRef gpuDimSeparator) {
   acc::GPUParallelDimsAttr parDimsAttr =
       loopOp->getAttrOfType<acc::GPUParallelDimsAttr>(
           acc::GPUParallelDimsAttr::name);
@@ -111,7 +118,8 @@ static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
 
         for (acc::GPUParallelDimAttr parDim : parDims) {
           accMsgs.push_back(getACCParLevelName(parDim, policy, computeRegion));
-          if (std::string gpuName = getGPUParDimName(parDim); !gpuName.empty())
+          if (std::string gpuName = getGPUParDimName(parDim, gpuDimSeparator);
+              !gpuName.empty())
             gpuMsgs.push_back(std::move(gpuName));
         }
 
@@ -137,13 +145,16 @@ public:
     func::FuncOp func = getOperation();
     acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
     acc::DefaultACCToGPUMappingPolicy policy;
+    if (gpuDimSeparator.empty())
+      gpuDimSeparator = ".";
 
     func.walk([&](acc::ComputeRegionOp computeRegion) {
       if (!shouldEmitLoopRemarks(computeRegion))
         return;
 
       computeRegion.getRegion().walk([&](LoopLikeOpInterface loopOp) {
-        emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy);
+        emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
+                              gpuDimSeparator);
       });
     });
   }

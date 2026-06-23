@@ -187,9 +187,9 @@ def ACCEmitRemarksLoop : Pass<"acc-emit-remarks-loop", "mlir::func::FuncOp"> {
     compute constructs and reports remarks for each loop carrying an
     `acc.par_dims` attribute.
   }];
-  let dependentDialects = [
-    "mlir::acc::OpenACCDialect",
-    "mlir::scf::SCFDialect"
+  let options = [
+    Option<"gpuDimSeparator", "gpu-dim-separator", "std::string", "\".\"",
+           "Separator between GPU index prefix and axis name in remarks ">
   ];
 }
 
