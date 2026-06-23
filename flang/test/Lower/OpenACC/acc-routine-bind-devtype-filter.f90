@@ -15,7 +15,7 @@ subroutine s_bind_devtype_filter(n, x)
 end subroutine
 
 ! CHECK-DAG: acc.routine @{{.*}} func(@_QPfoo) bind(@_QPfoo_n [#acc.device_type<nvidia>], @_QPfoo_m [#acc.device_type<multicore>]) worker ([#acc.device_type<multicore>]) vector ([#acc.device_type<nvidia>])
-! CHECK-DAG: acc.routine @{{.*}} func(@_QPfoo_n) vector ([#acc.device_type<nvidia>]){{$}}
-! CHECK-DAG: acc.routine @{{.*}} func(@_QPfoo_m) worker ([#acc.device_type<multicore>]){{$}}
-! CHECK-DAG: func.func private @_QPfoo_n
-! CHECK-DAG: func.func private @_QPfoo_m
+! CHECK-DAG: acc.routine @[[FOO_N_ROUTINE:.*]] func(@_QPfoo_n) vector ([#acc.device_type<nvidia>]){{$}}
+! CHECK-DAG: acc.routine @[[FOO_M_ROUTINE:.*]] func(@_QPfoo_m) worker ([#acc.device_type<multicore>]){{$}}
+! CHECK-DAG: func.func private @_QPfoo_n({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[FOO_N_ROUTINE]]]>}
+! CHECK-DAG: func.func private @_QPfoo_m({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[FOO_M_ROUTINE]]]>}
