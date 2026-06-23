@@ -286,7 +286,7 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::Scheduler::Direction::TopDown);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0, L1}));
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
     EXPECT_TRUE(Sched.trySchedule({Ret}));
@@ -295,7 +295,7 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::Scheduler::Direction::TopDown);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0, L1}));
     EXPECT_TRUE(Sched.trySchedule({S1}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
@@ -305,7 +305,7 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::Scheduler::Direction::TopDown);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0, L1}));
     EXPECT_TRUE(Sched.trySchedule({S0}));
     EXPECT_TRUE(Sched.trySchedule({S1}));
@@ -316,11 +316,10 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::Scheduler::Direction::TopDown);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L0}));
     EXPECT_TRUE(Sched.trySchedule({L1}));
     EXPECT_FALSE(Sched.trySchedule({S0, S2}));
-    Sched.clear(); // TODO: Remove
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     Ctx.revert();
@@ -328,7 +327,7 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::Scheduler::Direction::TopDown);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
     EXPECT_TRUE(Sched.trySchedule({L1}));
     EXPECT_TRUE(Sched.trySchedule({L0}));
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
@@ -338,16 +337,12 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
-    Sched.setDirection(sandboxir::Scheduler::Direction::TopDown);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
     // Dependent instrs.
     EXPECT_FALSE(Sched.trySchedule({L0, L1, S0, S1}));
-    Sched.clear(); // TODO: Remove
     EXPECT_FALSE(Sched.trySchedule({L0, L1, S0}));
-    Sched.clear(); // TODO: Remove
     EXPECT_FALSE(Sched.trySchedule({L0, S0}));
-    Sched.clear(); // TODO: Remove
     EXPECT_FALSE(Sched.trySchedule({L1, S1}));
-    Sched.clear(); // TODO: Remove
     EXPECT_FALSE(Sched.trySchedule({L1, S1, Ret}));
     Sched.clear(); // TODO: Remove
     // This should succeed.

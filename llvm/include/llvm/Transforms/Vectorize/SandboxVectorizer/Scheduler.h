@@ -103,6 +103,14 @@ public:
 #endif // NDEBUG
 };
 
+enum class SchedDirection {
+  BottomUp,
+  TopDown,
+};
+#ifndef NDEBUG
+StringLiteral schedDirectionToStr(SchedDirection Dir);
+#endif
+
 /// The nodes that need to be scheduled back-to-back in a single scheduling
 /// cycle form a SchedBundle.
 class SchedBundle {
@@ -150,8 +158,11 @@ public:
   /// Move all bundle instructions to \p Where back-to-back.
   LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
-  bool ready() const {
-    return all_of(Nodes, [](const auto *N) { return N->readyBottomUp(); });
+  bool ready(SchedDirection Dir) const {
+    return all_of(Nodes, [Dir](const auto *N) {
+      return Dir == SchedDirection::BottomUp ? N->readyBottomUp()
+                                             : N->readyTopDown();
+    });
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
@@ -215,23 +226,8 @@ class Scheduler {
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
-public:
-  enum class Direction {
-    BottomUp,
-    TopDown,
-  };
-  static StringLiteral directionToStr(Direction Dir) {
-    switch (Dir) {
-    case Direction::BottomUp:
-      return "BottomUp";
-    case Direction::TopDown:
-      return "TopDown";
-    }
-    llvm_unreachable("Unhandled Dir!");
-  }
-
 private:
-  Direction Dir = Direction::BottomUp;
+  SchedDirection Dir = SchedDirection::BottomUp;
 
 public:
   Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx), Ctx(Ctx) {
@@ -244,7 +240,7 @@ public:
     if (CreateInstrCB)
       Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
   }
-  void setDirection(Direction NewDir) {
+  void setDirection(SchedDirection NewDir) {
     assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
            !ScheduleTopItOpt && ScheduledBB == nullptr &&
            "We can't change the direction during scheduling!");
