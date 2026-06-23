@@ -15,6 +15,10 @@
 
 namespace Fortran::evaluate {
 
+namespace value {
+template <typename W, int P> class Real;
+}
+
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     const INT &power,
@@ -49,6 +53,20 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     }
   }
   return result;
+}
+
+template <typename W, int P, typename INT>
+ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
+    const INT &power,
+    Rounding rounding = TargetCharacteristics::defaultRounding) {
+  using REAL = value::Real<W, P>;
+  REAL one{REAL::FromInteger(INT{1}).value};
+  if (power.IsNegative() && !base.IsZero() &&
+      base.ABS().Compare(one) == Relation::Greater) {
+    REAL recip{one.Divide(base, rounding).value};
+    return TimesIntPowerOf(one, recip, power.ABS().value, rounding);
+  }
+  return TimesIntPowerOf(one, base, power, rounding);
 }
 
 template <typename REAL, typename INT>
