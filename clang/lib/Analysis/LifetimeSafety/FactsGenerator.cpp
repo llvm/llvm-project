@@ -908,6 +908,12 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
     const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
     if (!PVD->getType()->isRValueReferenceType())
       continue;
+    // Skip lifetime annotated r-value reference parameters. Lifetime annotation
+    // indicates that the parameter is borrowed (not consumed), so it should not
+    // be marked as moved even though it's an r-value reference.
+    if (PVD->hasAttr<LifetimeBoundAttr>() ||
+        PVD->hasAttr<LifetimeCaptureByAttr>())
+      continue;
     const Expr *Arg = Args[I];
     OriginList *MovedOrigins = getOriginsList(*Arg);
     assert(MovedOrigins->getLength() >= 1 &&
