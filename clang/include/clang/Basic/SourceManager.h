@@ -938,6 +938,7 @@ public:
   /// being \#included from the specified IncludePosition.
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
+		      llvm::StringRef InputEncodingName = {},
                       int LoadedID = 0,
                       SourceLocation::UIntTy LoadedOffset = 0);
 
@@ -962,7 +963,8 @@ public:
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
   /// new FileID for the \p SourceFile.
   FileID getOrCreateFileID(FileEntryRef SourceFile,
-                           SrcMgr::CharacteristicKind FileCharacter);
+                           SrcMgr::CharacteristicKind FileCharacter,
+			   llvm::StringRef InputEncodingName = {});
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
   /// function-like macro's body. Returns the start of the expansion.

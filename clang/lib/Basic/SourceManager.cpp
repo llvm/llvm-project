@@ -121,7 +121,16 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // return paths.
   IsBufferInvalid = true;
 
-  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile);
+  // If a converter is set, open the file in binary mode to get raw bytes
+  // and avoid platform-specific auto-conversion (e.g., EBCDIC->ASCII on z/OS,
+  // CRLF->LF on Windows). The explicit converter will handle all transformations.
+  bool NeedsExplicitConversion = FileIDConverterInfo.getPointer() != nullptr;
+  bool IsText = !NeedsExplicitConversion;
+
+  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile,
+                                           /*RequiresNullTerminator=*/true,
+                                           /*MaybeLimit=*/std::nullopt,
+                                           IsText);
 
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
@@ -610,10 +619,39 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
 				   SrcMgr::CharacteristicKind FileCharacter,
+				   llvm::StringRef InputEncodingName,
                                    int LoadedID,
                                    SourceLocation::UIntTy LoadedOffset) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile,
                                                      isSystem(FileCharacter));
+
+  llvm::ErrorOr<llvm::TextEncodingConverter *> Converter = nullptr;
+  llvm::ErrorOr<llvm::SmallString<32>> Ccsid =
+      llvm::getEncodingNameFromFileTag(SourceFile.getName());
+  if (!Ccsid) {
+    Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+        << SourceFile.getName() << Ccsid.getError().message();
+    return FileID();
+  }
+  if (!Ccsid->empty()) {
+    // File has a tag, use the converter from SourceManager's cache
+    Converter = getOrCreateConverter(*Ccsid);
+    if (!Converter) {
+      Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+          << SourceFile.getName()
+   << (llvm::Twine("cannot create converter from encoding '") + *Ccsid + "'");
+      return FileID();
+    }
+  } else if (!InputEncodingName.empty()) {
+    // No file tag but -finput-charset conversion is desired.
+    // Get the converter from the cache using the input encoding name.
+    Converter = getOrCreateConverter(InputEncodingName);
+    if (!Converter) {
+      llvm::report_fatal_error(
+          "Cannot create converter for file '" + SourceFile.getName() + "': " +
+          Converter.getError().message());
+    }
+  }
 
   #ifndef NDEBUG
   // Either the content cache has never been used for a FileID (and, if we are
@@ -621,12 +659,13 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   // it) or the conversion (or lack thereof) should be the same as that used
   // previously.
   auto [CacheConverter, CacheUsedByFileID] = IR.FileIDConverterInfo;
+  llvm::TextEncodingConverter *ConverterPtr = Converter ? *Converter : nullptr;
   if (CacheUsedByFileID)
-    assert(CacheConverter == Converter);
+    assert(CacheConverter == ConverterPtr);
   else
-    assert(!Converter || IR.IsBufferInvalid || !IR.getBufferIfLoaded());
+    assert(!ConverterPtr || IR.IsBufferInvalid || !IR.getBufferIfLoaded());
 #endif
-  IR.FileIDConverterInfo.setPointerAndInt(Converter, true);
+  IR.FileIDConverterInfo.setPointerAndInt(Converter ? *Converter : nullptr, true);
 
   // If this is a named pipe, immediately load the buffer to ensure subsequent
   // calls to ContentCache::getSize() are accurate.
@@ -669,10 +708,12 @@ FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
 /// new FileID for the \p SourceFile.
 FileID
 SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
-                                 SrcMgr::CharacteristicKind FileCharacter) {
+                                 SrcMgr::CharacteristicKind FileCharacter,
+				 llvm::StringRef InputEncodingName) {
   FileID ID = translateFile(SourceFile);
   return ID.isValid() ? ID
-                      : createFileID(SourceFile, SourceLocation(), FileCharacter);
+                      : createFileID(SourceFile, SourceLocation(), FileCharacter,
+				     InputEncodingName);
 }
 
 /// createFileID - Create a new FileID for the specified ContentCache and
@@ -2427,7 +2468,8 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =
-      SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
+      SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User,
+			      /*InputEncodingName=*/{});
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }
