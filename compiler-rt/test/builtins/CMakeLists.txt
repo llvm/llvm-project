@@ -43,6 +43,11 @@ if (MSVC AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 endif()
 pythonize_bool(BUILTINS_IS_MSVC)
 
+# Check if the linker supports --start-group and --end-group options
+include(CheckLinkerFlag)
+check_linker_flag(C "-Wl,--start-group" COMPILER_RT_HAS_START_GROUP)
+pythonize_bool(COMPILER_RT_HAS_START_GROUP)
+
 set(BUILTIN_TEST_ARCH ${BUILTIN_SUPPORTED_ARCH})
 if(APPLE)
   darwin_filter_host_archs(BUILTIN_SUPPORTED_ARCH BUILTIN_TEST_ARCH)

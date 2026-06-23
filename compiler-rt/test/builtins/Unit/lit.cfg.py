@@ -107,9 +107,16 @@ else:
     if config.target_os == "Haiku":
         config.substitutions.append(("%librt ", base_lib + " -lroot "))
     else:
-        config.substitutions.append(
-            ("%librt ", "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ")
-        )
+        # Check if the linker supports --start-group and --end-group
+        linker_supports_start_group = get_required_attr(config, "linker_supports_start_group")
+        if linker_supports_start_group:
+            config.substitutions.append(
+                ("%librt ", "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ")
+            )
+        else:
+            config.substitutions.append(
+                ("%librt ", "-lm " + base_lib + " -lc ")
+            )
 
 builtins_test_crt = get_required_attr(config, "builtins_test_crt")
 if builtins_test_crt:
