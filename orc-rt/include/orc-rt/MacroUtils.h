@@ -14,7 +14,6 @@
 #ifndef ORC_RT_MACROUTILS_H
 #define ORC_RT_MACROUTILS_H
 
-
 #define ORC_RT_DETAIL_DEPAREN_HELPER(...) __VA_ARGS__
 
 /// Strip a single layer of outer parentheses from a token sequence.
