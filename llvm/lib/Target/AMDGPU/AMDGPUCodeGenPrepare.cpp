@@ -738,7 +738,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
   bool IsNegative = false;
 
   // TODO: Handle other numerator values with arcp.
-  if (CLHS->isExactlyValue(1.0) || (IsNegative = CLHS->isExactlyValue(-1.0))) {
+  if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
     // Add in the sqrt flags.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(DivFMF | SqrtFMF);
@@ -779,8 +779,7 @@ AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder, Value *Num,
 
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
     bool IsNegative = false;
-    if (CLHS->isExactlyValue(1.0) ||
-        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+    if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
       Value *Src = Den;
 
       if (HasFP32DenormalFlush || FMF.approxFunc()) {
@@ -843,7 +842,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
 
   bool NumIsOne = false;
   if (const ConstantFP *CNum = dyn_cast<ConstantFP>(Num)) {
-    if (CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0))
+    if (CNum->isOne() || CNum->isMinusOne())
       NumIsOne = true;
   }
 
@@ -1900,7 +1899,8 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption)
+  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption ==
+                             cl::boolOrDefault::BOU_TRUE)
     return false;
 
   FixedVectorType *FVT = dyn_cast<FixedVectorType>(I.getType());

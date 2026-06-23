@@ -1721,12 +1721,25 @@ void CombinerHelper::applyOptBrCondByInvertingCond(
   Observer.changedInstr(*BrCond);
 }
 
-bool CombinerHelper::tryEmitMemcpyInlineFamily(MachineInstr &MI) const {
+bool CombinerHelper::matchCombineMemCpyFamily(
+    MachineInstr &MI, MemCpyFamilyLoweringInfo &MatchInfo,
+    unsigned MaxLen) const {
+  auto &[Dst, Src, KnownLen, Alignment, DstAlignCanChange, MemOps] = MatchInfo;
+  return canLowerMemCpyFamily(MI, MRI, MaxLen, Dst, Src, KnownLen, Alignment,
+                              DstAlignCanChange, MemOps);
+}
+
+void CombinerHelper::applyCombineMemCpyFamily(
+    MachineInstr &MI, MemCpyFamilyLoweringInfo &MatchInfo) const {
+  auto &[Dst, Src, KnownLen, Alignment, DstAlignCanChange, MemOps] = MatchInfo;
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
   LegalizerHelper Helper(HelperBuilder.getMF(), DummyObserver, HelperBuilder);
-  return Helper.lowerMemCpyFamily(MI) ==
-         LegalizerHelper::LegalizeResult::Legalized;
+  bool Changed = Helper.lowerMemCpyFamily(MI, Dst, Src, KnownLen, Alignment,
+                                          DstAlignCanChange, MemOps) ==
+                 LegalizerHelper::LegalizeResult::Legalized;
+  assert(Changed && "expected memcpy-family instruction to lower");
+  (void)Changed;
 }
 
 bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI,
@@ -7019,7 +7032,7 @@ bool CombinerHelper::matchRepeatedFPDivisor(
 
   auto IsOne = [this](Register X) {
     auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
-    return N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0));
+    return N0CFP && (N0CFP->isOne() || N0CFP->isMinusOne());
   };
 
   // Skip if current node is a reciprocal/fneg-reciprocal.

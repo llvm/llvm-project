@@ -778,6 +778,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
+  unsigned MutatedCallIdx = 0;
   for (auto &&[CB, NewFnTy] : Calls) {
     SmallVector<std::pair<int, Type *>> ChangedTypes;
     SmallVector<Type *> NewArgTypes;
@@ -799,11 +800,13 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
     NewFnTy = FunctionType::get(RetTy, NewArgTypes,
                                 CB->getFunctionType()->isVarArg());
 
-    if (!CB->hasName())
-      CB->setName("spv.mutated_callsite." + F->getName());
-    else
-      CB->setName("spv.named_mutated_callsite." + F->getName() + "." +
-                  CB->getName());
+    // Keyed via instruction metadata, not a name.
+    std::string Key =
+        ("spv.mutated_callsite." + F->getName() + "." + Twine(MutatedCallIdx++))
+            .str();
+    CB->setMetadata(
+        "spv.mutated_callsite",
+        MDNode::get(F->getContext(), MDString::get(F->getContext(), Key)));
 
     std::string Constraints;
     if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
@@ -817,7 +820,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
 
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
-        std::move(ChangedTypes), CB->getName(), Constraints);
+        std::move(ChangedTypes), Key, Constraints);
   }
 
   for (auto &&[CB, NewFTy] : Calls) {
