@@ -14,35 +14,35 @@
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f16) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (f16) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f16) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 3 : i32}> : (f16) -> i1
+  ! CHECK:     arith.bitcast %{{.*}} : f16 to i16
   print*, ieee_is_finite(x2), ieee_is_negative(x2), ieee_is_normal(x2), &
           ieee_is_nan(x2)
 
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (bf16) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (bf16) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (bf16) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 3 : i32}> : (bf16) -> i1
+  ! CHECK:     arith.bitcast %{{.*}} : bf16 to i16
   print*, ieee_is_finite(x3), ieee_is_negative(x3), ieee_is_normal(x3), &
           ieee_is_nan(x3)
 
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f32) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (f32) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f32) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 3 : i32}> : (f32) -> i1
+  ! CHECK:     arith.bitcast %{{.*}} : f32 to i32
   print*, ieee_is_finite(x4), ieee_is_negative(x4), ieee_is_normal(x4), &
           ieee_is_nan(x4)
 
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f64) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (f64) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f64) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 3 : i32}> : (f64) -> i1
+  ! CHECK:     arith.bitcast %{{.*}} : f64 to i64
   print*, ieee_is_finite(x8), ieee_is_negative(x8), ieee_is_normal(x8), &
           ieee_is_nan(x8)
 
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f128) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (f128) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f128) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 3 : i32}> : (f128) -> i1
+  ! CHECK:     arith.bitcast %{{.*}} : f128 to i128
   print*, ieee_is_finite(x16), ieee_is_negative(x16), ieee_is_normal(x16), &
           ieee_is_nan(x16)
 
