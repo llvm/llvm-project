@@ -33,7 +33,7 @@ int main(int, char**)
     {
         std::regex_traits<char> t;
         const char A[] = "A";
-        const char B[] = "B";
+        const char B[]      = "B";
         const char Aacute[] = "\xC1";
         typedef forward_iterator<const char*> F;
         assert(t.transform_primary(F(A), F(A+1)) !=
@@ -48,7 +48,7 @@ int main(int, char**)
     {
         std::regex_traits<wchar_t> t;
         const wchar_t A[] = L"A";
-        const wchar_t B[] = L"B";
+        const wchar_t B[]      = L"B";
         const wchar_t Aacute[] = L"\xC1";
         typedef forward_iterator<const wchar_t*> F;
         assert(t.transform_primary(F(A), F(A+1)) !=
