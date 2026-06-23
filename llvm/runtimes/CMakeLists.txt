@@ -367,6 +367,16 @@ function(runtime_default_target)
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 
   add_flang_mod_deps(runtimes-build ${extra_targets} ${test_targets})
+
+  # The runtimes configure step runs `flang` for CMake's Fortran ABI detection
+  # (enable_language(Fortran)). The mock `flang-lazy` driver only guarantees
+  # that bin/flang *exists*, not that its shared libraries are fully linked, so
+  # in a shared-library build the configure step can race with the linking of
+  # e.g. libFortranLower.so. Force the real flang (and its shared libraries) to
+  # be built first in that configuration; static builds keep the mock fast path.
+  if(LLVM_LINK_LLVM_DYLIB OR BUILD_SHARED_LIBS)
+    add_flang_mod_deps(runtimes-configure)
+  endif()
 endfunction()
 
 # runtime_register_target(name)
@@ -523,6 +533,13 @@ function(runtime_register_target name)
   endforeach()
 
   add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
+
+  # See the comment in runtime_default_target: the configure step executes the
+  # real flang, so in shared-library builds it must wait for flang's shared
+  # libraries to be linked rather than racing against them.
+  if(LLVM_LINK_LLVM_DYLIB OR BUILD_SHARED_LIBS)
+    add_flang_mod_deps(runtimes-${name}-configure)
+  endif()
 endfunction()
 
 # Check if we have any runtimes to build.
