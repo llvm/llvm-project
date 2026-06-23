@@ -10,7 +10,7 @@
 
 // class multimap
 
-// insert(...)
+// insert(...) // constexpr since C++26
 
 // UNSUPPORTED: c++03
 
