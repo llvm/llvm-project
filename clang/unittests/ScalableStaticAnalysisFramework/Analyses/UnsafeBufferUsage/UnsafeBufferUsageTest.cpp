@@ -688,6 +688,71 @@ TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"q", 1U}}));
 }
 
+//////////////////////////////////////////////////////////////
+// Template is ignored but instantiations are visited.      //
+//////////////////////////////////////////////////////////////
+
+TEST_F(UnsafeBufferUsageTest, FunctionTemplate) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    T* f(T *p) {
+      return &p[5];
+    }
+  )cpp"));
+  ASSERT_FALSE(findDeclByName("f", AST->getASTContext()));
+}
+
+TEST_F(UnsafeBufferUsageTest, MethodInClassTemplate) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    struct Wrapper {
+      T *ptr;
+      void set(T *p) { ptr = p[5]; }
+    };
+  )cpp"));
+  ASSERT_FALSE(findDeclByName("set", AST->getASTContext()));
+}
+
+TEST_F(UnsafeBufferUsageTest, FunctionTemplateInstantiation) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+  template<typename T>
+  void unsafe(T p) {
+    p[1] = p[2] + p[3];
+  }
+  
+  void f(int *p) {
+    unsafe(p);
+  }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("unsafe");
+
+  ASSERT_TRUE(Sum);
+  ASSERT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, MethodInClassTemplateInstantiation) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+  template<typename T>
+  struct UnsafeClass {
+    T p;
+    void unsafe_method() {
+       p[1] = p[2] + p[3];
+    }
+  };
+  
+  void f(int *p) {
+    UnsafeClass<int *> UC;
+
+    UC.unsafe_method();
+  }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("unsafe_method");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
 // Robustness test: unsupported constructs will not cause crash
 #ifndef NDEBUG
 TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
