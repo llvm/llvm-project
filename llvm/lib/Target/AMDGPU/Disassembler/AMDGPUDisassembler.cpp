@@ -269,6 +269,16 @@ static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
   return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
 }
 
+static DecodeStatus decodeRsrcReg256(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_256).
+  if (Imm < 128)
+    OpWidth = 256;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
 #define DECODE_OPERAND_SREG_7(RegClass, OpWidth)                               \
@@ -1504,7 +1514,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     return;
 
   int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize,
+                            AddrSize, Info->IndexedRsrc, Info->IndexedSamp);
   if (NewOpcode == -1)
     return;
 
