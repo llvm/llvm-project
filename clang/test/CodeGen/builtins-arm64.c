@@ -225,6 +225,10 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
 
   __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, 1); // HINT_STSHH_STRM
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !aarch64.atomic.hint ![[M2:[0-9]]]
+
+  // Invalid hint should be dropped
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 2); // Invalid Hint
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
 }
 
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}

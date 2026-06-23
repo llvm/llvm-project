@@ -19441,8 +19441,6 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
             cast<ConstantAsMetadata>(AtomicStHint->getOperand(0))->getValue())
             ->getZExtValue();
     AArch64AtomicStoreHint Hint = getAtomicStoreHintFromMD(HintVal);
-    assert(Hint != AArch64AtomicStoreHint::HINT_NONE &&
-           "Unrecognised atomic hint value requested.");
 
     if (static_cast<unsigned>(Hint) & 0b1)
       Flags |= MOAtomicHintBit0;
