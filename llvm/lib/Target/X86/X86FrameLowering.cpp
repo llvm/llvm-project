@@ -139,17 +139,6 @@ static unsigned getLEArOpcode(bool IsLP64) {
   return IsLP64 ? X86::LEA64r : X86::LEA32r;
 }
 
-static unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
-  if (Use64BitReg) {
-    if (isUInt<32>(Imm))
-      return X86::MOV32ri64;
-    if (isInt<32>(Imm))
-      return X86::MOV64ri32;
-    return X86::MOV64ri;
-  }
-  return X86::MOV32ri;
-}
-
 // Push-Pop Acceleration (PPX) hint is used to indicate that the POP reads the
 // value written by the PUSH from the stack. The processor tracks these marked
 // instructions internally and fast-forwards register data between matching PUSH
@@ -282,8 +271,8 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     unsigned AddSubRROpc = isSub ? getSUBrrOpcode(Uses64BitFramePtr)
                                  : getADDrrOpcode(Uses64BitFramePtr);
     if (Reg) {
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Uses64BitFramePtr, Offset)),
-              Reg)
+      BuildMI(MBB, MBBI, DL,
+              TII.get(X86::getMOVriOpcode(Uses64BitFramePtr, Offset)), Reg)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AddSubRROpc), StackPtr)
@@ -309,8 +298,8 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         Offset = -(Offset - SlotSize);
       else
         Offset = Offset + SlotSize;
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Uses64BitFramePtr, Offset)),
-              Rax)
+      BuildMI(MBB, MBBI, DL,
+              TII.get(X86::getMOVriOpcode(Uses64BitFramePtr, Offset)), Rax)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), Rax)
@@ -2101,7 +2090,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       // Handle the 64-bit Windows ABI case where we need to call __chkstk.
       // Function prologue is responsible for adjusting the stack pointer.
       int64_t Alloc = isEAXAlive ? NumBytes - 8 : NumBytes;
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Alloc)), X86::RAX)
+      BuildMI(MBB, MBBI, DL, TII.get(X86::getMOVriOpcode(Is64Bit, Alloc)),
+              X86::RAX)
           .addImm(Alloc)
           .setMIFlag(MachineInstr::FrameSetup);
     } else {
@@ -3623,10 +3613,11 @@ void X86FrameLowering::adjustForSegmentedStacks(
     if (IsNested)
       BuildMI(allocMBB, DL, TII.get(MOVrr), RegAX).addReg(Reg10);
 
-    BuildMI(allocMBB, DL, TII.get(getMOVriOpcode(IsLP64, StackSize)), Reg10)
+    BuildMI(allocMBB, DL, TII.get(X86::getMOVriOpcode(IsLP64, StackSize)),
+            Reg10)
         .addImm(StackSize);
     BuildMI(allocMBB, DL,
-            TII.get(getMOVriOpcode(IsLP64, X86FI->getArgumentStackSize())),
+            TII.get(X86::getMOVriOpcode(IsLP64, X86FI->getArgumentStackSize())),
             Reg11)
         .addImm(X86FI->getArgumentStackSize());
   } else {

@@ -1733,9 +1733,9 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
       // Do not append a pair that's already in the CSR list.
       if (CSRSet.contains(Pair))
         continue;
-      MCPhysReg EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
-      MCPhysReg OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
-      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg)) {
+      MCRegister EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
+      MCRegister OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
+      if (CSRSet.contains(EvenReg.id()) && CSRSet.contains(OddReg.id())) {
         NewCSRs.push_back(Pair);
         CSRSet.insert(Pair);
       }
@@ -1749,12 +1749,13 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // register bit. For GPRPair, only check sub_gpr_even and sub_gpr_odd, not
   // aliases like X8_W or X8_H which are not set in SavedRegs.
   for (unsigned i = 0; CSRegs[i]; ++i) {
-    unsigned CSReg = CSRegs[i];
+    MCRegister CSReg = CSRegs[i];
     bool CombineToSuperReg;
     if (RISCV::GPRPairRegClass.contains(CSReg)) {
-      MCPhysReg EvenReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_even);
-      MCPhysReg OddReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_odd);
-      CombineToSuperReg = SavedRegs.test(EvenReg) && SavedRegs.test(OddReg);
+      MCRegister EvenReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_even);
+      MCRegister OddReg = TRI.getSubReg(CSReg, RISCV::sub_gpr_odd);
+      CombineToSuperReg =
+          SavedRegs.test(EvenReg.id()) && SavedRegs.test(OddReg.id());
       // If s0(x8) is used as FP we can't generate load/store pair because it
       // breaks the frame chain.
       if (hasFP(MF) && CSReg == RISCV::X8_X9)
