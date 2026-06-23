@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -966,6 +967,51 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
       break;
     }
   }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// BuiltinIntCastOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BuiltinIntCastOp::verify() {
+  mlir::Type srcType = getSrc().getType();
+  mlir::Type resType = getType();
+
+  auto srcCirInt = mlir::dyn_cast<cir::IntType>(srcType);
+  auto resCirInt = mlir::dyn_cast<cir::IntType>(resType);
+
+  // One side must be a CIR integer the other must be a builtin
+  // integer or index type.
+  if (static_cast<bool>(srcCirInt) == static_cast<bool>(resCirInt))
+    return emitOpError()
+           << "requires exactly one '!cir.int' operand or result; the other "
+              "must be a builtin integer or 'index' type";
+
+  mlir::Type builtinType = srcCirInt ? resType : srcType;
+  if (!mlir::isa<mlir::IntegerType, mlir::IndexType>(builtinType))
+    return emitOpError() << "requires a builtin integer or 'index' type on the "
+                            "non-CIR side";
+
+  // The cast preserves bit width. 'index' has no fixed width, so only check
+  // when the builtin side is a fixed-width integer.
+  if (auto builtinInt = mlir::dyn_cast<mlir::IntegerType>(builtinType)) {
+    cir::IntType cirInt = srcCirInt ? srcCirInt : resCirInt;
+    if (cirInt.getWidth() != builtinInt.getWidth())
+      return emitOpError()
+             << "requires the CIR and builtin integer types to have the same "
+                "width; use 'cir.cast' for width conversions";
+  }
+
+  return success();
+}
+
+OpFoldResult cir::BuiltinIntCastOp::fold(FoldAdaptor adaptor) {
+  // Fold: builtin_int_cast(builtin_int_cast(x)) -> x
+  // Inner source type must match the cast's result type.
+  if (auto inner = getSrc().getDefiningOp<cir::BuiltinIntCastOp>())
+    if (inner.getSrc().getType() == getType())
+      return inner.getSrc();
   return {};
 }
 
