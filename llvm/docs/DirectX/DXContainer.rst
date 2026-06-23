@@ -144,7 +144,8 @@ HASH Part
 The HASH part contains a 32-bit unsigned integer with the shader hash flags, and
 a 128-bit MD5 hash digest. The flags field can either have the value ``0`` to
 indicate no flags, or ``1`` to indicate that the file hash was computed
-including the source code that produced the binary.
+including the source code that produced the binary. See :ref:`Compiler Flags
+<compiler_flags>` for how ``/Zss`` and ``/Zsb`` select the hashed bitcode.
 
 ILDB Part
 ---------
@@ -153,18 +154,17 @@ ILDB Part
 The ILDB part follows the structure of the `DXIL`_ part. It stores the
 unstripped DXIL bitcode module with debug information embedded.
 
-The ILDB part is emitted when the shader is compiled with debug information.
+The ILDB part is emitted when the shader is compiled with full debug information
+(``/Zi``). It is omitted from all outputs when slim debug (``/Zs``) is used.
+See :ref:`Compiler Flags <compiler_flags>` for how ``/Qembed_debug``,
+``/Qstrip_debug``, ``/Fd``, and ``/Zs`` control whether it appears in the main
+output, the companion PDB, or both.
+
 The stripped `DXIL`_ part has the ``Dwarf Version`` and ``Debug Info Version``
 module flags removed, and ``dx.source`` metadata nodes are stripped from it.
-Those nodes are preserved in the ILDB module when source is embedded in the
-debug module; otherwise they are replaced with empty placeholder values in the
-ILDB module written to the companion PDB file.
-
-By default, when debug information is present and no companion PDB file is
-requested, the ILDB part is embedded in the main DXContainer output. When a
-companion PDB file is requested, the ILDB part is written to the PDB unless
-llc's ``--dx-embed-debug`` is specified, in which case it is written to both the main
-DXContainer and the PDB.
+Those nodes are preserved in the ILDB module when ``/Qsource_in_debug_module``
+is used; otherwise they are replaced with empty placeholder values in the ILDB
+module written to the companion PDB file.
 
 .. rubric:: Reading this part
 
@@ -203,11 +203,8 @@ of the debug file name in bytes, not including the null terminator.
 
 If no PDB output path is specified, the debug file name defaults to
 ``<MD5 hash>.pdb``, where ``<MD5 hash>`` is the stringified MD5 digest from the
-`HASH`_ part. When the ``-dx-Zss`` flag is used, the digest is computed from the
-ILDB bitcode; otherwise it is computed from the stripped `DXIL`_ bitcode. If a
-PDB output path is specified with `-dx-Fd`, that path is used as the debug file name.
-When the path names a directory, the default ``<MD5 hash>.pdb`` file name is placed in
-that directory.
+`HASH`_ part. See :ref:`Compiler Flags <compiler_flags>` for how ``/Fd``, ``/Zss``,
+and ``/Zsb`` affect the debug file name and hash computation.
 
 .. rubric:: Reading this part
 
@@ -220,6 +217,7 @@ PRIV Part
 
 The PRIV part stores opaque binary data. DXC may emit it when the ``/Qpdb_in_private``
 flag is used to embed the companion debug info PDB file in the main DXContainer output.
+
 The part data may also hold arbitrary user-provided binary blobs attached by
 custom tooling.
 
@@ -243,12 +241,10 @@ SRCI Part
 .. _SRCI:
 
 The SRCI part stores shader source information extracted from ``dx.source``
-metadata in the LLVM module. It is emitted when source information is available
-and source is not embedded in the debug module. When source is embedded in the
-debug module, the ``dx.source`` metadata nodes remain in the `ILDB`_ module
-instead and the SRCI part is not generated.
+metadata in the LLVM module. It is emitted when source information is available.
+See :ref:`Compiler Flags <compiler_flags>` for output placement and related flags.
 
-The SRCI part is written to the companion PDB file. It consists of a part
+The SRCI part is written only to the companion PDB file. It consists of a part
 header followed by three 4-byte aligned sections. Each section begins with a
 ``SectionHeader`` and is followed by section-specific data:
 
@@ -882,3 +878,176 @@ SFI0 Part
 The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
 This denotes which optional features the shader requires. The flag values are
 defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
+
+Compiler Flags
+==============
+
+.. _compiler_flags:
+
+When compiling HLSL with :program:`clang-dxc`, several flags control whether
+debug information is embedded in the main DXContainer output, written to a
+companion PDB file, or both. Use ``/Zi`` for full debug output or ``/Zs`` for
+slim debug output without an `ILDB`_ part. Most dxc-style flags are forwarded
+to :program:`llc` as ``-mllvm`` options.
+
+Debug Output Locations
+----------------------
+
+Debug information is enabled with either ``/Zi`` (full debug) or ``/Zs`` (slim
+debug). The two flags are mutually exclusive.
+
+**Full debug with ``/Zi``**
+
+When ``/Zi`` is enabled, the `ILDB`_ part can appear in the main DXContainer
+output, in a companion PDB, or both:
+
+* **Embedded in the main DXContainer output.** The `ILDB`_ part holds the
+  unstripped DXIL module with debug information. It is included when
+  ``/Qembed_debug`` is used. The main output always contains the stripped `DXIL`_
+  part alongside other parts such as `HASH`_, `ILDN`_, and `VERS`_.
+* **Omitted from the main DXContainer output.** When ``/Qstrip_debug`` is used,
+  the `ILDB`_ part is not written to the main output. Other debug-related parts
+  such as `ILDN`_ are still emitted. If ``/Fd`` is also specified, the `ILDB`_
+  part is still written to the companion PDB. ``/Qstrip_debug`` takes precedence
+  over the default ``/Qembed_debug`` behavior when ``/Zi`` is used without
+  ``/Fd``. If both ``/Qstrip_debug`` and ``/Qembed_debug`` are specified,
+  ``/Qstrip_debug`` is ignored and the `ILDB`_ part is embedded.
+* **In a companion PDB file.** A sidecar ``.pdb`` stores a DXContainer stream
+  with debug-related parts including `ILDB`_, `SRCI`_, and `VERS`_. This is
+  produced when ``/Fd`` names an output path. Use :program:`llvm-pdbutil` to
+  inspect or extract that stream (see
+  :doc:`llvm-pdbutil <../CommandGuide/llvm-pdbutil>`).
+* **Embedded in the private data of the main output.** When
+  ``/Qpdb_in_private`` is used, a copy of the companion PDB file is stored as
+  opaque bytes in `PRIV`_. This can be used with or without ``/Fd``; without
+  ``/Fd``, the PDB is not retained as a separate file on disk. After extraction,
+  tools treat the bytes as a standalone ``.pdb`` file.
+
+``/Fd`` can be combined with ``/Qembed_debug`` or ``/Qpdb_in_private`` to
+write full debug information to more than one location.
+
+**Slim debug with ``/Zs``**
+
+When ``/Zs`` is enabled, LLVM emits slim debug information. The `ILDB`_ part is
+omitted from the main DXContainer output and from any companion PDB or `PRIV`_
+embedding, but other debug-related parts such as `HASH`_, `ILDN`_, `SRCI`_, and
+`VERS`_ are still emitted. A companion PDB from ``/Fd`` or a `PRIV`_ embedding
+from ``/Qpdb_in_private`` therefore contains slim debug data only.
+
+``/Zs`` cannot be combined with ``/Qembed_debug`` or ``/Qsource_in_debug_module``.
+
+The table below summarizes the dxc-compatible flags that affect this behavior.
+The **llc flag** column lists the ``-mllvm`` option the driver forwards when
+invoking the backend.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 20 60
+
+   * - clang-dxc flag
+     - llc flag
+     - Effect
+   * - ``/Zi``, ``-g``
+     -
+     - Enable full debug information. Mutually exclusive with ``/Zs``. Required
+       for ``/Qembed_debug`` and ``/Qstrip_debug``. The main `DXIL`_ part is
+       stripped of debug metadata. If ``/Zi`` is used without ``/Fd``,
+       ``/Qembed_debug``, and ``/Qstrip_debug``, the driver warns and enables
+       ``/Qembed_debug`` by default.
+   * - ``/Zs``
+     - ``--dx-Zs``
+     - Enable slim debug information. Mutually exclusive with ``/Zi``. Omits
+       the `ILDB`_ part from all outputs while still emitting parts such as
+       `ILDN`_, `SRCI`_, and `VERS`_. Incompatible with ``/Qembed_debug`` and
+       ``/Qsource_in_debug_module``.
+   * - ``/Fd``\ *path*
+     - ``--dx-Fd=``\ *path*
+     - Write a companion PDB file. Requires ``/Zi`` or ``/Zs``. The path is
+       recorded in the `ILDN`_ part. If *path* ends with a directory separator,
+       the file name defaults to ``<MD5 hash>.pdb`` from the `HASH`_ part in that
+       directory; otherwise *path* is used as the PDB file name.
+   * - ``/Qembed_debug``
+     - ``--dx-embed-debug``
+     - Embed the `ILDB`_ part and other debug parts in the main DXContainer
+       output. Requires ``/Zi``. Takes precedence over ``/Qstrip_debug`` when
+       both are specified.
+   * - ``/Qstrip_debug``
+     - ``--dx-strip-debug``
+     - Omit the `ILDB`_ part from the main DXContainer output. Requires ``/Zi``.
+       The `ILDB`_ part is still written to a companion PDB
+       when ``/Fd`` is specified. Prevents the default ``/Qembed_debug`` behavior
+       when ``/Zi`` is used without ``/Fd``. Otherwise, ignored when
+       ``/Qembed_debug`` is also specified.
+   * - ``/Qpdb_in_private``
+     - ``--dx-pdb-in-private``
+     - Embed a copy of the companion PDB in the `PRIV`_ part of the main
+       DXContainer output. Requires ``/Zi`` or ``/Zs``. When ``/Fd`` is also
+       specified, the PDB is written to that path as well. Without ``/Fd``, the
+       PDB is built in a temporary file, copied into `PRIV`_, and not retained
+       on disk. With ``/Zs``, the embedded PDB contains slim debug data without
+       an `ILDB`_ part.
+   * - ``/Zss``
+     - ``--dx-Zss``
+     - Compute the `HASH`_ digest from the `ILDB`_ bitcode and set the
+       ``IncludesSource`` hash flag. Requires ``/Zi`` or ``/Zs``.
+   * - ``/Zsb``
+     -
+     - Default behavior. Compute the `HASH`_ digest from the stripped `DXIL`_
+       bitcode.
+   * - ``/Qsource_in_debug_module``
+     - ``--dx-source-in-debug-module``
+     - Embed HLSL source in the `ILDB`_ module via ``dx.source`` metadata
+       instead of emitting a separate `SRCI`_ part.
+   * - ``-fdx-no-source-metadata``
+     -
+     - Do not embed ``dx.source`` metadata in the LLVM module, which prevents
+       `SRCI`_ generation.
+
+Part Placement
+--------------
+
+The table below shows where each debug-related part is written for a typical
+shader compile. ``Yes`` means the part is present in that output whenever its
+preconditions are met.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 12 28 28 32
+
+   * - Part
+     - Main output
+     - Companion PDB (as a separate file or embedded into private data)
+     - Preconditions / notes
+   * - `DXIL`_
+     - Yes
+     - No
+     -
+   * - `ILDB`_
+     - If ``/Qembed_debug`` (default when ``/Zi`` is used without ``/Fd`` and
+       ``/Qstrip_debug``)
+     - Yes
+     - Omitted when ``/Zs`` is used. Omitted from the main output when
+       ``/Qstrip_debug`` is used, or when ``/Fd`` is used without
+       ``/Qembed_debug``.
+   * - `ILDN`_
+     - Yes
+     - Yes
+     -
+   * - `HASH`_
+     - Yes
+     - Yes
+     -
+   * - `SRCI`_
+     - No
+     - Yes
+     - Requires available source metadata. Not emitted when
+       ``/Qsource_in_debug_module`` or ``-fdx-no-source-metadata`` is used.
+   * - `VERS`_
+     - Yes
+     - Yes
+     -
+   * - `PRIV`_
+     - If ``/Qpdb_in_private``
+     - No
+     - Holds a copy of the companion PDB file. Always the last part in the
+       container.
