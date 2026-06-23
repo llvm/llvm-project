@@ -2,7 +2,7 @@
 
 ; Ensure `noipa` does _not_ control inlining. The `noipa` attribute controls
 ; _other_ interprocedural optimisations by affecting the result of
-; `isDefinitionExact` and `hasExactDefinition` checks, but inlining is
+; `isInterposable` and `isDefinitionExact` checks, but inlining is
 ; controlled separately by the `noinline` attribute.
 
 define internal i32 @noipa(i32 %x) noipa {
