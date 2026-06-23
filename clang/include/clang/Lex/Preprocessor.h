@@ -1190,9 +1190,6 @@ private:
   /// Lex() should be invoked.
   CachedTokensTy::size_type CachedLexPos = 0;
 
-  /// True when the caching lexer is installed as the active lexer layer.
-  bool IsCachingLexMode = false;
-
   /// Stack of backtrack positions, allowing nested backtracks.
   ///
   /// The EnableBacktrackAtThisPos() method pushes a position to
@@ -2586,7 +2583,7 @@ private:
   friend void TokenLexer::ExpandFunctionArguments();
 
   void PushIncludeMacroStack() {
-    assert(!IsCachingLexMode && CurLexerCallback != CLK_CachingLexer &&
+    assert(CurLexerCallback != CLK_CachingLexer &&
            "cannot push a caching lexer");
     IncludeMacroStack.emplace_back(CurLexerCallback, CurLexerSubmodule,
                                    std::move(CurLexer), CurPPLexer,
@@ -2595,7 +2592,6 @@ private:
   }
 
   void PopIncludeMacroStack() {
-    IsCachingLexMode = false;
     if (CurLexer)
       PendingDestroyLexers.push_back(std::move(CurLexer));
     CurLexer = std::move(IncludeMacroStack.back().TheLexer);
@@ -2823,16 +2819,14 @@ private:
   // Caching stuff.
   void CachingLex(Token &Result);
 
-  bool InCachingLexMode() const { return IsCachingLexMode; }
+  bool InCachingLexMode() const { return CurLexerCallback == CLK_CachingLexer; }
 
   void EnterCachingLexMode();
   void EnterCachingLexModeUnchecked();
 
   void ExitCachingLexMode() {
-    if (InCachingLexMode()) {
-      IsCachingLexMode = false;
+    if (InCachingLexMode())
       RemoveTopOfLexerStack();
-    }
   }
 
   const Token &PeekAhead(unsigned N);

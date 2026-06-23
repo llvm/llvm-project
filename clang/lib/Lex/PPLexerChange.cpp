@@ -106,9 +106,6 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
 ///  and start lexing tokens from it instead of the current buffer.
 void Preprocessor::EnterSourceFileWithLexer(std::unique_ptr<Lexer> TheLexer,
                                             ConstSearchDirIterator CurDir) {
-  if (InCachingLexMode())
-    ExitCachingLexMode();
-
   PreprocessorLexer *PrevPPLexer = CurPPLexer;
 
   // Add the current lexer to the include stack.

@@ -126,10 +126,8 @@ void Preprocessor::EnterCachingLexMode() {
 }
 
 void Preprocessor::EnterCachingLexModeUnchecked() {
-  assert(!InCachingLexMode() && CurLexerCallback != CLK_CachingLexer &&
-         "already in caching lex mode");
+  assert(!InCachingLexMode() && "already in caching lex mode");
   PushIncludeMacroStack();
-  IsCachingLexMode = true;
   CurLexerCallback = CLK_CachingLexer;
 }
 
