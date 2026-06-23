@@ -152,7 +152,7 @@ LIBC_INLINE void FreeTrie::push(BlockRef block) {
   } else {
     node->parent = nullptr;
   }
-  list.push(node);
+  list.push(node, FreeListSecrets{});
   *cur = static_cast<Node *>(list.begin());
 }
 
