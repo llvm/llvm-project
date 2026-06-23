@@ -537,26 +537,16 @@ struct Allocator {
     return true;
   }
 
-  // Route the raw block allocation to the underlying allocator. The device
-  // heap tier (da_info) only exists for SANITIZER_AMDHSA, where `allocator` is
-  // a DeviceCombinedAllocator; other builds use a plain CombinedAllocator whose
-  // Allocate() has no device parameter.
-  void* AllocateBlock(AllocatorCache* cache, uptr needed_size,
-                      DeviceAllocationInfo* da_info) {
-#if SANITIZER_AMDHSA
-    return allocator.Allocate(cache, needed_size, 8, da_info);
-#else
-    (void)da_info;
-    return allocator.Allocate(cache, needed_size, 8);
-#endif
-  }
-
   // -------------------- Allocation/Deallocation routines ---------------
+  // Shared allocation core. `block_alloc(cache, needed_size)` supplies the raw
+  // backing block and is the only step that differs between the host heap and
+  // the AMDGPU device heap, so no device knowledge leaks into this routine.
   // may_return_null tells AllocateImpl() whether OOM should produce a nullptr
   // (true) or a fatal Report*+Die() (false).
+  template <typename BlockAllocFn>
   void* AllocateImpl(uptr size, uptr alignment, BufferedStackTrace* stack,
                      AllocType alloc_type, bool can_fill, bool may_return_null,
-                     DeviceAllocationInfo* da_info) {
+                     BlockAllocFn block_alloc) {
     if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
@@ -611,11 +601,11 @@ struct Allocator {
     void* allocated;
     if (t) {
       AllocatorCache* cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = AllocateBlock(cache, needed_size, da_info);
+      allocated = block_alloc(cache, needed_size);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache* cache = &fallback_allocator_cache;
-      allocated = AllocateBlock(cache, needed_size, da_info);
+      allocated = block_alloc(cache, needed_size);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
@@ -698,13 +688,28 @@ struct Allocator {
     return res;
   }
 
-  // Defer to the global, flag controlled, OOM policy.
+  // Host heap entry point. Defers to the global, flag controlled, OOM policy.
   void* Allocate(uptr size, uptr alignment, BufferedStackTrace* stack,
-                 AllocType alloc_type, bool can_fill,
-                 DeviceAllocationInfo* da_info = nullptr) {
+                 AllocType alloc_type, bool can_fill) {
     return AllocateImpl(size, alignment, stack, alloc_type, can_fill,
-                        AllocatorMayReturnNull(), da_info);
+                        AllocatorMayReturnNull(),
+                        [this](AllocatorCache* cache, uptr needed_size) {
+                          return allocator.Allocate(cache, needed_size, 8);
+                        });
   }
+
+#if SANITIZER_AMDHSA
+  // Device-heap entry point; keeps DeviceAllocationInfo off the host path.
+  void* AllocateDevice(uptr size, uptr alignment, BufferedStackTrace* stack,
+                       AllocType alloc_type, bool can_fill,
+                       DeviceAllocationInfo* da_info) {
+    return AllocateImpl(
+        size, alignment, stack, alloc_type, can_fill, AllocatorMayReturnNull(),
+        [this, da_info](AllocatorCache* cache, uptr needed_size) {
+          return allocator.Allocate(cache, needed_size, 8, da_info);
+        });
+  }
+#endif
 
   // Set quarantine flag if chunk is allocated, issue ASan error report on
   // available and quarantined chunks. Return true on success, false otherwise.
@@ -1499,7 +1504,8 @@ namespace __asan {
 
 void* AsanHsaAllocate(uptr size, uptr alignment, BufferedStackTrace* stack,
                       DeviceAllocationInfo* da_info) {
-  return instance.Allocate(size, alignment, stack, FROM_MALLOC, false, da_info);
+  return instance.AllocateDevice(size, alignment, stack, FROM_MALLOC,
+                                 /*can_fill=*/false, da_info);
 }
 
 void AsanHsaDeallocate(void* ptr, BufferedStackTrace* stack) {
