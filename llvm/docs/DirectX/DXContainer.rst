@@ -1049,5 +1049,4 @@ preconditions are met.
    * - `PRIV`_
      - If ``/Qpdb_in_private``
      - No
-     - Holds a copy of the companion PDB file. Always the last part in the
-       container.
+     - Holds a copy of the companion PDB file.
