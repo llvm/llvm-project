@@ -122,7 +122,8 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
-  opts.ShowColors = parseShowColorsArgs(args);
+  opts.setShowColors(parseShowColorsArgs(args) ? clang::ShowColorsKind::On
+                                               : clang::ShowColorsKind::Off);
 
   return true;
 }
@@ -1097,8 +1098,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Default to off for `flang -fc1`.
   bool showColors{parseShowColorsArgs(args, false)};
-  diags.getDiagnosticOptions().ShowColors = showColors;
-  res.getDiagnosticOpts().ShowColors = showColors;
+  auto colorsMode =
+      showColors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off;
+  diags.getDiagnosticOptions().setShowColors(colorsMode);
+  res.getDiagnosticOpts().setShowColors(colorsMode);
   res.getFrontendOpts().showColors = showColors;
   return !diags.hasUncompilableErrorOccurred();
 }
