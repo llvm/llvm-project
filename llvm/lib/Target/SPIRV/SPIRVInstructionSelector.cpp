@@ -3501,7 +3501,7 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
 
   // Subgroup scope constant
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy);
+  Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII);
 
   // Scalar case
   if (!IsVector) {
