@@ -1,6 +1,6 @@
 ; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 
-; Test: GlobalOpt changing calling convention of a noipa function.
+; GlobalOpt changing calling convention of a noipa function.
 ; If noipa is working, GlobalOpt should NOT change the CC of @foo,
 ; because it requires analyzing callers/callees interprocedurally.
 

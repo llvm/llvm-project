@@ -1,6 +1,6 @@
 ; RUN: opt -passes=argpromotion -S < %s | FileCheck %s
 
-; Test: ArgumentPromotion promoting a by-ref argument of a noipa function.
+; ArgumentPromotion promoting a by-ref argument of a noipa function.
 ; If noipa is working, argpromotion should NOT promote the pointer argument,
 ; because it requires inspecting the function body to determine load patterns.
 

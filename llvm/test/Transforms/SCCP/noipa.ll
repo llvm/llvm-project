@@ -1,6 +1,6 @@
 ; RUN: opt -passes=ipsccp -S < %s | FileCheck %s
 
-; Test: IPSCCP constant-propagating through arguments of a noipa function.
+; IPSCCP constant-propagating through arguments of a noipa function.
 ; If noipa is working, IPSCCP should NOT propagate the constant 42 into @foo,
 ; because analyzing calls to @foo to determine argument values is IPA.
 
