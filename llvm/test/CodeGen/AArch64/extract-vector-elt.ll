@@ -2,9 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for extract_v4i32_vector_insert
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_insert_const
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract
+; CHECK-GI:       warning: Instruction selection used fallback path for extract_v4i32_vector_extract
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract_const
 
 define i64 @extract_v2i64_undef_index(<2 x i64> %a, i32 %c) {
@@ -761,20 +759,35 @@ entry:
 }
 
 define i32 @extract_v4i32_vector_insert(<4 x i32> %a, <2 x i32> %b, i32 %c) {
-; CHECK-LABEL: extract_v4i32_vector_insert:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov d0, v0.d[1]
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    bfi x8, x0, #2, #2
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ldr w0, [x8]
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v4i32_vector_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
+; CHECK-SD-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-SD-NEXT:    str q1, [sp]
+; CHECK-SD-NEXT:    ldr w0, [x8]
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x3
+; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    str q1, [sp]
+; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 0)
   %d = extractelement <4 x i32> %vector, i32 %c
@@ -782,11 +795,20 @@ entry:
 }
 
 define i32 @extract_v4i32_vector_insert_const(<4 x i32> %a, <2 x i32> %b, i32 %c) {
-; CHECK-LABEL: extract_v4i32_vector_insert_const:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov w0, v1.s[1]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v4i32_vector_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov w0, v1.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    mov s0, v1.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 0)
   %d = extractelement <4 x i32> %vector, i32 1
