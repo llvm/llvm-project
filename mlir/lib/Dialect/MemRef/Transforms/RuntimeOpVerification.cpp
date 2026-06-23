@@ -418,6 +418,6 @@ void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
 
     // Load additional dialects of which ops may get created.
     ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,
-                     cf::ControlFlowDialect>();
+                     cf::ControlFlowDialect, scf::SCFDialect>();
   });
 }

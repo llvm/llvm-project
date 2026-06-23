@@ -480,6 +480,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTPOP          , MVT::i64  , Custom);
   }
 
+  if (Subtarget.hasBMI2()) {
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i8, Promote);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i16, Promote);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Legal);
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Legal);
+  }
+
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
 
   if (!Subtarget.hasMOVBE())
@@ -7744,6 +7752,22 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     return SDValue(); // Limit search depth.
   if ((VT.getScalarSizeInBits() % 8) != 0)
     return SDValue();
+
+  // If all of these are oneuse frozen loads, then attempt to create a frozen
+  // consecutive load.
+  if (all_of(Elts, [](SDValue Elt) {
+        return Elt.getOpcode() == ISD::FREEZE &&
+               ISD::isNormalLoad(Elt.getOperand(0).getNode()) &&
+               Elt.hasOneUse();
+      })) {
+    SmallVector<SDValue, 16> SrcElts;
+    for (SDValue Elt : Elts)
+      SrcElts.push_back(peekThroughFreeze(Elt));
+    if (SDValue LD = EltsFromConsecutiveLoads(VT, SrcElts, DL, DAG, Subtarget,
+                                              IsAfterLegalize, Depth + 1))
+      return DAG.getFreeze(LD);
+    return SDValue();
+  }
 
   unsigned NumElems = Elts.size();
 
@@ -29520,6 +29544,25 @@ SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getBuildVector(VT, DL, MaskBits);
 }
 
+static APInt getGFNIByteAffine(const APInt &ByteToAffine, const APInt &Matrix64,
+                               const APInt &Addend8) {
+  assert(ByteToAffine.getBitWidth() == 8 && "Byte input unexpected size!");
+  assert(Addend8.getBitWidth() == 8 && "8-bit addend input unexpected size!");
+  assert(Matrix64.getBitWidth() == 64 &&
+         "64-bit matrix input unexpected size!");
+
+  APInt ByteSplat = APInt::getSplat(64, ByteToAffine);
+  ByteSplat &= Matrix64.byteSwap();
+
+  // Cumulative parity
+  for (unsigned I = 0; I != 3; ++I)
+    ByteSplat ^= ByteSplat.lshr(1 << I);
+  ByteSplat &= 0x0101010101010101ull;
+
+  APInt Affined = APIntOps::ScaleBitMask(ByteSplat, 8);
+  return Affined ^ Addend8;
+}
+
 /// Lower a vector CTLZ using native supported vector CTLZ instruction.
 //
 // i8/i16 vector implemented using dword LZCNT vector instruction
@@ -32760,8 +32803,12 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
 }
 
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
-  IRBuilder<> Builder(AI);
-  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
+  LLVMContext &Ctx = AI->getContext();
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+        I->copyMetadata(*AI, LLVMContext::MD_pcsections);
+      }));
+  Builder.SetInsertPoint(AI);
   Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
   Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
@@ -32781,7 +32828,6 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
     break;
   }
   Instruction *I = AI->user_back();
-  LLVMContext &Ctx = AI->getContext();
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
   Value *Result = nullptr;
@@ -33004,10 +33050,13 @@ static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
 
 void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     AtomicRMWInst *AI) const {
-  IRBuilder<> Builder(AI);
-  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
-  Instruction *TempI = nullptr;
   LLVMContext &Ctx = AI->getContext();
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+        I->copyMetadata(*AI, LLVMContext::MD_pcsections);
+      }));
+  Builder.SetInsertPoint(AI);
+  Instruction *TempI = nullptr;
   ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
   if (!ICI) {
     TempI = AI->user_back();
@@ -33116,8 +33165,12 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
         AI->use_empty())
       return nullptr;
 
-  IRBuilder<> Builder(AI);
-  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      AI->getContext(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
+        I->copyMetadata(*AI, LLVMContext::MD_pcsections);
+      }));
+  Builder.SetInsertPoint(AI);
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
@@ -39705,25 +39758,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One.clearAllBits();
     break;
   }
-  case X86ISD::PDEP: {
-    KnownBits Known2;
-    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // Zeros are retained from the mask operand. But not ones.
-    Known.One.clearAllBits();
-    // The result will have at least as many trailing zeros as the non-mask
-    // operand since bits can only map to the same or higher bit position.
-    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
-    break;
-  }
-  case X86ISD::PEXT: {
-    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    // The result has as many leading zeros as the number of zeroes in the mask.
-    unsigned Count = Known.Zero.popcount();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Count);
-    Known.One.clearAllBits();
-    break;
-  }
   case X86ISD::VTRUNC:
   case X86ISD::VTRUNCS:
   case X86ISD::VTRUNCUS:
@@ -42443,21 +42477,9 @@ static SDValue combineX86ShufflesRecursively(
             Op, OpScaledDemandedElts, DAG))
       Op = NewOp;
   }
-  // FIXME: should we rerun resolveTargetShuffleInputsAndMask() now?
 
-  // Widen any subvector shuffle inputs we've collected.
-  // TODO: Remove this to avoid generating temporary nodes, we should only
-  // widen once combineX86ShuffleChain has found a match.
-  if (any_of(Ops, [RootSizeInBits](SDValue Op) {
-        return Op.getValueSizeInBits() < RootSizeInBits;
-      })) {
-    for (SDValue &Op : Ops)
-      if (Op.getValueSizeInBits() < RootSizeInBits)
-        Op = widenSubVector(Op, false, Subtarget, DAG, SDLoc(Op),
-                            RootSizeInBits);
-    // Reresolve - we might have repeated subvector sources.
-    resolveTargetShuffleInputsAndMask(Ops, Mask);
-  }
+  // Reresolve - we might have repeated subvector sources.
+  resolveTargetShuffleInputsAndMask(Ops, Mask);
 
   // Handle the all undef/zero/ones cases.
   if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
@@ -42469,6 +42491,18 @@ static SDValue combineX86ShufflesRecursively(
     return getOnesVector(RootVT, DAG, DL);
 
   assert(!Ops.empty() && "Shuffle with no inputs detected");
+
+  // Widen any subvector shuffle inputs we've collected.
+  // TODO: Remove this to avoid generating temporary nodes, we should only
+  // widen once combineX86ShuffleChain has found a match.
+  if (any_of(Ops, [RootSizeInBits](SDValue Op) {
+        return Op.getValueSizeInBits() < RootSizeInBits;
+      })) {
+    for (SDValue &Op : Ops)
+      if (Op.getValueSizeInBits() < RootSizeInBits)
+        Op = widenSubVector(Op, false, Subtarget, DAG, SDLoc(Op),
+                            RootSizeInBits);
+  }
 
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {
@@ -43605,11 +43639,25 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     // If we're permuting the upper 256-bits subvectors of a concatenation, then
     // see if we can peek through and access the subvector directly.
     if (VT.is512BitVector()) {
-      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only
-      // the upper subvector is used.
       SDValue LHS = peekThroughBitcasts(N->getOperand(0));
       SDValue RHS = peekThroughBitcasts(N->getOperand(1));
       uint64_t Mask = N->getConstantOperandVal(2);
+      // Attempt to concat directly instead of shuffling source together.
+      // TODO: combineX86ShufflesRecursively should do this generically.
+      if (Mask == 0x44 && LHS.getValueType() == RHS.getValueType() &&
+          LHS.getValueType().isSimple()) {
+        SmallVector<SDValue> LHSOps, RHSOps;
+        if (collectConcatOps(LHS.getNode(), LHSOps, DAG) &&
+            collectConcatOps(RHS.getNode(), RHSOps, DAG) &&
+            LHSOps.size() == 2 && RHSOps.size() == 2) {
+          if (SDValue Concat = combineConcatVectorOps(
+                  DL, LHS.getSimpleValueType(), {LHSOps[0], RHSOps[0]}, DAG,
+                  Subtarget))
+            return DAG.getBitcast(VT, Concat);
+        }
+      }
+      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only
+      // the upper subvector is used.
       SmallVector<SDValue> LHSOps, RHSOps;
       SDValue NewLHS, NewRHS;
       if ((Mask & 0x0A) == 0x0A &&
@@ -45957,34 +46005,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
 
     break;
-  }
-  case X86ISD::PDEP: {
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-
-    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
-    APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
-
-    // If the demanded bits has leading zeroes, we don't demand those from the
-    // mask.
-    if (SimplifyDemandedBits(Op1, LoMask, Known, TLO, Depth + 1))
-      return true;
-
-    // The number of possible 1s in the mask determines the number of LSBs of
-    // operand 0 used. Undemanded bits from the mask don't matter so filter
-    // them before counting.
-    KnownBits Known2;
-    uint64_t Count = (~Known.Zero & LoMask).popcount();
-    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, Count));
-    if (SimplifyDemandedBits(Op0, DemandedMask, Known2, TLO, Depth + 1))
-      return true;
-
-    // Zeroes are retained from the mask, but not ones.
-    Known.One.clearAllBits();
-    // The result will have at least as many trailing zeros as the non-mask
-    // operand since bits can only map to the same or higher bit position.
-    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
-    return false;
   }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
@@ -61966,14 +61986,6 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if (InVec.getOpcode() == ISD::BUILD_VECTOR)
     return DAG.getBuildVector(VT, DL, InVec->ops().slice(IdxVal, NumSubElts));
 
-  // EXTRACT_SUBVECTOR(EXTRACT_SUBVECTOR(V,C1)),C2) - EXTRACT_SUBVECTOR(V,C1+C2)
-  if (IdxVal != 0 && InVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      InVec.hasOneUse() && TLI.isTypeLegal(VT) &&
-      TLI.isTypeLegal(InVec.getOperand(0).getValueType())) {
-    unsigned NewIdx = IdxVal + InVec.getConstantOperandVal(1);
-    return extractSubVector(InVec.getOperand(0), NewIdx, DAG, DL, SizeInBits);
-  }
-
   // EXTRACT_SUBVECTOR(INSERT_SUBVECTOR(SRC,SUB,C1),C2)
   // --> INSERT_SUBVECTOR(EXTRACT_SUBVECTOR(SRC,C2),SUB,C1-C2)
   // iff SUB is entirely contained in the extraction.
@@ -62672,11 +62684,85 @@ static SDValue combineAndOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// Fold: GF2P8AFFINEQB(GF2P8AFFINEQB(X, YSub), YSup)
+//    => GF2P8AFFINEQB(X, YFolded)
+// Permuting the sub-matrix by the super-matrix at a byte, rather than bit,
+// granularity produces a matrix that performs both permutations at once.
+static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
+                                          SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+
+  unsigned VecWidth = VT.getSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltWidth = VT.getScalarSizeInBits();
+
+  SDValue X, YSub, YSup;
+  APInt ImmSub, ImmSup, ConstUndef;
+  SmallVector<APInt> YSubEltBits, YSupEltBits;
+
+  if (!(sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB,
+                                m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X),
+                                            m_Value(YSub), m_ConstInt(ImmSub)),
+                                m_Value(YSup), m_ConstInt(ImmSup))) &&
+        getTargetConstantBitsFromNode(YSub, EltWidth, ConstUndef, YSubEltBits,
+                                      /*AllowWholeUndefs=*/false) &&
+        getTargetConstantBitsFromNode(YSup, EltWidth, ConstUndef, YSupEltBits,
+                                      /*AllowWholeUndefs=*/false)))
+    return SDValue();
+
+  APInt SubM(VecWidth, 0);
+  APInt SupM(VecWidth, 0);
+  for (unsigned I = 0; I != NumElts; ++I) {
+    SubM.insertBits(YSubEltBits[I], I * EltWidth);
+    SupM.insertBits(YSupEltBits[I], I * EltWidth);
+  }
+
+  // Immediate permute
+  APInt FoldedImm;
+  if (SupM.isSplat(64)) {
+    FoldedImm = getGFNIByteAffine(ImmSub, SupM.trunc(64), ImmSup);
+  } else {
+    // Immediate is shared and needs to be permuted in the same manner
+    if (ImmSub != 0)
+      return SDValue();
+    FoldedImm = ImmSup;
+  }
+
+  // Matrix permute
+  APInt FoldedMatrix = APInt(VecWidth, 0);
+  APInt LeastRowMask = APInt::getSplat(VecWidth, APInt(64, 0xFF));
+  APInt LeastBitInByte = APInt::getSplat(VecWidth, APInt(8, 0x01));
+  APInt RowSplatter = APInt(VecWidth, 0x0101010101010101ull);
+
+  for (unsigned Row = 0; Row != 8; ++Row) {
+    APInt RowSplat = (SubM & LeastRowMask) * RowSplatter;
+    SubM = SubM.lshr(EltWidth);
+
+    APInt ByteMaskIfSet = (SupM.lshr(7 - Row)) & LeastBitInByte;
+    ByteMaskIfSet *= 0xFF;
+
+    FoldedMatrix ^= RowSplat & ByteMaskIfSet;
+  }
+
+  SmallVector<SDValue> FoldedVector;
+  for (unsigned I = 0; I < NumElts; ++I) {
+    APInt FoldedElt = FoldedMatrix.extractBits(EltWidth, I * EltWidth);
+    FoldedVector.push_back(DAG.getConstant(FoldedElt, DL, MVT::i8));
+  }
+  SDValue NewMatrix = DAG.getBuildVector(VT, DL, FoldedVector);
+
+  return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, NewMatrix,
+                     DAG.getTargetConstant(FoldedImm, DL, MVT::i8));
+}
+
 static SDValue combineGF2P8AFFINEQB(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
   if (SDValue R = combineAndOnGF2P8AFFINEQBOperand(N, dl, DAG, VT))
+    return R;
+
+  if (SDValue R = combineNestedGF2P8AFFINEQB(N, dl, DAG, VT))
     return R;
 
   return SDValue();
@@ -63292,8 +63378,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI:
-  case X86ISD::BZHI:
-  case X86ISD::PDEP:        return combineBMI(N, DAG, DCI);
+  case X86ISD::BZHI:        return combineBMI(N, DAG, DCI);
   case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);

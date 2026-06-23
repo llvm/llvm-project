@@ -131,6 +131,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  libgen
+  ../libc/include/libgen.yaml
+  libgen.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
@@ -663,6 +671,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
+    .llvm-libc-types.struct_winsize
 )
 
 add_header_macro(

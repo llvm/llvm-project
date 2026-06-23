@@ -5792,7 +5792,8 @@ private:
                  "User is not in the tree entry");
           int Lane = std::distance(P.first->Scalars.begin(), It);
           assert(Lane >= 0 && "Lane is not found");
-          if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
+          if (isa<StoreInst, InsertValueInst>(User) &&
+              !P.first->ReorderIndices.empty())
             Lane = P.first->ReorderIndices[Lane];
           assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
                  "Couldn't find extract lane");
@@ -5875,7 +5876,7 @@ private:
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
             Lane = EI.UserTE->ReorderIndices[Lane];
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
@@ -6078,7 +6079,7 @@ private:
               int Lane =
                   std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
               assert(Lane >= 0 && "Lane not set");
-              if (isa<StoreInst>(In) &&
+              if (isa<StoreInst, InsertValueInst>(In) &&
                   !Bundle->getTreeEntry()->ReorderIndices.empty())
                 Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
               assert(Lane < static_cast<int>(
@@ -7424,6 +7425,14 @@ static bool isMaskedLoadCompress(
       }
     }
   }
+  // Estimating the compression shuffle cost below can be extremely expensive
+  // for a very wide LoadVecTy, which is split into a large number of vector
+  // registers (see processShuffleMasks). The shuffle cost is always
+  // non-negative, so if the load cost alone already reaches the gather cost the
+  // masked-load-compress cannot be profitable. Bail out before the costly
+  // shuffle cost estimation in that case.
+  if (VectorGEPCost + LoadCost >= GatherCost)
+    return false;
   InstructionCost CompressCost = ::getShuffleCost(
       TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CompressMask, CostKind);
   if (!Order.empty()) {
@@ -21657,7 +21666,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
         (all_of(E->Scalars,
                 [&](Value *V) {
                   return isa<PoisonValue>(V) ||
-                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                         (E->Idx == 0 &&
+                          isa<InsertElementInst, InsertValueInst>(V)) ||
                          E->isCopyableElement(V) ||
                          (!isVectorLikeInstWithConstOps(V) &&
                           isUsedOutsideBlock(V));
@@ -23939,7 +23949,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                                          static_cast<int>(
                                              DL->getTypeAllocSize(ScalarTy))));
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
-        auto *Inst = Builder.CreateIntrinsic(
+        auto *Inst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::experimental_vp_strided_load,
             {StridedLoadTy, PO->getType(), StrideTy},
             {PO, StrideVal,
@@ -24028,7 +24038,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                 StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         if (StridedStoreTy != VecTy)
           VecValue = Builder.CreateBitOrPointerCast(VecValue, StridedStoreTy);
-        auto *Inst = Builder.CreateIntrinsic(
+        auto *Inst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::experimental_vp_strided_store,
             {StridedStoreTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr, StrideVal,
@@ -25902,7 +25912,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst>(EI.UserTE->Scalars[Lane]) &&
+            if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
                 !EI.UserTE->ReorderIndices.empty())
               Lane = EI.UserTE->ReorderIndices[Lane];
             assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
@@ -26109,7 +26119,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         do {
           int Lane = std::distance(Op.begin(), It);
           assert(Lane >= 0 && "Lane not set");
-          if (isa<StoreInst>(EI.UserTE->Scalars[Lane]) &&
+          if (isa<StoreInst, InsertValueInst>(EI.UserTE->Scalars[Lane]) &&
               !EI.UserTE->ReorderIndices.empty())
             Lane = EI.UserTE->ReorderIndices[Lane];
           assert(Lane < static_cast<int>(EI.UserTE->Scalars.size()) &&
@@ -30430,14 +30440,16 @@ public:
                      "op.rdx", ReductionOps);
     }
 
-    // Emit ordered reduction for the vectorized window.
+    // Emit ordered reduction for the vectorized window. The reduction only
+    // applies to floating point types.
+    assert(DestTy->isFPOrFPVectorTy() &&
+           SuccessRoot->getType()->isFPOrFPVectorTy() &&
+           "Expected floating point types for ordered reduction");
     Builder.SetCurrentDebugLocation(
         cast<Instruction>(ReductionRoot)->getDebugLoc());
-    if (VectorizedTree)
-      VectorizedTree =
-          emitReduction(SuccessRoot, Builder, TTI, DestTy, VectorizedTree);
-    else
-      VectorizedTree = emitReduction(SuccessRoot, Builder, TTI, DestTy);
+    VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
+                                    /*IsSigned=*/false, DestTy,
+                                    /*ReducedInTree=*/false, VectorizedTree);
 
     // Fold trailing scalars [SuccessStart+SuccessWidth, N).
     for (Value *RdxVal :
@@ -30480,13 +30492,16 @@ private:
   /// scale \p Scale and signedness \p IsSigned.
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
                         Value *Vec, unsigned Scale, bool IsSigned, Type *DestTy,
-                        bool ReducedInTree) {
+                        bool ReducedInTree, Value *Start = nullptr) {
     Value *Rdx;
     if (ReducedInTree) {
       Rdx = Vec;
-    } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
+    } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy);
+               VecTy && SLPReVec) {
       unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
+      assert(getNumElements(Vec->getType()) % DestTyNumElements == 0 &&
+             "Vec element count must be a multiple of DestTy element count");
       // e.g. Consider vector reduce add.
       // Initial reduction is
       // clang-format off
@@ -30505,7 +30520,7 @@ private:
       // %add0 = add <4 x i32> zeroinitializer, %A
       // %add1 = add <4 x i32> %add0, %B
       // clang-format on
-      Rdx = nullptr;
+      Rdx = Start;
       for (auto I : seq<unsigned>(VF)) {
         auto Position = I * DestTyNumElements;
         Value *SubVec =
@@ -30516,7 +30531,7 @@ private:
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
       }
     } else {
-      Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
+      Rdx = emitReduction(Vec, Builder, &TTI, DestTy, Start);
     }
     if (Rdx->getType() != DestTy)
       Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
@@ -30542,6 +30557,19 @@ private:
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
     bool AllConsts = allConstant(ReducedVals);
+    // A reduced value may have been replaced by an extractelement while
+    // vectorizing a previous subvector of the reduction. Such tracked values
+    // are not present in ReducedValsToOps, so look through them to the
+    // reduction operation that uses the replaced value.
+    auto GetReductionOp = [&](Value *RdxVal) -> Instruction * {
+      auto It = ReducedValsToOps.find(RdxVal);
+      if (It != ReducedValsToOps.end())
+        return It->second.front();
+      for (User *U : RdxVal->users())
+        if (getRdxKind(U) == RdxKind)
+          return cast<Instruction>(U);
+      return cast<Instruction>(RdxVal);
+    };
     auto EvaluateScalarCost =
         [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
           InstructionCost Cost = 0;
@@ -30550,7 +30578,7 @@ private:
           for (auto [Idx, RdxVal] : enumerate(ReducedVals)) {
             if (!isa<Instruction>(RdxVal))
               continue;
-            Instruction *RdxOp = ReducedValsToOps[ReducedVals[Idx]].front();
+            Instruction *RdxOp = GetReductionOp(RdxVal);
             if (Cnt == 1) {
               unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
               Cost +=
@@ -30630,7 +30658,7 @@ private:
                   RdxOpcode, VecTy, CostKind,
                   TTI::getOperandInfo(ReducedVals[I]),
                   TTI::getOperandInfo(ReducedVals[I + 1]), {},
-                  ReducedValsToOps[ReducedVals[I]].front());
+                  GetReductionOp(ReducedVals[I]));
             }
           } else {
             Type *RedTy = VectorTy->getElementType();

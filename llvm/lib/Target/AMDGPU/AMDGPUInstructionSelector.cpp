@@ -41,10 +41,8 @@ using namespace MIPatternMatch;
 #undef AMDGPUSubtarget
 
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
-    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI,
-    const AMDGPUTargetMachine &TM)
-    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
-      STI(STI),
+    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI)
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), STI(STI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -5359,7 +5357,7 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
   else if (Stat.second == SrcStatus::IS_LO_NEG)
     Mods ^= SISrcMods::NEG;
 
-  // 64-bit VOP3P instructions do not have OPSEL or ABS.
+  // 64-bit VOP3P instructions do not have OPSEL or ABS. Bail on v2f64 or v2i64.
   // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
   if (MRI.getType(RootReg).getSizeInBits() == 128) {
     Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
