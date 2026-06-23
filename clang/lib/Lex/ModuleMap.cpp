@@ -1473,7 +1473,13 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
     if (LocalFID.isInvalid()) {
       auto FileCharacter =
           IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
-      LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+      // Module map files are textual "source files". Use input charset converter
+      // if available, and file tag converters are handled by SourceManager's cache.
+      // Get input encoding from LangOptions for charset conversion
+      llvm::StringRef InputEncoding = LangOpts.InputEncoding;
+      LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter,
+                                /*LoadedID=*/0,
+                                InputEncoding);
     }
     ID = LocalFID;
   }

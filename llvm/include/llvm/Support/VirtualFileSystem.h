@@ -137,6 +137,13 @@ public:
   /// Closes the file.
   virtual std::error_code close() = 0;
 
+  /// Returns true if this is a real file and the requested text mode differs
+  /// from the current mode. Always returns false for non-real files.
+  /// Default implementation returns false for non-real files.
+  virtual bool realFileTextMismatch(bool RequestedIsText) const {
+    return false;
+  }
+
   // Get the same file with a different path.
   static ErrorOr<std::unique_ptr<File>>
   getWithPath(ErrorOr<std::unique_ptr<File>> Result, const Twine &P);

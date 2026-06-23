@@ -649,8 +649,14 @@ void Preprocessor::EnterMainSourceFile() {
           << PPOpts.PCHThroughHeader;
       return;
     }
-    setPCHThroughHeaderFileID(
-        SourceMgr.createFileID(*File, SourceLocation(), SrcMgr::C_User));
+    // Use input charset converter if available, and file tag converters
+    // are handled by SourceManager's cache.
+    // Get input encoding from LangOptions for charset conversion
+    llvm::StringRef InputEncoding = LangOpts.InputEncoding;
+    setPCHThroughHeaderFileID(SourceMgr.createFileID(
+        *File, SourceLocation(), SrcMgr::C_User,
+        /*LoadedID=*/0,
+        InputEncoding));
   }
 
   // Skip tokens from the Predefines and if needed the main file.

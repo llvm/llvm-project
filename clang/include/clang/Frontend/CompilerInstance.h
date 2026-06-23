@@ -871,7 +871,8 @@ public:
   static bool InitializeSourceManager(const FrontendInputFile &Input,
                                       DiagnosticsEngine &Diags,
                                       FileManager &FileMgr,
-                                      SourceManager &SourceMgr);
+                                      SourceManager &SourceMgr,
+                                      llvm::StringRef InputEncodingName = "");
 
   /// @}
 

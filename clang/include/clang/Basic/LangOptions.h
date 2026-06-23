@@ -621,6 +621,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the input encoding to convert to the internal encoding.
+  std::string InputEncoding; 
+ 
   LangOptions();
 
   /// Set language defaults for the given input language and

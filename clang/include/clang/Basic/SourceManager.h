@@ -50,6 +50,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TextEncoding.h"
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -155,6 +156,11 @@ public:
   ///
   /// FIXME: Remove this once OrigEntry is a FileEntryRef with a stable name.
   StringRef Filename;
+
+  /// Information on whether this is associated with a FileID for a file (as
+  /// opposed to a buffer) and, if so, what conversion (if any) was requested.
+  llvm::PointerIntPair<llvm::TextEncodingConverter *, 1u, bool>
+      FileIDConverterInfo;
 
   /// A bump pointer allocated array of offsets for each source line.
   ///
@@ -840,6 +846,11 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// we can add a cc1-level option to do so.
   SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
+  /// Cache of all text encoding converters used by this SourceManager.
+  /// This includes both the input charset converter and file tag converters.
+  /// Maps from "source_encoding:target_encoding" to the converter.
+  llvm::StringMap<std::unique_ptr<llvm::TextEncodingConverter>> ConverterCache;
+
 public:
   SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
                 bool UserFilesAreVolatile = false);
@@ -856,6 +867,15 @@ public:
   DiagnosticsEngine &getDiagnostics() const { return Diag; }
 
   FileManager &getFileManager() const { return FileMgr; }
+
+  /// Get or create a text encoding converter from the cache.
+  /// This method manages all converters (input charset and file tag converters)
+  /// in a single cache owned by SourceManager.
+  /// \param SourceEncoding the source character encoding name
+  /// \return pointer to the converter or an error code
+  /// The target encoding is always UTF-8.
+  llvm::ErrorOr<llvm::TextEncodingConverter *>
+  getOrCreateConverter(llvm::StringRef SourceEncoding);
 
   /// Set true if the SourceManager should report the original file name
   /// for contents of files that were overridden by other files. Defaults to
@@ -916,9 +936,13 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
+  /// \param InputEncodingName The input encoding name to use for conversion.
+  /// If not empty and the file has no tag, will look up the converter from
+  /// the cache using this encoding name.
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0,
+                      llvm::StringRef InputEncodingName = "",
                       SourceLocation::UIntTy LoadedOffset = 0);
 
   /// Create a new FileID that represents the specified memory buffer.
@@ -942,7 +966,8 @@ public:
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
   /// new FileID for the \p SourceFile.
   FileID getOrCreateFileID(FileEntryRef SourceFile,
-                           SrcMgr::CharacteristicKind FileCharacter);
+                           SrcMgr::CharacteristicKind FileCharacter,
+  	   llvm::StringRef InputEncodingName = "");
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
   /// function-like macro's body. Returns the start of the expansion.

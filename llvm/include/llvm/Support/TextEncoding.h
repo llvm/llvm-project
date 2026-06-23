@@ -21,8 +21,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 
+#include <memory>
 #include <string>
 #include <system_error>
+#include <utility>
 
 namespace llvm {
 
@@ -105,6 +107,17 @@ public:
   LLVM_ABI static ErrorOr<TextEncodingConverter> create(StringRef From,
                                                         StringRef To);
 
+  /// Maps the encoding name to enum constant if possible.
+  /// Uses normalized charset name matching.
+  /// \param[in] Name the character encoding name
+  /// \return the TextEncoding enum value if known, std::nullopt otherwise
+  LLVM_ABI static std::optional<TextEncoding> getKnownEncoding(StringRef Name);
+
+  /// Returns the canonical name for a known encoding.
+  /// \param[in] Encoding the TextEncoding enum value
+  /// \return the canonical name for the encoding (e.g., "UTF-8" or "IBM-1047")
+  LLVM_ABI static StringRef getKnownEncodingName(TextEncoding Encoding);
+
   TextEncodingConverter(const TextEncodingConverter &) = delete;
   TextEncodingConverter &operator=(const TextEncodingConverter &) = delete;
 
@@ -135,6 +148,19 @@ public:
       return std::string(Result);
     return EC;
   }
+};
+
+/// Cache for TextEncodingConverter instances.
+class TextEncodingConverterCache {
+  public:
+  /// Get or create a cached TextEncodingConverter.
+  /// If the converter exists in the cache, returns it. Otherwise, creates a new
+  /// converter, caches it, and returns it.
+  /// \param[in] SourceEncoding the source character encoding name
+  /// \param[in] TargetEncoding the target character encoding name
+  /// \return pointer to the converter or an error code
+  LLVM_ABI static ErrorOr<TextEncodingConverter *>
+  getOrCreateConverter(StringRef SourceEncoding, StringRef TargetEncoding);
 };
 
 } // namespace llvm

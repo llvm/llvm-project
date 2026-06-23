@@ -912,15 +912,28 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  return InitializeSourceManager(Input, getDiagnostics(), getFileManager(),
-                                 getSourceManager());
+  // Get the input encoding and add converter to cache if specified
+  std::string InputEncoding;
+  if (hasPreprocessor()) {
+    InputEncoding = getLangOpts().InputEncoding;
+    if (!InputEncoding.empty()) {
+      // Add the converter to SourceManager's cache
+      auto ConverterOrErr = getSourceManager().getOrCreateConverter(InputEncoding, "UTF-8");
+      // If converter creation fails, the error will be reported when createFileID tries to use it
+      (void)ConverterOrErr;
+    }
+  }
+  
+  return InitializeSourceManager(Input, getDiagnostics(),
+                                 getFileManager(), getSourceManager(),
+                                 InputEncoding);
 }
 
 // static
-bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
-                                               DiagnosticsEngine &Diags,
-                                               FileManager &FileMgr,
-                                               SourceManager &SourceMgr) {
+bool CompilerInstance::InitializeSourceManager(
+    const FrontendInputFile &Input,
+    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr,
+    llvm::StringRef InputEncodingName) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
@@ -949,8 +962,11 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
     return false;
   }
 
+  // Pass the input encoding name for charset conversion if specified
   SourceMgr.setMainFileID(
-      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind));
+      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind,
+                             /*LoadedID=*/0,
+                             InputEncodingName));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");

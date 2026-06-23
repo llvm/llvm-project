@@ -610,8 +610,15 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           }
 
           FileID FID = SM.translateFile(*File);
-          if (FID.isInvalid())
-            FID = SM.createFileID(*File, Pos, SrcMgr::C_User);
+          // Use input charset converter if available, and file tag converters
+          // are handled by SourceManager's cache.
+          if (FID.isInvalid()) {
+            // Get input encoding from LangOptions for charset conversion
+            llvm::StringRef InputEncoding = PP->getLangOpts().InputEncoding;
+            FID = SM.createFileID(*File, Pos, SrcMgr::C_User,
+             			  /*LoadedID=*/0,
+                                  InputEncoding);
+          }
 
           if (PH.Next(Line) && Line > 0)
             ExpectedLoc = SM.translateLineCol(FID, Line, 1);
