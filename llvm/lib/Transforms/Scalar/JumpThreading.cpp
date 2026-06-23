@@ -2054,6 +2054,50 @@ static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
     RemapSourceAtom(&*It, VM);
 }
 
+/// If AI is a constant alloca, hoist it and its lifetime intrinsic, to a
+/// common dominator between OldBB and PredBB. This could be PredBB itself.
+static bool hoistAllocaAndLifetime(AllocaInst *AI, BasicBlock *OldBB,
+                                   BasicBlock *PredBB, DominatorTree &DT) {
+  if (!isa<ConstantInt>(AI->getArraySize()))
+    return false;
+  assert(OldBB != PredBB && "Cannot hoist to same block");
+  BasicBlock *DomBB = DT.findNearestCommonDominator(OldBB, PredBB);
+  // OldBB must not dominate PredBB
+  if (!DomBB || DomBB == OldBB)
+    return false;
+
+  // We know that DomBB completely dominates OldBB, therefore any location in
+  // DomBB must be OK. Insert at the end, to preserve potential OpenMP regions.
+  // The debug records will stay with the alloca.
+  BasicBlock::iterator InsertPt = DomBB->getTerminator()->getIterator();
+  AI->moveBefore(InsertPt);
+
+  // Now hoist the lifetime start intrinsic (otherwise it might end up not
+  // dominating all uses of the alloca).
+  // If there are multiple lifetime starts, just move the first one. This
+  // ensures that the lifetime is started on all paths. It is OK for multiple
+  // lifetime starts to exist along the same path.
+  for (User *U : AI->users()) {
+    if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+        II->moveBefore(InsertPt);
+        break;
+      }
+    }
+  }
+  return true;
+}
+
+static void dropLifetimeMarkers(AllocaInst *AI) {
+  SmallVector<Instruction *, 4> ToErase;
+  for (User *U : AI->users())
+    if (auto *II = dyn_cast<IntrinsicInst>(U))
+      if (II->isLifetimeStartOrEnd())
+        ToErase.push_back(II);
+  for (Instruction *I : ToErase)
+    I->eraseFromParent();
+}
+
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
@@ -2116,6 +2160,24 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
   // keeping track of the mapping and using it to remap operands in the cloned
   // instructions.
   for (; BI != BE; ++BI) {
+    // For allocas, prefer hoisting to the common dominator over duplicating.
+    // Duplicating would require a PHI to merge the two copies, which is illegal
+    // for lifetime markers.  If hoisting is not possible (e.g. variable-size
+    // alloca), fall back to cloning but drop the now-invalid lifetime markers.
+    if (auto *AI = dyn_cast<AllocaInst>(BI)) {
+      // Save the next iterator before potentially moving AI out of this block.
+      BasicBlock::iterator NextBI = std::next(BI);
+      if (hoistAllocaAndLifetime(AI, AI->getParent(), PredBB,
+                                 DTU->getDomTree())) {
+        ValueMapping[AI] = AI;
+        // BI now points into DomBB after the move; reset so ++BI lands on
+        // NextBI.
+        BI = std::prev(NextBI);
+        continue;
+      }
+      dropLifetimeMarkers(AI);
+    }
+
     Instruction *New = BI->clone();
     New->setName(BI->getName());
     New->insertInto(NewBB, NewBB->end());
