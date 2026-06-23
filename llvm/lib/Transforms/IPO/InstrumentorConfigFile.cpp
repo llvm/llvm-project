@@ -197,7 +197,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
       auto *InnerObj = ObjIt.second.getAsObject();
       if (!InnerObj) {
         Ctx.diagnose(DiagnosticInfoInstrumentation(
-            "malformed JSON configuration, expected an object", DS_Warning));
+            "malformed JSON configuration, expected an object within " + It.first, DS_Warning));
         continue;
       }
       auto *IO = IChoiceMap.lookup(ObjIt.first);
