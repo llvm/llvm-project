@@ -68,8 +68,7 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_mov_b32 m0, 0x100002
 ; SDAG-NEXT:    s_barrier_init m0
-; SDAG-NEXT:    s_mov_b32 m0, 2
-; SDAG-NEXT:    s_barrier_signal m0
+; SDAG-NEXT:    s_barrier_signal 2
 ; SDAG-NEXT:    s_barrier_wait 1
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -85,11 +84,9 @@ define amdgpu_kernel void @signal_var_bar1() {
 ; OBJ-SDAG-LABEL: signal_var_bar1:
 ; OBJ-SDAG:       ; %bb.0:
 ; OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; OBJ-SDAG-NEXT:    s_add_co_i32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 16
+; OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+16, 4
 ; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; OBJ-SDAG-NEXT:    s_lshr_b32 s0, s0, 4
 ; OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
-; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
 ; OBJ-SDAG-NEXT:    s_barrier_init m0
 ; OBJ-SDAG-NEXT:    s_mov_b32 m0, s0
@@ -128,8 +125,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_mov_b32 m0, 0x100001
 ; SDAG-NEXT:    s_barrier_init m0
-; SDAG-NEXT:    s_mov_b32 m0, 1
-; SDAG-NEXT:    s_barrier_signal m0
+; SDAG-NEXT:    s_barrier_signal 1
 ; SDAG-NEXT:    s_barrier_wait 1
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -145,7 +141,7 @@ define amdgpu_kernel void @signal_var_misaligned() {
 ; OBJ-SDAG-LABEL: signal_var_misaligned:
 ; OBJ-SDAG:       ; %bb.0:
 ; OBJ-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo, 4
+; OBJ-SDAG-NEXT:    s_lshr_b32 s0, __amdgpu_named_barrier.bars.5a19a560517f8a3a4347b4502da34a70@abs32@lo+1, 4
 ; OBJ-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; OBJ-SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; OBJ-SDAG-NEXT:    s_or_b32 m0, 0x100000, s0
