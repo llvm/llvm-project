@@ -66,6 +66,22 @@ public:
   }
 };
 
+struct AllocActionSPSSerializer {
+
+  /// Pass-through for handlers returning WrapperFunctionBuffer.
+  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) { return B; }
+
+  /// Error serialization:
+  ///   - success values converted to empty WrapperFunctionBuffers
+  ///   - failure values converted to out-of-band errors.
+  static WrapperFunctionBuffer serialize(Error Err) {
+    if (!Err)
+      return WrapperFunctionBuffer();
+    return WrapperFunctionBuffer::createOutOfBandError(
+        toString(std::move(Err)).c_str());
+  }
+};
+
 template <typename... SPSArgTs> struct AllocActionSPSDeserializer {
   template <typename... ArgTs>
   bool deserialize(const char *ArgData, size_t ArgSize, ArgTs &...Args) {
@@ -84,7 +100,7 @@ template <typename... SPSArgTs> struct SPSAllocActionFunction {
                                       Handler &&H) {
     return AllocActionFunction::handle(
         ArgData, ArgSize, AllocActionSPSDeserializer<SPSTuple<SPSArgTs...>>(),
-        std::forward<Handler>(H));
+        AllocActionSPSSerializer(), std::forward<Handler>(H));
   }
 };
 

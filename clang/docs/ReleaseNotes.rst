@@ -664,6 +664,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Added ``-Wstringop-overread`` to warn when ``memcpy``, ``memmove``, ``memcmp``,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+  
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -682,6 +685,7 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed an assertion when comparing a fixed point type with a ``_BitInt`` type. (#GH196948)
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
@@ -847,6 +851,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
 - Fixed a crash when passing one sized implicitly casted vector to a ``abs``function. (#GH204777)
+- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
 ------------------------
