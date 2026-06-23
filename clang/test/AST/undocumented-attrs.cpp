@@ -100,4 +100,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 95
+CHECK-NEXT: Total: 94
