@@ -72,16 +72,12 @@ struct SCEVCollectTerms {
 
   bool follow(const SCEV *S) {
     if (isa<SCEVUnknown>(S) || isa<SCEVMulExpr>(S) ||
-        isa<SCEVSignExtendExpr>(S)) {
+        isa<SCEVSignExtendExpr>(S))
       if (!containsUndefs(S))
         Terms.push_back(S);
 
-      // Stop recursion: once we collected a term, do not walk its operands.
-      return false;
-    }
-
-    // Keep looking.
-    return true;
+    // Keep looking when S is a specific type expression.
+    return isa<SCEVAddExpr, SCEVAddRecExpr>(S);
   }
 
   bool isDone() const { return false; }
@@ -154,12 +150,10 @@ struct SCEVCollectAddRecMultiplies {
         return false;
 
       Terms.push_back(SE.getMulExpr(Operands));
-      // Stop recursion: once we collected a term, do not walk its operands.
-      return false;
     }
 
-    // Keep looking.
-    return true;
+    // Keep looking when S is a specific type expression.
+    return isa<SCEVAddExpr, SCEVAddRecExpr>(S);
   }
 
   bool isDone() const { return false; }
