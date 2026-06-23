@@ -144,12 +144,12 @@ struct WMMAInstInfo {
 #include "AMDGPUGenSearchableTables.inc"
 
 using TargetIDSetting = AMDGPU::TargetIDSetting;
-using AMDGPUTargetID = AMDGPU::AMDGPUTargetID;
+using TargetID = AMDGPU::TargetID;
 
-/// Construct AMDGPUTargetID from MCSubtargetInfo. \p FeatureString is used to
+/// Construct TargetID from MCSubtargetInfo. \p FeatureString is used to
 /// determine explicitly requested xnack/sramecc settings.
-AMDGPUTargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
-                                    StringRef FeatureString);
+TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                              StringRef FeatureString);
 
 namespace IsaInfo {
 
