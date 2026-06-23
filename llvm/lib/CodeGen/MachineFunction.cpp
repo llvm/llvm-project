@@ -1669,9 +1669,7 @@ template <>
 std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
-  if (!F->getFunction().getEntryCount().has_value())
-    return std::nullopt;
-  return F->getFunction().getEntryCount()->getCount();
+  return F->getFunction().getEntryCount();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
