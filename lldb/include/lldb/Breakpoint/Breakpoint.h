@@ -691,7 +691,7 @@ private:
   Target &m_target; // The target that holds this breakpoint.
   /// If not empty, this is the name of this breakpoint (many breakpoints can
   /// share the same name.)
-  llvm::StringSet<> m_name_list; 
+  llvm::StringSet<> m_name_list;
   lldb::SearchFilterSP
       m_filter_sp; // The filter that constrains the breakpoint's domain.
   lldb::BreakpointResolverSP
