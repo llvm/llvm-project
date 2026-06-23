@@ -142,7 +142,7 @@ public:
   /// the buffer was previously requested, this will call llvm::report_fatal_error.
   /// Always returns false for non-real files.
   /// Default implementation returns false for non-real files.
-  virtual bool checkTextModeMismatch(bool RequestedIsText) const {
+  virtual bool realFileCheckTextModeMismatch(bool RequestedIsText) const {
     return false;
   }
 

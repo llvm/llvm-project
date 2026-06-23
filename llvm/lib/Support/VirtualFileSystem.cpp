@@ -217,7 +217,7 @@ public:
                                                    bool IsVolatile) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
-  bool checkTextModeMismatch(bool RequestedIsText) const override {
+  bool realFileCheckTextModeMismatch(bool RequestedIsText) const override {
     bool HasMismatch = IsTextMode != RequestedIsText;
     if (HasMismatch && BufferWasRequested) {
       llvm::report_fatal_error(
