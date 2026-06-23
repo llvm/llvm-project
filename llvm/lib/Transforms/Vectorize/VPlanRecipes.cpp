@@ -3028,6 +3028,10 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+bool VPScalarIVStepsRecipe::doesGeneratePerAllLanes() const {
+  return !vputils::onlyFirstLaneUsed(this);
+}
+
 InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
                                                    VPCostContext &Ctx) const {
   // TODO: Add costs for floating point.

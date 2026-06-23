@@ -4313,6 +4313,9 @@ public:
       addOperand(StartIndex);
   }
 
+  /// Returns true if the recipe produces scalar values for all VF lanes.
+  bool doesGeneratePerAllLanes() const;
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
