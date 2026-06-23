@@ -700,12 +700,10 @@ def S_SUB_I32 : SOP2_32 <"s_sub_i32",
 
 let Uses = [SCC] in { // Carry in comes from SCC
 let isCommutable = 1 in {
-def S_ADDC_U32 : SOP2_32 <"s_addc_u32",
-  [(set i32:$sdst, (UniformBinFrag<adde> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_ADDC_U32 : SOP2_32 <"s_addc_u32">;
 } // End isCommutable = 1
 
-def S_SUBB_U32 : SOP2_32 <"s_subb_u32",
-  [(set i32:$sdst, (UniformBinFrag<sube> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_SUBB_U32 : SOP2_32 <"s_subb_u32">;
 } // End Uses = [SCC]
 
 let isCommutable = 1 in {
@@ -2072,13 +2070,6 @@ let AddedComplexity = 20 in {
   >;
 }
 
-// V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
-// case, the sgpr-copies pass will fix this to use the vector version.
-def : GCNPat <
-  (i32 (addc i32:$src0, i32:$src1)),
-  (S_ADD_U32 $src0, $src1)
->;
-
 // FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
 // REG_SEQUENCE patterns don't support instructions with multiple
 // outputs.
@@ -2129,6 +2120,20 @@ let WaveSizePredicate = isWave64 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),
   (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
+// v2i64 shl is legal, we need a way to select scalar code
+let SubtargetPredicate = HasPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE SReg_128,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       (i32 (EXTRACT_SUBREG $src1, sub0))), SGPR_64)), sub0_sub1,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       (i32 (EXTRACT_SUBREG $src1, sub2))), SGPR_64)), sub2_sub3))
 >;
 }
 

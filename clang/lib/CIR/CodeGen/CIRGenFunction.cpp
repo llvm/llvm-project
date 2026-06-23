@@ -1220,9 +1220,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitInitListLValue(cast<InitListExpr>(e));
   case Expr::CXXTemporaryObjectExprClass:
   case Expr::CXXConstructExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: CXXConstructExpr");
-    return LValue();
+    return emitCXXConstructLValue(cast<CXXConstructExpr>(e));
   case Expr::CXXBindTemporaryExprClass:
     return emitCXXBindTemporaryLValue(cast<CXXBindTemporaryExpr>(e));
   case Expr::CXXUuidofExprClass:
@@ -1387,7 +1385,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // TODO: there are other patterns besides zero that we can usefully memset,
   // like -1, which happens to be the pattern used by member-pointers.
   if (!cgm.getTypes().isZeroInitializable(ty)) {
-    cgm.errorNYI(loc, "type is not zero initializable");
+    // Only the pointer-to-data-member case is tested here; emitNullConstant
+    // owns the NYIs for shapes it cannot build (virtual bases, non-zero-init
+    // arrays).
+    assert((ty->isMemberDataPointerType() || ty->isRecordType()) &&
+           "emitNullInitialization: only pointer-to-data-member (directly or "
+           "within a record) null initialization is implemented");
+    mlir::Value nullVal = cgm.emitNullConstant(ty, loc);
+    builder.createStore(loc, nullVal, destPtr);
+    return;
   }
 
   // In LLVM Codegen: otherwise, just memset the whole thing to zero using

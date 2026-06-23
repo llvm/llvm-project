@@ -61,7 +61,7 @@ add_custom_command(TARGET omp POST_BUILD
 )
 if(LIBOMP_OMPT_SUPPORT)
   add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy omp-tools.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy "${LIBOMP_HEADERS_INTDIR}/omp-tools.h" ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
 if(LIBOMP_FORTRAN_MODULES)
@@ -74,7 +74,7 @@ if(LIBOMP_FORTRAN_MODULES)
   )
   add_dependencies(omp libomp-mod)
   add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h" ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
 

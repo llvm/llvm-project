@@ -1,4 +1,6 @@
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! REQUIRES: flang, amdgpu
+
 
 program main
   implicit none
