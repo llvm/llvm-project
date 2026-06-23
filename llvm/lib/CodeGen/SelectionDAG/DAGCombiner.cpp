@@ -552,6 +552,8 @@ namespace {
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_COMPRESS(SDNode *N);
+    SDValue reduceMaskedLoadToLowPrefixLoad(MaskedLoadSDNode *MLD);
+    SDValue reduceMaskedStoreToLowPrefixStore(MaskedStoreSDNode *MST);
     SDValue visitMLOAD(SDNode *N);
     SDValue visitMSTORE(SDNode *N);
     SDValue visitMGATHER(SDNode *N);
@@ -13427,6 +13429,116 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   return SDValue();
 }
 
+static std::optional<unsigned> getLowPrefixMaskNumElts(SDValue Mask) {
+  auto *BV = dyn_cast<BuildVectorSDNode>(Mask);
+  if (!BV || BV->getValueType(0).getVectorElementType() != MVT::i1)
+    return std::nullopt;
+
+  bool SeenFalse = false;
+  unsigned PrefixElts = 0;
+  unsigned NumElts = BV->getValueType(0).getVectorNumElements();
+  for (unsigned I = 0; I < NumElts; ++I) {
+    const SDValue &Op = BV->getOperand(I);
+    bool IsTrue = false;
+    if (!Op.isUndef()) {
+      auto *ConstNode = dyn_cast<ConstantSDNode>(Op);
+      if (!ConstNode)
+        return std::nullopt;
+      IsTrue = ConstNode->getAPIntValue().countr_one() >= 1;
+    }
+
+    if (IsTrue) {
+      if (SeenFalse)
+        return std::nullopt;
+      ++PrefixElts;
+      continue;
+    }
+    SeenFalse = true;
+  }
+
+  if (PrefixElts == 0 || PrefixElts == NumElts || !isPowerOf2_32(PrefixElts))
+    return std::nullopt;
+  return PrefixElts;
+}
+
+static EVT getNarrowLowPrefixVT(EVT VT, unsigned PrefixElts,
+                                SelectionDAG &DAG) {
+  if (!VT.isVector() || VT.isScalableVector() ||
+      PrefixElts >= VT.getVectorNumElements())
+    return EVT();
+
+  EVT NarrowVT =
+      EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), PrefixElts);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(NarrowVT))
+    return MVT::INVALID_SIMPLE_VALUE_TYPE;
+  return NarrowVT;
+}
+
+static MachineMemOperand *getNarrowLowPrefixMemOperand(MachineMemOperand *MMO,
+                                                       EVT NarrowMemVT,
+                                                       SelectionDAG &DAG) {
+  return DAG.getMachineFunction().getMachineMemOperand(
+      MMO->getPointerInfo(), MMO->getFlags(), NarrowMemVT.getStoreSize(),
+      MMO->getBaseAlign(), MMO->getAAInfo(), MMO->getRanges(),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
+}
+
+SDValue DAGCombiner::reduceMaskedLoadToLowPrefixLoad(MaskedLoadSDNode *MLD) {
+  if (!MLD->isSimple() || !MLD->isUnindexed() || MLD->isExpandingLoad() ||
+      MLD->getExtensionType() != ISD::NON_EXTLOAD)
+    return SDValue();
+
+  std::optional<unsigned> PrefixElts = getLowPrefixMaskNumElts(MLD->getMask());
+  if (!PrefixElts)
+    return SDValue();
+
+  EVT VT = MLD->getValueType(0);
+  EVT NarrowVT = getNarrowLowPrefixVT(VT, *PrefixElts, DAG);
+  EVT NarrowMemVT = getNarrowLowPrefixVT(MLD->getMemoryVT(), *PrefixElts, DAG);
+  if (NarrowVT == MVT::INVALID_SIMPLE_VALUE_TYPE ||
+      NarrowMemVT == MVT::INVALID_SIMPLE_VALUE_TYPE ||
+      NarrowVT != NarrowMemVT ||
+      !TLI.isOperationLegalOrCustom(ISD::LOAD, NarrowVT))
+    return SDValue();
+
+  SDLoc DL(MLD);
+  MachineMemOperand *MMO =
+      getNarrowLowPrefixMemOperand(MLD->getMemOperand(), NarrowMemVT, DAG);
+  SDValue Load =
+      DAG.getLoad(NarrowVT, DL, MLD->getChain(), MLD->getBasePtr(), MMO);
+  SDValue Insert =
+      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, MLD->getPassThru(), Load,
+                  DAG.getIntPtrConstant(0, DL));
+  return CombineTo(MLD, Insert, Load.getValue(1), true);
+}
+
+SDValue DAGCombiner::reduceMaskedStoreToLowPrefixStore(MaskedStoreSDNode *MST) {
+  if (!MST->isSimple() || !MST->isUnindexed() || MST->isCompressingStore() ||
+      MST->isTruncatingStore())
+    return SDValue();
+
+  std::optional<unsigned> PrefixElts = getLowPrefixMaskNumElts(MST->getMask());
+  if (!PrefixElts)
+    return SDValue();
+
+  EVT NarrowVT =
+      getNarrowLowPrefixVT(MST->getValue().getValueType(), *PrefixElts, DAG);
+  EVT NarrowMemVT = getNarrowLowPrefixVT(MST->getMemoryVT(), *PrefixElts, DAG);
+  if (NarrowVT == MVT::INVALID_SIMPLE_VALUE_TYPE ||
+      NarrowMemVT == MVT::INVALID_SIMPLE_VALUE_TYPE ||
+      NarrowVT != NarrowMemVT ||
+      !TLI.isOperationLegalOrCustom(ISD::STORE, NarrowVT))
+    return SDValue();
+
+  SDLoc DL(MST);
+  SDValue Value = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT,
+                              MST->getValue(), DAG.getIntPtrConstant(0, DL));
+  MachineMemOperand *MMO =
+      getNarrowLowPrefixMemOperand(MST->getMemOperand(), NarrowMemVT, DAG);
+  return DAG.getStore(MST->getChain(), DL, Value, MST->getBasePtr(), MMO);
+}
+
 SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
@@ -13463,6 +13575,9 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
                         MST->getBasePtr(), MST->getPointerInfo(),
                         MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
                         MST->getAAInfo());
+
+  if (SDValue Store = reduceMaskedStoreToLowPrefixStore(MST))
+    return Store;
 
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
@@ -13651,6 +13766,9 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
         MLD->getMemOperand()->getFlags(), MLD->getAAInfo(), MLD->getRanges());
     return CombineTo(N, NewLd, NewLd.getValue(1));
   }
+
+  if (SDValue Load = reduceMaskedLoadToLowPrefixLoad(MLD))
+    return Load;
 
   // Try transforming N to an indexed load.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))

@@ -65,6 +65,15 @@ define void @mstore_v9i32_gap_mask(ptr %dst, <9 x i32> %val) {
   ret void
 }
 
+define <9 x i32> @mload_v9i32_gap_mask(ptr %src, <9 x i32> %passthru) {
+; CHECK-LABEL: mload_v9i32_gap_mask:
+; CHECK:       ## %bb.0:
+; CHECK:         {%k
+; CHECK:         retq
+  %val = tail call <9 x i32> @llvm.masked.load.v9i32.p0(ptr %src, <9 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>, <9 x i32> %passthru)
+  ret <9 x i32> %val
+}
+
 define void @mstore_v9i32_high_mask(ptr %dst, <9 x i32> %val) {
 ; CHECK-LABEL: mstore_v9i32_high_mask:
 ; CHECK:       ## %bb.0:
@@ -72,6 +81,15 @@ define void @mstore_v9i32_high_mask(ptr %dst, <9 x i32> %val) {
 ; CHECK:         retq
   tail call void @llvm.masked.store.v9i32.p0(<9 x i32> %val, ptr %dst, <9 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
   ret void
+}
+
+define <9 x i32> @mload_v9i32_high_mask(ptr %src, <9 x i32> %passthru) {
+; CHECK-LABEL: mload_v9i32_high_mask:
+; CHECK:       ## %bb.0:
+; CHECK:         {%k
+; CHECK:         retq
+  %val = tail call <9 x i32> @llvm.masked.load.v9i32.p0(ptr %src, <9 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>, <9 x i32> %passthru)
+  ret <9 x i32> %val
 }
 
 declare <5 x i64> @llvm.masked.load.v5i64.p0(ptr, <5 x i1>, <5 x i64>)
