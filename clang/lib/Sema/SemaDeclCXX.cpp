@@ -18080,21 +18080,21 @@ bool Sema::CheckDependentFriend(SourceLocation Loc, NestedNameSpecifier NNS,
   if (!NNS.isDependent() || !FPL || FPL->size() == 0)
     return false;
 
-  if (NNS.getKind() == NestedNameSpecifier::Kind::Type) {
-    QualType T(NNS.getCanonical().getAsType(), 0);
+  assert(NNS.getKind() == NestedNameSpecifier::Kind::Type &&
+         "dependent nested-name-specifier must be a type");
+  QualType T(NNS.getCanonical().getAsType(), 0);
 
-    if (const auto *PIT = dyn_cast<PackIndexingType>(T))
-      T = PIT->getPattern();
+  if (const auto *PIT = dyn_cast<PackIndexingType>(T))
+    T = PIT->getPattern();
 
-    if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
-      if (isa_and_nonnull<ClassTemplateDecl>(
-              TST->getTemplateName().getAsTemplateDecl()))
-        return false;
-    }
-
-    if (isa<InjectedClassNameType>(T))
+  if (const auto *TST = dyn_cast<TemplateSpecializationType>(T)) {
+    if (isa_and_nonnull<ClassTemplateDecl>(
+            TST->getTemplateName().getAsTemplateDecl()))
       return false;
   }
+
+  if (isa<InjectedClassNameType>(T))
+    return false;
 
   Diag(Loc, diag::err_dependent_friend_not_member);
   return true;
