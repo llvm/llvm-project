@@ -706,8 +706,13 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 mlir::LogicalResult
 CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
   mlir::Value val = emitScalarExpr(s.getTarget());
-  assert(indirectGotoBlock &&
-         "If you jumping to a indirect branch should be alareadye emitted");
+  if (!indirectGotoBlock) {
+    // If the target labels were emitted as constants, we have more work to do.
+    // This diagnostic is here to flag the condition, but the changes may end
+    // up being implemented elsewhere.
+    cgm.errorNYI(s.getSourceRange(), "Indirect goto without a goto block");
+    return mlir::failure();
+  }
   cir::BrOp::create(builder, getLoc(s.getSourceRange()), indirectGotoBlock,
                     val);
   builder.createBlock(builder.getBlock()->getParent());
@@ -745,8 +750,8 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   builder.setInsertionPointToEnd(labelBlock);
   auto func = cast<cir::FuncOp>(curFn);
   cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
-                                                  func.getSymNameAttr(),
-                                                  label.getLabelAttr()),
+                                                  func.getSymName(),
+                                                  label.getLabel()),
                       label);
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::incrementProfileCounter());
