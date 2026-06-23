@@ -461,6 +461,20 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
             Args.getLastArgNoClaim(options::OPT_mcf_branch_label_scheme_EQ))
       Result.push_back(SchemeArg->getAsString(Args));
   }
+
+  std::vector<StringRef> Features;
+  tools::riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
+  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
+
+  if (llvm::is_contained(UnifiedFeatures, "+unaligned-scalar-mem"))
+    Result.push_back("-mno-strict-align");
+  else
+    Result.push_back("-mstrict-align");
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ))
+    Result.push_back(("-mcmodel=" + StringRef(A->getValue())).str());
+  else
+    Result.push_back("-mcmodel=medlow");
 }
 
 Multilib::flags_list
