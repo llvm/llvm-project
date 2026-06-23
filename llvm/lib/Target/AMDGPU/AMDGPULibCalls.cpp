@@ -935,18 +935,30 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   }
 
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
-    // pow[r](x, [-]0.5) = sqrt(x)
-    bool issqrt = CF->isExactlyValue(0.5);
-    if (FunctionCallee FPExpr =
-            getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
-                                                : AMDGPULibFunc::EI_RSQRT,
-                                         FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
-                        << '(' << *opr0 << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, issqrt ? "__pow2sqrt"
-                                                        : "__pow2rsqrt");
-      replaceCall(FPOp, nval);
-      return true;
+    // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
+    //
+    // sqrt/rsqrt and pow disagree on two negative inputs:
+    //   pow(-Inf, 0.5) == +Inf  but  sqrt(-Inf) == NaN   (ninf case)
+    //   pow(-0.0, 0.5) == +0.0  but  sqrt(-0.0) == -0.0  (nsz case)
+    // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
+    // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
+    // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
+    // required for all variants.
+    bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
+                  FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+    if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
+      bool issqrt = CF->isExactlyValue(0.5);
+      if (FunctionCallee FPExpr =
+              getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
+                                                  : AMDGPULibFunc::EI_RSQRT,
+                                           FInfo))) {
+        LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
+                          << '(' << *opr0 << ")\n");
+        Value *nval = CreateCallEx(B, FPExpr, opr0,
+                                   issqrt ? "__pow2sqrt" : "__pow2rsqrt");
+        replaceCall(FPOp, nval);
+        return true;
+      }
     }
   }
 
