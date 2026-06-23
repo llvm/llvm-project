@@ -100,12 +100,11 @@ public:
     ID.AddInteger(llvm::to_underlying(getKind()));
   }
 
+  bool operator<(SVal R) const {
+    return std::tie(Data, Kind) < std::tie(R.Data, R.Kind);
+  }
   bool operator==(SVal R) const { return Kind == R.Kind && Data == R.Data; }
   bool operator!=(SVal R) const { return !(*this == R); }
-
-  // Allow implementing traits for SVal to be used as a key in
-  // ImmutableSet / ImmutableMap.
-  friend struct ::llvm::ImutContainerInfo<SVal>;
 
   bool isUnknown() const { return getKind() == UnknownValKind; }
 
@@ -552,9 +551,7 @@ struct ImutContainerInfo<clang::ento::SVal>
     return L == R;
   }
 
-  static bool isLess(clang::ento::SVal L, clang::ento::SVal R) {
-    return std::tie(L.Data, L.Kind) < std::tie(R.Data, R.Kind);
-  }
+  static bool isLess(clang::ento::SVal L, clang::ento::SVal R) { return L < R; }
 
   static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
 };
