@@ -805,6 +805,8 @@ private:
   SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
+  SDValue tryLowerFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
                                                SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorIntExtendToSVE(SDValue Op,
@@ -829,7 +831,8 @@ private:
   SDValue LowerFixedLengthFPExtendToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthFPRoundToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthIntToFPToSVE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFixedLengthFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthFPToIntToSVE(SDValue Op, SelectionDAG &DAG,
+                                       unsigned Opcode) const;
   SDValue LowerFixedLengthVECTOR_SHUFFLEToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;
   SDValue LowerFixedLengthBuildVectorToSVE(SDValue Op, SelectionDAG &DAG) const;
