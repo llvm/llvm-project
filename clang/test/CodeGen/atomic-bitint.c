@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c2y -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
 //
 // Atomic operations on _BitInt(N). load/store/exchange/compare-exchange and
 // bitwise RMW lower directly; arithmetic RMW on a padded width and any RMW on a
