@@ -119,22 +119,60 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
+  int ExpectedMatches = 0;
+  DenseMap<Value*, bool> VisitedAffected;
+
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
     if (AVI == AffectedValues.end())
       continue;
+
+    if (VisitedAffected[AV.Assume])
+      continue;
+    VisitedAffected[AV.Assume] = true;
+
+    // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
+    //     call void @llvm.assume(i1 true)
+    //                   [ "dereferenceable"(ptr %arg1, i64 1),
+    //                     "align"(ptr %arg1, i64 8) ]
+    // it will appear multiple times in Affected, but we may (depending on
+    // how the results in AffectedValues.find_as(AV.Assume) are ordered)
+    // nullify multiple instances of Elem.Assume during one iteration of the
+    // for loop below. The next iteration of the for loop may then find only a
+    // match to a different AssumeInst, resulting in an assertion failure.
+    for (ResultElem &Elem : AVI->second) {
+      if (Elem.Assume == CI)
+        ExpectedMatches++;
+    }
+  }
+
+  for (auto &AV : Affected) {
+    auto AVI = AffectedValues.find_as(AV.Assume);
+    if (AVI == AffectedValues.end())
+      continue;
+
     bool Found = false;
     bool HasNonnull = false;
     for (ResultElem &Elem : AVI->second) {
       if (Elem.Assume == CI) {
         Found = true;
         Elem.Assume = nullptr;
+
+        ExpectedMatches--;
+        assert(ExpectedMatches >= 0);
+        // After ExpectedMatches == 0, we still need to iterate through this
+        // loop to determine the value of HasNonnull, to prevent prematurely
+        // AffectedValues.erase(AVI).
       }
       HasNonnull |= !!Elem.Assume;
       if (HasNonnull && Found)
         break;
     }
-    assert(Found && "already unregistered or incorrect cache state");
+
+    if (ExpectedMatches > 0) {
+      assert(Found && "already unregistered or incorrect cache state");
+    }
+
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
