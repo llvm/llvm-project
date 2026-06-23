@@ -229,7 +229,7 @@ static bool processCallBrInst(CallBrInst *CBR, DominatorTree &DT) {
 //               Process 'llvm.asm.constraint.br' instructions
 //===----------------------------------------------------------------------===//
 
-static bool processAsmConstraintBrInst(CallBrInst &CBR, bool IsOptLevelNone,
+static bool processAsmConstraintBrInst(CallBrInst &CBR, bool SelectMemPath,
                                        DomTreeUpdater &DTU) {
   BasicBlock *BB = CBR.getParent();
   BasicBlock *PrefReg = CBR.getDefaultDest();
@@ -240,7 +240,7 @@ static bool processAsmConstraintBrInst(CallBrInst &CBR, bool IsOptLevelNone,
 
   CBR.eraseFromParent();
 
-  if (IsOptLevelNone) {
+  if (SelectMemPath) {
     DeleteDeadBlock(PrefReg, &DTU);
     IRBuilder(BB).CreateBr(PrefMem);
     MergeBlockIntoPredecessor(PrefMem, &DTU);
