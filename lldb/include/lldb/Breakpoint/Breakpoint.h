@@ -689,10 +689,9 @@ private:
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
-  llvm::StringSet<> m_name_list; // If not empty, this is the name
-                                 // of this breakpoint (many
-                                 // breakpoints can share the same
-                                 // name.)
+  /// If not empty, this is the name of this breakpoint (many breakpoints can
+  /// share the same name.)
+  llvm::StringSet<> m_name_list; 
   lldb::SearchFilterSP
       m_filter_sp; // The filter that constrains the breakpoint's domain.
   lldb::BreakpointResolverSP
