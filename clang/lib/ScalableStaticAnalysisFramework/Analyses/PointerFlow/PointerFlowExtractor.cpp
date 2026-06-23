@@ -311,8 +311,7 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {
 public:
-  PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
-      : TUSummaryExtractor(Builder) {}
+  using TUSummaryExtractor::TUSummaryExtractor;
 
   /// \return a non-null unique pointer to a PointerFlowEntitySummary
   std::unique_ptr<PointerFlowEntitySummary>
