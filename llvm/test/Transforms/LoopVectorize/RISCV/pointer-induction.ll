@@ -248,6 +248,10 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; NO-FOLDING-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 4
 ; NO-FOLDING-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[TMP18]], <vscale x 2 x i64> [[TMP28]]
 ; NO-FOLDING-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[WIDE_GEP]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i32> poison), !alias.scope [[META4:![0-9]+]]
+; NO-FOLDING-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
+; NO-FOLDING-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; NO-FOLDING-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; NO-FOLDING:       [[MIDDLE_BLOCK]]:
 ; NO-FOLDING-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x i64>
 ; NO-FOLDING-NEXT:    [[TMP20:%.*]] = mul <vscale x 2 x i64> [[TMP19]], splat (i64 -7070675565921424023)
 ; NO-FOLDING-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[TMP20]], splat (i64 -4)
@@ -255,11 +259,7 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; NO-FOLDING-NEXT:    [[TMP23:%.*]] = mul nuw i32 [[TMP22]], 2
 ; NO-FOLDING-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], 1
 ; NO-FOLDING-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 2 x i64> [[TMP21]], i32 [[TMP24]]
-; NO-FOLDING-NEXT:    store i64 [[TMP25]], ptr [[DST]], align 1, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
-; NO-FOLDING-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP12]]
-; NO-FOLDING-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; NO-FOLDING-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
-; NO-FOLDING:       [[MIDDLE_BLOCK]]:
+; NO-FOLDING-NEXT:    store i64 [[TMP25]], ptr [[DST]], align 1, !alias.scope [[META8:![0-9]+]], !noalias [[META4]]
 ; NO-FOLDING-NEXT:    br label %[[SCALAR_PH]]
 ; NO-FOLDING:       [[SCALAR_PH]]:
 ; NO-FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ], [ [[START]], %[[VECTOR_MEMCHECK]] ]
