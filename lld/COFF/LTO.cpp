@@ -95,6 +95,11 @@ lto::Config BitcodeCompiler::createConfig() {
   c.SampleProfile = ctx.config.ltoSampleProfileName;
   c.TimeTraceEnabled = ctx.config.timeTraceEnabled;
   c.TimeTraceGranularity = ctx.config.timeTraceGranularity;
+  c.RemarksFilename = std::string(ctx.config.optRemarksFilename);
+  c.RemarksPasses = std::string(ctx.config.optRemarksPasses);
+  c.RemarksWithHotness = ctx.config.optRemarksWithHotness;
+  c.RemarksHotnessThreshold = ctx.config.optRemarksHotnessThreshold;
+  c.RemarksFormat = std::string(ctx.config.optRemarksFormat);
 
   if (ctx.config.emit == EmitKind::LLVM) {
     c.PreCodeGenModuleHook = [this](size_t task, const Module &m) {
