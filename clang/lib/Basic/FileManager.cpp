@@ -550,7 +550,7 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
       Entry->closeFile();
       return Result;
     }
-    // Mode mismatch - close the cached file and reopen with correct mode
+    // Mode mismatch - close the cached file and reopen with correct mode by falling through
     Entry->closeFile();
   }
 
