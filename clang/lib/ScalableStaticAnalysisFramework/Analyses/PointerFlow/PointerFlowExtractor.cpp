@@ -311,8 +311,7 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {
 public:
-  PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
-      : TUSummaryExtractor(Builder) {}
+  using TUSummaryExtractor::TUSummaryExtractor;
 
   /// \return a non-null unique pointer to a PointerFlowEntitySummary
   std::unique_ptr<PointerFlowEntitySummary>
@@ -336,6 +335,12 @@ public:
 
     findContributors(Ctx, Contributors);
     for (auto *CD : Contributors) {
+      // Templates are skipped, but their instantiations are handled. The idea
+      // is that we can conclude facts about a template through all of its
+      // instantiations.
+      if (CD->isTemplated())
+        continue;
+
       auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
 
       assert(EntitySummary);
