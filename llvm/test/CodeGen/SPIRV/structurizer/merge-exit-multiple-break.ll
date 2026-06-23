@@ -11,7 +11,7 @@ define internal spir_func void @main() #0 {
 ; CHECK-DAG:                  OpDecorate %[[#builtin:]] BuiltIn SubgroupLocalInvocationId
 ; CHECK-DAG:  %[[#int_ty:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#bool_ty:]] = OpTypeBool
-; CHECK-DAG:   %[[#int_0:]] = OpConstant %[[#int_ty]] 0
+; CHECK-DAG:   %[[#int_0:]] = OpConstantNull %[[#int_ty]]
 ; CHECK-DAG:   %[[#int_1:]] = OpConstant %[[#int_ty]] 1
 ; CHECK-DAG:   %[[#int_2:]] = OpConstant %[[#int_ty]] 2
 ; CHECK-DAG:  %[[#int_10:]] = OpConstant %[[#int_ty]] 10

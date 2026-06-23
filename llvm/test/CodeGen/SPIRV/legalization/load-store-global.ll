@@ -24,7 +24,7 @@
 ; CHECK-DAG: %[[#C3:]] = OpConstant %[[#int]] 3{{$}}
 ; CHECK-DAG: %[[#C2:]] = OpConstant %[[#int]] 2{{$}}
 ; CHECK-DAG: %[[#C1:]] = OpConstant %[[#int]] 1{{$}}
-; CHECK-DAG: %[[#C0:]] = OpConstant %[[#int]] 0{{$}}
+; CHECK-DAG: %[[#C0:]] = OpConstantNull %[[#int]]
 
 @G_16 = internal addrspace(10) global [16 x i32] zeroinitializer
 @G_4_double = internal addrspace(10) global <4 x double> zeroinitializer

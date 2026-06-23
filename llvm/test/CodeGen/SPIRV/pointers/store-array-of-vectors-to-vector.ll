@@ -9,7 +9,7 @@
 ; CHECK-DAG: [[UINT2:%[0-9]+]] = OpConstant [[UINT]] 2
 ; CHECK-DAG: [[ARRAY2VEC3:%[0-9]+]] = OpTypeArray [[VEC3FLOAT]] [[UINT2]]
 ; CHECK-DAG: [[PTR_ARRAY2VEC3:%[0-9]+]] = OpTypePointer StorageBuffer [[ARRAY2VEC3]]
-; CHECK-DAG: [[UINT0:%[0-9]+]] = OpConstant [[UINT]] 0
+; CHECK-DAG: [[UINT0:%[0-9]+]] = OpConstantNull [[UINT]]
 ; CHECK-DAG: [[UINT1:%[0-9]+]] = OpConstant [[UINT]] 1
 ; CHECK-DAG: [[UNDEF_VEC3:%[0-9]+]] = OpUndef [[VEC3FLOAT]]
 

@@ -12,7 +12,7 @@
 ; CHECK-DAG: %[[coord0:[0-9]+]] = OpConstantNull %[[v2float]]
 ; CHECK-DAG: %[[coord1_val:[0-9]+]] = OpConstant %[[float]] 0.5
 ; CHECK-DAG: %[[coord1:[0-9]+]] = OpConstantComposite %[[v2float]] %[[coord1_val]] %[[coord1_val]]
-; CHECK-DAG: %[[dref0:[0-9]+]] = OpConstant %[[float]] 0
+; CHECK-DAG: %[[dref0:[0-9]+]] = OpConstantNull %[[float]]
 ; CHECK-DAG: %[[offset1_val:[0-9]+]] = OpConstant %[[int]] 1
 ; CHECK-DAG: %[[offset1:[0-9]+]] = OpConstantComposite %[[v2int]] %[[offset1_val]] %[[offset1_val]]
 ; CHECK-DAG: %[[minlod_val:[0-9]+]] = OpConstant %[[float]] 1

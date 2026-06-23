@@ -11,7 +11,7 @@ define internal spir_func void @main() #0 {
 ; CHECK-DAG:   %[[#int_ty:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#int_ipty:]] = OpTypePointer Input %[[#int_ty]]
 ; CHECK-DAG:  %[[#bool_ty:]] = OpTypeBool
-; CHECK-DAG:    %[[#int_0:]] = OpConstant %[[#int_ty]] 0
+; CHECK-DAG:    %[[#int_0:]] = OpConstantNull %[[#int_ty]]
 ; CHECK-DAG:   %[[#int_10:]] = OpConstant %[[#int_ty]] 10
 ; CHECK-DAG:   %[[#builtin]] = OpVariable %[[#int_ipty]] Input
 

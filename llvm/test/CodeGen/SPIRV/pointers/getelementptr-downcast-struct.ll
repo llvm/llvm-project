@@ -4,7 +4,7 @@
 ; CHECK-DAG:       %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:     %[[#uint64:]] = OpTypeInt 64 0
 ; CHECK-DAG:    %[[#uint_pp:]] = OpTypePointer Private %[[#uint]]
-; CHECK-DAG:     %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:     %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:     %[[#uint_1:]] = OpConstant %[[#uint]] 1
 ; CHECK-DAG:    %[[#uint_10:]] = OpConstant %[[#uint]] 10
 ; CHECK-DAG:    %[[#t_array:]] = OpTypeArray %[[#uint]] %[[#uint_10]]

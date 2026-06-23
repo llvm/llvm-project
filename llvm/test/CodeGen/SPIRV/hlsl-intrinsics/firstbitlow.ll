@@ -7,8 +7,8 @@
 ; CHECK-DAG: [[u32x2_t:%.+]] = OpTypeVector [[u32_t]] 2
 ; CHECK-DAG: [[u32x3_t:%.+]] = OpTypeVector [[u32_t]] 3
 ; CHECK-DAG: [[u32x4_t:%.+]] = OpTypeVector [[u32_t]] 4
-; CHECK-DAG: [[const_0:%.*]] = OpConstant [[u32_t]] 0
-; CHECK-DAG: [[const_0x2:%.*]] = OpConstantComposite [[u32x2_t]] [[const_0]] [[const_0]]
+; CHECK-DAG: [[const_0:%.*]] = OpConstantNull [[u32_t]]
+; CHECK-DAG: [[const_0x2:%.*]] = OpConstantNull [[u32x2_t]]
 ; CHECK-DAG: [[const_1:%.*]] = OpConstant [[u32_t]] 1
 ; CHECK-DAG: [[const_2:%.*]] = OpConstant [[u32_t]] 2
 ; CHECK-DAG: [[const_32:%.*]] = OpConstant [[u32_t]] 32

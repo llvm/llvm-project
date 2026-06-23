@@ -13,7 +13,7 @@
 ; CHECK-DAG: OpMemberDecorate %[[CBLAYOUT]] 0 Offset 0
 ; CHECK-DAG: %[[WRAPPER:[0-9]+]] = OpTypeStruct %[[CBLAYOUT]]
 ; CHECK-DAG: %[[PTR_WRAPPER:[0-9]+]] = OpTypePointer Uniform %[[WRAPPER]]
-; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstant %[[UINT]] 0
+; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstantNull %[[UINT]]
 ; CHECK-DAG: %[[MYCBUFFER:[0-9]+]] = OpVariable %[[PTR_WRAPPER]] Uniform
 
 

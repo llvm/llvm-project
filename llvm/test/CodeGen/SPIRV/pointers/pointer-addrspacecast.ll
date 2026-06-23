@@ -2,7 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG:                     %[[#uint:]] = OpTypeInt 32 0
-; CHECK-DAG:                   %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:                   %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:                 %[[#ptr_uint:]] = OpTypePointer Private %[[#uint]]
 ; CHECK-DAG:                      %[[#var:]] = OpVariable %[[#ptr_uint]] Private %[[#uint_0]]
 

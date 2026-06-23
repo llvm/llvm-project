@@ -14,7 +14,7 @@
 ; CHECK-DAG: %[[image3d_s2:[0-9]+]] = OpTypeImage %[[float]] 3D 2 0 0 2 Unknown
 ; CHECK-DAG: %[[imagems:[0-9]+]] = OpTypeImage %[[float]] 2D 2 0 1 1 Unknown
 ; CHECK-DAG: %[[imagemsarray:[0-9]+]] = OpTypeImage %[[float]] 2D 2 1 1 1 Unknown
-; CHECK-DAG: %[[int_0:[0-9]+]] = OpConstant %[[int]] 0
+; CHECK-DAG: %[[int_0:[0-9]+]] = OpConstantNull %[[int]]
 
 @.str1 = private unnamed_addr constant [6 x i8] c"img1d\00", align 1
 @.str2 = private unnamed_addr constant [6 x i8] c"img2d\00", align 1

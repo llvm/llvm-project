@@ -29,7 +29,7 @@
 ; CHECK-DAG: [[T_explicit]] = OpTypeStruct [[uint]] [[v3f]]
 %struct.T = type { i32, <3 x float> }
 
-; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[uint]] 0{{$}}
+; CHECK-DAG: [[zero:%[0-9]+]] = OpConstantNull [[uint]]
 ; CHECK-DAG: [[one:%[0-9]+]] = OpConstant [[uint]] 1{{$}}
 ; CHECK-DAG: [[ten:%[0-9]+]] = OpConstant [[uint]] 10
 ; CHECK-DAG: [[T_array:%[0-9]+]] = OpTypeArray [[T]] [[ten]]

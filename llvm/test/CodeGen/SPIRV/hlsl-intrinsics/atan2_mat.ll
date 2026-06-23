@@ -20,7 +20,7 @@
 ; CHECK-DAG: %[[#vec2_float_32:]] = OpTypeVector %[[#float_32]] 2
 ; CHECK-DAG: %[[#vec2_float_16:]] = OpTypeVector %[[#float_16]] 2
 ; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#const_0:]] = OpConstant %[[#int_32]] 0
+; CHECK-DAG: %[[#const_0:]] = OpConstantNull %[[#int_32]]
 ; CHECK-DAG: %[[#const_1:]] = OpConstant %[[#int_32]] 1
 ; CHECK-DAG: %[[#const_2:]] = OpConstant %[[#int_32]] 2
 ; CHECK-DAG: %[[#const_3:]] = OpConstant %[[#int_32]] 3

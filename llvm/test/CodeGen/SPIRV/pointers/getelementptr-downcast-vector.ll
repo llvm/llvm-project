@@ -4,7 +4,7 @@
 ; CHECK-DAG:    %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#uint_pp:]] = OpTypePointer Private %[[#uint]]
 ; CHECK-DAG: %[[#uint_fp:]] = OpTypePointer Function %[[#uint]]
-; CHECK-DAG:  %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:  %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:  %[[#uint_1:]] = OpConstant %[[#uint]] 1
 ; CHECK-DAG:  %[[#uint_2:]] = OpConstant %[[#uint]] 2
 ; CHECK-DAG:      %[[#v2:]] = OpTypeVector %[[#uint]] 2

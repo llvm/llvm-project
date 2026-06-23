@@ -16,7 +16,7 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 ; CHECK-DAG:    OpName %[[#switch_0:]] "reg1"
 ; CHECK-DAG:    OpName %[[#variable:]] "var"
 
-; CHECK-DAG:    %[[#int_0:]] = OpConstant %[[#]] 0
+; CHECK-DAG:    %[[#int_0:]] = OpConstantNull %[[#]]
 ; CHECK-DAG:    %[[#int_1:]] = OpConstant %[[#]] 1
 ; CHECK-DAG:    %[[#int_2:]] = OpConstant %[[#]] 2
 ; CHECK-DAG:    %[[#int_3:]] = OpConstant %[[#]] 3

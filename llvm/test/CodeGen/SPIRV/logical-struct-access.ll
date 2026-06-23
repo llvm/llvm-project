@@ -16,7 +16,7 @@
 }
 ; CHECK-DAG:    [[B:%[0-9]+]] = OpTypeStruct [[A]] [[uint]] [[A]]
 
-; CHECK-DAG: [[uint_0:%[0-9]+]] = OpConstant [[uint]] 0
+; CHECK-DAG: [[uint_0:%[0-9]+]] = OpConstantNull [[uint]]
 ; CHECK-DAG: [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG: [[uint_2:%[0-9]+]] = OpConstant [[uint]] 2
 
