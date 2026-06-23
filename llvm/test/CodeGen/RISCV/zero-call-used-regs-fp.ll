@@ -467,3 +467,127 @@ define void @all_fp() "zero-call-used-regs"="all" {
 entry:
   ret void
 }
+
+define void @all_arg_fp() "zero-call-used-regs"="all-arg" {
+; 32-BITS-F-LABEL: all_arg_fp:
+; 32-BITS-F:       # %bb.0: # %entry
+; 32-BITS-F-NEXT:    li a0, 0
+; 32-BITS-F-NEXT:    li a1, 0
+; 32-BITS-F-NEXT:    li a2, 0
+; 32-BITS-F-NEXT:    li a3, 0
+; 32-BITS-F-NEXT:    li a4, 0
+; 32-BITS-F-NEXT:    li a5, 0
+; 32-BITS-F-NEXT:    li a6, 0
+; 32-BITS-F-NEXT:    li a7, 0
+; 32-BITS-F-NEXT:    fmv.w.x fa0, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa1, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa2, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa3, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa4, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa5, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa6, zero
+; 32-BITS-F-NEXT:    fmv.w.x fa7, zero
+; 32-BITS-F-NEXT:    ret
+;
+; 32-BITS-D-LABEL: all_arg_fp:
+; 32-BITS-D:       # %bb.0: # %entry
+; 32-BITS-D-NEXT:    li a0, 0
+; 32-BITS-D-NEXT:    li a1, 0
+; 32-BITS-D-NEXT:    li a2, 0
+; 32-BITS-D-NEXT:    li a3, 0
+; 32-BITS-D-NEXT:    li a4, 0
+; 32-BITS-D-NEXT:    li a5, 0
+; 32-BITS-D-NEXT:    li a6, 0
+; 32-BITS-D-NEXT:    li a7, 0
+; 32-BITS-D-NEXT:    fcvt.d.w fa0, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa1, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa2, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa3, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa4, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa5, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa6, zero
+; 32-BITS-D-NEXT:    fcvt.d.w fa7, zero
+; 32-BITS-D-NEXT:    ret
+;
+; 32-BITS-Q-LABEL: all_arg_fp:
+; 32-BITS-Q:       # %bb.0: # %entry
+; 32-BITS-Q-NEXT:    li a0, 0
+; 32-BITS-Q-NEXT:    li a1, 0
+; 32-BITS-Q-NEXT:    li a2, 0
+; 32-BITS-Q-NEXT:    li a3, 0
+; 32-BITS-Q-NEXT:    li a4, 0
+; 32-BITS-Q-NEXT:    li a5, 0
+; 32-BITS-Q-NEXT:    li a6, 0
+; 32-BITS-Q-NEXT:    li a7, 0
+; 32-BITS-Q-NEXT:    fcvt.q.w fa0, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa1, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa2, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa3, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa4, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa5, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa6, zero
+; 32-BITS-Q-NEXT:    fcvt.q.w fa7, zero
+; 32-BITS-Q-NEXT:    ret
+;
+; 64-BITS-F-LABEL: all_arg_fp:
+; 64-BITS-F:       # %bb.0: # %entry
+; 64-BITS-F-NEXT:    li a0, 0
+; 64-BITS-F-NEXT:    li a1, 0
+; 64-BITS-F-NEXT:    li a2, 0
+; 64-BITS-F-NEXT:    li a3, 0
+; 64-BITS-F-NEXT:    li a4, 0
+; 64-BITS-F-NEXT:    li a5, 0
+; 64-BITS-F-NEXT:    li a6, 0
+; 64-BITS-F-NEXT:    li a7, 0
+; 64-BITS-F-NEXT:    fmv.w.x fa0, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa1, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa2, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa3, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa4, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa5, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa6, zero
+; 64-BITS-F-NEXT:    fmv.w.x fa7, zero
+; 64-BITS-F-NEXT:    ret
+;
+; 64-BITS-D-LABEL: all_arg_fp:
+; 64-BITS-D:       # %bb.0: # %entry
+; 64-BITS-D-NEXT:    li a0, 0
+; 64-BITS-D-NEXT:    li a1, 0
+; 64-BITS-D-NEXT:    li a2, 0
+; 64-BITS-D-NEXT:    li a3, 0
+; 64-BITS-D-NEXT:    li a4, 0
+; 64-BITS-D-NEXT:    li a5, 0
+; 64-BITS-D-NEXT:    li a6, 0
+; 64-BITS-D-NEXT:    li a7, 0
+; 64-BITS-D-NEXT:    fmv.d.x fa0, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa1, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa2, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa3, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa4, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa5, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa6, zero
+; 64-BITS-D-NEXT:    fmv.d.x fa7, zero
+; 64-BITS-D-NEXT:    ret
+;
+; 64-BITS-Q-LABEL: all_arg_fp:
+; 64-BITS-Q:       # %bb.0: # %entry
+; 64-BITS-Q-NEXT:    li a0, 0
+; 64-BITS-Q-NEXT:    li a1, 0
+; 64-BITS-Q-NEXT:    li a2, 0
+; 64-BITS-Q-NEXT:    li a3, 0
+; 64-BITS-Q-NEXT:    li a4, 0
+; 64-BITS-Q-NEXT:    li a5, 0
+; 64-BITS-Q-NEXT:    li a6, 0
+; 64-BITS-Q-NEXT:    li a7, 0
+; 64-BITS-Q-NEXT:    fcvt.q.w fa0, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa1, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa2, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa3, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa4, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa5, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa6, zero
+; 64-BITS-Q-NEXT:    fcvt.q.w fa7, zero
+; 64-BITS-Q-NEXT:    ret
+entry:
+  ret void
+}

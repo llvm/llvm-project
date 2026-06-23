@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "RISCV.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 
 namespace llvm {
@@ -24,6 +25,7 @@ CCAssignFn RetCC_RISCV;
 namespace RISCV {
 
 ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
+ArrayRef<MCPhysReg> getArgFPRs(const RISCVSubtarget &STI);
 
 } // end namespace RISCV
 
