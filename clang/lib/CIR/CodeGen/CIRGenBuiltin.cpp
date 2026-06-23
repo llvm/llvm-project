@@ -2126,8 +2126,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                     cir::SyncScopeKind::System));
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_nontemporal_load:
-  case Builtin::BI__builtin_nontemporal_store:
+  case Builtin::BI__builtin_nontemporal_load: {
+    Address addr = emitPointerWithAlignment(e->getArg(0));
+    LValue lv = makeAddrLValue(addr, e->getType(),
+                               LValueBaseInfo(AlignmentSource::Type));
+    lv.setNontemporal(true);
+    mlir::Value val = emitLoadOfScalar(lv, e->getExprLoc());
+    return RValue::get(val);
+  }
+  case Builtin::BI__builtin_nontemporal_store: {
+    mlir::Value val = emitScalarExpr(e->getArg(0));
+    Address addr = emitPointerWithAlignment(e->getArg(1));
+    val = emitToMemory(val, e->getArg(0)->getType());
+    LValue lv = makeAddrLValue(addr, e->getArg(0)->getType(),
+                               LValueBaseInfo(AlignmentSource::Type));
+    lv.setNontemporal(true);
+    emitStoreOfScalar(val, lv, /*isInit=*/false);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__c11_atomic_is_lock_free:
   case Builtin::BI__atomic_is_lock_free:
   case Builtin::BI__atomic_test_and_set:
