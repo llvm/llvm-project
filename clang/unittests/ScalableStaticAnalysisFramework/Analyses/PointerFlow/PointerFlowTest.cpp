@@ -13,6 +13,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
@@ -172,6 +173,38 @@ protected:
       }
     }
 
+    if (!Extractor) {
+      ADD_FAILURE() << "failed to find PointerFlowTUSummaryExtractor";
+      return false;
+    }
+    Extractor->HandleTranslationUnit(AST->getASTContext());
+    return true;
+  }
+
+  // Variant that mounts a virtual `<sys.h>` header (with
+  // `#pragma clang system_header` prepended) on an `-isystem` path,
+  // letting tests exercise the system-header contributor gate.
+  // Returns true on AST build + extractor instantiation success.
+  bool setUpTestWithSystemHeader(StringRef Code, StringRef SysHeaderCode,
+                                 bool ExtractFromSystemHeaders) {
+    Opts.ExtractFromSystemHeaders = ExtractFromSystemHeaders;
+    std::string SysWithPragma =
+        ("#pragma clang system_header\n" + SysHeaderCode).str();
+    tooling::FileContentMappings VirtFiles = {
+        {"/sysinc/sys.h", SysWithPragma}};
+    AST = tooling::buildASTFromCodeWithArgs(
+        Code,
+        {"-Wno-unused-value", "-Wno-int-to-pointer-cast", "-isystem/sysinc"},
+        "input.cc", "clang-tool",
+        std::make_shared<PCHContainerOperations>(),
+        tooling::getClangStripDependencyFileAdjuster(), VirtFiles);
+
+    for (auto &E : clang::ssaf::TUSummaryExtractorRegistry::entries()) {
+      if (E.getName() == PointerFlowEntitySummary::Name) {
+        Extractor = E.instantiate(Builder);
+        break;
+      }
+    }
     if (!Extractor) {
       ADD_FAILURE() << "failed to find PointerFlowTUSummaryExtractor";
       return false;
@@ -1440,4 +1473,49 @@ TEST_F(PointerFlowTest, ReturnRefPtr) {
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"foo", 1U, true}, {"f", 1U, true}}}));
 }
 
+
+//////////////////////////////////////////////////////////////
+//          System-header contributor opt-out gate.         //
+//          Spec: tu-summary-extraction,                    //
+//          "System-header contributor opt-out flag".       //
+//////////////////////////////////////////////////////////////
+
+// Default: ExtractFromSystemHeaders == true. A function decl in a
+// `#pragma clang system_header`-marked included header IS enumerated
+// as a contributor and produces an EntitySummary.
+TEST_F(PointerFlowTest, SystemHeader_ExtractDefault) {
+  const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
+  const char *Main = R"cpp(
+    #include <sys.h>
+    int *user_gp;
+    void user_fn(int *p) { user_gp = p; }
+  )cpp";
+  ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
+                                        /*ExtractFromSystemHeaders=*/true));
+  // sys_fn is in a system header but the default (extract-true) enumerates
+  // it as a contributor — summary is non-null.
+  EXPECT_NE(getEntitySummary("sys_fn"), nullptr);
+  // user_fn is enumerated either way (positive control).
+  EXPECT_NE(getEntitySummary("user_fn"), nullptr);
+}
+
+// Opt-out: ExtractFromSystemHeaders == false. The system-header decl
+// is NOT enumerated; getEntitySummary returns nullptr for it. The
+// user-source decl is still enumerated (gate is per-decl, not TU-wide).
+TEST_F(PointerFlowTest, SystemHeader_SkipOptOut) {
+  const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
+  const char *Main = R"cpp(
+    #include <sys.h>
+    int *user_gp;
+    void user_fn(int *p) { user_gp = p; }
+  )cpp";
+  ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
+                                        /*ExtractFromSystemHeaders=*/false));
+  // sys_fn lives in a system header and is skipped at the
+  // ContributorFinder layer when ExtractFromSystemHeaders == false.
+  // getEntitySummary returns nullptr (no summary was built for it).
+  EXPECT_EQ(getEntitySummary("sys_fn"), nullptr);
+  // user_fn is in non-system code so the gate does not fire for it.
+  EXPECT_NE(getEntitySummary("user_fn"), nullptr);
+}
 } // namespace

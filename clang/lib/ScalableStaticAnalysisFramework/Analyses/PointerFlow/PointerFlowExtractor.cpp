@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
@@ -333,7 +334,7 @@ public:
   void HandleTranslationUnit(ASTContext &Ctx) override {
     std::vector<const NamedDecl *> Contributors;
 
-    findContributors(Ctx, Contributors);
+    findContributors(Ctx, Contributors, getOptions().ExtractFromSystemHeaders);
     for (auto *CD : Contributors) {
       // Templates are skipped, but their instantiations are handled. The idea
       // is that we can conclude facts about a template through all of its
