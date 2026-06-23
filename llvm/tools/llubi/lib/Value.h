@@ -14,6 +14,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::ubi {
@@ -176,8 +177,9 @@ class Provenance : public RefCountedBase<Provenance> {
   // Null if it is concrete.
   IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
+  CaptureComponents Capability;
+
   // TODO: modeling nofree
-  // TODO: modeling captures
   // TODO: modeling inrange(Start, End) attribute
 
   const APInt &getTag() const { return Tag; }
@@ -186,10 +188,22 @@ class Provenance : public RefCountedBase<Provenance> {
   friend class Context;
 
 public:
-  Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
+  Provenance(IntrusiveRefCntPtr<MemoryObject> Obj,
+             CaptureComponents Capability = CaptureComponents::All)
+      : Obj(std::move(Obj)), Capability(Capability) {}
   static IntrusiveRefCntPtr<Provenance> nullary();
+  IntrusiveRefCntPtr<Provenance> clone() const {
+    IntrusiveRefCntPtr<Provenance> Res =
+        makeIntrusiveRefCnt<Provenance>(Obj, Capability);
+    Res->Wildcard = Wildcard;
+    return Res;
+  }
+  void captureCapability(CaptureComponents CapturedMask) {
+    Capability &= CapturedMask;
+  }
   IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
+  CaptureComponents capability() const { return Capability; }
   bool isWildcard() const { return Wildcard != nullptr; }
 };
 

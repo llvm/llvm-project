@@ -15,9 +15,11 @@
 namespace llvm::ubi {
 Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
              ArrayRef<AnyValue> Args, AnyValue &RetVal,
-             const TargetLibraryInfoImpl &TLIImpl)
+             const TargetLibraryInfoImpl &TLIImpl,
+             CapturedProvenanceList CapturedProvenances)
     : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-      RetVal(RetVal), TLI(TLIImpl, &F) {
+      RetVal(RetVal), TLI(TLIImpl, &F),
+      CapturedProvenances(std::move(CapturedProvenances)) {
   assert((Args.size() == F.arg_size() ||
           (F.isVarArg() && Args.size() >= F.arg_size())) &&
          "Expected enough arguments to call the function.");
@@ -55,12 +57,19 @@ void ExecutorBase::reportErrorString(StringRef Msg) {
 
 std::pair<MemoryObject *, uint64_t>
 ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
-                              Align Alignment, bool IsStore) {
-  auto *MO = Ctx.checkProvenance(Ptr, [](const Provenance &) {
-    // TODO: check provenance
-    // TODO: check inrange(S, E)
-    return true;
-  });
+                              Align Alignment, bool IsStore, bool IsVolatile) {
+  auto *MO =
+      Ctx.checkProvenance(Ptr, [IsStore, IsVolatile](const Provenance &Prov) {
+        CaptureComponents CC = Prov.capability();
+        if (IsVolatile &&
+            (CC & CaptureComponents::Address) != CaptureComponents::Address)
+          return false;
+        if (IsStore ? !capturesFullProvenance(CC) : !capturesAnyProvenance(CC))
+          return false;
+
+        // TODO: check inrange(S, E)
+        return true;
+      });
   if (!MO) {
     reportImmediateUB()
         << "Invalid memory access via a pointer with nullary provenance.";
@@ -110,7 +119,7 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
 }
 
 AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
-                            bool NoUndef) {
+                            bool NoUndef, bool IsVolatile) {
   if (Ptr.isPoison()) {
     reportImmediateUB() << "Invalid memory access with a poison pointer.";
     return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -118,7 +127,7 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
   auto &PtrVal = Ptr.asPointer();
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-          /*IsStore=*/false);
+          /*IsStore=*/false, IsVolatile);
       MO) {
     // Load from a dead stack object yields poison value.
     if (MO->getState() == MemoryObjectState::Dead)
@@ -135,7 +144,7 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
 }
 
 void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
-                         const AnyValue &Val, Type *ValTy) {
+                         const AnyValue &Val, Type *ValTy, bool IsVolatile) {
   if (Ptr.isPoison()) {
     reportImmediateUB() << "Invalid memory access with a poison pointer.";
     return;
@@ -143,7 +152,7 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
   auto &PtrVal = Ptr.asPointer();
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-          /*IsStore=*/true);
+          /*IsStore=*/true, IsVolatile);
       MO) {
     if (MO->isConstant()) {
       reportImmediateUB() << "Try to write to a constant memory object: "
