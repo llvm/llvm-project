@@ -86,6 +86,12 @@ merge:
 
 ; CHECK-LABEL: define void @test_split_tail_store_blocks_subpartition_type(
 ; CHECK-NOT: <2 x i64>
+; CHECK: [[TAIL_SHIFT:%.*]] = lshr i256 %x, 128
+; CHECK-NOT: <2 x i64>
+; CHECK: [[TAIL:%.*]] = trunc i256 [[TAIL_SHIFT]] to i128
+; CHECK-NOT: <2 x i64>
+; CHECK: store i128 [[TAIL]], ptr %dst, align 8
+; CHECK-NOT: <2 x i64>
 ; CHECK: ret void
 define void @test_split_tail_store_blocks_subpartition_type(ptr %dst, i256 %x) {
 entry:
