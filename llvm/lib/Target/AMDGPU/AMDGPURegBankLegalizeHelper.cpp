@@ -20,16 +20,13 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIModeRegisterDefaults.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/Support/KnownBits.h"
 
 #define DEBUG_TYPE "amdgpu-regbanklegalize"
 
@@ -1293,10 +1290,8 @@ bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
     uint32_t ClampedVal = std::min(
         static_cast<uint32_t>(ConstMode->Value.getZExtValue()),
         static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
-    NewMode =
-        B.buildConstant(SgprRB_S32,
-                        AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal))
-            .getReg(0);
+    uint32_t DecodedVal = AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal);
+    NewMode = B.buildConstant(SgprRB_S32, DecodedVal).getReg(0);
   } else {
     // If we know the input can only be one of the supported standard modes in
     // the range 0-3, we can use a simplified mapping to hardware values.
@@ -1342,9 +1337,10 @@ bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
   // targets.
   uint32_t BothRoundHwReg =
       AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
-  B.buildInstr(AMDGPU::S_SETREG_B32)
-      .addReg(NewMode)
-      .addImm(static_cast<int16_t>(BothRoundHwReg));
+  B.buildIntrinsic(Intrinsic::amdgcn_s_setreg, ArrayRef<DstOp>(),
+                   /*HasSideEffects=*/true, /*isConvergent=*/false)
+      .addImm(static_cast<int16_t>(BothRoundHwReg))
+      .addReg(NewMode);
 
   MI.eraseFromParent();
   return true;
@@ -1405,11 +1401,9 @@ bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
   // if it's an extended value.
   auto Four = B.buildConstant(SgprRB_S32, 4);
   auto EnumOffset = B.buildAdd(SgprRB_S32, TableEntry, Four);
-  B.buildInstr(AMDGPU::S_CMP_LT_U32)
-      .addReg(TableEntry.getReg(0))
-      .addReg(Four.getReg(0));
-  B.buildInstr(AMDGPU::S_CSELECT_B32, {Dst},
-               {TableEntry.getReg(0), EnumOffset.getReg(0)});
+  auto IsStandardMode =
+      B.buildICmp(CmpInst::ICMP_ULT, SgprRB_S32, TableEntry, Four);
+  B.buildSelect(Dst, IsStandardMode, TableEntry, EnumOffset);
 
   MI.eraseFromParent();
   return true;
