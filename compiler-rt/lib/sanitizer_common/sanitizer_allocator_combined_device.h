@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_ALLOCATOR_H
-#error This file must be included inside sanitizer_allocator.h
+#  error This file must be included inside sanitizer_allocator.h
 #endif
 
 // DeviceCombinedAllocator adds an optional device-memory heap tier on top of an
@@ -49,11 +49,13 @@ class DeviceCombinedAllocator {
 
   void* Allocate(AllocatorCache* cache, uptr size, uptr alignment,
                  DeviceAllocationInfo* da_info = nullptr) {
-    if (!da_info) return base_.Allocate(cache, size, alignment);
+    if (!da_info)
+      return base_.Allocate(cache, size, alignment);
     // Device tier: mirror CombinedAllocator's malloc(0)/overflow guards. The
     // device allocator handles its own alignment/page rounding, so 'size' is
     // forwarded unrounded (CombinedAllocator's original_size semantics).
-    if (size == 0) size = 1;
+    if (size == 0)
+      size = 1;
     if (size + alignment < size) {
       Report(
           "WARNING: %s: DeviceCombinedAllocator allocation overflow: "
@@ -76,7 +78,8 @@ class DeviceCombinedAllocator {
   void ForceReleaseToOS() { base_.ForceReleaseToOS(); }
 
   void Deallocate(AllocatorCache* cache, void* p) {
-    if (!p) return;
+    if (!p)
+      return;
     if (device_.PointerIsMine(p))
       device_.Deallocate(&device_stats_, p);
     else
@@ -85,7 +88,8 @@ class DeviceCombinedAllocator {
 
   void* Reallocate(AllocatorCache* cache, void* p, uptr new_size,
                    uptr alignment) {
-    if (!p) return Allocate(cache, new_size, alignment);
+    if (!p)
+      return Allocate(cache, new_size, alignment);
     if (!new_size) {
       Deallocate(cache, p);
       return nullptr;
@@ -94,7 +98,8 @@ class DeviceCombinedAllocator {
     uptr old_size = GetActuallyAllocatedSize(p);
     uptr memcpy_size = Min(new_size, old_size);
     void* new_p = Allocate(cache, new_size, alignment);
-    if (new_p) internal_memcpy(new_p, p, memcpy_size);
+    if (new_p)
+      internal_memcpy(new_p, p, memcpy_size);
     Deallocate(cache, p);
     return new_p;
   }
@@ -106,7 +111,8 @@ class DeviceCombinedAllocator {
   bool FromPrimary(const void* p) const { return base_.FromPrimary(p); }
 
   void* GetMetaData(const void* p) {
-    if (device_.PointerIsMine(p)) return device_.GetMetaData(p);
+    if (device_.PointerIsMine(p))
+      return device_.GetMetaData(p);
     return base_.GetMetaData(p);
   }
 
@@ -114,24 +120,28 @@ class DeviceCombinedAllocator {
   // (via ForceLock). Uses GetBlockBeginFastLocked for the device check to avoid
   // re-acquiring a mutex already held by the caller.
   void* GetMetaDataFastLocked(const void* p) {
-    if (device_.GetBlockBeginFastLocked(p)) return device_.GetMetaData(p);
+    if (device_.GetBlockBeginFastLocked(p))
+      return device_.GetMetaData(p);
     return base_.GetMetaDataFastLocked(p);
   }
 
   void* GetBlockBegin(const void* p) {
-    if (void* beg = base_.GetBlockBegin(p)) return beg;
+    if (void* beg = base_.GetBlockBegin(p))
+      return beg;
     return device_.GetBlockBegin(p);
   }
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
   void* GetBlockBeginFastLocked(const void* p) {
-    if (void* beg = base_.GetBlockBeginFastLocked(p)) return beg;
+    if (void* beg = base_.GetBlockBeginFastLocked(p))
+      return beg;
     return device_.GetBlockBeginFastLocked(p);
   }
 
   uptr GetActuallyAllocatedSize(void* p) {
-    if (device_.PointerIsMine(p)) return device_.GetActuallyAllocatedSize(p);
+    if (device_.PointerIsMine(p))
+      return device_.GetActuallyAllocatedSize(p);
     return base_.GetActuallyAllocatedSize(p);
   }
 

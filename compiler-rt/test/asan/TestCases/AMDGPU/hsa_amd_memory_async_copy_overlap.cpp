@@ -1,28 +1,30 @@
-// RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib
-// -lhsa-runtime64 \ RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
+// RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib -lhsa-runtime64 \
+// RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
-// Regression test for the AddressSanitizer hsa_amd_memory_async_copy
-// interceptor: invalid overlapping ranges are diagnosed (same family of checks
-// as memcpy).
+// Regression test for the AddressSanitizer hsa_amd_memory_async_copy interceptor:
+// invalid overlapping ranges are diagnosed (same family of checks as memcpy).
 //
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
+#include "hsa_amd_test_helpers.h"
+
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "hsa_amd_test_helpers.h"
-
 int main() {
-  if (hsa_amd_test_require_init()) return 1;
+  if (hsa_amd_test_require_init())
+    return 1;
 
   HsaAmdAgentPick pick;
   hsa_amd_test_agent_pick_init(&pick);
   hsa_status_t it = hsa_iterate_agents(hsa_amd_test_pick_first_agent_cb, &pick);
-  if (hsa_amd_test_iterate_agents_ok(it)) return 1;
+  if (hsa_amd_test_iterate_agents_ok(it))
+    return 1;
   if (pick.agent.handle == 0) {
     fprintf(stderr, "no HSA agent found\n");
     return 1;
@@ -37,8 +39,8 @@ int main() {
   }
 
   char buf[128];
-  char* dst = buf;
-  char* src = buf + 40;
+  char *dst = buf;
+  char *src = buf + 40;
   // Ranges [buf, buf+64) and [buf+40, buf+104) overlap; dst != src so the
   // interceptor runs CHECK_RANGES_OVERLAP before scheduling the async copy.
   (void)hsa_amd_memory_async_copy(dst, pick.agent, src, pick.agent, 64,
