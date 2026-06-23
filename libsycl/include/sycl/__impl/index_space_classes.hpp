@@ -348,19 +348,23 @@ public:
 
   /// Constructs an id from item.get_id().
   /// Only valid when the template parameter Dimensions is equal to 1.
-  template <int N = Dimensions, std::enable_if_t<N == 1, bool> = true>
-  id(const item<Dimensions> &item) noexcept : Base(item.get_id(0)) {}
+  template <int N = Dimensions, bool WithOffset = true,
+            std::enable_if_t<N == 1, bool> = true>
+  id(const item<Dimensions, WithOffset> &item) noexcept
+      : Base(item.get_id(0)) {}
 
   /// Constructs an id from item.get_id().
   /// Only valid when the template parameter Dimensions is equal to 2.
-  template <int N = Dimensions, std::enable_if_t<N == 2, bool> = true>
-  id(const item<Dimensions> &item) noexcept
+  template <int N = Dimensions, bool WithOffset = true,
+            std::enable_if_t<N == 2, bool> = true>
+  id(const item<Dimensions, WithOffset> &item) noexcept
       : Base(item.get_id(0), item.get_id(1)) {}
 
   /// Constructs an id from item.get_id().
   /// Only valid when the template parameter Dimensions is equal to 3.
-  template <int N = Dimensions, std::enable_if_t<N == 3, bool> = true>
-  id(const item<Dimensions> &item) noexcept
+  template <int N = Dimensions, bool WithOffset = true,
+            std::enable_if_t<N == 3, bool> = true>
+  id(const item<Dimensions, WithOffset> &item) noexcept
       : Base(item.get_id(0), item.get_id(1), item.get_id(2)) {}
 
   /*
