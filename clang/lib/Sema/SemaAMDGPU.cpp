@@ -168,6 +168,20 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
     return checkAtomicMonitorLoad(TheCall);
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f16:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f16:
+  case AMDGPU::BI__builtin_amdgcn_struct_buffer_load_format_v4f16:
+  case AMDGPU::BI__builtin_amdgcn_struct_buffer_store_format_v4f16: {
+    StringRef FeatureList(
+        getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
+    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
+                                                 CallerFeatureMap)) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+          << FD->getDeclName() << FeatureList;
+      return false;
+    }
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:
   case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f16_i32:
