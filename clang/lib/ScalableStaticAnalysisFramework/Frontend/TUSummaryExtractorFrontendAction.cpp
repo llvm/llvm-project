@@ -11,6 +11,7 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
@@ -100,33 +101,33 @@ public:
 private:
   TUSummaryRunner(llvm::Triple TargetTriple,
                   std::unique_ptr<SerializationFormat> Format,
-                  const FrontendOptions &Opts);
+                  const SSAFOptions &Opts);
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
 
   TUSummary Summary;
   TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
   std::unique_ptr<SerializationFormat> Format;
-  const FrontendOptions &Opts;
+  const SSAFOptions &Opts;
 };
 } // namespace
 
 std::unique_ptr<TUSummaryRunner> TUSummaryRunner::create(CompilerInstance &CI) {
-  const FrontendOptions &Opts = CI.getFrontendOpts();
+  const SSAFOptions &Opts = CI.getSSAFOpts();
   DiagnosticsEngine &Diags = CI.getDiagnostics();
 
-  if (Opts.SSAFCompilationUnitId.empty()) {
+  if (Opts.CompilationUnitId.empty()) {
     Diags.Report(diag::warn_ssaf_tu_summary_requires_compilation_unit_id);
     return nullptr;
   }
 
   auto MaybePair =
-      parseOutputFileFormatAndPathOrReportError(Diags, Opts.SSAFTUSummaryFile);
+      parseOutputFileFormatAndPathOrReportError(Diags, Opts.TUSummaryFile);
   if (!MaybePair.has_value())
     return nullptr;
   auto [FormatName, OutputPath] = MaybePair.value();
 
-  if (reportUnrecognizedExtractorNames(Diags, Opts.SSAFExtractSummaries))
+  if (reportUnrecognizedExtractorNames(Diags, Opts.ExtractSummaries))
     return nullptr;
 
   return std::unique_ptr<TUSummaryRunner>{new TUSummaryRunner{
@@ -135,18 +136,18 @@ std::unique_ptr<TUSummaryRunner> TUSummaryRunner::create(CompilerInstance &CI) {
 
 TUSummaryRunner::TUSummaryRunner(llvm::Triple TargetTriple,
                                  std::unique_ptr<SerializationFormat> Format,
-                                 const FrontendOptions &Opts)
+                                 const SSAFOptions &Opts)
     : MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>>{}),
       Summary(std::move(TargetTriple),
               BuildNamespace(BuildNamespaceKind::CompilationUnit,
-                             Opts.SSAFCompilationUnitId)),
+                             Opts.CompilationUnitId)),
       Format(std::move(Format)), Opts(Opts) {
   assert(this->Format);
-  assert(!Opts.SSAFCompilationUnitId.empty());
+  assert(!Opts.CompilationUnitId.empty());
 
   // Now the Summary and the builders are constructed, we can also construct the
   // extractors.
-  auto Extractors = makeTUSummaryExtractors(Builder, Opts.SSAFExtractSummaries);
+  auto Extractors = makeTUSummaryExtractors(Builder, Opts.ExtractSummaries);
   assert(!Extractors.empty());
 
   // We must initialize the Consumers here because our extractors need a
@@ -164,9 +165,9 @@ void TUSummaryRunner::HandleTranslationUnit(ASTContext &Ctx) {
   llvm::sys::sandbox::ScopedSetting Guard = llvm::sys::sandbox::scopedDisable();
 
   // Then serialize the result.
-  if (auto Err = Format->writeTUSummary(Summary, Opts.SSAFTUSummaryFile)) {
+  if (auto Err = Format->writeTUSummary(Summary, Opts.TUSummaryFile)) {
     Ctx.getDiagnostics().Report(diag::warn_ssaf_write_tu_summary_failed)
-        << Opts.SSAFTUSummaryFile << llvm::toString(std::move(Err));
+        << Opts.TUSummaryFile << llvm::toString(std::move(Err));
   }
 }
 
