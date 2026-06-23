@@ -11,7 +11,6 @@ CHECK-NEXT:	AcquiredBefore
 CHECK-NEXT:	Alias
 CHECK-NEXT:	Aligned
 CHECK-NEXT:	AnalyzerNoReturn
-CHECK-NEXT:	Annotate
 CHECK-NEXT:	ArcWeakrefUnavailable
 CHECK-NEXT:	AvailableOnlyInDefaultEvalMethod
 CHECK-NEXT:	Blocks
