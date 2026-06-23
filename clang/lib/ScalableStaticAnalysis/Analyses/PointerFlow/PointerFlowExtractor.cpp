@@ -13,9 +13,9 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/Frontend/SSAFOptions.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeBase.h"
+<<<<<<< HEAD:clang/lib/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlowExtractor.cpp
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlow.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
@@ -23,6 +23,16 @@
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
+=======
+#include "clang/Frontend/SSAFOptions.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
+#include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlow.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
+>>>>>>> b1cd54411a3a (Fix code formatting):clang/lib/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlowExtractor.cpp
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Sequence.h"
