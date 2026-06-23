@@ -296,8 +296,6 @@ Error lto::DTLTO::addObjectFilesToLink() {
       AddBufferFn AddBuffer = CacheStream.GetAddBuffer();
       AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));
 
-      if (Error Err = CacheStream.commit())
-        return Err;
     } else {
       if (AddBuffer) {
         AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));

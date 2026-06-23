@@ -157,7 +157,13 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
           : CachedFileStream(std::make_unique<raw_svector_ostream>(FilePath),
                              std::move(EntryPath)),
             AddBuffer(std::move(AddBuffer)), Task(Task) {}
-      ~MoveFileToCache() {
+      virtual ~MoveFileToCache() = default;
+
+      virtual Error commit() override {
+        if (Committed)
+          return createStringError(make_error_code(std::errc::invalid_argument),
+                                   Twine("MoveFileToCache already committed."));
+
         // Rename/move native object file into cache directory, if they are
         // located the same device/logical drive, otherwise we use a copy.
         std::error_code EC = sys::fs::rename(FilePath, ObjectPathName);
@@ -169,11 +175,13 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 #endif
           EC = sys::fs::copy_file(FilePath, ObjectPathName);
         if (EC)
-          report_fatal_error(Twine("Failed to rename or copy file ") +
-                             FilePath + " to " + ObjectPathName + ": " +
-                             EC.message() + "\n");
+          return createStringError(EC, Twine("Failed to rename or copy file ") +
+                                           FilePath + " to " + ObjectPathName +
+                                           ": " + EC.message() + "\n");
+
+        Committed = true;
+        return Error::success();
       }
-      virtual Error commit() override { return Error::success(); }
       virtual AddBufferFn GetAddBuffer() override { return AddBuffer; }
     };
 
