@@ -332,7 +332,9 @@ static Register adjustPreloadedArgType(MachineIRBuilder &B, Register Src,
   if (SrcTy == DstTy)
     return Src;
 
-  LLT IntDstTy = DstTy.isPointer() ? LLT::scalar(DstTy.getSizeInBits()) : DstTy;
+  LLT IntDstTy = (DstTy.isPointer() || DstTy.isVector())
+                     ? LLT::scalar(DstTy.getSizeInBits())
+                     : DstTy;
   if (SrcTy.getSizeInBits() != IntDstTy.getSizeInBits())
     Src = B.buildAnyExtOrTrunc(IntDstTy, Src).getReg(0);
   else if (SrcTy != IntDstTy)
@@ -340,6 +342,9 @@ static Register adjustPreloadedArgType(MachineIRBuilder &B, Register Src,
 
   if (DstTy.isPointer())
     return B.buildIntToPtr(DstTy, Src).getReg(0);
+
+  if (DstTy.isVector())
+    return B.buildBitcast(DstTy, Src).getReg(0);
 
   return Src;
 }
