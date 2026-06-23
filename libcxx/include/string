@@ -3839,7 +3839,7 @@ constexpr _String __integer_to_string(_Integer __val) {
 
 template <class _Integer>
 _LIBCPP_ALWAYS_INLINE constexpr string __to_string(_Integer __val) {
-#    if _LIBCPP_PREFERRED_OVERLOAD
+#    ifdef _LIBCPP_PREFERRED_OVERLOAD
   if !consteval {
     return std::to_string(__val);
   } else
@@ -3852,7 +3852,7 @@ _LIBCPP_ALWAYS_INLINE constexpr string __to_string(_Integer __val) {
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Integer>
 _LIBCPP_ALWAYS_INLINE constexpr wstring __to_wstring(_Integer __val) {
-#      if _LIBCPP_PREFERRED_OVERLOAD
+#      ifdef _LIBCPP_PREFERRED_OVERLOAD
   if !consteval {
     return std::to_wstring(__val);
   } else
