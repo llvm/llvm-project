@@ -2596,6 +2596,9 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
       return {};
     if (iterArgIt == iterArgs.end()) {
       // `val` is defined outside of the loop.
+      if(!val.getParentRegion()){
+        return{};
+      }
       assert(forOp.isDefinedOutsideOfLoop(val) &&
              "must be defined outside of the loop");
       hasValDefinedOutsideLoop = true;
