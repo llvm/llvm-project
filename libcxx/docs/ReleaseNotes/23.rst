@@ -52,6 +52,7 @@ Implemented Papers
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P4206R0: Revert string support in ``std::constant_wrapper`` (`Github <https://llvm.org/PR203338>`__)
 
 Improvements and New Features
 -----------------------------
@@ -61,6 +62,7 @@ Improvements and New Features
   for ``std::deque<int>`` iterators.
 - ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
   of up to 25x.
+- A lot of transitive includes have been removed, resulting in significant compile time improvements.
 - ``std::bad_variant_access::what()`` now returns a message identifying the cause of the failure:
   ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
   ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
