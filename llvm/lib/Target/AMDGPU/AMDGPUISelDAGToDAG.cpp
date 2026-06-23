@@ -554,13 +554,16 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
+  unsigned EltSizeInRegs = EltVT.getSizeInBits() / 32;
+  assert(IsGCN || EltSizeInRegs == 1);
   for (unsigned i = 0; i < NOps; i++) {
     // XXX: Why is this here?
     if (isa<RegisterSDNode>(N->getOperand(i))) {
       IsRegSeq = false;
       break;
     }
-    unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(i)
+    unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(
+                               i * EltSizeInRegs, EltSizeInRegs)
                          : R600RegisterInfo::getSubRegFromChannel(i);
     RegSeqArgs[1 + (2 * i)] = N->getOperand(i);
     RegSeqArgs[1 + (2 * i) + 1] = CurDAG->getTargetConstant(Sub, DL, MVT::i32);
@@ -571,7 +574,8 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     MachineSDNode *ImpDef = CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                    DL, EltVT);
     for (unsigned i = NOps; i < NumVectorElts; ++i) {
-      unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(i)
+      unsigned Sub = IsGCN ? SIRegisterInfo::getSubRegFromChannel(
+                                 i * EltSizeInRegs, EltSizeInRegs)
                            : R600RegisterInfo::getSubRegFromChannel(i);
       RegSeqArgs[1 + (2 * i)] = SDValue(ImpDef, 0);
       RegSeqArgs[1 + (2 * i) + 1] =
@@ -738,11 +742,12 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     }
 
     const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    assert(VT.getVectorElementType().bitsEq(MVT::i32));
+    EVT EltTy = VT.getVectorElementType();
+    assert(EltTy.bitsEq(MVT::i32) || EltTy.bitsEq(MVT::i64));
+    unsigned VecInBits = NumVectorElts * EltTy.getScalarSizeInBits();
     const TargetRegisterClass *RegClass =
-        N->isDivergent()
-            ? TRI->getDefaultVectorSuperClassForBitWidth(NumVectorElts * 32)
-            : SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * 32);
+        N->isDivergent() ? TRI->getDefaultVectorSuperClassForBitWidth(VecInBits)
+                         : SIRegisterInfo::getSGPRClassForBitWidth(VecInBits);
 
     SelectBuildVector(N, RegClass->getID());
     return;
