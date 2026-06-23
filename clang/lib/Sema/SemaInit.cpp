@@ -1484,8 +1484,24 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
   } else if (DeclType->isOCLIntelSubgroupAVCType() ||
              DeclType->isSizelessBuiltinType()) {
     // Checks for scalar type are sufficient for these types too.
-    CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
-                    StructuredIndex);
+    Expr *expr =
+        (Index < IList->getNumInits()) ? IList->getInit(Index) : nullptr;
+    // Prevent splat when doing list initialization.
+    if (expr && expr->getType()->isArithmeticType() &&
+        DeclType->isSizelessVectorType() &&
+        SemaRef.Context.getLangOpts().CPlusPlus) {
+      if (!VerifyOnly) {
+        PartialDiagnostic PDiag =
+            SemaRef.PDiag(diag::err_init_conversion_failed)
+            << static_cast<int>(Entity.getKind()) << DeclType
+            << expr->isLValue() << expr->getType() << expr->getSourceRange();
+        SemaRef.HandleFunctionTypeMismatch(PDiag, expr->getType(), DeclType);
+        SemaRef.Diag(expr->getBeginLoc(), PDiag);
+      }
+      hadError = true;
+    } else
+      CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
+                      StructuredIndex);
   } else if (DeclType->isDependentType()) {
     // C++ [over.match.class.deduct]p1.5:
     //   brace elision is not considered for any aggregate element that has a
