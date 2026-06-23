@@ -1,0 +1,188 @@
+// RUN: %clang_cc1 -triple riscv64 -target-feature +zve64d %s -emit-llvm -o - | FileCheck %s
+
+#include <stdint.h>
+
+// CHECK-LABEL: __rvv_bool1_t_fun_1
+// CHECK: store <vscale x {{[0-9]*}} x i1> splat (i1 true), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i1>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i1> %[[RETVAL]]
+__rvv_bool1_t __rvv_bool1_t_fun_1(void) {
+  __rvv_bool1_t svi1(true);
+  return svi1;
+}
+
+// CHECK-LABEL: __rvv_bool1_t_fun_2
+// CHECK: store <vscale x {{[0-9]*}} x i1> splat (i1 true), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i1>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i1> %[[RETVAL]]
+__rvv_bool1_t __rvv_bool1_t_fun_2(void) {
+  __rvv_bool1_t svi1 = true;
+  return svi1;
+}
+
+// CHECK-LABEL: __rvv_bool1_t_argfun_1
+// CHECK: %[[STOREDV:.*]] = zext i1 %arg to i8
+// CHECK: store i8 %[[STOREDV]], ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i8, ptr %[[WHERE]]
+// CHECK: %[[WHAT_I1:.*]] = icmp ne i8 %[[WHAT]], 0
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x i1> poison, i1 %[[WHAT_I1]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x i1> %[[INSERT]], <vscale x {{[0-9]*}} x i1> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: store <vscale x {{[0-9]*}} x i1> %[[SPLAT]], ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i1>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i1> %[[RETVAL]]
+__rvv_bool1_t __rvv_bool1_t_argfun_1(bool arg) {
+  __rvv_bool1_t svi1(arg);
+  return svi1;
+}
+
+void __rvv_bool1_t_sink(__rvv_bool1_t);
+
+// CHECK-LABEL: __rvv_bool1_t_argfun_2
+// CHECK: store i32 %i, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i32, ptr %[[WHERE]]
+// CHECK: %[[WHAT_I1:.*]] = icmp ne i32 %[[WHAT]], 0
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x i1> poison, i1 %[[WHAT_I1]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x i1> %[[INSERT]], <vscale x {{[0-9]*}} x i1> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: call void @[[SINK:.*]](<vscale x {{[0-9]*}} x i1> %[[SPLAT]])
+// CHECK: ret void
+void __rvv_bool1_t_argfun_2(int i)
+{
+  __rvv_bool1_t_sink(i);
+}
+
+// CHECK-LABEL: __rvv_int8m1_t_fun_1
+// CHECK: store <vscale x {{[0-9]*}} x i8> splat (i8 123), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i8>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i8> %[[RETVAL]]
+__rvv_int8m1_t __rvv_int8m1_t_fun_1(void) {
+  __rvv_int8m1_t svi8(123);
+  return svi8;
+}
+
+// CHECK-LABEL: __rvv_int8m1_t_fun_2
+// CHECK: store <vscale x {{[0-9]*}} x i8> splat (i8 123), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i8>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i8> %[[RETVAL]]
+__rvv_int8m1_t __rvv_int8m1_t_fun_2(void) {
+  __rvv_int8m1_t svi8 = 123;
+  return svi8;
+}
+
+// CHECK-LABEL: __rvv_int8m1_t_argfun_1
+// CHECK: store i8 %arg, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i8, ptr %[[WHERE]]
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x i8> poison, i8 %[[WHAT]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x i8> %[[INSERT]], <vscale x {{[0-9]*}} x i8> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: store <vscale x {{[0-9]*}} x i8> %[[SPLAT]], ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i8>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i8> %[[RETVAL]]
+__rvv_int8m1_t __rvv_int8m1_t_argfun_1(int8_t arg) {
+  __rvv_int8m1_t svi8(arg);
+  return svi8;
+}
+
+void __rvv_int8m1_t_sink(__rvv_int8m1_t);
+
+// CHECK-LABEL __rvv_int8m1_t_argfun_2
+// CHECK: store i32 %i, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i32, ptr %[[WHERE]]
+// CHECK: %[[WHAT_I8:.*]] = trunc i32 %[[WHAT]] to i8
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x i8> poison, i8 %[[WHAT_I8]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x i8> %[[INSERT]], <vscale x {{[0-9]*}} x i8> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: call void @[[SINK:.*]](<vscale x {{[0-9]*}} x i8> %[[SPLAT]])
+// CHECK: ret void
+void __rvv_int8m1_t_argfun_2(int i)
+{
+  __rvv_int8m1_t_sink(i);
+}
+
+// CHECK-LABEL: __rvv_uint32m1_t_fun_1
+// CHECK: store <vscale x {{[0-9]*}} x i32> splat (i32 1024), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i32>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i32> %[[RETVAL]]
+__rvv_uint32m1_t __rvv_uint32m1_t_fun_1(void) {
+  __rvv_uint32m1_t svui32(1024U);
+  return svui32;
+}
+
+// CHECK-LABEL: __rvv_uint32m1_t_fun_2
+// CHECK: store <vscale x {{[0-9]*}} x i32> splat (i32 1024), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i32>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i32> %[[RETVAL]]
+__rvv_uint32m1_t __rvv_uint32m1_t_fun_2(void) {
+  __rvv_uint32m1_t svui32 = 1024U;
+  return svui32;
+}
+
+// CHECK-LABEL: __rvv_uint32m1_t_argfun_1
+// CHECK: store i32 %arg, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i32, ptr %[[WHERE]]
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x i32> poison, i32 %[[WHAT]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x i32> %[[INSERT]], <vscale x {{[0-9]*}} x i32> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: store <vscale x {{[0-9]*}} x i32> %[[SPLAT]], ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x i32>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x i32> %[[RETVAL]]
+__rvv_uint32m1_t __rvv_uint32m1_t_argfun_1(uint32_t arg) {
+  __rvv_uint32m1_t svui32(arg);
+  return svui32;
+}
+
+void __rvv_uint32m1_t_sink(__rvv_uint32m1_t);
+
+// CHECK-LABEL: __rvv_uint32m1_t_argfun_2
+// CHECK: store i32 %i, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i32, ptr %[[WHERE]]
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x i32> poison, i32 %[[WHAT]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x i32> %[[INSERT]], <vscale x {{[0-9]*}} x i32> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: call void @[[SINK:.*]](<vscale x {{[0-9]*}} x i32> %[[SPLAT]])
+// CHECK: ret void
+void __rvv_uint32m1_t_argfun_2(int i)
+{
+  __rvv_uint32m1_t_sink(i);
+}
+
+// CHECK-LABEL: __rvv_float32m1_t_fun_1
+// CHECK: store <vscale x {{[0-9]*}} x float> splat (float 1.230000e-01), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x float>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x float> %[[RETVAL]]
+__rvv_float32m1_t __rvv_float32m1_t_fun_1(void) {
+  __rvv_float32m1_t svfloat32(0.123);
+  return svfloat32;
+}
+
+// CHECK-LABEL: __rvv_float32m1_t_fun_2
+// CHECK: store <vscale x {{[0-9]*}} x float> splat (float 1.230000e-01), ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x float>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x float> %[[RETVAL]]
+__rvv_float32m1_t __rvv_float32m1_t_fun_2(void) {
+  __rvv_float32m1_t svfloat32 = 0.123;
+  return svfloat32;
+}
+
+// CHECK-LABEL: __rvv_float32m1_t_argfun_1
+// CHECK: store float %arg, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load float, ptr %[[WHERE]]
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x float> poison, float %[[WHAT]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x float> %[[INSERT]], <vscale x {{[0-9]*}} x float> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: store <vscale x {{[0-9]*}} x float> %[[SPLAT]], ptr %[[RETPTR:.*]]
+// CHECK: %[[RETVAL:.*]] = load <vscale x {{[0-9]*}} x float>, ptr %[[RETPTR]]
+// CHECK: ret <vscale x {{[0-9]*}} x float> %[[RETVAL]]
+__rvv_float32m1_t __rvv_float32m1_t_argfun_1(float arg) {
+  __rvv_float32m1_t svfloat32(arg);
+  return svfloat32;
+}
+
+void __rvv_float32m1_t_sink(__rvv_float32m1_t);
+
+// CHECK-LABEL: __rvv_float32m1_t_argfun_2
+// CHECK: store i32 %i, ptr %[[WHERE:.*]]
+// CHECK: %[[WHAT:.*]] = load i32, ptr %[[WHERE]]
+// CHECK: %[[WHAT_FP:.*]] = sitofp i32 %[[WHAT]] to float
+// CHECK: %[[INSERT:.*]] = insertelement <vscale x {{[0-9]*}} x float> poison, float %[[WHAT_FP]], i64 0
+// CHECK: %[[SPLAT:.*]] = shufflevector <vscale x {{[0-9]*}} x float> %[[INSERT]], <vscale x {{[0-9]*}} x float> poison, <vscale x {{[0-9]*}} x i32> zeroinitializer
+// CHECK: call void @[[SINK:.*]](<vscale x {{[0-9]*}} x float> %[[SPLAT]])
+// CHECK: ret void
+void __rvv_float32m1_t_argfun_2(int i)
+{
+  __rvv_float32m1_t_sink(i);
+}

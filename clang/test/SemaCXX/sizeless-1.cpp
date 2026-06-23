@@ -127,14 +127,14 @@ void func(int sel) {
 
   init_int8 = local_int8;
   init_int8 = local_int16; // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'svint16_t'}}
-  init_int8 = sel;         // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'int'}}
+  init_int8 = sel;
 
   sel = local_int8; // expected-error {{assigning to 'int' from incompatible type 'svint8_t'}}
 
   local_int8 = (svint8_t)local_int8;
   local_int8 = (const svint8_t)local_int8;
   local_int8 = (svint8_t)local_int16; // expected-error {{C-style cast from 'svint16_t' (aka '__SVInt16_t') to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
-  local_int8 = (svint8_t)0;           // expected-error {{C-style cast from 'int' to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
+  local_int8 = (svint8_t)0;
   sel = (int)local_int8;              // expected-error {{C-style cast from 'svint8_t' (aka '__SVInt8_t') to 'int' is not allowed}}
 
   init_int8 = local_int8;
@@ -354,7 +354,7 @@ void cxx_only(int sel) {
 
   local_int8 = static_cast<svint8_t>(local_int8);
   local_int8 = static_cast<svint8_t>(local_int16);  // expected-error {{static_cast from 'svint16_t' (aka '__SVInt16_t') to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
-  local_int8 = static_cast<svint8_t>(0);            // expected-error {{static_cast from 'int' to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
+  local_int8 = static_cast<svint8_t>(0);
   local_int16 = static_cast<svint16_t>(local_int8); // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'svint16_t' (aka '__SVInt16_t') is not allowed}}
   sel = static_cast<int>(local_int8);               // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'int' is not allowed}}
 

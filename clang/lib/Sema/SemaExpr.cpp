@@ -8056,8 +8056,29 @@ bool Sema::CheckVectorCast(SourceRange R, QualType VectorTy, QualType Ty,
   return false;
 }
 
+static QualType getVectorElementType(ASTContext &Context, QualType VectorTy,
+                                     bool Unaltered) {
+  if (const auto *TyA = VectorTy->getAs<VectorType>())
+    return TyA->getElementType();
+  if (VectorTy->isSizelessVectorType()) {
+    if (Unaltered) {
+      // Scalable vector types (SVE, RVV) can alter the element type for Bool
+      // in order to avoid any layout issues. Effectively, it makes it harder
+      // to figure out what the actual element type was. See the comment added
+      // to Type::getSveEltType().
+      if (VectorTy->isSveVLSBuiltinType() || VectorTy->isRVVVLSBuiltinType()) {
+        const auto *BTy = VectorTy->castAs<BuiltinType>();
+        return Context.getBuiltinVectorTypeInfo(BTy).ElementType;
+      }
+    }
+    return VectorTy->getSizelessVectorEltType(Context);
+  }
+  return QualType();
+}
+
 ExprResult Sema::prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr) {
-  QualType DestElemTy = VectorTy->castAs<VectorType>()->getElementType();
+  QualType DestElemTy =
+      getVectorElementType(Context, VectorTy, /*Unaltered*/ true);
 
   if (DestElemTy == SplattedExpr->getType())
     return SplattedExpr;
