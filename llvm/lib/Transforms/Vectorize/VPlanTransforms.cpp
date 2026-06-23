@@ -7123,7 +7123,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         Chains.clear();
         break;
       }
-      auto UseIsValid = [&, RedPhiR = RedPhiR](VPUser *U) {
+      auto UseIsValid = [&, RedPhiR = RedPhiR, &Chains = Chains](VPUser *U) {
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
 
