@@ -347,6 +347,26 @@ void Instruction::dropOneDbgRecord(DbgRecord *DVR) {
   DebugMarker->dropOneDbgRecord(DVR);
 }
 
+void Instruction::appendIntermediateDebugLoc(MDNode *IntermediateLoc) {
+  if (!IntermediateLoc)
+    return;
+
+  MDNode *CurrentMD = DbgLoc.getAsMDNode();
+  if (!CurrentMD) {
+    assert(false &&
+           "Cannot append intermediate loc without a primary debug location");
+    return;
+  }
+
+  if (auto *DI = dyn_cast<DILocation>(CurrentMD)) {
+    DbgLoc = DebugLoc(MDTuple::get(getContext(), {DI, IntermediateLoc}));
+  } else if (auto *Tuple = dyn_cast<MDTuple>(CurrentMD)) {
+    SmallVector<Metadata *, 4> Operands(Tuple->operands());
+    Operands.push_back(IntermediateLoc);
+    DbgLoc = DebugLoc(MDTuple::get(getContext(), Operands));
+  }
+}
+
 bool Instruction::comesBefore(const Instruction *Other) const {
   assert(getParent() && Other->getParent() &&
          "instructions without BB parents have no order");

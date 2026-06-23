@@ -487,6 +487,7 @@ public:
     visitModuleIdents();
     visitModuleCommandLines();
     visitModuleErrnoTBAA();
+    visitIntermediateLevelSource();
 
     verifyCompileUnits();
 
@@ -524,6 +525,22 @@ private:
   void visitModuleIdents();
   void visitModuleCommandLines();
   void visitModuleErrnoTBAA();
+  void visitIntermediateLevelSource();
+  void visitIntermediateLevelSourceEntry(const MDNode *N);
+  // Cache of declared intermediate-source DIFiles (slot 1 of each entry of
+  // !llvm.intermediate_level_source), populated lazily on first use. Meaningful
+  // only when IntermediateLevelSourcePresent is true. The "missing named
+  // metadata" diagnostic is emitted at most once per module verification by
+  // latching IntermediateLevelSourceMissingReported.
+  bool IntermediateLevelSourcePopulated = false;
+  bool IntermediateLevelSourcePresent = false;
+  bool IntermediateLevelSourceMissingReported = false;
+  SmallPtrSet<const DIFile *, 8> IntermediateLevelSourceFiles;
+  void populateIntermediateLevelSourceFiles();
+  // Validate that every intermediate DILocation referenced from a tuple-form
+  // !dbg attachment names a file declared in !llvm.intermediate_level_source
+  // (when that named metadata is present).
+  void verifyIntermediateLocChain(const Instruction &I, const MDNode *N);
   void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
@@ -1989,6 +2006,109 @@ void Verifier::visitModuleErrnoTBAA() {
 
   for (const MDNode *N : ErrnoTBAA->operands())
     TBAAVerifyHelper.visitTBAAMetadata(nullptr, N);
+}
+
+void Verifier::visitIntermediateLevelSource() {
+  const NamedMDNode *Src = M.getNamedMetadata("llvm.intermediate_level_source");
+  if (!Src)
+    return;
+
+  // Each entry must be a !{kind, file, source} tuple where kind and source are
+  // non-null metadata strings and file is a DIFile.
+  // NVPTXDwarfDebug::buildIntermediateSourceSection consumes these three slots
+  // when emitting the .nv_intermediate_source_section PTX section; rejecting
+  // malformed entries here gives a clean diagnostic at IR load time instead of
+  // asserting in codegen.
+  for (const MDNode *N : Src->operands())
+    visitIntermediateLevelSourceEntry(N);
+}
+
+void Verifier::visitIntermediateLevelSourceEntry(const MDNode *N) {
+  // Bail on wrong arity since the per-slot checks below dereference operand
+  // indices 0..2 directly. Use CheckFailed for the per-slot checks so that a
+  // failure in one slot doesn't suppress diagnostics for the remaining slots.
+  Check(N->getNumOperands() == 3,
+        "incorrect number of operands in llvm.intermediate_level_source "
+        "metadata entry (expected !{kind, filename, source})",
+        N);
+  if (!isa_and_nonnull<MDString>(N->getOperand(0)))
+    CheckFailed("invalid kind operand in llvm.intermediate_level_source "
+                "metadata entry (expected metadata string)",
+                N, N->getOperand(0));
+  if (!isa_and_nonnull<DIFile>(N->getOperand(1)))
+    CheckFailed("invalid file operand in llvm.intermediate_level_source "
+                "metadata entry (expected DIFile)",
+                N, N->getOperand(1));
+  if (!isa_and_nonnull<MDString>(N->getOperand(2)))
+    CheckFailed("invalid source operand in llvm.intermediate_level_source "
+                "metadata entry (expected metadata string)",
+                N, N->getOperand(2));
+}
+
+void Verifier::populateIntermediateLevelSourceFiles() {
+  if (IntermediateLevelSourcePopulated)
+    return;
+  IntermediateLevelSourcePopulated = true;
+  const NamedMDNode *Src = M.getNamedMetadata("llvm.intermediate_level_source");
+  if (!Src)
+    return;
+  IntermediateLevelSourcePresent = true;
+  // Collect the file slot (operand 1) of each well-formed entry. The
+  // arity / non-null structural checks are the responsibility of
+  // visitIntermediateLevelSourceEntry.
+  for (const MDNode *N : Src->operands()) {
+    if (N->getNumOperands() < 3)
+      continue;
+    if (auto *F = dyn_cast_or_null<DIFile>(N->getOperand(1)))
+      IntermediateLevelSourceFiles.insert(F);
+  }
+}
+
+void Verifier::verifyIntermediateLocChain(const Instruction &I,
+                                          const MDNode *N) {
+  // The expected shape, mirroring NVPTXDwarfDebug::recordIntermediateLoc, is
+  //   !dbg = !{ DILocation,
+  //             !{ MDString kind, DILocation intermediate }, ... }
+  auto *Tuple = dyn_cast<MDTuple>(N);
+  if (!Tuple)
+    return;
+  for (const MDOperand &Op : Tuple->operands()) {
+    if (isa_and_nonnull<DILocation>(Op.get()))
+      continue;
+    auto *InnerTuple = dyn_cast_or_null<MDTuple>(Op.get());
+    if (!InnerTuple || InnerTuple->getNumOperands() < 2)
+      continue;
+    auto *IntLoc =
+        dyn_cast_or_null<DILocation>(InnerTuple->getOperand(1).get());
+    if (!IntLoc)
+      continue;
+
+    // Lazily build the filename set.
+    populateIntermediateLevelSourceFiles();
+    if (!IntermediateLevelSourcePresent) {
+      // Latch so we only emit the module-level "missing named MD" diagnostic
+      // once per verification.
+      if (!IntermediateLevelSourceMissingReported) {
+        IntermediateLevelSourceMissingReported = true;
+        DebugInfoCheckFailed(
+            "intermediate-loc !dbg chain found but module has no "
+            "!llvm.intermediate_level_source named metadata",
+            &I, N);
+      }
+      return;
+    }
+
+    const DIScope *Scope = IntLoc->getScope();
+    if (!Scope)
+      continue;
+    const DIFile *File = Scope->getFile();
+    if (!File)
+      continue;
+    CheckDI(IntermediateLevelSourceFiles.contains(File),
+            "intermediate DILocation references a file with no matching "
+            "entry in !llvm.intermediate_level_source",
+            &I, IntLoc, File);
+  }
 }
 
 void Verifier::visitModuleFlags() {
@@ -6027,7 +6147,11 @@ void Verifier::visitInstruction(Instruction &I) {
     visitMemCacheHintMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
-    CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
+    CheckDI(isa<DILocation>(N) || (isa<MDTuple>(N) && N->getNumOperands() > 0 &&
+                                   isa<DILocation>(N->getOperand(0))),
+            "invalid !dbg metadata attachment", &I, N);
+    if (isa<MDTuple>(N))
+      verifyIntermediateLocChain(I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);
 
     if (auto *DL = dyn_cast<DILocation>(N)) {

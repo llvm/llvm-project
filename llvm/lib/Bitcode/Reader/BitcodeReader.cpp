@@ -5180,9 +5180,20 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       unsigned Line = Record[0], Col = Record[1];
       unsigned ScopeID = Record[2], IAID = Record[3];
-      bool isImplicitCode = Record.size() >= 5 && Record[4];
-      uint64_t AtomGroup = Record.size() == 7 ? Record[5] : 0;
-      uint8_t AtomRank = Record.size() == 7 ? Record[6] : 0;
+      const bool isImplicitCode = Record.size() >= 5 && Record[4];
+      const uint64_t AtomGroup = Record.size() >= 7 ? Record[5] : 0;
+      const uint8_t AtomRank = Record.size() >= 7 ? Record[6] : 0;
+      // MDStringID uses 1-based indexing (0 means no MDString) to match the
+      // writer's use of getMetadataOrNullID; it carries the intermediate-loc
+      // kind string for a tuple-shaped DebugLoc.
+      const unsigned MDStringID = Record.size() >= 8 ? Record[7] : 0;
+      MDString *MS = nullptr;
+      if (MDStringID) {
+        MS = dyn_cast_or_null<MDString>(
+            MDLoader->getMetadataFwdRefOrLoad(MDStringID - 1));
+        if (!MS)
+          return error("Invalid debug loc record");
+      }
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
@@ -5198,9 +5209,20 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid debug loc record");
       }
 
-      LastLoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
-                                isImplicitCode, AtomGroup, AtomRank);
-      I->setDebugLoc(LastLoc);
+      if (!Scope)
+        return error("Invalid debug loc record");
+      DILocation *Loc =
+          DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
+                          isImplicitCode, AtomGroup, AtomRank);
+      if (!MS) {
+        LastLoc = Loc;
+        I->setDebugLoc(LastLoc);
+      } else {
+        // Tuple-shaped DebugLoc: pair the primary location with the
+        // intermediate-loc kind string for the second DEBUG_LOC record.
+        MDTuple *TileIRTuple = MDTuple::get(Scope->getContext(), {MS, Loc});
+        I->appendIntermediateDebugLoc(TileIRTuple);
+      }
       I = nullptr;
       continue;
     }

@@ -70,48 +70,55 @@ enum class DebugLocKind : uint8_t {
   Temporary
 };
 
-// Extends a DILocation pointer to also store a DebugLocKind and Origin,
+// Extends a raw MDNode pointer to also store a DebugLocKind and Origin,
 // allowing Debugify to ignore intentionally-empty DebugLocs and display the
 // code responsible for generating unintentionally-empty DebugLocs.
 // Currently we only need to track the Origin of this DILoc when using a
 // DebugLoc that is not annotated (i.e. has DebugLocKind::Normal) and has a
 // null DILocation, so only collect the origin stacktrace in those cases.
+//
+// Stores a raw MDNode* (instead of upstream's DILocation*) so that the
+// intermediate-location MDTuple !{ DILocation, !{ MDString, DILocation } }
+// can be held directly; get() unwraps it to the primary DILocation.
 class DILocAndCoverageTracking : public DbgLocOrigin {
-  DILocation *Loc;
+  MDNode *Loc;
 
 public:
   DebugLocKind Kind;
   // Default constructor for empty DebugLocs.
   DILocAndCoverageTracking()
       : DbgLocOrigin(true), Loc(nullptr), Kind(DebugLocKind::Normal) {}
-  // Valid or nullptr DILocation*, no annotative DebugLocKind.
-  DILocAndCoverageTracking(const DILocation *Loc)
-      : DbgLocOrigin(!Loc), Loc(const_cast<DILocation *>(Loc)),
+  // Valid or nullptr DILocation*, no annotative DebugLocKind. Defined
+  // out-of-line in DebugLoc.cpp: the DILocation*->MDNode* upcast requires the
+  // complete DILocation type, which is only forward-declared here.
+  DILocAndCoverageTracking(const DILocation *L);
+  // Valid or nullptr MDNode*, no annotative DebugLocKind. Kept tolerant so
+  // tuple-shaped (intermediate-location) nodes can be stored unchanged.
+  DILocAndCoverageTracking(const MDNode *L)
+      : DbgLocOrigin(!L), Loc(const_cast<MDNode *>(L)),
         Kind(DebugLocKind::Normal) {}
-  // Explicit DebugLocKind, which always means a nullptr DILocation*.
-  DILocAndCoverageTracking(DebugLocKind Kind)
-      : DbgLocOrigin(Kind == DebugLocKind::Normal), Loc(nullptr), Kind(Kind) {}
+  // Explicit DebugLocKind, which always means a nullptr MDNode*.
+  DILocAndCoverageTracking(DebugLocKind K)
+      : DbgLocOrigin(K == DebugLocKind::Normal), Loc(nullptr), Kind(K) {}
 
-  operator DILocation *() const { return Loc; }
+  operator MDNode *() const { return Loc; }
 };
 template <> struct simplify_type<DILocAndCoverageTracking> {
-  using SimpleType = DILocation *;
+  using SimpleType = MDNode *;
 
-  static DILocation *getSimplifiedValue(DILocAndCoverageTracking &MD) {
-    return MD;
-  }
+  static MDNode *getSimplifiedValue(DILocAndCoverageTracking &MD) { return MD; }
 };
 template <> struct simplify_type<const DILocAndCoverageTracking> {
-  using SimpleType = DILocation *;
+  using SimpleType = MDNode *;
 
-  static DILocation *getSimplifiedValue(const DILocAndCoverageTracking &MD) {
+  static MDNode *getSimplifiedValue(const DILocAndCoverageTracking &MD) {
     return MD;
   }
 };
 
 using DebugLocRef = DILocAndCoverageTracking;
 #else
-using DebugLocRef = DILocation *;
+using DebugLocRef = MDNode *;
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
 /// A debug info location.
@@ -125,8 +132,19 @@ class DebugLoc {
   DebugLocRef Loc = {};
 
 public:
+  DebugLoc() = default;
+
   /// Construct from an \a DILocation.
-  DebugLoc(const DILocation *L = nullptr) : Loc(const_cast<DILocation *>(L)) {}
+  LLVM_ABI DebugLoc(const DILocation *L);
+
+  /// Construct from an \a MDNode.
+  ///
+  /// Note: if \c N is not an \a DILocation, a verifier check will fail, and
+  /// accessors will crash.  However, construction from other nodes is
+  /// supported in order to handle forward references when reading textual
+  /// IR. Kept (upstream deletes this) so an intermediate-location MDTuple can
+  /// be stored directly in a DebugLoc.
+  LLVM_ABI explicit DebugLoc(const MDNode *N);
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
   DebugLoc(DebugLocKind Kind) : Loc(Kind) {}
@@ -215,7 +233,7 @@ public:
   ///
   /// \pre !*this or \c isa<DILocation>(getAsMDNode()).
   /// @{
-  DILocation *get() const { return Loc; }
+  LLVM_ABI DILocation *get() const;
   operator DILocation *() const { return get(); }
   DILocation *operator->() const { return get(); }
   DILocation &operator*() const { return *get(); }
@@ -239,18 +257,50 @@ public:
 
   /// Return true if the source locations match, ignoring isImplicitCode and
   /// source atom info.
+  // Compare full MDNode pointers in the early-exit (covers MDTuple-shaped
+  // DebugLocs too; MDTuples are uniqued, so equal-pointer implies equal
+  // {primary, intermediate}) and AND the intermediate fields into the
+  // structural compare. The intermediate DILocation is wrapped in a
+  // DebugLoc so it goes through the same structural compare as the
+  // primary (decomposed into line/col/scope/inlinedAt) instead of a
+  // pointer-only check; this avoids treating structurally-equal but
+  // distinctly-allocated intermediates (e.g., DILocations built atop a
+  // getDistinct InlinedAt chain) as different. The intermediate-kind
+  // MDString is uniqued, so a pointer compare is the right shape there.
   bool isSameSourceLocation(const DebugLoc &Other) const {
-    if (get() == Other.get())
+    if (getAsMDNode() == Other.getAsMDNode())
       return true;
     return ((bool)*this == (bool)Other) && getLine() == Other.getLine() &&
            getCol() == Other.getCol() && getScope() == Other.getScope() &&
-           getInlinedAt() == Other.getInlinedAt();
+           getInlinedAt() == Other.getInlinedAt() &&
+           DebugLoc(getIntermediateLoc())
+               .isSameSourceLocation(DebugLoc(Other.getIntermediateLoc())) &&
+           getIntermediateLocKind() == Other.getIntermediateLocKind();
   }
 
   LLVM_ABI unsigned getLine() const;
   LLVM_ABI unsigned getCol() const;
   LLVM_ABI MDNode *getScope() const;
   LLVM_ABI DILocation *getInlinedAt() const;
+
+  /// Intermediate location(s) do not have a full parallel scope chain for
+  /// the intermediate source. They only capture enough information to
+  /// reference the DIFile and tie it to the Compile Unit scope.
+
+  /// Get the intermediate IR location (e.g., TileIR).
+  LLVM_ABI DILocation *getIntermediateLoc() const;
+
+  /// Get the kind string (e.g., "TileIR") from the intermediate location tuple.
+  LLVM_ABI MDString *getIntermediateLocKind() const;
+
+  /// Get the context from the intermediate location tuple.
+  LLVM_ABI LLVMContext *getIntermediateLocContext() const;
+
+  /// Apply DILocation::getWithoutAtom() to the primary while preserving
+  /// any intermediate-location MDTuple wrapper. Prefer this over
+  /// `dl->getWithoutAtom()` whenever the result is reassigned to a
+  /// DebugLoc — the `->` projection drops the intermediate operand.
+  LLVM_ABI DebugLoc getWithoutAtom() const;
 
   /// Get the fully inlined-at scope for a DebugLoc.
   ///
@@ -280,8 +330,12 @@ public:
   LLVM_ABI bool isImplicitCode() const;
   LLVM_ABI void setImplicitCode(bool ImplicitCode);
 
-  bool operator==(const DebugLoc &DL) const { return Loc == DL.Loc; }
-  bool operator!=(const DebugLoc &DL) const { return Loc != DL.Loc; }
+  bool operator==(const DebugLoc &DL) const {
+    return getAsMDNode() == DL.getAsMDNode();
+  }
+  bool operator!=(const DebugLoc &DL) const {
+    return getAsMDNode() != DL.getAsMDNode();
+  }
 
   LLVM_ABI void dump() const;
 
