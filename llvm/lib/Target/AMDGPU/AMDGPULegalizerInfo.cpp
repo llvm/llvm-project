@@ -2267,7 +2267,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
   }
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
+  getActionDefinitionsBuilder(
+      {G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET, G_MEMSET_INLINE})
       .lower();
 
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
@@ -5513,7 +5514,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     // v_rcp_f16 and v_rsq_f16 DO support denormals and 0.51ulp.
 
     // 1 / x -> RCP(x)
-    if (CLHS->isExactlyValue(1.0)) {
+    if (CLHS->isOne()) {
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
           .addUse(RHS)
           .setMIFlags(Flags);
@@ -5523,7 +5524,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
 
     // -1 / x -> RCP( FNEG(x) )
-    if (CLHS->isExactlyValue(-1.0)) {
+    if (CLHS->isMinusOne()) {
       auto FNeg = B.buildFNeg(ResTy, RHS, Flags);
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
           .addUse(FNeg.getReg(0))
@@ -5565,7 +5566,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
     return false;
 
   const ConstantFP *CLHS = getConstantFPVRegVal(X, MRI);
-  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+  bool IsNegRcp = CLHS && CLHS->isMinusOne();
 
   // Pull out the negation so it folds for free into the source modifiers.
   if (IsNegRcp)
@@ -5587,7 +5588,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   R = B.buildFMA(ResTy, Tmp1, R, R);
 
   // Skip the last 2 correction terms for reciprocal.
-  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0))) {
+  if (IsNegRcp || (CLHS && CLHS->isOne())) {
     B.buildCopy(Res, R);
     MI.eraseFromParent();
     return true;

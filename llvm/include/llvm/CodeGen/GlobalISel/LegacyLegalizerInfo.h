@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/Support/Compiler.h"
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -456,9 +455,9 @@ private:
   // Data structures used by getAction:
   SmallVector<SizeAndActionsVec, 1> ScalarActions[LastOp - FirstOp + 1];
   SmallVector<SizeAndActionsVec, 1> ScalarInVectorActions[LastOp - FirstOp + 1];
-  std::unordered_map<uint16_t, SmallVector<SizeAndActionsVec, 1>>
+  DenseMap<uint16_t, SmallVector<SizeAndActionsVec, 1>>
       AddrSpace2PointerActions[LastOp - FirstOp + 1];
-  std::unordered_map<uint16_t, SmallVector<SizeAndActionsVec, 1>>
+  DenseMap<uint16_t, SmallVector<SizeAndActionsVec, 1>>
       NumElements2Actions[LastOp - FirstOp + 1];
 };
 

@@ -198,7 +198,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's xnack settings are compatible with module's
   // xnack settings.
   if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getXnackSetting() !=
           getTargetStreamer()->getTargetID()->getXnackSetting()) {
     OutContext.reportError(
@@ -209,7 +209,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's sramecc settings are compatible with module's
   // sramecc settings.
   if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getSramEccSetting() !=
           getTargetStreamer()->getTargetID()->getSramEccSetting()) {
     OutContext.reportError(
@@ -434,17 +434,29 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
-  unsigned Generation = STM.getGeneration();
+
+  // Bake the per-function SGPR budget into the operands so the late-evaluated
+  // MCExpr stays arithmetic. The trap reservation in particular is implicit on
+  // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
+  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
+  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
     return MCConstantExpr::create(Value, Ctx);
   };
 
+  // Zero SGPR count when SGPRs don't limit occupancy, so the MCExpr skips the
+  // SGPR term without having to test the generation itself.
+  const MCExpr *SGPRArg =
+      IsaInfo::isSGPROccupancyLimited(STM) ? NumSGPRs : CreateExpr(0);
+
   return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
                               {CreateExpr(MaxWaves), CreateExpr(Granule),
                                CreateExpr(TargetTotalNumVGPRs),
-                               CreateExpr(Generation), CreateExpr(InitOcc),
-                               NumSGPRs, NumVGPRs},
+                               CreateExpr(InitOcc), CreateExpr(SGPRTotal),
+                               CreateExpr(SGPRGranule),
+                               CreateExpr(SGPRTrapReserve), SGPRArg, NumVGPRs},
                               Ctx);
 }
 
@@ -1200,12 +1212,12 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       break;
 
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const IsaInfo::AMDGPUTargetID &STMTargetID = STM.getTargetID();
+    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
     if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
     if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
 }

@@ -62,12 +62,12 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP7]])
+; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[ST_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[ST_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
@@ -341,12 +341,12 @@ define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 deref
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[LD_ADDR:%.*]] = getelementptr i16, ptr [[LOAD_ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP7]])
+; CHECK-NEXT:    [[LD_ADDR:%.*]] = getelementptr i16, ptr [[LOAD_ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[LD_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV]]
@@ -1184,12 +1184,12 @@ define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) no
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP7]])
+; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[ST_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[ST_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])

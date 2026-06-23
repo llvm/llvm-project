@@ -76,13 +76,9 @@ public:
   virtual Value *FoldCast(Instruction::CastOps Op, Value *V,
                           Type *DestTy) const = 0;
 
-  virtual Value *
-  FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
-                     FastMathFlags FMF = FastMathFlags()) const = 0;
-
-  virtual Value *
-  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                      FastMathFlags FMF = FastMathFlags()) const = 0;
+  virtual Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops,
+                               Type *Ty, FastMathFlags FMF = {},
+                               Function *CtxF = nullptr) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators

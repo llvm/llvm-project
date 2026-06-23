@@ -1,5 +1,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx950 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950 %s
+; The amdhsa OS implicitly enables the trap handler, which reserves 16 SGPRs per
+; wave. The reported occupancy of SGPR-limited kernels must account for that, so
+; the same kernels reach a lower occupancy than on the non-amdhsa runs above.
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9TRAP %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950TRAP %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1010,GFX1010W32 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-xnack -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1010,GFX1010W64 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
@@ -353,6 +358,8 @@ define amdgpu_kernel void @used_256_vgprs() #10 {
 ; GCN-LABEL: {{^}}used_80_sgprs:
 ; GFX9:       ; Occupancy: 10
 ; GFX950:     ; Occupancy: 8
+; GFX9TRAP:   ; Occupancy: 8
+; GFX950TRAP: ; Occupancy: 7
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
@@ -363,8 +370,10 @@ define amdgpu_kernel void @used_80_sgprs() #10 {
 }
 
 ; GCN-LABEL: {{^}}used_88_sgprs:
-; GFX9:       ; Occupancy: 9
+; GFX9:       ; Occupancy: 8
 ; GFX950:     ; Occupancy: 8
+; GFX9TRAP:   ; Occupancy: 7
+; GFX950TRAP: ; Occupancy: 7
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
@@ -375,8 +384,10 @@ define amdgpu_kernel void @used_88_sgprs() #10 {
 }
 
 ; GCN-LABEL: {{^}}used_100_sgprs:
-; GFX9:       ; Occupancy: 8
+; GFX9:       ; Occupancy: 7
 ; GFX950:     ; Occupancy: 7
+; GFX9TRAP:   ; Occupancy: 6
+; GFX950TRAP: ; Occupancy: 6
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
@@ -389,6 +400,8 @@ define amdgpu_kernel void @used_100_sgprs() #10 {
 ; GCN-LABEL: {{^}}used_101_sgprs:
 ; GFX9:       ; Occupancy: 7
 ; GFX950:     ; Occupancy: 7
+; GFX9TRAP:   ; Occupancy: 6
+; GFX950TRAP: ; Occupancy: 6
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16

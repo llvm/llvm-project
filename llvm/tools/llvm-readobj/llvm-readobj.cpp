@@ -243,11 +243,11 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::SectionRelocations = Args.hasArg(OPT_section_relocations);
   opts::SectionSymbols = Args.hasArg(OPT_section_symbols);
   if (Args.hasArg(OPT_section_mapping))
-    opts::SectionMapping = cl::BOU_TRUE;
+    opts::SectionMapping = cl::boolOrDefault::BOU_TRUE;
   else if (Args.hasArg(OPT_section_mapping_EQ_false))
-    opts::SectionMapping = cl::BOU_FALSE;
+    opts::SectionMapping = cl::boolOrDefault::BOU_FALSE;
   else
-    opts::SectionMapping = cl::BOU_UNSET;
+    opts::SectionMapping = cl::boolOrDefault::BOU_UNSET;
   opts::PrintStackSizes = Args.hasArg(OPT_stack_sizes);
   opts::PrintStackMap = Args.hasArg(OPT_stackmap);
   opts::StringDump = Args.getAllArgValues(OPT_string_dump_EQ);
@@ -440,7 +440,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
 
   if (opts::HashSymbols)
     Dumper->printHashSymbols();
-  if (opts::ProgramHeaders || opts::SectionMapping == cl::BOU_TRUE)
+  if (opts::ProgramHeaders ||
+      opts::SectionMapping == cl::boolOrDefault::BOU_TRUE)
     Dumper->printProgramHeaders(opts::ProgramHeaders, opts::SectionMapping);
   if (opts::DynamicTable)
     Dumper->printDynamicTable();

@@ -154,7 +154,7 @@ void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
 }
 
 void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
-                                                const MCSubtargetInfo *STI,
+                                                const MCSubtargetInfo &STI,
                                                 unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())

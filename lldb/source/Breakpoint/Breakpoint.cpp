@@ -1064,7 +1064,8 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(ConstString filename, uint32_t line_number,
+bool Breakpoint::GetMatchingFileLine(llvm::StringRef filename,
+                                     uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
   // collection

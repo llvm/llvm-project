@@ -663,6 +663,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
+    .llvm-libc-types.struct_winsize
 )
 
 add_header_macro(

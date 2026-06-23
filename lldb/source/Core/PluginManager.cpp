@@ -171,8 +171,7 @@ llvm::Expected<PluginInfo> PluginInfo::Create(const FileSpec &path) {
   // Look for files that follow the convention <g_plugin_prefix><name>.<ext>, in
   // which case we need to call lldb_initialize_<name> and
   // lldb_terminate_<name>.
-  llvm::StringRef file_name =
-      path.GetFileNameStrippingExtension().GetStringRef();
+  llvm::StringRef file_name = path.GetFileNameStrippingExtension();
   if (file_name.starts_with(g_plugin_prefix)) {
     llvm::StringRef plugin_name = file_name.substr(g_plugin_prefix.size());
     std::string init_symbol =

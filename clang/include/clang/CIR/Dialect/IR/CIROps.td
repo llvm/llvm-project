@@ -694,6 +694,7 @@ def CIR_LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
@@ -702,6 +703,7 @@ def CIR_LoadOp : CIR_Op<"load", [
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -793,12 +795,14 @@ def CIR_StoreOp : CIR_Op<"store", [
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -809,6 +813,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     // Non-volatile, non-atomic store with default alignment.
     OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
       build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*is_nontemporal=*/mlir::UnitAttr(),
             /*alignment=*/mlir::IntegerAttr(),
             /*sync_scope=*/cir::SyncScopeKindAttr(),
             /*mem_order=*/cir::MemOrderAttr());
@@ -6305,15 +6310,15 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
 }
 
 def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntMultipleOf16
 > {
   let summary = "Reverse the bytes in the object representation of the operand";
   let description = [{
     The `cir.byte_swap` operation takes an integer as operand, reverse the bytes
     in the object representation of the operand integer, and returns the result.
 
-    The operand integer must be an unsigned integer. Its widths must be either
-    16, 32, or 64.
+    The operand integer must be an unsigned integer whose width is a multiple of
+    16 bits (e.g. 16, 32, 64, 128, or a wider `_BitInt`).
 
     Example:
 

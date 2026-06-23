@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // generate_canonical
 
 template <class _RealType, size_t __bits, class _URNG>
-_LIBCPP_HIDE_FROM_ABI _RealType generate_canonical(_URNG& __g) {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _RealType generate_canonical(_URNG& __g) {
   const size_t __dt = numeric_limits<_RealType>::digits;
   const size_t __b  = __dt < __bits ? __dt : __bits;
 #ifdef _LIBCPP_CXX03_LANG

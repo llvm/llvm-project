@@ -151,6 +151,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
     fir.call @_QPuse_index(%3) : (index) -> ()
     return
   }
+  func.func @_QQconstant_scalar_device_to_host() attributes {fir.bindc_name = "T"} {
+    %0 = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+    %1 = fir.declare %0 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.alloca i32
+    cuf.data_transfer %1 to %2 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
+    return
+  }
   func.func private @_QPuse_index(index)
   fir.global @_QMcon3Ezzz {data_attr = #cuf.cuda<constant>} : i32
 }
@@ -162,3 +169,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK: fir.store %{{.*}} to %[[ADDR]] : !fir.ref<i32>
 // CHECK: fir.call @_FortranACUFGetDeviceAddress
 // CHECK-NOT: fir.load %{{.*}} : !fir.ref<i32>
+// CHECK: fir.call @_QPuse_index
+// CHECK-LABEL: func.func @_QQconstant_scalar_device_to_host()
+// CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+// CHECK: %[[DECL:.*]] = fir.declare %[[ADDR]] {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK: %[[DST:.*]] = fir.alloca i32
+// CHECK: %[[VALUE:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
+// CHECK: fir.store %[[VALUE]] to %[[DST]] : !fir.ref<i32>
+// CHECK-NOT: fir.call @_FortranACUFDataTransferPtrPtr

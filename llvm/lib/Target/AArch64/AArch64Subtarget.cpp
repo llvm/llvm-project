@@ -304,6 +304,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
     break;
+  case HIP12:
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
+    VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
+    break;
   case ThunderX3T110:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);

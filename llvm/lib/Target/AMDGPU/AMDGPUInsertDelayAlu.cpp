@@ -76,7 +76,7 @@ public:
     // WMMA XDL ops are treated the same as TRANS.
     if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI))
+    if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
@@ -410,7 +410,7 @@ public:
           }
         }
 
-        if (SII->isVALU(MI.getOpcode())) {
+        if (SII->isVALU(MI.getOpcode(), /*AllowLDSDMA=*/true)) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {

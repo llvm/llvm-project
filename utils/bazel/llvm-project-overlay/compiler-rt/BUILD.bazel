@@ -33,6 +33,7 @@ WIN32_ONLY_FILES = [
 
 PROFILE_ROCM_FILES = [
     "lib/profile/InstrProfilingPlatformROCm.cpp",
+    "lib/profile/InstrProfilingPlatformROCmHSA.cpp",
 ]
 
 cc_library(

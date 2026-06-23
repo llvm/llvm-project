@@ -45,9 +45,16 @@ llvm::Error makeSawButExpectedError(const JSONTy &Saw, llvm::StringRef Expected,
   return llvm::createStringError(Fmt.c_str(), SawStr.c_str(), ExpectedArgs...);
 }
 
-template <typename DeclOrExpr> bool hasPtrOrArrType(const DeclOrExpr *E) {
+///\return true iff expression `E` has pointer or array type.
+inline bool hasPtrOrArrType(const Expr *E) {
   return llvm::isa<clang::PointerType, clang::ArrayType>(
       E->getType().getCanonicalType());
+}
+
+///\return true iff Decl `D` has (reference-to) pointer or array type.
+inline bool hasPtrOrArrType(const ValueDecl *D) {
+  return llvm::isa<clang::PointerType, clang::ArrayType>(
+      D->getType().getNonReferenceType().getCanonicalType());
 }
 
 llvm::Error makeEntityNameErr(clang::ASTContext &Ctx,

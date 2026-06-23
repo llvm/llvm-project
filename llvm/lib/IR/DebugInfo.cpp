@@ -2381,7 +2381,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   // Note: trackAssignments doesn't respect dbg.declare's IR positions (as it
   // doesn't "understand" dbg.declares). However, this doesn't appear to break
   // any rules given this description of dbg.declare from
-  // llvm/docs/SourceLevelDebugging.rst:
+  // llvm/docs/SourceLevelDebugging.md:
   //
   //   It is not control-dependent, meaning that if a call to llvm.dbg.declare
   //   exists and has a valid location argument, that address is considered to

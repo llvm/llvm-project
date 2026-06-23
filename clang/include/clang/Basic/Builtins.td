@@ -1835,6 +1835,18 @@ def ElementwiseClmul : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwisePext : Builtin {
+  let Spellings = ["__builtin_elementwise_pext"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwisePdep : Builtin {
+  let Spellings = ["__builtin_elementwise_pdep"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
@@ -5551,6 +5563,12 @@ def HLSLQuadReadAcrossX : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLQuadReadAcrossY : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_quad_read_across_y"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLQuadReadAcrossDiagonal : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_quad_read_across_diagonal"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

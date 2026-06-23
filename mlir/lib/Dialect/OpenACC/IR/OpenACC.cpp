@@ -283,6 +283,11 @@ struct MemRefPointerLikeModel
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
+
+  MemRefType getAsMemRefType(Type pointer, ModuleOp module) const {
+    (void)module;
+    return dyn_cast<MemRefType>(pointer);
+  }
 };
 
 struct LLVMPointerPointerLikeModel
@@ -360,6 +365,15 @@ struct PrivateTypePointerLikeModel
     if (!isa<PointerLikeType>(resultType))
       return {};
     return UnwrapPrivateOp::create(builder, loc, resultType, value).getResult();
+  }
+
+  MemRefType getAsMemRefType(Type type, ModuleOp module) const {
+    Type baseTy = cast<PrivateType>(type).getBaseTy();
+    if (auto memrefTy = dyn_cast<MemRefType>(baseTy))
+      return memrefTy;
+    if (auto ptrLikeTy = dyn_cast<PointerLikeType>(baseTy))
+      return ptrLikeTy.getAsMemRefType(module);
+    return {};
   }
 };
 

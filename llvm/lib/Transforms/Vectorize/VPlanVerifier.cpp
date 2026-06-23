@@ -194,6 +194,9 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     if (vputils::isHeaderMask(Mask, Plan))
       continue;
 
+    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
+      continue;
+
     CmpPredicate Pred;
     VPValue *LHS, *RHS;
     if (match(Mask, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&

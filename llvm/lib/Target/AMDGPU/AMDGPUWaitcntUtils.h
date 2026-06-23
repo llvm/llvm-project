@@ -46,6 +46,28 @@ StringLiteral getInstCounterName(InstCounterType T);
 iota_range<InstCounterType>
 inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
 
+/// Represents the hardware counter limits for different wait count types.
+struct HardwareLimits {
+  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
+  unsigned ExpcntMax;
+  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
+  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
+  unsigned SamplecntMax; // gfx12+ only.
+  unsigned BvhcntMax;    // gfx12+ only.
+  unsigned KmcntMax;     // gfx12+ only.
+  unsigned XcntMax;      // gfx1250.
+  unsigned AsyncMax;     // gfx1250.
+  unsigned VaVdstMax;    // gfx12+ expert mode only.
+  unsigned VmVsrcMax;    // gfx12+ expert mode only.
+
+  HardwareLimits() = default;
+
+  /// Initializes hardware limits from ISA version.
+  HardwareLimits(const IsaVersion &IV);
+
+  unsigned get(InstCounterType T) const;
+};
+
 } // namespace AMDGPU
 
 template <> struct enum_iteration_traits<AMDGPU::InstCounterType> {
@@ -109,6 +131,12 @@ public:
     return false;
   }
 
+  void add(AMDGPU::InstCounterType T, unsigned Count) {
+    set(T, std::min(get(T), Count));
+  }
+
+  void clear(AMDGPU::InstCounterType T) { set(T, ~0u); }
+
   bool hasWaitStoreCnt() const { return Cnt[STORE_CNT] != ~0u; }
 
   bool hasWaitDepctr() const {
@@ -167,6 +195,10 @@ unsigned encodeLoadcntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 /// immediate that can be used with S_WAIT_STORECNT_DSCNT for given isa
 /// \p Version.
 unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
+
+/// Determine if \p MI is a gfx12+ single-counter S_WAIT_*CNT instruction,
+/// and if so, which counter it is waiting on.
+std::optional<AMDGPU::InstCounterType> counterTypeForInstr(unsigned Opcode);
 
 } // namespace AMDGPU
 

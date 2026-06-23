@@ -79,7 +79,7 @@ static_assert(!std::__unsigned_integer<unsigned int&>);
 static_assert(!std::__unsigned_integer<const unsigned int&>);
 
 // Extended unsigned integer types per [basic.fundamental]/p3 Note 1.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
 static_assert(std::__unsigned_integer<unsigned _BitInt(8)>);
 static_assert(std::__unsigned_integer<unsigned _BitInt(16)>);
 static_assert(std::__unsigned_integer<unsigned _BitInt(64)>);

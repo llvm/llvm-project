@@ -199,7 +199,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
-      return O.error("Unknown SPIR-V extension: " + Token.str());
+      return O.error("Unknown SPIR-V extension: " + Token);
 
     EnabledExtensions.insert(NameValuePair->second);
   }
@@ -221,7 +221,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
     auto NameValuePair = SPIRVExtensionMap.find(Token.substr(1));
 
     if (NameValuePair == SPIRVExtensionMap.end())
-      return O.error("Unknown SPIR-V extension: " + Token.str());
+      return O.error("Unknown SPIR-V extension: " + Token);
     if (EnabledExtensions.count(NameValuePair->second))
       return O.error(
           "Extension cannot be allowed and disallowed at the same time: " +
@@ -236,7 +236,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 }
 
 StringRef
-SPIRVExtensionsParser::checkExtensions(const std::vector<std::string> &ExtNames,
+SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
                                        ExtensionSet &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {
     if (Ext == "all") {

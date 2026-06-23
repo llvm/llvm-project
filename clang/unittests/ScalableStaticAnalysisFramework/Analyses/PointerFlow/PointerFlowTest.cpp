@@ -104,9 +104,13 @@ const SomeDecl *findEntityByName(FindEntityByName Name, ASTContext &Ctx) {
     const SomeDecl *FoundDecl = nullptr;
 
     NamedDeclFinder(FindEntityByName SearchingName)
-        : SearchingName(SearchingName) {}
+        : SearchingName(SearchingName) {
+      ShouldVisitTemplateInstantiations = true;
+    }
 
     bool VisitDecl(Decl *D) override {
+      if (D->isTemplated())
+        return true;
       if (auto *ND = dyn_cast<NamedDecl>(D)) {
         FoundDecl = llvm::dyn_cast_or_null<SomeDecl>(
             matchNamedDeclByFindEntityByName(SearchingName, ND));
@@ -148,7 +152,8 @@ protected:
   std::unique_ptr<ASTUnit> AST;
 
   PointerFlowTest()
-      : TUSum(BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
+      : TUSum(llvm::Triple("arm64-apple-macosx"),
+              BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         Builder(TUSum), Extractor(nullptr) {}
 
   template <typename ContributorDecl = NamedDecl,
@@ -1265,6 +1270,72 @@ TEST_F(PointerFlowTest, CXXConstructExprArrayInit) {
 }
 
 //////////////////////////////////////////////////////////////
+// Template is ignored but instantiations are visited.      //
+//////////////////////////////////////////////////////////////
+TEST_F(PointerFlowTest, FunctionTemplate) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    T* f(T *p) {
+      int *q = p;
+      return q;
+    }
+  )cpp"));
+  ASSERT_FALSE(findEntityByName("f", AST->getASTContext()));
+}
+
+TEST_F(PointerFlowTest, MethodInClassTemplate) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    struct Wrapper {
+      T *ptr;
+      void set(T *p) { ptr = p; }
+    };
+  )cpp"));
+  ASSERT_FALSE(findEntityByName("set", AST->getASTContext()));
+}
+
+TEST_F(PointerFlowTest, FunctionTemplateInstantiation) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    T* f(T *p) {
+      int *q = p;
+      return q;
+    }
+
+    void test(int *p) {
+      f(p);
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary<FunctionDecl>("f");
+
+  ASSERT_TRUE(Sum);
+  ASSERT_EQ(*Sum, makeEdges(__LINE__, {{{"q", 1U}, {"p", 1U}},
+                                       {{"f", 1U, 1}, {"q", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, MethodInClassTemplateInstantiation) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    template <typename T>
+    struct Wrapper {
+      T *ptr;
+      void set(T *p) { ptr = p; }
+    };
+
+    void test(int *p) {
+      Wrapper<int> W;
+
+      W.set(p);
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary<FunctionDecl>("set");
+
+  ASSERT_TRUE(Sum);
+  ASSERT_EQ(*Sum, makeEdges(__LINE__, {{{"ptr", 1U}, {"p", 1U}}}));
+}
+
+//////////////////////////////////////////////////////////////
 //          Robustness Tests (No Crash Tests)               //
 //////////////////////////////////////////////////////////////
 
@@ -1304,6 +1375,67 @@ TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
   )cpp"));
   ASSERT_FALSE(getEntitySummary<FunctionDecl>("f"));
   ASSERT_FALSE(getEntitySummary<CXXMethodDecl>("g"));
+}
+
+//////////////////////////////////////////////////////////////
+//          Reference-to-pointer Tests                      //
+//////////////////////////////////////////////////////////////
+
+TEST_F(PointerFlowTest, ArgToRefParam) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void callee(int *&rp);
+    void caller(int *p) {
+      callee(p);
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("caller");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, ArgToRefParamLevel2) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void callee(int **&rp);
+    void caller(int **pp) {
+      callee(pp);
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("caller");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"pp", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, InitRefPtr) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int *p) {
+      int *&rp = p;
+      int * const & crp = p;
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"p", 1U}},
+                                       {{"crp", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, ReturnRefPtr) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *& f();
+    int *& foo() {
+      return f();
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"foo", 1U, true}, {"f", 1U, true}}}));
 }
 
 } // namespace

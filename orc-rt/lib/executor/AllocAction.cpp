@@ -11,14 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/AllocAction.h"
-#include "orc-rt/ScopeExit.h"
+#include "orc-rt/scope_exit.h"
 
 namespace orc_rt {
 
 Expected<std::vector<AllocAction>>
 runFinalizeActions(std::vector<AllocActionPair> AAPs) {
   std::vector<AllocAction> DeallocActions;
-  auto RunDeallocActions = make_scope_exit([&]() {
+  auto RunDeallocActions = scope_exit([&]() {
     while (!DeallocActions.empty()) {
       // TODO: Log errors from cleanup dealloc actions.
       {

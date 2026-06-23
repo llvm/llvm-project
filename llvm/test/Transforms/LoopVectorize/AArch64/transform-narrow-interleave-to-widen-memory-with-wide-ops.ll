@@ -1345,3 +1345,244 @@ loop:
 exit:
   ret void
 }
+
+define void @test_2xdouble_different_fcmp_predicates(ptr noalias %data) {
+; VF2-LABEL: define void @test_2xdouble_different_fcmp_predicates(
+; VF2-SAME: ptr noalias [[DATA:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[STRIDED_VEC]], zeroinitializer
+; VF2-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[STRIDED_VEC]]
+; VF2-NEXT:    [[TMP4:%.*]] = fcmp olt <2 x double> [[STRIDED_VEC1]], zeroinitializer
+; VF2-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x double> zeroinitializer, <2 x double> [[STRIDED_VEC1]]
+; VF2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
+;
+; VF4-LABEL: define void @test_2xdouble_different_fcmp_predicates(
+; VF4-SAME: ptr noalias [[DATA:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x double> [[STRIDED_VEC]], zeroinitializer
+; VF4-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x double> zeroinitializer, <4 x double> [[STRIDED_VEC]]
+; VF4-NEXT:    [[TMP4:%.*]] = fcmp olt <4 x double> [[STRIDED_VEC1]], zeroinitializer
+; VF4-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x double> zeroinitializer, <4 x double> [[STRIDED_VEC1]]
+; VF4-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP6]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.2 = shl nsw i64 %iv, 1
+  %data.0 = getelementptr inbounds double, ptr %data, i64 %mul.2
+  %l.0 = load double, ptr %data.0, align 8
+  %c.0 = fcmp ogt double %l.0, 0.000000e+00
+  %s.0 = select i1 %c.0, double 0.000000e+00, double %l.0
+  store double %s.0, ptr %data.0, align 8
+  %idx.1 = or disjoint i64 %mul.2, 1
+  %data.1 = getelementptr inbounds double, ptr %data, i64 %idx.1
+  %l.1 = load double, ptr %data.1, align 8
+  %c.1 = fcmp olt double %l.1, 0.000000e+00
+  %s.1 = select i1 %c.1, double 0.000000e+00, double %l.1
+  store double %s.1, ptr %data.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_2xi64_different_icmp_predicates(ptr noalias %data) {
+; VF2-LABEL: define void @test_2xi64_different_icmp_predicates(
+; VF2-SAME: ptr noalias [[DATA:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[STRIDED_VEC]], zeroinitializer
+; VF2-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> zeroinitializer, <2 x i64> [[STRIDED_VEC]]
+; VF2-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i64> [[STRIDED_VEC1]], zeroinitializer
+; VF2-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i64> zeroinitializer, <2 x i64> [[STRIDED_VEC1]]
+; VF2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
+;
+; VF4-LABEL: define void @test_2xi64_different_icmp_predicates(
+; VF4-SAME: ptr noalias [[DATA:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> [[STRIDED_VEC]], zeroinitializer
+; VF4-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> [[STRIDED_VEC]]
+; VF4-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i64> [[STRIDED_VEC1]], zeroinitializer
+; VF4-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> zeroinitializer, <4 x i64> [[STRIDED_VEC1]]
+; VF4-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP6]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.2 = shl nsw i64 %iv, 1
+  %data.0 = getelementptr inbounds i64, ptr %data, i64 %mul.2
+  %l.0 = load i64, ptr %data.0, align 8
+  %c.0 = icmp sgt i64 %l.0, 0
+  %s.0 = select i1 %c.0, i64 0, i64 %l.0
+  store i64 %s.0, ptr %data.0, align 8
+  %idx.1 = or disjoint i64 %mul.2, 1
+  %data.1 = getelementptr inbounds i64, ptr %data, i64 %idx.1
+  %l.1 = load i64, ptr %data.1, align 8
+  %c.1 = icmp slt i64 %l.1, 0
+  %s.1 = select i1 %c.1, i64 0, i64 %l.1
+  store i64 %s.1, ptr %data.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_2xdouble_same_fcmp_predicate(ptr noalias %data) {
+; VF2-LABEL: define void @test_2xdouble_same_fcmp_predicate(
+; VF2-SAME: ptr noalias [[DATA:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], zeroinitializer
+; VF2-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[WIDE_LOAD1]]
+; VF2-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP1]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
+;
+; VF4-LABEL: define void @test_2xdouble_same_fcmp_predicate(
+; VF4-SAME: ptr noalias [[DATA:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x double> [[STRIDED_VEC]], zeroinitializer
+; VF4-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x double> zeroinitializer, <4 x double> [[STRIDED_VEC]]
+; VF4-NEXT:    [[TMP4:%.*]] = fcmp ogt <4 x double> [[STRIDED_VEC1]], zeroinitializer
+; VF4-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x double> zeroinitializer, <4 x double> [[STRIDED_VEC1]]
+; VF4-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP6]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; VF4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.2 = shl nsw i64 %iv, 1
+  %data.0 = getelementptr inbounds double, ptr %data, i64 %mul.2
+  %l.0 = load double, ptr %data.0, align 8
+  %c.0 = fcmp ogt double %l.0, 0.000000e+00
+  %s.0 = select i1 %c.0, double 0.000000e+00, double %l.0
+  store double %s.0, ptr %data.0, align 8
+  %idx.1 = or disjoint i64 %mul.2, 1
+  %data.1 = getelementptr inbounds double, ptr %data, i64 %idx.1
+  %l.1 = load double, ptr %data.1, align 8
+  %c.1 = fcmp ogt double %l.1, 0.000000e+00
+  %s.1 = select i1 %c.1, double 0.000000e+00, double %l.1
+  store double %s.1, ptr %data.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

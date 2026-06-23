@@ -82,6 +82,10 @@ public:
     return launchKernelImpl(Kernel, KEnv);
   }
 
+  Error hostCall(void (*Callback)(void *), void *UserData) {
+    return hostCallImpl(Callback, UserData);
+  }
+
   Error dataFence() { return dataFenceImpl(); }
 
   Error appendSignalEvent(L0EventTy *Event) {
@@ -126,6 +130,7 @@ public:
   }
   virtual Error launchKernelImpl(ze_kernel_handle_t Kernel,
                                  L0LaunchEnvTy &KEnv) = 0;
+  virtual Error hostCallImpl(void (*Callback)(void *), void *UserData) = 0;
 
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
@@ -186,6 +191,7 @@ public:
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size) override;
   Error dataFenceImpl() override;
@@ -204,6 +210,7 @@ public:
   Error synchronizeImpl() override;
   std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents() override;
   std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error dataFenceImpl() override { return Plugin::success(); }
 };
 
@@ -222,6 +229,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error dataFenceImpl() override { return Plugin::success(); }
 };
 
@@ -240,6 +248,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
 };
 
 /// Simple cache for queue objects.

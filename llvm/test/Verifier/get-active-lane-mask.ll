@@ -13,9 +13,19 @@ define <4 x i32> @t1(i32 %IV, i32 %TC) {
 declare i32 @llvm.get.active.lane.mask.i32.i32(i32, i32)
 
 define i32 @t2(i32 %IV, i32 %TC) {
-; CHECK:      intrinsic return type (overload type 0) expected any vector type, but got i32
+; CHECK:      intrinsic return type (overload type 0) expected any integer vector, but got i32
 ; CHECK-NEXT: ptr @llvm.get.active.lane.mask.i32.i32
 
   %res = call i32 @llvm.get.active.lane.mask.i32.i32(i32 %IV, i32 %TC)
   ret i32 %res
+}
+
+declare <4 x i1> @llvm.get.active.lane.mask.v4i1.v4i32(<4 x i32>, <4 x i32>)
+
+define <4 x i1> @t3(<4 x i32> %x) {
+; CHECK:      intrinsic argument 0 type (overload type 1) expected any integer type, but got <4 x i32>
+; CHECK-NEXT: ptr @llvm.get.active.lane.mask.v4i1.v4i32
+
+  %res = call <4 x i1> @llvm.get.active.lane.mask.v4i1.v4i32(<4 x i32> %x, <4 x i32> %x)
+  ret <4 x i1> %res
 }

@@ -1654,6 +1654,13 @@ void AccAttributeVisitor::CheckAssociatedLoop(
     return;
   }
 
+  // Non-standard extension; warn for collapse(N>1) on a DO CONCURRENT.
+  if (outerDoConstruct.IsDoConcurrent() && level > 1) {
+    context_.Warn(common::UsageWarning::Portability,
+        GetContext().directiveSource,
+        "COLLAPSE on DO CONCURRENT is non-standard"_warn_en_US);
+  }
+
   const auto getNextDoConstruct =
       [this, forceCollapsed](const parser::Block &block,
           std::int64_t &level) -> const parser::DoConstruct * {
@@ -2190,6 +2197,37 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
       ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
+
+  // groupprivate carries an optional device_type clause (OpenMP 6.0). Always
+  // record it, like declare_target's enter clause, so a clause-less directive
+  // still round-trips through symbol dumps and .mod files; an absent clause
+  // means the spec default (any).
+  common::OmpDeviceType device{common::OmpDeviceType::Any};
+  if (auto *devClause{
+          parser::omp::FindClause(x.v, llvm::omp::Clause::OMPC_device_type)}) {
+    device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
+  }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  WithOmpDeclarative::OmpClauseSet clauses;
+  clauses.set(llvm::omp::Clause::OMPC_device_type);
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
+        common::visit(
+            [&](auto &d) {
+              using TypeD = llvm::remove_cvref_t<decltype(d)>;
+              if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+                d.set_version(version);
+                d.set_ompGroupprivate(clauses);
+                d.set_ompGroupprivate(device);
+              }
+            },
+            const_cast<Symbol &>(sym->GetUltimate()).details());
+      }
+    }
+  }
+
   return true;
 }
 
@@ -2285,7 +2323,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
               auto &deviceType{
-                  const_cast<decltype(device) &>(d.ompDeviceType())};
+                  const_cast<decltype(device) &>(d.ompDeclTargetDeviceType())};
               deviceType = device;
             }
           } else if constexpr (std::is_same_v<GenericDetails, TypeD> ||
@@ -3074,16 +3112,19 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
 
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
+  bool cbResolved{false};
   if (name.symbol) {
     if (auto *details{name.symbol->detailsIf<CommonBlockDetails>()}) {
       if (!details->objects().empty()) {
         // Common block already resolved
-        return;
+        cbResolved = true;
       }
     }
   }
 
-  if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
+  parser::Name cbName{name};
+  Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
+  if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
       CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
     }
@@ -3091,7 +3132,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     // same meaning as if every explicit member of the common block
     // appeared in the list
     auto &details{symbol->get<CommonBlockDetails>()};
-    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag)};
+    bool cbCloned{cbResolved && name.symbol != originalCB};
+    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag) && !cbCloned};
     CommonBlockDetails cloneDetails{symbol->name()};
     for (auto [index, object] : llvm::enumerate(details.objects())) {
       if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
@@ -3115,6 +3157,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     if (cloneCommonBlock) {
       name.symbol = &currScope().MakeSymbol(
           symbol->name(), symbol->attrs(), std::move(cloneDetails));
+    } else {
+      name.symbol = symbol;
     }
   } else {
     context_.Say(name.source, // 2.15.3

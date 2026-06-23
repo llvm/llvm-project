@@ -2128,9 +2128,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_BZERO:
-  case TargetOpcode::G_MEMSET: {
+  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE: {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
-    std::string Name = Opc == TargetOpcode::G_MEMSET ? "memset" : "bzero";
+    std::string Name = Opc == TargetOpcode::G_MEMSET          ? "memset"
+                       : Opc == TargetOpcode::G_MEMSET_INLINE ? "memset_inline"
+                                                              : "bzero";
     if (MMOs.size() != 1) {
       report(Twine(Name, " must have 1 memory operand"), MI);
       break;
@@ -2150,9 +2153,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
       report("inconsistent " + Twine(Name, " address space"), MI);
 
-    if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
-        (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
-      report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
+    if (Opc != TargetOpcode::G_MEMSET_INLINE) {
+      if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
+          (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
+        report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
+    }
 
     break;
   }

@@ -76,7 +76,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
       new VPInstruction(Instruction::Sub, {DefI, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {UseI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -118,7 +118,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -206,9 +206,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   VPInstruction *BranchOnCond2 =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -235,9 +235,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   VPInstruction *BranchOnCond2 =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -272,7 +272,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
@@ -296,8 +296,8 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 
 TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getConstantInt(32, 0);
-  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {Zero});
+  auto *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");

@@ -116,7 +116,7 @@ const char *SBFileSpec::GetDirectory() const {
 
   FileSpec directory{*m_opaque_up};
   directory.ClearFilename();
-  return directory.GetPathAsConstString().GetCString();
+  return ConstString(directory.GetPath()).GetCString();
 }
 
 void SBFileSpec::SetFilename(const char *filename) {

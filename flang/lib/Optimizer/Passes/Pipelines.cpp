@@ -113,7 +113,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
-  options.emitFakeUseForArguments =
+  options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
   addPassConditionally(pm, disableDebugInfo,

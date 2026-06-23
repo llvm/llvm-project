@@ -71,7 +71,7 @@ private:
 
 protected:
   // Basic subtarget description.
-  AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
+  AMDGPU::TargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
   int LDSBankCount = 0;
@@ -157,9 +157,7 @@ public:
     return RegBankInfo.get();
   }
 
-  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
-    return TargetID;
-  }
+  const AMDGPU::TargetID &getTargetID() const { return TargetID; }
 
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;

@@ -234,11 +234,11 @@ def GPRMemZeroOffset : MemOperand<GPR> {
   let PrintMethod = "printZeroOffsetMemOp";
 }
 
-def GPRMem : MemOperand<GPR>;
+def BasePtr : MemOperand<GPR>;
 
 def SPMem : MemOperand<SP>;
 
-def GPRCMem : MemOperand<GPRC>;
+def BasePtrC : MemOperand<GPRC>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
@@ -653,7 +653,7 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
-    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins GPRMem:$rs1, simm12_lo:$imm12),
+    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
 class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
@@ -669,7 +669,7 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
     : RVInstS<funct3, OPC_STORE, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
 
 class HStore_rr<bits<7> funct7, string opcodestr>
@@ -2008,8 +2008,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT,
             ValueType PtrVT = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (PtrVT GPRMem:$rs1), simm12_lo:$imm12))),
-          (Inst GPRMem:$rs1, simm12_lo:$imm12)>;
+    : Pat<(vt (LoadOp (AddrRegImm (PtrVT BasePtr:$rs1), simm12_lo:$imm12))),
+          (Inst BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
 def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
@@ -2023,9 +2023,9 @@ def : LdPat<zextloadi16, LHU>;
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
             ValueType vt, ValueType PtrVT = XLenVT>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT GPRMem:$rs1),
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT BasePtr:$rs1),
                    simm12_lo:$imm12)),
-          (Inst StTy:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
+          (Inst StTy:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;

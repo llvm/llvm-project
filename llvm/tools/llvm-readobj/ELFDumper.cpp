@@ -4779,7 +4779,8 @@ static bool checkPTDynamic(const typename ELFT::Phdr &Phdr,
 template <class ELFT>
 void GNUELFDumper<ELFT>::printProgramHeaders(
     bool PrintProgramHeaders, cl::boolOrDefault PrintSectionMapping) {
-  const bool ShouldPrintSectionMapping = (PrintSectionMapping != cl::BOU_FALSE);
+  const bool ShouldPrintSectionMapping =
+      (PrintSectionMapping != cl::boolOrDefault::BOU_FALSE);
   // Exit early if no program header or section mapping details were requested.
   if (!PrintProgramHeaders && !ShouldPrintSectionMapping)
     return;
@@ -5273,7 +5274,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 template <class ELFT>
 bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
-  DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
+  DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
   while (C && C.tell() < CGSection->sh_size) {
@@ -7991,7 +7992,7 @@ void LLVMELFDumper<ELFT>::printProgramHeaders(
     bool PrintProgramHeaders, cl::boolOrDefault PrintSectionMapping) {
   if (PrintProgramHeaders)
     printProgramHeaders();
-  if (PrintSectionMapping == cl::BOU_TRUE)
+  if (PrintSectionMapping == cl::boolOrDefault::BOU_TRUE)
     printSectionMapping();
 }
 

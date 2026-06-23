@@ -1274,7 +1274,7 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
   EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI3, &DT));
 }
 
-TEST(ValueTracking, canCreatePoisonOrUndef) {
+TEST_F(ValueTrackingTest, canCreatePoisonOrUndef) {
   std::string AsmHead =
       "@s = external dso_local global i32, align 1\n"
       "declare i32 @g(i32)\n"
@@ -1285,7 +1285,8 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, i1 %cond, "
-      "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, ptr %p) {\n";
+      "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, ptr %p,"
+      "<4 x float> %vf) {\n";
   std::string AsmTail = "  ret void\n}";
   // (can create poison?, can create undef?, IR instruction)
   SmallVector<std::pair<std::pair<bool, bool>, std::string>, 32> Data = {
@@ -1369,26 +1370,24 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %vx)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmax.v4i32(<4 x i32> %vx)"},
+       "call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %vf)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmin.v4i32(<4 x i32> %vx)"},
+       "call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %vf)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"},
+       "call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %vf)"},
       {{false, false},
-       "call i32 @llvm.vector.reduce.fmaximum.v4i32(<4 x i32> %vx)"}};
+       "call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %vf)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
     AssemblyStr += Itm.second + "\n";
   AssemblyStr += AsmTail;
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(AssemblyStr, Error, Context);
-  assert(M && "Bad assembly?");
+  auto M = parseModule(AssemblyStr);
+  ASSERT_TRUE(M) << "Bad assembly?";
 
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
+  Function *F = M->getFunction("f");
+  ASSERT_TRUE(F) << "Bad assembly?";
 
   auto &BB = F->getEntryBlock();
 

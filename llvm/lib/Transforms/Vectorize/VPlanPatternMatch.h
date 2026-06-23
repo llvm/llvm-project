@@ -252,20 +252,28 @@ struct Recipe_match {
       assert(((isa<VPInstruction>(R) &&
                cast<VPInstruction>(R)->getNumOperandsForOpcode() == -1u) ||
               (RepR && std::tuple_size_v<Ops_t> ==
-                           RepR->getNumOperands() - RepR->isPredicated())) &&
+                           RepR->getNumOperandsWithoutMask())) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
     }
 
     // If the recipe has more operands than expected, we only support matching
-    // masked VPInstructions where the number of operands of the matcher is the
-    // same as the number of operands excluding mask.
+    // masked VPInstructions or predicated VPReplicateRecipes, where the number
+    // of operands of the matcher matches the number of operands excluding the
+    // mask.
     if (R->getNumOperands() > std::tuple_size<Ops_t>::value) {
-      auto *VPI = dyn_cast<VPInstruction>(R);
-      if (!VPI || !VPI->isMasked() ||
-          VPI->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+      if (auto *VPI = dyn_cast<VPInstruction>(R)) {
+        if (!VPI->isMasked() ||
+            VPI->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+          return false;
+      } else if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
+        if (!RepR->isPredicated() ||
+            RepR->getNumOperandsWithoutMask() != std::tuple_size<Ops_t>::value)
+          return false;
+      } else {
         return false;
+      }
     }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
@@ -615,6 +623,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::Shl, Op0_t, Op1_t> m_Shl(const Op0_t &Op0,
                                                              const Op1_t &Op1) {
   return m_Binary<Instruction::Shl, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::LShr, Op0_t, Op1_t>
+m_LShr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::LShr, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

@@ -1267,6 +1267,27 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(result);
   }
 
+  case Builtin::BI__builtin_bswapg: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    // CIR models bool as cir.bool rather than an integer, so peel it off
+    // before the cast below.  Like classic codegen's i1 case, it byte-swaps
+    // to itself.
+    if (mlir::isa<cir::BoolType>(arg.getType()))
+      return RValue::get(arg);
+    auto argTy = mlir::cast<cir::IntType>(arg.getType());
+    // A single bit or a single byte byte-swaps to itself.
+    if (argTy.getWidth() == 1 || argTy.getWidth() == 8)
+      return RValue::get(arg);
+    assert(argTy.getWidth() % 16 == 0 &&
+           "__builtin_bswapg requires a single byte or a multiple of 16 bits");
+    // cir.byte_swap requires an unsigned operand.  Reinterpret a signed
+    // argument as unsigned of the same width; createBuiltinBitOp casts the
+    // swapped result back to the builtin's (possibly signed) return type.
+    if (argTy.isSigned())
+      arg = builder.createIntCast(arg, builder.getUIntNTy(argTy.getWidth()));
+    return RValue::get(createBuiltinBitOp<cir::ByteSwapOp>(*this, e, arg));
+  }
+
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
@@ -2105,8 +2126,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                     cir::SyncScopeKind::System));
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_nontemporal_load:
-  case Builtin::BI__builtin_nontemporal_store:
+  case Builtin::BI__builtin_nontemporal_load: {
+    Address addr = emitPointerWithAlignment(e->getArg(0));
+    LValue lv = makeAddrLValue(addr, e->getType(),
+                               LValueBaseInfo(AlignmentSource::Type));
+    lv.setNontemporal(true);
+    mlir::Value val = emitLoadOfScalar(lv, e->getExprLoc());
+    return RValue::get(val);
+  }
+  case Builtin::BI__builtin_nontemporal_store: {
+    mlir::Value val = emitScalarExpr(e->getArg(0));
+    Address addr = emitPointerWithAlignment(e->getArg(1));
+    val = emitToMemory(val, e->getArg(0)->getType());
+    LValue lv = makeAddrLValue(addr, e->getArg(0)->getType(),
+                               LValueBaseInfo(AlignmentSource::Type));
+    lv.setNontemporal(true);
+    emitStoreOfScalar(val, lv, /*isInit=*/false);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__c11_atomic_is_lock_free:
   case Builtin::BI__atomic_is_lock_free:
   case Builtin::BI__atomic_test_and_set:

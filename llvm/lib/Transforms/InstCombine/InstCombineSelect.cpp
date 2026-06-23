@@ -417,9 +417,8 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
           Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
 
-          CallInst *NewLdexp = Builder.CreateIntrinsic(
-              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp});
-          NewLdexp->setFastMathFlags(FMF);
+          Value *NewLdexp = Builder.CreateIntrinsic(
+              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
           return replaceInstUsesWith(SI, NewLdexp);
         }
       }
@@ -2308,7 +2307,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldBinaryIntrinsic(Opcode, LHS, RHS, LHS->getType())
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
                : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
