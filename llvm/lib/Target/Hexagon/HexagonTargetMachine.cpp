@@ -188,6 +188,7 @@ LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAlignGlobalArraysPass(PR);
   initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
@@ -367,6 +368,10 @@ void HexagonPassConfig::addIRPasses() {
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt) {
+    // Set the minimum alignment of global integer arrays (char, short, int) to
+    // 8 bytes. Disabled by default; enabled with -hexagon-align-global-arrays.
+    addPass(createHexagonAlignGlobalArrays(getOptLevel() !=
+                                           CodeGenOptLevel::Aggressive));
     if (EnableInstSimplify)
       addPass(createInstSimplifyLegacyPass());
     addPass(createDeadCodeEliminationPass());
