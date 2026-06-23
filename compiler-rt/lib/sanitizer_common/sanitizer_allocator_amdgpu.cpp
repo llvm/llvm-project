@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 #if SANITIZER_AMDHSA
-#  include <dlfcn.h>  // For dlopen, dlsym
+#include <dlfcn.h>  // For dlopen, dlsym
 
-#  include "sanitizer_allocator.h"
-#  include "sanitizer_atomic.h"
+#include "sanitizer_allocator.h"
+#include "sanitizer_atomic.h"
 
 namespace __sanitizer {
-#  include "sanitizer_allocator_amdgpu.h"
+#include "sanitizer_allocator_amdgpu.h"
 
 struct HsaFunctions {
   // -------------- Memory Allocate/Deallocate Functions ----------------
@@ -83,8 +83,7 @@ void AmdgpuDeviceAllocator::ClearRuntimeShutdownState() {
 
 void AmdgpuDeviceAllocator::NoteDeviceAllocatorFailure(
     DeviceAllocationInfo* da_info, DeviceAllocFailure failure) {
-  if (!da_info || da_info->type_ != DAT_AMDGPU)
-    return;
+  if (!da_info || da_info->type_ != DAT_AMDGPU) return;
   AmdgpuAllocationInfo* aa_info =
       reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
   switch (failure) {
@@ -104,23 +103,19 @@ void AmdgpuDeviceAllocator::NoteDeviceAllocatorFailure(
 // and not RTLD_NEXT/DEFAULT (those resolve ASan interceptors and recurse).
 bool AmdgpuDeviceAllocator::Init(bool allow_dlopen) {
   SpinMutexLock l(&hsa_runtime_init_mu);
-  if (HsaSymbolsLoaded())
-    return true;
+  if (HsaSymbolsLoaded()) return true;
 
   // Never dlopen during __asan_init.
-  if (!allow_dlopen)
-    return false;
+  if (!allow_dlopen) return false;
 
   if (!hsa_runtime_handle) {
     const char* path = GetEnv("SANITIZER_HSA_RUNTIME_PATH");
-    if (!path || !path[0])
-      path = kDefaultHsaRuntimePath;
+    if (!path || !path[0]) path = kDefaultHsaRuntimePath;
     // Prefer first `RTLD_NOLOAD` when ROCr is already mapped(after successful
     // REAL(hsa_init)). If RTLD_NOLOAD fails, try `RTLD_NOW` (when ROCr is not
     // loaded).
     hsa_runtime_handle = dlopen(path, RTLD_LAZY | RTLD_NOLOAD);
-    if (!hsa_runtime_handle)
-      hsa_runtime_handle = dlopen(path, RTLD_NOW);
+    if (!hsa_runtime_handle) hsa_runtime_handle = dlopen(path, RTLD_NOW);
     if (!hsa_runtime_handle) {
       const char* err = dlerror();
       VReport(2, "Amdgpu Init: dlopen(%s) failed: %s\n", path,
@@ -192,8 +187,7 @@ void* AmdgpuDeviceAllocator::Allocate(uptr size, uptr alignment,
     aa_info->status = hsa_amd.memory_pool_allocate(
         aa_info->memory_pool, size, aa_info->flags, &aa_info->ptr);
   }
-  if (aa_info->status != HSA_STATUS_SUCCESS)
-    return nullptr;
+  if (aa_info->status != HSA_STATUS_SUCCESS) return nullptr;
 
   return aa_info->ptr;
 }
@@ -249,8 +243,7 @@ static uptr AmdgpuPointerInfoMapBase(uptr ptr,
 
 bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
                                            DevicePointerInfo* ptr_info) {
-  if (!ptr_info)
-    return false;
+  if (!ptr_info) return false;
 
   // GetPointerInfo returns false after AMDGPU runtime shutdown
   if (UNLIKELY(IsRuntimeShutdown())) {
@@ -265,15 +258,13 @@ bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
   hsa_status_t status =
       hsa_amd.pointer_info(reinterpret_cast<void*>(ptr), &info, 0, 0, 0);
 
-  if (status != HSA_STATUS_SUCCESS)
-    return false;
+  if (status != HSA_STATUS_SUCCESS) return false;
 
   if (info.type == HSA_EXT_POINTER_TYPE_UNKNOWN || !info.sizeInBytes)
     return false;
 
   const uptr map_beg = AmdgpuPointerInfoMapBase(ptr, info);
-  if (!map_beg)
-    return false;
+  if (!map_beg) return false;
 
   ptr_info->map_beg = map_beg;
   ptr_info->map_size = info.sizeInBytes;
@@ -291,8 +282,7 @@ void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
     // Callback to detect and notify AMDGPU runtime shutdown
     hsa_amd_system_event_callback_t callback = [](const hsa_amd_event_t* event,
                                                   void* data) {
-      if (!event)
-        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+      if (!event) return HSA_STATUS_ERROR_INVALID_ARGUMENT;
       if (event->event_type == HSA_AMD_SYSTEM_SHUTDOWN_EVENT)
         AmdgpuDeviceAllocator::NotifyRuntimeShutdown();
       return HSA_STATUS_SUCCESS;
@@ -325,11 +315,9 @@ VmemGpuReserveTracker& VmemGpuReserveTracker::Get() {
 }
 
 void VmemGpuReserveTracker::EnsureInited() {
-  if (atomic_load(&inited_, memory_order_acquire))
-    return;
+  if (atomic_load(&inited_, memory_order_acquire)) return;
   SpinMutexLock l(&mu_);
-  if (atomic_load(&inited_, memory_order_relaxed))
-    return;
+  if (atomic_load(&inited_, memory_order_relaxed)) return;
   reservations_.Initialize(0);
   atomic_store(&inited_, 1, memory_order_release);
 }
@@ -350,12 +338,9 @@ VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::CheckFree(uptr ptr,
   SpinMutexLock l(&mu_);
   for (uptr i = 0; i < reservations_.size(); ++i) {
     const VmemGpuReservation& r = reservations_[i];
-    if (r.ptr != ptr)
-      continue;
-    if (r.size != size)
-      return kSizeMismatch;
-    if (r.freed)
-      return kDoubleFree;
+    if (r.ptr != ptr) continue;
+    if (r.size != size) return kSizeMismatch;
+    if (r.freed) return kDoubleFree;
     return kFirstFree;
   }
   return kNotTracked;

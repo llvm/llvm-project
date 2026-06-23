@@ -1,5 +1,5 @@
-// RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib -lhsa-runtime64 \
-// RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
+// RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib
+// -lhsa-runtime64 \ RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
 // RUN: %run %t 2>&1 | FileCheck %s
 //
 // hsa_amd_pointer_info on vmem reserved via reserve_align() must report the
@@ -9,23 +9,22 @@
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
-#include "hsa_amd_test_helpers.h"
-
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
-
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 
-int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+#include "hsa_amd_test_helpers.h"
 
-  const size_t kSize = 4096; //4KiB size
-  // Here alignment is larger than a page size, so the reserved address will be aligned to 64KiB.
-  const uint64_t kAlign = 65536; //64KiB alignment
-  void *mem = nullptr;
+int main() {
+  if (hsa_amd_test_require_init()) return 1;
+
+  const size_t kSize = 4096;  // 4KiB size
+  // Here alignment is larger than a page size, so the reserved address will be
+  // aligned to 64KiB.
+  const uint64_t kAlign = 65536;  // 64KiB alignment
+  void* mem = nullptr;
   // Host-accessible vmem reserve via NO_REGISTER (host mmap, not KFD VA).
   if (hsa_amd_vmem_address_reserve_align(
           &mem, kSize, /*address=*/0, kAlign,

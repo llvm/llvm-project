@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_ALLOCATOR_H
-#  error This file must be included after sanitizer_allocator.h
+#error This file must be included after sanitizer_allocator.h
 #endif
 
 #if SANITIZER_AMDHSA
@@ -86,8 +86,7 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
   // If allocation fails without an HSA API status, record one so callers never
   // see *ptr == nullptr with status still SUCCESS.
   void EnsureFailureStatus(hsa_status_t err) {
-    if (status == HSA_STATUS_SUCCESS)
-      status = err;
+    if (status == HSA_STATUS_SUCCESS) status = err;
   }
 
   hsa_status_t status;

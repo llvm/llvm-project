@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_ALLOCATOR_H
-#  error This file must be included inside sanitizer_allocator.h
+#error This file must be included inside sanitizer_allocator.h
 #endif
 
 // DeviceAllocatorT: device-mapped heap bookkeeping. Map/unmap uses the
@@ -83,8 +83,7 @@ class DeviceAllocatorT {
   // callers (and any wrapper) need not thread it in.
   void Init() {
     internal_memset(this, 0, sizeof(*this));
-    if (!DeviceBackend::kEnableDeviceBackend)
-      return;
+    if (!DeviceBackend::kEnableDeviceBackend) return;
     enabled_ = true;
     kMetadataSize_ = PrimaryAllocator::kMetadataSize;
     chunks_ = reinterpret_cast<uptr*>(ptr_array_.Init());
@@ -106,8 +105,7 @@ class DeviceAllocatorT {
     }
     CHECK(IsPowerOfTwo(alignment));
     uptr map_size = RoundUpMapSize(size);
-    if (alignment > page_size_)
-      map_size += alignment;
+    if (alignment > page_size_) map_size += alignment;
     // Overflow.
     if (map_size < size) {
       Report(
@@ -161,8 +159,7 @@ class DeviceAllocatorT {
       uptr p_ = reinterpret_cast<uptr>(p);
       EnsureSortedChunks();  // Avoid doing the sort while iterating.
       for (idx = 0; idx < n_chunks_; idx++) {
-        if (chunks_[idx] >= p_)
-          break;
+        if (chunks_[idx] >= p_) break;
       }
       CHECK_EQ(chunks_[idx], p_);
       CHECK_LT(idx, n_chunks_);
@@ -211,21 +208,17 @@ class DeviceAllocatorT {
 
   void* GetBlockBegin(const void* ptr) const {
     Header header;
-    if (!mem_funcs_inited_)
-      return nullptr;
+    if (!mem_funcs_inited_) return nullptr;
     uptr p = reinterpret_cast<uptr>(ptr);
     SpinMutexLock l(&mutex_);
     uptr nearest_chunk = 0;
     // Cache-friendly linear search.
     for (uptr i = 0; i < n_chunks_; i++) {
       uptr ch = chunks_[i];
-      if (p < ch)
-        continue;  // p is at left to this chunk, skip it.
-      if (p - ch < p - nearest_chunk)
-        nearest_chunk = ch;
+      if (p < ch) continue;  // p is at left to this chunk, skip it.
+      if (p - ch < p - nearest_chunk) nearest_chunk = ch;
     }
-    if (!nearest_chunk)
-      return nullptr;
+    if (!nearest_chunk) return nullptr;
     if (p != nearest_chunk) {
       Header* h = GetHeader(nearest_chunk, &header);
       CHECK_GE(nearest_chunk, h->map_beg);
@@ -239,8 +232,7 @@ class DeviceAllocatorT {
   }
 
   void EnsureSortedChunks() {
-    if (chunks_sorted_)
-      return;
+    if (chunks_sorted_) return;
     Sort(reinterpret_cast<uptr*>(chunks_), n_chunks_);
     chunks_sorted_ = true;
   }
@@ -248,20 +240,17 @@ class DeviceAllocatorT {
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
   void* GetBlockBeginFastLocked(const void* ptr) {
-    if (!mem_funcs_inited_)
-      return nullptr;
+    if (!mem_funcs_inited_) return nullptr;
     mutex_.CheckLocked();
     uptr p = reinterpret_cast<uptr>(ptr);
     uptr n = n_chunks_;
-    if (!n)
-      return nullptr;
+    if (!n) return nullptr;
     EnsureSortedChunks();
     Header header, *h;
     h = GetHeader(chunks_[n - 1], &header);
     uptr min_mmap_ = chunks_[0];
     uptr max_mmap_ = chunks_[n - 1] + h->map_size;
-    if (p < min_mmap_)
-      return nullptr;
+    if (p < min_mmap_) return nullptr;
     if (p >= max_mmap_) {
       // TODO (bingma): If dev_runtime_unloaded_ = true, map_size is limited
       // to one page and we might miss a valid 'ptr'. If we hit cases where
@@ -283,15 +272,13 @@ class DeviceAllocatorT {
     if (beg < end) {
       CHECK_EQ(beg + 1, end);
       // There are 2 chunks left, choose one.
-      if (p >= chunks_[end])
-        beg = end;
+      if (p >= chunks_[end]) beg = end;
     }
 
     if (p != chunks_[beg]) {
       h = GetHeader(chunks_[beg], &header);
       CHECK_NE(h, nullptr);
-      if (p < h->map_beg)
-        return nullptr;
+      if (p < h->map_beg) return nullptr;
       if (h->map_beg + h->map_size <= p) {
         // TODO (bingma): See above TODO in this function
         return nullptr;
@@ -308,8 +295,7 @@ class DeviceAllocatorT {
         stats.currently_allocated >> 10, stats.max_allocated >> 20);
     for (uptr i = 0; i < ARRAY_SIZE(stats.by_size_log); i++) {
       uptr c = stats.by_size_log[i];
-      if (!c)
-        continue;
+      if (!c) continue;
       Printf("%zd:%zd; ", i, c);
     }
     Printf("\n");
@@ -340,8 +326,7 @@ class DeviceAllocatorT {
     }
     mem_funcs_inited_ = DeviceBackend::Init();
     mem_funcs_init_count_++;
-    if (mem_funcs_inited_)
-      page_size_ = DeviceBackend::GetPageSize();
+    if (mem_funcs_inited_) page_size_ = DeviceBackend::GetPageSize();
     return mem_funcs_inited_;
   }
 
@@ -357,8 +342,7 @@ class DeviceAllocatorT {
     // is unloaded, GetPointerInfo() will fail. For such case, we can still
     // return a valid value for map_beg, map_size will be limited to one page
     if (LIKELY(!dev_runtime_unloaded_)) {
-      if (DeviceBackend::GetPointerInfo(chunk, h))
-        return h;
+      if (DeviceBackend::GetPointerInfo(chunk, h)) return h;
       // If GetPointerInfo() fails, we don't assume the runtime is unloaded yet.
       // We just return a conservative single-page header. Here mark/check the
       // runtime shutdown state
