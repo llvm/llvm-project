@@ -7727,18 +7727,23 @@ CodeGenModule::EmitStaticInitListBackingArray(llvm::Constant *Init,
                                               CharUnits Align) {
   LangAS AddrSpace = GetGlobalConstantAddressSpace();
   auto TargetAS = getContext().getTargetAddressSpace(AddrSpace);
-  auto *GV = new llvm::GlobalVariable(
-      getModule(), Init->getType(), /*isConstant=*/true,
-      llvm::GlobalValue::PrivateLinkage, Init, ".init.list",
-      /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, TargetAS);
-  GV->setAlignment(Align.getAsAlign());
+  llvm::GlobalVariable *&Entry = StaticInitListBackingArrayMap[Init];
+  if (!Entry) {
+    Entry = new llvm::GlobalVariable(
+        getModule(), Init->getType(), /*isConstant=*/true,
+        llvm::GlobalValue::PrivateLinkage, Init, ".init.list",
+        /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, TargetAS);
+    Entry->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  }
+  Entry->setAlignment(
+      std::max(Entry->getAlign().valueOrOne(), Align.getAsAlign()));
 
-  llvm::Constant *CV = GV;
+  llvm::Constant *CV = Entry;
   if (AddrSpace != LangAS::Default)
     CV = performAddrSpaceCast(
-        GV, llvm::PointerType::get(
-                getLLVMContext(),
-                getContext().getTargetAddressSpace(LangAS::Default)));
+        Entry, llvm::PointerType::get(
+                   getLLVMContext(),
+                   getContext().getTargetAddressSpace(LangAS::Default)));
 
   return ConstantAddress(CV, Init->getType(), Align);
 }
