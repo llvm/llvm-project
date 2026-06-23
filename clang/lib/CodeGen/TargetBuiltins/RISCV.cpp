@@ -1220,6 +1220,25 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pasubu_u8x8:
   case RISCV::BI__builtin_riscv_pasubu_u16x4:
   case RISCV::BI__builtin_riscv_pasubu_u32x2:
+  // Packed Exchanged Addition and Subtraction
+  case RISCV::BI__builtin_riscv_pas_x_i16x2:
+  case RISCV::BI__builtin_riscv_pas_x_i16x4:
+  case RISCV::BI__builtin_riscv_pas_x_i32x2:
+  case RISCV::BI__builtin_riscv_psa_x_i16x2:
+  case RISCV::BI__builtin_riscv_psa_x_i16x4:
+  case RISCV::BI__builtin_riscv_psa_x_i32x2:
+  case RISCV::BI__builtin_riscv_psas_x_i16x2:
+  case RISCV::BI__builtin_riscv_psas_x_i16x4:
+  case RISCV::BI__builtin_riscv_psas_x_i32x2:
+  case RISCV::BI__builtin_riscv_pssa_x_i16x2:
+  case RISCV::BI__builtin_riscv_pssa_x_i16x4:
+  case RISCV::BI__builtin_riscv_pssa_x_i32x2:
+  case RISCV::BI__builtin_riscv_paas_x_i16x2:
+  case RISCV::BI__builtin_riscv_paas_x_i16x4:
+  case RISCV::BI__builtin_riscv_paas_x_i32x2:
+  case RISCV::BI__builtin_riscv_pasa_x_i16x2:
+  case RISCV::BI__builtin_riscv_pasa_x_i16x4:
+  case RISCV::BI__builtin_riscv_pasa_x_i32x2:
   // Packed Absolute Value and Absolute Difference
   case RISCV::BI__builtin_riscv_pabd_i8x4:
   case RISCV::BI__builtin_riscv_pabd_i16x2:
@@ -1259,6 +1278,36 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pasubu_u16x4:
     case RISCV::BI__builtin_riscv_pasubu_u32x2:
       ID = Intrinsic::riscv_pasubu;
+      break;
+    case RISCV::BI__builtin_riscv_pas_x_i16x2:
+    case RISCV::BI__builtin_riscv_pas_x_i16x4:
+    case RISCV::BI__builtin_riscv_pas_x_i32x2:
+      ID = Intrinsic::riscv_pas;
+      break;
+    case RISCV::BI__builtin_riscv_psa_x_i16x2:
+    case RISCV::BI__builtin_riscv_psa_x_i16x4:
+    case RISCV::BI__builtin_riscv_psa_x_i32x2:
+      ID = Intrinsic::riscv_psa;
+      break;
+    case RISCV::BI__builtin_riscv_psas_x_i16x2:
+    case RISCV::BI__builtin_riscv_psas_x_i16x4:
+    case RISCV::BI__builtin_riscv_psas_x_i32x2:
+      ID = Intrinsic::riscv_psas;
+      break;
+    case RISCV::BI__builtin_riscv_pssa_x_i16x2:
+    case RISCV::BI__builtin_riscv_pssa_x_i16x4:
+    case RISCV::BI__builtin_riscv_pssa_x_i32x2:
+      ID = Intrinsic::riscv_pssa;
+      break;
+    case RISCV::BI__builtin_riscv_paas_x_i16x2:
+    case RISCV::BI__builtin_riscv_paas_x_i16x4:
+    case RISCV::BI__builtin_riscv_paas_x_i32x2:
+      ID = Intrinsic::riscv_paas;
+      break;
+    case RISCV::BI__builtin_riscv_pasa_x_i16x2:
+    case RISCV::BI__builtin_riscv_pasa_x_i16x4:
+    case RISCV::BI__builtin_riscv_pasa_x_i32x2:
+      ID = Intrinsic::riscv_pasa;
       break;
     case RISCV::BI__builtin_riscv_pabd_i8x4:
     case RISCV::BI__builtin_riscv_pabd_i16x2:

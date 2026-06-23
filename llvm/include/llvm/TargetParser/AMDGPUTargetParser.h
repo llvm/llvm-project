@@ -17,10 +17,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
+#include <string>
 #include <utility>
 
 namespace llvm {
 
+class raw_ostream;
 template <typename T> class SmallVectorImpl;
 class Triple;
 
@@ -102,6 +105,110 @@ LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 /// default target features with entries overridden by \p Features.
 LLVM_ABI std::pair<FeatureError, StringRef>
 fillAMDGPUFeatureMap(StringRef GPU, const Triple &T, StringMap<bool> &Features);
+
+enum class TargetIDSetting { Unsupported, Any, Off, On };
+
+class LLVM_ABI AMDGPUTargetID {
+private:
+  GPUKind Arch;
+  std::string TargetTripleString;
+  TargetIDSetting XnackSetting;
+  TargetIDSetting SramEccSetting;
+  bool IsAMDHSA;
+
+public:
+  AMDGPUTargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
+                 TargetIDSetting SramEccSetting);
+
+  ~AMDGPUTargetID() = default;
+
+  /// \return True if the current xnack setting is not "Unsupported".
+  bool isXnackSupported() const {
+    return XnackSetting != TargetIDSetting::Unsupported;
+  }
+
+  /// \returns True if the current xnack setting is "On" or "Any".
+  bool isXnackOnOrAny() const {
+    return XnackSetting == TargetIDSetting::On ||
+           XnackSetting == TargetIDSetting::Any;
+  }
+
+  /// \returns True if current xnack setting is "On" or "Off",
+  /// false otherwise.
+  bool isXnackOnOrOff() const {
+    return getXnackSetting() == TargetIDSetting::On ||
+           getXnackSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns The current xnack TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getXnackSetting() const { return XnackSetting; }
+
+  /// Sets xnack setting to \p NewXnackSetting.
+  void setXnackSetting(TargetIDSetting NewXnackSetting) {
+    XnackSetting = NewXnackSetting;
+  }
+
+  /// \return True if the current sramecc setting is not "Unsupported".
+  bool isSramEccSupported() const {
+    return SramEccSetting != TargetIDSetting::Unsupported;
+  }
+
+  /// \returns True if the current sramecc setting is "On" or "Any".
+  bool isSramEccOnOrAny() const {
+    return SramEccSetting == TargetIDSetting::On ||
+           SramEccSetting == TargetIDSetting::Any;
+  }
+
+  /// \returns True if current sramecc setting is "On" or "Off",
+  /// false otherwise.
+  bool isSramEccOnOrOff() const {
+    return getSramEccSetting() == TargetIDSetting::On ||
+           getSramEccSetting() == TargetIDSetting::Off;
+  }
+
+  /// \returns The current sramecc TargetIDSetting, possible options are
+  /// "Unsupported", "Any", "Off", and "On".
+  TargetIDSetting getSramEccSetting() const { return SramEccSetting; }
+
+  /// Sets sramecc setting to \p NewSramEccSetting.
+  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
+    SramEccSetting = NewSramEccSetting;
+  }
+
+  void setTargetIDFromTargetIDStream(StringRef TargetID);
+
+  GPUKind getGPUKind() const { return Arch; }
+
+  StringRef getTargetTripleString() const { return TargetTripleString; }
+
+  /// \returns True if this is an AMDHSA target.
+  bool isAMDHSA() const { return IsAMDHSA; }
+
+  /// Parse a target ID directive string (e.g.,
+  /// "amdgcn-amd-amdhsa--gfx1010:xnack-") and return an AMDGPUTargetID.
+  /// \returns AMDGPUTargetID or std::nullopt if malformed.
+  static std::optional<AMDGPUTargetID>
+  parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Write string representation to \p OS
+  void print(raw_ostream &OS) const;
+
+  /// \returns String representation of an object.
+  std::string toString() const;
+
+  bool operator==(const AMDGPUTargetID &Other) const;
+  bool operator!=(const AMDGPUTargetID &Other) const {
+    return !(*this == Other);
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const AMDGPUTargetID &TargetID) {
+  TargetID.print(OS);
+  return OS;
+}
+
 } // namespace AMDGPU
 
 } // namespace llvm

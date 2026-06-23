@@ -2060,6 +2060,14 @@ class RVPBinaryIntrinsic
   // Packed Absolute Value and Absolute Difference
   def int_riscv_pabd  : RVPBinaryIntrinsic;
   def int_riscv_pabdu : RVPBinaryIntrinsic;
+
+  // Packed Exchanged Addition and Subtraction.
+  def int_riscv_pas  : RVPBinaryIntrinsic;
+  def int_riscv_psa  : RVPBinaryIntrinsic;
+  def int_riscv_psas : RVPBinaryIntrinsic;
+  def int_riscv_pssa : RVPBinaryIntrinsic;
+  def int_riscv_paas : RVPBinaryIntrinsic;
+  def int_riscv_pasa : RVPBinaryIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

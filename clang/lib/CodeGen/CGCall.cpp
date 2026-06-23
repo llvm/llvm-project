@@ -832,6 +832,32 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 } // namespace CodeGen
 } // namespace clang
 
+#ifndef NDEBUG
+static const char *abiKindToString(ABIArgInfo::Kind K) {
+  switch (K) {
+  case ABIArgInfo::Direct:
+    return "Direct";
+  case ABIArgInfo::Extend:
+    return "Extend";
+  case ABIArgInfo::Indirect:
+    return "Indirect";
+  case ABIArgInfo::IndirectAliased:
+    return "IndirectAliased";
+  case ABIArgInfo::Ignore:
+    return "Ignore";
+  case ABIArgInfo::Expand:
+    return "Expand";
+  case ABIArgInfo::CoerceAndExpand:
+    return "CoerceAndExpand";
+  case ABIArgInfo::TargetSpecific:
+    return "TargetSpecific";
+  case ABIArgInfo::InAlloca:
+    return "InAlloca";
+  }
+  llvm_unreachable("Unknown kind");
+}
+#endif
+
 void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
   SmallVector<const llvm::abi::Type *> MappedArgTypes;
   MappedArgTypes.reserve(FI.arg_size());
@@ -849,12 +875,100 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
 
   getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
 
-  FI.getReturnInfo() =
-      convertABIArgInfo(AbiFI->getReturnInfo(), FI.getReturnType());
+#ifndef NDEBUG
+  // With assertions enabled, also compute info using Clang ABI logic,
+  // so we can ensure the results are consistent.
+  getABIInfo().computeInfo(FI);
 
+  auto ConvertABIArgInfo = [&](ABIArgInfo &Target,
+                               const llvm::abi::ArgInfo &AbiInfo, QualType Type,
+                               int ArgNo) {
+    auto Check = [&](bool Cond, llvm::function_ref<void()> MessageFn) {
+      if (Cond)
+        return;
+      if (ArgNo == -1)
+        llvm::dbgs() << "For return value of type ";
+      else
+        llvm::dbgs() << "For argument " << ArgNo << " of type ";
+      llvm::dbgs() << Type << ": ";
+      MessageFn();
+      llvm::dbgs() << "\n";
+      abort();
+    };
+    auto CheckSimple = [&](auto TargetVal, auto ResVal, StringRef What) {
+      Check(TargetVal == ResVal, [&]() {
+        llvm::dbgs() << What << " mismatch (expected: " << TargetVal
+                     << ", given: " << ResVal << ")";
+      });
+    };
+
+    ABIArgInfo Res = convertABIArgInfo(AbiInfo, Type);
+    Check(Target.getKind() == Res.getKind(), [&]() {
+      llvm::dbgs() << "Kind mismatch (expected: "
+                   << abiKindToString(Target.getKind())
+                   << ", given: " << abiKindToString(Res.getKind()) << ")";
+    });
+
+    if (Res.canHaveCoerceToType()) {
+      // Normalize nullptr types.
+      llvm::Type *TargetType = Target.getCoerceToType();
+      llvm::Type *ResType = Res.getCoerceToType();
+      if (!TargetType)
+        TargetType = getTypes().ConvertType(Type);
+      if (!ResType)
+        ResType = getTypes().ConvertType(Type);
+
+      Check(TargetType == ResType, [&]() {
+        llvm::dbgs() << "CoerceToType mismatch (expected: " << *TargetType
+                     << ", given: " << *ResType << ")";
+      });
+    }
+
+    switch (Res.getKind()) {
+    case ABIArgInfo::Extend:
+      CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
+      CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
+      [[fallthrough]];
+    case ABIArgInfo::Direct:
+      CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
+      CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
+                  "DirectOffset");
+      break;
+    case ABIArgInfo::Indirect:
+      CheckSimple(Target.getIndirectByVal(), Res.getIndirectByVal(),
+                  "IndirectByVal");
+      [[fallthrough]];
+    case ABIArgInfo::IndirectAliased:
+      CheckSimple(Target.getIndirectAddrSpace(), Res.getIndirectAddrSpace(),
+                  "IndirectAddrSpace");
+      CheckSimple(Target.getIndirectRealign(), Res.getIndirectRealign(),
+                  "IndirectRealign");
+      Check(Target.getIndirectAlign() == Res.getIndirectAlign(), [&]() {
+        llvm::dbgs() << "IndirectAlign mismatch (expected: "
+                     << Target.getIndirectAlign().getQuantity()
+                     << ", given: " << Res.getIndirectAlign().getQuantity()
+                     << ")";
+      });
+      break;
+    default:
+      break;
+    }
+
+    Target = Res;
+  };
+#else
+  auto ConvertABIArgInfo =
+      [&](ABIArgInfo &Target, const llvm::abi::ArgInfo &AbiInfo, QualType Type,
+          int ArgNo) { Target = convertABIArgInfo(AbiInfo, Type); };
+#endif
+
+  ConvertABIArgInfo(FI.getReturnInfo(), AbiFI->getReturnInfo(),
+                    FI.getReturnType(), -1);
+
+  int ArgNo = 0;
   for (auto [CGArg, AbiArg] :
        llvm::zip_equal(FI.arguments(), AbiFI->arguments()))
-    CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+    ConvertABIArgInfo(CGArg.info, AbiArg.Info, CGArg.type, ArgNo++);
 }
 
 ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,

@@ -175,3 +175,39 @@ TEST(AllocActionTest, RunFinalizeActionsNullDealloc) {
 
   EXPECT_EQ(Val, 1);
 }
+
+// Handler that returns Error::success(). Exercises the
+// AllocActionSPSSerializer::serialize(Error) overload's success path.
+static orc_rt_WrapperFunctionBuffer
+errorSuccess_sps_allocaction(const char *ArgData, size_t ArgSize) {
+  return SPSAllocActionFunction<>::handle(
+             ArgData, ArgSize, []() -> Error { return Error::success(); })
+      .release();
+}
+
+// Handler that returns a StringError. Exercises the
+// AllocActionSPSSerializer::serialize(Error) overload's failure path.
+static orc_rt_WrapperFunctionBuffer
+errorFailure_sps_allocaction(const char *ArgData, size_t ArgSize) {
+  return SPSAllocActionFunction<>::handle(
+             ArgData, ArgSize,
+             []() -> Error { return make_error<StringError>("test failure"); })
+      .release();
+}
+
+TEST(AllocActionTest, RunActionWithErrorSuccessReturn) {
+  // A handler returning Error::success() should produce a non-out-of-band
+  // result buffer.
+  AllocAction AA(errorSuccess_sps_allocaction, WrapperFunctionBuffer());
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+}
+
+TEST(AllocActionTest, RunActionWithErrorFailureReturn) {
+  // A handler returning a real Error should produce an out-of-band error
+  // result buffer carrying the Error's string form.
+  AllocAction AA(errorFailure_sps_allocaction, WrapperFunctionBuffer());
+  auto B = AA();
+  ASSERT_NE(B.getOutOfBandError(), nullptr);
+  EXPECT_STREQ(B.getOutOfBandError(), "test failure");
+}
