@@ -1337,7 +1337,7 @@ Vyukov MPSC，单消费者=唯一 owner worker（§1.3 SC 前提不变）：
 - cache：固定槽 POD 表替代 `unordered_map`（共享内存不能放 STL）。
   - publish（仅 owner worker）：桶写锁 spin 到 `readers==0` → **锁内重校验逐实例 version**（commit gate，失配 `VersionMismatch` 不写）→ 同 identity 原地覆盖 / 空槽 / 桶满淘汰 → `storeRelease(state=Ready)` → **锁外**通过 owner 私有 release 回调释放旧/被淘汰 fnPtr（回调可能重入 code pool/ORC/分配器，绝不在临界区内运行）。
   - lookup：桶 `tryRead` → 扫 `Ready` 且 `generation`/identity/version 匹配 → 命中持读 token（调用方用完 `release_read`）。
-- **fnPtr 跨核可共享前提（构建开关 `EJIT_SRE_SHARED_CODE_POINTERS`，默认 OFF）：** 仅当平台保证①同一地址空间、②code pool 在所有核映射到**相同 VA**、③code pool 生命周期覆盖所有读者、④`seal/enable_ex` 已完成、⑤I/D-cache 跨核执行一致时才显式置 ON（`EJitCompileDriver` 据此调 `setCodeSharingEnabled`，**绝不自动猜测平台能力**）。**不满足时 clean reject**：非 owner 核 lookup 命中 `Ready` 但能力关闭时返回 `readyButNotShareable`（fallback，**不重新入队**，避免重编译 churn），**绝不盲目返回指针**；owner 核读自己的 fnPtr 不受限。错误置 ON 可能导致非法地址执行或运行陈旧 I-cache。`codeSharingEnabled` 在诊断中输出。
+- **fnPtr 跨核可共享前提（构建开关 `EJIT_SRE_SHARED_CODE_POINTERS`，默认 OFF）：** 仅当平台保证①同一地址空间、②code pool 在所有核映射到**相同 VA**、③code pool 生命周期覆盖所有读者、④I/D-cache 跨核执行一致时才显式置 ON（`EJitCompileDriver` 据此调 `setCodeSharingEnabled`，**绝不自动猜测平台能力**）。即使地址相同，`enable_ex` 修改的执行权限也可能只属于调用核的 stage-1 映射，因此非 owner 核命中共享 fnPtr 后，必须先通过 `PrepareCodeCallback` 在**当前核**安装执行权限；成功后在 cache slot 的 64-bit `executableCoreMask` 中记录该核，后续同核命中不重复调用。准备失败时返回 `readyButNotShareable`（fallback，**不重新入队**），绝不返回不可执行指针。当前平台适配完整支持 legacy 2MiB seal：按 2MiB 对齐 fnPtr 后调用 `enable_ex(1, poolBase)`；4K seal 模式因裸 fnPtr 不携带完整代码范围而 clean reject，后续需要在 cache slot 增加代码范围后才能安全共享。owner 核读自己的 fnPtr 不重复准备。`codeSharingEnabled` 和 `executePrepareFailed` 在诊断中输出。
 - 大端/内存序：仅固定宽度标量按值访问，无 bitfield、无字节解析；所有发布/消费成对 acquire/release（§10.2）。共享状态 ABI version 因 request/dedup 变化升到 **v2**。
 
 ### 11.7 worker 启动时序、栈与任务生命周期

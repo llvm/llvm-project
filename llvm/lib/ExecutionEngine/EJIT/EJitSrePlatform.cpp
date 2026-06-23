@@ -23,7 +23,8 @@
 #include "llvm/ExecutionEngine/EJIT/EJitSrePlatform.h"
 
 #ifndef EJIT_SRE_CODE_POOL_SIZE
-#define EJIT_SRE_CODE_POOL_SIZE (static_cast<unsigned long long>(2) * 1024 * 1024)
+#define EJIT_SRE_CODE_POOL_SIZE                                                \
+  (static_cast<unsigned long long>(2) * 1024 * 1024)
 #endif
 
 #ifndef EJIT_SRE_CODE_POOL_PTNO
@@ -38,7 +39,8 @@
 
 namespace {
 constexpr unsigned long long kSrePoolSize = EJIT_SRE_CODE_POOL_SIZE;
-constexpr unsigned char kSrePtNo = static_cast<unsigned char>(EJIT_SRE_CODE_POOL_PTNO);
+constexpr unsigned char kSrePtNo =
+    static_cast<unsigned char>(EJIT_SRE_CODE_POOL_PTNO);
 constexpr unsigned kSreMid = static_cast<unsigned>(EJIT_SRE_CODE_POOL_MID);
 constexpr size_t k2MiB = static_cast<size_t>(2) * 1024 * 1024;
 constexpr size_t k4KiB = static_cast<size_t>(4) * 1024;
@@ -55,15 +57,15 @@ constexpr size_t k4KiB = static_cast<size_t>(4) * 1024;
 // symbol or bind incorrectly. EmbeddedJIT only declares and calls them; the
 // platform must provide the strong definitions.
 //===----------------------------------------------------------------------===//
-extern "C" unsigned ejit_sre_enable_ex(unsigned startLevel,
-                                       unsigned long long va)
-    __asm__("enable_ex");
+extern "C" unsigned
+ejit_sre_enable_ex(unsigned startLevel,
+                   unsigned long long va) __asm__("enable_ex");
 
 // Split a 2MiB-aligned [va, va + size) window into 4KiB mappings. Must be
 // called before any per-page enable_ex on that window. Returns 0 on success.
-extern "C" unsigned ejit_sre_split_2m_to_4k(unsigned long long va,
-                                            unsigned long long size)
-    __asm__("split_2m_to_4k");
+extern "C" unsigned
+ejit_sre_split_2m_to_4k(unsigned long long va,
+                        unsigned long long size) __asm__("split_2m_to_4k");
 
 extern "C" void *SRE_MemDbgAlloc(unsigned int mid, unsigned char ptNo,
                                  unsigned long size, const char *func,
@@ -83,9 +85,8 @@ llvm::ejit::makeSreCodePoolManager() {
 #endif
 
   auto RawAlloc = [](size_t Bytes) -> void * {
-    return SRE_MemDbgAlloc(kSreMid, kSrePtNo,
-                           static_cast<unsigned long>(Bytes), __func__,
-                           __LINE__);
+    return SRE_MemDbgAlloc(kSreMid, kSrePtNo, static_cast<unsigned long>(Bytes),
+                           __func__, __LINE__);
   };
 
   auto Seal = [](void *Va) -> unsigned {
@@ -102,9 +103,8 @@ llvm::ejit::makeSreCodePoolManager() {
 
   auto Split = [](void *Base, size_t Size) -> unsigned {
 #ifdef EJIT_CODE_POOL_4K_SEAL
-    return ejit_sre_split_2m_to_4k(
-        reinterpret_cast<unsigned long long>(Base),
-        static_cast<unsigned long long>(Size));
+    return ejit_sre_split_2m_to_4k(reinterpret_cast<unsigned long long>(Base),
+                                   static_cast<unsigned long long>(Size));
 #else
     (void)Base;
     (void)Size;
@@ -113,6 +113,19 @@ llvm::ejit::makeSreCodePoolManager() {
   };
 
   return std::make_unique<EJitCodePoolManager>(Opts, RawAlloc, Seal, Split);
+}
+
+bool llvm::ejit::prepareSreCodeForCurrentCore(const void *FnPtr) {
+#if !defined(EJIT_SRE_ENABLE_EX) || defined(EJIT_CODE_POOL_4K_SEAL)
+  (void)FnPtr;
+  return false;
+#else
+  if (!FnPtr)
+    return false;
+  const auto Address = reinterpret_cast<uintptr_t>(FnPtr);
+  const auto PoolBase = Address & ~(static_cast<uintptr_t>(k2MiB) - 1);
+  return ejit_sre_enable_ex(1, static_cast<unsigned long long>(PoolBase)) == 0;
+#endif
 }
 
 #endif // EJIT_SRE_CODE_POOL

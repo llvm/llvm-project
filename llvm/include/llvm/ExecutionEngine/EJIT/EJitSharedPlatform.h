@@ -61,7 +61,8 @@ constexpr uint32_t kEJitSharedAbiMagic = 0x456A5370u; // "EjSp"
 /// stores the owning generation (0 = free) instead of a 1-bit flag.
 /// v3: the shared state carries an owner registration fingerprint (peers
 /// validate their funcIndex/dimType mapping against the owner before use).
-constexpr uint32_t kEJitSharedAbiVersion = 3u;
+/// v4: each cache slot carries a per-core executable-permission ready mask.
+constexpr uint32_t kEJitSharedAbiVersion = 4u;
 
 /// Sentinel "no core" id. Out of any plausible core-id range.
 constexpr uint32_t kEJitInvalidCoreId = 0xFFFFFFFFu;

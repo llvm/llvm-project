@@ -247,6 +247,29 @@ EJitSharedTaskPool::cacheLookup(uint32_t funcIndex, const EJitDimPair *dims,
     void *fn = reinterpret_cast<void *>(Slot.fnPtr.loadAcquire());
     if (!fn)
       break;
+
+    // Execute permission is a per-core property on the target. The owner has
+    // already sealed the code before publishing it, but a peer may use a
+    // different stage-1 translation context. Prepare the mapping in the
+    // calling core before returning the shared pointer. A failure is a clean
+    // fallback, never an attempt to execute an unprepared address.
+    if (self != owner) {
+      const bool CanMemoize = self < 64;
+      const uint64_t CoreBit = CanMemoize ? (uint64_t{1} << self) : 0;
+      const bool AlreadyPrepared =
+          CanMemoize &&
+          ((Slot.executableCoreMask.loadAcquire() & CoreBit) != 0);
+      if (!AlreadyPrepared) {
+        if (!prepareCodeFn_ || !prepareCodeFn_(prepareCodeCtx_, fn)) {
+          state_->counters.executePrepareFailed.fetchAdd(1);
+          bucketReadRelease(B);
+          R.readyButNotShareable = true;
+          return R;
+        }
+        if (CanMemoize)
+          Slot.executableCoreMask.fetchOr(CoreBit);
+      }
+    }
     R.fnPtr = fn;
     R.bucketIndex = bucket;
     R.hasReadToken = true;
@@ -320,6 +343,9 @@ EJitSharedTaskPool::cachePublish(const EJitCompileRequest &req, void *fnPtr) {
     target->versions[i] = req.versions[i];
   }
   target->fnPtr.storeRelease(reinterpret_cast<uintptr_t>(fnPtr));
+  const uint32_t OwnerCore = state_->ownerCoreId.loadAcquire();
+  target->executableCoreMask.storeRelease(
+      OwnerCore < 64 ? (uint64_t{1} << OwnerCore) : 0);
   target->state.storeRelease(static_cast<uint32_t>(EJitSharedSlotState::Ready));
   bucketWriteRelease(B);
 
@@ -368,6 +394,7 @@ void initSharedStorage(EJitSharedTaskPoolState *st, uint32_t mode) {
   st->counters.compileFailed.storeRelaxed(0);
   st->counters.publishFailed.storeRelaxed(0);
   st->counters.instanceDisabled.storeRelaxed(0);
+  st->counters.executePrepareFailed.storeRelaxed(0);
   for (uint32_t b = 0; b < kEJitSharedCacheBuckets; ++b) {
     st->buckets[b].writeFlag.storeRelaxed(0);
     st->buckets[b].readers.storeRelaxed(0);
@@ -380,6 +407,7 @@ void initSharedStorage(EJitSharedTaskPoolState *st, uint32_t mode) {
       Slot.generation = 0;
       Slot.identityHash = 0;
       Slot.fnPtr.storeRelaxed(0);
+      Slot.executableCoreMask.storeRelaxed(0);
     }
   }
 }
@@ -757,4 +785,6 @@ void EJitSharedTaskPool::getDiagnostics(EJitSharedDiagnostics &out) const {
   out.compileFailed = state_->counters.compileFailed.loadRelaxed();
   out.publishFailed = state_->counters.publishFailed.loadRelaxed();
   out.instanceDisabled = state_->counters.instanceDisabled.loadRelaxed();
+  out.executePrepareFailed =
+      state_->counters.executePrepareFailed.loadRelaxed();
 }

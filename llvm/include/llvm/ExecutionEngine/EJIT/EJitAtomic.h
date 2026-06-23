@@ -84,6 +84,9 @@ public:
   /// Atomic subtract, returning the previous value (acq_rel).
   T fetchSub(T v) { return __atomic_fetch_sub(&value_, v, __ATOMIC_ACQ_REL); }
 
+  /// Atomic bitwise OR, returning the previous value (acq_rel).
+  T fetchOr(T v) { return __atomic_fetch_or(&value_, v, __ATOMIC_ACQ_REL); }
+
 private:
   // mutable so const load helpers can form a non-const pointer for the builtin.
   mutable T value_;

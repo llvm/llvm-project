@@ -123,6 +123,10 @@ struct EJitSharedCacheSlot {
   uint32_t versions[4]; ///< per-instance version snapshot at publish
   uint64_t identityHash; ///< hash(funcIndex, dims) — fast reject before compare
   EJitAtomicUPtr fnPtr; ///< compiled function pointer (cross-core read gated)
+  /// Bit N means core N has successfully installed execute permission for this
+  /// code address. Core ids >= 64 are supported but cannot be memoized here,
+  /// so they run the preparation callback on every hit.
+  EJitAtomicU64 executableCoreMask;
 };
 
 //===----------------------------------------------------------------------===//
@@ -157,6 +161,7 @@ struct EJitSharedCounters {
   EJitAtomicU64 compileFailed;
   EJitAtomicU64 publishFailed;
   EJitAtomicU64 instanceDisabled;
+  EJitAtomicU64 executePrepareFailed;
 };
 
 //===----------------------------------------------------------------------===//

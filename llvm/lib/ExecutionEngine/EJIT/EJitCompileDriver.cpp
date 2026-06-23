@@ -10,6 +10,9 @@
 #endif
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
+#ifdef EJIT_SRE_CODE_POOL
+#include "llvm/ExecutionEngine/EJIT/EJitSrePlatform.h"
+#endif
 #ifdef EJIT_SRE_SHARED_TASKPOOL
 #include "llvm/ExecutionEngine/EJIT/EJitFuncRegistry.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLifecycleRegistry.h"
@@ -33,6 +36,17 @@ bool taskpoolCompileThunk(void *ctx, const EJitCompileRequest &req,
   *outFn = fn;
   return fn != nullptr;
 }
+
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+bool sharedPrepareCodeThunk(void * /*ctx*/, const void *fnPtr) {
+#ifdef EJIT_SRE_CODE_POOL
+  return prepareSreCodeForCurrentCore(fnPtr);
+#else
+  (void)fnPtr;
+  return false;
+#endif
+}
+#endif
 } // namespace
 #endif
 
@@ -92,6 +106,7 @@ EJitCompileDriver::EJitCompileDriver(const Config &config, EJitCache &cache,
   // code (spec §11); we never auto-detect it.
 #ifdef EJIT_SRE_SHARED_CODE_POINTERS
   sharedPool_.setCodeSharingEnabled(true);
+  sharedPool_.setPrepareCodeCallback(&sharedPrepareCodeThunk, this);
 #else
   sharedPool_.setCodeSharingEnabled(false);
 #endif

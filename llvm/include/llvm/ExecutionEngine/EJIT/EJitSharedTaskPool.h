@@ -61,6 +61,7 @@ struct EJitSharedDiagnostics {
   uint64_t compileFailed;
   uint64_t publishFailed;
   uint64_t instanceDisabled;
+  uint64_t executePrepareFailed;
 };
 
 //===----------------------------------------------------------------------===//
@@ -85,6 +86,9 @@ public:
   /// Owner-private physical-code release callback for an overwritten/retired
   /// pointer. Optional; a purely logical drop happens when unset.
   using ReleaseCallback = void (*)(void *ctx, void *oldFn);
+  /// Install execute permission for \p fnPtr in the calling core's translation
+  /// context. Required before a non-owner core may consume a shared fnPtr.
+  using PrepareCodeCallback = bool (*)(void *ctx, const void *fnPtr);
 
   /// Worker loop entry (provided by this class, run on the injected task).
   using WorkerEntryFn = void (*)(void *ctx);
@@ -143,6 +147,10 @@ public:
   void setReleaser(ReleaseCallback fn, void *ctx) {
     releaseFn_ = fn;
     releaseCtx_ = ctx;
+  }
+  void setPrepareCodeCallback(PrepareCodeCallback fn, void *ctx) {
+    prepareCodeFn_ = fn;
+    prepareCodeCtx_ = ctx;
   }
   void setWorkerHooks(WorkerStartFn start, WorkerStopFn stop, void *ctx) {
     workerStart_ = start;
@@ -258,6 +266,8 @@ private:
   void *compileCtx_ = nullptr;
   ReleaseCallback releaseFn_ = nullptr;
   void *releaseCtx_ = nullptr;
+  PrepareCodeCallback prepareCodeFn_ = nullptr;
+  void *prepareCodeCtx_ = nullptr;
   WorkerStartFn workerStart_ = nullptr;
   WorkerStopFn workerStop_ = nullptr;
   void *workerCtx_ = nullptr;

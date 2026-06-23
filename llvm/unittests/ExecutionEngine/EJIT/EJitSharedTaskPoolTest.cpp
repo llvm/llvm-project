@@ -58,6 +58,16 @@ void mockRelease(void *ctx, void *oldFn) {
   static_cast<ReleaseLog *>(ctx)->freed.push_back(oldFn);
 }
 
+struct PrepareLog {
+  std::vector<uint32_t> cores;
+  bool succeed = true;
+};
+bool mockPrepareCode(void *ctx, const void * /*fnPtr*/) {
+  auto *log = static_cast<PrepareLog *>(ctx);
+  log->cores.push_back(EJitCoreId::current());
+  return log->succeed;
+}
+
 // Compiler that returns a distinct, non-null pointer on every call (models a
 // recompile landing at a new code address).
 struct SeqCompiler {
@@ -429,7 +439,9 @@ TEST_F(SharedTaskPoolTest, CrossCoreFnPtrSharingGate) {
   // codeSharing ON: any core reads the SAME fnPtr.
   {
     state_ = std::make_unique<EJitSharedTaskPoolState>();
+    PrepareLog prepare;
     EJitSharedTaskPool owner;
+    owner.setPrepareCodeCallback(&mockPrepareCode, &prepare);
     bringUpOwner(owner, /*codeSharing=*/true);
     EJitCoreId::setCurrentForTest(0);
     ASSERT_EQ(owner.compileOrGet(21, nullptr, 0, codeFor(21)).status,
@@ -437,12 +449,76 @@ TEST_F(SharedTaskPoolTest, CrossCoreFnPtrSharingGate) {
     EXPECT_TRUE(owner.pollOne());
     EJitSharedTaskPool peer;
     peer.bind(state_.get());
+    peer.setPrepareCodeCallback(&mockPrepareCode, &prepare);
     EJitCoreId::setCurrentForTest(9);
     auto peerHit = peer.compileOrGet(21, nullptr, 0, codeFor(21));
     ASSERT_EQ(peerHit.status, EJitCompileOrGetStatus::CacheHit);
     EXPECT_EQ(peerHit.fnPtr, codeFor(21)); // same pointer cross-core
+    ASSERT_EQ(prepare.cores.size(), 1u);
+    EXPECT_EQ(prepare.cores[0], 9u);
     peer.releaseRead(peerHit.bucketIndex);
   }
+}
+
+TEST_F(SharedTaskPoolTest, PeerPreparesExecutePermissionOncePerCore) {
+  PrepareLog prepare;
+  EJitSharedTaskPool owner;
+  owner.setPrepareCodeCallback(&mockPrepareCode, &prepare);
+  bringUpOwner(owner, /*codeSharing=*/true);
+
+  EJitCoreId::setCurrentForTest(0);
+  ASSERT_EQ(owner.compileOrGet(22, nullptr, 0, codeFor(22)).status,
+            EJitCompileOrGetStatus::EnqueuedPending);
+  ASSERT_TRUE(owner.pollOne());
+
+  // Owner code was prepared by its compile/lookup path before publication.
+  auto ownerHit = owner.compileOrGet(22, nullptr, 0, codeFor(22));
+  ASSERT_EQ(ownerHit.status, EJitCompileOrGetStatus::CacheHit);
+  owner.releaseRead(ownerHit.bucketIndex);
+  EXPECT_TRUE(prepare.cores.empty());
+
+  EJitCoreId::setCurrentForTest(21);
+  auto firstPeerHit = owner.compileOrGet(22, nullptr, 0, codeFor(22));
+  ASSERT_EQ(firstPeerHit.status, EJitCompileOrGetStatus::CacheHit);
+  owner.releaseRead(firstPeerHit.bucketIndex);
+  ASSERT_EQ(prepare.cores.size(), 1u);
+  EXPECT_EQ(prepare.cores[0], 21u);
+
+  // The per-slot mask suppresses repeated enable_ex work on the same core.
+  auto secondPeerHit = owner.compileOrGet(22, nullptr, 0, codeFor(22));
+  ASSERT_EQ(secondPeerHit.status, EJitCompileOrGetStatus::CacheHit);
+  owner.releaseRead(secondPeerHit.bucketIndex);
+  EXPECT_EQ(prepare.cores.size(), 1u);
+
+  // A different core has its own translation context and prepares separately.
+  EJitCoreId::setCurrentForTest(22);
+  auto otherPeerHit = owner.compileOrGet(22, nullptr, 0, codeFor(22));
+  ASSERT_EQ(otherPeerHit.status, EJitCompileOrGetStatus::CacheHit);
+  owner.releaseRead(otherPeerHit.bucketIndex);
+  ASSERT_EQ(prepare.cores.size(), 2u);
+  EXPECT_EQ(prepare.cores[1], 22u);
+}
+
+TEST_F(SharedTaskPoolTest, PeerPrepareFailureCleanlyFallsBack) {
+  PrepareLog prepare;
+  prepare.succeed = false;
+  EJitSharedTaskPool owner;
+  owner.setPrepareCodeCallback(&mockPrepareCode, &prepare);
+  bringUpOwner(owner, /*codeSharing=*/true);
+
+  EJitCoreId::setCurrentForTest(0);
+  ASSERT_EQ(owner.compileOrGet(23, nullptr, 0, codeFor(23)).status,
+            EJitCompileOrGetStatus::EnqueuedPending);
+  ASSERT_TRUE(owner.pollOne());
+
+  void *fallback = reinterpret_cast<void *>(0xDEADBEEFull);
+  EJitCoreId::setCurrentForTest(21);
+  auto peerHit = owner.compileOrGet(23, nullptr, 0, fallback);
+  EXPECT_EQ(peerHit.status, EJitCompileOrGetStatus::OffMode);
+  EXPECT_EQ(peerHit.fnPtr, fallback);
+  EXPECT_FALSE(peerHit.hasReadToken);
+  EXPECT_TRUE(peerHit.readyButNotShareable);
+  EXPECT_EQ(state_->counters.executePrepareFailed.loadAcquire(), 1u);
 }
 
 //===----------------------------------------------------------------------===//
