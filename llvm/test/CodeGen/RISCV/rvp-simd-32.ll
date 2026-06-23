@@ -1310,8 +1310,8 @@ define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.b a0, a0
-; RV64-NEXT:    pwcvtu.b a1, a1
+; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    pwcvtu.wb a1, a1
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
@@ -1346,8 +1346,8 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.b a1, a1
-; RV64-NEXT:    pwcvtu.b a0, a0
+; RV64-NEXT:    pwcvtu.wb a1, a1
+; RV64-NEXT:    pwcvtu.wb a0, a0
 ; RV64-NEXT:    psext.h.b a1, a1
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
