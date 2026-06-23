@@ -18,6 +18,7 @@
 
 using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::FreeList;
+using LIBC_NAMESPACE::FreeListSecrets;
 using LIBC_NAMESPACE::FreeStore;
 using LIBC_NAMESPACE::FreeTrie;
 using LIBC_NAMESPACE::cpp::byte;
@@ -25,6 +26,7 @@ using LIBC_NAMESPACE::cpp::optional;
 
 // Inserting or removing blocks too small to be tracked does nothing.
 TEST(LlvmLibcFreeStore, TooSmall) {
+  FreeListSecrets secrets{};
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
@@ -38,15 +40,16 @@ TEST(LlvmLibcFreeStore, TooSmall) {
   BlockRef remainder = *maybeBlock;
 
   FreeStore store;
-  store.insert(too_small);
-  store.insert(remainder);
+  store.insert(too_small, secrets);
+  store.insert(remainder, secrets);
 
-  EXPECT_EQ(store.remove_best_fit(too_small.inner_size()).addr(),
+  EXPECT_EQ(store.remove_best_fit(too_small.inner_size(), secrets).addr(),
             remainder.addr());
-  store.remove(too_small);
+  store.remove(too_small, secrets);
 }
 
 TEST(LlvmLibcFreeStore, RemoveBestFit) {
+  FreeListSecrets secrets{};
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
@@ -67,40 +70,43 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   BlockRef remainder = *maybeBlock;
 
   FreeStore store;
-  store.insert(smallest);
+  store.insert(smallest, secrets);
   if (largest_small != smallest)
-    store.insert(largest_small);
-  store.insert(remainder);
+    store.insert(largest_small, secrets);
+  store.insert(remainder, secrets);
 
   // For TLSF (oversized first), asking for a size will return the block from
   // the first non-empty oversized bin if one exists, bypassing the exact bin.
   if (largest_small != smallest) {
-    BlockRef block = store.remove_best_fit(smallest.inner_size());
+    BlockRef block = store.remove_best_fit(smallest.inner_size(), secrets);
     ASSERT_EQ(block.addr(), largest_small.addr());
-    store.insert(block);
+    store.insert(block, secrets);
 
-    BlockRef block2 = store.remove_best_fit(largest_small.inner_size());
+    BlockRef block2 =
+        store.remove_best_fit(largest_small.inner_size(), secrets);
     ASSERT_EQ(block2.addr(), remainder.addr());
-    store.insert(block2);
+    store.insert(block2, secrets);
   } else {
-    BlockRef block = store.remove_best_fit(smallest.inner_size());
+    BlockRef block = store.remove_best_fit(smallest.inner_size(), secrets);
     ASSERT_EQ(block.addr(), remainder.addr());
-    store.insert(block);
+    store.insert(block, secrets);
   }
 
   // Search small list for best fit.
   BlockRef next_smallest =
       largest_small == smallest ? remainder : largest_small;
-  ASSERT_EQ(store.remove_best_fit(smallest.inner_size() + 1).addr(),
+  ASSERT_EQ(store.remove_best_fit(smallest.inner_size() + 1, secrets).addr(),
             next_smallest.addr());
-  store.insert(next_smallest);
+  store.insert(next_smallest, secrets);
 
   // Continue search for best fit to large blocks.
-  EXPECT_EQ(store.remove_best_fit(largest_small.inner_size() + 1).addr(),
-            remainder.addr());
+  EXPECT_EQ(
+      store.remove_best_fit(largest_small.inner_size() + 1, secrets).addr(),
+      remainder.addr());
 }
 
 TEST(LlvmLibcFreeStore, Remove) {
+  FreeListSecrets secrets{};
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
@@ -112,13 +118,13 @@ TEST(LlvmLibcFreeStore, Remove) {
   BlockRef remainder = *maybeBlock;
 
   FreeStore store;
-  store.insert(small);
-  store.insert(remainder);
+  store.insert(small, secrets);
+  store.insert(remainder, secrets);
 
-  store.remove(remainder);
-  ASSERT_EQ(store.remove_best_fit(remainder.inner_size()).addr(),
+  store.remove(remainder, secrets);
+  ASSERT_EQ(store.remove_best_fit(remainder.inner_size(), secrets).addr(),
             BlockRef().addr());
-  store.remove(small);
-  ASSERT_EQ(store.remove_best_fit(small.inner_size()).addr(),
+  store.remove(small, secrets);
+  ASSERT_EQ(store.remove_best_fit(small.inner_size(), secrets).addr(),
             BlockRef().addr());
 }

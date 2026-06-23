@@ -155,7 +155,7 @@ LIBC_INLINE void FreeTrie::push(BlockRef block) {
   } else {
     node->parent = nullptr;
   }
-  list.push(node);
+  list.push(node, FreeListSecrets{});
   *cur = static_cast<Node *>(list.begin());
 }
 
@@ -284,7 +284,7 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::pop_min() {
 LIBC_INLINE void FreeTrie::remove(Node* node) {
   LIBC_ASSERT(!empty() && "cannot remove from empty trie");
   FreeList list = node;
-  list.pop();
+  list.pop(FreeListSecrets{});
   Node* new_node = static_cast<Node*>(list.begin());
   if (!new_node) {
     // The freelist is empty. Replace the subtrie root with an arbitrary leaf.

@@ -121,14 +121,16 @@ public:
   LIBC_INLINE TLSFFreeStoreImpl &
   operator=(const TLSFFreeStoreImpl &other) = delete;
 
-  LIBC_INLINE void insert(BlockRef block);
-  LIBC_INLINE void remove(BlockRef block);
-  LIBC_INLINE BlockRef remove_best_fit(size_t size) {
-    return find_and_remove_fit(size);
+  LIBC_INLINE void insert(BlockRef block, const FreeListSecrets& secrets);
+  LIBC_INLINE void remove(BlockRef block, const FreeListSecrets& secrets);
+  LIBC_INLINE BlockRef remove_best_fit(size_t size,
+                                       const FreeListSecrets& secrets) {
+    return find_and_remove_fit(size, secrets);
   }
-  LIBC_INLINE BlockRef find_and_remove_fit(size_t size);
+  LIBC_INLINE BlockRef find_and_remove_fit(size_t size,
+                                           const FreeListSecrets& secrets);
 
-protected:
+ protected:
   LIBC_INLINE static bool too_small(BlockRef block) {
     return block.outer_size() < MIN_OUTER_SIZE;
   }
@@ -148,7 +150,8 @@ protected:
   LIBC_INLINE void clear_bit(size_t bit_index);
   LIBC_INLINE bool get_bit(size_t bit_index) const;
   LIBC_INLINE size_t find_first_bit_set_after(size_t bit_index) const;
-  LIBC_INLINE BlockRef remove_first_fit_in_list(size_t index, size_t size);
+  LIBC_INLINE BlockRef remove_first_fit_in_list(size_t index, size_t size,
+                                                const FreeListSecrets& secrets);
   LIBC_INLINE FreeTrie get_trie();
   LIBC_INLINE BlockRef find_and_remove_fit_in_trie(size_t size);
   LIBC_INLINE BlockRef pop_min_in_trie();
@@ -245,7 +248,8 @@ LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::pop_min_in_trie() {
 }
 
 template <typename CONFIG>
-LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::insert(BlockRef block) {
+LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::insert(
+    BlockRef block, const FreeListSecrets& secrets) {
   if (too_small(block))
     return;
   size_t bit_index = size_to_bit_index(block.inner_size());
@@ -257,12 +261,13 @@ LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::insert(BlockRef block) {
       return;
     }
 
-  free_lists[bit_index].list.push(block);
+  free_lists[bit_index].list.push(block, secrets);
   set_bit(bit_index);
 }
 
 template <typename CONFIG>
-LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::remove(BlockRef block) {
+LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::remove(
+    BlockRef block, const FreeListSecrets& secrets) {
   if (too_small(block))
     return;
   size_t bit_index = size_to_bit_index(block.inner_size());
@@ -277,14 +282,14 @@ LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::remove(BlockRef block) {
     }
 
   free_lists[bit_index].list.remove(
-      reinterpret_cast<FreeList::Node *>(block.usable_space()));
+      reinterpret_cast<FreeList::Node*>(block.usable_space()), secrets);
   if (free_lists[bit_index].list.empty())
     clear_bit(bit_index);
 }
 
 template <typename CONFIG>
-LIBC_INLINE BlockRef
-TLSFFreeStoreImpl<CONFIG>::remove_first_fit_in_list(size_t index, size_t size) {
+LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::remove_first_fit_in_list(
+    size_t index, size_t size, const FreeListSecrets& secrets) {
   FreeList::Node *begin_node = free_lists[index].list.begin();
   if (begin_node == nullptr)
     return BlockRef();
@@ -292,27 +297,27 @@ TLSFFreeStoreImpl<CONFIG>::remove_first_fit_in_list(size_t index, size_t size) {
   FreeList::Node *cur = begin_node;
   do {
     if (cur->size() >= size) {
-      free_lists[index].list.remove(cur);
+      free_lists[index].list.remove(cur, secrets);
       if (free_lists[index].list.empty())
         clear_bit(index);
       return cur->block();
     }
-    cur = cur->next_node();
+    cur = free_lists[index].list.next_node(cur, secrets);
   } while (cur != begin_node);
 
   return BlockRef();
 }
 
 template <typename CONFIG>
-LIBC_INLINE BlockRef
-TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
+LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(
+    size_t size, const FreeListSecrets& secrets) {
   size_t bit_index = size_to_bit_index(size);
 
   if (LIBC_UNLIKELY(bit_index >= TOTAL_BITS - 1)) {
     if constexpr (USE_TRIE)
       return find_and_remove_fit_in_trie(size);
     else
-      return remove_first_fit_in_list(TOTAL_BITS - 1, size);
+      return remove_first_fit_in_list(TOTAL_BITS - 1, size, secrets);
   }
 
   // 1. Try oversized bins (guaranteed fit, but larger).
@@ -324,7 +329,7 @@ TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
     }
 
     BlockRef block = free_lists[oversized_bit].list.front();
-    free_lists[oversized_bit].list.pop();
+    free_lists[oversized_bit].list.pop(secrets);
     if (free_lists[oversized_bit].list.empty())
       clear_bit(oversized_bit);
     return block;
@@ -332,7 +337,7 @@ TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
 
   // 2. Try exact fit (fallback).
   if (get_bit(bit_index)) {
-    if (BlockRef block = remove_first_fit_in_list(bit_index, size))
+    if (BlockRef block = remove_first_fit_in_list(bit_index, size, secrets))
       return block;
   }
 

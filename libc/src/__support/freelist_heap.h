@@ -37,22 +37,45 @@ using cpp::span;
 
 LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
+#ifndef LIBC_COPT_FREELIST_KEY0
+#define LIBC_COPT_FREELIST_KEY0 0
+#endif
+#ifndef LIBC_COPT_FREELIST_KEY1
+#define LIBC_COPT_FREELIST_KEY1 0
+#endif
+#ifndef LIBC_COPT_FREELIST_KEY2
+#define LIBC_COPT_FREELIST_KEY2 0
+#endif
+
 class FreeListHeap {
 public:
-  constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
+#if LIBC_COPT_HARDEN_FREELIST
+ constexpr FreeListHeap(const FreeListSecrets& secrets =
+                            {LIBC_COPT_FREELIST_KEY0, LIBC_COPT_FREELIST_KEY1,
+                             LIBC_COPT_FREELIST_KEY2})
+     : begin(&_end), end(&__llvm_libc_heap_limit), secrets(secrets) {}
 
-  constexpr FreeListHeap(span<cpp::byte> region)
-      : begin(region.begin()), end(region.end()) {}
+ constexpr FreeListHeap(span<cpp::byte> region,
+                        const FreeListSecrets& secrets =
+                            {LIBC_COPT_FREELIST_KEY0, LIBC_COPT_FREELIST_KEY1,
+                             LIBC_COPT_FREELIST_KEY2})
+     : begin(region.begin()), end(region.end()), secrets(secrets) {}
+#else
+ constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
 
-  void *allocate(size_t size);
-  void *aligned_allocate(size_t alignment, size_t size);
-  // NOTE: All pointers passed to free must come from one of the other
-  // allocation functions: `allocate`, `aligned_allocate`, `realloc`, `calloc`.
-  void free(void *ptr);
-  void *realloc(void *ptr, size_t size);
-  void *calloc(size_t num, size_t size);
+ constexpr FreeListHeap(span<cpp::byte> region)
+     : begin(region.begin()), end(region.end()) {}
+#endif
 
-  cpp::span<cpp::byte> region() const { return {begin, end}; }
+ void* allocate(size_t size);
+ void* aligned_allocate(size_t alignment, size_t size);
+ // NOTE: All pointers passed to free must come from one of the other
+ // allocation functions: `allocate`, `aligned_allocate`, `realloc`, `calloc`.
+ void free(void* ptr);
+ void* realloc(void* ptr, size_t size);
+ void* calloc(size_t num, size_t size);
+
+ cpp::span<cpp::byte> region() const { return {begin, end}; }
 
 private:
   void init();
@@ -71,21 +94,39 @@ private:
   cpp::byte *end;
   bool is_initialized = false;
   FreeStore free_store;
+#if LIBC_COPT_HARDEN_FREELIST
+  const FreeListSecrets secrets;
+#endif
 };
 
 template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
 public:
-  constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
+#if LIBC_COPT_HARDEN_FREELIST
+ constexpr FreeListHeapBuffer(
+     const FreeListSecrets& secrets = {LIBC_COPT_FREELIST_KEY0,
+                                       LIBC_COPT_FREELIST_KEY1,
+                                       LIBC_COPT_FREELIST_KEY2})
+     : FreeListHeap{buffer, secrets}, buffer{} {}
+#else
+ constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
+#endif
 
 private:
   cpp::byte buffer[BUFF_SIZE];
 };
 
+#if LIBC_COPT_HARDEN_FREELIST
+#define HEAP_SECRETS secrets
+#else
+#define HEAP_SECRETS \
+  FreeListSecrets {}
+#endif
+
 [[gnu::noinline]] LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
   auto result = BlockRef::init(region());
   BlockRef block = *result;
-  free_store.insert(block);
+  free_store.insert(block, HEAP_SECRETS);
   is_initialized = true;
 }
 
@@ -101,15 +142,13 @@ private:
   if (!request_size)
     return nullptr;
 
-  BlockRef block = free_store.remove_best_fit(request_size);
+  BlockRef block = free_store.remove_best_fit(request_size, HEAP_SECRETS);
   if (!block)
     return nullptr;
 
   auto block_info = BlockRef::allocate(block, alignment, size);
-  if (block_info.next)
-    free_store.insert(block_info.next);
-  if (block_info.prev)
-    free_store.insert(block_info.prev);
+  if (block_info.next) free_store.insert(block_info.next, HEAP_SECRETS);
+  if (block_info.prev) free_store.insert(block_info.prev, HEAP_SECRETS);
 
   block_info.block.mark_used();
   return block_info.block.usable_space();
@@ -154,16 +193,16 @@ private:
 
   if (prev_free) {
     // Remove from free store and merge.
-    free_store.remove(prev_free);
+    free_store.remove(prev_free, HEAP_SECRETS);
     block = prev_free;
     block.merge_next();
   }
   if (!next.used()) {
-    free_store.remove(next);
+    free_store.remove(next, HEAP_SECRETS);
     block.merge_next();
   }
   // Add back to the freelist
-  free_store.insert(block);
+  free_store.insert(block, HEAP_SECRETS);
 }
 
 [[gnu::noinline]] LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block,
@@ -184,10 +223,10 @@ private:
       // to be non-null.
       LIBC_ASSERT(right && "right block must be non-null");
       if (!right.used()) {
-        free_store.remove(right);
+        free_store.remove(right, HEAP_SECRETS);
         next_block.merge_next();
       }
-      free_store.insert(next_block);
+      free_store.insert(next_block, HEAP_SECRETS);
     }
     return true;
   }

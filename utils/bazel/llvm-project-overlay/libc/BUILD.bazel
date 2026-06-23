@@ -16281,6 +16281,7 @@ libc_support_library(
         ":__support_common",
         ":__support_libc_assert",
         ":__support_macros_config",
+        ":hdr_stdint_proxy",
     ],
 )
 

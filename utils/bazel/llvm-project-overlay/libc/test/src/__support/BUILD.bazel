@@ -121,3 +121,53 @@ libc_test(
         "//libc:__support_macros_properties_types",
     ],
 )
+
+libc_test(
+    name = "freelist_test",
+    srcs = ["freelist_test.cpp"],
+    deps = [
+        "//libc:__support_block",
+        "//libc:__support_cpp_optional",
+        "//libc:freelist",
+    ],
+)
+
+libc_test(
+    name = "freelist_hardened_test",
+    srcs = ["freelist_test.cpp"],
+    defines = ["LIBC_COPT_HARDEN_FREELIST=1"],
+    deps = [
+        "//libc:__support_block",
+        "//libc:__support_cpp_optional",
+        "//libc:freelist",
+    ],
+)
+
+libc_test(
+    name = "freelist_heap_test",
+    srcs = ["freelist_heap_test.cpp"],
+    deps = [
+        "//libc:__support_block",
+        "//libc:__support_cpp_optional",
+        "//libc:__support_cpp_span",
+        "//libc:freelist_heap",
+        "//libc:memcmp",
+        "//libc:memcpy",
+        "//libc:string_memory_utils",
+    ],
+)
+
+libc_test(
+    name = "freelist_heap_hardened_test",
+    srcs = ["freelist_heap_test.cpp"],
+    defines = ["LIBC_COPT_HARDEN_FREELIST=1"],
+    deps = [
+        "//libc:__support_block",
+        "//libc:__support_cpp_optional",
+        "//libc:__support_cpp_span",
+        "//libc:freelist_heap",
+        "//libc:memcmp",
+        "//libc:memcpy",
+        "//libc:string_memory_utils",
+    ],
+)
