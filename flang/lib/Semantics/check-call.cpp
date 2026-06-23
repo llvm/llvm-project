@@ -520,8 +520,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       // Assumed-type dummies with ignore_tkr(c) passed via descriptor to
       // bind(C) procedures model opaque CFI argument passing; the callee does
       // not access derived-type structure as TYPE(*).
-      const bool relaxAssumedTypeDerivedChecks{
-          procedure.IsBindC() &&
+      const bool relaxAssumedTypeDerivedChecks{procedure.IsBindC() &&
           dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
           dummy.IsPassedByDescriptor(/*isBindC=*/true)};
       if (!relaxAssumedTypeDerivedChecks) {
@@ -530,10 +529,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Actual argument associated with TYPE(*) %s may not have a parameterized derived type"_err_en_US,
               dummyName);
         }
-        if (const Symbol *
-            tbp{FindImmediateComponent(*actualDerived, [](const Symbol &symbol) {
-              return symbol.has<ProcBindingDetails>();
-            })}) { // F2023 15.5.2.5 p2
+        if (const Symbol *tbp{FindImmediateComponent(
+                *actualDerived, [](const Symbol &symbol) {
+                  return symbol.has<ProcBindingDetails>();
+                })}) { // F2023 15.5.2.5 p2
           evaluate::SayWithDeclaration(messages, *tbp,
               "Actual argument associated with TYPE(*) %s may not have type-bound procedure '%s'"_err_en_US,
               dummyName, tbp->name());
@@ -544,8 +543,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           if (auto *msg{messages.Say(
                   "Actual argument associated with TYPE(*) %s may not have derived type '%s' with FINAL subroutine '%s'"_err_en_US,
                   dummyName, actualDerived->typeSymbol().name(), name)}) {
-            msg->Attach(name, "FINAL subroutine '%s' in derived type '%s'"_en_US,
-                name, actualDerived->typeSymbol().name());
+            msg->Attach(name,
+                "FINAL subroutine '%s' in derived type '%s'"_en_US, name,
+                actualDerived->typeSymbol().name());
           }
         }
       }
