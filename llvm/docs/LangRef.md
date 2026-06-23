@@ -1735,61 +1735,26 @@ Currently, only the following parameter attributes are defined:
     indicating zero treatment of input denormals, it does not imply the
     value cannot be a denormal value which would compare equal to 0.
 
-    ```{list-table} Recognized test mask names
-    :header-rows: 1
+    Recognized test mask names:
 
-    * - Name
-      - floating-point class
-      - Bitmask value
-    * - nan
-      - Any NaN
-      - 3
-    * - inf
-      - +/- infinity
-      - 516
-    * - norm
-      - +/- normal
-      - 264
-    * - sub
-      - +/- subnormal
-      - 144
-    * - zero
-      - +/- 0
-      - 96
-    * - all
-      - All values
-      - 1023
-    * - snan
-      - Signaling NaN
-      - 1
-    * - qnan
-      - Quiet NaN
-      - 2
-    * - ninf
-      - Negative infinity
-      - 4
-    * - nnorm
-      - Negative normal
-      - 8
-    * - nsub
-      - Negative subnormal
-      - 16
-    * - nzero
-      - Negative zero
-      - 32
-    * - pzero
-      - Positive zero
-      - 64
-    * - psub
-      - Positive subnormal
-      - 128
-    * - pnorm
-      - Positive normal
-      - 256
-    * - pinf
-      - Positive infinity
-      - 512
-    ```
+    | Name | floating-point class | Bitmask value |
+    | --- | --- | --- |
+    | nan | Any NaN | 3 |
+    | inf | +/- infinity | 516 |
+    | norm | +/- normal | 264 |
+    | sub | +/- subnormal | 144 |
+    | zero | +/- 0 | 96 |
+    | all | All values | 1023 |
+    | snan | Signaling NaN | 1 |
+    | qnan | Quiet NaN | 2 |
+    | ninf | Negative infinity | 4 |
+    | nnorm | Negative normal | 8 |
+    | nsub | Negative subnormal | 16 |
+    | nzero | Negative zero | 32 |
+    | pzero | Positive zero | 64 |
+    | psub | Positive subnormal | 128 |
+    | pnorm | Positive normal | 256 |
+    | pinf | Positive infinity | 512 |
 
 `alignstack(<n>)`
 :   This indicates the alignment that should be considered by the backend when
@@ -4593,16 +4558,11 @@ value.
 
 ###### Examples:
 
-```{list-table}
-:header-rows: 0
-
-* - `i1`
-  - a single-bit integer.
-* - `i32`
-  - a 32-bit integer.
-* - `i1942652`
-  - a really big integer of over 1 million bits.
-```
+| Type | Description |
+| --- | --- |
+| `i1` | a single-bit integer. |
+| `i32` | a 32-bit integer. |
+| `i1942652` | a really big integer of over 1 million bits. |
 
 (t_byte)=
 
@@ -4647,16 +4607,11 @@ The number of bits the byte occupies is specified by the `N` value.
 
 ###### Examples:
 
-```{list-table}
-:header-rows: 0
-
-* - `b1`
-  - a single-bit byte value.
-* - `b32`
-  - a 32-bit byte value.
-* - `b128`
-  - a 128-bit byte value.
-```
+| Type | Description |
+| --- | --- |
+| `b1` | a single-bit byte value. |
+| `b32` | a 32-bit byte value. |
+| `b128` | a 128-bit byte value. |
 
 (t_floating)=
 
@@ -4891,20 +4846,13 @@ IR, even if the exact size in bytes cannot be determined until run time.
 
 **Examples:**
 
-```{list-table}
-:header-rows: 0
-
-* - `<4 x i32>`
-  - Vector of 4 32-bit integer values.
-* - `<8 x float>`
-  - Vector of 8 32-bit floating-point values.
-* - `<2 x i64>`
-  - Vector of 2 64-bit integer values.
-* - `<4 x ptr>`
-  - Vector of 4 pointers
-* - `<vscale x 4 x i32>`
-  - Vector with a multiple of 4 32-bit integer values.
-```
+| Type | Description |
+| --- | --- |
+| `<4 x i32>` | Vector of 4 32-bit integer values. |
+| `<8 x float>` | Vector of 8 32-bit floating-point values. |
+| `<2 x i64>` | Vector of 2 64-bit integer values. |
+| `<4 x ptr>` | Vector of 4 pointers |
+| `<vscale x 4 x i32>` | Vector with a multiple of 4 32-bit integer values. |
 
 (t_label)=
 
@@ -4982,29 +4930,19 @@ be any type with a size.
 
 **Examples:**
 
-```{list-table}
-:header-rows: 0
-
-* - `[40 x i32]`
-  - Array of 40 32-bit integer values.
-* - `[41 x i32]`
-  - Array of 41 32-bit integer values.
-* - `[4 x i8]`
-  - Array of 4 8-bit integer values.
-```
+| Type | Description |
+| --- | --- |
+| `[40 x i32]` | Array of 40 32-bit integer values. |
+| `[41 x i32]` | Array of 41 32-bit integer values. |
+| `[4 x i8]` | Array of 4 8-bit integer values. |
 
 Here are some examples of multidimensional arrays:
 
-```{list-table}
-:header-rows: 0
-
-* - `[3 x [4 x i32]]`
-  - 3x4 array of 32-bit integer values.
-* - `[12 x [10 x float]]`
-  - 12x10 array of single precision floating-point values.
-* - `[2 x [3 x [4 x i16]]]`
-  - 2x3x4 array of 16-bit integer values.
-```
+|Type|Description|
+|---|---|
+|`[3 x [4 x i32]]`|3x4 array of 32-bit integer values.|
+|`[12 x [10 x float]]`|12x10 array of single precision floating-point values.|
+|`[2 x [3 x [4 x i16]]]`|2x3x4 array of 16-bit integer values.|
 
 There is no restriction on indexing beyond the end of the array implied
 by a static type (though there are restrictions on indexing beyond the
@@ -11288,25 +11226,12 @@ arguments must have identical types.
 
 The truth table used for the '`and`' instruction is:
 
-```{list-table}
-:header-rows: 0
-
-* - In0
-  - In1
-  - Out
-* - 0
-  - 0
-  - 0
-* - 0
-  - 1
-  - 0
-* - 1
-  - 0
-  - 0
-* - 1
-  - 1
-  - 1
-```
+| In0 | In1 | Out |
+| --- | --- | --- |
+| 0 | 0 | 0 |
+| 0 | 1 | 0 |
+| 1 | 0 | 0 |
+| 1 | 1 | 1 |
 
 ##### Example:
 
@@ -11342,25 +11267,12 @@ arguments must have identical types.
 
 The truth table used for the '`or`' instruction is:
 
-```{list-table}
-:header-rows: 0
-
-* - In0
-  - In1
-  - Out
-* - 0
-  - 0
-  - 0
-* - 0
-  - 1
-  - 1
-* - 1
-  - 0
-  - 1
-* - 1
-  - 1
-  - 1
-```
+| In0 | In1 | Out |
+| --- | --- | --- |
+| 0 | 0 | 0 |
+| 0 | 1 | 1 |
+| 1 | 0 | 1 |
+| 1 | 1 | 1 |
 
 `disjoint` means that for each bit, that bit is zero in at least one of the
 inputs. This allows the Or to be treated as an Add since no carry can occur from
@@ -11402,25 +11314,12 @@ arguments must have identical types.
 
 The truth table used for the '`xor`' instruction is:
 
-```{list-table}
-:header-rows: 0
-
-* - In0
-  - In1
-  - Out
-* - 0
-  - 0
-  - 0
-* - 0
-  - 1
-  - 1
-* - 1
-  - 0
-  - 1
-* - 1
-  - 1
-  - 0
-```
+| In0 | In1 | Out |
+| --- | --- | --- |
+| 0 | 0 | 0 |
+| 0 | 1 | 1 |
+| 1 | 0 | 1 |
+| 1 | 1 | 0 |
 
 ##### Example:
 
@@ -14384,17 +14283,10 @@ statepoint. This is currently only used to mark certain statepoints
 as GC transitions. This operand is a 64-bit integer with the following
 layout, where bit 0 is the least significant bit:
 
-  ```{list-table}
-  :header-rows: 1
-
-  * - Bit #
-    - Usage
-  * - 0
-    - Set if the statepoint is a GC transition, cleared
-      otherwise.
-  * - 1-63
-    - Reserved for future use; must be cleared.
-  ```
+  | Bit # | Usage |
+  | --- | --- |
+  | 0 | Set if the statepoint is a GC transition, cleared otherwise. |
+  | 1-63 | Reserved for future use; must be cleared. |
 
 The 'call parameters' arguments are simply the arguments which need to
 be passed to the call target.  They will be lowered according to the
@@ -28552,32 +28444,18 @@ of floating-point values.
 The second argument specifies, which tests to perform. It must be a compile-time
 integer constant, each bit in which specifies floating-point class:
 
-```{list-table}
-:header-rows: 1
-
-* - Bit #
-  - floating-point class
-* - 0
-  - Signaling NaN
-* - 1
-  - Quiet NaN
-* - 2
-  - Negative infinity
-* - 3
-  - Negative normal
-* - 4
-  - Negative subnormal
-* - 5
-  - Negative zero
-* - 6
-  - Positive zero
-* - 7
-  - Positive subnormal
-* - 8
-  - Positive normal
-* - 9
-  - Positive infinity
-```
+| Bit # | floating-point class |
+| --- | --- |
+| 0 | Signaling NaN |
+| 1 | Quiet NaN |
+| 2 | Negative infinity |
+| 3 | Negative normal |
+| 4 | Negative subnormal |
+| 5 | Negative zero |
+| 6 | Positive zero |
+| 7 | Positive subnormal |
+| 8 | Positive normal |
+| 9 | Positive infinity |
 
 ##### Semantics:
 
