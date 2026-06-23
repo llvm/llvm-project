@@ -16,33 +16,63 @@
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/IR/Value.h"
 
 using namespace mlir;
 
-/// Print a value that is used as an operand of an alias query.
+namespace mlir {
+namespace test {
+
+/// Print an operation that is used as an operand of an alias query.
 static void printAliasOperand(Operation *op) {
-  llvm::errs() << op->getAttrOfType<StringAttr>("test.ptr").getValue();
+  if (!op) {
+    llvm::errs() << "<<NULL OPERATION>>";
+    return;
+  }
+
+  if (StringAttr attr = op->getAttrOfType<StringAttr>("test.ptr")) {
+    llvm::errs() << attr.getValue();
+    return;
+  }
+
+  llvm::errs() << op->getName().getStringRef();
 }
+
+/// Print a value that is used as an operand of an alias query.
 static void printAliasOperand(Value value) {
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     Region *region = arg.getParentRegion();
+    Operation *parentOp = region ? region->getParentOp() : nullptr;
+
+    if (parentOp) {
+      if (StringAttr attr = parentOp->getAttrOfType<StringAttr>("test.ptr"))
+        llvm::errs() << attr.getValue();
+      else
+        llvm::errs() << parentOp->getName().getStringRef();
+    } else {
+      llvm::errs() << "<<UNKNOWN PARENT>>";
+    }
+
+    if (region)
+      llvm::errs() << ".region" << region->getRegionNumber();
+
     unsigned parentBlockNumber = arg.getOwner()->computeBlockNumber();
-    llvm::errs() << region->getParentOp()
-                        ->getAttrOfType<StringAttr>("test.ptr")
-                        .getValue()
-                 << ".region" << region->getRegionNumber();
     if (parentBlockNumber != 0)
       llvm::errs() << ".block" << parentBlockNumber;
+
     llvm::errs() << "#" << arg.getArgNumber();
     return;
   }
-  OpResult result = cast<OpResult>(value);
-  printAliasOperand(result.getOwner());
+
+  Operation *owner = value.getDefiningOp();
+  assert(owner && "expected non-block argument value to have a defining op");
+
+  printAliasOperand(owner);
+
+  auto result = cast<mlir::OpResult>(value);
   llvm::errs() << "#" << result.getResultNumber();
 }
 
-namespace mlir {
-namespace test {
 void printAliasResult(AliasResult result, Value lhs, Value rhs) {
   printAliasOperand(lhs);
   llvm::errs() << " <-> ";

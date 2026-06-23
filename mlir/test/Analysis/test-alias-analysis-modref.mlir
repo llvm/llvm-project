@@ -112,3 +112,17 @@ func.func @conditional_all_effects(%arg: memref<2xf32>) attributes {test.ptr = "
   "test.conditional_side_effect_op"() {has_effects = true, test.ptr = "conditional_side_effect_op"} : () -> i32
   return {test.ptr = "return"}
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "block_argument_with_unit_test_ptr"
+// CHECK: func.func -> func.func.region0#0: ModRef
+module {
+  func.func @block_argument_with_unit_test_ptr(%arg0: f32 {test._ptr}) attributes {test.ptr} {
+    %0 = "test.ptr"(%arg0) {test._ptr} : (f32) -> f32
+    %1 = "test.ptr"(%arg0) {test.inclusive} : (f32) -> f32
+    %2 = "test.ptr"(%arg0) {test.exclusive} : (f32) -> f32
+    %3 = "test.ptr"(%arg0) {test.c_ptr} : (f32) -> f32
+    return
+  }
+}

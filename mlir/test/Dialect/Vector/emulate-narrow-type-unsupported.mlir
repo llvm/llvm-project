@@ -109,3 +109,21 @@ func.func @vector_maskedstore_2d_i8_negative(%arg0: index, %arg1: index, %arg2: 
 //  CHECK-LABEL: func @vector_maskedstore_2d_i8_negative
 //        CHECK: memref.alloc() : memref<3x8xi8>
 //    CHECK-NOT: i32
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// vector.maskedload
+///----------------------------------------------------------------------------------------
+
+func.func @vector_maskedload_blockarg_mask_negative(%arg0: memref<16xi8>, %arg1: vector<8xi1>, %arg2: vector<8xi8>) -> vector<8xi8> {
+    %c0 = arith.constant 0 : index
+    %0 = vector.maskedload %arg0[%c0], %arg1, %arg2 : memref<16xi8>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+    return %0 : vector<8xi8>
+}
+// The mask is a block argument with no defining op, so it cannot be
+// compressed - expect no conversion (and, crucially, no crash).
+//  CHECK-LABEL: func @vector_maskedload_blockarg_mask_negative
+//   CHECK-SAME:   %{{.*}}: memref<16xi8>, %[[MASK:.+]]: vector<8xi1>
+//        CHECK:   vector.maskedload %{{.*}}, %[[MASK]]
+//    CHECK-NOT: i32
