@@ -21,6 +21,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -80,7 +81,7 @@ private:
   cpp::byte buffer[BUFF_SIZE];
 };
 
-LIBC_INLINE void FreeListHeap::init() {
+[[gnu::noinline]] LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
   auto result = BlockRef::init(region());
   BlockRef block = *result;
@@ -88,7 +89,8 @@ LIBC_INLINE void FreeListHeap::init() {
   is_initialized = true;
 }
 
-LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
+[[gnu::noinline]] LIBC_INLINE void *
+FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (size == 0)
     return nullptr;
 
@@ -113,12 +115,12 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   return block_info.block.usable_space();
 }
 
-LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
+[[gnu::noinline]] LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
   return allocate_impl(BlockRef::MIN_ALIGN, size);
 }
 
-LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
-                                                 size_t size) {
+[[gnu::noinline]] LIBC_INLINE void *
+FreeListHeap::aligned_allocate(size_t alignment, size_t size) {
   // The alignment must be an integral power of two.
   if (!IsPow2(alignment))
     return nullptr;
@@ -133,7 +135,7 @@ LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
   return allocate_impl(alignment, size);
 }
 
-LIBC_INLINE void FreeListHeap::free(void *ptr) {
+[[gnu::noinline]] LIBC_INLINE void FreeListHeap::free(void *ptr) {
   if (ptr == nullptr)
     return;
 
@@ -164,7 +166,8 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
   free_store.insert(block);
 }
 
-LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
+[[gnu::noinline]] LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block,
+                                                                 size_t size) {
   size_t min_outer_size = BlockRef::outer_size(cpp::max(size, sizeof(size_t)));
   uintptr_t next_block_start = BlockRef::next_possible_block_start(
       block.addr() + min_outer_size, BlockRef::MIN_ALIGN);
@@ -193,7 +196,8 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
 
 // Follows constract of the C standard realloc() function
 // If ptr is free'd, will return nullptr.
-LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
+[[gnu::noinline]] LIBC_INLINE void *FreeListHeap::realloc(void *ptr,
+                                                          size_t size) {
   if (size == 0) {
     free(ptr);
     return nullptr;
@@ -228,7 +232,8 @@ LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
+[[gnu::noinline]] LIBC_INLINE void *FreeListHeap::calloc(size_t num,
+                                                         size_t size) {
   size_t bytes;
   if (__builtin_mul_overflow(num, size, &bytes))
     return nullptr;
@@ -238,7 +243,8 @@ LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
   return ptr;
 }
 
-extern FreeListHeap *freelist_heap;
+LIBC_INLINE_VAR LIBC_CONSTINIT FreeListHeap freelist_heap_symbols;
+LIBC_INLINE_VAR FreeListHeap *freelist_heap = &freelist_heap_symbols;
 
 } // namespace LIBC_NAMESPACE_DECL
 
