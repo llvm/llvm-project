@@ -698,6 +698,22 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
         llvm::sys::path::append(CoverageFilename, Gcno);
       }
       llvm::sys::path::replace_extension(CoverageFilename, "gcda");
+      // Apply -ffile-prefix-map / -fcoverage-prefix-map to the embedded .gcda
+      // path only.  The .gcno path must remain unchanged so the compiler can
+      // write it to disk at build time.  The .gcda path is stored verbatim in
+      // llvm.gcov metadata and embedded in the binary for runtime use; without
+      // remapping, the absolute build-directory path leaks into the binary
+      // even when -ffile-prefix-map= remaps everything else.
+      for (const Arg *A : Args.filtered(options::OPT_ffile_prefix_map_EQ,
+                                        options::OPT_fcoverage_prefix_map_EQ)) {
+        StringRef Map = A->getValue();
+        auto Sep = Map.find('=');
+        if (Sep == StringRef::npos)
+          continue;
+        if (llvm::sys::path::replace_path_prefix(
+                CoverageFilename, Map.substr(0, Sep), Map.substr(Sep + 1)))
+          break;
+      }
       CmdArgs.push_back(
           Args.MakeArgString("-coverage-data-file=" + CoverageFilename));
     }
