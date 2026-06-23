@@ -1210,7 +1210,8 @@ bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
     return details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Device);
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant);
   }
   return false;
 }
