@@ -467,6 +467,40 @@ ContentCache &SourceManager::createMemBufferContentCache(
   return *Entry;
 }
 
+llvm::ErrorOr<llvm::TextEncodingConverter *>
+SourceManager::getOrCreateConverter(llvm::StringRef SourceEncoding) {
+  // Use getKnownEncoding to get normalized encoding names
+  std::optional<llvm::TextEncoding> SourceKnown =
+      llvm::TextEncodingConverter::getKnownEncoding(SourceEncoding);
+  
+  if (SourceKnown && *SourceKnown == llvm::TextEncoding::UTF8)
+    return nullptr;
+
+  // Create a cache key using canonical encoding name
+  llvm::StringRef CacheKey = SourceKnown
+      ? llvm::TextEncodingConverter::getKnownEncodingName(*SourceKnown)
+      : SourceEncoding;
+
+  // Check if converter already exists in cache
+  auto It = ConverterCache.find(CacheKey);
+  if (It != ConverterCache.end())
+    return It->second.get();
+
+  // Create a new converter
+  llvm::ErrorOr<llvm::TextEncodingConverter> NewConverter =
+      llvm::TextEncodingConverter::create(SourceEncoding, "UTF-8");
+  
+  if (!NewConverter)
+    return NewConverter.getError();
+
+  // Store the converter in the cache
+  auto Inserted = ConverterCache.insert(
+      std::make_pair(CacheKey, std::make_unique<llvm::TextEncodingConverter>(
+                                   std::move(*NewConverter))));
+  
+  return Inserted.first->second.get();
+}
+
 const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
                                                       bool *Invalid) const {
   return const_cast<SourceManager *>(this)->loadSLocEntry(Index, Invalid);

@@ -846,6 +846,11 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// we can add a cc1-level option to do so.
   SmallVector<std::pair<std::string, FullSourceLoc>, 2> StoredModuleBuildStack;
 
+  /// Cache of all text encoding converters used by this SourceManager.
+  /// This includes both the input charset converter and file tag converters.
+  /// Maps from "source_encoding:target_encoding" to the converter.
+  llvm::StringMap<std::unique_ptr<llvm::TextEncodingConverter>> ConverterCache;
+
 public:
   SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
                 bool UserFilesAreVolatile = false);
@@ -862,6 +867,15 @@ public:
   DiagnosticsEngine &getDiagnostics() const { return Diag; }
 
   FileManager &getFileManager() const { return FileMgr; }
+
+  /// Get or create a text encoding converter from the cache.
+  /// This method manages all converters (input charset and file tag converters)
+  /// in a single cache owned by SourceManager.
+  /// \param SourceEncoding the source character encoding name
+  /// \return pointer to the converter or an error code
+  /// The target encoding is always UTF-8.
+  llvm::ErrorOr<llvm::TextEncodingConverter *>
+  getOrCreateConverter(llvm::StringRef SourceEncoding);
 
   /// Set true if the SourceManager should report the original file name
   /// for contents of files that were overridden by other files. Defaults to
