@@ -5447,7 +5447,8 @@ private:
         fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
       } else {
         cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                    transferKindAttr, hasManagedOrUnifedSymbols);
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
       }
       return;
     }
