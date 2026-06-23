@@ -38,7 +38,7 @@ def int_dx_resource_handlefromimplicitbinding
 
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrConvergent, IntrNoMem]>;
 
 def int_dx_resource_getbasepointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty],
