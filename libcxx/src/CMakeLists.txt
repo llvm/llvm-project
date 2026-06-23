@@ -176,6 +176,7 @@ add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cxx_shared PUBLIC cxx-headers runtimes-libc-shared
                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                  PRIVATE boost_math
                                   PRIVATE llvm-libc-common-utilities)
 set_target_properties(cxx_shared
   PROPERTIES
@@ -263,6 +264,7 @@ add_library(cxx_static STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cxx_static PUBLIC cxx-headers runtimes-libc-static
                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                  PRIVATE boost_math
                                   PRIVATE libcxx-abi-static
                                   PRIVATE llvm-libc-common-utilities)
 set_target_properties(cxx_static
