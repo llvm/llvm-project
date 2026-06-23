@@ -1705,16 +1705,21 @@ public:
 
   void instantiateIndirectGotoBlock();
 
-  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
-  /// return type matches the type of the first argument. The intrinsic name is
-  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
-  /// into \p intrinName by the caller.
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
+  /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
+  /// baked into \p intrinName by the caller.  The result type defaults to the
+  /// type of the first argument; pass \p resultType for intrinsics whose result
+  /// differs from the operand, such as a vector reduction that returns the
+  /// element type.  Unlike classic CodeGen, CIR has no intrinsic registry to
+  /// derive the result type from the operand, so it must be supplied here.
   template <unsigned N>
   [[maybe_unused]] RValue
   emitBuiltinWithOneOverloadedType(const CallExpr *e,
-                                   llvm::StringRef intrinName) {
+                                   llvm::StringRef intrinName,
+                                   mlir::Type resultType = {}) {
     static_assert(N, "expect non-empty argument");
-    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    mlir::Type cirTy =
+        resultType ? resultType : convertType(e->getArg(0)->getType());
     SmallVector<mlir::Value, N> args;
     for (unsigned i = 0; i < N; ++i)
       args.push_back(emitScalarExpr(e->getArg(i)));
