@@ -5225,16 +5225,6 @@ TEST_F(FunctionAttachmentTest, RealEntryCount) {
   EXPECT_EQ(Function::PCT_Real, Count->getType());
 }
 
-TEST_F(FunctionAttachmentTest, SyntheticEntryCount) {
-  Function *F = getFunction("bar");
-  EXPECT_FALSE(F->getEntryCount().has_value());
-  F->setEntryCount(123, Function::PCT_Synthetic);
-  auto Count = F->getEntryCount(true /*allow synthetic*/);
-  EXPECT_TRUE(Count.has_value());
-  EXPECT_EQ(123u, Count->getCount());
-  EXPECT_EQ(Function::PCT_Synthetic, Count->getType());
-}
-
 TEST_F(FunctionAttachmentTest, SubprogramAttachment) {
   Function *F = getFunction("foo");
   DISubprogram *SP = getSubprogram();

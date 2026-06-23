@@ -1101,25 +1101,19 @@ void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
   setEntryCount(ProfileCount(Count, Type), Imports);
 }
 
-std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
+std::optional<ProfileCount> Function::getEntryCount() const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
-      if (MDS->getString() == MDProfLabels::FunctionEntryCount) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        uint64_t Count = CI->getValue().getZExtValue();
-        // A value of -1 is used for SamplePGO when there were no samples.
-        // Treat this the same as unknown.
-        if (Count == (uint64_t)-1)
-          return std::nullopt;
-        return ProfileCount(Count, PCT_Real);
-      } else if (AllowSynthetic &&
-                 MDS->getString() ==
-                     MDProfLabels::SyntheticFunctionEntryCount) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        uint64_t Count = CI->getValue().getZExtValue();
-        return ProfileCount(Count, PCT_Synthetic);
-      }
+      if (MDS->getString() != MDProfLabels::FunctionEntryCount)
+        return std::nullopt;
+      ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
+      uint64_t Count = CI->getValue().getZExtValue();
+      // A value of -1 is used for SamplePGO when there were no samples.
+      // Treat this the same as unknown.
+      if (Count == static_cast<uint64_t>(-1))
+        return std::nullopt;
+      return ProfileCount(Count, PCT_Real);
     }
   return std::nullopt;
 }
