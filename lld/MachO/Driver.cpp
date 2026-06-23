@@ -1310,6 +1310,14 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
+  if (args.hasArg(OPT_kext) &&
+      is_contained({AK_x86_64, AK_x86_64h}, config->arch())) {
+    if (requested)
+      error("-fixup_chains with -kext is only supported on arm64 targets");
+
+    return false;
+  }
+
   if (args.hasArg(OPT_preload)) {
     if (requested)
       error("-fixup_chains is incompatible with -preload");
