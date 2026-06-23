@@ -57,10 +57,6 @@ class HeaderSearchOptions;
 class PreprocessorOptions;
 class TargetOptions;
 
-namespace ssaf {
-class SSAFOptions;
-} // namespace ssaf
-
 // This lets us create the DiagnosticsEngine with a properly-filled-out
 // DiagnosticOptions instance.
 std::unique_ptr<DiagnosticOptions>
@@ -129,9 +125,6 @@ protected:
   /// Options controlling preprocessed output.
   std::shared_ptr<PreprocessorOutputOptions> PreprocessorOutputOpts;
 
-  /// Options controlling the Scalable Static Analysis Framework (SSAF).
-  std::shared_ptr<ssaf::SSAFOptions> SSAFOpts;
-
   /// Dummy tag type whose instance can be passed into the constructor to
   /// prevent creation of the reference-counted option objects.
   struct EmptyConstructor {};
@@ -167,7 +160,6 @@ public:
   const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
     return *PreprocessorOutputOpts;
   }
-  const ssaf::SSAFOptions &getSSAFOpts() const { return *SSAFOpts; }
   /// @}
 
   /// Visitation.
@@ -280,21 +272,20 @@ public:
   /// @{
   // Note: These need to be pulled in manually. Otherwise, they get hidden by
   // the mutable getters with the same names.
+  using CompilerInvocationBase::getLangOpts;
+  using CompilerInvocationBase::getTargetOpts;
+  using CompilerInvocationBase::getDiagnosticOpts;
+  using CompilerInvocationBase::getHeaderSearchOpts;
+  using CompilerInvocationBase::getPreprocessorOpts;
   using CompilerInvocationBase::getAnalyzerOpts;
+  using CompilerInvocationBase::getMigratorOpts;
   using CompilerInvocationBase::getAPINotesOpts;
   using CompilerInvocationBase::getCASOpts;
   using CompilerInvocationBase::getCodeGenOpts;
-  using CompilerInvocationBase::getDependencyOutputOpts;
-  using CompilerInvocationBase::getDiagnosticOpts;
   using CompilerInvocationBase::getFileSystemOpts;
   using CompilerInvocationBase::getFrontendOpts;
-  using CompilerInvocationBase::getHeaderSearchOpts;
-  using CompilerInvocationBase::getLangOpts;
-  using CompilerInvocationBase::getMigratorOpts;
-  using CompilerInvocationBase::getPreprocessorOpts;
+  using CompilerInvocationBase::getDependencyOutputOpts;
   using CompilerInvocationBase::getPreprocessorOutputOpts;
-  using CompilerInvocationBase::getSSAFOpts;
-  using CompilerInvocationBase::getTargetOpts;
   /// @}
 
   /// Mutable getters.
@@ -317,7 +308,6 @@ public:
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return *PreprocessorOutputOpts;
   }
-  ssaf::SSAFOptions &getSSAFOpts() { return *SSAFOpts; }
   /// @}
 
   /// Base class internals.
@@ -453,7 +443,6 @@ public:
   FrontendOptions &getMutFrontendOpts();
   DependencyOutputOptions &getMutDependencyOutputOpts();
   PreprocessorOutputOptions &getMutPreprocessorOutputOpts();
-  ssaf::SSAFOptions &getMutSSAFOpts();
   /// @}
 };
 

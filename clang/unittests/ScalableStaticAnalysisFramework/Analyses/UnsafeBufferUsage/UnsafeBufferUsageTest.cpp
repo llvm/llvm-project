@@ -10,7 +10,6 @@
 #include "FindDecl.h"
 #include "TestFixture.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
@@ -36,7 +35,6 @@ using testing::UnorderedElementsAre;
 namespace {
 class UnsafeBufferUsageTest : public TestFixture {
 protected:
-  SSAFOptions Opts;
   TUSummary TUSum;
   TUSummaryBuilder Builder;
   std::unique_ptr<TUSummaryExtractor> Extractor;
@@ -45,7 +43,7 @@ protected:
   UnsafeBufferUsageTest()
       : TUSum(llvm::Triple("arm64-apple-macosx"),
               BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
-        Builder(TUSum, Opts) {}
+        Builder(TUSum) {}
 
   bool setUpTest(StringRef Code) {
     AST = tooling::buildASTFromCodeWithArgs(
