@@ -1,18 +1,21 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple x86_64-unknown-linux-gnu -std=c23
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple x86_64-unknown-linux-gnu -std=c2y
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple riscv64-unknown-linux-gnu -std=c23
 //
 // C23 requires the type-generic atomic interfaces to accept _BitInt(N) for
-// every N, so _Atomic(_BitInt(N)) is well-formed at every width. Widths past
-// 128 are x86-only.
+// every N, so _Atomic(_BitInt(N)) is well-formed at every width. The atomic
+// code imposes no width cap of its own; widths past 128 are available wherever
+// the target accepts _BitInt > 128 (x86 and RISC-V today).
 
 // expected-no-diagnostics
 
-_Atomic(_BitInt(4))   a4;    // small
-_Atomic(_BitInt(9))   a9;    // non-power-of-two
-_Atomic(_BitInt(37))  a37;   // padded
-_Atomic(_BitInt(64))  a64;
-_Atomic(_BitInt(128)) a128;
-_Atomic(_BitInt(256)) a256;  // wider than any inline atomic
+_Atomic(_BitInt(4))    a4;     // small
+_Atomic(_BitInt(9))    a9;     // non-power-of-two
+_Atomic(_BitInt(37))   a37;    // padded
+_Atomic(_BitInt(64))   a64;
+_Atomic(_BitInt(128))  a128;
+_Atomic(_BitInt(256))  a256;   // wider than any inline atomic
+_Atomic(_BitInt(4096)) a4096;  // far past the inline range
 
 // The _Atomic qualifier spelling is equally valid.
 _Atomic _BitInt(9) q9;
