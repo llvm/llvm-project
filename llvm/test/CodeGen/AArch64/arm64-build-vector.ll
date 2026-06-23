@@ -136,8 +136,7 @@ define <1 x double> @convert_single_fp_vector_constant(i1 %cmp) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    fmov d1, #1.00000000
-; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    tst w0, #0x1
 ; CHECK-GI-NEXT:    fcsel d0, d1, d0, ne
 ; CHECK-GI-NEXT:    ret
 entry:
