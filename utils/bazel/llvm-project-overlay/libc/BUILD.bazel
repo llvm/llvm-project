@@ -17,6 +17,7 @@ load(
     "libc_math_function",
     "libc_support_library",
 )
+load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 
 package(
@@ -16248,5 +16249,96 @@ libc_function(
         ":__support_macros_config",
         ":types_size_t",
         ":types_wchar_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_block",
+    hdrs = ["src/__support/block.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_algorithm",
+        ":__support_cpp_cstddef",
+        ":__support_cpp_limits",
+        ":__support_cpp_new",
+        ":__support_cpp_optional",
+        ":__support_cpp_span",
+        ":__support_libc_assert",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_math_extras",
+        ":hdr_stdint_proxy",
+        ":string_memory_utils",
+        ":types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "freelist",
+    hdrs = ["src/__support/freelist.h"],
+    deps = [
+        ":__support_block",
+        ":__support_common",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "freetrie",
+    hdrs = ["src/__support/freetrie.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+        ":freelist",
+    ],
+)
+
+libc_support_library(
+    name = "freestore",
+    hdrs = ["src/__support/freestore.h"],
+    deps = [
+        ":__support_block",
+        ":__support_common",
+        ":__support_cpp_array",
+        ":__support_cpp_bit",
+        ":__support_cpp_limits",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":freelist",
+        ":freetrie",
+        ":hdr_stdint_proxy",
+        ":types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "freelist_heap",
+    hdrs = ["src/__support/freelist_heap.h"],
+    deps = [
+        ":__support_block",
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_cpp_span",
+        ":__support_libc_assert",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_math_extras",
+        ":freestore",
+        ":string_memory_utils",
+    ],
+)
+
+cc_library(
+    name = "freelist_heap_lib",
+    defines = [
+        "LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H",
+        "LIBC_NAMESPACE=" + LIBC_NAMESPACE,
+    ],
+    includes = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":freelist_heap",
     ],
 )

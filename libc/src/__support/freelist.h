@@ -15,6 +15,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 
 #include "block.h"
+#include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -80,13 +82,37 @@ public:
 
   /// Push an already-constructed node to the back of the list.
   /// This allows pushing derived node types with additional data.
-  void push(Node *node);
+  LIBC_INLINE void push(Node* node) {
+    if (begin_) {
+      LIBC_ASSERT(BlockRef::from_usable_space(node).outer_size() ==
+                      begin_->block().outer_size() &&
+                  "freelist entries must have the same size");
+      // Since the list is circular, insert the node immediately before begin_.
+      node->prev = begin_->prev;
+      node->next = begin_;
+      begin_->prev->next = node;
+      begin_->prev = node;
+    } else {
+      begin_ = node->prev = node->next = node;
+    }
+  }
 
   /// Pop the first node from the list.
   LIBC_INLINE void pop() { remove(begin_); }
 
   /// Remove an arbitrary node from the list.
-  void remove(Node *node);
+  LIBC_INLINE void remove(Node* node) {
+    LIBC_ASSERT(begin_ && "cannot remove from empty list");
+    if (node == node->next) {
+      LIBC_ASSERT(node == begin_ &&
+                  "a self-referential node must be the only element");
+      begin_ = nullptr;
+    } else {
+      node->prev->next = node->next;
+      node->next->prev = node->prev;
+      if (begin_ == node) begin_ = node->next;
+    }
+  }
 
 private:
   Node *begin_;

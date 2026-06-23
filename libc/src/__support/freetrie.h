@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 
 #include "freelist.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -97,7 +98,7 @@ public:
   void push(BlockRef block);
 
   /// Remove a node from this trie node's free list.
-  void remove(Node *node);
+  LIBC_INLINE void remove(Node* node);
 
   /// @returns A smallest node that can allocate the given size; otherwise
   /// nullptr.
@@ -118,7 +119,7 @@ private:
 
   /// Replaces references to one node with another (or nullptr) in all adjacent
   /// parent and child nodes.
-  void replace_node(Node *node, Node *new_node);
+  LIBC_INLINE void replace_node(Node* node, Node* new_node);
 
   Node *&root;
   SizeRange range;
@@ -278,6 +279,54 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::pop_min() {
   if (min_node)
     remove(min_node);
   return min_node;
+}
+
+LIBC_INLINE void FreeTrie::remove(Node* node) {
+  LIBC_ASSERT(!empty() && "cannot remove from empty trie");
+  FreeList list = node;
+  list.pop();
+  Node* new_node = static_cast<Node*>(list.begin());
+  if (!new_node) {
+    // The freelist is empty. Replace the subtrie root with an arbitrary leaf.
+    // This is legal because there is no relationship between the size of the
+    // root and its children.
+    Node* leaf = node;
+    while (leaf->lower || leaf->upper)
+      leaf = leaf->lower ? leaf->lower : leaf->upper;
+    if (leaf == node) {
+      // If the root is a leaf, then removing it empties the subtrie.
+      replace_node(node, nullptr);
+      return;
+    }
+
+    replace_node(leaf, nullptr);
+    new_node = leaf;
+  }
+
+  if (!is_head(node)) return;
+
+  // Copy the trie links to the new head.
+  new_node->lower = node->lower;
+  new_node->upper = node->upper;
+  new_node->parent = node->parent;
+  replace_node(node, new_node);
+}
+
+LIBC_INLINE void FreeTrie::replace_node(Node* node, Node* new_node) {
+  LIBC_ASSERT(is_head(node) && "only head nodes contain trie links");
+
+  if (node->parent) {
+    Node*& parent_child =
+        node->parent->lower == node ? node->parent->lower : node->parent->upper;
+    LIBC_ASSERT(parent_child == node &&
+                "no reference to child node found in parent");
+    parent_child = new_node;
+  } else {
+    LIBC_ASSERT(root == node && "non-root node had no parent");
+    root = new_node;
+  }
+  if (node->lower) node->lower->parent = new_node;
+  if (node->upper) node->upper->parent = new_node;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
