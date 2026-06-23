@@ -20,7 +20,6 @@
 
 #include "llvm/ADT/ADL.h"
 #include <type_traits>
-#include <utility>
 
 namespace llvm {
 
@@ -32,10 +31,6 @@ template <typename IteratorT>
 class iterator_range {
   IteratorT begin_iterator, end_iterator;
 
-  template <typename From, typename To>
-  using explicitly_converted_t = decltype(static_cast<To>(
-      std::declval<std::add_rvalue_reference_t<From>>()));
-
 public:
 #if defined(__GNUC__) &&                                                       \
     (__GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4))
@@ -44,8 +39,11 @@ public:
   template <typename Container>
 #else
   template <typename Container,
-            std::void_t<explicitly_converted_t<
-                llvm::detail::IterOfRange<Container>, IteratorT>> * = nullptr>
+            std::enable_if_t<
+                std::is_constructible_v<
+                    IteratorT, std::add_rvalue_reference_t<
+                                   llvm::detail::IterOfRange<Container>>>,
+                int> = 0>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {
