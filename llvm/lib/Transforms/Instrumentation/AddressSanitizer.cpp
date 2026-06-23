@@ -2833,8 +2833,21 @@ GlobalVariable *ModuleAddressSanitizer::getOrCreateModuleName() {
   if (!ModuleName) {
     // We shouldn't merge same module names, as this string serves as unique
     // module ID in runtime.
+    //
+    // The raw M.getModuleIdentifier() is never remapped through
+    // -ffile-prefix-map, so using it here leaks absolute build-directory
+    // paths into ASan global descriptors and __asan_before_dynamic_init()
+    // arguments even when prefix maps are specified.  When debug info is
+    // present, the DICompileUnit source file already has the prefix map
+    // applied by the frontend; prefer it to avoid the leak.
+    StringRef ModuleId = M.getModuleIdentifier();
+    if (NamedMDNode *CUs = M.getNamedMetadata("llvm.dbg.cu"))
+      if (CUs->getNumOperands() > 0)
+        if (auto *CU = dyn_cast<DICompileUnit>(CUs->getOperand(0)))
+          if (!CU->getFilename().empty())
+            ModuleId = CU->getFilename();
     ModuleName =
-        createPrivateGlobalForString(M, M.getModuleIdentifier(),
+        createPrivateGlobalForString(M, ModuleId,
                                      /*AllowMerging*/ false, genName("module"));
   }
   return ModuleName;
