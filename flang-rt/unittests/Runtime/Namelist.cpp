@@ -415,4 +415,22 @@ TEST(NamelistTests, BangAsValueSeparator) {
   EXPECT_EQ(gotC, "a!b     ");
 }
 
+// NAMELIST: undelimited CHARACTER array elements must be value-separated.
+TEST(NamelistTests, UndelimitedCharacterArray) {
+  OwningPtr<Descriptor> xDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{3}, std::vector<std::string>{"0", "1", "2"}, 1)};
+  const NamelistGroup::Item items[]{{"x", *xDesc}};
+  const NamelistGroup group{"nml", 1, items};
+  char buffer[32]{};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char}, sizeof buffer, buffer, 0,
+      nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk);
+  EXPECT_EQ(std::string(buffer, sizeof buffer).find("012"), std::string::npos);
+}
+
 // TODO: Internal NAMELIST error tests

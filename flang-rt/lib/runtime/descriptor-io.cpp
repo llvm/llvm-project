@@ -381,6 +381,11 @@ inline RT_API_ATTRS bool FormattedCharacterIO(
   for (std::size_t j{0}; j < numElements; ++j) {
     A *x{&ExtractElement<A>(io, descriptor, subscripts)};
     if (listOutput) {
+      // NAMELIST only: undelimited character array elements must not inherit
+      // lastWasUndelimitedCharacter across elements
+      if (io.mutableModes().inNamelist) {
+        listOutput->set_lastWasUndelimitedCharacter(false);
+      }
       if (!ListDirectedCharacterOutput(io, *listOutput, x, length)) {
         return false;
       }
