@@ -2139,16 +2139,17 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                              : ScalarCallCost * VF.getKnownMinValue() +
                                    getScalarizationOverhead(CI, VF);
 
-  // The call may be vectorized at this VF, via a vector intrinsic or a vector library variant.
+  // The call may be vectorized at this VF, via a vector intrinsic or a vector
+  // library variant.
   if (getVectorIntrinsicIDForCall(CI, TLI))
     Cost = std::min(Cost, getVectorIntrinsicCost(CI, VF));
 
   if (Function *Variant =
           getVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI))
-    Cost = std::min(Cost, TTI.getCallInstrCost(
-                              /*F=*/nullptr, Variant->getReturnType(),
-                              Variant->getFunctionType()->params(),
-                              Config.CostKind));
+    Cost = std::min(Cost,
+                    TTI.getCallInstrCost(
+                        /*F=*/nullptr, Variant->getReturnType(),
+                        Variant->getFunctionType()->params(), Config.CostKind));
 
   return Cost;
 }
