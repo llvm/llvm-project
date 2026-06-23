@@ -51,6 +51,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -6775,11 +6776,15 @@ bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
       TM.getSubtargetImpl(*Callee)->getTargetLowering();
 
   LLVMContext &Ctx = Caller->getContext();
+  const DataLayout &DL = Caller->getDataLayout();
   CallingConv::ID CC = Callee->getCallingConv();
   return all_of(Types, [&](Type *Ty) {
-    EVT VT = CallerTLI->getValueType(DL, Ty);
-    return CallerTLI->getRegisterTypeForCallingConv(Ctx, CC, VT) ==
-           CalleeTLI->getRegisterTypeForCallingConv(Ctx, CC, VT);
+    SmallVector<EVT> VTs;
+    ComputeValueVTs(*CallerTLI, DL, Ty, VTs);
+    return all_of(VTs, [&](EVT VT) {
+      return CallerTLI->getRegisterTypeForCallingConv(Ctx, CC, VT) ==
+             CalleeTLI->getRegisterTypeForCallingConv(Ctx, CC, VT);
+    });
   });
 }
 
