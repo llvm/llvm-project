@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/bit.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
@@ -24,18 +25,27 @@ class raw_ostream;
 namespace AMDGPU {
 
 /// Bit mask of hardware events.
+///
 /// This is useful to manipulate events as hardware events rarely come alone.
 /// This class implements all the usual operators one would need to manipulate a
 /// bit mask, and also supports printing to a \ref raw_ostream and iterating
 /// over all the set bits of the event mask.
 ///
-/// For clarity/consistency, this class should behave as much as possible like
-/// a classic integer bitmask. Methods should be constexpr whenever possible.
-/// Also avoid adding mutating methods, e.g.:
+/// This class behaves like a constexpr set of flags. None of the methods should
+/// be able to mutate the data unless they are assignment operators. Examples:
 /// \verbatim
-///   A = A.without(B); // good
-//    A.remove(B);      // bad
+///   A |= B;   // Add flags (union).
+///   A -= B;   // Remove flags (substraction).
+///   A &= B;   // Intersection.
+///   A ^= B;   // Bitwise XOR.
+///   (bool)A;  // Check whether any bits are set; A.any() also works.
+///   !A;       // Check if no bits are set; A.none() also works.
+///   A.size(); // Check how many bits are set.
 /// \endverbatim
+///
+/// This type also provides certain stronger guarantees than a simple integer:
+///   - Default constructor initializes the mask to zero.
+///   - Constructor ensures undefined bits cannot be set.
 class HWEvents {
 public:
   using value_type = uint32_t;
@@ -89,19 +99,13 @@ public:
   constexpr bool none() const { return Data == 0; }
   constexpr value_type value() const { return Data; }
 
-  constexpr explicit operator bool() const { return any(); }
+  explicit constexpr operator bool() const { return any(); }
 
   constexpr bool contains(HWEvents Other) const {
     return (~Data & Other.Data) == 0;
   }
 
-  /// \returns this, but all bits set in \p Other set to zero.
-  [[nodiscard]] constexpr HWEvents without(HWEvents Other) const {
-    return Data & ~Other.Data;
-  }
-
   const_iterator begin() const { return *this; }
-
   const_iterator end() const { return {}; }
 
   constexpr HWEvents operator|(HWEvents Other) const {
@@ -112,6 +116,10 @@ public:
   }
   constexpr HWEvents operator^(HWEvents Other) const {
     return Data ^ Other.Data;
+  }
+
+  constexpr HWEvents operator-(HWEvents Other) const {
+    return Data & ~Other.Data;
   }
 
   constexpr HWEvents operator~() const { return Data ^ ALL; }
@@ -132,6 +140,11 @@ public:
     return *this;
   }
 
+  constexpr HWEvents operator-=(HWEvents Other) {
+    Data &= ~Other.Data;
+    return *this;
+  }
+
   /// Overload both bitwise AND operators w/ the value_type to avoid an implicit
   /// conversion to HWEvent in this common pattern used to clear an event bit:
   /// `Events & ~HWEvent::EVENT_TO_CLEAR`.
@@ -142,6 +155,10 @@ public:
     Data &= Other;
     return *this;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   value_type Data = NONE;

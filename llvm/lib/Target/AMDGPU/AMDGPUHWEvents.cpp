@@ -16,6 +16,10 @@
 namespace llvm {
 namespace AMDGPU {
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void HWEvents::dump() const { dbgs() << *this << "\n"; }
+#endif
+
 static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
                                              const SIInstrInfo &TII) {
   if (TII.isVALU(Inst, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(Inst)) {
