@@ -18,9 +18,9 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.limits_macros
-    libc.src.__support.alloc_checker
     libc.hdr.types.size_t
     libc.src.__support.common
+    libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
     libc.src.__support.libc_errno

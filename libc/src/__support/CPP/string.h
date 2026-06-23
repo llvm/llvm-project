@@ -23,6 +23,20 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
+namespace {
+
+char *realloc_or_die(char *ptr, size_t size) {
+  void *new_ptr = ::realloc(ptr, size);
+  if (new_ptr == nullptr) {
+    // Out of memory: this is not handled in current implementation,
+    // We trap the program and exits.
+    __builtin_trap();
+  }
+
+  return reinterpret_cast<char *>(new_ptr);
+}
+
+} // namespace
 
 // This class mimics std::string but does not intend to be a full fledged
 // implementation. Most notably it does not provide support for character traits
@@ -133,15 +147,9 @@ public:
     if (new_capacity < SIZE_MAX / 11)
       new_capacity = new_capacity * 11 / 8;
 
-    if (void *Ptr = ::realloc(buffer_ == get_empty_string() ? nullptr : buffer_,
-                              new_capacity)) {
-      buffer_ = static_cast<char *>(Ptr);
-      capacity_ = new_capacity;
-      return;
-    }
-    // Out of memory: this is not handled in current implementation,
-    // We trap the program and exits.
-    __builtin_trap();
+    buffer_ = realloc_or_die(buffer_ == get_empty_string() ? nullptr : buffer_,
+                             new_capacity);
+    capacity_ = new_capacity;
   }
 
   LIBC_INLINE void resize(size_t size) {
@@ -151,6 +159,24 @@ public:
       inline_memset(data() + size_, '\0', size_extension);
     }
     set_size_and_add_null_character(size);
+  }
+
+  // Releases the backing C-string.
+  //
+  // The returned pointer must be free'd by the caller.
+  // This is a non-standard extension to std::string.
+  LIBC_INLINE char *release_c_str() {
+    if (buffer_ == get_empty_string()) {
+      // Ensure the buffer is heap allocated,
+      // so that it may later be passed to `free`.
+      char *res = realloc_or_die(nullptr, 1);
+      res[0] = '\0';
+      return res;
+    }
+
+    char *res = buffer_;
+    reset_no_deallocate();
+    return res;
   }
 
   LIBC_INLINE string &operator+=(const string &rhs) {

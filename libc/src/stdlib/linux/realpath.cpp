@@ -15,8 +15,8 @@
 #include "hdr/errno_macros.h"
 #include "hdr/limits_macros.h"
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/alloc-checker.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
@@ -49,20 +49,19 @@ class ResolvedPath {
 public:
   ResolvedPath() { set_to_root(); }
 
-  void set_to_root() {
-    buf_[0] = PATH_SEP;
-    size_ = 1;
-  }
+  void set_to_root() { path_ = PATH_SEP_STRING; }
 
-  bool is_root() const { return view() == PATH_SEP_STRING; }
+  bool is_root() const { return path_ == PATH_SEP_STRING; }
 
   ErrorOr<Ok> set_to_cwd() { return Error(ENOSYS); }
 
+  // Removes the trailing path component.
   void set_to_parent() {
-    size_t sep_index = view().find_last_of(PATH_SEP);
+    size_t sep_index = cpp::string_view(path_).find_last_of(PATH_SEP);
 
-    // Ensure we maintain the root separator.
-    size_ = sep_index == 0 ? 1 : sep_index;
+    // Never move past the root separator. For example,
+    // ensures that set_to_parent on "/hello" only resizes to "/".
+    path_.resize(sep_index >= 1 ? sep_index : 1);
   }
 
   // Adds a single component to the end of this path.
@@ -75,24 +74,28 @@ public:
     return push_raw(component);
   }
 
-  cpp::string_view view() const { return cpp::string_view(buf_, size_); }
+  // Releases ownership of the underlying C-string and resets this path.
+  //
+  // Must be free'd by the caller.
+  char *release() { return path_.release_c_str(); }
+
+  // Copies the content of this path to `dst`.
+  void copy_to(char *dst) {
+    inline_memcpy(dst, path_.c_str(), path_.size() + 1);
+  }
 
 private:
   ErrorOr<Ok> push_raw(cpp::string_view value) {
-    if (value.size() > sizeof(buf_) - size_)
+    // -1 because PATH_MAX includes a null-terminator.
+    size_t remaining_bytes = (PATH_MAX - 1) - path_.size();
+    if (value.size() > remaining_bytes)
       return Error(ENAMETOOLONG);
 
-    inline_memcpy(buf_ + size_, value.data(), value.size());
-    size_ += value.size();
+    path_ += value;
     return Ok{};
   }
 
-  // Current size of the path stored in `buf_`.
-  size_t size_;
-
-  // `PATH_MAX` includes a null-terminator in its count,
-  // so use `PATH_MAX - 1` here as `ResolvedPath` is not null-terminated.
-  char buf_[PATH_MAX - 1];
+  cpp::string path_;
 };
 
 // A view over path components yet to be processed by realpath.
@@ -141,20 +144,6 @@ private:
   cpp::string_view view_;
 };
 
-ErrorOr<char *> copy_or_allocate_cstr(char *dst, cpp::string_view src) {
-  if (dst == nullptr) {
-    AllocChecker ac;
-    // `dst` is safe to return and let the caller `free()`, since AllocChecker
-    // delegates to malloc, and this value is trivially destructible.
-    dst = new (ac) char[src.size() + 1];
-    if (!ac)
-      return Error(ENOMEM);
-  }
-  inline_memcpy(dst, src.data(), src.size());
-  dst[src.size()] = '\0';
-  return dst;
-}
-
 ErrorOr<Ok> resolve_path(PendingPath &pending_path,
                          ResolvedPath &resolved_path) {
   while (!pending_path.empty()) {
@@ -197,7 +186,11 @@ ErrorOr<char *> realpath_impl(const char *__restrict path_cstr,
   if (ErrorOr<Ok> res = resolve_path(pending_path, resolved_path); !res)
     return Error(res.error());
 
-  return copy_or_allocate_cstr(resolved_path_buf, resolved_path.view());
+  if (resolved_path_buf != nullptr) {
+    resolved_path.copy_to(resolved_path_buf);
+    return resolved_path_buf;
+  }
+  return resolved_path.release();
 }
 
 } // namespace

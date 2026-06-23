@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/func/free.h"
 #include "src/__support/CPP/string.h"
 #include "test/UnitTest/Test.h"
 
@@ -184,6 +185,25 @@ TEST(LlvmLibcStringTest, ConcatWithCString) {
   ASSERT_STREQ((string("a") + string("b")).c_str(), "ab");
   ASSERT_STREQ((string("a") + "b").c_str(), "ab");
   ASSERT_STREQ(("a" + string("b")).c_str(), "ab");
+}
+
+TEST(LlvmLibcStringTest, ReleaseCStrResetsString) {
+  string s("abc");
+
+  char *cstr = s.release_c_str();
+  ASSERT_STREQ(cstr, "abc");
+  ASSERT_STREQ(s.c_str(), "");
+  free(cstr);
+}
+
+TEST(LlvmLibcStringTest, ReleaseCStrOnDefaultString) {
+  string s;
+
+  char *cstr = s.release_c_str();
+  ASSERT_STREQ(cstr, "");
+  ASSERT_STREQ(s.c_str(), "");
+  ASSERT_NE(cstr, s.data()); // Different pointers.
+  free(cstr);
 }
 
 TEST(LlvmLibcStringTest, Comparison) {
