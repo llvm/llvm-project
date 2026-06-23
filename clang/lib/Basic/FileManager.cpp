@@ -543,7 +543,7 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
   if (Entry->File) {
     // Check if the cached file's mode matches the requested mode
     // Only perform mismatch recovery for real files
-    if (!Entry->File->realFileTextMismatch(IsText)) {
+    if (!Entry->File->checkTextModeMismatch(IsText)) {
       // Mode matches, use the cached file descriptor
       auto Result = Entry->File->getBuffer(Filename, FileSize,
                                            RequiresNullTerminator, isVolatile);

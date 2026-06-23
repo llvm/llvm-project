@@ -195,12 +195,14 @@ class RealFile : public File {
   Status S;
   std::string RealName;
   bool IsTextMode;
+  bool BufferWasRequested;
 
   RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName,
            bool IsText)
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
-        RealName(NewRealPathName.str()), IsTextMode(IsText) {
+        RealName(NewRealPathName.str()), IsTextMode(IsText),
+        BufferWasRequested(false) {
     assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
   }
 
@@ -215,8 +217,15 @@ public:
                                                    bool IsVolatile) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
-  bool realFileTextMismatch(bool RequestedIsText) const override {
-    return IsTextMode != RequestedIsText;
+  bool checkTextModeMismatch(bool RequestedIsText) const override {
+    bool HasMismatch = IsTextMode != RequestedIsText;
+    if (HasMismatch && BufferWasRequested) {
+      llvm::report_fatal_error(
+          "Text mode mismatch: file was previously opened with " +
+          Twine(IsTextMode ? "text" : "binary") + " mode, now requested with " +
+          Twine(RequestedIsText ? "text" : "binary") + " mode");
+    }
+    return HasMismatch;
   }
 };
 
@@ -247,6 +256,7 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  BufferWasRequested = true;
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
