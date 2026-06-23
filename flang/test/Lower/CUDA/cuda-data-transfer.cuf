@@ -24,6 +24,7 @@ module mod1
   real(kind=8), device, allocatable, dimension(:) :: p
 
   real, constant :: c1 = 1.0
+  real, device :: d1 = 1.0
 
   interface
     function __sum(a_d) result(res_h)
@@ -736,4 +737,25 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub42()
 ! CHECK: %[[RES:.*]] = arith.mulf
 ! CHECK: fir.store %[[RES]] to %{{.*}} : !fir.ref<f32>
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub43()
+  use mod1
+  real :: a
+  a = d1 * d1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub43()
+! CHECK: %[[RES:.*]] = arith.mulf
+! CHECK: fir.store %[[RES]] to %{{.*}} : !fir.ref<f32>
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub44()
+  use mod1
+  real :: a
+  a = -d1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub44()
+! CHECK: arith.negf
 ! CHECK-NOT: cuf.data_transfer
