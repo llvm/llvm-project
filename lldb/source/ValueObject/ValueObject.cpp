@@ -23,6 +23,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ABI.h"
@@ -51,7 +52,9 @@
 #include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Casting.h"
 
 #include <algorithm>
 #include <atomic>
@@ -2393,6 +2396,18 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
         return ValueObjectSP();
       }
+      root->UpdateValueIfNeeded(false);
+      if (root->GetValue().IsImplicitPointer()) {
+        Status error;
+        root = DereferenceValueOrAlternate(
+            *root, options.m_synthetic_children_traversal, error);
+        if (error.Fail() || !root) {
+          *reason_to_stop =
+              ValueObject::eExpressionPathScanEndReasonDereferencingFailed;
+          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+          return ValueObjectSP();
+        }
+      }
     }
       [[fallthrough]];
     case '.': // or fallthrough from ->
@@ -2816,6 +2831,47 @@ ValueObjectSP ValueObject::GetQualifiedRepresentationIfAvailable(
 ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();
+
+  UpdateValueIfNeeded(false);
+  if (m_value.IsImplicitPointer()) {
+    CompilerType pointee_type = GetCompilerType().GetPointeeType();
+    if (!pointee_type) {
+      error = Status::FromErrorString("implicit pointer has no pointee type");
+      return ValueObjectSP();
+    }
+
+    ModuleSP module_sp = GetModule();
+    SymbolFile *symbol_file = module_sp ? module_sp->GetSymbolFile() : nullptr;
+    if (!symbol_file) {
+      error = Status::FromErrorString(
+          "cannot resolve DW_OP_implicit_pointer without symbol file");
+      return ValueObjectSP();
+    }
+
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    Value::ImplicitPointerInfo implicit_pointer =
+        m_value.GetImplicitPointerInfo();
+    auto *dwarf_symbol_file = llvm::dyn_cast<plugin::dwarf::SymbolFileDWARF>(
+        symbol_file->GetBackingSymbolFile());
+    if (!dwarf_symbol_file) {
+      error = Status::FromErrorString(
+          "cannot resolve DW_OP_implicit_pointer without DWARF symbol file");
+      return ValueObjectSP();
+    }
+
+    ValueObjectSP result_sp = dwarf_symbol_file->ResolveImplicitPointer(
+        implicit_pointer.die_offset, implicit_pointer.byte_offset,
+        pointee_type, exe_ctx.GetBestExecutionContextScope(), GetVariable().get());
+    if (!result_sp) {
+      error = Status::FromErrorStringWithFormat(
+          "cannot resolve DW_OP_implicit_pointer target DIE 0x%" PRIx64,
+          implicit_pointer.die_offset);
+      return ValueObjectSP();
+    }
+
+    error.Clear();
+    return result_sp;
+  }
 
   std::string deref_name_str;
   uint32_t deref_byte_size = 0;

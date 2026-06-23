@@ -219,7 +219,6 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_APPLE_uninit:
   case DW_OP_PGI_omp_thread_num:
   case DW_OP_hi_user:
-  case DW_OP_GNU_implicit_pointer:
     break;
 
   case DW_OP_addr:
@@ -419,12 +418,14 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
     return offset - data_offset;
   }
 
-  case DW_OP_implicit_pointer: // 0xa0 4-byte (or 8-byte for DWARF 64) constant
-                               // + LEB128
+  case DW_OP_implicit_pointer: // 0xa0 4-byte (or 8-byte for DWARF64) DIE offset
+  case DW_OP_GNU_implicit_pointer: // 0xf2 4-byte (or 8-byte for DWARF64) DIE
+                                   // offset followed by SLEB128 byte offset.
   {
+    DwarfFormat format = dwarf_cu ? dwarf_cu->GetDwarfFormat() : DWARF32;
+    offset += getDwarfOffsetByteSize(format);
     data.Skip_LEB128(&offset);
-    return (dwarf_cu ? dwarf_cu->GetAddressByteSize() : 4) + offset -
-           data_offset;
+    return offset - data_offset;
   }
 
   case DW_OP_GNU_entry_value:
@@ -943,6 +944,9 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   // Deref a register or implicit location and truncate the value to `size`
   // bytes. See the corresponding comment in DW_OP_deref for more details on
   // why we deref these locations this way.
+  if (eval_ctx.stack.back().IsImplicitPointer())
+    return llvm::createStringError("cannot dereference an implicit pointer");
+
   if (eval_ctx.loc_desc_kind == Register ||
       eval_ctx.loc_desc_kind == Implicit) {
     // Reset context to default values.
@@ -1077,6 +1081,10 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
   if (piece_byte_size == 0)
     return llvm::Error::success();
 
+  if (eval_ctx.pieces.IsImplicitPointer())
+    return llvm::createStringError(
+        "DW_OP_piece cannot combine DW_OP_implicit_pointer with other pieces");
+
   Value curr_piece;
 
   if (eval_ctx.stack.empty()) {
@@ -1099,6 +1107,16 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
     eval_ctx.stack.pop_back();
     UpdateValueTypeFromLocationDescription(eval_ctx, piece_locdesc,
                                            &curr_piece_source_value);
+
+    if (curr_piece_source_value.IsImplicitPointer()) {
+      if (eval_ctx.pieces.GetBuffer().GetByteSize() != 0)
+        return llvm::createStringError(
+            "DW_OP_piece cannot combine DW_OP_implicit_pointer with other "
+            "pieces");
+      eval_ctx.pieces = curr_piece_source_value;
+      eval_ctx.op_piece_offset += piece_byte_size;
+      return llvm::Error::success();
+    }
 
     const Value::ValueType curr_piece_source_value_type =
         curr_piece_source_value.GetValueType();
@@ -1299,7 +1317,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     const Value *object_address_ptr) {
   uint32_t address_size = opcodes.GetAddressByteSize();
   llvm::DataExtractor expr_data = opcodes.GetAsLLVM();
-  llvm::DWARFExpression expr(expr_data, address_size);
+  std::optional<DwarfFormat> dwarf_format =
+      dwarf_cu ? dwarf_cu->GetDwarfFormat() : DWARF32;
+  llvm::DWARFExpression expr(expr_data, address_size, dwarf_format);
 
   if (expr_data.size() == 0)
     return llvm::createStringError(
@@ -1853,10 +1873,16 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
     }
 
-    case DW_OP_implicit_pointer: {
+    case DW_OP_implicit_pointer:
+    case DW_OP_GNU_implicit_pointer: {
       eval_ctx.loc_desc_kind = Implicit;
-      return llvm::createStringError("could not evaluate %s",
-                                     DW_OP_value_to_name(opcode));
+      uint64_t die_offset = op->getRawOperand(0);
+      int64_t byte_offset = static_cast<int64_t>(op->getRawOperand(1));
+
+      Value result;
+      result.SetImplicitPointer({die_offset, byte_offset});
+      stack.push_back(result);
+      break;
     }
 
     case DW_OP_push_object_address:
@@ -1981,7 +2007,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   if (stack.empty()) {
     // Nothing on the stack, check if we created a piece value from DW_OP_piece
     // or DW_OP_bit_piece opcodes
-    if (eval_ctx.pieces.GetBuffer().GetByteSize())
+    if (eval_ctx.pieces.GetBuffer().GetByteSize() ||
+        eval_ctx.pieces.IsImplicitPointer())
       return eval_ctx.pieces;
 
     return llvm::createStringError("stack empty after evaluation");

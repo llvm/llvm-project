@@ -60,7 +60,10 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
+#include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 
@@ -89,6 +92,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
@@ -96,7 +100,7 @@
 #include <cctype>
 #include <cstring>
 
-//#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
+// #define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
 
 #ifdef ENABLE_DEBUG_PRINTF
 #include <cstdio>
@@ -3441,6 +3445,62 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
     }
   }
   return 0;
+}
+
+lldb::ValueObjectSP SymbolFileDWARF::ResolveImplicitPointer(
+    uint64_t die_offset, int64_t byte_offset, CompilerType pointee_type,
+    ExecutionContextScope *exe_scope, Variable *context_var) {
+  if (!pointee_type || !exe_scope)
+    return nullptr;
+
+  SymbolContext sc;
+  if (context_var)
+    context_var->CalculateSymbolContext(&sc);
+  if (!sc.comp_unit)
+    if (StackFrameSP frame_sp = exe_scope->CalculateStackFrame())
+      sc = frame_sp->GetSymbolContext(eSymbolContextCompUnit |
+                                      eSymbolContextFunction |
+                                      eSymbolContextBlock);
+
+  DWARFDIE target_die = DebugInfo().GetDIE(DIERef::Section::DebugInfo,
+                                           die_offset);
+  if (!target_die)
+    return nullptr;
+
+  if (!sc.comp_unit) {
+    if (DWARFUnit *dwarf_cu = target_die.GetCU())
+      if (auto *compile_unit = llvm::dyn_cast<DWARFCompileUnit>(dwarf_cu))
+        sc.comp_unit = GetCompUnitForDWARFCompUnit(*compile_unit);
+  }
+
+  VariableSP target_var_sp = ParseVariableDIECached(sc, target_die);
+  if (!target_var_sp)
+    return nullptr;
+
+  ValueObjectSP target_valobj_sp =
+      ValueObjectVariable::Create(exe_scope, target_var_sp);
+  if (!target_valobj_sp || !target_valobj_sp->UpdateValueIfNeeded(false))
+    return nullptr;
+
+  DataExtractor target_data;
+  Status target_error;
+  target_valobj_sp->GetData(target_data, target_error);
+  if (target_error.Fail() || target_data.GetByteSize() == 0)
+    return nullptr;
+
+  if (byte_offset < 0 ||
+      static_cast<uint64_t>(byte_offset) > target_data.GetByteSize())
+    return nullptr;
+
+  lldb::offset_t data_offset = byte_offset;
+  lldb::offset_t data_size = target_data.GetByteSize() - data_offset;
+  if (auto type_size =
+          llvm::expectedToOptional(pointee_type.GetByteSize(exe_scope)))
+    data_size = std::min<lldb::offset_t>(data_size, *type_size);
+
+  DataExtractor pointee_data(target_data, data_offset, data_size);
+  return ValueObjectConstResult::Create(exe_scope, pointee_type, ConstString(),
+                                        pointee_data, LLDB_INVALID_ADDRESS);
 }
 
 VariableSP SymbolFileDWARF::ParseVariableDIECached(const SymbolContext &sc,
