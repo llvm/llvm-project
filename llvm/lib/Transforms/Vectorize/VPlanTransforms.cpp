@@ -7130,17 +7130,18 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, Plan, Phi);
 }
 
-/// Check if the pointer operand \p Addr of a memory access is consecutive
-/// w.r.t. \p L, i.e. it is an affine AddRec with unit stride in units of
-/// \p AccessTy.
-static bool isStride1Access(VPValue *Addr, Type *AccessTy,
-                            PredicatedScalarEvolution &PSE, const Loop *L) {
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                                PredicatedScalarEvolution &PSE,
+                                                const Loop *L) {
   const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
   if (!AddRec)
-    return false;
+    return std::nullopt;
 
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE) == 1;
+  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
@@ -7263,8 +7264,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         VPValue *Ptr = VPI->getOperand(!IsLoad);
-        Type *ScalarTy = getLoadStoreType(I);
-        if (!isStride1Access(Ptr, ScalarTy, PSE, L))
+        Type *ScalarTy =
+            IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
+        if (getConstantStride(Ptr, ScalarTy, PSE, L) != 1)
           return false;
 
         Type *StrideTy =
@@ -7274,17 +7276,17 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             Ptr, ScalarTy, StrideOne, vputils::getGEPFlagsForPtr(Ptr),
             VPI->getDebugLoc());
         VectorPtr->insertBefore(VPI);
+        VPRecipeBase *WidenedR;
         if (IsLoad)
-          return ReplaceWith(
-              VPI, new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr,
-                                         /*Mask=*/nullptr,
-                                         /*Consecutive=*/true, *VPI,
-                                         I->getDebugLoc()));
-        return ReplaceWith(
-            VPI, new VPWidenStoreRecipe(*cast<StoreInst>(I), VectorPtr,
-                                        VPI->getOperand(0),
-                                        /*Mask=*/nullptr, /*Consecutive=*/true,
-                                        *VPI, I->getDebugLoc()));
+          WidenedR = new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr,
+                                           /*Mask=*/nullptr,
+                                           /*Consecutive=*/true, *VPI,
+                                           VPI->getDebugLoc());
+        else
+          WidenedR = new VPWidenStoreRecipe(
+              *cast<StoreInst>(I), VectorPtr, VPI->getOperand(0),
+              /*Mask=*/nullptr, /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+        return ReplaceWith(VPI, WidenedR);
       });
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
