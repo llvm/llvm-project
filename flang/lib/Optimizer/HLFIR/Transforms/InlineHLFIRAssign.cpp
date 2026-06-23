@@ -120,13 +120,12 @@ public:
                                   << "\tRHS: " << rhs << "\n"
                                   << "\tALIAS: " << aliasRes << "\n");
           // Overlap is Unknown: unsafe to read RHS while writing LHS
-          // without a temp. Call
-          // ArraySectionAnalyzer::genRuntimeDisjointnessCheck to check if the
-          // sections are disjoint.
-          // 1. Sections disjoint at runtime-> direct element-wise copy (no
-          // temp)
-          // 2. Sections are not disjoint at runtime  -> Allocate a temporary
-          // and copy RHS into it, then copy the temporary to LHS.
+          // without a temp. Call genIndexBasedDisjointnessCheck(..) or
+          // genAddressBasedDisjointnessCheck(..) to check if the slices are
+          // disjoint.
+          // 1. If disjoint -> direct element-wise copy (no temp).
+          // 2. If not disjoint -> allocate a temporary and copy RHS into it,
+          // then copy the temporary to LHS..
           rhsNeedsTemporary = true;
         }
       }
@@ -149,28 +148,27 @@ public:
     };
 
     if (rhsNeedsTemporary) {
-      if (mlir::Value disjoint =
-              fir::ArraySectionAnalyzer::genRuntimeDisjointnessCheck(
-                  loc, builder, lhs, rhs)) {
-        builder.genIfThenElse(loc, disjoint)
-            .genThen([&]() { emitAssignFrom(rhs); })
-            .genElse([&]() {
-              mlir::Value tempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
-              emitAssignFrom(hlfir::Entity{tempExpr});
-              hlfir::DestroyOp::create(builder, loc, tempExpr);
-            })
-            .end();
-        rewriter.eraseOp(assign);
-        return mlir::success();
+      std::optional<mlir::Value> disjoint =
+          fir::factory::genIndexBasedDisjointnessCheck(loc, builder, lhs, rhs);
+      if (!disjoint) {
+        disjoint = fir::factory::genAddressBasedDisjointnessCheck(loc, builder,
+                                                                  lhs, rhs);
       }
-    }
+      if (!disjoint)
+        return rewriter.notifyMatchFailure(
+            assign, "Failed to generate runtime disjointness check,"
+                    "deferring to runtime assignment implementation");
 
-    // When rhsNeedsTemporary is true and genRuntimeDisjointnessCheck
-    // returned null, always use a temporary rhsExpr.
-    mlir::Value rhsTempExpr;
-    if (rhsNeedsTemporary) {
-      rhsTempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
-      rhs = hlfir::Entity{rhsTempExpr};
+      builder.genIfThenElse(loc, *disjoint)
+          .genThen([&]() { emitAssignFrom(rhs); })
+          .genElse([&]() {
+            mlir::Value tempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
+            emitAssignFrom(hlfir::Entity{tempExpr});
+            hlfir::DestroyOp::create(builder, loc, tempExpr);
+          })
+          .end();
+      rewriter.eraseOp(assign);
+      return mlir::success();
     }
 
     // Materialize scalar RHS before the assignment loop. Fortran 10.2.1.3
@@ -182,9 +180,6 @@ public:
       rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
 
     emitAssignFrom(rhs);
-
-    if (rhsTempExpr)
-      hlfir::DestroyOp::create(builder, loc, rhsTempExpr);
 
     rewriter.eraseOp(assign);
     return mlir::success();

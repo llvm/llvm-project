@@ -11,7 +11,6 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "array-section-analyzer"
@@ -192,56 +191,6 @@ ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2,
                           << des1 << "and:\n"
                           << des2 << "\n");
   return SlicesOverlapKind::Unknown;
-}
-
-mlir::Value ArraySectionAnalyzer::genRuntimeDisjointnessCheck(
-    mlir::Location loc, mlir::OpBuilder &builder, mlir::Value lhsRef,
-    mlir::Value rhsRef) {
-  auto des1 = lhsRef.getDefiningOp<hlfir::DesignateOp>();
-  auto des2 = rhsRef.getDefiningOp<hlfir::DesignateOp>();
-  if (!des1 || !des2)
-    return {};
-
-  if (des1.getMemref() != des2.getMemref())
-    return {};
-
-  if (des1.getComponent() != des2.getComponent() ||
-      des1.getComponentShape() != des2.getComponentShape() ||
-      des1.getSubstring() != des2.getSubstring() ||
-      des1.getComplexPart() != des2.getComplexPart() ||
-      des1.getTypeparams() != des2.getTypeparams())
-    return {};
-
-  if (des1.getIsTriplet().empty() ||
-      !llvm::equal(des1.getIsTriplet(), des2.getIsTriplet()))
-    return {};
-
-  mlir::Type idxTy = mlir::IndexType::get(des1.getContext());
-  auto toIdx = [&](mlir::Value v) -> mlir::Value {
-    return fir::ConvertOp::create(builder, loc, idxTy, v);
-  };
-
-  mlir::Value disjoint;
-  auto des1It = des1.getIndices().begin();
-  auto des2It = des2.getIndices().begin();
-  for (bool isTriplet : des1.getIsTriplet()) {
-    SectionDesc desc1 = readSectionDesc(des1It, isTriplet);
-    SectionDesc desc2 = readSectionDesc(des2It, isTriplet);
-    auto [lb1, ub1] = getOrderedBounds(desc1);
-    auto [lb2, ub2] = getOrderedBounds(desc2);
-    if (!lb1 || !lb2)
-      continue;
-
-    mlir::Value c1 = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::slt, toIdx(ub1), toIdx(lb2));
-    mlir::Value c2 = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::slt, toIdx(ub2), toIdx(lb1));
-    mlir::Value c1Orc2 = mlir::arith::OrIOp::create(builder, loc, c1, c2);
-    disjoint = disjoint
-                   ? mlir::arith::OrIOp::create(builder, loc, disjoint, c1Orc2)
-                   : c1Orc2;
-  }
-  return disjoint;
 }
 
 bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {

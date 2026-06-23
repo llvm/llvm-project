@@ -18,15 +18,45 @@
 // CHECK-SAME: %[[ARGF:.*]]: !fir.ref<!fir.array<?x?x?xf32>> {fir.bindc_name = "field"}
 
 // CHECK: hlfir.declare %[[ARGF]](%{{.*}}) {{.*}} uniq_name = "_QFself_copy_ewEfield"
-// CHECK-DAG: hlfir.designate %{{.*}}#0 (
-// CHECK-DAG: hlfir.designate %{{.*}}#0 (
-// CHECK: fir.if %{{.*}} {
-// CHECK: fir.do_loop
-// CHECK: hlfir.assign
+
+// Index-based runtime disjointness check:
+// CHECK: %[[RHS:.*]] = hlfir.designate %{{.*}}#0 (%{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}}
+// CHECK: %[[LHS:.*]] = hlfir.designate %{{.*}}#0 (%{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}}, %{{.*}}:%{{.*}}:%{{.*}}) shape %{{.*}}
+// CHECK: %[[CMP1:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
+// CHECK: %[[CMP2:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
+// CHECK: %[[DIM1_DISJ:.*]] = arith.ori %[[CMP1]], %[[CMP2]] : i1
+// CHECK: %[[CMP3:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
+// CHECK: %[[CMP4:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
+// CHECK: %[[DIM2_DISJ:.*]] = arith.ori %[[CMP3]], %[[CMP4]] : i1
+// CHECK: %[[DISJ12:.*]] = arith.ori %[[DIM1_DISJ]], %[[DIM2_DISJ]] : i1
+// CHECK: %[[CMP5:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
+// CHECK: %[[CMP6:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
+// CHECK: %[[DIM3_DISJ:.*]] = arith.ori %[[CMP5]], %[[CMP6]] : i1
+// CHECK: %[[DISJOINT:.*]] = arith.ori %[[DISJ12]], %[[DIM3_DISJ]] : i1
+// CHECK: fir.if %[[DISJOINT]] {
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:       fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:         %{{.*}} = hlfir.designate %[[RHS]] (%{{.*}}, %{{.*}}, %{{.*}})
+// CHECK:         %{{.*}} = fir.load %{{.*}}
+// CHECK:         %{{.*}} = hlfir.designate %[[LHS]] (%{{.*}}, %{{.*}}, %{{.*}})
+// CHECK:         hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
+// CHECK:       }
+// CHECK:     }
+// CHECK:   }
 // CHECK: } else {
-// CHECK: hlfir.as_expr
-// CHECK: fir.do_loop
-// CHECK: hlfir.destroy
+// CHECK:   %[[EXPR:.*]] = hlfir.as_expr %[[RHS]]
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:       fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:         %{{.*}} = hlfir.apply %[[EXPR]], %{{.*}}, %{{.*}}, %{{.*}}
+// CHECK:         %{{.*}} = hlfir.designate %[[LHS]] (%{{.*}}, %{{.*}}, %{{.*}})
+// CHECK:         hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
+// CHECK:       }
+// CHECK:     }
+// CHECK:   }
+// CHECK:   hlfir.destroy %[[EXPR]]
+// CHECK: }
 
 func.func @_QPself_copy_ew(%arg0: !fir.ref<!fir.array<?x?x?xf32>> {fir.bindc_name = "field"}, %arg1: !fir.ref<i32> {fir.bindc_name = "xm"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ym"}, %arg3: !fir.ref<i32> {fir.bindc_name = "levs"}, %arg4: !fir.ref<i32> {fir.bindc_name = "xh"}, %arg5: !fir.ref<i32> {fir.bindc_name = "yh"}) {
   %0 = fir.dummy_scope : !fir.dscope

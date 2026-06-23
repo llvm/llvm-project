@@ -1,7 +1,4 @@
-// Self-copy of array sections with the same runtime stride on LHS and RHS.
-// Runtime stride prevents genRuntimeDisjointnessCheck(..) from building a disjoint
-// i1, so inlining uses hlfir.as_expr temporary
-//
+//  Test inlining of hlfir.assign for array sections with the same runtime stride on LHS and RHS
 // RUN: fir-opt --inline-hlfir-assign %s | FileCheck %s
 
 // Fortran source:
@@ -21,15 +18,57 @@
 // CHECK-LABEL: func.func @_QPtestcase
 // CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.array<?xf32>>
 
-// Box self-assign is lowered with a temp expr (no runtime disjointness guard).
-// CHECK: hlfir.designate
-// CHECK: hlfir.designate
-// CHECK: [[EXPR:%.*]] = hlfir.as_expr
-// CHECK-NOT: fir.if
-// CHECK: fir.do_loop
-// CHECK: hlfir.apply [[EXPR]]
-// CHECK: hlfir.assign
-// CHECK: hlfir.destroy [[EXPR]]
+// CHECK: %{{.*}} = hlfir.designate
+// CHECK: %{{.*}} = hlfir.designate
+// CHECK: %[[LHS_ADDR:.*]] = fir.box_addr %{{.*}}
+// CHECK: %[[LHS_BASE:.*]] = fir.convert %[[LHS_ADDR]] : (!fir.ref<!fir.array<?xf32>>) -> i64
+// CHECK: %[[LHS_ELESZ:.*]] = fir.box_elesize %{{.*}}
+// CHECK: %[[LHS_DIMS:.*]]:3 = fir.box_dims %{{.*}}, %{{.*}}
+// CHECK: %{{.*}} = arith.subi %[[LHS_DIMS]]#1, %{{.*}} : index
+// CHECK: %{{.*}} = arith.muli %{{.*}}, %[[LHS_DIMS]]#2 : index
+// CHECK: %{{.*}} = arith.cmpi slt, %[[LHS_DIMS]]#2, %{{.*}} : index
+// CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
+// CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
+// CHECK: %{{.*}} = arith.subi %[[LHS_ELESZ]], %{{.*}} : index
+// CHECK: %{{.*}} = arith.addi %{{.*}}, %{{.*}} : index
+// CHECK: %{{.*}} = fir.convert %{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.convert %{{.*}} : (index) -> i64
+// CHECK: %[[LHS_START:.*]] = arith.addi %[[LHS_BASE]], %{{.*}} : i64
+// CHECK: %[[LHS_END:.*]] = arith.addi %[[LHS_BASE]], %{{.*}} : i64
+// CHECK: %[[RHS_ADDR:.*]] = fir.box_addr %{{.*}}
+// CHECK: %[[RHS_BASE:.*]] = fir.convert %[[RHS_ADDR]] : (!fir.ref<!fir.array<?xf32>>) -> i64
+// CHECK: %[[RHS_ELESZ:.*]] = fir.box_elesize %{{.*}}
+// CHECK: %[[RHS_DIMS:.*]]:3 = fir.box_dims %{{.*}}, %{{.*}}
+// CHECK: %{{.*}} = arith.subi %[[RHS_DIMS]]#1, %{{.*}} : index
+// CHECK: %{{.*}} = arith.muli %{{.*}}, %[[RHS_DIMS]]#2 : index
+// CHECK: %{{.*}} = arith.cmpi slt, %[[RHS_DIMS]]#2, %{{.*}} : index
+// CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
+// CHECK: %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
+// CHECK: %{{.*}} = arith.subi %[[RHS_ELESZ]], %{{.*}} : index
+// CHECK: %{{.*}} = arith.addi %{{.*}}, %{{.*}} : index
+// CHECK: %{{.*}} = fir.convert %{{.*}} : (index) -> i64
+// CHECK: %{{.*}} = fir.convert %{{.*}} : (index) -> i64
+// CHECK: %[[RHS_START:.*]] = arith.addi %[[RHS_BASE]], %{{.*}} : i64
+// CHECK: %[[RHS_END:.*]] = arith.addi %[[RHS_BASE]], %{{.*}} : i64
+// CHECK: %[[CMP1:.*]] = arith.cmpi ult, %[[LHS_END]], %[[RHS_START]] : i64
+// CHECK: %[[CMP2:.*]] = arith.cmpi ult, %[[RHS_END]], %[[LHS_START]] : i64
+// CHECK: %[[DISJOINT:.*]] = arith.ori %[[CMP1]], %[[CMP2]] : i1
+// CHECK: fir.if %[[DISJOINT]] {
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     %{{.*}} = hlfir.designate %{{.*}} (%{{.*}})
+// CHECK:     %{{.*}} = fir.load %{{.*}}
+// CHECK:     %{{.*}} = hlfir.designate %{{.*}} (%{{.*}})
+// CHECK:     hlfir.assign %{{.*}} to %{{.*}}
+// CHECK:   }
+// CHECK: } else {
+// CHECK:   %[[EXPR:.*]] = hlfir.as_expr %{{.*}}
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     %{{.*}} = hlfir.apply %[[EXPR]], %{{.*}}
+// CHECK:     %{{.*}} = hlfir.designate %{{.*}} (%{{.*}})
+// CHECK:     hlfir.assign %{{.*}} to %{{.*}}
+// CHECK:   }
+// CHECK:   hlfir.destroy %[[EXPR]]
+// CHECK: }
 
 func.func @_QPtestcase(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "step"}) {
   %0 = fir.dummy_scope : !fir.dscope
