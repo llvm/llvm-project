@@ -54,6 +54,10 @@ bool SystemZPreRASchedStrategy::closesLiveRange(const SUnit *SU,
   return VR16PChange < 0 || (!VR16PChange && GRX32PChange < 0);
 }
 
+static cl::opt<unsigned> MinSULat("min-SU-lat", cl::init(0));
+static cl::opt<unsigned> MinRegionSize("min-region-size", cl::init(0));
+static cl::opt<unsigned> MinRegionSumLat("min-region-sumlat", cl::init(~0));
+
 bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
                                              SchedCandidate &TryCand,
                                              SchedBoundary *Zone) const {
@@ -87,11 +91,15 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
                                                              : nullptr)
       if (HigherSU->getHeight() > Zone->getScheduledLatency() &&
           HigherSU->getDepth() < computeRemLatency(*Zone)) {
-        // The higher SU increases the scheduled latency but is not on the
-        // Critical Path by Depth, so put it above the other one.
-        tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
-                GenericSchedulerBase::BotHeightReduce);
-        return TryCand.Reason != NoCand;
+
+        if ((std::max(TryCand.SU->Latency, Cand.SU->Latency) >= MinSULat) &&
+            (DAG->SUnits.size() >= MinRegionSize || SumLat >= MinRegionSumLat)) {
+          // The higher SU increases the scheduled latency but is not on the
+          // Critical Path by Depth, so put it above the other one.
+          tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
+                  GenericSchedulerBase::BotHeightReduce);
+          return TryCand.Reason != NoCand;
+        }
       }
 
   // Weak edges help copy coalescing.
@@ -140,8 +148,11 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   Cmp0SrcReg = SystemZ::NoRegister;
 
   unsigned DAGHeight = 0;
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
+  SumLat = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
     DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+    SumLat += DAG->SUnits[Idx].Latency;
+  }
 
   if (RegionPolicy.ShouldTrackPressure)
     LivenessHeightCutOff = DAGHeight / (DAG->SUnits.size() < 50 ? 4 : 2);
