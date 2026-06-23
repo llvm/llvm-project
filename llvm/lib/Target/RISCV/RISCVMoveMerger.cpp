@@ -186,19 +186,9 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
       FirstPair.Source->getReg(), GPRPairIdx, &RISCV::GPRPairRegClass);
   MCRegister DestReg = TRI->getMatchingSuperReg(
       FirstPair.Destination->getReg(), GPRPairIdx, &RISCV::GPRPairRegClass);
-  bool SrcKill = PairedSource.isKill() && FirstPair.Source->isKill();
+  bool KillSrc = PairedSource.isKill() && FirstPair.Source->isKill();
 
-  if (ST->hasStdExtZdinx()) {
-    BuildMI(*I->getParent(), I, DL, TII->get(RISCV::FSGNJ_D_IN32X), DestReg)
-        .addReg(SrcReg)
-        .addReg(SrcReg, getKillRegState(SrcKill));
-  } else if (ST->hasStdExtP()) {
-    BuildMI(*I->getParent(), I, DL, TII->get(RISCV::PADD_DW), DestReg)
-        .addReg(RISCV::X0_Pair)
-        .addReg(SrcReg, getKillRegState(SrcKill));
-  } else {
-    llvm_unreachable("Unhandled subtarget with paired move.");
-  }
+  TII->copyPhysReg(*I->getParent(), I, DL, DestReg, SrcReg, KillSrc);
 
   I->eraseFromParent();
   Paired->eraseFromParent();
