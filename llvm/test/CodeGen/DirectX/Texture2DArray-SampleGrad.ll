@@ -70,12 +70,3 @@ define void @samplegrad_texture2darray_with_offset(<3 x float> %coords, <2 x flo
   call void @use_float4(<4 x float> %data)
   ret void
 }
-
-declare target("dx.Texture", <4 x float>, 0, 0, 0, 7)
-    @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_7t(i32, i32, i32, i32, ptr)
-declare target("dx.Sampler", 0)
-    @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(i32, i32, i32, i32, ptr)
-declare <4 x float>
-    @llvm.dx.resource.samplegrad.v4f32.tdx.Texture_v4f32_0_0_0_7t.tdx.Sampler_0t.v3f32.v2f32.v2f32.v2i32(
-        target("dx.Texture", <4 x float>, 0, 0, 0, 7),
-        target("dx.Sampler", 0), <3 x float>, <2 x float>, <2 x float>, <2 x i32>)

@@ -4,6 +4,8 @@ target triple = "dxil-pc-shadermodel6.6-pixel"
 
 declare void @use_float4(<4 x float>)
 
+; CHECK: @[[TEX2DARR:[0-9]+]] = external constant %"Texture2DArray<float4>"
+
 ; Test that a Texture2DArray handle gets ResourceKind::Texture2DArray metadata.
 ; CHECK-LABEL: define void @annotate_texture2darray_float4(
 define void @annotate_texture2darray_float4(<3 x float> %coords, float %bias) {
@@ -26,12 +28,6 @@ define void @annotate_texture2darray_float4(<3 x float> %coords, float %bias) {
   call void @use_float4(<4 x float> %data)
   ret void
 }
-
-declare target("dx.Texture", <4 x float>, 0, 0, 0, 7)
-    @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_7t(i32, i32, i32, i32, ptr)
-declare target("dx.Sampler", 0)
-    @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(i32, i32, i32, i32, ptr)
-declare <4 x float>
-    @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_7t.tdx.Sampler_0t.v3f32.v2i32(
-        target("dx.Texture", <4 x float>, 0, 0, 0, 7),
-        target("dx.Sampler", 0), <3 x float>, float, <2 x i32>)
+; Test that the metadata ResourceKind is Texture2DArray (=7), and element type is F32
+; CHECK: !{{[0-9]+}} = !{i32 0, ptr @[[TEX2DARR]], !"", i32 0, i32 5, i32 1, i32 7, i32 0, ![[TAG:[0-9]+]]}
+; CHECK: ![[TAG]] = !{i32 0, i32 9}
