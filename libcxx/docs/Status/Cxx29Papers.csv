@@ -5,7 +5,7 @@
 "`P3319R6 <https://wg21.link/P3319R6>`__","Add an ``iota`` object for ``simd`` (and more)","2026-06 (Brno)","","","`#204393 <https://github.com/llvm/llvm-project/issues/204393>`__",""
 "`P3798R1 <https://wg21.link/P3798R1>`__","The unexpected in ``std::expected``","2026-06 (Brno)","","","`#204394 <https://github.com/llvm/llvm-project/issues/204394>`__",""
 "`P3052R2 <https://wg21.link/P3052R2>`__","``view_interface::at()``","2026-06 (Brno)","","","`#204395 <https://github.com/llvm/llvm-project/issues/204395>`__",""
-"`P4206R0 <https://wg21.link/P4206R0>`__","Revert string support in ``std::constant_wrapper``","2026-06 (Brno)","","","`#203336 <https://github.com/llvm/llvm-project/issues/203336>`__","To be applied as a Defect Report."
+"`P4206R0 <https://wg21.link/P4206R0>`__","Revert string support in ``std::constant_wrapper``","2026-06 (Brno)","|Complete|","23","`#203336 <https://github.com/llvm/llvm-project/issues/203336>`__","Applied as a Defect Report."
 "`P3395R6 <https://wg21.link/P3395R6>`__","Fix encoding issues and add a formatter for ``std::error_code``","2026-06 (Brno)","","","`#204396 <https://github.com/llvm/llvm-project/issues/204396>`__",""
 "`P3505R4 <https://wg21.link/P3505R4>`__","Fix the default floating-point representation in ``std::format``","2026-06 (Brno)","","","`#204397 <https://github.com/llvm/llvm-project/issues/204397>`__","To be applied as a Defect Report."
 "`P3154R3 <https://wg21.link/P3154R3>`__","Deprecating signed character types in iostreams","2026-06 (Brno)","","","`#204398 <https://github.com/llvm/llvm-project/issues/204398>`__",""
