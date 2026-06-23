@@ -85,3 +85,40 @@ subroutine test_component_reference()
   ! ERROR: Component reference is not allowed for enumeration type 'color'
   i = c%__ordinal
 end subroutine
+
+! Module providing an enumeration type by USE association
+module enum_constructor_mod
+  enumeration type :: color
+    enumerator :: red, green, blue
+  end enumeration type
+end module
+
+! Constructor errors for a USE-associated enumeration type.
+! This exercises the cross-module path: the type's local symbol carries
+! UseDetails, so the enumeration-specific checks must follow USE association.
+subroutine test_constructor_errors_use()
+  use enum_constructor_mod
+
+  type(color) :: c
+
+  ! ERROR: Enumeration constructor for 'color' requires exactly one argument
+  c = color()
+
+  ! ERROR: Enumeration constructor for 'color' requires exactly one argument
+  c = color(1, 2)
+
+  ! ERROR: Enumeration constructor for 'color' may not have a keyword argument
+  c = color(val=1)
+
+  ! ERROR: Enumeration constructor argument must be INTEGER, but is REAL(4)
+  c = color(1.0)
+
+  ! ERROR: Enumeration constructor argument for 'color' must be scalar
+  c = color([1, 2])
+
+  ! ERROR: Enumeration constructor value (0) for 'color' must be positive and less than or equal to the number of enumerators (3)
+  c = color(0)
+
+  ! ERROR: Enumeration constructor value (4) for 'color' must be positive and less than or equal to the number of enumerators (3)
+  c = color(4)
+end subroutine

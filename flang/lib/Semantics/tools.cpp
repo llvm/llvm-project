@@ -1086,7 +1086,9 @@ bool IsAssumedType(const Symbol &symbol) {
 }
 
 bool IsEnumerationType(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+  // Use the ultimate symbol for cases such as USE-associated enumeration types
+  if (const auto *details{
+          symbol.GetUltimate().detailsIf<DerivedTypeDetails>()}) {
     return details->isEnumerationType();
   }
   return false;

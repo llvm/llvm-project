@@ -3650,9 +3650,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
         if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
-        // Detect enumeration types and set the category accordingly
-        if (const auto *dtDetails{
-                symbol.detailsIf<semantics::DerivedTypeDetails>()}) {
+        // Detect enumeration types and set the category accordingly.
+        // Use the ultimate symbol so that a USE-associated enumeration type
+        // (whose local symbol carries UseDetails) is recognized too.
+        if (const auto *dtDetails{symbol.GetUltimate()
+                    .detailsIf<semantics::DerivedTypeDetails>()}) {
           if (dtDetails->isEnumerationType()) {
             dtSpec.set_category(
                 semantics::DerivedTypeSpec::Category::EnumerationType);
