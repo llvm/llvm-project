@@ -379,12 +379,9 @@ static cl::opt<bool>
                     cl::ZeroOrMore, cl::Hidden, cl::init(false),
                     cl::cat(BoltCategory));
 
-static cl::opt<unsigned> BatchSize(
-    "cu-processing-batch-size",
-    cl::desc(
-        "Specifies the size of batches for processing CUs. Higher number has "
-        "better performance, but more memory usage. Default value is 1."),
-    cl::Hidden, cl::init(1), cl::cat(BoltCategory));
+static cl::opt<unsigned> BatchSize("cu-processing-batch-size",
+                                   cl::desc("Now it is not used."), cl::Hidden,
+                                   cl::init(1), cl::cat(BoltCategory));
 
 static cl::opt<bool> AlwaysConvertToRanges(
     "always-convert-to-ranges",
