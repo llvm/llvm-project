@@ -108,6 +108,10 @@ public:
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const override;
+
+  bool isMemmoveProfitable(Value *DestPtr, Value *SourcePtr,
+                           ScalarEvolution *SE) const override;
+
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
