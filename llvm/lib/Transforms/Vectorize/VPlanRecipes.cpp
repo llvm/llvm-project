@@ -2450,12 +2450,17 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   Type *IncTy = IncAmt->getScalarType();
   VectorType *VTy = VectorType::get(IncTy, VF);
 
-  // Assume that a non-constant update value (or a constant != 1) requires
-  // a multiply, and add that into the cost.
-  InstructionCost MulCost =
-      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (match(IncAmt, m_One()))
-    MulCost = TTI::TCC_Free;
+  // For umin/umax, there's no multiplication — the increment value is compared
+  // directly. For add/sub/uadd.sat, assume that a non-constant update value
+  // (or a constant != 1) requires a multiply.
+  InstructionCost MulCost = TTI::TCC_Free;
+  if (UpdateKind != HistogramUpdateKind::UMax &&
+      UpdateKind != HistogramUpdateKind::UMin) {
+    MulCost =
+        Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
+    if (match(IncAmt, m_One()))
+      MulCost = TTI::TCC_Free;
+  }
 
   // Find the cost of the histogram operation itself.
   Type *PtrTy = VectorType::get(AddressTy, VF);
