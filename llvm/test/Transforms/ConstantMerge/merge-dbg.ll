@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=constmerge -S | FileCheck %s
-; RUN: opt < %s -passes=assign-guid,constmerge -S | FileCheck %s
 
 ; CHECK: = constant i32 1, !dbg [[A:![0-9]+]], !dbg [[B:![0-9]+]]
 @a = internal constant i32 1, !dbg !0

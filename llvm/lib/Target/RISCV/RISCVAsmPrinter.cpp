@@ -292,7 +292,7 @@ void RISCVAsmPrinter::emitLpadAlignedCall(const MachineInstr &MI) {
              HasRelax = MCSTI.hasFeature(RISCV::FeatureRelax);
 
   if (HasZca)
-    OutStreamer->emitCodeAlignment(Align(4), &MCSTI);
+    OutStreamer->emitCodeAlignment(Align(4), MCSTI);
 
   if (OutStreamer->hasRawTextSupport()) {
     // Assembly path: wrap call with .option push/exact/pop and emit LPAD
@@ -597,7 +597,7 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
   // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
   const uint8_t NoopsInSledCount = STI->is64Bit() ? 33 : 21;
 
-  OutStreamer->emitCodeAlignment(Align(4), STI);
+  OutStreamer->emitCodeAlignment(Align(4), *STI);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
@@ -1082,6 +1082,9 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     break;
   case RISCVII::MO_TLSDESC_CALL:
     Kind = ELF::R_RISCV_TLSDESC_CALL;
+    break;
+  case RISCVII::MO_QC_ACCESS:
+    Kind = RISCV::S_QC_ACCESS;
     break;
   }
 

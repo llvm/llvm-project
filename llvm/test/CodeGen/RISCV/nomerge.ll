@@ -6,8 +6,8 @@ define void @foo(i32 %i) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    li a1, 7
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    beq a0, a1, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 5

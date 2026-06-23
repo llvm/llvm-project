@@ -763,6 +763,10 @@ control the crash diagnostics.
    Like ``-fcrash-diagnostics-dir=<dir>``, specifies where to write the
    crash diagnostics files, but with lower precedence than the option.
 
+.. option:: -fcrash-diagnostics-tar=<path>
+
+  Specify where to write the crash diagnostics files as a tarball.
+
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is especially useful when trying to
 generate a reproducer for warnings or errors while using modules.
@@ -936,6 +940,8 @@ Clang options that don't fit neatly into other categories.
   * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
     aren't available. This is the default for arm64.
   * ``always`` - Always emit DWARF unwind regardless.
+  * ``dwarf-only`` - Always emit DWARF unwind, and force compact unwind to defer
+    to DWARF.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 

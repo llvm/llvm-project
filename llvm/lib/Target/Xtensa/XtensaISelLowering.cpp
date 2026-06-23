@@ -258,6 +258,16 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 }
 
+Register XtensaTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return Xtensa::A2;
+}
+
+Register XtensaTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return Xtensa::A3;
+}
+
 bool XtensaTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   // The Xtensa target isn't yet aware of offsets.
@@ -643,8 +653,9 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
                                     DAG.getIntPtrConstant(Offset, DL));
       SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
+      Align Alignment = Flags.getNonZeroByValAlign();
       SDValue Memcpy = DAG.getMemcpy(
-          Chain, DL, Address, ArgValue, SizeNode, Flags.getNonZeroByValAlign(),
+          Chain, DL, Address, ArgValue, SizeNode, Alignment, Alignment,
           /*isVolatile=*/false, /*AlwaysInline=*/false,
           /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
           MachinePointerInfo());
@@ -1269,7 +1280,8 @@ SDValue XtensaTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
 
   return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr,
                        DAG.getConstant(VAListSize, SDLoc(Op), MVT::i32),
-                       Align(4), /*isVolatile*/ false, /*AlwaysInline*/ true,
+                       Align(4), Align(4), /*isVolatile*/ false,
+                       /*AlwaysInline*/ true,
                        /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));
 }

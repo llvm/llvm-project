@@ -447,6 +447,18 @@ public:
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;
+  llvm::DenseMap<const CompoundLiteralExpr *, cir::GlobalOp>
+      emittedCompoundLiterals;
+
+  cir::GlobalOp
+  getAddrOfConstantCompoundLiteralIfEmitted(const CompoundLiteralExpr *e) {
+    return emittedCompoundLiterals.lookup(e);
+  }
+  void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *e,
+                                        cir::GlobalOp gv) {
+    [[maybe_unused]] bool ok = emittedCompoundLiterals.insert({e, gv}).second;
+    assert(ok && "compound literal global already emitted");
+  }
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -626,8 +638,10 @@ public:
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
   /// Set TLS mode for the given operation based on the given variable
-  /// declaration.
-  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+  /// declaration. If `isExtendingDecl` is true, then the operation is a
+  /// temporary whose lifetime is extended by the variable declared by `d`.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d,
+                  bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
   cir::TLS_Model getDefaultCIRTLSModel() const;
@@ -707,6 +721,11 @@ public:
   /// Returns a null attribute to represent either a null method or null data
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
+
+  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Returns std::nullopt and emits errorNYI for virtual-base paths.
+  std::optional<llvm::SmallVector<int32_t>>
+  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
@@ -808,6 +827,9 @@ public:
     assert(openMPRuntime != nullptr);
     return *openMPRuntime;
   }
+
+  bool isPaddedAtomicType(QualType type);
+  bool isPaddedAtomicType(const AtomicType *type);
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -913,6 +935,12 @@ public:
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
 private:
+  /// Search \p currentClass and its non-virtual base subobjects for \p field,
+  /// appending CIR field indices along the path from \p currentClass.
+  bool findFieldMemberPath(const CXXRecordDecl *currentClass,
+                           const FieldDecl *field,
+                           llvm::SmallVectorImpl<int32_t> &path);
+
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;

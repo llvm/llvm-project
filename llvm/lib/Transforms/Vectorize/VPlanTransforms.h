@@ -42,7 +42,9 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
+LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintBeforePasses;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintVectorRegionScope;
 #endif
@@ -54,24 +56,35 @@ struct VPlanTransforms {
   template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
+      dbgs()
+          << "VPlan for loop in '"
+          << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
+          << "' " << BeforeOrAfterStr << " " << PassName << '\n';
+      if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
+        Plan.getVectorLoopRegion()->print(dbgs());
+      else
+        dbgs() << Plan << '\n';
+    };
+
+    auto MatchesPassListOption = [&](const cl::list<std::string> &ListOpt) {
+      return (ListOpt.getNumOccurrences() > 0 &&
+              any_of(ListOpt, [PassName](StringRef Entry) {
+                return Regex(Entry).match(PassName);
+              }));
+    };
+
+    if (VPlanPrintBeforeAll || MatchesPassListOption(VPlanPrintBeforePasses))
+      PrintPlan("before");
+#endif
+
     scope_exit PostTransformActions{[&]() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
-      if (VPlanPrintAfterAll ||
-          (VPlanPrintAfterPasses.getNumOccurrences() > 0 &&
-           any_of(VPlanPrintAfterPasses, [PassName](StringRef Entry) {
-             return Regex(Entry).match(PassName);
-           }))) {
-        dbgs()
-            << "VPlan for loop in '"
-            << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
-            << "' after " << PassName << '\n';
-        if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
-          Plan.getVectorLoopRegion()->print(dbgs());
-        else
-          dbgs() << Plan << '\n';
-      }
+      if (VPlanPrintAfterAll || MatchesPassListOption(VPlanPrintAfterPasses))
+        PrintPlan("after");
 #endif
       if (VerifyEachVPlan && EnableVerify) {
         if (!verifyVPlanIsValid(Plan))
@@ -140,6 +153,7 @@ struct VPlanTransforms {
   /// recurrence cannot be handled.
   static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
+      const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -171,7 +185,7 @@ struct VPlanTransforms {
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
-  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan);
 
   // Create a check in \p CheckBlock to see if the vector loop should be
   // executed. May create VPExpandSCEV recipes in the plan's entry block.
@@ -295,7 +309,8 @@ struct VPlanTransforms {
   /// possible.
   static void
   replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                         const DenseMap<Value *, const SCEV *> &StridesMap);
+                         const DenseMap<Value *, const SCEV *> &StridesMap,
+                         const VPDominatorTree &VPDT);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
@@ -346,10 +361,10 @@ struct VPlanTransforms {
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                          VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB,
-                                          UncountableExitStyle Style);
+  static bool handleUncountableEarlyExits(
+      VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
+      VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+      DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
@@ -386,10 +401,14 @@ struct VPlanTransforms {
   /// Perform instcombine-like simplifications on recipes in \p Plan.
   static void simplifyRecipes(VPlan &Plan);
 
+  /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
+  static void simplifyReverses(VPlan &Plan);
+
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors. If \p OnlyLatches is true, only
-  /// process loop latches.
-  static void removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
+  /// process loop latches. Returns true if incoming values from any phi-like
+  /// recipe have been removed.
+  static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);

@@ -1,5 +1,3 @@
-
-find_package(Doxygen)
 if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
   set(abs_top_srcdir ${CMAKE_CURRENT_SOURCE_DIR})
@@ -48,8 +46,7 @@ if (LLVM_ENABLE_DOXYGEN)
     set(bolt_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+  llvm_configure_doxygen()
 
   set(abs_top_srcdir)
   set(abs_top_builddir)
