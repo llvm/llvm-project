@@ -86,6 +86,7 @@ public:
   {
     return __base_;
   }
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
@@ -180,7 +181,7 @@ class adjacent_view<_View, _Np>::__iterator {
   _LIBCPP_HIDE_FROM_ABI explicit constexpr __iterator(_Iter&& __i, index_sequence<_Is...>)
       : __current_{std::move(__i.__current_[_Is])...} {}
 
-  static consteval auto __get_iterator_concept() {
+  [[nodiscard]] static consteval auto __get_iterator_concept() {
     if constexpr (random_access_range<_Base>)
       return random_access_iterator_tag{};
     else if constexpr (bidirectional_range<_Base>)
@@ -206,7 +207,7 @@ public:
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<const _View>>
       : __iterator(std::move(__i), make_index_sequence<_Np>{}) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const {
     return std::__tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
   }
 
@@ -368,15 +369,15 @@ public:
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
   operator-(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__current_.back() - __y.__end_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
-  operator-(const __sentinel& __y, const __iterator<_OtherConst>& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>> 
+  operator-(const __sentinel & __y, const __iterator<_OtherConst>& __x) {
     return __y.__end_ - __x.__current_.back();
   }
 };
