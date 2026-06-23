@@ -4216,19 +4216,34 @@ define <2 x half> @v_fma_mul_add_32_v2f16(<2 x half> %x, <2 x half> %y) {
 }
 
 define amdgpu_ps i32 @s_mul_32_f16(half inreg %x, half inreg %y) {
-; GFX9-LABEL: s_mul_32_f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0x5000
-; GFX9-NEXT:    v_mul_f16_e32 v0, s0, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    ; return to shader part epilog
+; GFX9-SDAG-LABEL: s_mul_32_f16:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0x5000
+; GFX9-SDAG-NEXT:    v_mul_f16_e32 v0, s0, v0
+; GFX9-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: s_mul_32_f16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mul_f16_e64 v0, 0x5000, s0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    ; return to shader part epilog
+; GFX9-GISEL-LABEL: s_mul_32_f16:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0x5000
+; GFX9-GISEL-NEXT:    v_mul_f16_e32 v0, s0, v0
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX10-SDAG-LABEL: s_mul_32_f16:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    v_mul_f16_e64 v0, 0x5000, s0
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX10-GISEL-LABEL: s_mul_32_f16:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    v_mul_f16_e64 v0, 0x5000, s0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_mul_32_f16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -4247,15 +4262,15 @@ define amdgpu_ps i32 @s_mul_32_f16(half inreg %x, half inreg %y) {
 ; GFX11-GISEL-TRUE16-LABEL: s_mul_32_f16:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    v_mul_f16_e64 v0.l, 0x5000, s0
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
 ; GFX11-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX11-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-FAKE16-LABEL: s_mul_32_f16:
 ; GFX11-GISEL-FAKE16:       ; %bb.0:
 ; GFX11-GISEL-FAKE16-NEXT:    v_mul_f16_e64 v0, 0x5000, s0
-; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX11-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %mul = fmul contract half %x, 32.0
   %cast = bitcast half %mul to i16

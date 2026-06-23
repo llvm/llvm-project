@@ -92,8 +92,7 @@ bool LiveVariable::liveAtAddress(object::SectionedAddress Addr) const {
 }
 
 void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
-  DataExtractor Data({LocExpr.Expr.data(), LocExpr.Expr.size()},
-                     Unit->getContext().isLittleEndian(), 0);
+  DataExtractor Data(LocExpr.Expr, Unit->getContext().isLittleEndian());
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
 
   auto GetRegName = [&MRI, &OS](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
@@ -688,7 +687,7 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
     printLines(OS, Address, LineInfo, Delimiter, LEP);
   if (PrintSource)
     printSources(OS, LineInfo, ObjectFilename, Delimiter, LEP);
-  OldLineInfo = LineInfo;
+  OldLineInfo = std::move(LineInfo);
 }
 
 void SourcePrinter::printLines(formatted_raw_ostream &OS,

@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
@@ -18,6 +19,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -59,6 +61,8 @@ class InputInfo;
 class SanitizerArgs;
 class Tool;
 class XRayArgs;
+
+enum LTOKind : int;
 
 /// Helper structure used to pass information extracted from clang executable
 /// name such as `i686-linux-android-g++`.
@@ -107,6 +111,13 @@ public:
     UNW_None,
     UNW_CompilerRT,
     UNW_Libgcc
+  };
+
+  enum CStdlibType {
+    CST_Newlib,
+    CST_Picolibc,
+    CST_LLVMLibC,
+    CST_System,
   };
 
   enum class UnwindTableLevel {
@@ -178,7 +189,12 @@ private:
   Tool *getOffloadPackager() const;
   Tool *getLinkerWrapper() const;
 
+  /// Track if diagnostics have been emitted for sanitizer arguments already to
+  /// avoid duplicate diagnostics.
   mutable bool SanitizerArgsChecked = false;
+
+  /// Set of BoundArch values which have already had diagnostics emitted.
+  mutable llvm::SmallSet<StringRef, 4> BoundArchSanitizerArgsChecked;
 
   /// The effective clang triple for the current Job.
   mutable llvm::Triple EffectiveTriple;
@@ -194,10 +210,27 @@ private:
   mutable std::optional<CXXStdlibType> cxxStdlibType;
   mutable std::optional<RuntimeLibType> runtimeLibType;
   mutable std::optional<UnwindLibType> unwindLibType;
+  mutable std::optional<CStdlibType> cStdlibType;
 
 protected:
   MultilibSet Multilibs;
   llvm::SmallVector<Multilib> SelectedMultilibs;
+  SmallVector<std::string> MultilibMacroDefines;
+
+  using OrderedMultilibs =
+      llvm::iterator_range<llvm::SmallVector<Multilib>::const_reverse_iterator>;
+
+  /// Get selected multilibs in priority order with default fallback.
+  OrderedMultilibs getOrderedMultilibs() const;
+
+  /// Discover and load a multilib.yaml configuration.
+  bool loadMultilibsFromYAML(const llvm::opt::ArgList &Args, const Driver &D,
+                             StringRef Fallback = {});
+
+  /// Load multilib configuration from a YAML file at \p MultilibPath,
+  std::optional<std::string> findMultilibsYAML(const llvm::opt::ArgList &Args,
+                                               const Driver &D,
+                                               StringRef FallbackDir = {});
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
@@ -275,9 +308,7 @@ public:
   /// this toolchain.
   StringRef getDefaultUniversalArchName() const;
 
-  std::string getTripleString() const {
-    return Triple.getTriple();
-  }
+  StringRef getTripleString() const { return Triple.getTriple(); }
 
   /// Get the toolchain's effective clang triple.
   const llvm::Triple &getEffectiveTriple() const {
@@ -316,7 +347,18 @@ public:
   /// -print-multi-flags-experimental argument.
   Multilib::flags_list getMultilibFlags(const llvm::opt::ArgList &) const;
 
-  SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
+  SanitizerArgs getSanitizerArgs(
+      const llvm::opt::ArgList &JobArgs, BoundArch BA = {},
+      Action::OffloadKind DeviceOffloadKind = Action::OFK_None) const;
+
+  /// Returns the feature requirement for a sanitizer on a specific arch for
+  /// diagnostic purposes. Returns the required feature name (e.g., "xnack+") if
+  /// the sanitizer is generally supported but requires a specific feature for
+  /// the given BoundArch, or an empty StringRef otherwise.
+  virtual StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                            BoundArch BA) const {
+    return {};
+  }
 
   const XRayArgs getXRayArgs(const llvm::opt::ArgList &) const;
 
@@ -352,11 +394,11 @@ public:
   /// specific translations are needed. If \p DeviceOffloadKind is specified
   /// the translation specific for that offload kind is performed.
   ///
-  /// \param BoundArch - The bound architecture name, or 0.
+  /// \param BA - The bound architecture.
   /// \param DeviceOffloadKind - The device offload kind used for the
   /// translation.
   virtual llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const {
     return nullptr;
   }
@@ -380,7 +422,7 @@ public:
   /// a null pointer, otherwise return a DerivedArgList containing the
   /// translated arguments.
   virtual llvm::opt::DerivedArgList *
-  TranslateXarchArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateXarchArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                      Action::OffloadKind DeviceOffloadKind,
                      SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const;
 
@@ -422,6 +464,17 @@ public:
   /// HasNativeLTOLinker - Check whether the linker and related tools have
   /// native LLVM support.
   virtual bool HasNativeLLVMSupport() const;
+
+  /// Returns the default LTO mode for this toolchain.
+  virtual LTOKind getDefaultLTOMode() const;
+
+  /// Resolve the requested LTO mode for this toolchain.
+  virtual LTOKind getLTOMode(const llvm::opt::ArgList &Args,
+                             Action::OffloadKind Kind = Action::OFK_None) const;
+
+  /// Returns true if LTO is active for this toolchain given the args.
+  bool isUsingLTO(const llvm::opt::ArgList &Args,
+                  Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.
@@ -538,6 +591,10 @@ public:
   // Returns Triple without the OSs version.
   llvm::Triple getTripleWithoutOSVersion() const;
 
+  /// Returns the target-specific path for Flang's intrinsic modules in the
+  /// resource directory if it exists.
+  std::optional<std::string> getDefaultIntrinsicModuleDir() const;
+
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 
@@ -615,6 +672,10 @@ public:
   // i.e. a value of 'true' does not imply that debugging is wanted.
   virtual bool GetDefaultStandaloneDebug() const { return false; }
 
+  /// Returns true if this toolchain adds '-gsimple-template-names=simple'
+  /// by default when generating debug-info.
+  virtual bool getDefaultDebugSimpleTemplateNames() const { return false; }
+
   // Return the default debugger "tuning."
   virtual llvm::DebuggerKind getDefaultDebuggerTuning() const {
     return llvm::DebuggerKind::GDB;
@@ -655,7 +716,7 @@ public:
   /// ComputeLLVMTriple - Return the LLVM target triple to use, after taking
   /// command line arguments into account.
   virtual std::string
-  ComputeLLVMTriple(const llvm::opt::ArgList &Args,
+  ComputeLLVMTriple(const llvm::opt::ArgList &Args, BoundArch BA = {},
                     types::ID InputType = types::TY_INVALID) const;
 
   /// ComputeEffectiveClangTriple - Return the Clang triple to use for this
@@ -663,9 +724,9 @@ public:
   /// example, on Darwin the -mmacos-version-min= command line argument (which
   /// sets the deployment target) determines the version in the triple passed to
   /// Clang.
-  virtual std::string ComputeEffectiveClangTriple(
-      const llvm::opt::ArgList &Args,
-      types::ID InputType = types::TY_INVALID) const;
+  virtual std::string
+  ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args, BoundArch BA = {},
+                              types::ID InputType = types::TY_INVALID) const;
 
   /// getDefaultObjCRuntime - Return the default Objective-C runtime
   /// for this platform.
@@ -693,9 +754,10 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add options that need to be passed to cc1 for this target.
-  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args,
-                                     Action::OffloadKind DeviceOffloadKind) const;
+  virtual void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const;
 
   /// Add options that need to be passed to cc1as for this target.
   virtual void
@@ -705,12 +767,12 @@ public:
   /// Add warning options that need to be passed to cc1 for this target.
   virtual void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const;
 
-  // Get the list of extra macro defines requested by the multilib
-  // configuration.
-  virtual SmallVector<std::string>
+  /// Get the list of extra macro defines requested by the multilib
+  /// configuration.
+  SmallVector<std::string>
   getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const {
-    return {};
-  };
+    return MultilibMacroDefines;
+  }
 
   // GetRuntimeLibType - Determine the runtime library type to use with the
   // given compilation arguments.
@@ -724,6 +786,11 @@ public:
   // GetUnwindLibType - Determine the unwind library type to use with the
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
+
+  // Determine the C standard library to use with the given
+  // compilation arguments. Defaults to CST_System when no --cstdlib= flag
+  // is provided.
+  virtual CStdlibType GetCStdlibType(const llvm::opt::ArgList &Args) const;
 
   // Detect the highest available version of libc++ in include path.
   virtual std::string detectLibcxxVersion(StringRef IncludePath) const;
@@ -749,8 +816,8 @@ public:
                                    llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddFilePathLibArgs - Add each thing in getFilePaths() as a "-L" option.
-  void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs) const;
+  virtual void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddCCKextLibArgs - Add the system specific linker arguments to use
   /// for kernel extensions (Darwin-specific).
@@ -802,16 +869,18 @@ public:
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args,
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
                 const Action::OffloadKind DeviceOffloadingKind) const;
 
-  /// Add the system specific linker arguments to use
-  /// for the given HIP runtime library type.
-  virtual void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
-                                    llvm::opt::ArgStringList &CmdArgs) const {}
+  /// Add the system specific libraries for the active offload kinds.
+  virtual void addOffloadRTLibs(unsigned ActiveKinds,
+                                const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Return sanitizers which are available in this toolchain.
-  virtual SanitizerMask getSupportedSanitizers() const;
+  virtual SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const;
 
   /// Return sanitizers which are enabled by default.
   virtual SanitizerMask getDefaultSanitizers() const {
@@ -833,17 +902,27 @@ public:
 
   // We want to expand the shortened versions of the triples passed in to
   // the values used for the bitcode libraries.
-  static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
-    llvm::Triple TT(TripleStr);
-    if (TT.getVendor() == llvm::Triple::UnknownVendor ||
-        TT.getOS() == llvm::Triple::UnknownOS) {
-      if (TT.getArch() == llvm::Triple::nvptx)
-        return llvm::Triple("nvptx-nvidia-cuda");
-      if (TT.getArch() == llvm::Triple::nvptx64)
-        return llvm::Triple("nvptx64-nvidia-cuda");
-      if (TT.isAMDGCN())
-        return llvm::Triple("amdgcn-amd-amdhsa");
+  static void normalizeOffloadTriple(llvm::Triple &TT) {
+    if (TT.isNVPTX()) {
+      if (TT.getVendor() == llvm::Triple::UnknownVendor)
+        TT.setVendor(llvm::Triple::NVIDIA);
+      if (TT.getOS() == llvm::Triple::UnknownOS)
+        TT.setOS(llvm::Triple::CUDA);
+      return;
     }
+
+    if (TT.isAMDGPU()) {
+      if (TT.getVendor() == llvm::Triple::UnknownVendor)
+        TT.setVendor(llvm::Triple::AMD);
+      if (TT.getOS() == llvm::Triple::UnknownOS)
+        TT.setOS(llvm::Triple::AMDHSA);
+      return;
+    }
+  }
+
+  static llvm::Triple normalizeOffloadTriple(llvm::StringRef OrigTT) {
+    llvm::Triple TT(OrigTT);
+    normalizeOffloadTriple(TT);
     return TT;
   }
 };

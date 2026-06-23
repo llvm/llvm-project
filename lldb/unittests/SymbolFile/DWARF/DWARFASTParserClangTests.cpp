@@ -11,6 +11,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -21,11 +22,10 @@ using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
 
 namespace {
-static std::once_flag debugger_initialize_flag;
 
 class DWARFASTParserClangTests : public testing::Test {
   void SetUp() override {
-    std::call_once(debugger_initialize_flag,
+    std::call_once(TestUtilities::g_debugger_initialize_flag,
                    []() { Debugger::Initialize(nullptr); });
   }
 };
@@ -307,7 +307,7 @@ DWARF:
     lldb::TypeSP type =
         tester.GetParser().ParseTypeFromDWARF(sc, func, &new_type);
     found_function_types.push_back(
-        type->GetForwardCompilerType().GetTypeName().AsCString());
+        type->GetForwardCompilerType().GetTypeName().GetString());
   }
 
   // Compare the parsed function types against the expected list of types.

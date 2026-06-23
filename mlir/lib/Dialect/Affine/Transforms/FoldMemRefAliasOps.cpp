@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -24,7 +24,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINEFOLDMEMREFALIASOPS
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -128,7 +128,8 @@ struct AffineLoadOpOfCollapseShapeOpFolder final
 
     SmallVector<Value> sourceIndices;
     memref::resolveSourceIndicesCollapseShape(
-        loadOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices);
+        loadOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices,
+        /*startsInbounds=*/true);
 
     rewriter.replaceOpWithNewOp<AffineLoadOp>(
         loadOp, collapseShapeOp.getViewSource(), sourceIndices);
@@ -212,7 +213,8 @@ struct AffineStoreOpOfCollapseShapeOpFolder final
 
     SmallVector<Value> sourceIndices;
     memref::resolveSourceIndicesCollapseShape(
-        storeOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices);
+        storeOp.getLoc(), rewriter, collapseShapeOp, indices, sourceIndices,
+        /*startsInbounds=*/true);
 
     rewriter.replaceOpWithNewOp<AffineStoreOp>(
         storeOp, storeOp.getValueToStore(), collapseShapeOp.getViewSource(),

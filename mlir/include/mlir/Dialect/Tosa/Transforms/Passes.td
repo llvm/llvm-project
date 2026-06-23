@@ -42,6 +42,16 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
     "tensor::TensorDialect",
     "tosa::TosaDialect",
   ];
+
+  let options = [
+    Option<"foldShapeExpressions", "fold-shape-expressions", "bool",
+           /*default=*/"false",
+           "Fold TOSA shape operations when they have known input values">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           /*default=*/"false",
+           "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
+           "be inserted at the I/O boundaries.">
+  ];
 }
 
 def TosaMakeBroadcastablePass
@@ -175,6 +185,17 @@ def TosaAttachTarget : Pass<"tosa-attach-target", "ModuleOp"> {
   ];
 }
 
+def TosaDowngrade1p1To1p0Pass
+    : Pass<"tosa-downgrade-1-1-to-1-0", "func::FuncOp"> {
+  let summary = "Downgrade TOSA 1.1 specification constructs to TOSA 1.0";
+  let description = [{
+    Rewrites constructs which are only compatible in TOSA specification 1.1 and
+    above to their TOSA 1.0 counterparts where possible. Downgrading is best-effort
+    and validation should be performed afterwards to ensure compatibility with
+    the TOSA 1.0 specification.
+  }];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
@@ -220,6 +241,25 @@ def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
   let dependentDialects = [
     "func::FuncDialect",
     "tosa::TosaDialect",
+  ];
+}
+
+def TosaInputShape : Pass<"tosa-experimental-input-shape", "func::FuncOp"> {
+  let summary = "Override dynamic function arguments to specified static shapes.";
+  let description = [{
+    Pass that overrides the dynamic input shapes of function arguments to
+    specified static shapes. If a specified static shape conflicts with the
+    static dimensions in an original input shape, an error is reported.
+  }];
+
+  let constructor = "tosa::createTosaInputShapePass()";
+  let dependentDialects = [
+    "tensor::TensorDialect"
+  ];
+  let options = [
+    ListOption<"args", "args", "std::string",
+          "Comma-separated list of shape descriptions. Each description contains the "
+          "argument name, a colon, and a shape with dimensions separated by x ">
   ];
 }
 

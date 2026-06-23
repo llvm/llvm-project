@@ -46,6 +46,7 @@ static const unsigned ZOSAddressMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_output
     0, // hlsl_push_constant
     0  // wasm_funcref
 };
@@ -184,7 +185,7 @@ public:
     fillValidCPUList(Values);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }

@@ -1,26 +1,23 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO(#60133): Requires updates following opaque pointer migration.
-; XFAIL: *
-
 ;; Check 'LLVM ==> SPIR-V' conversion of extractvalue/insertvalue.
 
 %struct.arr = type { [7 x float] }
 %struct.st = type { %struct.inner }
 %struct.inner = type { float }
 
-; CHECK-SPIRV:     %[[#float_ty:]] = OpTypeFloat 32
-; CHECK-SPIRV:     %[[#int_ty:]] = OpTypeInt 32
-; CHECK-SPIRV:     %[[#arr_size:]] = OpConstant %[[#int_ty]] 7
-; CHECK-SPIRV:     %[[#array_ty:]] = OpTypeArray %[[#float_ty]] %[[#arr_size]]
-; CHECK-SPIRV:     %[[#struct_ty:]] = OpTypeStruct %[[#array_ty]]
-; CHECK-SPIRV:     %[[#struct_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#struct_ty]]
-; CHECK-SPIRV:     %[[#array_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#array_ty]]
-; CHECK-SPIRV:     %[[#struct1_in_ty:]] = OpTypeStruct %[[#float_ty]]
-; CHECK-SPIRV:     %[[#struct1_ty:]] = OpTypeStruct %[[#struct1_in_ty]]
-; CHECK-SPIRV:     %[[#struct1_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#struct1_ty]]
-; CHECK-SPIRV:     %[[#struct1_in_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#struct1_in_ty]]
+; CHECK-SPIRV-DAG: %[[#int_ty:]] = OpTypeInt 32
+; CHECK-SPIRV-DAG: %[[#float_ty:]] = OpTypeFloat 32
+; CHECK-SPIRV-DAG: %[[#arr_size:]] = OpConstant %[[#int_ty]] 7
+; CHECK-SPIRV-DAG: %[[#array_ty:]] = OpTypeArray %[[#float_ty]] %[[#arr_size]]
+; CHECK-SPIRV-DAG: %[[#struct_ty:]] = OpTypeStruct %[[#array_ty]]
+; CHECK-SPIRV-DAG: %[[#struct_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#struct_ty]]
+; CHECK-SPIRV-DAG: %[[#array_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#array_ty]]
+; CHECK-SPIRV-DAG: %[[#struct1_in_ty:]] = OpTypeStruct %[[#float_ty]]
+; CHECK-SPIRV-DAG: %[[#struct1_ty:]] = OpTypeStruct %[[#struct1_in_ty]]
+; CHECK-SPIRV-DAG: %[[#struct1_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#struct1_ty]]
+; CHECK-SPIRV-DAG: %[[#struct1_in_ptr_ty:]] = OpTypePointer CrossWorkgroup %[[#struct1_in_ty]]
 ; CHECK-SPIRV-NOT: OpConstant %{{.*}} 2
 ; CHECK-SPIRV-NOT: OpConstant %{{.*}} 4
 ; CHECK-SPIRV-NOT: OpConstant %{{.*}} 5
@@ -36,15 +33,15 @@
 ; CHECK-SPIRV:        OpStore %[[#store_ptr]] %[[#inserted_array]]
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
-define spir_func void @array_test(%struct.arr addrspace(1)* %object) {
+define spir_func void @array_test(ptr addrspace(1) %object) {
 entry:
-  %0 = getelementptr inbounds %struct.arr, %struct.arr addrspace(1)* %object, i32 0, i32 0
-  %1 = load [7 x float], [7 x float] addrspace(1)* %0, align 4
+  %0 = getelementptr inbounds %struct.arr, ptr addrspace(1) %object, i32 0, i32 0
+  %1 = load [7 x float], ptr addrspace(1) %0, align 4
   %2 = extractvalue [7 x float] %1, 4
   %3 = extractvalue [7 x float] %1, 2
   %4 = fadd float %2, %3
   %5 = insertvalue [7 x float] %1, float %4, 5
-  store [7 x float] %5, [7 x float] addrspace(1)* %0
+  store [7 x float] %5, ptr addrspace(1) %0
   ret void
 }
 
@@ -55,16 +52,18 @@ entry:
 ; CHECK-SPIRV:        %[[#elem:]] = OpCompositeExtract %[[#float_ty]] %[[#extracted_struct]] 0
 ; CHECK-SPIRV:        %[[#add:]] = OpFAdd %[[#float_ty]] %[[#elem]] %[[#]]
 ; CHECK-SPIRV:        %[[#inserted_struct:]] = OpCompositeInsert %[[#struct1_in_ty]] %[[#add]] %[[#extracted_struct]] 0
-; CHECK-SPIRV:        OpStore %[[#store1_ptr]] %[[#inserted_struct]]
+; CHECK-SPIRV:        %[[#bitcast1:]] = OpBitcast %[[#]] %[[#store1_ptr]]
+; CHECK-SPIRV:        %[[#store1_dst:]] = OpBitcast %[[#struct1_in_ptr_ty]] %[[#bitcast1]]
+; CHECK-SPIRV:        OpStore %[[#store1_dst]] %[[#inserted_struct]] Aligned 4
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
-define spir_func void @struct_test(%struct.st addrspace(1)* %object) {
+define spir_func void @struct_test(ptr addrspace(1) %object) {
 entry:
-  %0 = getelementptr inbounds %struct.st, %struct.st addrspace(1)* %object, i32 0, i32 0
-  %1 = load %struct.inner, %struct.inner addrspace(1)* %0, align 4
+  %0 = getelementptr inbounds %struct.st, ptr addrspace(1) %object, i32 0, i32 0
+  %1 = load %struct.inner, ptr addrspace(1) %0, align 4
   %2 = extractvalue %struct.inner %1, 0
   %3 = fadd float %2, 1.000000e+00
   %4 = insertvalue %struct.inner %1, float %3, 0
-  store %struct.inner %4, %struct.inner addrspace(1)* %0
+  store %struct.inner %4, ptr addrspace(1) %0
   ret void
 }

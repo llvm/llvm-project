@@ -32,6 +32,7 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -133,7 +134,8 @@ CompilerInvocationBase::CompilerInvocationBase()
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
       DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
-      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()),
+      SSAFOpts(std::make_shared<ssaf::SSAFOptions>()) {}
 
 CompilerInvocationBase &
 CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
@@ -151,6 +153,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
     DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
     PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
+    SSAFOpts = make_shared_copy(X.getSSAFOpts());
   }
   return *this;
 }
@@ -171,6 +174,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+    SSAFOpts = X.SSAFOpts;
   }
   return *this;
 }
@@ -235,6 +239,10 @@ FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
 
 FrontendOptions &CowCompilerInvocation::getMutFrontendOpts() {
   return ensureOwned(FrontendOpts);
+}
+
+ssaf::SSAFOptions &CowCompilerInvocation::getMutSSAFOpts() {
+  return ensureOwned(SSAFOpts);
 }
 
 DependencyOutputOptions &CowCompilerInvocation::getMutDependencyOutputOpts() {
@@ -515,7 +523,8 @@ static T mergeForwardValue(T KeyPath, U Value) {
   return static_cast<T>(Value);
 }
 
-template <typename T, typename U> static T mergeMaskValue(T KeyPath, U Value) {
+template <typename T, typename U>
+[[maybe_unused]] static T mergeMaskValue(T KeyPath, U Value) {
   return KeyPath | Value;
 }
 
@@ -524,7 +533,7 @@ template <typename T> static T extractForwardValue(T KeyPath) {
 }
 
 template <typename T, typename U, U Value>
-static T extractMaskValue(T KeyPath) {
+[[maybe_unused]] static T extractMaskValue(T KeyPath) {
   return ((KeyPath & Value) == Value) ? static_cast<T>(Value) : T();
 }
 
@@ -622,6 +631,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  if (Args.hasArg(OPT_freflection) && !LangOpts.CPlusPlus26) {
+    Diags.Report(diag::err_drv_reflection_requires_cxx26)
+        << Args.getLastArg(options::OPT_freflection)->getAsString(Args);
+  }
+
   LangOpts.NamedLoops =
       Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
 
@@ -629,6 +643,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
                                                           << "-fsycl-is-host";
+
+  // SYCL requires C++; reject C inputs on both device and host.
+  if ((LangOpts.SYCLIsDevice || LangOpts.SYCLIsHost) && !LangOpts.CPlusPlus)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << GetInputKindName(IK) << "-fsycl";
 
   if (Args.hasArg(OPT_fgnu89_inline) && LangOpts.CPlusPlus)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
@@ -653,6 +672,18 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (Args.hasArg(OPT_gpu_max_threads_per_block_EQ) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
+
+  // HLSL invocations should always have -Wconversion, -Wvector-conversion, and
+  // -Wmatrix-conversion by default.
+  if (LangOpts.HLSL) {
+    auto &Warnings = Invocation.getDiagnosticOpts().Warnings;
+    if (!llvm::is_contained(Warnings, "conversion"))
+      Warnings.insert(Warnings.begin(), "conversion");
+    if (!llvm::is_contained(Warnings, "vector-conversion"))
+      Warnings.insert(Warnings.begin(), "vector-conversion");
+    if (!llvm::is_contained(Warnings, "matrix-conversion"))
+      Warnings.insert(Warnings.begin(), "matrix-conversion");
+  }
 
   // When these options are used, the compiler is allowed to apply
   // optimizations that may affect the final result. For example
@@ -1009,6 +1040,30 @@ static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
   }
 
   // Nothing to generate for FullCompilerInvocation.
+}
+
+static void GenerateSSAFArgs(const ssaf::SSAFOptions &Opts,
+                             ArgumentConsumer Consumer) {
+  const ssaf::SSAFOptions *SSAFOpts = &Opts;
+
+#define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
+#include "clang/Options/Options.inc"
+#undef SSAF_OPTION_WITH_MARSHALLING
+}
+
+static bool ParseSSAFArgs(ssaf::SSAFOptions &Opts, ArgList &Args,
+                          DiagnosticsEngine &Diags) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
+  ssaf::SSAFOptions *SSAFOpts = &Opts;
+
+#define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Options/Options.inc"
+#undef SSAF_OPTION_WITH_MARSHALLING
+
+  return Diags.getNumErrors() == NumErrorsBefore;
 }
 
 static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
@@ -2244,7 +2299,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (UsingSampleProfile)
     NeedLocTracking = true;
 
-  if (!Opts.StackUsageOutput.empty())
+  if (!Opts.StackUsageFile.empty())
     NeedLocTracking = true;
 
   // If the user requested a flag that requires source locations available in
@@ -2303,6 +2358,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
 
   Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
+
+  if (!Opts.HLSLRecordCommandLine.empty()) {
+    auto ParsedArgs =
+        clang::parseEscapedCommandLine(Opts.HLSLRecordCommandLine.c_str());
+    if (!ParsedArgs)
+      Diags.Report(diag::err_drv_invalid_escaped_command_line)
+          << llvm::toString(ParsedArgs.takeError());
+    else
+      Opts.HLSLParsedCommandLine = std::move(*ParsedArgs);
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -2540,6 +2605,10 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     if (Prefix != "expected")
       GenerateArg(Consumer, OPT_verify_EQ, Prefix);
 
+  if (Opts.VerifyDirectives) {
+    GenerateArg(Consumer, OPT_verify_directives);
+  }
+
   DiagnosticLevelMask VIU = Opts.getVerifyIgnoreUnexpected();
   if (VIU == DiagnosticLevelMask::None) {
     // This is the default, don't generate anything.
@@ -2638,6 +2707,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
+  Opts.VerifyDirectives = Args.hasArg(OPT_verify_directives);
   Opts.VerifyPrefixes = Args.getAllArgValues(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
@@ -3269,6 +3339,12 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   Opts.DashX = DashX;
 
+  // CIR is a source-level frontend pipeline. When the input is already LLVM IR
+  // (e.g. during the backend phase of OpenMP offloading), the standard LLVM
+  // backend should be used instead.
+  if (Opts.UseClangIRPipeline && DashX.getLanguage() == Language::LLVM_IR)
+    Opts.UseClangIRPipeline = false;
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -3693,6 +3769,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+    for (StringRef Sanitizer :
+         serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+      GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ,
+                  Sanitizer);
 
     return;
   }
@@ -3765,7 +3845,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_ftrapv);
     GenerateArg(Consumer, OPT_ftrapv_handler, Opts.OverflowHandler);
   } else if (Opts.SignedOverflowBehavior == LangOptions::SOB_Defined) {
-    GenerateArg(Consumer, OPT_fwrapv);
+    if (!Opts.MSVCCompat)
+      GenerateArg(Consumer, OPT_fwrapv);
+  } else if (Opts.MSVCCompat) {
+    GenerateArg(Consumer, OPT_fno_wrapv);
   }
   if (Opts.PointerOverflowDefined)
     GenerateArg(Consumer, OPT_fwrapv_pointer);
@@ -3859,10 +3942,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fopenmp_cuda_blocks_per_sm_EQ,
                 Twine(Opts.OpenMPCUDABlocksPerSM));
 
-  if (Opts.OpenMPCUDAReductionBufNum != 1024)
-    GenerateArg(Consumer, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-                Twine(Opts.OpenMPCUDAReductionBufNum));
-
   if (!Opts.OMPTargetTriples.empty()) {
     std::string Targets;
     llvm::raw_string_ostream OS(Targets);
@@ -3892,6 +3971,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
     GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+    GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ, Sanitizer);
 
   // Conflating '-fsanitize-system-ignorelist' and '-fsanitize-ignorelist'.
   for (const std::string &F : Opts.NoSanitizeFiles)
@@ -3982,6 +4064,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
+    parseSanitizerKinds(
+        "-fsanitize-ignore-for-ubsan-feature=",
+        Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+        Opts.UBSanFeatureIgnoredSanitize);
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4041,6 +4127,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             .Cases({"cl1.2", "CL1.2"}, LangStandard::lang_opencl12)
             .Cases({"cl2.0", "CL2.0"}, LangStandard::lang_opencl20)
             .Cases({"cl3.0", "CL3.0"}, LangStandard::lang_opencl30)
+            .Cases({"cl3.1", "CL3.1"}, LangStandard::lang_opencl31)
             .Cases({"clc++", "CLC++"}, LangStandard::lang_openclcpp10)
             .Cases({"clc++1.0", "CLC++1.0"}, LangStandard::lang_openclcpp10)
             .Cases({"clc++2021", "CLC++2021"}, LangStandard::lang_openclcpp2021)
@@ -4173,9 +4260,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // Set the handler, if one is specified.
     Opts.OverflowHandler =
         std::string(Args.getLastArgValue(OPT_ftrapv_handler));
-  }
-  else if (Args.hasArg(OPT_fwrapv))
+  } else if (Args.hasFlag(OPT_fwrapv, OPT_fno_wrapv, Opts.MSVCCompat)) {
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
+  }
   if (Args.hasArg(OPT_fwrapv_pointer))
     Opts.PointerOverflowDefined = true;
 
@@ -4300,9 +4387,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.OpenMPCUDABlocksPerSM =
         getLastArgIntValue(Args, options::OPT_fopenmp_cuda_blocks_per_sm_EQ,
                            Opts.OpenMPCUDABlocksPerSM, Diags);
-    Opts.OpenMPCUDAReductionBufNum = getLastArgIntValue(
-        Args, options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-        Opts.OpenMPCUDAReductionBufNum, Diags);
   }
 
   // Set the value of the debugging flag used in the new offloading device RTL.
@@ -4399,6 +4483,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
+  parseSanitizerKinds(
+      "-fsanitize-ignore-for-ubsan-feature=",
+      Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+      Opts.UBSanFeatureIgnoredSanitize);
   Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_ignorelist_EQ);
   std::vector<std::string> systemIgnorelists =
       Args.getAllArgValues(OPT_fsanitize_system_ignorelist_EQ);
@@ -5027,6 +5115,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
+  ParseSSAFArgs(Res.getSSAFOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
@@ -5073,6 +5162,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+
+  // Set the default and host triples for SYCL device compilation.
+  if (LangOpts.SYCLIsDevice) {
+    if (!Args.hasArg(options::OPT_triple))
+      Res.getTargetOpts().Triple = "spirv64-unknown-unknown";
+    Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+  }
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);
@@ -5141,7 +5237,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
       Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
-std::string CompilerInvocation::getModuleHash() const {
+std::string CompilerInvocation::computeContextHash() const {
   // FIXME: Consider using SHA1 instead of MD5.
   llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 
@@ -5372,6 +5468,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
   GenerateMigratorArgs(getMigratorOpts(), Consumer);
   GenerateAnalyzerArgs(getAnalyzerOpts(), Consumer);
+  GenerateSSAFArgs(getSSAFOpts(), Consumer);
   GenerateDiagnosticArgs(getDiagnosticOpts(), Consumer,
                          /*DefaultDiagColor=*/false);
   GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);

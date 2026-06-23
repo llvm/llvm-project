@@ -37,6 +37,7 @@
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -193,7 +194,9 @@ public:
     /// Keeps track of other functions we depend on because there is a reference
     /// to the constant islands in them.
     IslandProxiesType Proxies, ColdProxies;
-    SmallPtrSet<BinaryFunction *, 1> Dependency; // The other way around
+    SetVector<BinaryFunction *, SmallVector<BinaryFunction *, 1>,
+              SmallPtrSet<BinaryFunction *, 1>>
+        Dependency; // The other way around
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
@@ -400,7 +403,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -682,7 +686,8 @@ private:
   ///
   /// Prefer to use BinaryContext::getFunctionForSymbol(EntrySymbol, &ID)
   /// instead of calling this function directly.
-  uint64_t getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
+  std::optional<uint64_t>
+  getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
 
   /// If the function represents a secondary split function fragment, set its
   /// parent fragment to \p BF.
@@ -770,6 +775,9 @@ private:
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
+
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
 
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.

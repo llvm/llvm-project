@@ -663,7 +663,7 @@ void Writer::treatSpecialUndefineds() {
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const lld::macho::Reloc &r) {
+                                    const Relocation &r) {
   if (!sym->isLive()) {
     if (Defined *defined = dyn_cast<Defined>(sym)) {
       if (config->emitInitOffsets &&
@@ -707,7 +707,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      lld::macho::Reloc &r = *it;
+      Relocation &r = *it;
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
@@ -1007,12 +1007,16 @@ static void sortSegmentsAndSections() {
         osec->align = tlvAlign;
       }
 
-      if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(
-              merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
-              });
+      if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
+        auto coldIt = std::stable_partition(
+            merged->inputs.begin(), merged->inputs.end(),
+            [](InputSection *isec) { return !isec->isCold; });
+        if (!isecPriorities.empty()) {
+          std::stable_sort(merged->inputs.begin(), coldIt,
+                           [&](InputSection *a, InputSection *b) {
+                             return isecPriorities.lookup(a) <
+                                    isecPriorities.lookup(b);
+                           });
         }
       }
     }

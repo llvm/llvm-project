@@ -444,9 +444,7 @@ public:
       if (!Op.IsConst)
         ActiveMLocs[Op.Loc].insert(VarID);
     auto NewValue = ResolvedDbgValue{ResolvedDbgOps, Value.Properties};
-    auto Result = ActiveVLocs.insert(std::make_pair(VarID, NewValue));
-    if (!Result.second)
-      Result.first->second = NewValue;
+    ActiveVLocs.insert_or_assign(VarID, std::move(NewValue));
   }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
@@ -985,7 +983,6 @@ public:
 //===----------------------------------------------------------------------===//
 
 ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
-ValueIDNum ValueIDNum::TombstoneValue = {UINT_MAX, UINT_MAX, UINT_MAX - 1};
 
 #ifndef NDEBUG
 void ResolvedDbgOp::dump(const MLocTracker *MTrack) const {

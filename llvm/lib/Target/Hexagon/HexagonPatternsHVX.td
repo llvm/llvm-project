@@ -456,6 +456,13 @@ let Predicates = [UseHVX] in {
               (VShuff (V6_vmpyhus_acc (VDeal $Vx, -4),
                                       HVI16:$Vs, HVI16:$Vt), -4)>;
   }
+
+  def : Pat<(VecI32 (partial_reduce_umla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpyubv_acc $Acc, $A, $B)>;
+  def : Pat<(VecI32 (partial_reduce_smla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpybv_acc $Acc, $A, $B)>;
+  def : Pat<(VecI32 (partial_reduce_sumla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpybusv_acc $Acc, $B, $A)>;
 }
 
 let Predicates = [UseHVX] in {
@@ -735,6 +742,9 @@ let Predicates = [UseHVX] in {
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
   def: Pat<(VecQ32 (trunc HVI32:$Vs)),
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
+  def: Pat<(VecQ8 (trunc HWI16:$Vss)),
+           (Combineq(VecQ16(V6_vandvrt (HiVec $Vss), (ToI32 0x01010101))),
+           (VecQ16 (V6_vandvrt (LoVec $Vss), (ToI32 0x01010101))))>;
   def: Pat<(VecQ16 (trunc HWI32:$Vss)),
            (Combineq(VecQ32(V6_vandvrt (HiVec $Vss), (ToI32 0x01010101))),
            (VecQ32 (V6_vandvrt (LoVec $Vss), (ToI32 0x01010101))))>;

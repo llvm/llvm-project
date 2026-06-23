@@ -44,6 +44,7 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   //     %6 = add i32 %3, 6
   //     %7 = add i32 %2, %4
   //     %8 = sub i32 %2, %4
+  //     ret void
   Argument *FirstArg = &*(F->arg_begin());
   BasicBlock *IfBB = BasicBlock::Create(C, "if", F);
   BasicBlock *TrueBB = BasicBlock::Create(C, "true", F);
@@ -68,6 +69,7 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   auto *I2 = cast<Instruction>(B.CreateAdd(AddOp2, ConstantInt::get(I32Ty, 6)));
   auto *I3 = cast<Instruction>(B.CreateAdd(SubOp1, SubOp2));
   auto *I4 = cast<Instruction>(B.CreateSub(SubOp1, SubOp2));
+  B.CreateRetVoid();
 
   // Now rewrite uses in instructions %5, %6, %7. They need to use a phi, which
   // SSAUpdater should insert into %merge.

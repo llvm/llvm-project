@@ -71,8 +71,8 @@ struct CIRRecordLowering final {
   void setBitFieldInfo(const FieldDecl *fd, CharUnits startOffset,
                        mlir::Type storageType);
 
-  void lower(bool NonVirtualBaseType);
-  void lowerUnion();
+  void lower(bool nonVirtualBaseType);
+  void lowerUnion(bool nonVirtualBaseType);
 
   /// Determines if we need a packed llvm struct.
   void determinePacked(bool nvBaseType);
@@ -196,9 +196,15 @@ struct CIRRecordLowering final {
   void fillOutputFields();
 
   void appendPaddingBytes(CharUnits size) {
-    if (!size.isZero()) {
-      fieldTypes.push_back(getByteArrayType(size));
-      padded = true;
+    if (size.isZero())
+      return;
+    mlir::Type padTy = getByteArrayType(size);
+    padded = true;
+    if (recordDecl->isUnion()) {
+      assert(!unionPadding && "at most one union tail-padding type");
+      unionPadding = padTy;
+    } else {
+      fieldTypes.push_back(padTy);
     }
   }
 
@@ -212,6 +218,7 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  mlir::Type unionPadding;
   llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
@@ -273,7 +280,7 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   if (recordDecl->isUnion()) {
-    lowerUnion();
+    lowerUnion(nonVirtualBaseType);
     computeVolatileBitfields();
     return;
   }
@@ -571,14 +578,20 @@ void CIRRecordLowering::accumulateFields() {
       field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (!field->isZeroSize(astContext)) {
-      members.push_back(MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
-                                   MemberInfo::InfoKind::Field,
-                                   getStorageType(*field), *field));
-      ++field;
-    } else {
+    } else if (isEmptyFieldForLayout(astContext, *field)) {
       // TODO(cir): do we want to do anything special about zero size members?
       assert(!cir::MissingFeatures::zeroSizeRecordMembers());
+      ++field;
+    } else {
+      // Use base subobject layout for potentially-overlapping fields,
+      // as it is done in RecordLayoutBuilder.
+      members.push_back(MemberInfo(
+          bitsToCharUnits(getFieldBitOffset(*field)),
+          MemberInfo::InfoKind::Field,
+          field->isPotentiallyOverlapping()
+              ? getStorageType(field->getType()->getAsCXXRecordDecl())
+              : getStorageType(*field),
+          *field));
       ++field;
     }
   }
@@ -660,21 +673,47 @@ void CIRRecordLowering::insertPadding() {
   llvm::stable_sort(members);
 }
 
+static cir::ArgPassingKind
+convertRecordArgPassingKind(RecordArgPassingKind kind) {
+  switch (kind) {
+  case RecordArgPassingKind::CanPassInRegs:
+    return cir::ArgPassingKind::CanPassInRegs;
+  case RecordArgPassingKind::CannotPassInRegs:
+    return cir::ArgPassingKind::CannotPassInRegs;
+  case RecordArgPassingKind::CanNeverPassInRegs:
+    return cir::ArgPassingKind::CanNeverPassInRegs;
+  }
+  llvm_unreachable("unknown RecordArgPassingKind");
+}
+
 std::unique_ptr<CIRGenRecordLayout>
 CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   CIRRecordLowering lowering(*this, rd, /*packed=*/false);
   assert(ty->isIncomplete() && "recomputing record layout?");
   lowering.lower(/*nonVirtualBaseType=*/false);
 
-  // If we're in C++, compute the base subobject type.
+  // If we're in C++, compute the base subobject type. For C++ records baseTy
+  // defaults to the complete object type and is replaced by a distinct,
+  // smaller record only when the record has tail padding an enclosing
+  // [[no_unique_address]] field can reuse. We must populate baseTy even when
+  // it equals ty because callers such as getStorageType(const CXXRecordDecl *)
+  // read it unconditionally when laying out potentially-overlapping
+  // ([[no_unique_address]]) fields; a null baseTy would otherwise propagate as
+  // a null mlir::Type into the members vector and trip the !empty() assertion
+  // in fillOutputFields.
   cir::RecordType baseTy;
-  if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
-      !rd->hasAttr<FinalAttr>()) {
+  if (llvm::isa<CXXRecordDecl>(rd)) {
     baseTy = *ty;
+    // A record needs a distinct base-subobject type when its tail padding can
+    // be reused by an enclosing [[no_unique_address]] field, i.e. when the
+    // non-virtual size differs from the complete size.  This matches classic
+    // CodeGen and covers unions too: a union's non-virtual size already tracks
+    // its reusable tail padding (and stays at the minimum union size when the
+    // union is empty, so a zero-data union does not spuriously qualify).
     if (lowering.astRecordLayout.getNonVirtualSize() !=
         lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
-      baseLowering.lower(/*NonVirtualBaseType=*/true);
+      baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
           baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
@@ -682,8 +721,12 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
-      // on both of them with the same index.
-      assert(lowering.packed == baseLowering.packed &&
+      // on both of them with the same index.  Unions are exempt: CIR derives a
+      // union's packedness from its layout size, which is the data size for the
+      // base subobject but the full size for the complete object, so the two
+      // can legitimately disagree.  (Classic CodeGen derives both from the data
+      // size and so needs no such exemption.)
+      assert((rd->isUnion() || lowering.packed == baseLowering.packed) &&
              "Non-virtual and complete types must agree on packedness");
     }
   }
@@ -692,7 +735,25 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
+  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded,
+               lowering.unionPadding);
+
+  // Queue ABI metadata for the module-level cir.record_layouts attribute.
+  if (ty->getName()) {
+    mlir::MLIRContext *mlirCtx = ty->getContext();
+    cir::ArgPassingKind apk =
+        convertRecordArgPassingKind(rd->getArgPassingRestrictions());
+
+    bool hasTrivialDestructor = true;
+    if (auto *cxxRD = dyn_cast<CXXRecordDecl>(rd))
+      hasTrivialDestructor = cxxRD->hasTrivialDestructor();
+    const auto &astLayout = astContext.getASTRecordLayout(rd);
+    uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
+
+    cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
+                                           mlirCtx, apk, hasTrivialDestructor,
+                                           recordAlignInBytes));
+  }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(
       ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
@@ -757,8 +818,13 @@ void CIRGenRecordLayout::dump() const { print(llvm::errs()); }
 
 void CIRGenBitFieldInfo::dump() const { print(llvm::errs()); }
 
-void CIRRecordLowering::lowerUnion() {
-  CharUnits layoutSize = astRecordLayout.getSize();
+void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
+  // The base-subobject layout of a union is sized to its data size rather than
+  // its full size.  A union can have reusable tail padding when one of its
+  // members is a [[no_unique_address]] field that itself has tail padding, so
+  // an enclosing [[no_unique_address]] union field must use this smaller type.
+  CharUnits layoutSize = nonVirtualBaseType ? astRecordLayout.getDataSize()
+                                            : astRecordLayout.getSize();
   mlir::Type storageType = nullptr;
   bool seenNamedMember = false;
 
@@ -808,17 +874,35 @@ void CIRRecordLowering::lowerUnion() {
 
     // NOTE(cir): Track all union member's types, not just the largest one. It
     // allows for proper type-checking and retain more info for analisys.
-    fieldTypes.push_back(fieldType);
+    //
+    // The base-subobject type instead uses a single (possibly clipped) storage
+    // type, mirroring classic CodeGen, so that it exposes the union's reusable
+    // tail padding.
+    if (!nonVirtualBaseType)
+      fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType)
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "No-storage Union NYI");
+  if (!storageType) {
+    appendPaddingBytes(layoutSize);
+    return;
+  }
 
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
-  else
+
+  if (nonVirtualBaseType) {
+    // The base-subobject record is built as a struct from fieldTypes, so add
+    // the storage type and any trailing padding as ordinary fields rather than
+    // routing padding through the union's single tail-padding slot.
+    fieldTypes.push_back(storageType);
+    CharUnits padding = layoutSize - getSize(storageType);
+    if (!padding.isZero()) {
+      fieldTypes.push_back(getByteArrayType(padding));
+      padded = true;
+    }
+  } else {
     appendPaddingBytes(layoutSize - getSize(storageType));
+  }
 
   // Set packed if we need it.
   if (!layoutSize.isMultipleOf(getAlignment(storageType)))

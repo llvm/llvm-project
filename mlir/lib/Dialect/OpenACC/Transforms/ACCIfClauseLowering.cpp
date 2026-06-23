@@ -59,6 +59,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
@@ -136,13 +137,15 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   // condition
   SmallVector<Operation *> dataEntryOps;
   SmallVector<Operation *> dataExitOps;
+  SmallVector<Operation *> firstprivateOps;
+  SmallVector<Operation *> privateOps;
+  SmallVector<Operation *> reductionOps;
 
   // Collect data entry operations
-  for (Value operand : computeConstructOp.getDataClauseOperands()) {
+  for (Value operand : computeConstructOp.getDataClauseOperands())
     if (Operation *defOp = operand.getDefiningOp())
       if (isa<ACC_DATA_ENTRY_OPS>(defOp))
         dataEntryOps.push_back(defOp);
-  }
 
   // Find corresponding exit operations for each entry operation.
   // Iterate backwards through entry ops since exit ops appear in reverse order.
@@ -151,12 +154,22 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
       if (isa<ACC_DATA_EXIT_OPS>(user))
         dataExitOps.push_back(user);
 
+  // Collect firstprivate, private, and reduction operations
+  auto collectOps = [&](SmallVector<Operation *> &ops, OperandRange operands) {
+    for (Value operand : operands)
+      if (Operation *defOp = operand.getDefiningOp())
+        ops.push_back(defOp);
+  };
+  collectOps(firstprivateOps, computeConstructOp.getFirstprivateOperands());
+  collectOps(privateOps, computeConstructOp.getPrivateOperands());
+  collectOps(reductionOps, computeConstructOp.getReductionOperands());
+
   // Create scf.if with device and host execution paths
   auto ifOp = scf::IfOp::create(rewriter, computeConstructOp.getLoc(),
                                 TypeRange{}, ifCond, /*withElseRegion=*/true);
 
-  // Declare deviceMapping at function scope for later use
-  IRMapping deviceMapping;
+  LLVM_DEBUG(llvm::dbgs() << "Cloning " << dataEntryOps.size()
+                          << " data entry operations for device path\n");
 
   // Device execution path (true branch)
   Block &thenBlock = ifOp.getThenRegion().front();
@@ -164,15 +177,24 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
 
   // Clone data entry operations
   SmallVector<Value> deviceDataOperands;
+  SmallVector<Value> firstprivateOperands;
+  SmallVector<Value> privateOperands;
+  SmallVector<Value> reductionOperands;
 
-  LLVM_DEBUG(llvm::dbgs() << "Cloning " << dataEntryOps.size()
-                          << " data entry operations for device path\n");
-
-  for (Operation *dataOp : dataEntryOps) {
-    Operation *clonedDataOp = rewriter.clone(*dataOp, deviceMapping);
-    deviceDataOperands.push_back(clonedDataOp->getResult(0));
-    deviceMapping.map(dataOp->getResult(0), clonedDataOp->getResult(0));
-  }
+  // Map the data entry and firstprivate ops for the cloned region
+  IRMapping deviceMapping;
+  auto cloneAndMapOps = [&](SmallVector<Operation *> &ops,
+                            SmallVector<Value> &operands) {
+    for (Operation *op : ops) {
+      Operation *clonedOp = rewriter.clone(*op, deviceMapping);
+      operands.push_back(clonedOp->getResult(0));
+      deviceMapping.map(op->getResult(0), clonedOp->getResult(0));
+    }
+  };
+  cloneAndMapOps(dataEntryOps, deviceDataOperands);
+  cloneAndMapOps(firstprivateOps, firstprivateOperands);
+  cloneAndMapOps(privateOps, privateOperands);
+  cloneAndMapOps(reductionOps, reductionOperands);
 
   // Create new compute op without if condition for device execution by
   // cloning
@@ -180,6 +202,9 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
       rewriter.clone(*computeConstructOp.getOperation(), deviceMapping));
   newComputeOp.getIfCondMutable().clear();
   newComputeOp.getDataClauseOperandsMutable().assign(deviceDataOperands);
+  newComputeOp.getFirstprivateOperandsMutable().assign(firstprivateOperands);
+  newComputeOp.getPrivateOperandsMutable().assign(privateOperands);
+  newComputeOp.getReductionOperandsMutable().assign(reductionOperands);
 
   // Clone data exit operations
   rewriter.setInsertionPointAfter(newComputeOp);
@@ -191,22 +216,28 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
     scf::YieldOp::create(rewriter, computeConstructOp.getLoc());
 
   // Host execution path (false branch)
-  if (!computeConstructOp.getRegion().hasOneBlock()) {
-    accSupport->emitNYI(computeConstructOp.getLoc(),
-                        "region with multiple blocks");
-    return;
+  Region &hostRegion = computeConstructOp.getRegion();
+  if (hostRegion.hasOneBlock()) {
+    // Don't need to clone original ops, just take them and legalize for host.
+    ifOp.getElseRegion().takeBody(hostRegion);
+
+    // Swap acc yield for scf yield.
+    Block &elseBlock = ifOp.getElseRegion().front();
+    elseBlock.getTerminator()->erase();
+    rewriter.setInsertionPointToEnd(&elseBlock);
+    scf::YieldOp::create(rewriter, computeConstructOp.getLoc());
+
+    convertHostRegion(computeConstructOp, ifOp.getElseRegion());
+  } else {
+    // scf.if regions must stay single-block. Wrap the original multi-block ACC
+    // body in scf.execute_region so it can be hosted in the else branch.
+    Block &elseBlock = ifOp.getElseRegion().front();
+    rewriter.setInsertionPoint(elseBlock.getTerminator());
+    IRMapping hostMapping;
+    auto hostExecuteRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
+        hostRegion, hostMapping, computeConstructOp.getLoc(), rewriter);
+    convertHostRegion(computeConstructOp, hostExecuteRegion.getRegion());
   }
-
-  // Don't need to clone original ops, just take them and legalize for host
-  ifOp.getElseRegion().takeBody(computeConstructOp.getRegion());
-
-  // Swap acc yield for scf yield
-  Block &elseBlock = ifOp.getElseRegion().front();
-  elseBlock.getTerminator()->erase();
-  rewriter.setInsertionPointToEnd(&elseBlock);
-  scf::YieldOp::create(rewriter, computeConstructOp.getLoc());
-
-  convertHostRegion(computeConstructOp, ifOp.getElseRegion());
 
   // The original op is now empty and can be erased
   eraseOps.push_back(computeConstructOp);
@@ -216,12 +247,18 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   for (Operation *dataOp : dataExitOps)
     eraseOps.push_back(dataOp);
 
-  for (Operation *dataOp : dataEntryOps) {
-    // The new host code may contain uses of the acc variables. Replace them by
-    // the host values.
-    getAccVar(dataOp).replaceAllUsesWith(getVar(dataOp));
-    eraseOps.push_back(dataOp);
-  }
+  // The new host code may contain uses of the acc variables. Replace them by
+  // the host values.
+  auto replaceAndEraseOps = [&](SmallVector<Operation *> &ops) {
+    for (Operation *op : ops) {
+      getAccVar(op).replaceAllUsesWith(getVar(op));
+      eraseOps.push_back(op);
+    }
+  };
+  replaceAndEraseOps(dataEntryOps);
+  replaceAndEraseOps(firstprivateOps);
+  replaceAndEraseOps(privateOps);
+  replaceAndEraseOps(reductionOps);
 }
 
 void ACCIfClauseLowering::runOnOperation() {

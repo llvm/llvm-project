@@ -116,6 +116,9 @@ generateReproducerForInvocationArguments(
     ArrayRef<const char *> Argv, const ClangInvocationInfo &Info,
     const llvm::ToolContext &ToolContext,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  // The driver is not expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   using namespace driver;
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Argv[0]);
 
@@ -133,12 +136,10 @@ generateReproducerForInvocationArguments(
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Argv));
   if (C && !C->containsError()) {
     for (const auto &J : C->getJobs()) {
-      if (const Command *Cmd = dyn_cast<Command>(&J)) {
-        Driver::CompilationDiagnosticReport Report;
-        TheDriver.generateCompilationDiagnostics(
-            *C, *Cmd, generateReproducerMetaInfo(Info), &Report);
-        return Report;
-      }
+      Driver::CompilationDiagnosticReport Report;
+      TheDriver.generateCompilationDiagnostics(
+          *C, J, generateReproducerMetaInfo(Info), &Report);
+      return Report;
     }
   }
 

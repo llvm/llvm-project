@@ -48,7 +48,7 @@ namespace {
 // The static 'Wrapper' instance ensures olInit() is called once at program
 // startup and olShutDown() is called once at program termination
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { OL_CHECK(olInit()); }
+  OffloadInitWrapper() { OL_CHECK(olInit(nullptr)); }
   ~OffloadInitWrapper() { OL_CHECK(olShutDown()); }
 };
 static OffloadInitWrapper Wrapper{};
@@ -286,17 +286,18 @@ DeviceContext::getKernelHandle(ol_program_handle_t ProgramHandle,
   return Handle;
 }
 
-void DeviceContext::launchKernelImpl(
-    ol_symbol_handle_t KernelHandle, uint32_t NumGroups, uint32_t GroupSize,
-    const void *KernelArgs, std::size_t KernelArgsSize) const noexcept {
+void DeviceContext::launchKernelImpl(ol_symbol_handle_t KernelHandle,
+                                     uint32_t NumGroups, uint32_t GroupSize,
+                                     size_t NumArgs, void **ArgPtrs,
+                                     const size_t *ArgSizes) const noexcept {
   ol_kernel_launch_size_args_t LaunchSizeArgs;
   LaunchSizeArgs.Dimensions = 1;
   LaunchSizeArgs.NumGroups = {NumGroups, 1, 1};
   LaunchSizeArgs.GroupSize = {GroupSize, 1, 1};
   LaunchSizeArgs.DynSharedMemory = 0;
 
-  OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, KernelArgs,
-                          KernelArgsSize, &LaunchSizeArgs));
+  OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, &LaunchSizeArgs,
+                          nullptr, NumArgs, ArgPtrs, ArgSizes));
 }
 
 [[nodiscard]] llvm::StringRef DeviceContext::getName() const noexcept {

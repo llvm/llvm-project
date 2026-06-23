@@ -25,6 +25,9 @@ void L0OptionsTy::processEnvironmentVars() {
       std::string(" ") +
       StringEnvar("LIBOMPTARGET_LEVEL_ZERO_COMPILATION_OPTIONS", "").get();
 
+  Flags.UseCopyOffloadHint =
+      BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
+
   // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
   //  <Option>       := 0 | <PoolInfoList>
@@ -117,21 +120,23 @@ void L0OptionsTy::processEnvironmentVars() {
           }
         }
       } else {
-        DP("Ignoring incorrect memory pool configuration "
-           "LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=%s\n",
-           MemoryPoolVar.get().c_str());
-        DP("LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>\n");
-        DP("  <Option>       := 0 | <PoolInfoList>\n");
-        DP("  <PoolInfoList> := <PoolInfo>[,<PoolInfoList>]\n");
-        DP("  <PoolInfo>     := "
-           "<MemType>[,<AllocMax>[,<Capacity>[,<PoolSize>]]]\n");
-        DP("  <MemType>      := all | device | host | shared\n");
-        DP("  <AllocMax>     := non-negative integer or empty, "
-           "max allocation size in MB (default: 1)\n");
-        DP("  <Capacity>     := positive integer or empty, "
-           "number of allocations from a single block (default: 4)\n");
-        DP("  <PoolSize>     := positive integer or empty, "
-           "max pool size in MB (default: 256)\n");
+        ODBG_OS(OLDT_Init, [&](llvm::raw_ostream &O) {
+          O << "Ignoring incorrect memory pool configuration "
+               "LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL="
+            << MemoryPoolVar.get() << "\n";
+          O << "LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>\n";
+          O << "  <Option>       := 0 | <PoolInfoList>\n";
+          O << "  <PoolInfoList> := <PoolInfo>[,<PoolInfoList>]\n";
+          O << "  <PoolInfo>     := "
+               "<MemType>[,<AllocMax>[,<Capacity>[,<PoolSize>]]]\n";
+          O << "  <MemType>      := all | device | host | shared\n";
+          O << "  <AllocMax>     := non-negative integer or empty, "
+               "max allocation size in MB (default: 1)\n";
+          O << "  <Capacity>     := positive integer or empty, "
+               "number of allocations from a single block (default: 4)\n";
+          O << "  <PoolSize>     := positive integer or empty, "
+               "max pool size in MB (default: 256)\n";
+        });
       }
     }
   }
@@ -150,7 +155,8 @@ void L0OptionsTy::processEnvironmentVars() {
     size_t SizeInKB = StagingBufferSizeVar;
     if (SizeInKB > (16 << 10)) {
       SizeInKB = (16 << 10);
-      DP("Staging buffer size is capped at %zu KB\n", SizeInKB);
+      ODBG(OLDT_Init) << "Staging buffer size is capped at " << SizeInKB
+                      << " KB";
     }
     StagingBufferSize = SizeInKB << 10;
   }
@@ -182,6 +188,8 @@ void L0OptionsTy::processEnvironmentVars() {
       CommandMode = CommandModeTy::Async;
     else if (match(CommandModeVar, "async_ordered"))
       CommandMode = CommandModeTy::AsyncOrdered;
+    else if (match(CommandModeVar, "inorder"))
+      CommandMode = CommandModeTy::InOrder;
     else
       MESSAGE("Warning: Ignoring invalid value for "
               "LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=%s\n",

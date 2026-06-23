@@ -1,6 +1,9 @@
 header: sys/select.h
-header_template: select.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: FD_SETSIZE
+    macro_header: sys-select-macros.h
 types:
   - type_name: struct_timeval
   - type_name: struct_timespec
@@ -13,7 +16,7 @@ objects: []
 functions:
   - name: select
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int

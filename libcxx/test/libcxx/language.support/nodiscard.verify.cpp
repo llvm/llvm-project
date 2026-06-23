@@ -14,8 +14,10 @@
 
 #include <compare>
 #include <coroutine>
+#include <cstddef>
 #include <exception>
 #include <initializer_list>
+#include <new>
 #include <typeinfo>
 #include <typeindex>
 
@@ -85,6 +87,29 @@ void test() {
   }
 #endif
 
+#if TEST_STD_VER >= 17
+  { // <cstddef>
+    std::byte b{0};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b | b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b & b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b ^ b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ~b;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b << 1;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b >> 1;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::to_integer<int>(b);
+  }
+#endif
+
   { // <exception>
     {
       std::bad_exception bex;
@@ -102,16 +127,18 @@ void test() {
       nex.nested_ptr(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     }
 
-#if TEST_STD_VER <= 14
-    std::get_unexpected(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
+    { // Removed in C++17
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+      std::get_unexpected();
+    }
 
     std::get_terminate(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-#if _LIBCPP_STD_VER <= 17
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::uncaught_exception();
-#endif
+    { // Removed in C++20
+      // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+      std::uncaught_exception();
+    }
+
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::uncaught_exceptions();
 
@@ -157,6 +184,46 @@ void test() {
     const std::bad_typeid bt;
 
     bc.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+#endif
+
+  {
+    std::bad_alloc ex;
+
+    ex.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+  {
+    std::bad_array_new_length ex;
+
+    ex.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+
+  {
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new(0);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new(0, std::nothrow);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new[](0);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new[](0, std::nothrow);
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new(0, std::align_val_t{1});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new(0, std::align_val_t{1}, std::nothrow);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new[](0, std::align_val_t{1});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new[](0, std::align_val_t{1}, std::nothrow);
+#endif // _LIBCPP_HAS_ALIGNED_ALLOCATION
+  }
+
+#if TEST_STD_VER >= 17
+  {
+    int* ptr = nullptr;
+
+    std::launder(ptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 #endif
 }

@@ -345,7 +345,7 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SP::SWAPrr:
   case SP::SWAPri:
     if (MF->getSubtarget<SparcSubtarget>().fixTN0011())
-      OutStreamer->emitCodeAlignment(Align(16), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(16), getSubtargetInfo());
     break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
@@ -403,7 +403,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     O << MO.getSymbolName();
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << "_"
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << "_"
       << MO.getIndex();
     break;
   case MachineOperand::MO_Metadata:

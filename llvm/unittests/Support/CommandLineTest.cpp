@@ -18,6 +18,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -41,6 +42,10 @@ namespace {
 MATCHER(StringEquality, "Checks if two char* are equal as strings") {
   return std::string(std::get<0>(arg)) == std::string(std::get<1>(arg));
 }
+
+#ifdef _WIN32
+bool preferForwardSlash() { return llvm::sys::path::native("/") == "/"; }
+#endif
 
 class TempEnvVar {
  public:
@@ -100,7 +105,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   static const char ArgString[] = "new-test-option";
   static const char ValueString[] = "Integer";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   ASSERT_EQ(Map.count("test-option"), 1u) << "Could not find option in map.";
@@ -222,6 +227,71 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
       "foo bar",     "foo bar",   "foo bar",          "foo\\bar",
       "-DFOO=bar()", "foobarbaz", "C:\\src\\foo.cpp", "C:srcfoo.cpp"};
   testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineEmptyQuotes) {
+  // Explicit '' and "" should be treated as an empty string argument, as shells
+  // and gcc do.
+  const char Input1[] = R"(a b c "" d)";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b c '' d)";
+  const char *const Output2[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+
+  // Check that empty arguments are preserved at the beginning/end of the
+  // input.
+  const char Input3[] = R"('' a b c d "")";
+  const char *const Output3[] = {"", "a", "b", "c", "d", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input3, Output3);
+
+  // Check that an input containing only empty arguments is handled
+  // correctly.
+  const char Input4[] = R"("" '')";
+  const char *const Output4[] = {"", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input4, Output4);
+
+  // Each sequence of juxtaposed empty string segments is still just one
+  // empty string.
+  const char Input5[] = R"('''' """" ''"")";
+  const char *const Output5[] = {"", "", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input5, Output5);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineWhitespace) {
+  // Leading/trailing whitespace should be ignored.
+  const char Input1[] = R"(  a b c '' d  )";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineJuxtaposedQuotedSegments) {
+  const char Input1[] = R"(a""a ""b c"" d''d ''e f'')";
+  const char *const Output1[] = {"aa", "b", "c", "dd", "e", "f"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"("'a'"'"b"')";
+  const char *const Output2[] = {R"('a'"b")"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineUnterminatedQuotes) {
+  // Unterminated quotes are implicitly terminated at EOF.
+  const char Input1[] = R"(a b ')";
+  const char *const Output1[] = {"a", "b", ""};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b 'c d)";
+  const char *const Output2[] = {"a", "b", "c d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
+TEST(CommandLineTest, TokenizeGNUCommandLineNewlines) {
+  // Newlines are also treated literally inside quotes.
+  const char Input1[] = "a 'b\nc' d";
+  const char *const Output1[] = {"a", "b\nc", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
 }
 
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
@@ -421,7 +491,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
   ASSERT_EQ(cl::NotHidden, TestOption2.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -447,7 +517,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   ASSERT_EQ(cl::NotHidden, TestOption3.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -950,7 +1020,7 @@ TEST(CommandLineTest, ResponseFiles) {
 TEST(CommandLineTest, RecursiveResponseFiles) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = preferForwardSlash() ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -1020,7 +1090,7 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 TEST(CommandLineTest, ResponseFilesAtArguments) {
   vfs::InMemoryFileSystem FS;
 #ifdef _WIN32
-  const char *TestRoot = "C:\\";
+  const char *TestRoot = preferForwardSlash() ? "C:/" : "C:\\";
 #else
   const char *TestRoot = "/";
 #endif
@@ -2131,6 +2201,90 @@ TEST(CommandLineTest, ConsumeOptionalString) {
   ASSERT_TRUE(Input.has_value());
   EXPECT_EQ("\"value\"", *Input);
   EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, ParseElementCount) {
+  cl::ResetCommandLineParser();
+
+  StackOption<ElementCount> Count("count", cl::init(ElementCount::getFixed(1)));
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *FixedArgs[] = {"prog", "--count=4"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(std::size(FixedArgs), FixedArgs,
+                                          StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getFixed(4));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *SpacedScalableArgs[] = {"prog", "--count=vscale x 8"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(
+      std::size(SpacedScalableArgs), SpacedScalableArgs, StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(8));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *FlexibleWhitespaceArgs[] = {"prog", "--count=\tvscale\t x\t12  "};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(std::size(FlexibleWhitespaceArgs),
+                                          FlexibleWhitespaceArgs, StringRef(),
+                                          &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(12));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *CompactScalableArgs[] = {"prog", "--count=vscalex4"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(
+      std::size(CompactScalableArgs), CompactScalableArgs, StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(4));
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, RejectInvalidElementCount) {
+  cl::ResetCommandLineParser();
+
+  StackOption<ElementCount> Count("count");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *MissingMultiplierArgs[] = {"prog", "--count=vscale"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(MissingMultiplierArgs),
+                                           MissingMultiplierArgs, StringRef(),
+                                           &OS));
+  std::string ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'vscale' value invalid for ElementCount argument!"),
+      std::string::npos);
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *TrailingJunkArgs[] = {"prog", "--count=vscale x 8x"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkArgs),
+                                           TrailingJunkArgs, StringRef(), &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(ErrorOutput.find(
+                "'vscale x 8x' value invalid for ElementCount argument!"),
+            std::string::npos);
+
+  const char *TrailingJunkFixedArgs[] = {"prog", "--count=4adsf"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkFixedArgs),
+                                           TrailingJunkFixedArgs, StringRef(),
+                                           &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'4adsf' value invalid for ElementCount argument!"),
+      std::string::npos);
 }
 
 TEST(CommandLineTest, ResetAllOptionOccurrences) {

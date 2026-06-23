@@ -16,10 +16,9 @@
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
 
-namespace clang::tidy::performance {
+using namespace clang::ast_matchers;
 
-using namespace ::clang::ast_matchers;
-using llvm::StringRef;
+namespace clang::tidy::performance {
 using utils::decl_ref_expr::allDeclRefExprs;
 using utils::decl_ref_expr::isOnlyUsedAsConst;
 
@@ -30,7 +29,7 @@ static constexpr StringRef FunctionDeclId = "functionDecl";
 static constexpr StringRef OldVarDeclId = "oldVarDecl";
 
 static void recordFixes(const VarDecl &Var, ASTContext &Context,
-                        DiagnosticBuilder &Diagnostic) {
+                        const DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
@@ -39,8 +38,8 @@ static void recordFixes(const VarDecl &Var, ASTContext &Context,
   }
 }
 
-static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
-                                                          SourceManager &SM) {
+static std::optional<SourceLocation>
+firstLocAfterNewLine(SourceLocation Loc, const SourceManager &SM) {
   bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
   if (Invalid)
@@ -50,7 +49,7 @@ static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
 }
 
 static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
-                          DiagnosticBuilder &Diagnostic) {
+                          const DiagnosticBuilder &Diagnostic) {
   auto &SM = Context.getSourceManager();
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
@@ -93,8 +92,8 @@ AST_MATCHER_FUNCTION_P(StatementMatcher,
       // Access through dereference, typically used for `operator[]`: `(*a)[3]`.
       unaryOperator(hasOperatorName("*"), hasUnaryOperand(ReceiverExpr)));
   const auto ReceiverType =
-      hasCanonicalType(recordType(hasDeclaration(namedDecl(
-          unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
+      hasCanonicalType(recordType(hasDeclaration(namedDecl(unless(
+          matchers::matchesAnyListedRegexName(ExcludedContainerTypes))))));
 
   return expr(
       anyOf(cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
@@ -246,7 +245,7 @@ void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
                                            unless(hasDeclaration(namedDecl(
                                                hasName("::std::function")))))),
                                        unless(hasDeclaration(namedDecl(
-                                           matchers::matchesAnyListedName(
+                                           matchers::matchesAnyListedRegexName(
                                                AllowedTypes)))))),
                                    unless(isImplicit()),
                                    hasInitializer(traverse(

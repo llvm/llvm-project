@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 namespace emitc {
@@ -28,8 +29,13 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 /// Populates `patterns` with expression-related patterns.
 void populateExpressionPatterns(RewritePatternSet &patterns);
 
-/// Populates 'patterns' with func-related patterns.
-void populateFuncPatterns(RewritePatternSet &patterns);
+//===----------------------------------------------------------------------===//
+// The WrapFuncInClass pass.
+//===----------------------------------------------------------------------===//
+
+void populateWrapFuncInClass(
+    RewritePatternSet &patterns, StringRef funcName,
+    DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
 
 } // namespace emitc
 } // namespace mlir

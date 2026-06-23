@@ -8,15 +8,16 @@
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEXACTION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEXACTION_H
-#include "Headers.h"
 #include "index/SymbolCollector.h"
 #include "clang/Frontend/FrontendAction.h"
 
 namespace clang {
 namespace clangd {
 
+struct IndexFileIn;
+
 // Creates an action that indexes translation units and delivers the results
-// for SymbolsCallback (each slab corresponds to one TU).
+// for IndexContentsCallback (each call corresponds to one TU).
 //
 // Only a subset of SymbolCollector::Options are respected:
 //   - include paths are always collected, and canonicalized appropriately
@@ -25,10 +26,7 @@ namespace clangd {
 //   - the symbol origin is set to Static if not specified by caller
 std::unique_ptr<FrontendAction> createStaticIndexingAction(
     SymbolCollector::Options Opts,
-    std::function<void(SymbolSlab)> SymbolsCallback,
-    std::function<void(RefSlab)> RefsCallback,
-    std::function<void(RelationSlab)> RelationsCallback,
-    std::function<void(IncludeGraph)> IncludeGraphCallback);
+    std::function<void(IndexFileIn)> IndexContentsCallback);
 
 } // namespace clangd
 } // namespace clang

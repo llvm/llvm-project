@@ -14,6 +14,7 @@ let Predicates = [FeatureVector] in {
   // Register move.
   let isMoveReg = 1 in {
     def VLR : UnaryVRRa<"vlr", 0xE756, null_frag, v128any, v128any>;
+    def VLR16 : UnaryAliasVRR<null_frag, v16hb, v16hb>;
     def VLR32 : UnaryAliasVRR<null_frag, v32sb, v32sb>;
     def VLR64 : UnaryAliasVRR<null_frag, v64db, v64db>;
   }
@@ -51,6 +52,31 @@ class VectorExtractSubreg<ValueType type, Instruction insn>
 def : VectorExtractSubreg<v16i8, VLGVB>;
 def : VectorExtractSubreg<v8i16, VLGVH>;
 def : VectorExtractSubreg<v4i32, VLGVF>;
+
+// VLGVX extractions always zero extend to 64 bits, so no need for a
+// following zero extend.
+// i8/i16 -> i32.
+class VectorExtractZextSubreg<ValueType VecTy, Instruction insn,
+                              SDPatternOperator operator>
+  : Pat<(i32 (operator (i32 (z_vector_extract (VecTy VR128:$vec),
+                                              shift12only:$index)))),
+        (EXTRACT_SUBREG (insn VR128:$vec, shift12only:$index), subreg_l32)>;
+def : VectorExtractZextSubreg<v16i8, VLGVB, zext8>;
+def : VectorExtractZextSubreg<v8i16, VLGVH, zext16>;
+
+// i8/i16 -> i64.
+class VectorExtractZext<ValueType VecTy, Instruction insn,
+                        SDPatternOperator operator>
+  : Pat<(i64 (operator (anyext (i32 (z_vector_extract (VecTy VR128:$vec),
+                                                      shift12only:$index))))),
+        (insn VR128:$vec, shift12only:$index)>;
+def : VectorExtractZext<v16i8, VLGVB, zext8>;
+def : VectorExtractZext<v8i16, VLGVH, zext16>;
+
+// i32 -> i64.
+def : Pat<(i64 (zext (i32 (z_vector_extract (v4i32 VR128:$vec),
+                                            shift12only:$index)))),
+          (VLGVF VR128:$vec, shift12only:$index)>;
 
 //===----------------------------------------------------------------------===//
 // Immediate instructions
@@ -133,6 +159,8 @@ let Predicates = [FeatureVector] in {
   def VLREPH : UnaryVRX<"vlreph", 0xE705, z_replicate_loadi16, v128h, 2, 1>;
   def VLREPF : UnaryVRX<"vlrepf", 0xE705, z_replicate_loadi32, v128f, 4, 2>;
   def VLREPG : UnaryVRX<"vlrepg", 0xE705, z_replicate_loadi64, v128g, 8, 3>;
+  def : Pat<(v8f16 (z_replicate_loadf16 bdxaddr12only:$addr)),
+            (VLREPH bdxaddr12only:$addr)>;
   def : Pat<(v4f32 (z_replicate_loadf32 bdxaddr12only:$addr)),
             (VLREPF bdxaddr12only:$addr)>;
   def : Pat<(v2f64 (z_replicate_loadf64 bdxaddr12only:$addr)),
@@ -142,7 +170,8 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1 in {
+  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1,
+      isReMaterializable = 1 in {
     def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
@@ -229,6 +258,9 @@ let Predicates = [FeatureVector] in {
   def VSTEH : StoreBinaryVRX<"vsteh", 0xE709, z_vstei16, v128h, 2, imm32zx3>;
   def VSTEF : StoreBinaryVRX<"vstef", 0xE70B, z_vstei32, v128f, 4, imm32zx2>;
   def VSTEG : StoreBinaryVRX<"vsteg", 0xE70A, z_vstei64, v128g, 8, imm32zx1>;
+  def : Pat<(z_vstef16 (v8f16 VR128:$val), bdxaddr12only:$addr,
+                       imm32zx3:$index),
+            (VSTEH VR128:$val, bdxaddr12only:$addr, imm32zx2:$index)>;
   def : Pat<(z_vstef32 (v4f32 VR128:$val), bdxaddr12only:$addr,
                        imm32zx2:$index),
             (VSTEF VR128:$val, bdxaddr12only:$addr, imm32zx2:$index)>;
@@ -279,6 +311,8 @@ let Predicates = [FeatureVectorEnhancements2] in {
   def VLERH : UnaryVRX<"vlerh", 0xE607, z_loadeswap, v128h, 16, 1>;
   def VLERF : UnaryVRX<"vlerf", 0xE607, z_loadeswap, v128f, 16, 2>;
   def VLERG : UnaryVRX<"vlerg", 0xE607, z_loadeswap, v128g, 16, 3>;
+  def : Pat<(v8f16 (z_loadeswap bdxaddr12only:$addr)),
+            (VLERH bdxaddr12only:$addr)>;
   def : Pat<(v4f32 (z_loadeswap bdxaddr12only:$addr)),
             (VLERF bdxaddr12only:$addr)>;
   def : Pat<(v2f64 (z_loadeswap bdxaddr12only:$addr)),
@@ -320,6 +354,8 @@ let Predicates = [FeatureVectorEnhancements2] in {
   def VSTERH : StoreVRX<"vsterh", 0xE60F, z_storeeswap, v128h, 16, 1>;
   def VSTERF : StoreVRX<"vsterf", 0xE60F, z_storeeswap, v128f, 16, 2>;
   def VSTERG : StoreVRX<"vsterg", 0xE60F, z_storeeswap, v128g, 16, 3>;
+  def : Pat<(z_storeeswap (v8f16 VR128:$val), bdxaddr12only:$addr),
+            (VSTERH VR128:$val, bdxaddr12only:$addr)>;
   def : Pat<(z_storeeswap (v4f32 VR128:$val), bdxaddr12only:$addr),
             (VSTERF VR128:$val, bdxaddr12only:$addr)>;
   def : Pat<(z_storeeswap (v2f64 VR128:$val), bdxaddr12only:$addr),
@@ -348,6 +384,7 @@ let Predicates = [FeatureVector] in {
   def VMRHH : BinaryVRRc<"vmrhh", 0xE761, z_merge_high, v128h, v128h, 1>;
   def VMRHF : BinaryVRRc<"vmrhf", 0xE761, z_merge_high, v128f, v128f, 2>;
   def VMRHG : BinaryVRRc<"vmrhg", 0xE761, z_merge_high, v128g, v128g, 3>;
+  def : BinaryRRWithType<VMRHH, VR128, z_merge_high, v8f16>;
   def : BinaryRRWithType<VMRHF, VR128, z_merge_high, v4f32>;
   def : BinaryRRWithType<VMRHG, VR128, z_merge_high, v2f64>;
 
@@ -357,6 +394,7 @@ let Predicates = [FeatureVector] in {
   def VMRLH : BinaryVRRc<"vmrlh", 0xE760, z_merge_low, v128h, v128h, 1>;
   def VMRLF : BinaryVRRc<"vmrlf", 0xE760, z_merge_low, v128f, v128f, 2>;
   def VMRLG : BinaryVRRc<"vmrlg", 0xE760, z_merge_low, v128g, v128g, 3>;
+  def : BinaryRRWithType<VMRLH, VR128, z_merge_low, v8f16>;
   def : BinaryRRWithType<VMRLF, VR128, z_merge_low, v4f32>;
   def : BinaryRRWithType<VMRLG, VR128, z_merge_low, v2f64>;
 
@@ -376,6 +414,8 @@ let Predicates = [FeatureVector] in {
   def VREPH : BinaryVRIc<"vreph", 0xE74D, z_splat, v128h, v128h, 1>;
   def VREPF : BinaryVRIc<"vrepf", 0xE74D, z_splat, v128f, v128f, 2>;
   def VREPG : BinaryVRIc<"vrepg", 0xE74D, z_splat, v128g, v128g, 3>;
+  def : Pat<(v8f16 (z_splat VR128:$vec, imm32zx16_timm:$index)),
+            (VREPH VR128:$vec, imm32zx16:$index)>;
   def : Pat<(v4f32 (z_splat VR128:$vec, imm32zx16_timm:$index)),
             (VREPF VR128:$vec, imm32zx16:$index)>;
   def : Pat<(v2f64 (z_splat VR128:$vec, imm32zx16_timm:$index)),
@@ -497,6 +537,7 @@ defm : GenericVectorOps<v16i8, v16i8>;
 defm : GenericVectorOps<v8i16, v8i16>;
 defm : GenericVectorOps<v4i32, v4i32>;
 defm : GenericVectorOps<v2i64, v2i64>;
+defm : GenericVectorOps<v8f16, v8i16>;
 defm : GenericVectorOps<v4f32, v4i32>;
 defm : GenericVectorOps<v2f64, v2i64>;
 
@@ -516,6 +557,7 @@ defm : BlendVectorOps<v16i8, v16i8, VBLENDB>;
 defm : BlendVectorOps<v8i16, v8i16, VBLENDH>;
 defm : BlendVectorOps<v4i32, v4i32, VBLENDF>;
 defm : BlendVectorOps<v2i64, v2i64, VBLENDG>;
+defm : BlendVectorOps<v8f16, v8i16, VBLENDH>;
 defm : BlendVectorOps<v4f32, v4i32, VBLENDF>;
 defm : BlendVectorOps<v2f64, v2i64, VBLENDG>;
 
@@ -1582,6 +1624,7 @@ let Predicates = [FeatureVector] in {
   // Maximum.
   multiclass VectorMax<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, any_fmaxnum, tr, 4>;
+    def : FPMinMax<insn, fmaximumnum, tr, 4>;
     def : FPMinMax<insn, any_fmaximum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
@@ -1608,6 +1651,7 @@ let Predicates = [FeatureVector] in {
   // Minimum.
   multiclass VectorMin<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, any_fminnum, tr, 4>;
+    def : FPMinMax<insn, fminimumnum, tr, 4>;
     def : FPMinMax<insn, any_fminimum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
@@ -2110,6 +2154,7 @@ def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (i128  VR128:$src))), (v16i8 VR128:$src)>;
+def : Pat<(v16i8 (bitconvert (v8f16 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v4f32 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (v2f64 VR128:$src))), (v16i8 VR128:$src)>;
 def : Pat<(v16i8 (bitconvert (f128  VR128:$src))), (v16i8 VR128:$src)>;
@@ -2118,6 +2163,7 @@ def : Pat<(v8i16 (bitconvert (v16i8 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v4i32 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v2i64 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (i128  VR128:$src))), (v8i16 VR128:$src)>;
+def : Pat<(v8i16 (bitconvert (v8f16 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v4f32 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v2f64 VR128:$src))), (v8i16 VR128:$src)>;
 def : Pat<(v8i16 (bitconvert (f128  VR128:$src))), (v8i16 VR128:$src)>;
@@ -2126,6 +2172,7 @@ def : Pat<(v4i32 (bitconvert (v16i8 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v8i16 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v2i64 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (i128  VR128:$src))), (v4i32 VR128:$src)>;
+def : Pat<(v4i32 (bitconvert (v8f16 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v4f32 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (v2f64 VR128:$src))), (v4i32 VR128:$src)>;
 def : Pat<(v4i32 (bitconvert (f128  VR128:$src))), (v4i32 VR128:$src)>;
@@ -2134,15 +2181,26 @@ def : Pat<(v2i64 (bitconvert (v16i8 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v8i16 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v4i32 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (i128  VR128:$src))), (v2i64 VR128:$src)>;
+def : Pat<(v2i64 (bitconvert (v8f16 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v4f32 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (v2f64 VR128:$src))), (v2i64 VR128:$src)>;
 def : Pat<(v2i64 (bitconvert (f128  VR128:$src))), (v2i64 VR128:$src)>;
+
+def : Pat<(v8f16 (bitconvert (v16i8 VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (v8i16 VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (v4i32 VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (v2i64 VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (i128  VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (v4f32 VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (v2f64 VR128:$src))), (v8f16 VR128:$src)>;
+def : Pat<(v8f16 (bitconvert (f128  VR128:$src))), (v8f16 VR128:$src)>;
 
 def : Pat<(v4f32 (bitconvert (v16i8 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v8i16 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v4i32 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (i128  VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v2i64 VR128:$src))), (v4f32 VR128:$src)>;
+def : Pat<(v4f32 (bitconvert (v8f16 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (v2f64 VR128:$src))), (v4f32 VR128:$src)>;
 def : Pat<(v4f32 (bitconvert (f128  VR128:$src))), (v4f32 VR128:$src)>;
 
@@ -2151,6 +2209,7 @@ def : Pat<(v2f64 (bitconvert (v8i16 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v4i32 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (i128  VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v2i64 VR128:$src))), (v2f64 VR128:$src)>;
+def : Pat<(v2f64 (bitconvert (v8f16 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v4f32 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (f128  VR128:$src))), (v2f64 VR128:$src)>;
 
@@ -2159,6 +2218,7 @@ def : Pat<(f128  (bitconvert (v8i16 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v4i32 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v2i64 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (i128  VR128:$src))), (f128  VR128:$src)>;
+def : Pat<(f128  (bitconvert (v8f16 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v4f32 VR128:$src))), (f128  VR128:$src)>;
 def : Pat<(f128  (bitconvert (v2f64 VR128:$src))), (f128  VR128:$src)>;
 
@@ -2166,6 +2226,7 @@ def : Pat<(i128  (bitconvert (v16i8 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v8i16 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v4i32 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v2i64 VR128:$src))), (i128  VR128:$src)>;
+def : Pat<(i128  (bitconvert (v8f16 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v4f32 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (v2f64 VR128:$src))), (i128  VR128:$src)>;
 def : Pat<(i128  (bitconvert (f128  VR128:$src))), (i128  VR128:$src)>;
@@ -2216,6 +2277,7 @@ multiclass ScalarToVectorFP<Instruction vrep, ValueType vt, RegisterOperand cls,
             (vrep (INSERT_SUBREG (vt (IMPLICIT_DEF)), cls:$scalar,
                                  subreg), 0)>;
 }
+defm : ScalarToVectorFP<VREPH, v8f16, FP16, subreg_h16>;
 defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_h32>;
 defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_h64>;
 
@@ -2236,6 +2298,11 @@ let AddedComplexity = 4 in {
 // 3 added by TableGen for the base register operand in VLGV-based integer
 // extractions and ensures that this version is strictly better.
 let AddedComplexity = 4 in {
+  def : Pat<(f16 (z_vector_extract (v8f16 VR128:$vec), 0)),
+            (EXTRACT_SUBREG VR128:$vec, subreg_h16)>;
+  def : Pat<(f16 (z_vector_extract (v8f16 VR128:$vec), imm32zx3:$index)),
+            (EXTRACT_SUBREG (VREPH VR128:$vec, imm32zx2:$index), subreg_h16)>;
+
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), 0)),
             (EXTRACT_SUBREG VR128:$vec, subreg_h32)>;
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), imm32zx2:$index)),

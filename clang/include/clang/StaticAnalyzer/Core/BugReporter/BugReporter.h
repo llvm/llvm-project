@@ -48,7 +48,6 @@ namespace clang {
 class AnalyzerOptions;
 class ASTContext;
 class Decl;
-class LocationContext;
 class SourceManager;
 class Stmt;
 
@@ -256,6 +255,10 @@ public:
   BasicBugReport(const BugType &bt, StringRef desc, PathDiagnosticLocation l)
       : BugReport(Kind::Basic, bt, desc), Location(l) {}
 
+  BasicBugReport(const BugType &BT, StringRef ShortDesc, StringRef Desc,
+                 PathDiagnosticLocation L)
+      : BugReport(Kind::Basic, BT, ShortDesc, Desc), Location(L) {}
+
   static bool classof(const BugReport *R) {
     return R->getKind() == Kind::Basic;
   }
@@ -318,9 +321,9 @@ protected:
   llvm::DenseMap<const MemRegion *, bugreporter::TrackingKind>
       InterestingRegions;
 
-  /// A set of location contexts that correspoind to call sites which should be
+  /// A set of stack frames that correspond to call sites which should be
   /// considered "interesting".
-  llvm::SmallPtrSet<const LocationContext *, 2> InterestingLocationContexts;
+  llvm::SmallPtrSet<const StackFrame *, 2> InterestingStackFrames;
 
   /// A set of custom visitors which generate "event" diagnostics at
   /// interesting points in the path.
@@ -446,12 +449,12 @@ public:
   /// condition, will append "will be used as a condition" to the message).
   void markInteresting(SVal V, bugreporter::TrackingKind TKind =
                                    bugreporter::TrackingKind::Thorough);
-  void markInteresting(const LocationContext *LC);
+  void markInteresting(const StackFrame *SF);
 
   bool isInteresting(SymbolRef sym) const;
   bool isInteresting(const MemRegion *R) const;
   bool isInteresting(SVal V) const;
-  bool isInteresting(const LocationContext *LC) const;
+  bool isInteresting(const StackFrame *SF) const;
 
   std::optional<bugreporter::TrackingKind>
   getInterestingnessKind(SymbolRef sym) const;

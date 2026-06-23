@@ -50,6 +50,9 @@ struct IsVariableHelper
   Result operator()(const CoarrayRef &) const { return true; }
   Result operator()(const ComplexPart &) const { return true; }
   Result operator()(const ProcedureDesignator &) const;
+  template <typename T> Result operator()(const ConditionalExpr<T> &) const {
+    return false;
+  }
   template <typename T> Result operator()(const Expr<T> &x) const {
     if constexpr (common::HasMember<T, AllIntrinsicTypes> ||
         std::is_same_v<T, SomeDerived>) {
@@ -1296,7 +1299,15 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
+// Get the symbol vectors of the expression where symbols are grouped together
+// if they are part of the same component expression.
+//
+// Example: a%b + c%d
+// Will be grouped as: [(a, b), (c, d)]
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
+
 bool IsCUDADeviceSymbol(const Symbol &sym);
+bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1307,6 +1318,37 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
       return true;
     }
   }
+  return false;
+}
+
+inline bool IsCUDAConstantSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Constant);
+  }
+  return false;
+}
+
+// Non-allocatable module-level managed/unified variables use pointer
+// indirection through a companion global in __nv_managed_data__.
+// Explicit data transfers (cudaMemcpy) must be avoided for these
+// variables since they would target the shadow address rather than
+// the actual unified memory address.
+inline bool IsNonAllocatableModuleCUDAManagedSymbol(const Symbol &sym) {
+  const Symbol &ultimate = sym.GetUltimate();
+  if (!IsCUDAManagedOrUnifiedSymbol(ultimate))
+    return false;
+  if (ultimate.attrs().test(semantics::Attr::ALLOCATABLE))
+    return false;
+  return ultimate.owner().IsModule();
+}
+
+template <typename A>
+inline bool HasNonAllocatableModuleCUDAManagedSymbols(const A &expr) {
+  for (const Symbol &sym : CollectCudaSymbols(expr))
+    if (IsNonAllocatableModuleCUDAManagedSymbol(sym))
+      return true;
   return false;
 }
 
@@ -1322,6 +1364,9 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   return symbols.size();
 }
 
+// Get the number of unique symbols with CUDA device attribute.
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
+
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
 template <typename A>
@@ -1329,6 +1374,16 @@ inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
   semantics::UnorderedSymbolSet symbols;
   for (const Symbol &sym : CollectCudaSymbols(expr)) {
     if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+      symbols.insert(sym);
+    }
+  }
+  return symbols.size();
+}
+
+template <typename A> inline int GetNbOfCUDAConstantSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDAConstantSymbol(sym)) {
       symbols.insert(sym);
     }
   }
@@ -1347,13 +1402,31 @@ template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int rhsNbConstantSymbols{GetNbOfCUDAConstantSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special cases performed on the host:
-  // - Only managed or unifed symbols are involved on RHS and LHS.
-  // - LHS is managed or unified and the RHS is host only.
-  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == 1 &&
-          rhsNbSymbols == 1) ||
+  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
+    return false;
+
+  // If only constant symbols are present on the rhs, and no device symbols on
+  // the lhs, then no data transfer is needed because the constant have a host
+  // value.
+  if (rhsNbConstantSymbols == rhsNbSymbols && !HasCUDADeviceAttrs(lhs)) {
+    return false;
+  }
+
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
+  // Cases where no explicit data transfer is needed:
+  // - Both sides involve only managed/unified symbols (host-accessible).
+  // - LHS is host-only and RHS has only managed/unified symbols.
+  // - LHS is managed/unified and RHS is host-only.
+  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
+          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
@@ -1377,6 +1450,7 @@ enum class Operator {
   Call,
   Constant,
   Convert,
+  Conditional,
   Div,
   Eq,
   Eqv,
@@ -1546,6 +1620,8 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);
@@ -1638,6 +1714,9 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 } // namespace Fortran::semantics
 

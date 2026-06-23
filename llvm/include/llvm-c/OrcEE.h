@@ -66,7 +66,7 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
  */
 LLVM_C_ABI LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManagerReserveAlloc(
-    LLVMOrcExecutionSessionRef ES, bool ReserveAlloc);
+    LLVMOrcExecutionSessionRef ES, LLVMBool ReserveAlloc);
 
 /**
  * Create a RTDyldObjectLinkingLayer instance using MCJIT-memory-manager-like

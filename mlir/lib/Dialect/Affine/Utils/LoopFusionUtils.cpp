@@ -357,7 +357,7 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
 static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
                                                     bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount || *tripCount != 1)
     return failure();
   auto *parentOp = forOp->getParentOp();
@@ -496,14 +496,14 @@ bool mlir::affine::getLoopNestStats(AffineForOp forOpRoot,
 
     // Record trip count for 'forOp'. Set flag if trip count is not
     // constant.
-    std::optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
+    std::optional<APInt> maybeConstTripCount = forOp.getStaticTripCount();
     if (!maybeConstTripCount) {
       // Currently only constant trip count loop nests are supported.
       LDBG() << "Non-constant trip count unsupported";
       return WalkResult::interrupt();
     }
 
-    stats->tripCountMap[childForOp] = *maybeConstTripCount;
+    stats->tripCountMap[childForOp] = maybeConstTripCount->getZExtValue();
     return WalkResult::advance();
   });
   return !walkResult.wasInterrupted();
@@ -584,8 +584,11 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
   if (!buildSliceTripCountMap(slice, &sliceTripCountMap))
     return false;
   // Checks whether a store to load forwarding will happen.
-  int64_t sliceIterationCount = getSliceIterationCount(sliceTripCountMap);
-  assert(sliceIterationCount > 0);
+  uint64_t sliceIterationCount = getSliceIterationCount(sliceTripCountMap);
+  // It's possible it's zero due to an overflow and a wraparound; being a cost
+  // model, we fail.
+  if (sliceIterationCount == 0)
+    return false;
   bool storeLoadFwdGuaranteed = (sliceIterationCount == 1);
   auto *insertPointParent = slice.insertPoint->getParentOp();
 

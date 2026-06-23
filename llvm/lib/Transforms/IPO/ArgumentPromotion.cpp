@@ -50,6 +50,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -432,6 +433,16 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     PromoteMemToReg(Allocas, DT, &AC);
   }
 
+  // If argument(s) are dead (hence removed) or promoted, the function probably
+  // does not follow the standard calling convention anymore. Add DW_CC_nocall
+  // to DISubroutineType to inform debugger that it may not be safe to call this
+  // function.
+  DISubprogram *SP = NF->getSubprogram();
+  if (SP) {
+    auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
+    SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
+  }
+
   return NF;
 }
 
@@ -445,7 +456,9 @@ static bool allCallersPassValidPointerForArgument(
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
-  if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL))
+  if (isDereferenceableAndAlignedPointer(
+          Arg, NeededAlign, Bytes,
+          SimplifyQuery(DL, &Callee->getEntryBlock().front())))
     return true;
 
   // Look at all call sites of the function.  At this point we know we only have
@@ -480,7 +493,8 @@ static bool allCallersPassValidPointerForArgument(
       return true;
 
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
-                                              NeededAlign, Bytes, DL);
+                                              NeededAlign, Bytes,
+                                              SimplifyQuery(DL, &CB));
   });
 }
 

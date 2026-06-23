@@ -8,9 +8,18 @@
 struct IncompleteS;
 IncompleteS *p;
 
-// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
-// LLVM: @p = global ptr null
-// OGCG: @p = global ptr null, align 8
+// CIR-DAG: cir.global "private" constant cir_private @[[PAREN_A:.*]] = #cir.zero : !rec_Point
+// CIR-DAG: cir.global "private" constant cir_private @__const.{{.*}} = #cir.zero : !rec_CompleteS
+// CIR-DAG: cir.global "private" constant cir_private @__const.{{.*}} = #cir.zero : !rec_CompleteS
+// CIR-DAG: cir.global "private" constant cir_private @__const.{{.*}} = #cir.zero : !rec_CompleteS
+// CIR-DAG: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
+
+// LLVM-DAG: @[[PAREN_A:.*]] = private constant %struct.Point zeroinitializer
+// LLVM-DAG: @__const.{{.*}} = private constant %struct.CompleteS zeroinitializer
+// LLVM-DAG: @__const.{{.*}} = private constant %struct.CompleteS zeroinitializer
+// LLVM-DAG: @__const.{{.*}} = private constant %struct.CompleteS zeroinitializer
+// LLVM-DAG: @p = global ptr null
+// OGCG-DAG: @p = global ptr null, align 8
 
 struct CompleteS {
   int a;
@@ -28,7 +37,7 @@ void f(void) {
 }
 
 // CIR:      cir.func{{.*}} @_Z1fv()
-// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"]
+// CIR-NEXT:   cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!rec_IncompleteS>>
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @_Z1fv()
@@ -45,17 +54,17 @@ char f2(CompleteS &s) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f2R9CompleteS(%[[ARG_S:.*]]: !cir.ptr<!rec_CompleteS>{{.*}})
-// CIR:   %[[S_ADDR:.*]] = cir.alloca !cir.ptr<!rec_CompleteS>, !cir.ptr<!cir.ptr<!rec_CompleteS>>, ["s", init, const]
+// CIR:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_CompleteS>>
 // CIR:   cir.store %[[ARG_S]], %[[S_ADDR]]
 // CIR:   %[[S_REF:.*]] = cir.load{{.*}} %[[S_ADDR]]
 // CIR:   %[[S_ADDR2:.*]] = cir.get_member %[[S_REF]][1] {name = "b"}
 // CIR:   %[[S_B:.*]] = cir.load{{.*}} %[[S_ADDR2]]
 
-// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr %[[ARG_S:.*]])
+// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr{{.*}} %[[ARG_S:.*]])
 // LLVM:   %[[S_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG_S]], ptr %[[S_ADDR]]
 // LLVM:   %[[S_REF:.*]] = load ptr, ptr %[[S_ADDR]], align 8
-// LLVM:   %[[S_ADDR2:.*]] = getelementptr %struct.CompleteS, ptr %[[S_REF]], i32 0, i32 1
+// LLVM:   %[[S_ADDR2:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[S_REF]], i32 0, i32 1
 // LLVM:   %[[S_B:.*]] = load i8, ptr %[[S_ADDR2]]
 
 // OGCG: define{{.*}} i8 @_Z2f2R9CompleteS(ptr{{.*}} %[[ARG_S:.*]])
@@ -80,14 +89,14 @@ void f3() {
 }
 
 // CIR: cir.func{{.*}} @_Z2f3v()
-// CIR:   %[[O:.*]] = cir.alloca !rec_Outer, !cir.ptr<!rec_Outer>, ["o"]
+// CIR:   %[[O:.*]] = cir.alloca "o" {{.*}} : !cir.ptr<!rec_Outer>
 // CIR:   %[[O_I:.*]] = cir.get_member %[[O]][0] {name = "i"}
 // CIR:   %[[O_I_N:.*]] = cir.get_member %[[O_I]][0] {name = "n"}
 
 // LLVM: define{{.*}} void @_Z2f3v()
 // LLVM:   %[[O:.*]] = alloca %struct.Outer, i64 1, align 4
-// LLVM:   %[[O_I:.*]] = getelementptr %struct.Outer, ptr %[[O]], i32 0, i32 0
-// LLVM:   %[[O_I_N:.*]] = getelementptr %struct.Inner, ptr %[[O_I]], i32 0, i32 0
+// LLVM:   %[[O_I:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %[[O]], i32 0, i32 0
+// LLVM:   %[[O_I_N:.*]] = getelementptr inbounds nuw %struct.Inner, ptr %[[O_I]], i32 0, i32 0
 
 // OGCG: define{{.*}} void @_Z2f3v()
 // OGCG:   %[[O:.*]] = alloca %struct.Outer, align 4
@@ -105,17 +114,17 @@ void paren_expr() {
 }
 
 // CIR: cir.func{{.*}} @_Z10paren_exprv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["a", init]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["b", init]
-// CIR:   %[[CONST:.*]] = cir.const #cir.zero : !rec_Point
-// CIR:   cir.store{{.*}} %[[CONST]], %[[A_ADDR]] : !rec_Point, !cir.ptr<!rec_Point>
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_Point>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_Point>
+// CIR:   %[[CONST:.*]] = cir.get_global @[[PAREN_A]] : !cir.ptr<!rec_Point>
+// CIR:   cir.copy %[[CONST]] to %[[A_ADDR]] : !cir.ptr<!rec_Point>
 // CIR:   cir.copy %[[A_ADDR]] to %[[B_ADDR]] : !cir.ptr<!rec_Point>
 
 // LLVM: define{{.*}} void @_Z10paren_exprv()
 // LLVM:   %[[A_ADDR:.*]] = alloca %struct.Point, i64 1, align 4
 // LLVM:   %[[B_ADDR:.*]] = alloca %struct.Point, i64 1, align 4
-// LLVM:   store %struct.Point zeroinitializer, ptr %[[A_ADDR]], align 4
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[B_ADDR]], ptr %[[A_ADDR]], i32 8, i1 false)
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[PAREN_A]]
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[B_ADDR]], ptr %[[A_ADDR]], i64 8, i1 false)
 
 // OGCG: define{{.*}} void @_Z10paren_exprv()
 // OGCG:   %[[A_ADDR:.*]] = alloca %struct.Point, align 4
@@ -130,16 +139,16 @@ void choose_expr() {
 }
 
 // CIR: cir.func{{.*}} @_Z11choose_exprv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["b"]
-// CIR:   %[[C_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["c", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR:   cir.copy %[[A_ADDR]] to %[[C_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // LLVM: define{{.*}} void @_Z11choose_exprv()
 // LLVM:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
 // LLVM:   %[[B_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
 // LLVM:   %[[C_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[C_ADDR]], ptr %[[A_ADDR]], i32 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[C_ADDR]], ptr %[[A_ADDR]], i64 8, i1 false)
 
 // OGCG: define{{.*}} void @_Z11choose_exprv()
 // OGCG:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
@@ -155,10 +164,10 @@ void generic_selection() {
 }
 
 // CIR: cir.func{{.*}} @_Z17generic_selectionv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
-// CIR:   %[[B_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["b"]
-// CIR:   %[[C_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c"]
-// CIR:   %[[D_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["d", init]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR:   cir.copy %[[A_ADDR]] to %[[D_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // LLVM: define{{.*}} void @_Z17generic_selectionv()
@@ -166,7 +175,7 @@ void generic_selection() {
 // LLVM:   %2 = alloca %struct.CompleteS, i64 1, align 4
 // LLVM:   %3 = alloca i32, i64 1, align 4
 // LLVM:   %4 = alloca %struct.CompleteS, i64 1, align 4
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %4, ptr %1, i32 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %4, ptr %1, i64 8, i1 false)
 
 // OGCG: define{{.*}} void @_Z17generic_selectionv()
 // OGCG:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
@@ -183,8 +192,8 @@ void designated_init_update_expr() {
   } b = {a, .c.a = 1};
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !rec_Container, !cir.ptr<!rec_Container>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_Container>
 // CIR: %[[C_ADDR:.*]] = cir.get_member %[[B_ADDR]][0] {name = "c"} : !cir.ptr<!rec_Container> -> !cir.ptr<!rec_CompleteS>
 // CIR: cir.copy %[[A_ADDR]] to %[[C_ADDR]] : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[C_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
@@ -194,11 +203,11 @@ void designated_init_update_expr() {
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca %struct.Container, i64 1, align 4
-// LLVM: %[[C_ADDR:.*]] = getelementptr %struct.Container, ptr %[[B_ADDR]], i32 0, i32 0
-// LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %[[C_ADDR]], ptr %[[A_ADDR]], i32 8, i1 false)
-// LLVM: %[[ELEM_0_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[C_ADDR]], i32 0, i32 0
+// LLVM: %[[C_ADDR:.*]] = getelementptr inbounds nuw %struct.Container, ptr %[[B_ADDR]], i32 0, i32 0
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[C_ADDR]], ptr %[[A_ADDR]], i64 8, i1 false)
+// LLVM: %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[C_ADDR]], i32 0, i32 0
 // LLVM: store i32 1, ptr %[[ELEM_0_PTR]], align 4
-// LLVM: %[[ELEM_1_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[C_ADDR]], i32 0, i32 1
+// LLVM: %[[ELEM_1_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[C_ADDR]], i32 0, i32 1
 
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: %[[B_ADDR:.*]] = alloca %struct.Container, align 4
@@ -214,7 +223,7 @@ void atomic_init() {
 }
 
 // CIR: cir.func{{.*}} @_Z11atomic_initv()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a"]
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR:   %[[ELEM_0_PTR:.*]] = cir.get_member %[[A_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
 // CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[CONST_0]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -224,9 +233,9 @@ void atomic_init() {
 
 // LLVM: define{{.*}} void @_Z11atomic_initv()
 // LLVM:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 8
-// LLVM:   %[[ELEM_0_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[A_ADDR]], i32 0, i32 0
+// LLVM:   %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[A_ADDR]], i32 0, i32 0
 // LLVM:   store i32 0, ptr %[[ELEM_0_PTR]], align 8
-// LLVM:   %[[ELEM_1_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[A_ADDR]], i32 0, i32 1
+// LLVM:   %[[ELEM_1_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[A_ADDR]], i32 0, i32 1
 // LLVM:   store i8 0, ptr %[[ELEM_1_PTR]], align 4
 
 // OGCG: define{{.*}} void @_Z11atomic_initv()
@@ -240,12 +249,12 @@ void unary_extension() {
   CompleteS a = __extension__ CompleteS();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
-// CIR: %[[ZERO_INIT:.*]] = cir.const #cir.zero : !rec_CompleteS
-// CIR: cir.store{{.*}} %[[ZERO_INIT]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
+// CIR: %[[ZERO_INIT:.*]] = cir.get_global @[[UNARY_A:.*]] : !cir.ptr<!rec_CompleteS>
+// CIR: cir.copy %[[ZERO_INIT]] to %[[A_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM: store %struct.CompleteS zeroinitializer, ptr %[[A_ADDR]], align 4
+// LLVM: call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[UNARY_A:.*]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[A_ADDR]], i8 0, i64 8, i1 false)
@@ -255,13 +264,13 @@ void bin_comma() {
 }
 
 // CIR: cir.func{{.*}} @_Z9bin_commav()
-// CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
-// CIR:   %[[CONST:.*]] = cir.const #cir.zero : !rec_CompleteS
-// CIR:   cir.store{{.*}} %[[CONST]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
+// CIR:   %[[CONST:.*]] = cir.get_global @[[COMMA_A:.*]] : !cir.ptr<!rec_CompleteS>
+// CIR:   cir.copy %[[CONST]] to %[[A_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // LLVM: define{{.*}} void @_Z9bin_commav()
 // LLVM:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM:   store %struct.CompleteS zeroinitializer, ptr %[[A_ADDR]], align 4
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[COMMA_A:.*]]
 
 // OGCG: define{{.*}} void @_Z9bin_commav()
 // OGCG:   %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
@@ -269,14 +278,14 @@ void bin_comma() {
 
 void compound_literal_expr() { CompleteS a = (CompleteS){}; }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.zero : !rec_CompleteS
-// CIR: cir.store{{.*}} %[[CONST]], %[[A_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
+// CIR: %[[CONST:.*]] = cir.get_global @[[COMPLIT_A:.*]] : !cir.ptr<!rec_CompleteS>
+// CIR: cir.copy %[[CONST]] to %[[A_ADDR]] : !cir.ptr<!rec_CompleteS>
 
 // TODO(cir): zero-initialize the padding
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM: store %struct.CompleteS zeroinitializer, ptr %[[A_ADDR]], align 4
+// LLVM: call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[COMPLIT_A:.*]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[A_ADDR]], i8 0, i64 8, i1 false)
@@ -289,32 +298,24 @@ void struct_with_const_member_expr() {
   int a = (StructWithConstMember){}.a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[RESULT:.*]] = cir.scope {
-// CIR:   %[[REF_ADDR:.*]] = cir.alloca !rec_StructWithConstMember, !cir.ptr<!rec_StructWithConstMember>, ["ref.tmp0"]
-// CIR:   %[[ELEM_0_PTR:.*]] = cir.get_member %[[REF_ADDR]][0] {name = "a"} : !cir.ptr<!rec_StructWithConstMember> -> !cir.ptr<!u8i>
-// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   %[[SET_BF:.*]] = cir.set_bitfield{{.*}} (#bfi_a, %[[ELEM_0_PTR]] : !cir.ptr<!u8i>, %[[CONST_0]] : !s32i) -> !s32i
-// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.yield %[[CONST_0]] : !s32i
-// CIR: } : !s32i
-// CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[REF_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_StructWithConstMember>
+// CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[REF_ADDR]][0] {name = "a"} : !cir.ptr<!rec_StructWithConstMember> -> !cir.ptr<!u8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[SET_BF:.*]] = cir.set_bitfield{{.*}} (#bfi_a, %[[ELEM_0_PTR]] : !cir.ptr<!u8i>, %[[CONST_0]] : !s32i) -> !s32i
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: cir.store{{.*}} %[[CONST_0]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 
 // TODO(cir): zero-initialize the padding
 
-// LLVM:  %[[REF_ADDR:.*]] = alloca %struct.StructWithConstMember, i64 1, align 4
 // LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  br label %[[BF_LABEL:.*]]
-// LLVM: [[BF_LABEL]]:
-// LLVM:  %[[ELEM_0_PTR:.*]] = getelementptr %struct.StructWithConstMember, ptr %[[REF_ADDR]], i32 0, i32 0
+// LLVM:  %[[REF_ADDR:.*]] = alloca %struct.StructWithConstMember, i64 1, align 4
+// LLVM:  %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.StructWithConstMember, ptr %[[REF_ADDR]], i32 0, i32 0
 // LLVM:  %[[TMP_REF:.*]] = load i8, ptr %[[ELEM_0_PTR]], align 4
 // LLVM:  %[[BF_CLEAR:.*]] = and i8 %[[TMP_REF]], -2
 // LLVM:  %[[BF_SET:.*]] = or i8 %[[BF_CLEAR]], 0
 // LLVM:  store i8 %[[BF_SET]], ptr %[[ELEM_0_PTR]], align 4
-// LLVM:  br label %[[RESULT_LABEL:.*]]
-// LLVM: [[RESULT_LABEL]]:
-// LLVM:  %[[RESULT:.*]] = phi i32 [ 0, %[[BF_LABEL]] ]
-// LLVM:  store i32 %[[RESULT]], ptr %[[A_ADDR]], align 4
+// LLVM:  store i32 0, ptr %[[A_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG: %[[REF_ADDR:.*]] = alloca %struct.StructWithConstMember, align 4
@@ -326,7 +327,7 @@ void struct_with_const_member_expr() {
 
 void function_arg_with_default_value(CompleteS a = {1, 2}) {}
 
-// CIR: %[[ARG_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
+// CIR: %[[ARG_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
 // CIR: cir.store %{{.*}}, %[[ARG_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
 
 // LLVM: %[[ARG_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
@@ -339,23 +340,22 @@ void calling_function_with_default_values() {
   function_arg_with_default_value();
 }
 
-// CIR: %[[AGG_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["agg.tmp0"]
+// CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[ELEM_1_PTR:.*]] = cir.get_member %[[AGG_ADDR]][1] {name = "b"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s8i>
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_2_I8:.*]] = cir.cast integral %[[CONST_2]] : !s32i -> !s8i
-// CIR: cir.store{{.*}} %[[CONST_2_I8]], %[[ELEM_1_PTR]] : !s8i, !cir.ptr<!s8i>
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s8i
+// CIR: cir.store{{.*}} %[[CONST_2]], %[[ELEM_1_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR: %[[TMP_AGG:.*]] = cir.load{{.*}} %[[AGG_ADDR]] : !cir.ptr<!rec_CompleteS>, !rec_CompleteS
 // CIR: cir.call @_Z31function_arg_with_default_value9CompleteS(%[[TMP_AGG]]) : (!rec_CompleteS) -> ()
 
 // TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
 
 // LLVM: %[[AGG_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM: %[[ELEM_0_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 0
+// LLVM: %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 0
 // LLVM: store i32 1, ptr %[[ELEM_0_PTR]], align 4
-// LLVM: %[[ELEM_1_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 1
+// LLVM: %[[ELEM_1_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM: store i8 2, ptr %[[ELEM_1_PTR]], align 4
 // LLVM: %[[TMP_AGG:.*]] = load %struct.CompleteS, ptr %[[AGG_ADDR]], align 4
 // LLVM: call void @_Z31function_arg_with_default_value9CompleteS(%struct.CompleteS %[[TMP_AGG]])

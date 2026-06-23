@@ -74,9 +74,10 @@ ObjectContainerUniversalMachO::ObjectContainerUniversalMachO(
 ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() = default;
 
 bool ObjectContainerUniversalMachO::ParseHeader() {
-  bool success = ParseHeader(*m_extractor_sp.get(), m_header, m_fat_archs);
+  bool success = ParseHeader(*m_extractor_sp, m_header, m_fat_archs);
   // We no longer need any data, we parsed all we needed to parse and cached it
-  // in m_header and m_fat_archs
+  // in m_header and m_fat_archs.  Need to have an empty DataExtractor for code
+  // that assumes it is non-null.
   m_extractor_sp = std::make_shared<DataExtractor>();
   return success;
 }
@@ -121,6 +122,11 @@ bool ObjectContainerUniversalMachO::ParseHeader(
           arch.align = extractor.GetU32(&offset);
           fat_archs.emplace_back(arch);
         }
+      } else {
+        // nfat_arch is read from the file and is untrusted (up to 0xFFFFFFFF).
+        // Once the data is exhausted the offset can no longer advance, so the
+        // remaining iterations would spin uselessly; stop here.
+        break;
       }
     }
     return true;
@@ -187,28 +193,32 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
+  if (!extractor_sp)
+    return {};
 
-  DataExtractor extractor;
-  extractor.SetData(data_sp, data_offset, data_sp->GetByteSize());
-
-  if (ObjectContainerUniversalMachO::MagicBytesMatch(extractor)) {
+  ModuleSpecList specs;
+  if (ObjectContainerUniversalMachO::MagicBytesMatch(*extractor_sp)) {
     llvm::MachO::fat_header header;
     std::vector<FatArch> fat_archs;
-    if (ParseHeader(extractor, header, fat_archs)) {
+    if (ParseHeader(*extractor_sp, header, fat_archs)) {
       for (const FatArch &fat_arch : fat_archs) {
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
-        if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
-          ObjectFile::GetModuleSpecifications(
-              file, slice_file_offset, file_size - slice_file_offset, specs);
+        // The slice must start strictly past the current offset.  A slice whose
+        // offset is 0 (or otherwise does not advance) is self-referential: the
+        // recursive call below would re-parse the same range and recurse
+        // without bound.  Skip such slices instead of overflowing the stack.
+        if (slice_file_offset > file_offset &&
+            fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
+          ModuleSpecList arch_specs = ObjectFile::GetModuleSpecifications(
+              file, slice_file_offset, file_size - slice_file_offset);
+          specs.Append(arch_specs);
         }
       }
     }
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }

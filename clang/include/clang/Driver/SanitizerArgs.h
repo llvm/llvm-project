@@ -8,7 +8,9 @@
 #ifndef LLVM_CLANG_DRIVER_SANITIZERARGS_H
 #define LLVM_CLANG_DRIVER_SANITIZERARGS_H
 
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -28,6 +30,7 @@ class SanitizerArgs {
   SanitizerSet MergeHandlers;
   SanitizerMaskCutoffs SkipHotCutoffs;
   SanitizerSet AnnotateDebugInfo;
+  SanitizerSet SuppressUBSanFeature;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -67,6 +70,7 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  bool TrapLoop = false;
   bool TysanOutlineInstrumentation = true;
   bool HandlerPreserveAllRegs = false;
   // True if cross-dso CFI support if provided by the system (i.e. Android).
@@ -83,7 +87,9 @@ class SanitizerArgs {
 public:
   /// Parses the sanitizer arguments from an argument list.
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                bool DiagnoseErrors = true);
+                bool DiagnoseErrors = true, bool DiagnoseBoundArchErrors = true,
+                BoundArch BA = {},
+                Action::OffloadKind DeviceOffloadKind = Action::OFK_None);
 
   bool needsSharedRt() const { return SharedRuntime; }
   bool needsStableAbi() const { return StableABI; }
@@ -109,6 +115,7 @@ public:
   bool needsUbsanRt() const;
   bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
+  bool needsUbsanLoopDetectRt() const { return TrapLoop; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
   bool needsCfiCrossDsoRt() const;

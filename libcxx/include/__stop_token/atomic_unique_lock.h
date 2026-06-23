@@ -10,9 +10,10 @@
 #ifndef _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 #define _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 
-#include <__bit/popcount.h>
+#include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
+#include <__bit/has_single_bit.h>
 #include <__config>
-#include <atomic>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // and LockedBit is the value of State when the lock bit is set, e.g  1 << 2
 template <class _State, _State _LockedBit>
 class __atomic_unique_lock {
-  static_assert(std::__popcount(static_cast<unsigned long long>(_LockedBit)) == 1,
+  static_assert(std::has_single_bit(static_cast<unsigned long long>(_LockedBit)),
                 "LockedBit must be an integer where only one bit is set");
 
   std::atomic<_State>& __state_;

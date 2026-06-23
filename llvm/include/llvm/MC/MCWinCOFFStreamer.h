@@ -25,7 +25,7 @@ class StringRef;
 class WinCOFFObjectWriter;
 class raw_pwrite_stream;
 
-class MCWinCOFFStreamer : public MCObjectStreamer {
+class LLVM_ABI MCWinCOFFStreamer : public MCObjectStreamer {
 public:
   MCWinCOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                     std::unique_ptr<MCCodeEmitter> CE,
@@ -42,7 +42,7 @@ public:
   /// \name MCStreamer interface
   /// \{
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void initSections(const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
