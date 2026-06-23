@@ -14,6 +14,8 @@
 #include <utility>
 #include <functional>
 
+#include "test_iterators.h"
+
 struct View : std::ranges::view_interface<View> {
   int* begin();
   char* begin() const;
@@ -23,6 +25,18 @@ struct View : std::ranges::view_interface<View> {
 static_assert(!std::ranges::common_range<View>);
 static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+
+struct NonCommonSimpleView : std::ranges::view_interface<NonCommonSimpleView> {
+  int* begin();
+  int* begin() const;
+  sized_sentinel<int*> end();
+  sized_sentinel<int*> end() const;
+};
+static_assert(!std::ranges::common_range<View>);
+static_assert(
+    std::same_as<std::ranges::iterator_t<NonCommonSimpleView>, std::ranges::iterator_t<const NonCommonSimpleView>>);
+static_assert(
+    std::same_as<std::ranges::sentinel_t<NonCommonSimpleView>, std::ranges::sentinel_t<const NonCommonSimpleView>>);
 
 void test() {
   auto v = View{} | std::views::transform(std::identity{});
@@ -63,6 +77,8 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it[0];
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(it)[0];
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it + 0;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   0 + it;
@@ -81,6 +97,17 @@ void test() {
   it - st;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
+
+  {
+    auto ncsv = NonCommonSimpleView{} | std::views::transform(std::identity{});
+    auto c_it = std::as_const(ncsv).begin();
+    auto sst  = ncsv.end();
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    sst - c_it;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    c_it - sst;
+  }
 
   // [range.transform.overview]
 
