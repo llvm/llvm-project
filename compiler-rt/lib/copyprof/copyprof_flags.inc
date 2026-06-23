@@ -24,3 +24,8 @@ COPYPROF_FLAG(int, obj_size_threshold, 16,
 COPYPROF_FLAG(
     bool, must_allocate, true,
     "Only report copies of objects that allocated memory when copied.")
+COPYPROF_FLAG(
+    const char*, report_output_file, nullptr,
+    "If set, write CopyProf reports to this file instead of stderr. The "
+    "filename is made unique by appending a suffix to it. This avoids "
+    "collisions when an application starts multiple copies of itself.")
