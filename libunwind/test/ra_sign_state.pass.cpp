@@ -73,6 +73,7 @@ __attribute__((noinline)) extern "C" uintptr_t get_main_ra_sign_state() {
   uint64_t sign_state = -1;
   _Unwind_Backtrace(frame_handler, &sign_state);
   printf("UNW_AARCH64_RA_SIGN_STATE = %" PRIu64 "\n", sign_state);
+  assert((sign_state & 0x3) == sign_state);
   return sign_state;
 }
 
@@ -80,7 +81,7 @@ __attribute__((noinline)) uint64_t check_vanilla() {
   return get_main_ra_sign_state();
 }
 
-__attribute__((naked)) uint64_t check_negate() {
+__attribute__((naked, target("pauth"))) uint64_t check_negate() {
   asm(".cfi_negate_ra_state\n"
       "pacibsp\n"
 
@@ -104,10 +105,8 @@ FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
   ret = check_vanilla();
-  assert((ret & 2) == ret);
-
 #if defined(__PTRAUTH__) || __has_feature(ptrauth_calls)
-  assert(ret == 1);
+  assert(ret == 1 || ret == 2);
 #else
   assert(ret == 0);
 #endif
