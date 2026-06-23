@@ -479,8 +479,7 @@ define i1 @assume_a_gt_b_and_b_ge_c_signed(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[AB]])
 ; CHECK-NEXT:    [[BC:%.*]] = icmp sge i64 [[B]], [[C:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BC]])
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[EQ]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ab = icmp sgt i64 %a, %b
   call void @llvm.assume(i1 %ab)

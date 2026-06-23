@@ -429,8 +429,7 @@ define i1 @assume_a_lt_b_and_b_lt_c_signed(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[B]], [[C:%.*]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    ret i1 true
 ;
   %1 = icmp slt i64 %a, %b
   tail call void @llvm.assume(i1 %1)
