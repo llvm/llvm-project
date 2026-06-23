@@ -283,12 +283,11 @@ static void AddFriendTemplateDeductionCandidate(
   if (!FailedTSC)
     return;
 
-  const Decl *CanonicalDeclaration = Declaration->getCanonicalDecl();
   for (TemplateSpecCandidate &Candidate : *FailedTSC) {
     if (!Candidate.Specialization)
       continue;
 
-    if (Candidate.Specialization->getCanonicalDecl() == CanonicalDeclaration)
+    if (declaresSameEntity(Candidate.Specialization, Declaration))
       return;
   }
 
@@ -462,7 +461,7 @@ static bool DeduceFriendContextTemplateArguments(
     ContextArgs = CTSD->getTemplateArgs().asArray();
   }
 
-  if (ContextCTD->getCanonicalDecl() != FriendCTD->getCanonicalDecl())
+  if (!declaresSameEntity(ContextCTD, FriendCTD))
     return false;
 
   return DeduceTemplateArguments(S, FriendTPL, FriendCTD, FriendArgs,
@@ -496,7 +495,7 @@ static bool MatchesFriendContext(Sema &S, DeclContext *DC,
       if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
         CTD = CTSD->getSpecializedTemplate();
 
-      if (CTD && CTD->getCanonicalDecl() == Template->getCanonicalDecl())
+      if (declaresSameEntity(CTD, Template))
         return RD;
     }
     return nullptr;
@@ -506,8 +505,7 @@ static bool MatchesFriendContext(Sema &S, DeclContext *DC,
     const CXXRecordDecl *FriendContext =
         GetClassTemplateContext(FriendRecord->getDeclContext(), FriendCTD);
     const CXXRecordDecl *Context = GetClassTemplateContext(DC, FriendCTD);
-    if (FriendContext && Context &&
-        FriendContext->getCanonicalDecl() == Context->getCanonicalDecl())
+    if (declaresSameEntity(FriendContext, Context))
       return true;
   }
 
@@ -739,7 +737,7 @@ static AccessResult MatchesFriend(Sema &S,
     }
 
     // It's a match.
-    if (Friend == CTD->getCanonicalDecl())
+    if (declaresSameEntity(Friend, CTD))
       return AR_accessible;
 
     // If the context isn't dependent, it can't be a dependent match.
@@ -1058,8 +1056,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     if (!CTSD)
       continue;
 
-    if (CTSD->getSpecializedTemplate()->getCanonicalDecl() !=
-        CTD->getCanonicalDecl())
+    if (!declaresSameEntity(CTSD->getSpecializedTemplate(), CTD))
       continue;
 
     if (CanDeduceTemplateArguments(S, TPL, CTD, TST->template_arguments(),
