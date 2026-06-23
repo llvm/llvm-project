@@ -1291,10 +1291,10 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
-      if (R.getNumOperands() != 2)
-        return nullptr;
-      unsigned ID = OpcodeOrIID->second;
-      return Folder.FoldBinaryIntrinsic(ID, Ops[0], Ops[1], R.getScalarType());
+      auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(&R);
+      return Folder.FoldIntrinsic(OpcodeOrIID->second, Ops, R.getScalarType(),
+                                  RFlags ? RFlags->getFastMathFlagsOrNone()
+                                         : FastMathFlags());
     }
     unsigned Opcode = OpcodeOrIID->second;
     if (Instruction::isBinaryOp(Opcode))
@@ -5781,14 +5781,18 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
 
 static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
   SmallVector<VPValue *> Ops0;
-  auto *WideMember0 = dyn_cast<VPSingleDefRecipe>(Ops[0]);
+  auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
     return false;
   for (VPValue *V : Ops) {
     if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
       return false;
-    auto *R = cast<VPSingleDefRecipe>(V);
+    auto *R = cast<VPRecipeWithIRFlags>(V);
     if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(WideMember0))
+      return false;
+    if (R->getScalarType() != WideMember0->getScalarType())
+      return false;
+    if (R->hasPredicate() && R->getPredicate() != WideMember0->getPredicate())
       return false;
   }
 

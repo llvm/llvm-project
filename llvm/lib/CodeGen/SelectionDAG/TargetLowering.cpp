@@ -9126,7 +9126,7 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   // Each pass handles half the shift amount of the previous pass.
   SDValue X = Val;
   for (int S = (int)LogBW - 1; S >= 0; --S) {
-    SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
+    SDValue ShiftSv = DAG.getShiftAmountConstant(1ull << S, VT, DL);
     SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
     SDValue UnshiftedBits =
         DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));

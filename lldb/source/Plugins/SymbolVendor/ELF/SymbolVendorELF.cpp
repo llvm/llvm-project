@@ -160,8 +160,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
             objfile_section_list->FindSectionByType(section_type, true)) {
       if (SectionSP module_section_sp =
               module_section_list->FindSectionByType(section_type, true))
-        module_section_list->ReplaceSection(module_section_sp->GetID(),
-                                            section_sp);
+        module_section_list->ReplaceSection(module_section_sp, section_sp);
       else
         module_section_list->AddSection(section_sp);
     }

@@ -315,17 +315,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::i1, MVT::i32, MVT::i64, MVT::f32, MVT::f64}, Expand);
 
   setOperationAction({ISD::ABS, ISD::UADDO, ISD::USUBO}, MVT::i32, Legal);
+  setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i64, Legal);
 
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i32, Legal);
+  setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
 
   setOperationAction({ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS}, MVT::i64,
                      Expand);
 
   setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
-
-#if 0
-  setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
-#endif
 
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
@@ -908,7 +906,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (Subtarget->hasPackedFP64Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
                           ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
-                          ISD::FCANONICALIZE},
+                          ISD::FCANONICALIZE, ISD::BUILD_VECTOR},
                          MVT::v2f64, Legal);
       setOperationAction(
           {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
@@ -921,7 +919,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     }
 
     if (Subtarget->hasPackedU64Ops()) {
-      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL}, MVT::v2i64, Legal);
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::BUILD_VECTOR},
+                         MVT::v2i64, Legal);
       setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL},
                          {MVT::v4i64, MVT::v8i64, MVT::v16i64, MVT::v32i64},
                          Custom);
@@ -1050,9 +1049,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::PTRADD,
-                       ISD::UADDO_CARRY,
                        ISD::SUB,
-                       ISD::USUBO_CARRY,
                        ISD::MUL,
                        ISD::FADD,
                        ISD::FSUB,
@@ -13354,7 +13351,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     if (!AllowInaccurateRcp && VT != MVT::f16 && VT != MVT::bf16)
       return SDValue();
 
-    if (CLHS->isExactlyValue(1.0)) {
+    if (CLHS->isOne()) {
       // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
       // the CI documentation has a worst case error of 1 ulp.
       // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
@@ -13371,7 +13368,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
 
     // Same as for 1.0, but expand the sign out of the constant.
-    if (CLHS->isExactlyValue(-1.0)) {
+    if (CLHS->isMinusOne()) {
       // -1.0 / x -> rcp (fneg x)
       SDValue FNegRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, FNegRHS);
@@ -13403,7 +13400,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
     return SDValue();
 
   const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(X);
-  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+  bool IsNegRcp = CLHS && CLHS->isMinusOne();
 
   // Pull out the negation so it folds for free into the source modifiers.
   if (IsNegRcp)
@@ -13423,7 +13420,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV64(SDValue Op,
   R = DAG.getNode(ISD::FMA, SL, VT, Tmp1, R, R);
 
   // Skip the last 2 correction terms for reciprocal.
-  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0)))
+  if (IsNegRcp || (CLHS && CLHS->isOne()))
     return R;
 
   SDValue Ret = DAG.getNode(ISD::FMUL, SL, VT, X, R);
@@ -16308,7 +16305,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
     // hardware fmed3 behavior converting to a min.
     // FIXME: Should this be allowing -0.0?
-    if (K1->isExactlyValue(1.0) && K0->isPosZero())
+    if (K1->isOne() && K0->isPosZero())
       return DAG.getNode(AMDGPUISD::CLAMP, SL, VT, Op0.getOperand(0));
   }
 
@@ -16506,8 +16503,8 @@ static bool isClampZeroToOne(SDValue A, SDValue B) {
   if (ConstantFPSDNode *CA = dyn_cast<ConstantFPSDNode>(A)) {
     if (ConstantFPSDNode *CB = dyn_cast<ConstantFPSDNode>(B)) {
       // FIXME: Should this be allowing -0.0?
-      return (CA->isPosZero() && CB->isExactlyValue(1.0)) ||
-             (CA->isExactlyValue(1.0) && CB->isPosZero());
+      return (CA->isPosZero() && CB->isOne()) ||
+             (CA->isOne() && CB->isPosZero());
     }
   }
 
@@ -17763,31 +17760,6 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   return SDValue();
 }
 
-SDValue
-SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
-
-  if (N->getValueType(0) != MVT::i32)
-    return SDValue();
-
-  if (!isNullConstant(N->getOperand(1)))
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue LHS = N->getOperand(0);
-
-  // uaddo_carry (add x, y), 0, cc => uaddo_carry x, y, cc
-  // usubo_carry (sub x, y), 0, cc => usubo_carry x, y, cc
-  unsigned LHSOpc = LHS.getOpcode();
-  unsigned Opc = N->getOpcode();
-  if ((LHSOpc == ISD::ADD && Opc == ISD::UADDO_CARRY) ||
-      (LHSOpc == ISD::SUB && Opc == ISD::USUBO_CARRY)) {
-    SDValue Args[] = {LHS.getOperand(0), LHS.getOperand(1), N->getOperand(2)};
-    return DAG.getNode(Opc, SDLoc(N), N->getVTList(), Args);
-  }
-  return SDValue();
-}
-
 SDValue SITargetLowering::performFAddCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
@@ -17897,8 +17869,7 @@ SDValue SITargetLowering::performFDivCombine(SDNode *N,
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
     bool IsNegative = false;
-    if (CLHS->isExactlyValue(1.0) ||
-        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+    if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
       // fdiv contract 1.0, (sqrt contract x) -> rsq
       // fdiv contract -1.0, (sqrt contract x) -> fneg(rsq)
       if (RHS.getOpcode() == ISD::FSQRT) {
@@ -18684,9 +18655,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performPtrAddCombine(N, DCI);
   case ISD::SUB:
     return performSubCombine(N, DCI);
-  case ISD::UADDO_CARRY:
-  case ISD::USUBO_CARRY:
-    return performAddCarrySubCarryCombine(N, DCI);
   case ISD::FADD:
     return performFAddCombine(N, DCI);
   case ISD::FSUB:

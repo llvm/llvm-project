@@ -129,13 +129,13 @@ define <8 x half> @canonicalize_v8f16(<8 x half> %a) nounwind {
 ; Z16-NEXT:    vgmf %v1, 2, 8
 ; Z16-NEXT:    meebr %f0, %f1
 ; Z16-NEXT:    brasl %r14, __truncsfhf2@PLT
-; Z16-NEXT:    vl %v1, 192(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vl %v2, 192(%r15), 3 # 16-byte Reload
 ; Z16-NEXT:    # kill: def $f0h killed $f0h def $v0
-; Z16-NEXT:    vmrhh %v0, %v0, %v1
+; Z16-NEXT:    vreph %v1, %v1, 5
+; Z16-NEXT:    vmrhh %v0, %v0, %v2
 ; Z16-NEXT:    vst %v0, 192(%r15), 3 # 16-byte Spill
-; Z16-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
-; Z16-NEXT:    vreph %v0, %v0, 5
-; Z16-NEXT:    # kill: def $f0h killed $f0h killed $v0
+; Z16-NEXT:    ldr %f0, %f1
 ; Z16-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; Z16-NEXT:    vgmf %v1, 2, 8
 ; Z16-NEXT:    meebr %f0, %f1
@@ -150,13 +150,13 @@ define <8 x half> @canonicalize_v8f16(<8 x half> %a) nounwind {
 ; Z16-NEXT:    meebr %f0, %f1
 ; Z16-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; Z16-NEXT:    vl %v1, 176(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vl %v2, 192(%r15), 3 # 16-byte Reload
 ; Z16-NEXT:    # kill: def $f0h killed $f0h def $v0
-; Z16-NEXT:    vmrhh %v0, %v0, %v1
-; Z16-NEXT:    vl %v1, 192(%r15), 3 # 16-byte Reload
-; Z16-NEXT:    vmrhf %v0, %v0, %v1
-; Z16-NEXT:    vst %v0, 192(%r15), 3 # 16-byte Spill
+; Z16-NEXT:    vmrhh %v1, %v0, %v1
 ; Z16-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vmrhf %v1, %v1, %v2
 ; Z16-NEXT:    vreph %v0, %v0, 3
+; Z16-NEXT:    vst %v1, 192(%r15), 3 # 16-byte Spill
 ; Z16-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; Z16-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; Z16-NEXT:    vgmf %v1, 2, 8
@@ -262,13 +262,13 @@ define void @canonicalize_ptr_v8f16(ptr %out) nounwind {
 ; Z16-NEXT:    vgmf %v1, 2, 8
 ; Z16-NEXT:    meebr %f0, %f1
 ; Z16-NEXT:    brasl %r14, __truncsfhf2@PLT
-; Z16-NEXT:    vl %v1, 192(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vl %v2, 192(%r15), 3 # 16-byte Reload
 ; Z16-NEXT:    # kill: def $f0h killed $f0h def $v0
-; Z16-NEXT:    vmrhh %v0, %v0, %v1
+; Z16-NEXT:    vreph %v1, %v1, 5
+; Z16-NEXT:    vmrhh %v0, %v0, %v2
 ; Z16-NEXT:    vst %v0, 192(%r15), 3 # 16-byte Spill
-; Z16-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
-; Z16-NEXT:    vreph %v0, %v0, 5
-; Z16-NEXT:    # kill: def $f0h killed $f0h killed $v0
+; Z16-NEXT:    ldr %f0, %f1
 ; Z16-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; Z16-NEXT:    vgmf %v1, 2, 8
 ; Z16-NEXT:    meebr %f0, %f1
@@ -283,13 +283,13 @@ define void @canonicalize_ptr_v8f16(ptr %out) nounwind {
 ; Z16-NEXT:    meebr %f0, %f1
 ; Z16-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; Z16-NEXT:    vl %v1, 176(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vl %v2, 192(%r15), 3 # 16-byte Reload
 ; Z16-NEXT:    # kill: def $f0h killed $f0h def $v0
-; Z16-NEXT:    vmrhh %v0, %v0, %v1
-; Z16-NEXT:    vl %v1, 192(%r15), 3 # 16-byte Reload
-; Z16-NEXT:    vmrhf %v0, %v0, %v1
-; Z16-NEXT:    vst %v0, 192(%r15), 3 # 16-byte Spill
+; Z16-NEXT:    vmrhh %v1, %v0, %v1
 ; Z16-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
+; Z16-NEXT:    vmrhf %v1, %v1, %v2
 ; Z16-NEXT:    vreph %v0, %v0, 3
+; Z16-NEXT:    vst %v1, 192(%r15), 3 # 16-byte Spill
 ; Z16-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; Z16-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; Z16-NEXT:    vgmf %v1, 2, 8

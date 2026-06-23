@@ -19,6 +19,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Options/Options.h"
@@ -209,7 +210,7 @@ CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<ASTMergeAction>(std::move(Act),
                                             FEOpts.ASTMergeFiles);
 
-  if (!FEOpts.SSAFTUSummaryFile.empty()) {
+  if (!CI.getSSAFOpts().TUSummaryFile.empty()) {
     Act = std::make_unique<ssaf::TUSummaryExtractorFrontendAction>(
         std::move(Act));
   }

@@ -301,7 +301,7 @@ LoadCommands:
     vmaddr:          4294975488
     vmsize:          4096
     fileoff:         8192
-    filesize:        508
+    filesize:        512
     maxprot:         1
     initprot:        1
     nsects:          0
@@ -310,7 +310,7 @@ LoadCommands:
     cmdsize:         24
     symoff:          8192
     nsyms:           18
-    stroff:          8484
+    stroff:          8488
     strsize:         216
   - cmd:             LC_DYSYMTAB
     cmdsize:         80
