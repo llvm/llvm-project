@@ -29,6 +29,7 @@ set(LIBCXX_SOURCES
   include/ryu/ryu.h
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
+  mathematical_special_functions.cpp
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
