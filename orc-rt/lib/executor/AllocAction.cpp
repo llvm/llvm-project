@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/AllocAction.h"
-#include "orc-rt/ScopeExit.h"
+#include "orc-rt/scope_exit.h"
 
 namespace orc_rt {
 

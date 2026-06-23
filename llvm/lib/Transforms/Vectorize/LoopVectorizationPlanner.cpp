@@ -162,7 +162,8 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
-  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors;
+  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors ||
+         VectorizerParams::VectorizationFactor.isScalable();
 }
 
 bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {

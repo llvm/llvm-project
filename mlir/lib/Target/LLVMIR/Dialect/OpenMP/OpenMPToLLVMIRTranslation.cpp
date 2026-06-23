@@ -8194,10 +8194,6 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   attrs.MinThreads = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
-  // TODO: Allow modified buffer length similar to
-  // fopenmp-cuda-teams-reduction-recs-num flag in clang.
-  if (attrs.ReductionDataSize != 0)
-    attrs.ReductionBufferLength = 1024;
 }
 
 /// Gather LLVM runtime values for all clauses evaluated in the host that are

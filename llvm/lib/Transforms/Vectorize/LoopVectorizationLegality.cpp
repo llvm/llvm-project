@@ -104,7 +104,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
                                        bool InterleaveOnlyWhenForced,
                                        OptimizationRemarkEmitter &ORE,
                                        const TargetTransformInfo *TTI)
-    : Width("vectorize.width", VectorizerParams::VectorizationFactor, HK_WIDTH),
+    : Width("vectorize.width",
+            VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
@@ -141,6 +142,10 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   if (ForceScalableVectorization.getValue() !=
       LoopVectorizeHints::SK_Unspecified)
     Scalable.Value = ForceScalableVectorization.getValue();
+
+  // If force-vector-width is scalable, force scalable vectorization.
+  if (VectorizerParams::VectorizationFactor.isScalable())
+    Scalable.Value = SK_AlwaysScalable;
 
   // Scalable vectorization is disabled if no preference is specified.
   if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified)
