@@ -3177,6 +3177,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
     mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
                                       mlir::OpBuilder &builder) const;
   }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
