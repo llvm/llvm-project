@@ -32,18 +32,15 @@ define void @memset_misaligned_dst() {
 
 ; COPY-DST: Entering function: main
 ; COPY-DST: Entering function: memcpy_misaligned_dst
-; COPY-DST: Immediate UB detected: Misaligned memory access.
-; COPY-DST-SAME: Required alignment: 2.
+; COPY-DST: Immediate UB detected: Memory transfer intrinsic with poison destination pointer.
 ; COPY-DST: error: Execution of function 'main' failed.
 
 ; COPY-SRC: Entering function: main
 ; COPY-SRC: Entering function: memcpy_misaligned_src
-; COPY-SRC: Immediate UB detected: Misaligned memory access.
-; COPY-SRC-SAME: Required alignment: 2.
+; COPY-SRC: Immediate UB detected: Memory transfer intrinsic with poison source pointer.
 ; COPY-SRC: error: Execution of function 'main' failed.
 
 ; SET-DST: Entering function: main
 ; SET-DST: Entering function: memset_misaligned_dst
-; SET-DST: Immediate UB detected: Misaligned memory access.
-; SET-DST-SAME: Required alignment: 2.
+; SET-DST: Immediate UB detected: memset called with poison destination pointer.
 ; SET-DST: error: Execution of function 'main' failed.

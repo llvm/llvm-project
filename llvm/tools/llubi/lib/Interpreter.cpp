@@ -700,20 +700,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return V.asInteger();
   }
 
-  bool handlesMemoryIntrinsicAlignment(Intrinsic::ID IID, unsigned ArgNo) {
-    switch (IID) {
-    case Intrinsic::memcpy:
-    case Intrinsic::memcpy_inline:
-    case Intrinsic::memmove:
-      return ArgNo == 0 || ArgNo == 1;
-    case Intrinsic::memset:
-    case Intrinsic::memset_inline:
-      return ArgNo == 0;
-    default:
-      return false;
-    }
-  }
-
   AnyValue callMemTransferIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args,
                                     Intrinsic::ID IID) {
     const AnyValue &Dest = Args[0];
@@ -1668,8 +1654,7 @@ public:
   /// Handle both poison-generating and UB-implying attributes for parameters
   /// and return values.
   void handleAttributes(Type *Ty, AnyValue &V, AttributeSet AttrsAtCallSite,
-                        AttributeSet AttrsAtCallee,
-                        bool HandleAlignAttr = true) {
+                        AttributeSet AttrsAtCallee) {
     if (Ty->isIntOrIntVectorTy()) {
       if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::Range);
           CRAttr.isValid())
@@ -1691,7 +1676,7 @@ public:
           AttrsAtCallee.hasAttribute(Attribute::NonNull))
         applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
     }
-    if (HandleAlignAttr && Ty->isPtrOrPtrVectorTy()) {
+    if (Ty->isPtrOrPtrVectorTy()) {
       if (MaybeAlign Align = AttrsAtCallSite.getAlignment())
         applyAlignAttr(V, *Align);
       if (MaybeAlign Align = AttrsAtCallee.getAlignment())
@@ -1849,11 +1834,7 @@ public:
       // callee. We do it explicitly to avoid duplication.
       AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
       AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
-      bool HandleAlignAttr =
-          !Callee->isIntrinsic() ||
-          !handlesMemoryIntrinsicAlignment(Callee->getIntrinsicID(), I);
-      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee,
-                       HandleAlignAttr);
+      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
 
     CurrentFrame->ResolvedCallee = Callee;
