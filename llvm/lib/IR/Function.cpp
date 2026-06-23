@@ -56,7 +56,6 @@
 #include <string>
 
 using namespace llvm;
-using ProfileCount = Function::ProfileCount;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
@@ -1079,29 +1078,18 @@ void Function::setValueSubclassDataBit(unsigned Bit, bool On) {
     setValueSubclassData(getSubclassDataFromValue() & ~(1 << Bit));
 }
 
-void Function::setEntryCount(ProfileCount Count,
+void Function::setEntryCount(uint64_t Count,
                              const DenseSet<GlobalValue::GUID> *S) {
-#if !defined(NDEBUG)
-  auto PrevCount = getEntryCount();
-  assert(!PrevCount || PrevCount->getType() == Count.getType());
-#endif
-
   auto ImportGUIDs = getImportGUIDs();
   if (S == nullptr && ImportGUIDs.size())
     S = &ImportGUIDs;
 
   MDBuilder MDB(getContext());
-  setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createFunctionEntryCount(Count.getCount(), Count.isSynthetic(), S));
+  setMetadata(LLVMContext::MD_prof,
+              MDB.createFunctionEntryCount(Count, false, S));
 }
 
-void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
-                             const DenseSet<GlobalValue::GUID> *Imports) {
-  setEntryCount(ProfileCount(Count, Type), Imports);
-}
-
-std::optional<ProfileCount> Function::getEntryCount() const {
+std::optional<uint64_t> Function::getEntryCount() const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
@@ -1113,7 +1101,7 @@ std::optional<ProfileCount> Function::getEntryCount() const {
       // Treat this the same as unknown.
       if (Count == static_cast<uint64_t>(-1))
         return std::nullopt;
-      return ProfileCount(Count, PCT_Real);
+      return Count;
     }
   return std::nullopt;
 }

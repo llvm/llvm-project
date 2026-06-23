@@ -114,7 +114,7 @@ bool ProfileSummaryInfo::isFunctionEntryCold(const Function *F) const {
   // FIXME: The heuristic used below for determining coldness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a
   // convenience method that calls isHotCount.
-  return FunctionCount && isColdCount(FunctionCount->getCount());
+  return FunctionCount && isColdCount(*FunctionCount);
 }
 
 /// Compute the hot and cold thresholds.
