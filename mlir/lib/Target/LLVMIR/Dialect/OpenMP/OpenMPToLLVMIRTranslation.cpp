@@ -4974,15 +4974,15 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     llvmAtomicX.IsSigned = isSigned;
 
     llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-    bool isPostfixUpdate = true;
-    bool isWeak = atomicCompareOp.getWeak();
+    bool isFailOnly = atomicCaptureOp.getFailOnly();
+    bool isPostfixUpdate = !isFailOnly;
 
     bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-        ompBuilder->createAtomicCompare(
-            ompLoc, llvmAtomicX, llvmAtomicV, llvmAtomicR, eVal, dVal,
-            atomicOrdering, compareOp, isXBinopExpr, isPostfixUpdate,
-            /*IsFailOnly=*/false, isWeak);
+        ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, llvmAtomicV,
+                                        llvmAtomicR, eVal, dVal, atomicOrdering,
+                                        compareOp, isXBinopExpr,
+                                        isPostfixUpdate, isFailOnly);
     ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
     if (failed(handleError(afterIP, *atomicCaptureOp)))

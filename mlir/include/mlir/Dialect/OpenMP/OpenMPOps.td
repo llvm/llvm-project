@@ -1938,6 +1938,8 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
     ```
   }] # clausesDescription;
 
+  let arguments = !con(clausesArgs, (ins UnitAttr:$fail_only));
+
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
 

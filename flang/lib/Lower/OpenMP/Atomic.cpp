@@ -571,7 +571,8 @@ void Fortran::lower::omp::lowerAtomic(
     (void)action0;
     (void)action1;
     captureOp = mlir::omp::AtomicCaptureOp::create(
-        builder, loc, hint, makeMemOrderAttr(converter, memOrder));
+        builder, loc, hint, makeMemOrderAttr(converter, memOrder),
+        /*fail_only=*/nullptr);
     // Set the non-atomic insertion point to before the atomic.capture.
     preAt = getInsertionPointBefore(captureOp);
 
@@ -646,15 +647,45 @@ void Fortran::lower::omp::lowerAtomic(
       expectedVal = builder.createConvert(loc, elemTypeOfX, expectedVal);
     }
 
-    // If this is a compare+capture, generate the read op first.
+    // If this is a compare+capture, determine the ordering of ops.
+    // Pattern 1 (prefix): v = x; if (x == e) x = d  → read first
+    // Pattern 2 (postfix): if (x == e) x = d; v = x → compare first
+    // Pattern 3 (fail-only): if (x == e) x = d; else v = x → read on failure
+    bool isPostfixCapture = false;
+    bool isFailOnly = false;
+    const evaluate::Assignment *readAssign = nullptr;
     if (construct.IsCapture()) {
-      assert(get(analysis.op0.assign) && (analysis.op0.what & analysis.Read) &&
-             "Expected a read operation for compare capture");
-      mlir::Operation *readOp = genAtomicRead(
-          converter, semaCtx, loc, stmtCtx, atomAddr, atom,
-          *get(analysis.op0.assign), hint, memOrder, preAt, atomicAt, postAt);
-      assert(readOp && "Should have created an atomic read operation");
-      builder.setInsertionPointAfter(readOp);
+      // Determine which op is the read and check for fail-only (IfFalse).
+      int readWhat = 0;
+      if (analysis.op0.what & analysis.Read) {
+        readAssign = get(analysis.op0.assign);
+        readWhat = analysis.op0.what;
+      } else if (analysis.op1.what & analysis.Read) {
+        readAssign = get(analysis.op1.assign);
+        readWhat = analysis.op1.what;
+        isPostfixCapture = true;
+      }
+      assert(readAssign && "Expected a read assignment for compare capture");
+
+      // Check if the read is conditioned on comparison failure (else branch).
+      if (readWhat & analysis.IfFalse)
+        isFailOnly = true;
+
+      if (!isPostfixCapture && !isFailOnly) {
+        // Pattern 1 (prefix): read is first, generate it before compare.
+        mlir::Operation *readOp =
+            genAtomicRead(converter, semaCtx, loc, stmtCtx, atomAddr, atom,
+                          *readAssign, hint, memOrder, preAt, atomicAt, postAt);
+        assert(readOp && "Should have created an atomic read operation");
+        builder.setInsertionPointAfter(readOp);
+      } else {
+        // Pattern 2 (postfix) or 3 (fail-only): compare first, read after.
+        builder.restoreInsertionPoint(atomicAt);
+      }
+
+      // Set the fail_only attribute on the capture op.
+      if (isFailOnly && captureOp)
+        mlir::cast<mlir::omp::AtomicCaptureOp>(captureOp).setFailOnly(true);
     }
 
     mlir::UnitAttr weakAttr = nullptr;
@@ -725,6 +756,18 @@ void Fortran::lower::omp::lowerAtomic(
     // Generate omp.yield
     mlir::omp::YieldOp::create(builder, loc, newVal);
     builder.setInsertionPointAfter(atomicOp);
+
+    // Pattern 2 (postfix) or 3 (fail-only): compare first, read second.
+    // Generate read after compare for postfix or fail-only patterns.
+    if (construct.IsCapture() && (isPostfixCapture || isFailOnly)) {
+      fir::FirOpBuilder::InsertPoint afterCompareAt =
+          builder.saveInsertionPoint();
+      mlir::Operation *readOp = genAtomicRead(
+          converter, semaCtx, loc, stmtCtx, atomAddr, atom, *readAssign, hint,
+          memOrder, preAt, afterCompareAt, postAt);
+      assert(readOp && "Should have created an atomic read operation");
+      builder.setInsertionPointAfter(readOp);
+    }
     // END omp atomic compare
   } else {
     if (!construct.IsCapture()) {

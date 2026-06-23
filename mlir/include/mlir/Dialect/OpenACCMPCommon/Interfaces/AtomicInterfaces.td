@@ -286,6 +286,7 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         auto &secondOp = *ops.getNextNode(firstOp);
         auto firstReadStmt = dyn_cast<AtomicReadOpInterface>(firstOp);
         auto firstUpdateStmt = dyn_cast<AtomicUpdateOpInterface>(firstOp);
+        auto firstCompareStmt = dyn_cast<AtomicCompareOpInterface>(firstOp);
         auto secondReadStmt = dyn_cast<AtomicReadOpInterface>(secondOp);
         auto secondUpdateStmt = dyn_cast<AtomicUpdateOpInterface>(secondOp);
         auto secondWriteStmt = dyn_cast<AtomicWriteOpInterface>(secondOp);
@@ -294,7 +295,8 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         if (!((firstUpdateStmt && secondReadStmt) ||
               (firstReadStmt && secondUpdateStmt) ||
               (firstReadStmt && secondWriteStmt) ||
-              (firstReadStmt && secondCompareStmt)))
+              (firstReadStmt && secondCompareStmt) ||
+              (firstCompareStmt && secondReadStmt)))
           return ops.front().emitError()
                 << "invalid sequence of operations in the capture region";
         if (firstUpdateStmt && secondReadStmt &&
@@ -315,8 +317,13 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         if (firstReadStmt && secondCompareStmt &&
             firstReadStmt.getX() != secondCompareStmt.getX())
           return firstReadStmt.emitError()
-                << "captured variable in atomic.read must be compared/updated in "
+                << "captured variable in atomic.read must be updated in "
                     "second operation";
+        if (firstCompareStmt && secondReadStmt &&
+            secondReadStmt.getX() != firstCompareStmt.getX())
+          return secondReadStmt.emitError()
+                << "captured variable in atomic.read must be updated in "
+                    "first operation";
 
         return mlir::success();
       }]

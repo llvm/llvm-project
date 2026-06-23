@@ -11321,7 +11321,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         assert(OldValue->getType() == V.ElemTy &&
                "OldValue and V must be of same type");
         if (IsPostfixUpdate) {
-          Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+          SuccessOrFail = Builder.CreateExtractValue(Result, /*Idxs=*/1);
+          Value *NewValue = Builder.CreateSelect(SuccessOrFail, D, OldValue);
+          Builder.CreateStore(NewValue, V.Var, V.IsVolatile);
         } else {
           SuccessOrFail = Builder.CreateExtractValue(Result, /*Idxs=*/1);
           if (IsFailOnly) {
@@ -11377,7 +11379,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         assert(OldValue->getType() == V.ElemTy &&
                "OldValue and V must be of same type");
         if (IsPostfixUpdate) {
-          Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+          Value *NewValue = Builder.CreateSelect(SuccessOrFail, D, OldValue);
+          Builder.CreateStore(NewValue, V.Var, V.IsVolatile);
         } else {
           if (IsFailOnly) {
             BasicBlock *CurBB = Builder.GetInsertBlock();
