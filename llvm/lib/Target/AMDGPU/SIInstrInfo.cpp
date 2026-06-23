@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -62,6 +63,17 @@ static cl::opt<bool> Fix16BitCopies(
   cl::desc("Fix copies between 32 and 16 bit registers by extending to 32 bit"),
   cl::init(true),
   cl::ReallyHidden);
+
+static cl::opt<SIInstrInfo::DSLatencyMode> DSLatency(
+    "amdgpu-ds-latency-mode", cl::desc("LDS latency mode (LDS contention)"),
+    cl::values(
+        clEnumValN(SIInstrInfo::DSLatencyMode::Fast, "fast",
+                   "Use default/pinned latency (no contention)"),
+        clEnumValN(SIInstrInfo::DSLatencyMode::Loaded, "loaded",
+                   "Use loaded latency (moderate contention, 3x latency)"),
+        clEnumValN(SIInstrInfo::DSLatencyMode::Overloaded, "overloaded",
+                   "Use overloaded latency (high contention, 5x latency)")),
+    cl::init(SIInstrInfo::DSLatencyMode::Fast), cl::Hidden);
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
@@ -10834,12 +10846,24 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
     unsigned Lat = 0, Count = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
       ++Count;
-      Lat = std::max(Lat, SchedModel.computeInstrLatency(&*I));
+      Lat = std::max(Lat, getInstrLatency(*I));
     }
     return Lat + Count - 1;
   }
 
-  return SchedModel.computeInstrLatency(&MI);
+  return getInstrLatency(MI);
+}
+
+unsigned SIInstrInfo::getInstrLatency(const MachineInstr &MI) const {
+  if (SchedModel.hasInstrSchedModel()) {
+    unsigned Latency = SchedModel.computeInstrLatency(&MI);
+    if (isDS(MI)) {
+      Latency *= getDSLatencyMultiplier(*MI.getMF());
+    }
+    return Latency;
+  }
+
+  return 0;
 }
 
 const MachineOperand &
@@ -11527,4 +11551,37 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
     return true;
 
   return AMDGPU::getMAIIsGFX940XDL(Opcode);
+}
+
+unsigned SIInstrInfo::getDSLatencyMultiplier(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+
+  // Priority selection goes to the attribute
+  Attribute A = F.getFnAttribute("amdgpu-ds-latency-mode");
+  if (A.isValid()) {
+    StringRef Val = A.getValueAsString();
+    if (Val == "fast")
+      return 1;
+    if (Val == "loaded")
+      return 3;
+    if (Val == "overloaded")
+      return 5;
+  }
+
+  // If using coexec scheduler, default to "loaded" mode unless overridden
+  // by the command line option.
+  if (DSLatency.getNumOccurrences() == 0 &&
+      AMDGPU::getSchedStrategy(F) == "coexec")
+    return 3;
+
+  switch (DSLatency) {
+  case DSLatencyMode::Fast:
+    return 1; // Use default scheduling model latency
+  case DSLatencyMode::Loaded:
+    return 3;
+  case DSLatencyMode::Overloaded:
+    return 5;
+  }
+
+  return 1;
 }

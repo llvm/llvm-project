@@ -1999,10 +1999,11 @@ GCNSchedStage::computeSUnitReadyCycle(const SUnit &SU, unsigned CurrCycle,
                                       DenseMap<unsigned, unsigned> &ReadyCycles,
                                       const TargetSchedModel &SM) {
   unsigned ReadyCycle = CurrCycle;
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG.TII);
   for (auto &D : SU.Preds) {
     if (D.isAssignedRegDep()) {
       MachineInstr *DefMI = D.getSUnit()->getInstr();
-      unsigned Latency = SM.computeInstrLatency(DefMI);
+      unsigned Latency = SII->getInstrLatency(*DefMI);
       unsigned DefReady = ReadyCycles[DAG.getSUnit(DefMI)->NodeNum];
       ReadyCycle = std::max(ReadyCycle, DefReady + Latency);
     }

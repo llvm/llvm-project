@@ -421,14 +421,14 @@ public:
     BranchProb = Head.getSuccProbability(FromIt);
     if (BranchProb.isUnknown())
       BranchProb = BranchProbability::getZero();
-    BranchTakenCost = SchedModel.computeInstrLatency(&Branch);
+    BranchTakenCost = TII.getInstrLatency(Branch);
   }
 
   bool isProfitable(const MachineInstr &MI) {
     if (TII.isWaitcnt(MI.getOpcode()))
       return false;
 
-    ThenCyclesCost += SchedModel.computeInstrLatency(&MI);
+    ThenCyclesCost += TII.getInstrLatency(MI);
 
     // Consider `P = N/D` to be the probability of execz being false (skipping
     // the then-block) The transformation is profitable if always executing the
