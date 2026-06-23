@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMProfileData
+  CopyProfReader.cpp
   DataAccessProf.cpp
   ETMTraceDecoder.cpp
   GCOV.cpp
