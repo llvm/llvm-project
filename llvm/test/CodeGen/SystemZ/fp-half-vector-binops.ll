@@ -198,10 +198,10 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    std %f8, 240(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    vl %v0, 16(%r2), 3
-; VECTOR-NEXT:    mvc 160(16,%r15), 0(%r2) # 16-byte Folded Spill
 ; VECTOR-NEXT:    lgr %r13, %r3
 ; VECTOR-NEXT:    vst %v0, 176(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    vreph %v0, %v0, 7
+; VECTOR-NEXT:    mvc 160(16,%r15), 0(%r2) # 16-byte Folded Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -224,13 +224,13 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    aebr %f0, %f8
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
-; VECTOR-NEXT:    vl %v1, 208(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v1, 176(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v2, 208(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h def $v0
-; VECTOR-NEXT:    vmrhh %v0, %v0, %v1
+; VECTOR-NEXT:    vreph %v1, %v1, 5
+; VECTOR-NEXT:    vmrhh %v0, %v0, %v2
 ; VECTOR-NEXT:    vst %v0, 208(%r15), 3 # 16-byte Spill
-; VECTOR-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
-; VECTOR-NEXT:    vreph %v0, %v0, 5
-; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
+; VECTOR-NEXT:    ldr %f0, %f1
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
 ; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
@@ -253,13 +253,13 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    aebr %f0, %f8
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; VECTOR-NEXT:    vl %v1, 192(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v2, 208(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h def $v0
-; VECTOR-NEXT:    vmrhh %v0, %v0, %v1
-; VECTOR-NEXT:    vl %v1, 208(%r15), 3 # 16-byte Reload
-; VECTOR-NEXT:    vmrhf %v0, %v0, %v1
-; VECTOR-NEXT:    vst %v0, 208(%r15), 3 # 16-byte Spill
+; VECTOR-NEXT:    vmrhh %v1, %v0, %v1
 ; VECTOR-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vmrhf %v1, %v1, %v2
 ; VECTOR-NEXT:    vreph %v0, %v0, 3
+; VECTOR-NEXT:    vst %v1, 208(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
