@@ -117,10 +117,8 @@ void Preprocessor::EnterCachingLexMode() {
   assert(LexLevel == 0 &&
          "entered caching lex mode while lexing something else");
 
-  if (InCachingLexMode()) {
-    assert(CurLexerCallback == CLK_CachingLexer && "Unexpected lexer kind");
+  if (InCachingLexMode())
     return;
-  }
 
   EnterCachingLexModeUnchecked();
 }

@@ -173,7 +173,6 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
                                     bool DisableMacroExpansion, bool OwnsTokens,
                                     bool IsReinject) {
   if (InCachingLexMode()) {
-    assert(CurLexerCallback == CLK_CachingLexer && "Unexpected lexer kind");
     if (CachedLexPos < CachedTokens.size()) {
       assert(IsReinject && "new tokens in the middle of cached stream");
       // We're entering tokens into the middle of our cached token stream. We
