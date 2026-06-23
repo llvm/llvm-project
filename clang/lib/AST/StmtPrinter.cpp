@@ -1843,9 +1843,10 @@ void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
 }
 
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
-  // special case enums to avoid producing cast expressions when naming
-  // an enumerator would suffice
   if (QualType T = Node->getType(); T->isEnumeralType()) {
+    // special case enums to avoid producing cast expressions when naming
+    // an enumerator would suffice
+
     const auto *IL = dyn_cast<IntegerLiteral>(Node->getSubExpr());
     const auto *ED = T->getAsEnumDecl();
     if (IL && ED) {
