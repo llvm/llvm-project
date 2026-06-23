@@ -91,17 +91,10 @@ define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; SSE41-FAST:       # %bb.0:
 ; SSE41-FAST-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-FAST-NEXT:    paddw %xmm1, %xmm4
-; SSE41-FAST-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; SSE41-FAST-NEXT:    paddw %xmm4, %xmm5
-; SSE41-FAST-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,1,1]
-; SSE41-FAST-NEXT:    paddw %xmm5, %xmm4
 ; SSE41-FAST-NEXT:    phaddw %xmm4, %xmm4
-; SSE41-FAST-NEXT:    movdqa %xmm1, %xmm5
-; SSE41-FAST-NEXT:    phaddw %xmm0, %xmm5
-; SSE41-FAST-NEXT:    phaddw %xmm5, %xmm5
-; SSE41-FAST-NEXT:    phaddw %xmm5, %xmm5
-; SSE41-FAST-NEXT:    phaddw %xmm5, %xmm5
-; SSE41-FAST-NEXT:    movd %xmm5, %eax
+; SSE41-FAST-NEXT:    phaddw %xmm4, %xmm4
+; SSE41-FAST-NEXT:    phaddw %xmm4, %xmm4
+; SSE41-FAST-NEXT:    movd %xmm4, %eax
 ; SSE41-FAST-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[0,0,0,0,4,5,6,7]
 ; SSE41-FAST-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,1,0,1]
 ; SSE41-FAST-NEXT:    pcmpeqw %xmm4, %xmm1
@@ -129,6 +122,7 @@ define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; AVX2-SLOW-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; AVX2-SLOW-NEXT:    vpaddw %xmm3, %xmm2, %xmm2
 ; AVX2-SLOW-NEXT:    vmovd %xmm2, %eax
+; AVX2-SLOW-NEXT:    vmovd %eax, %xmm2
 ; AVX2-SLOW-NEXT:    vpbroadcastw %xmm2, %ymm2
 ; AVX2-SLOW-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
@@ -146,18 +140,13 @@ define { i16, i16 } @test_reduce_v16i16_with_add(<16 x i16> %x, <16 x i16> %y) {
 ; AVX2-FAST-LABEL: test_reduce_v16i16_with_add:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-FAST-NEXT:    vpaddw %xmm2, %xmm0, %xmm3
-; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
-; AVX2-FAST-NEXT:    vpaddw %xmm4, %xmm3, %xmm3
-; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
-; AVX2-FAST-NEXT:    vpaddw %xmm4, %xmm3, %xmm3
-; AVX2-FAST-NEXT:    vphaddw %xmm3, %xmm3, %xmm3
-; AVX2-FAST-NEXT:    vphaddw %xmm0, %xmm2, %xmm2
+; AVX2-FAST-NEXT:    vpaddw %xmm2, %xmm0, %xmm2
 ; AVX2-FAST-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-FAST-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-FAST-NEXT:    vphaddw %xmm2, %xmm2, %xmm2
 ; AVX2-FAST-NEXT:    vmovd %xmm2, %eax
-; AVX2-FAST-NEXT:    vpbroadcastw %xmm3, %ymm2
+; AVX2-FAST-NEXT:    vmovd %eax, %xmm2
+; AVX2-FAST-NEXT:    vpbroadcastw %xmm2, %ymm2
 ; AVX2-FAST-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; AVX2-FAST-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX2-FAST-NEXT:    vpxor %ymm2, %ymm0, %ymm0
