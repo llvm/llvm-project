@@ -13806,6 +13806,9 @@ def warn_hlsl_assigning_local_resource_is_not_unique
               "unique global resource">,
       InGroup<HLSLExplicitBinding>;
 
+def err_hlsl_static_local_resource : Error<
+  "static local resource variable is not allowed">;
+  
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
 def err_hlsl_samplecmp_requires_float

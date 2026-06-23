@@ -6513,6 +6513,13 @@ QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
 }
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
+  // Static local resource variables cannot be copy-initialized.
+  if (VDecl->isStaticLocal() && VDecl->getType()->isHLSLResourceRecord()) {
+    SemaRef.Diag(VDecl->getLocation(), diag::err_hlsl_static_local_resource);
+    VDecl->setInvalidDecl();
+    return false;
+  }
+
   // If initializing a local resource, track the resource binding it is using
   if (VDecl->getType()->isHLSLResourceRecord() && !VDecl->hasGlobalStorage())
     trackLocalResource(VDecl, Init);
