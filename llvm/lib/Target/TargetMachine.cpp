@@ -98,7 +98,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
-  // Treat all globals in explicit/implicit sections as small, except for the
+  // Treat all globals in user-defined sections as small, except for the
   // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
   // of linking together small and large sections, resulting in small
   // references to large data sections. The code model attribute overrides this
