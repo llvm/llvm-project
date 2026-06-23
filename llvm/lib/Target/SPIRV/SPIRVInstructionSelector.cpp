@@ -1637,9 +1637,8 @@ std::optional<SplitParts> SPIRVInstructionSelector::splitEvenOddLanes(
     Parts.High = MRI->createVirtualRegister(GR.getRegClass(I32Type));
     Parts.Low = MRI->createVirtualRegister(GR.getRegClass(I32Type));
 
-    bool ZeroAsNull = !STI.isShader();
-    Register IdxZero = GR.getOrCreateConstInt(0, I, I32Type, TII, ZeroAsNull);
-    Register IdxOne = GR.getOrCreateConstInt(1, I, I32Type, TII, ZeroAsNull);
+    Register IdxZero = GR.getOrCreateConstInt(0, I, I32Type, TII);
+    Register IdxOne = GR.getOrCreateConstInt(1, I, I32Type, TII);
 
     if (!selectOpWithSrcs(Parts.High, I32Type, I, {PopCountReg, IdxOne},
                           SPIRV::OpVectorExtractDynamic))
@@ -3277,7 +3276,6 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
   auto ExtractOp =
       Signed ? SPIRV::OpBitFieldSExtract : SPIRV::OpBitFieldUExtract;
 
-  bool ZeroAsNull = !STI.isShader();
   // Extract the i8 element, multiply and add it to the accumulator
   for (unsigned i = 0; i < 4; i++) {
     // A[i]
@@ -3286,8 +3284,8 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         .addDef(AElt)
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(X)
-        .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII, ZeroAsNull))
-        .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
+        .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII))
+        .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
         .constrainAllUses(TII, TRI, RBI);
 
     // B[i]
@@ -3296,8 +3294,8 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         .addDef(BElt)
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(Y)
-        .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII, ZeroAsNull))
-        .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
+        .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII))
+        .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
         .constrainAllUses(TII, TRI, RBI);
 
     // A[i] * B[i]
@@ -3315,8 +3313,8 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         .addDef(MaskMul)
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(Mul)
-        .addUse(GR.getOrCreateConstInt(0, I, EltType, TII, ZeroAsNull))
-        .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
+        .addUse(GR.getOrCreateConstInt(0, I, EltType, TII))
+        .addUse(GR.getOrCreateConstInt(8, I, EltType, TII))
         .constrainAllUses(TII, TRI, RBI);
 
     // Acc = Acc + A[i] * B[i]
@@ -3414,7 +3412,7 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType))
                  .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
-                                                IntTy, TII, !STI.isShader()));
+                                                IntTy, TII));
 
   for (unsigned J = 2; J < I.getNumOperands(); J++) {
     BMI.addUse(I.getOperand(J).getReg());
@@ -3475,8 +3473,7 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
           TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     !STI.isShader()))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
       .addImm(SPIRV::GroupOperation::Reduce)
       .addUse(BallotReg)
       .constrainAllUses(TII, TRI, RBI);
@@ -3504,8 +3501,7 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
 
   // Subgroup scope constant
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy,
-                                               TII, !STI.isShader());
+  Register ScopeConst = GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy);
 
   // Scalar case
   if (!IsVector) {
@@ -3681,8 +3677,7 @@ bool SPIRVInstructionSelector::selectWaveReduce(
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     !STI.isShader()))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
       .addImm(SPIRV::GroupOperation::Reduce)
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
@@ -3740,8 +3735,7 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     !STI.isShader()))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
       .addImm(SPIRV::GroupOperation::ExclusiveScan)
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
@@ -3758,14 +3752,12 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   Register InputRegister = I.getOperand(2).getReg();
 
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  bool ZeroAsNull = !STI.isShader();
   Register DirectionReg =
-      GR.getOrCreateConstInt(Direction, I, IntTy, TII, ZeroAsNull);
+      GR.getOrCreateConstInt(Direction, I, IntTy, TII);
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadSwap))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     ZeroAsNull))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
       .addUse(InputRegister)
       .addUse(DirectionReg)
       .constrainAllUses(TII, TRI, RBI);
@@ -3871,10 +3863,9 @@ bool SPIRVInstructionSelector::handle64BitOverflow(
   }
   // On odd component counts we need to handle one more component
   if (CurrentComponent != ComponentCount) {
-    bool ZeroAsNull = !STI.isShader();
     Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
     Register ConstIntLastIdx = GR.getOrCreateConstInt(
-        ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
+        ComponentCount - 1, I, BaseType, TII);
 
     if (!selectOpWithSrcs(FinalElemReg, I64Type, I, {SrcReg, ConstIntLastIdx},
                           SPIRV::OpVectorExtractDynamic))
@@ -4124,7 +4115,7 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
 
   MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
 
-  bool IsNullVector = IsConst && !STI.isShader();
+  bool IsNullVector = IsConst;
   for (unsigned i = I.getNumExplicitDefs();
        i < I.getNumExplicitOperands() && IsNullVector; ++i) {
     MachineInstr *Def = getDef(I.getOperand(i), MRI);
@@ -4395,11 +4386,9 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
 
 Register SPIRVInstructionSelector::buildZerosVal(SPIRVTypeInst ResType,
                                                  MachineInstr &I) const {
-  // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
-  bool ZeroAsNull = !STI.isShader();
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
-    return GR.getOrCreateConstVector(0UL, I, ResType, TII, ZeroAsNull);
-  return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
+    return GR.getOrCreateConstVector(0UL, I, ResType, TII);
+  return GR.getOrCreateConstInt(0, I, ResType, TII);
 }
 
 bool SPIRVInstructionSelector::isScalarOrVectorIntConstantZero(
@@ -4450,22 +4439,18 @@ bool SPIRVInstructionSelector::isScalarOrVectorIntConstantZero(
 
 Register SPIRVInstructionSelector::buildZerosValF(SPIRVTypeInst ResType,
                                                   MachineInstr &I) const {
-  // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
-  bool ZeroAsNull = !STI.isShader();
   APFloat VZero = getZeroFP(GR.getTypeForSPIRVType(ResType));
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
-    return GR.getOrCreateConstVector(VZero, I, ResType, TII, ZeroAsNull);
-  return GR.getOrCreateConstFP(VZero, I, ResType, TII, ZeroAsNull);
+    return GR.getOrCreateConstVector(VZero, I, ResType, TII);
+  return GR.getOrCreateConstFP(VZero, I, ResType, TII);
 }
 
 Register SPIRVInstructionSelector::buildOnesValF(SPIRVTypeInst ResType,
                                                  MachineInstr &I) const {
-  // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
-  bool ZeroAsNull = !STI.isShader();
   APFloat VOne = getOneFP(GR.getTypeForSPIRVType(ResType));
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
-    return GR.getOrCreateConstVector(VOne, I, ResType, TII, ZeroAsNull);
-  return GR.getOrCreateConstFP(VOne, I, ResType, TII, ZeroAsNull);
+    return GR.getOrCreateConstVector(VOne, I, ResType, TII);
+  return GR.getOrCreateConstFP(VOne, I, ResType, TII);
 }
 
 Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
@@ -4698,10 +4683,10 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
     Reg = GR.getOrCreateConstNullPtr(MIRBuilder, ResType);
   } else if (Opcode == TargetOpcode::G_FCONSTANT) {
     Reg = GR.getOrCreateConstFP(I.getOperand(1).getFPImm()->getValue(), I,
-                                ResType, TII, !STI.isShader());
+                                ResType, TII);
   } else {
     Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getValue(), I,
-                                 ResType, TII, !STI.isShader());
+                                 ResType, TII);
   }
   return Reg == ResVReg ? true : BuildCOPY(ResVReg, Reg, I);
 }
@@ -6458,11 +6443,10 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     unsigned BitSetOpcode, bool SwapPrimarySide) const {
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   SPIRVTypeInst BaseType = GR.retrieveScalarOrVectorIntType(ResType);
-  bool ZeroAsNull = !STI.isShader();
   Register ConstIntZero =
-      GR.getOrCreateConstInt(0, I, BaseType, TII, ZeroAsNull);
+      GR.getOrCreateConstInt(0, I, BaseType, TII);
   Register ConstIntOne =
-      GR.getOrCreateConstInt(1, I, BaseType, TII, ZeroAsNull);
+      GR.getOrCreateConstInt(1, I, BaseType, TII);
 
   // SPIRV doesn't support vectors with more than 4 components. Since the
   // algoritm below converts i64 -> i32x2 and i64x4 -> i32x8 it can only
@@ -6551,18 +6535,18 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
 
   if (IsScalarRes) {
     NegOneReg =
-        GR.getOrCreateConstInt((unsigned)-1, I, ResType, TII, ZeroAsNull);
-    Reg0 = GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
-    Reg32 = GR.getOrCreateConstInt(32, I, ResType, TII, ZeroAsNull);
+        GR.getOrCreateConstInt((unsigned)-1, I, ResType, TII);
+    Reg0 = GR.getOrCreateConstInt(0, I, ResType, TII);
+    Reg32 = GR.getOrCreateConstInt(32, I, ResType, TII);
     SelectOp = SPIRV::OpSelectSISCond;
     AddOp = SPIRV::OpIAddS;
   } else {
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount,
                                              MIRBuilder, false);
     NegOneReg =
-        GR.getOrCreateConstVector((unsigned)-1, I, ResType, TII, ZeroAsNull);
-    Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII, ZeroAsNull);
-    Reg32 = GR.getOrCreateConstVector(32, I, ResType, TII, ZeroAsNull);
+        GR.getOrCreateConstVector((unsigned)-1, I, ResType, TII);
+    Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII);
+    Reg32 = GR.getOrCreateConstVector(32, I, ResType, TII);
     SelectOp = SPIRV::OpSelectVIVCond;
     AddOp = SPIRV::OpIAddV;
   }
