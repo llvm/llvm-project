@@ -2180,6 +2180,7 @@ class LSRInstance {
   mutable SCEVExpander Rewriter;
   bool Changed = false;
   bool HardwareLoopProfitable = false;
+  bool ShouldPreserveLCSSA = false;
 
   /// This is the insert position that the current loop's induction variable
   /// increment should be placed. In simple loops, this is the latch block's
@@ -6029,13 +6030,14 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           // Split the critical edge.
           BasicBlock *NewBB = nullptr;
           if (!Parent->isLandingPad()) {
-            NewBB =
-                SplitCriticalEdge(BB, Parent,
-                                  CriticalEdgeSplittingOptions(&DT, &LI, MSSAU)
-                                      .setMergeIdenticalEdges()
-                                      .setKeepOneInputPHIs());
+            CriticalEdgeSplittingOptions SplitOptions(&DT, &LI, MSSAU);
+            SplitOptions =
+                SplitOptions.setMergeIdenticalEdges().setKeepOneInputPHIs();
+            if (ShouldPreserveLCSSA)
+              SplitOptions = SplitOptions.setPreserveLCSSA();
+            NewBB = SplitCriticalEdge(BB, Parent, SplitOptions);
           } else {
-            SmallVector<BasicBlock*, 2> NewBBs;
+            SmallVector<BasicBlock *, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
             SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
             NewBB = NewBBs[0];
@@ -6294,7 +6296,8 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0
                             ? PreferredAddresingMode
                             : TTI.getPreferredAddressingMode(L, &SE)),
-      Rewriter(SE, "lsr", PreserveLCSSA), BaselineCost(L, SE, TTI, AMK) {
+      Rewriter(SE, "lsr", PreserveLCSSA), ShouldPreserveLCSSA(PreserveLCSSA),
+      BaselineCost(L, SE, TTI, AMK) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
