@@ -12,3 +12,15 @@ define void @ptr_vector_bitcast_base(<1 x ptr> %v) {
   load i8, ptr %p, align 1
   ret void
 }
+
+define void @ptr_vector_ptrmask_from_bitcast(ptr %p) {
+; CHECK-LABEL: define void @ptr_vector_ptrmask_from_bitcast(
+; CHECK-SAME: ptr nofree readnone captures(none) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret void
+;
+  %v = bitcast ptr %p to <1 x ptr>
+  %m = call <1 x ptr> @llvm.ptrmask.v1p0.v1i64(<1 x ptr> %v, <1 x i64> <i64 -8>)
+  ret void
+}
+
+declare <1 x ptr> @llvm.ptrmask.v1p0.v1i64(<1 x ptr>, <1 x i64>)
