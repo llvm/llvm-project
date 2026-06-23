@@ -6,7 +6,7 @@
 ; STSHH: Keep, Relaxed
 ;
 
-define dso_local void @test_atomic_store_keep_relaxed_i8(ptr %ptr, i8 %val) nounwind {
+define void @test_atomic_store_keep_relaxed_i8(ptr %ptr, i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_relaxed_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -16,7 +16,7 @@ define dso_local void @test_atomic_store_keep_relaxed_i8(ptr %ptr, i8 %val) noun
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_relaxed_i16(ptr %ptr, i16 %val) nounwind {
+define void @test_atomic_store_keep_relaxed_i16(ptr %ptr, i16 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_relaxed_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -26,7 +26,7 @@ define dso_local void @test_atomic_store_keep_relaxed_i16(ptr %ptr, i16 %val) no
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_relaxed_i32(ptr %ptr, i32 %val) nounwind {
+define void @test_atomic_store_keep_relaxed_i32(ptr %ptr, i32 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_relaxed_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -36,7 +36,7 @@ define dso_local void @test_atomic_store_keep_relaxed_i32(ptr %ptr, i32 %val) no
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_relaxed_i64(ptr %ptr, i64 %val) nounwind {
+define void @test_atomic_store_keep_relaxed_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_relaxed_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -50,7 +50,7 @@ define dso_local void @test_atomic_store_keep_relaxed_i64(ptr %ptr, i64 %val) no
 ; STSHH: Keep, Release
 ;
 
-define dso_local void @test_atomic_store_keep_release_bfloat(ptr %ptr, bfloat %val) nounwind {
+define void @test_atomic_store_keep_release_bfloat(ptr %ptr, bfloat %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_release_bfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -62,7 +62,7 @@ define dso_local void @test_atomic_store_keep_release_bfloat(ptr %ptr, bfloat %v
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_release_half(ptr %ptr, half %val) nounwind {
+define void @test_atomic_store_keep_release_half(ptr %ptr, half %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_release_half:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -74,7 +74,7 @@ define dso_local void @test_atomic_store_keep_release_half(ptr %ptr, half %val) 
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_release_float(ptr %ptr, float %val) nounwind {
+define void @test_atomic_store_keep_release_float(ptr %ptr, float %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_release_float:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w8, s0
@@ -85,7 +85,7 @@ define dso_local void @test_atomic_store_keep_release_float(ptr %ptr, float %val
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_release_double(ptr %ptr, double %val) nounwind {
+define void @test_atomic_store_keep_release_double(ptr %ptr, double %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_release_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov x8, d0
@@ -100,7 +100,7 @@ define dso_local void @test_atomic_store_keep_release_double(ptr %ptr, double %v
 ; STSHH: Keep, SequentiallyConsistent
 ;
 
-define dso_local void @test_atomic_store_keep_seqcst_i8(ptr %ptr, i8 %val) nounwind {
+define void @test_atomic_store_keep_seqcst_i8(ptr %ptr, i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_seqcst_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -110,7 +110,7 @@ define dso_local void @test_atomic_store_keep_seqcst_i8(ptr %ptr, i8 %val) nounw
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_seqcst_i16(ptr %ptr, i16 %val) nounwind {
+define void @test_atomic_store_keep_seqcst_i16(ptr %ptr, i16 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_seqcst_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -120,7 +120,7 @@ define dso_local void @test_atomic_store_keep_seqcst_i16(ptr %ptr, i16 %val) nou
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_seqcst_i32(ptr %ptr, i32 %val) nounwind {
+define void @test_atomic_store_keep_seqcst_i32(ptr %ptr, i32 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_seqcst_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -130,7 +130,7 @@ define dso_local void @test_atomic_store_keep_seqcst_i32(ptr %ptr, i32 %val) nou
   ret void
 }
 
-define dso_local void @test_atomic_store_keep_seqcst_i64(ptr %ptr, i64 %val) nounwind {
+define void @test_atomic_store_keep_seqcst_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_keep_seqcst_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
@@ -144,7 +144,7 @@ define dso_local void @test_atomic_store_keep_seqcst_i64(ptr %ptr, i64 %val) nou
 ; STSHH: Stream, Relaxed
 ;
 
-define dso_local void @test_atomic_store_strm_relaxed_bfloat(ptr %ptr, bfloat %val) nounwind {
+define void @test_atomic_store_strm_relaxed_bfloat(ptr %ptr, bfloat %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_bfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -156,7 +156,7 @@ define dso_local void @test_atomic_store_strm_relaxed_bfloat(ptr %ptr, bfloat %v
   ret void
 }
 
-define dso_local void @test_atomic_store_strm_relaxed_half(ptr %ptr, half %val) nounwind {
+define void @test_atomic_store_strm_relaxed_half(ptr %ptr, half %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_half:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -168,7 +168,7 @@ define dso_local void @test_atomic_store_strm_relaxed_half(ptr %ptr, half %val) 
   ret void
 }
 
-define dso_local void @test_atomic_store_strm_relaxed_float(ptr %ptr, float %val) nounwind {
+define void @test_atomic_store_strm_relaxed_float(ptr %ptr, float %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_float:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w8, s0
@@ -179,7 +179,7 @@ define dso_local void @test_atomic_store_strm_relaxed_float(ptr %ptr, float %val
   ret void
 }
 
-define dso_local void @test_atomic_store_strm_relaxed_double(ptr %ptr, double %val) nounwind {
+define void @test_atomic_store_strm_relaxed_double(ptr %ptr, double %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov x8, d0
@@ -194,7 +194,7 @@ define dso_local void @test_atomic_store_strm_relaxed_double(ptr %ptr, double %v
 ; STSHH: Stream, Release
 ;
 
-define dso_local void @test_atomic_store_stream_release_i8(ptr %ptr, i8 %val) nounwind {
+define void @test_atomic_store_stream_release_i8(ptr %ptr, i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_release_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh strm
@@ -204,7 +204,7 @@ define dso_local void @test_atomic_store_stream_release_i8(ptr %ptr, i8 %val) no
   ret void
 }
 
-define dso_local void @test_atomic_store_stream_release_i16(ptr %ptr, i16 %val) nounwind {
+define void @test_atomic_store_stream_release_i16(ptr %ptr, i16 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_release_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh strm
@@ -214,7 +214,7 @@ define dso_local void @test_atomic_store_stream_release_i16(ptr %ptr, i16 %val) 
   ret void
 }
 
-define dso_local void @test_atomic_store_stream_release_i32(ptr %ptr, i32 %val) nounwind {
+define void @test_atomic_store_stream_release_i32(ptr %ptr, i32 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_release_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh strm
@@ -224,7 +224,7 @@ define dso_local void @test_atomic_store_stream_release_i32(ptr %ptr, i32 %val) 
   ret void
 }
 
-define dso_local void @test_atomic_store_stream_release_i64(ptr %ptr, i64 %val) nounwind {
+define void @test_atomic_store_stream_release_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_release_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh strm
@@ -238,7 +238,7 @@ define dso_local void @test_atomic_store_stream_release_i64(ptr %ptr, i64 %val) 
 ; STSHH: Stream, SequentiallyConsistent
 ;
 
-define dso_local void @test_atomic_store_stream_seqcst_bfloat(ptr %ptr, bfloat %val) nounwind {
+define void @test_atomic_store_stream_seqcst_bfloat(ptr %ptr, bfloat %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_seqcst_bfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -250,7 +250,7 @@ define dso_local void @test_atomic_store_stream_seqcst_bfloat(ptr %ptr, bfloat %
   ret void
 }
 
-define dso_local void @test_atomic_store_stream_seqcst_i16(ptr %ptr, half %val) nounwind {
+define void @test_atomic_store_stream_seqcst_i16(ptr %ptr, half %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_seqcst_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -262,7 +262,7 @@ define dso_local void @test_atomic_store_stream_seqcst_i16(ptr %ptr, half %val) 
   ret void
 }
 
-define dso_local void @test_atomic_store_stream_seqcst_i32(ptr %ptr, float %val) nounwind {
+define void @test_atomic_store_stream_seqcst_i32(ptr %ptr, float %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_seqcst_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w8, s0
@@ -273,7 +273,7 @@ define dso_local void @test_atomic_store_stream_seqcst_i32(ptr %ptr, float %val)
   ret void
 }
 
-define dso_local void @test_atomic_store_stream_seqcst_double(ptr %ptr, double %val) nounwind {
+define void @test_atomic_store_stream_seqcst_double(ptr %ptr, double %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stream_seqcst_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov x8, d0
@@ -284,5 +284,19 @@ define dso_local void @test_atomic_store_stream_seqcst_double(ptr %ptr, double %
   ret void
 }
 
+;
+; Invalid Hint
+;
+
+define void @test_atomic_store_invalid_hint(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_invalid_hint:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr release, align 8, !aarch64.atomic.hint !2
+  ret void
+}
+
 !0 = !{i32 0}
 !1 = !{i32 1}
+!2 = !{i32 2}
