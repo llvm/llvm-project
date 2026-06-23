@@ -66,6 +66,7 @@ public:
     std::vector<std::string> DsymHints;
     std::string FallbackDebugPath;
     std::string DWPName;
+    std::string PDBName;
     std::vector<std::string> DebugFileDirectory;
     std::vector<std::string> GsymFileDirectory;
     size_t MaxCacheSize =

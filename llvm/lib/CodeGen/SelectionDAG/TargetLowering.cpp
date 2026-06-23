@@ -2463,6 +2463,34 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     break;
   }
+  case ISD::PDEP: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
+    APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
+
+    // If the demanded bits has leading zeroes, we don't demand those from the
+    // mask.
+    if (SimplifyDemandedBits(Op1, LoMask, Known, TLO, Depth + 1))
+      return true;
+
+    // The number of possible 1s in the mask determines the number of LSBs of
+    // operand 0 used. Undemanded bits from the mask don't matter so filter
+    // them before counting.
+    KnownBits Known2;
+    uint64_t Count = (~Known.Zero & LoMask).popcount();
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, Count));
+    if (SimplifyDemandedBits(Op0, DemandedMask, Known2, TLO, Depth + 1))
+      return true;
+
+    // Zeroes are retained from the mask, but not ones.
+    Known.One.clearAllBits();
+    // The result will have at least as many trailing zeros as the non-mask
+    // operand since bits can only map to the same or higher bit position.
+    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -9098,7 +9126,7 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   // Each pass handles half the shift amount of the previous pass.
   SDValue X = Val;
   for (int S = (int)LogBW - 1; S >= 0; --S) {
-    SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
+    SDValue ShiftSv = DAG.getShiftAmountConstant(1ull << S, VT, DL);
     SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
     SDValue UnshiftedBits =
         DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));

@@ -293,6 +293,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
 
     // Property of the kernel/environment which can't actually differ.
     AMDGPU::FeatureSGPRInitBug, AMDGPU::FeatureXNACK,
+    AMDGPU::FeatureXNACKOnOffModes, AMDGPU::FeatureSupportsXNACK,
     AMDGPU::FeatureTrapHandler,
 
     // The default assumption needs to be ecc is enabled, but no directly
@@ -894,10 +895,15 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasPackedFP32Ops() && SLT == MVT::f32) ||
       (ST->hasPackedFP64Ops() && SLT == MVT::f64) ||
-      (ST->hasPackedU64Ops() && SLT == MVT::i64))
+      (ST->hasPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
+  } else if (SLT == MVT::f32) {
+    bool HasPk2FP32Op = ST->hasPackedFP32Ops() &&
+                        IID != Intrinsic::minimumnum &&
+                        IID != Intrinsic::maximumnum;
+    NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
+  }
 
   // TODO: Get more refined intrinsic costs?
   unsigned InstRate = getQuarterRateInstrCost(CostKind);

@@ -905,6 +905,10 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 first argument is 0 and no second argument is provided.
 T __builtin_elementwise_clmul(T x, T y)         perform a carry-less multiplication of x and y, returning the least    integer types
                                                 significant bits of the wide result.
+T __builtin_elementwise_pext(T x, T m)          extract bits from x selected by the mask m, pack them contiguously     integer types
+                                                into the least significant bits of the result, and zero the rest.
+T __builtin_elementwise_pdep(T x, T m)          deposit the least significant bits of x at the positions               integer types
+                                                where m has a 1-bit, and zero the rest.
 ============================================== ====================================================================== =========================================
 
 
