@@ -19401,9 +19401,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       // and overflow in the offset computation.
       if (IdxResult.isNegative() || IdxResult.getActiveBits() > 63)
         return Error(OOE);
-      int64_t IdxVal = IdxResult.isUnsigned()
-                           ? (int64_t)IdxResult.getZExtValue()
-                           : IdxResult.getSExtValue();
+      int64_t IdxVal = IdxResult.getExtValue();
       int64_t ElemSize = ElementSize.getQuantity();
       if (IdxVal != 0 &&
           ElemSize > std::numeric_limits<int64_t>::max() / IdxVal)
