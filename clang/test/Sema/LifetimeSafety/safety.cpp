@@ -236,7 +236,7 @@ void overrides_potential(bool cond) {
   {
     MyObj s;
     q = &s;       // expected-warning {{does not live long enough}}
-    p = q;
+    p = q;        // expected-note {{local variable 'q' aliases the storage of local variable 's'}}
   }               // expected-note {{local variable 's' is destroyed here}}
 
   if (cond) {
@@ -1236,8 +1236,11 @@ void conditional_operator_lifetimebound_nested(bool cond) {
   MyObj* p;
   {
     MyObj a, b;
-    p = Identity(cond ? Identity(&a)    // expected-warning {{local variable 'a' does not live long enough}}
-                      : Identity(&b));  // expected-warning {{local variable 'b' does not live long enough}}
+    p = Identity(cond ? Identity(&a)    // expected-warning {{local variable 'a' does not live long enough}} \
+                                        // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a'}} \
+                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b'}}
+                      : Identity(&b));  // expected-warning {{local variable 'b' does not live long enough}} \
+                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b'}}
   }  // expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'a' is destroyed here}}
   (void)*p;  // expected-note 2 {{later used here}}
 }
@@ -2735,8 +2738,7 @@ void chained_defaulted_assignment_propagation() {
     std::string str{"abc"};
     S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
                      // expected-note {{result of call to 'getS' aliases the storage of local variable 'str'}}
-    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}\
-                     // expected-note {{expression aliases the storage of local variable 'str'}}
+    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}
   }                  // expected-note {{local variable 'str' is destroyed here}}
   use(c);            // expected-note {{later used here}}
 }
