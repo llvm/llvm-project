@@ -1047,6 +1047,10 @@ public:
                                   ForDefinition_t IsForDefinition
                                     = NotForDefinition);
 
+  /// Creates a private constant global for an initializer_list backing array.
+  ConstantAddress EmitStaticInitListBackingArray(llvm::Constant *Init,
+                                                 CharUnits Align);
+
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new  variable with the right type
   /// will be created and all uses of the old variable will be replaced with a

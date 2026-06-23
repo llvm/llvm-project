@@ -1292,9 +1292,11 @@ static inline bool IsOpaqueConstantCall(const CallExpr *E) {
 
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS);
-bool arePotentiallyOverlappingInitListBackingArrays(InterpState &S,
-                                                    const Pointer &LHS,
-                                                    const Pointer &RHS);
+/// Returns true when LHS and RHS designate potentially non-unique objects that
+/// could share storage, making their comparison non-constant.
+bool arePotentiallyOverlappingNonUniqueObjects(InterpState &S,
+                                               const Pointer &LHS,
+                                               const Pointer &RHS);
 
 template <>
 inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
@@ -1364,7 +1366,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
-  if (arePotentiallyOverlappingInitListBackingArrays(S, LHS, RHS)) {
+  if (arePotentiallyOverlappingNonUniqueObjects(S, LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_non_unique_object_comparison);
     return false;

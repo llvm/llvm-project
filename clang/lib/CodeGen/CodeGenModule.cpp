@@ -7720,6 +7720,29 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
   return ConstantAddress(CV, Type, Align);
 }
 
+/// Creates the private constant global used for a static initializer_list
+/// backing array.
+ConstantAddress
+CodeGenModule::EmitStaticInitListBackingArray(llvm::Constant *Init,
+                                              CharUnits Align) {
+  LangAS AddrSpace = GetGlobalConstantAddressSpace();
+  auto TargetAS = getContext().getTargetAddressSpace(AddrSpace);
+  auto *GV = new llvm::GlobalVariable(
+      getModule(), Init->getType(), /*isConstant=*/true,
+      llvm::GlobalValue::PrivateLinkage, Init, ".init.list",
+      /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal, TargetAS);
+  GV->setAlignment(Align.getAsAlign());
+
+  llvm::Constant *CV = GV;
+  if (AddrSpace != LangAS::Default)
+    CV = performAddrSpaceCast(
+        GV, llvm::PointerType::get(
+                getLLVMContext(),
+                getContext().getTargetAddressSpace(LangAS::Default)));
+
+  return ConstantAddress(CV, Init->getType(), Align);
+}
+
 /// EmitObjCPropertyImplementations - Emit information for synthesized
 /// properties for an implementation.
 void CodeGenModule::EmitObjCPropertyImplementations(const

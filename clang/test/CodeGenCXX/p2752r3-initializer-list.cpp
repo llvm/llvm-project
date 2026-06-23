@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 %std_cxx11- -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - --embed-dir=%S/Inputs -Wno-c23-extensions %s | FileCheck %s
 
+// CHECK-DAG: @[[DOUBLE_INIT:[.A-Za-z0-9_$]+]] = private constant [3 x double] [double 1.000000e+00, double 2.000000e+00, double 3.000000e+00], align 8
+// CHECK-DAG: @[[EMBED_INIT:[.A-Za-z0-9_$]+]] = private constant [2 x i8] c"jk", align 1
+// CHECK-DAG: @[[HUNDO_INIT:[.A-Za-z0-9_$]+]] = private constant [100 x i32]
+
 namespace std {
 using size_t = decltype(sizeof(int));
 
@@ -29,8 +33,9 @@ void g(float x) {
 
 void h() {
   // CHECK-LABEL: define{{.*}} void @_ZN9example121hEv(
-  // CHECK: alloca [3 x double],
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 @constinit, i64 24,
+  // CHECK-NOT: alloca [3 x double]
+  // CHECK-NOT: llvm.memcpy
+  // CHECK: store ptr @[[DOUBLE_INIT]], ptr %{{.*}}, align 8
   // CHECK: call void @_ZN9example121fESt16initializer_listIdE(
   f({1, 2, 3});
 }
@@ -41,14 +46,31 @@ void bytes(std::initializer_list<unsigned char>);
 
 void f() {
   // CHECK-LABEL: define{{.*}} void @_ZN13embed_example1fEv(
-  // CHECK: alloca [2 x i8],
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 {{.*}}, ptr align 1 @.str, i64 2,
+  // CHECK-NOT: alloca [2 x i8]
+  // CHECK-NOT: llvm.memcpy
+  // CHECK: store ptr @[[EMBED_INIT]], ptr %{{.*}}, align 8
   // CHECK: call void @_ZN13embed_example5bytesESt16initializer_listIhE(
   bytes({
 #embed <jk.txt>
   });
 }
 } // namespace embed_example
+
+namespace large_constant_list {
+#define TEN 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+#define HUNDO TEN, TEN, TEN, TEN, TEN, TEN, TEN, TEN, TEN, TEN
+
+void f(std::initializer_list<int>);
+
+void g() {
+  // CHECK-LABEL: define{{.*}} void @_ZN19large_constant_list1gEv(
+  // CHECK-NOT: alloca [100 x i32]
+  // CHECK-NOT: llvm.memcpy
+  // CHECK: store ptr @[[HUNDO_INIT]], ptr %{{.*}}, align 8
+  // CHECK: call void @_ZN19large_constant_list1fESt16initializer_listIiE(
+  f({HUNDO});
+}
+} // namespace large_constant_list
 
 namespace destructor_side_effects {
 extern "C" int printf(const char *, ...);
