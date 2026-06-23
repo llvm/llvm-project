@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// REQUIRES: std-at-least-c++23
 
 // <tuple>
 
@@ -39,36 +40,33 @@ template <class ...Args>
 void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
 void f() {
-  // Test that we emit our diagnostic from the library.
-  // expected-error@tuple:* 8 {{Attempted construction of reference element binds to a temporary whose lifetime has ended}}
-
-  // Good news everybody! Clang now diagnoses this for us!
-  // expected-error@tuple:* 0+ {{reference member '__value_' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  // Test that the public constructors are deleted when constructing a reference
+  // element would bind to a temporary.
 
   {
-    F<int, const std::string&>(std::make_tuple(1, "abc")); // expected-note 1 {{requested here}}
+    F<int, const std::string&>(std::make_tuple(1, "abc")); // expected-error {{deleted}}
   }
   {
-    std::tuple<int, const std::string&> t(1, "a"); // expected-note 1 {{requested here}}
+    std::tuple<int, const std::string&> t(1, "a"); // expected-error {{deleted}}
   }
   {
-    F<int, const std::string&>(std::tuple<int, const std::string&>(1, "abc")); // expected-note 1 {{requested here}}
+    F<int, const std::string&>(std::tuple<int, const std::string&>(1, "abc")); // expected-error {{deleted}}
   }
   {
     ConvertsTo<int&> ct;
-    std::tuple<const long&, int> t(ct, 42); // expected-note {{requested here}}
+    std::tuple<const long&, int> t(ct, 42); // expected-error {{deleted}}
   }
   {
     ConvertsTo<int> ct;
-    std::tuple<int const&, void*> t(ct, nullptr); // expected-note {{requested here}}
+    std::tuple<int const&, void*> t(ct, nullptr); // expected-error {{deleted}}
   }
   {
     ConvertsTo<Derived> ct;
-    std::tuple<Base const&, int> t(ct, 42); // expected-note {{requested here}}
+    std::tuple<Base const&, int> t(ct, 42); // expected-error {{deleted}}
   }
   {
     std::allocator<int> alloc;
-    std::tuple<std::string &&> t2("hello"); // expected-note {{requested here}}
-    std::tuple<std::string &&> t3(std::allocator_arg, alloc, "hello"); // expected-note {{requested here}}
+    std::tuple<std::string&&> t2("hello"); // expected-error {{deleted}}
+    std::tuple<std::string&&> t3(std::allocator_arg, alloc, "hello"); // expected-error {{deleted}}
   }
 }
