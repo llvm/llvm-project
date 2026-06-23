@@ -203,6 +203,13 @@ ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
   return ArrayRef(ArgFPR32s);
 }
 
+ArrayRef<MCPhysReg> RISCV::getArgVRs(const RISCVSubtarget &STI) {
+  if (STI.hasStdExtV())
+    return ArrayRef(ArgVRs);
+
+  return {};
+}
+
 static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {
   // The GPRs used for passing arguments in the ILP32* and LP64* ABIs, except
   // the ILP32E ABI.

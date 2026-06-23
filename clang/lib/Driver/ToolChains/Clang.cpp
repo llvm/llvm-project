@@ -7022,8 +7022,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // The backend code needs to be changed to include the appropriate function
     // calls automatically.
     StringRef Value = A->getValue();
-    if (!Triple.isX86() && !Triple.isAArch64() &&
-        !(Triple.isRISCV() && (Value == "skip" || Value.contains("gpr"))))
+    if (!Triple.isX86() && !Triple.isAArch64() && !Triple.isRISCV())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
   }
