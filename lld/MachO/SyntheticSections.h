@@ -303,14 +303,11 @@ private:
 class RelocSection : public LinkEditSection {
 public:
   RelocSection(const char *name);
-  bool isNeeded() const override { return !entries.empty(); }
-  uint64_t getRawSize() const override {
-    return entries.size() * (sizeof(uint32_t) * 2);
-  }
   void addEntry(const Symbol *sym, const InputSection *isec, uint32_t offset,
-                uint8_t type, bool pcrel, uint8_t length) {
-    entries.emplace_back(sym, isec, offset, type, pcrel, length);
-  }
+                uint8_t type, bool pcrel, uint8_t length);
+  bool isNeeded() const override { return !entries.empty(); }
+  void finalizeContents() override;
+  uint64_t getRawSize() const override { return contents.size(); }
   void writeTo(uint8_t *buf) const override;
 
   virtual bool isExternal() const = 0;
@@ -328,7 +325,9 @@ public:
         : sym(sym), isec(isec), offset(offset), type(type), pcrel(pcrel),
           length(length) {}
   };
+  bool isFinal = false;
   std::vector<Entry> entries;
+  SmallVector<char, 128> contents;
 };
 
 class ExternalRelocSection final : public RelocSection {

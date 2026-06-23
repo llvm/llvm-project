@@ -833,13 +833,27 @@ void StubHelperSection::setUp() {
 RelocSection::RelocSection(const char *name)
     : LinkEditSection(segment_names::linkEdit, name) {}
 
-void RelocSection::writeTo(uint8_t *buf) const {
-  for (const Entry &e : entries) {
-    write32le(buf, e.isec->getVA(e.offset));
+void RelocSection::addEntry(const Symbol *sym, const InputSection *isec,
+                            uint32_t offset, uint8_t type, bool pcrel,
+                            uint8_t length) {
+  assert(!this->isFinal && "RelocSection entry added after finalizeContents");
+  this->entries.emplace_back(sym, isec, offset, type, pcrel, length);
+}
 
-    const bool ext = this->isExternal();
+void RelocSection::finalizeContents() {
+  assert(!this->isFinal && "RelocSection finalized twice");
+  this->isFinal = true;
+
+  const bool isExternal = this->isExternal();
+
+  raw_svector_ostream os{contents};
+  for (const Entry &e : entries) {
+    char buf[sizeof(uint32_t)];
+    write32le(buf, e.isec->getVA(e.offset));
+    os.write(buf, sizeof(buf));
+
     uint32_t symOrSectNum;
-    if (ext)
+    if (isExternal)
       symOrSectNum = e.sym->symtabIndex;
     else {
       const auto *def = dyn_cast_or_null<Defined>(e.sym);
@@ -847,15 +861,18 @@ void RelocSection::writeTo(uint8_t *buf) const {
       symOrSectNum = targetIsec->parent->index;
     }
 
-    write32le(buf + sizeof(uint32_t),
-              (symOrSectNum & 0x00ffffffu) |
-                  (static_cast<uint32_t>(e.pcrel) << 24) |
-                  (static_cast<uint32_t>(e.length) << 25) |
-                  (static_cast<uint32_t>(ext) << 27) |
-                  (static_cast<uint32_t>(e.type) << 28));
-
-    buf += sizeof(uint32_t) * 2;
+    write32le(buf, (symOrSectNum & 0x00ffffffu) |
+                       (static_cast<uint32_t>(e.pcrel) << 24) |
+                       (static_cast<uint32_t>(e.length) << 25) |
+                       (static_cast<uint32_t>(isExternal) << 27) |
+                       (static_cast<uint32_t>(e.type) << 28));
+    os.write(buf, sizeof(buf));
   }
+}
+
+void RelocSection::writeTo(uint8_t *buf) const {
+  assert(this->isFinal && "RelocSection contents written before finalization");
+  memcpy(buf, contents.data(), contents.size());
 }
 
 ExternalRelocSection::ExternalRelocSection()

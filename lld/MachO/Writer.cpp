@@ -1175,11 +1175,10 @@ void Writer::finalizeAddresses() {
 void Writer::finalizeLinkEditSegment() {
   TimeTraceScope timeScope("Finalize __LINKEDIT segment");
   // Fill __LINKEDIT contents.
-  std::array<LinkEditSection *, 12> linkEditSections{
+  std::array<LinkEditSection *, 10> linkEditSections{
       in.rebase,         in.binding,
       in.weakBinding,    in.lazyBinding,
       in.exports,        in.chainedFixups,
-      in.extRelocs,      in.localRelocs,
       symtabSection,     indirectSymtabSection,
       dataInCodeSection, functionStartsSection,
   };
@@ -1189,6 +1188,11 @@ void Writer::finalizeLinkEditSegment() {
                     if (osec)
                       osec->finalizeContents();
                   });
+
+  if (in.extRelocs)
+    in.extRelocs->finalizeContents();
+  if (in.localRelocs)
+    in.localRelocs->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
