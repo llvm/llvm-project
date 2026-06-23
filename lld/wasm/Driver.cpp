@@ -561,7 +561,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
-  ctx.arg.libcallThreadContext = args.hasArg(OPT_libcall_thread_context);
+  ctx.arg.cooperativeThreading = args.hasArg(OPT_cooperative_threading);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
@@ -754,6 +754,11 @@ static void setConfigs() {
   // exporting memory under its default name.
   if (!ctx.arg.memoryExport.has_value() && !ctx.arg.memoryImport.has_value()) {
     ctx.arg.memoryExport = memoryName;
+  }
+  if (ctx.arg.cooperativeThreading) {
+    if (ctx.arg.sharedMemory)
+      error("--cooperative-threading is incompatible with --shared-memory");
+    ctx.arg.libcallThreadContext = true;
   }
 }
 
@@ -964,7 +969,7 @@ static void createSyntheticSymbols() {
         createGlobalVariable(stack_pointer_name, !ctx.arg.libcallThreadContext);
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.arg.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
         ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
@@ -986,9 +991,11 @@ static void createSyntheticSymbols() {
       static WasmSignature setTLSBaseSignature{{}, {ValType::I32}};
       ctx.sym.setTLSBase =
           createUndefinedFunction("__wasm_set_tls_base", &setTLSBaseSignature);
+      ctx.sym.setTLSBase->markLive();
       static WasmSignature getTLSBaseSignature{{ValType::I32}, {}};
       ctx.sym.getTLSBase =
           createUndefinedFunction("__wasm_get_tls_base", &getTLSBaseSignature);
+      ctx.sym.getTLSBase->markLive();
     }
   }
 }
@@ -1019,16 +1026,12 @@ static void createOptionalSymbols() {
   if (ctx.sym.firstPageEnd)
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 
-  // For non-shared memory programs we still need to define __tls_base since we
-  // allow object files built with TLS to be linked into single threaded
-  // programs, and such object files can contain references to this symbol.
-  //
-  // However, in this case __tls_base is immutable and points directly to the
-  // start of the `.tdata` static segment.
-  //
-  // __tls_size and __tls_align are not needed in this case since they are only
-  // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory)
+  // TLS object files may be linked into single-threaded programs, so
+  // __tls_base must always be defined. In this case it is immutable and points
+  // directly to the start of the `.tdata` segment. __tls_size and __tls_align
+  // are omitted since they are only used by __wasm_init_tls, which is not
+  // created in this case.
+  if (!ctx.sym.tlsBase)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
