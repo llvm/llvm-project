@@ -88,6 +88,13 @@ static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
+// In a module-subprogram-part, a bare `!$ACC ROUTINE` line (without a name)
+// cannot be attached to a specific routine. Accept and ignore it so parsing
+// can continue to the following subprogram.
+static constexpr auto ignoredBareRoutineOpenACCDirective{
+    (skipStuffBeforeStatement >> "!$ACC "_sptok >> "ROUTINE"_tok / endOfLine) >>
+    construct<CompilerDirective>(pure<CompilerDirective::Unrecognized>())};
+
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
 TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
@@ -294,6 +301,7 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
     construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(ignoredBareRoutineOpenACCDirective)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
