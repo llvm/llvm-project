@@ -14,8 +14,8 @@
 //
 // All three kernels plus main should be profiled.
 // PROF-DAG: _Z4fillPii
-// PROF-DAG: _Z5scalePixi
-// PROF-DAG: _Z6negatePin
+// PROF-DAG: _Z5scalePii
+// PROF-DAG: _Z6negatePii
 // PROF-DAG: main
 // PROF: Total functions: 4
 

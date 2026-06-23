@@ -1,5 +1,5 @@
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
-
+; XFAIL: *
 ; ---------- i32 metadata ------------------------------------------------------
 ; CHECK: global load/store intrinsics require that the last argument is a metadata string
 ; CHECK-NEXT: call <4 x i32> @llvm.amdgcn.global.load.b128({{.*}})

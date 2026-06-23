@@ -10397,10 +10397,11 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
 
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
-        // Implicitly treat allocatable arrays as managed when feature is
-        // enabled. This is done after all explicit CUDA attributes have been
-        // processed. Only applies when CUDA Fortran is enabled; otherwise
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr()) {
+        // Implicitly treat allocatable/pointer arrays as managed when feature
+        // is enabled. This is done after all explicit CUDA attributes have
+        // been processed. Only applies when CUDA Fortran is enabled; otherwise
         // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
@@ -10411,8 +10412,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
         // Implicitly treat allocatable arrays as pinned when feature is
         // enabled.
-        else if (context().languageFeatures().IsEnabled(
-                     common::LanguageFeature::CudaPinned))
+        else if (IsAllocatable(symbol) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
       }
     }

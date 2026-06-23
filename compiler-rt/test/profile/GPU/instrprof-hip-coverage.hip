@@ -12,7 +12,9 @@
 // RUN:   | FileCheck %s --check-prefix=REPORT
 //
 // REPORT: instrprof-hip-coverage.hip
-// REPORT-NOT: 0.00%
+// No coverage column should be fully uncovered. Anchor on a non-digit before
+// the "0.00%" so this does not spuriously match e.g. "80.00%".
+// REPORT-NOT: {{[^.0-9]0[.]00%}}
 
 #include <hip/hip_runtime.h>
 #include <cstdio>
