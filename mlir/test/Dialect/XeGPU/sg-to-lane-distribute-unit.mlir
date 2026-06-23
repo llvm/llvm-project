@@ -175,14 +175,14 @@ gpu.func @prefetch_nd() {
 // CHECK-LABEL: gpu.func @scatter_load_chunksize
 // CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
 // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]]
 // CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf16> to vector<1x8xf16>
 gpu.func @scatter_load_chunksize(%src: memref<256xf16>) {
   %offset = arith.constant dense<12> : vector<16xindex>
   %mask = arith.constant dense<true> : vector<16xi1>
   %0 = xegpu.load %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
+    <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
     : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
   gpu.return
 }
@@ -190,20 +190,20 @@ gpu.func @scatter_load_chunksize(%src: memref<256xf16>) {
 // CHECK-LABEL: gpu.func @scatter_store_chunksize
 // CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
 // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]]
 // CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
 // CHECK: %[[C1:.*]] = vector.shape_cast %[[LOAD]] : vector<8xf16> to vector<1x8xf16>
 // CHECK: %[[C2:.*]] = vector.shape_cast %[[C1]] : vector<1x8xf16> to vector<8xf16>
-// CHECK: xegpu.store %[[C2]], %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}>
+// CHECK: xegpu.store %[[C2]], %arg0[%[[OFFSET]]], %[[MASK]]
 // CHECK-SAME: : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
 gpu.func @scatter_store_chunksize(%src: memref<256xf16>) {
   %offset = arith.constant dense<12> : vector<16xindex>
   %mask = arith.constant dense<true> : vector<16xi1>
   %0 = xegpu.load %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
+    <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
     : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
   xegpu.store %0, %src[%offset], %mask
-    <{chunk_size = 8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
+    <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
     : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
   gpu.return
 }

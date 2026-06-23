@@ -377,8 +377,8 @@ gpu.func @prefetch_nd_3d(%src: memref<4x8x16xf16>) {
 
 // CHECK: gpu.func @simt_load_4(%[[arg0:.*]]: memref<256xf16>, %[[arg1:.*]]: vector<1xindex>, %[[arg2:.*]]: vector<1xi1>) {
 gpu.func @simt_load_4(%arg0: memref<256xf16>, %arg1: vector<1xindex>, %arg2: vector<1xi1>) {
-  // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-  %0 = xegpu.load %arg0[%arg1], %arg2 <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+  // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+  %0 = xegpu.load %arg0[%arg1], %arg2 : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
   gpu.return
 }
 
@@ -391,8 +391,8 @@ gpu.func @simt_load_5(%arg0: memref<256xf16>, %arg1: vector<1xindex>, %arg2: vec
 
 // CHECK: gpu.func @simt_load_6(%[[arg0:.*]]: memref<256xf16>, %[[arg1:.*]]: index, %[[arg2:.*]]: i1) {
 gpu.func @simt_load_6(%arg0: memref<256xf16>, %arg1: index, %arg2: i1) {
-  // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{chunk_size = 8 : i64}> : memref<256xf16>, index, i1 -> vector<8xf16>
-  %0 = xegpu.load %arg0[%arg1], %arg2 <{chunk_size = 8 : i64}> : memref<256xf16>, index, i1 -> vector<8xf16>
+  // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] : memref<256xf16>, index, i1 -> vector<8xf16>
+  %0 = xegpu.load %arg0[%arg1], %arg2 : memref<256xf16>, index, i1 -> vector<8xf16>
   gpu.return
 }
 
@@ -407,23 +407,23 @@ gpu.func @simt_load_7(%arg0: memref<256xf16>, %arg1: index, %arg2: i1) {
 gpu.func @subgroup_load_offset_1(%src: memref<?xf16>) {
   %offset = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %mask = arith.constant dense<1>: vector<4xi1>
-  //CHECK: %[[R1:.*]] = xegpu.load %arg0[%cst], %cst_0 <{chunk_size = 2 : i64, l1_hint = #xegpu.cache_hint<cached>}> : memref<?xf16>, vector<4xindex>, vector<4xi1> -> vector<4x2xf16>
-  %val = xegpu.load %src[%offset], %mask <{chunk_size=2, l1_hint = #xegpu.cache_hint<cached>}>
+  //CHECK: %[[R1:.*]] = xegpu.load %arg0[%cst], %cst_0 <{l1_hint = #xegpu.cache_hint<cached>}> : memref<?xf16>, vector<4xindex>, vector<4xi1> -> vector<4x2xf16>
+  %val = xegpu.load %src[%offset], %mask <{l1_hint = #xegpu.cache_hint<cached>}>
       : memref<?xf16>, vector<4xindex>, vector<4xi1> -> vector<4x2xf16>
   gpu.return
 }
 
 // CHECK: gpu.func @simt_store_4(%[[arg0:.*]]: vector<8xf16>, %[[arg1:.*]]: memref<256xf16>, %[[arg2:.*]]: vector<1xindex>, %[[arg3:.*]]: vector<1xi1>) {
 gpu.func @simt_store_4(%arg0: vector<8xf16>, %arg1: memref<256xf16>, %arg2: vector<1xindex>, %arg3: vector<1xi1>) {
-  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] <{chunk_size = 8 : i64}> : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
-  xegpu.store %arg0, %arg1[%arg2], %arg3 <{chunk_size = 8 : i64}> : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+  xegpu.store %arg0, %arg1[%arg2], %arg3 : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
   gpu.return
 }
 
 // CHECK: gpu.func @simt_store_5(%[[arg0:.*]]: vector<8xf16>, %[[arg1:.*]]: memref<256xf16>, %[[arg2:.*]]: index, %[[arg3:.*]]: i1) {
 gpu.func @simt_store_5(%arg0: vector<8xf16>, %arg1: memref<256xf16>, %arg2: index, %arg3: i1) {
-  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] <{chunk_size = 8 : i64}> : vector<8xf16>, memref<256xf16>, index, i1
-  xegpu.store %arg0, %arg1[%arg2], %arg3 <{chunk_size = 8 : i64}> : vector<8xf16>, memref<256xf16>, index, i1
+  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] : vector<8xf16>, memref<256xf16>, index, i1
+  xegpu.store %arg0, %arg1[%arg2], %arg3 : vector<8xf16>, memref<256xf16>, index, i1
   gpu.return
 }
 
@@ -446,8 +446,8 @@ gpu.func @subgroup_store_offset_1(%dest: memref<?xf16>) {
   %val = arith.constant dense<2.9>: vector<4x2xf16>
   %offset = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %mask = arith.constant dense<1>: vector<4xi1>
-  //CHECK: xegpu.store %[[R0:.*]], %arg0[%cst_0], %cst_1 <{chunk_size = 2 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<4x2xf16>, memref<?xf16>, vector<4xindex>, vector<4xi1>
-  xegpu.store %val, %dest[%offset], %mask <{chunk_size=2, l1_hint = #xegpu.cache_hint<cached>}>
+  //CHECK: xegpu.store %[[R0:.*]], %arg0[%cst_0], %cst_1 <{l1_hint = #xegpu.cache_hint<cached>}> : vector<4x2xf16>, memref<?xf16>, vector<4xindex>, vector<4xi1>
+  xegpu.store %val, %dest[%offset], %mask <{l1_hint = #xegpu.cache_hint<cached>}>
       : vector<4x2xf16>, memref<?xf16>, vector<4xindex>, vector<4xi1>
   gpu.return
 }
