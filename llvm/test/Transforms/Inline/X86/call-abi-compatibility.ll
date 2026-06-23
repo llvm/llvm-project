@@ -265,7 +265,7 @@ define void @callee_calls_512bit_avx512f() "target-features"="+avx512f" {
 }
 
 ; Okay to inline as +avx512bw does not change the ABI of 512 bit vectors
-;relative to +avx512f.
+; relative to +avx512f.
 define void @caller_calls_512bit_avx512bw() "target-features"="+avx512bw" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_avx512bw
 ; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
@@ -273,6 +273,26 @@ define void @caller_calls_512bit_avx512bw() "target-features"="+avx512bw" {
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_calls_512bit_avx512f()
+  ret void
+}
+
+define void @callee_calls_512bit_vector_width_256() "target-features"="+avx512vl" "min-legal-vector-width"="256" "prefer-vector-width"="256" {
+; CHECK-LABEL: define {{[^@]+}}@callee_calls_512bit_vector_width_256
+; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_512bit(<16 x float> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_512bit(<16 x float> zeroinitializer)
+  ret void
+}
+
+define void @caller_calls_512bit_vector_width_512() "target-features"="+avx512vl" "min-legal-vector-width"="512" "prefer-vector-width"="512" {
+; CHECK-LABEL: define {{[^@]+}}@caller_calls_512bit_vector_width_512
+; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    call void @callee_calls_512bit_vector_width_256()
+; CHECK-NEXT:    ret void
+;
+  call void @callee_calls_512bit_vector_width_256()
   ret void
 }
 

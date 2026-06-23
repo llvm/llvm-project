@@ -6719,21 +6719,24 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   // Work this as a subsetting of subtarget features.
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+  const X86Subtarget &CallerSubtarget = TM.getSubtarget<X86Subtarget>(*Caller);
+  const X86Subtarget &CalleeSubtarget = TM.getSubtarget<X86Subtarget>(*Callee);
+  const FeatureBitset &CallerBits = CallerSubtarget.getFeatureBits();
+  const FeatureBitset &CalleeBits = CalleeSubtarget.getFeatureBits();
 
-  // Check whether features are the same (apart from the ignore list).
+  // Check whether callee features are a subset of caller features
+  // (apart from the ignore list).
   FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
   FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  if (RealCallerBits == RealCalleeBits)
-    return true;
-
-  // If the features are a subset, we need to additionally check for calls
-  // that may become ABI-incompatible as a result of inlining.
   if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
     return false;
+
+  // If the features are not exactly the same (or there is a difference in
+  // AVX512 register usage), we need to additionally check for calls
+  // that may become ABI-incompatible as a result of inlining.
+  if (RealCallerBits == RealCalleeBits &&
+      CallerSubtarget.useAVX512Regs() == CalleeSubtarget.useAVX512Regs())
+    return true;
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
