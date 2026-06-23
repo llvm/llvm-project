@@ -507,7 +507,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrInfoAttr blockAddrInfo) {
 /// BlockAddrDiffAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
   assert(blockInfoAddr &&
-    "block address lowering requires LLVMBlockAddressInfo");
+         "block address lowering requires LLVMBlockAddressInfo");
   // A block-address difference initializer is lowered to the difference of the
   // two block addresses: trunc(ptrtoint(lhs) - ptrtoint(rhs)). Just like a
   // single block address, each referenced block tag may not have been emitted
@@ -540,8 +540,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
   // initializer's type. LLVM is sensitive about the exact format of the
   // address-of-label difference, so the truncation must happen after the
   // subtraction.
-  mlir::Type intptrTy = rewriter.getIntegerType(
-      layout.getTypeSizeInBits(ptrTy));
+  mlir::Type intptrTy =
+      rewriter.getIntegerType(layout.getTypeSizeInBits(ptrTy));
   mlir::Value lhsInt =
       mlir::LLVM::PtrToIntOp::create(rewriter, loc, intptrTy, lhsAddr);
   mlir::Value rhsInt =
@@ -2520,11 +2520,12 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert((isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
-              cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-              cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-              cir::VTableAttr, cir::ZeroAttr>(init)));
+  assert(
+      (isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr, cir::ConstArrayAttr,
+           cir::ConstRecordAttr, cir::ConstVectorAttr, cir::ConstPtrAttr,
+           cir::ConstComplexAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
+           cir::UndefAttr, cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+          init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
