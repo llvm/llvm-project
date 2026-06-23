@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../carg.h
   DEPENDS
     libc.src.__support.CPP.bit
+    libc.src.__support.common
     libc.src.__support.complex_type
     libc.src.__support.math.atan2
 )
@@ -18,6 +19,7 @@ add_entrypoint_object(
     ../cargf.h
   DEPENDS
     libc.src.__support.CPP.bit
+    libc.src.__support.common
     libc.src.__support.complex_type
     libc.src.__support.math.atan2f
 )

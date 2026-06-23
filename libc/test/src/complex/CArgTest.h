@@ -1,9 +1,14 @@
-//===-- Utility class to test different flavors of carg ---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// CArgTest.h
+/// This file contains utility class to test different flavors of carg.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_SRC_COMPLEX_CARGTEST_H
@@ -21,7 +26,7 @@ class CArgTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(FPT)
 
 public:
-  typedef FPT (*CArgFunc)(CFPT);
+  using CArgFunc = FPT (*)(CFPT);
 
   void testZeroValues(CArgFunc func) {
     EXPECT_FP_EQ(func(CFPT{0.0, 0.0}), zero);

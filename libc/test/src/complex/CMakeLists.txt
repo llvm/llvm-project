@@ -7,6 +7,8 @@ add_fp_unittest(
     libc-complex-unittests
   SRCS
     carg_test.cpp
+  HDRS
+    CArgTest.h
   DEPENDS
     libc.src.complex.carg
 )
@@ -18,6 +20,8 @@ add_fp_unittest(
     libc-complex-unittests
   SRCS
     cargf_test.cpp
+  HDRS
+    CArgTest.h
   DEPENDS
     libc.src.complex.cargf
 )
