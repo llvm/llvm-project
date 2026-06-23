@@ -643,7 +643,7 @@ Error DataAggregator::filterBinaryMMapInfo() {
       if (errs().has_colors())
         errs().resetColor();
 
-      return createStringError(inconvertibleErrorCode(),
+      return createStringError(std::errc::not_supported,
                                "could not find a profile matching PID");
     }
   }
@@ -766,7 +766,7 @@ Error DataAggregator::parsePerfData() {
       Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
                    "Cannot print 'addr' field.");
       if (!NoData.match(ErrMsg))
-        return createStringError(inconvertibleErrorCode(), ErrMsg);
+        return E;
     }
     if (std::error_code EC = parseMemEvents())
       return errorCodeToError(EC);
@@ -1832,7 +1832,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
-    Returns.emplace(LBR.From, LBR.IsReturn);
+    if (LBR.IsReturn)
+      Returns.emplace(LBR.From, true);
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.

@@ -4289,7 +4289,8 @@ def fir_ReduceSpecifier {
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
                                                          ["getLoopInductionVars"]>,
-     Terminator, NoTerminator, SingleBlock, ParentOneOf<["DoConcurrentOp"]>]> {
+     Terminator, NoTerminator, SingleBlock, AutomaticAllocationScope,
+     ParentOneOf<["DoConcurrentOp"]>]> {
   let summary = "do concurrent loop";
 
   let description = [{

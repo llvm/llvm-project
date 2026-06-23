@@ -991,10 +991,11 @@ protected:
 
 #  if _LIBCPP_HAS_CHAR8_T
 
-// template <> class codecvt<char16_t, char8_t, mbstate_t> // C++20
+// template <> class codecvt<char16_t, char8_t, mbstate_t> // C++20, deprecated in C++20
 
 template <>
-class _LIBCPP_EXPORTED_FROM_ABI codecvt<char16_t, char8_t, mbstate_t> : public locale::facet, public codecvt_base {
+class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI codecvt<char16_t, char8_t, mbstate_t>
+    : public locale::facet, public codecvt_base {
 public:
   typedef char16_t intern_type;
   typedef char8_t extern_type;
@@ -1154,10 +1155,11 @@ protected:
 
 #  if _LIBCPP_HAS_CHAR8_T
 
-// template <> class codecvt<char32_t, char8_t, mbstate_t> // C++20
+// template <> class codecvt<char32_t, char8_t, mbstate_t> // C++20, deprecated in C++20
 
 template <>
-class _LIBCPP_EXPORTED_FROM_ABI codecvt<char32_t, char8_t, mbstate_t> : public locale::facet, public codecvt_base {
+class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI codecvt<char32_t, char8_t, mbstate_t>
+    : public locale::facet, public codecvt_base {
 public:
   typedef char32_t intern_type;
   typedef char8_t extern_type;
@@ -1263,8 +1265,10 @@ _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // d
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
 #  if _LIBCPP_HAS_CHAR8_T
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20
+extern template class _LIBCPP_DEPRECATED_IN_CXX20
+_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20, deprecated in C++20
+extern template class _LIBCPP_DEPRECATED_IN_CXX20
+_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20, deprecated in C++20
 #  endif
 
 template <size_t _Np>

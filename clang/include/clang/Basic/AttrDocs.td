@@ -3042,8 +3042,35 @@ def BTFTypeTagDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
 Clang supports the ``__attribute__((btf_type_tag("ARGUMENT")))`` attribute for
-all targets. It only has effect when ``-g`` is specified on the command line and
-is currently silently ignored when not applied to a pointer type (note: this
+all targets. It only has effect when ``-g`` is specified on the command line.
+
+The attribute can be applied to a pointer type, in which case the tag is
+associated with the pointee type, e.g.:
+
+.. code-block:: c
+
+  int __attribute__((btf_type_tag("tag"))) *p;
+
+It can also be applied to the underlying type of a typedef, in which case the
+tag follows the typedef down to its base type, e.g.:
+
+.. code-block:: c
+
+  typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+
+The following is the corresponding btf:
+
+.. code-block::
+
+  ...
+  [2] TYPE_TAG 'tag' type_id=4
+  [3] TYPEDEF 'foo_t' type_id=2
+  [4] STRUCT 'foo' size=4 vlen=1
+      'c' type_id=5 bits_offset=0
+  [5] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+  ...
+
+The attribute is currently silently ignored in any other position (note: this
 scenario may be diagnosed in the future).
 
 The ``ARGUMENT`` string will be preserved in IR and emitted to DWARF for the
@@ -9145,6 +9172,33 @@ point."
 }];
 }
 
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `annotate` attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -10049,6 +10103,51 @@ The following aspects are currently supported:
 
 - ``fixed``: The call has a C ISO 18037 fixed-point argument.
 - ``float``: The call has a floating-point argument.
+  }];
+}
+
+def OverflowBehaviorDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``overflow_behavior`` attribute provides fine-grained, type-level control
+over how arithmetic operations on an integer type behave on overflow. It may be
+applied to a ``typedef``, to a variable or data member, or to an integer type
+directly, and accepts one of two behaviors as its argument:
+
+* ``wrap``: arithmetic on the attributed type wraps on overflow, using two's
+  complement semantics. This is equivalent to ``-fwrapv`` but scoped to the
+  attributed type, and works for both signed and unsigned types. UBSan's
+  ``signed-integer-overflow``, ``unsigned-integer-overflow``,
+  ``implicit-signed-integer-truncation``, and
+  ``implicit-unsigned-integer-truncation`` checks are suppressed for the type.
+
+* ``trap``: arithmetic on the attributed type is checked for overflow, enabling
+  overflow checks for the type even when ``-fwrapv`` is in effect globally.
+
+.. code-block:: c++
+
+  typedef unsigned int __attribute__((overflow_behavior(trap))) non_wrapping_uint;
+
+  non_wrapping_uint add_one(non_wrapping_uint a) {
+    return a + 1; // Overflow is checked for this operation.
+  }
+
+  int mul_alot(int n) {
+    int __attribute__((overflow_behavior(wrap))) a = n;
+    return a * 1337; // Overflow is not checked and is well-defined.
+  }
+
+The keyword spellings ``__ob_wrap`` and ``__ob_trap`` are equivalent to
+``overflow_behavior(wrap)`` and ``overflow_behavior(trap)`` respectively.
+
+The attribute wholly overrides global flags (``-ftrapv``, ``-fwrapv``,
+sanitizers, and Sanitizer Special Case Lists) for the attributed type. It can
+only be applied to integer types.
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``. For full details on promotion and
+conversion rules, pointer semantics, diagnostics, and interaction with
+sanitizers, see :doc:`OverflowBehaviorTypes`.
   }];
 }
 

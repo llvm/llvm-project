@@ -1755,6 +1755,7 @@ public:
   LValue emitCallExprLValue(const clang::CallExpr *e);
 
   LValue emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e);
+  LValue emitCXXConstructLValue(const CXXConstructExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -2094,7 +2095,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               bool isNontemporal = false);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -2304,6 +2306,7 @@ public:
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
+          /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));

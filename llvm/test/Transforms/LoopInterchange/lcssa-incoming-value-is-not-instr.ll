@@ -62,3 +62,73 @@ exit:
   %cst.lcssa = phi i32 [ %cst, %outer.latch ]
   ret i32 %cst.lcssa
 }
+
+
+; Ensure that we can handle LCSSA PHI even if the root of the use-def chain of
+; the incoming value is not an instruction.
+
+define i32 @g() {
+; CHECK-LABEL: define i32 @g() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[INNER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
+; CHECK:       [[INNER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 42, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 2
+; CHECK-NEXT:    br label %[[INNER_EXIT:.*]]
+; CHECK:       [[INNER_LATCH_SPLIT]]:
+; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP1]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 2
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
+; CHECK:       [[INNER_EXIT]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 2
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_LATCH_SPLIT]], label %[[OUTER_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[X_FINAL:%.*]] = phi i32 [ [[X_LCSSA]], %[[INNER_LATCH_SPLIT]] ]
+; CHECK-NEXT:    ret i32 [[X_FINAL]]
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.latch ]
+  br label %inner.latch
+
+inner.latch:
+  %x = phi i32 [ 42, %inner.header ]
+  %j.next = add i64 %j, 1
+  %ec.j = icmp eq i64 %j.next, 2
+  br i1 %ec.j, label %inner.exit, label %inner.header
+
+inner.exit:
+  %x.lcssa = phi i32 [ %x, %inner.latch ]
+  br label %outer.latch
+
+outer.latch:
+  %x.lcssa2 = phi i32 [ %x.lcssa, %inner.exit ]
+  %i.next = add i64 %i, 1
+  %ec.i = icmp eq i64 %i.next, 2
+  br i1 %ec.i, label %exit, label %outer.header
+
+exit:
+  %x.final = phi i32 [ %x.lcssa2, %outer.latch ]
+  ret i32 %x.final
+}

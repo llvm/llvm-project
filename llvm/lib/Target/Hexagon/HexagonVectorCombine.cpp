@@ -2443,7 +2443,7 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
     return nullptr;
   LLVM_DEBUG(dbgs() << "  Indexes        : " << *Indexes << "\n");
 
-  Instruction *Gather = nullptr;
+  Value *Gather = nullptr;
   Type *NT = HVC.getHvxTy(HVC.getIntTy(32), false);
   if (Qual == HvxIdioms::LdSt || Qual == HvxIdioms::Arithmetic) {
     // We fully assume the address space is in VTCM. We also assume that all

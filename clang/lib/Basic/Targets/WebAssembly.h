@@ -142,7 +142,7 @@ private:
   bool isValidCPUName(StringRef Name) const final;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const final;
 
-  bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
+  bool setCPU(StringRef Name) final { return isValidCPUName(Name); }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
@@ -186,7 +186,7 @@ private:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return CCCR_Error;
+      return HasTailCall ? CCCR_OK : CCCR_Error;
     default:
       return CCCR_Warning;
     }
