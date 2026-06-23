@@ -98,7 +98,7 @@
 
 - `--cu-processing-batch-size=<uint>`
 
-  Specifies the size of batches for processing CUs. Now it is not used.
+  Deprecated, has no effect.
 
 - `--data=<string>`
 

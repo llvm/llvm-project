@@ -380,8 +380,9 @@ static cl::opt<bool>
                     cl::cat(BoltCategory));
 
 static cl::opt<unsigned> BatchSize("cu-processing-batch-size",
-                                   cl::desc("Now it is not used."), cl::Hidden,
-                                   cl::init(1), cl::cat(BoltCategory));
+                                   cl::desc("Deprecated, has no effect."),
+                                   cl::Hidden, cl::init(0),
+                                   cl::cat(BoltCategory));
 
 static cl::opt<bool> AlwaysConvertToRanges(
     "always-convert-to-ranges",
@@ -986,6 +987,10 @@ void DWARFRewriter::processBucket(
 }
 
 void DWARFRewriter::updateDebugInfo() {
+  if (opts::BatchSize != 0)
+    BC.errs() << "BOLT-WARNING: --cu-processing-batch-size is deprecated and "
+                 "will be ignored. "
+                 "Use --debug-thread-count instead.\n";
   ErrorOr<BinarySection &> DebugInfo = BC.getUniqueSectionByName(".debug_info");
   if (!DebugInfo)
     return;
