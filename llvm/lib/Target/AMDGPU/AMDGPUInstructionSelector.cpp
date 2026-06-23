@@ -2895,6 +2895,31 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   return false;
 }
 
+static bool isExtractLoElt(MachineRegisterInfo &MRI, Register In,
+                           Register &Out) {
+  // There could be a bitcast between the extraction and its use.
+  In = stripBitCast(In, MRI);
+
+  // The first def of a 2 x 16-bit unmerge is the low half of its source.
+  if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
+    if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(0).getReg() == In &&
+        MRI.getType(In).getSizeInBits() == 16) {
+      Out = Unmerge->getSourceReg();
+      return true;
+    }
+  }
+
+  // A truncation from 32 to 16 bits keeps the low half in place.
+  Register Trunc;
+  if (mi_match(In, MRI, m_GTrunc(m_Reg(Trunc))) &&
+      MRI.getType(Trunc).getSizeInBits() == 32) {
+    Out = stripBitCast(Trunc, MRI);
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUInstructionSelector::selectG_FPEXT(MachineInstr &I) const {
   if (!Subtarget->hasSALUFloatInsts())
     return false;
@@ -7120,6 +7145,26 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
 
+// Place a 16-bit source into the low half of a new 32-bit VGPR.
+static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *InsertPt,
+                                         MachineRegisterInfo &MRI) {
+  MachineIRBuilder B(*InsertPt);
+
+  // Create an vgpr_16 for the hi16 part using IMPLICIT_DEF
+  Register ImpdefReg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+  B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(ImpdefReg);
+
+  Register DstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  B.buildInstr(AMDGPU::REG_SEQUENCE)
+      .addDef(DstReg)
+      .addReg(Src)
+      .addImm(AMDGPU::lo16)
+      .addReg(ImpdefReg)
+      .addImm(AMDGPU::hi16);
+
+  return DstReg;
+}
+
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
                                                      bool &Matched) const {
@@ -7161,9 +7206,20 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
 
     Mods |= SISrcMods::OP_SEL_1;
 
+    // The instruction reads a 32-bit source and selects a half of it, so look
+    // for the 32-bit register the 16-bit value is a half of.
     if (isExtractHiElt(*MRI, Src, Src)) {
+      // Src is now the 32-bit source and op_sel picks its high half.
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
+    } else if (!isExtractLoElt(*MRI, Src, Src)) {
+      // Src is genuinely 16 bits wide. With real true16 instructions a 16-bit
+      // VALU value lives in a VGPR_16, which the mix instructions cannot read,
+      // so widen it. 16-bit SALU values already occupy a full SGPR_32.
+      const RegisterBank *SrcRB = RBI.getRegBank(Src, *MRI, TRI);
+      if (Subtarget->useRealTrue16Insts() && SrcRB &&
+          SrcRB->getID() == AMDGPU::VGPRRegBankID)
+        Src = createVOP3PSrc32FromLo16(Src, Root.getParent(), *MRI);
     }
 
     Matched = true;
