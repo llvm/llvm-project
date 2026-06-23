@@ -211,8 +211,6 @@ endif()
   endif()
 endmacro()
 
-find_package(hip CONFIG PATHS ${ROCM_INSTALL_PATH}/hip QUIET)
-
 add_comgr_test(data_test c)
 add_comgr_test(disasm_instr_test c)
 add_comgr_test(metadata_tp_test c)
