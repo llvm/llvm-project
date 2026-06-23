@@ -1208,12 +1208,12 @@ TEST(StringRefTest, LFCRLineEnding) {
   EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
 }
 
-TEST(StringRefTest, NonemptyOr) {
+TEST(StringRefTest, NonEmptyOr) {
   constexpr StringRef empty;
   constexpr StringRef populated("yay!");
-  EXPECT_EQ(populated, empty.nonemptyOr("yay!"));
-  EXPECT_EQ(populated, populated.nonemptyOr("boo!"));
-  EXPECT_EQ(empty, empty.nonemptyOr(empty));
+  EXPECT_EQ(populated, empty.nonEmptyOr("yay!"));
+  EXPECT_EQ(populated, populated.nonEmptyOr("boo!"));
+  EXPECT_EQ(empty, empty.nonEmptyOr(empty));
 }
 
 static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");
