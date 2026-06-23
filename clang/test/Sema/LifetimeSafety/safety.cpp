@@ -2073,6 +2073,66 @@ std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
 std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access
 
+namespace pointer_to_member {
+struct S { int x; void f() const; };
+
+// `&(obj.*pm)` borrows the object, like `&obj.field`.
+void via_dot_star() {
+  const int *p;
+  {
+    S s{5};
+    int S::*pm = &S::x;
+    p = &(s.*pm); // expected-warning {{local variable 's' does not live long enough}}
+  }               // expected-note {{local variable 's' is destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void via_arrow_star() {
+  const int *p;
+  {
+    S s{5};
+    int S::*pm = &S::x;
+    S *sp = &s;     // expected-warning {{local variable 's' does not live long enough}}
+    p = &(sp->*pm); // expected-note {{local variable 'sp' aliases the storage of local variable 's'}}
+  }                 // expected-note {{local variable 's' is destroyed here}}
+  (void)*p;         // expected-note {{later used here}}
+}
+
+// Negative: a long-lived object borrowed through `.*` stays silent.
+void via_dot_star_ok() {
+  static S s{5};
+  int S::*pm = &S::x;
+  const int *p = &(s.*pm);
+  (void)*p; // no-warning
+}
+
+// A pointer/view member makes `obj.*pm` an origin one level deeper than the
+// object; flowing only the outer (storage) level still ties the borrow to the
+// object, so a dangle is caught.
+struct V { std::string_view view; };
+void via_dot_star_view_member() {
+  std::string_view *p;
+  {
+    V v;
+    std::string_view V::*pm = &V::view;
+    p = &(v.*pm); // expected-warning {{local variable 'v' does not live long enough}}
+  }               // expected-note {{local variable 'v' is destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+// A pointer-to-member-function result is only callable (not storable), so it
+// carries no borrow -- but calling one on a dangling object is still caught.
+void via_member_function_ptr() {
+  void (S::*pmf)() const = &S::f;
+  S *sp;
+  {
+    S s;
+    sp = &s; // expected-warning {{local variable 's' does not live long enough}}
+  }          // expected-note {{local variable 's' is destroyed here}}
+  (sp->*pmf)(); // expected-note {{later used here}}
+}
+} // namespace pointer_to_member
+
 namespace attr_on_template_params {
 struct MyObj {
   ~MyObj();
