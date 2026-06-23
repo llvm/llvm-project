@@ -584,10 +584,12 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   // Turn off dependency outputs. Should have already been emitted.
   Invocation.getDependencyOutputOpts().OutputFile.clear();
 
-  configureInvocationForCaching(Invocation, Tool.getCASOpts(), Root->toString(),
-                                CachingInputKind::IncludeTree,
-                                WorkingDirectory.str());
-  DepscanPrefixMapping::remapInvocationPaths(Invocation, Mapper);
+  Invocation.withCowRef<void>([&](CowCompilerInvocation &CowInvocation) {
+    configureInvocationForCaching(
+        CowInvocation, Tool.getCASOpts(), Root->toString(),
+        CachingInputKind::IncludeTree, WorkingDirectory.str());
+    DepscanPrefixMapping::remapInvocationPaths(CowInvocation, Mapper);
+  });
   return *Root;
 }
 
@@ -747,7 +749,11 @@ bool CompilerInstanceWithContext::computeDependencies(
   MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
-  if (!Controller.finalize(CI, ModuleInvocation))
+  bool Success = ModuleInvocation.withCowRef<bool>(
+      [&](CowCompilerInvocation &CowModuleInvocation) {
+        return Controller.finalize(CI, CowModuleInvocation);
+      });
+  if (!Success)
     return false;
 
   std::string ID = ModuleInvocation.getFrontendOpts().CASIncludeTreeID;

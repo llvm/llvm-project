@@ -60,7 +60,7 @@ createCompileJobCacheKey(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
                          const CompilerInvocation &Invocation);
 std::optional<llvm::cas::CASID>
 createCompileJobCacheKey(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
-                         const CowCompilerInvocation &Invocation);
+                         CowCompilerInvocation Invocation);
 
 /// Perform any destructive changes needed to canonicalize \p Invocation for
 /// caching, extracting the settings that affect compilation even if they do not

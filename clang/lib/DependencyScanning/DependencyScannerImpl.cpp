@@ -856,7 +856,11 @@ bool DependencyScanningAction::runInvocation(
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     std::optional<std::string> CacheKey =
@@ -947,7 +951,11 @@ bool DependencyScanningAction::runInvocation(
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
     }
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     // Forward any CAS results to consumer.
