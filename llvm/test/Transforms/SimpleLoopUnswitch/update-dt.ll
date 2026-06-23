@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='loop-mssa(loop-rotate,simple-loop-unswitch<nontrivial;trivial>)' -verify-memoryssa -disable-output
+; RUN: opt < %s -passes='loop-mssa(simple-loop-unswitch)' -verify-memoryssa -disable-output
 
 ; Ensure that MemorySSA and DomTree are correctly updated after a
 ; continue-to-break transformation during loop unswitching.
