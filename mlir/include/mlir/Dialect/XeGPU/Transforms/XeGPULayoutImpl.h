@@ -159,6 +159,22 @@ DistributeLayoutAttr
 inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
                                           DistributeLayoutAttr resLayout);
 
+/// Note on the `consumerLayout` argument used by the consumer-driven setup* /
+/// complete* helpers below:
+///
+/// Layout propagation is a backward dataflow analysis, so a producer learns its
+/// consumers' demands one at a time. The `consumerLayout` passed to these
+/// helpers is the *single* layout that the first consumer to reach the producer
+/// has requested (see `getConsumerLayoutAt`); these helpers do not pick among,
+/// or merge, multiple consumers, and they do not reason about cost (e.g. a
+/// consumer inside a loop vs. one outside). If a producer has several consumers
+/// with conflicting layout demands, only the first-arriving one shapes the
+/// producer's anchor layout here; any later, inconsistent consumer is left
+/// as-is and reconciled afterwards by the layout conflict resolution process
+/// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op on that
+/// edge. So these helpers can always assume exactly one (possibly null)
+/// consumer layout to honor.
+
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
 ///
@@ -290,7 +306,7 @@ DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
 /// (downstream) consumer layout and validates it against uArch constraints;
 /// when valid, the consumer's `inst_data` / `sg_layout` are honored.
 /// Otherwise defaults derived from uArch block parameters are used.
-/// `consumerLayout` may be null. `numSg` is only used for Subgroup-kind
+/// `consumerLayout` must be presented. `numSg` is only used for Subgroup-kind
 /// layouts when the consumer does not already provide an sg_layout.
 DistributeLayoutAttr
 setupLoadNdAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,

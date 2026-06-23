@@ -397,13 +397,9 @@ static xegpu::LayoutAttr buildInstDataLayoutWithLane(
 static bool isValidLaneLayout(ArrayRef<int64_t> dataShape,
                               ArrayRef<int64_t> laneLayout,
                               ArrayRef<int64_t> laneData) {
-  int rank = dataShape.size();
-  for (int dim = 0; dim < rank; ++dim) {
-    int64_t laneProduct = laneLayout[dim] * laneData[dim];
-    if (dataShape[dim] % laneProduct != 0)
-      return false;
-  }
-  return true;
+  return !llvm::any_of(llvm::seq<int>(0, dataShape.size()), [&](int dim) {
+    return dataShape[dim] % (laneLayout[dim] * laneData[dim]) != 0;
+  });
 }
 
 static xegpu::LayoutAttr
@@ -1100,11 +1096,15 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
 //     pick their own layout from uArch.
 //
 //   * Derivation direction between inst_data and lane_layout/lane_data. Both
-//     obey the invariant inst_data = k * lane_layout * lane_data
-//     (k >= 1, per dim), but ops solve it from opposite ends:
+//     obey the invariant inst_data = k * lane_layout * lane_data, where `k` is
+//     a per-dim integer >= 1 giving how many times each lane repeats its
+//     access to cover one instruction's data tile (k == 1 means one lane
+//     position per element; k > 1 means the instruction loads/stores several
+//     elements per lane along that dim). Ops solve this invariant from
+//     opposite ends:
 //       - Rigid-lane ops (Nd block IO, DPAS): hardware fixes lane_layout /
 //         lane_data first, then inst_data is built as a multiple of their
-//         product (get2DBlockIOInstDataLayout / getDpasInstDataLayouts).
+//         product (using get2DBlockIOInstDataLayout / getDpasInstDataLayouts).
 //       - inst_data-first ops (scatter load): take inst_data from the consumer
 //         and derive lane_layout/lane_data underneath it.
 //
@@ -1131,15 +1131,13 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
 //   - Store (scatter)   : store_scatter / store_matrix — same scatter scheme,
 //                         but always self-derived from the scatter default.
 //   - Reduction         : (multi_)reduction, consumer-driven — distribute the
-//                         inner two dims. Default: lanes stay on the innermost
-//                         dim, even when it is reduced. They only switch to a
-//                         non-reduction dim (to keep the reduction within a
-//                         lane) when the innermost is the sole reduction dim
-//                         AND the consumer has nowhere to broadcast the result
-//                         back (i.e. not a 2D reduction-to-scalar and the
-//                         consumer is not a slice over this reduction dim).
-//                         Reuses the consumer's slice layout when it slices
-//                         exactly the reduction dims, otherwise re-derives.
+//                         inner two dims, with lanes on the innermost dim by
+//                         default (reducing across lanes) and switched to a
+//                         non-reduction dim only when that keeps the reduction
+//                         within a lane. Reuses the consumer's slice layout
+//                         when it slices exactly the reduction dims, otherwise
+//                         re-derives. See setupMultiReductionResultLayout for
+//                         the exact switch condition and worked examples.
 //   - BitCast/Interleave: scale the innermost data field by the bitwidth /
 //                         interleave ratio so the source layout divides back
 //                         out.
@@ -1858,8 +1856,8 @@ xegpu::completeScatterLoadLaneLayoutFromInstData(
     auto consumerLaneLayout = consumerLayout.getEffectiveLaneLayoutAsInt();
     auto consumerLaneData = consumerLayout.getEffectiveLaneDataAsInt();
     if (!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
-        isValidLaneLayout(consumerLaneLayout, consumerLaneData,
-                          specifiedInstData))
+        isValidLaneLayout(specifiedInstData, consumerLaneLayout,
+                          consumerLaneData))
       return buildInstDataLayoutWithLane(context, specifiedInstData,
                                          consumerLaneLayout, consumerLaneData);
   }
@@ -2071,6 +2069,18 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 /// reuse the slice layout's parent layout for the source to further minimize
 /// potential data redistribution.
 ///
+/// This is a best-effort alignment, not a hard constraint: the goal is only to
+/// pick a *legal* source layout that minimizes redistribution against the
+/// (single, first-arriving) consumer layout. There is no failure path - when
+/// the consumer's slice layout cannot be reused as-is (example 2 below), the
+/// function falls back to distributing all subgroups on the non-reduction
+/// dimensions first and the remainder on the reduction dimensions, which always
+/// yields a valid source layout. If the resulting source layout still differs
+/// from what some consumer expects (e.g. a second, inconsistent consumer), that
+/// mismatch is reconciled later by the layout conflict resolution process
+/// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op - this
+/// function never has to give up.
+///
 /// For the InstData and Lane layout kinds only the innermost two dimensions
 /// are distributed; all leading dimensions are assumed to be unit dimensions.
 /// This assumption is checked via `leadingDimsAreUnit`. The lane_layout and
@@ -2079,6 +2089,10 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 /// only one of the innermost two dims is a reduction dim). The inst_data is
 /// simply the element-wise product lane_layout * lane_data.
 ///
+/// The function returns the *result* layout (the SliceAttr). The *source*
+/// layout it decides on is the parent of that slice; both are listed below so
+/// the relationship is explicit.
+///
 /// Examples:
 ///   1. Subgroup layout - Row reduction on 2D tensor:
 ///      srcShape=[32, 128], reductionDims=[1], resShape=[32], subgroupSize=16,
@@ -2086,43 +2100,81 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///      * Consumer Layout:
 ///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
 ///        [1]>}
-////     * Result Layout:
-///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8],sg_data=[8, 16]>, dims =
+///      * Source Layout (decided by this function):
+///        #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>
+///      * Result Layout (returned):
+///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>, dims =
 ///        [1]>}
-///      Note that the sg_layout is reused but sg_data needs to be adjusted to
-///      evenly distribute the source tensor tile among the reduction dim.
+///      The consumer slices exactly the reduction dim, so its parent layout is
+///      reused for the source: sg_layout is kept, but the source's sg_data on
+///      the reduction dim is grown from 8 to 16 (= srcShape[1] / sg_layout[1] =
+///      128 / 8) so the source tile is evenly distributed over the reduction
+///      dim. Slicing that source over dim 1 reproduces the consumer.
 ///
-///   2. Subgroup layout - Same example above but consumer doesn't have a
-///   reusable slice layout.
-///      * Consumer Layout:
-///        #xegpu.layout<sgLayout=[32], sgData=[1]>
-///      * Result Layout:
-///        #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 128]>, dims =
-///        [1]>}
-///      * Consumer Layout:
-///        #xegpu.slice<#xegpu.layout<sgLayout=[8, 2, 4], sgData=[4, 64, 32]>,
-///      dims = [1, 2]>}
-///      * Result Layout:
-///        #xegpu.slice<#xegpu.layout<sgLayout=[8,4], sgData=[4, 32]>, dims =
-///        [1]>}
-///      Note that the consumer's layout can't be directly reused as is.
-///      So the algorithm distributes all subgroups on non reduction dimensions
-///      first and then distribute remaining subgroups on the reduction
-///      dimension.
+///   2. Subgroup layout - Same shapes as above but consumer doesn't have a
+///   reusable slice layout, so the algorithm distributes all subgroups on the
+///   non-reduction dims first and the remainder on the reduction dims.
+///      2a. * Consumer Layout:
+///            #xegpu.layout<sg_layout=[32], sg_data=[1]>
+///          * Source Layout (decided by this function):
+///            #xegpu.layout<sg_layout=[32, 1], sg_data=[1, 128]>
+///          * Result Layout (returned):
+///            #xegpu.slice<#xegpu.layout<sg_layout=[32, 1], sg_data=[1, 128]>,
+///            dims = [1]>}
+///          All 32 subgroups land on the non-reduction dim 0; the reduction dim
+///          1 gets the leftover (sg_layout=1, so the whole length 128 lives in
+///          one subgroup's sg_data).
+///      2b. * Consumer Layout:
+///            #xegpu.slice<#xegpu.layout<sg_layout=[8, 2, 4], sg_data=[4, 64,
+///            32]>, dims = [1, 2]>}
+///          * Source Layout (decided by this function):
+///            #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>
+///          * Result Layout (returned):
+///            #xegpu.slice<#xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>,
+///            dims = [1]>}
+///          The consumer slices dims [1, 2] which do not match this op's
+///          reductionDims, so it can't be reused as-is; subgroups are
+///          re-distributed (non-reduction dim first, then reduction dim).
 ///
 ///   3. Lane layout - Default (lanes on innermost dim):
 ///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
-///      Result: laneLayout=[1, 16], laneData=[1, 1]. The innermost dim is not
-///      reduced, so lanes stay on it.
+///      * Source Layout (decided by this function):
+///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dim 0).
+///      The innermost dim is not reduced, so lanes stay on it.
 ///
 ///   4. Lane layout - Switch (lanes moved off the reduction dim):
 ///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
-///      Result: laneLayout=[16, 1], laneData=[1, 1]. The innermost dim is the
-///      sole reduction dim, so lanes move to the non-reduction dim to reduce
-///      within a lane. This switch only happens when the consumer has no
-///      reduction dims to broadcast the result back along (i.e. the consumer
-///      layout is not a slice over this reduction); otherwise the default
-///      (example 3) is used.
+///      * Source Layout (decided by this function):
+///        laneLayout=[16, 1], laneData=[1, 1] (returned sliced over dim 1).
+///      The innermost dim is the sole reduction dim, so lanes move to the
+///      non-reduction dim to reduce within a lane. This switch only happens
+///      when the consumer has no reduction dims to broadcast the result back
+///      along (i.e. the consumer layout is not a slice over this reduction);
+///      otherwise the default (example 3) is used.
+///
+///   5. Lane layout - No switch when both inner dims are reduced (reduction to
+///   scalar):
+///      srcShape=[32, 64], reductionDims=[0, 1], subgroupSize=16
+///      * Source Layout (decided by this function):
+///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dims
+///        [0,1]).
+///      Both dims are reduced, so this is not a *sole* innermost reduction; the
+///      switch condition (example 4) does not apply and lanes stay on the
+///      innermost dim. The cross-lane reduction here is unavoidable.
+///
+///   6. Lane layout - No switch when the consumer slices the reduction dim:
+///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
+///      * Consumer Layout:
+///        #xegpu.slice<#xegpu.layout<laneLayout=[1, 16], laneData=[1, 1]>,
+///        dims = [1]>}
+///      * Source Layout (decided by this function):
+///        #xegpu.layout<laneLayout=[1, 16], laneData=[1, 1]> (the consumer
+///        slice's parent, reused directly; returned sliced over dim 1).
+///      Same shape/reductionDims as example 4, but here the consumer is a slice
+///      over the reduction dim, so it can broadcast the result back along that
+///      dim. The slice's parent layout is reused as the source (no switch, no
+///      re-derivation); the inst_data propagation step has already inserted a
+///      convert_layout if needed, so the lane-level layout can be reused as-is.
 
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
