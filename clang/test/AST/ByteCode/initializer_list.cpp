@@ -92,6 +92,70 @@ namespace cwg2765 {
       begins_equal<std::initializer_list<int>>({1, 2, 3}, {4, 5, 6});
   static_assert(!different_three, "");
 
+  constexpr bool init_list_overlaps_string() {
+    return std::initializer_list<char>{'h', 'e', 'l', 'l', 'o', '\0'}.begin()
+           != "hello"; // #cwg2765-init-list-string-compare \
+                        // both-warning {{result of comparison against a string literal is unspecified}}
+  }
+  static_assert(init_list_overlaps_string(), "");
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  // both-note@#cwg2765-init-list-string-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+  // both-note@-3 {{in call to}}
+
+  constexpr bool init_list_differs_from_string() {
+    return std::initializer_list<char>{'h', 'e', 'l', 'p', '\0'}.begin()
+           != "hello"; // both-warning {{result of comparison against a string literal is unspecified}}
+  }
+  static_assert(init_list_differs_from_string(), "");
+
+  template <int N> struct FixedString {
+    char data[N];
+    constexpr FixedString(const char (&s)[N]) {
+      for (int i = 0; i != N; ++i)
+        data[i] = s[i];
+    }
+  };
+
+  template <FixedString S>
+  constexpr bool template_array_overlaps_string = // both-error {{constexpr variable 'template_array_overlaps_string<FixedString<6>{"hello"}>' must be initialized by a constant expression}} \
+                                                  // both-note {{declared here}}
+      S.data != "hello"; // #cwg2765-template-array-string-compare
+  static_assert(template_array_overlaps_string<"hello">); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                          // both-note {{in instantiation of variable template specialization}} \
+                                                          // both-note {{initializer of 'template_array_overlaps_string<FixedString<6>{"hello"}>' is not a constant expression}}
+  // both-note@#cwg2765-template-array-string-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+
+  template <FixedString S>
+  constexpr bool template_array_differs_from_string =
+      S.data != "hello";
+  static_assert(template_array_differs_from_string<"help">);
+
+  template <FixedString S>
+  constexpr bool init_list_overlaps_template_array() {
+    return std::initializer_list<char>{'h', 'e', 'l', 'l', 'o', '\0'}.begin()
+           != S.data; // #cwg2765-init-list-template-array-compare
+  }
+  static_assert(init_list_overlaps_template_array<"hello">());
+  // both-error@-1 {{static assertion expression is not an integral constant expression}}
+  // both-note@#cwg2765-init-list-template-array-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+  // both-note@-3 {{in call to}}
+
+  template <FixedString S>
+  constexpr bool init_list_differs_from_template_array() {
+    return std::initializer_list<char>{'h', 'e', 'l', 'p', '\0'}.begin()
+           != S.data;
+  }
+  static_assert(init_list_differs_from_template_array<"hello">());
+
+  template <FixedString A, FixedString B>
+  constexpr bool template_arrays_overlap_shifted = // both-error {{constexpr variable 'template_arrays_overlap_shifted<FixedString<5>{"ello"}, FixedString<6>{"hello"}>' must be initialized by a constant expression}} \
+                                                   // both-note {{declared here}}
+      A.data != B.data + 1; // #cwg2765-template-array-shifted-compare
+  static_assert(template_arrays_overlap_shifted<"ello", "hello">); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                                    // both-note {{in instantiation of variable template specialization}} \
+                                                                    // both-note {{initializer of 'template_arrays_overlap_shifted<FixedString<5>{"ello"}, FixedString<6>{"hello"}>' is not a constant expression}}
+  // both-note@#cwg2765-template-array-shifted-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+
   constexpr bool same_object() {
     std::initializer_list<int> il = {1, 1, 1};
     return il.begin() == il.begin() && il.begin() != il.begin() + 1;
