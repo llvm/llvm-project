@@ -441,16 +441,16 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   }
 
   MergeableConst4Section = Ctx->getELFSection(
-      (CstPrefix + ".cst4").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 4);
+      CstPrefix + ".cst4", ELF::SHT_PROGBITS, MergeableCstFlags, 4);
 
   MergeableConst8Section = Ctx->getELFSection(
-      (CstPrefix + ".cst8").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 8);
+      CstPrefix + ".cst8", ELF::SHT_PROGBITS, MergeableCstFlags, 8);
 
   MergeableConst16Section = Ctx->getELFSection(
-      (CstPrefix + ".cst16").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 16);
+      CstPrefix + ".cst16", ELF::SHT_PROGBITS, MergeableCstFlags, 16);
 
   MergeableConst32Section = Ctx->getELFSection(
-      (CstPrefix + ".cst32").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 32);
+      CstPrefix + ".cst32", ELF::SHT_PROGBITS, MergeableCstFlags, 32);
 
   // Exception Handling Sections.
 
