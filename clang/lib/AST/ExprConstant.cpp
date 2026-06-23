@@ -10269,19 +10269,19 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     llvm_unreachable("GetAlignOfType on a non-alignment ExprKind");
 }
 
-// Return the target builtin ID to dispatch on in the constant evaluators'
-// target-specific cases, or 0 if \p BuiltinOp does not name a builtin those
-// cases should handle.
+// Convert a builtin ID to the canonical x86 builtin ID the constant evaluators
+// dispatch on in their x86 target-specific cases, or 0 if \p BuiltinOp is a
+// target builtin those cases should not handle.
 //
-// Target-specific builtin IDs of different targets overlap (each target numbers
-// its builtins from Builtin::FirstTSBuiltin), so a target builtin ID is only
-// meaningful for the target that owns it. Determine the owning target
-// (translating an auxiliary ID back to its canonical value) and only return the
-// ID for architectures whose target-specific builtins the constant evaluators
-// know how to fold; otherwise an overlapping ID could be misinterpreted as an
-// unrelated builtin of another target.
-unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
-                                       unsigned BuiltinOp) {
+// Target-independent builtins are returned unchanged. Target builtin IDs of
+// different targets overlap (each target numbers its builtins from
+// Builtin::FirstTSBuiltin), so a target builtin ID is only meaningful for the
+// target that owns it. Determine the owning target (translating an auxiliary ID
+// back to its canonical value) and only return the ID when x86 owns it;
+// otherwise an overlapping ID could be misinterpreted as an unrelated x86
+// builtin.
+unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
+                                        unsigned BuiltinOp) {
   // Target-independent builtins have the same ID regardless of the target, so
   // they can be dispatched as-is. This is the common case and is intentionally
   // kept to a single comparison so callers can use this on hot paths (e.g. the
@@ -10303,11 +10303,8 @@ unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
   if (!OwningTarget)
     return 0;
 
-  // Only dispatch the ID for architectures whose target-specific builtins the
-  // constant evaluators can fold. x86 and x86_64 share a single builtin set and
-  // are the only such architectures today; as other targets gain
-  // constant-evaluation support for their builtins, add the corresponding cases
-  // here so their IDs are dispatched too.
+  // x86 and x86_64 share a single builtin set and are the only architectures
+  // whose target-specific builtins the constant evaluators currently fold.
   switch (OwningTarget->getTriple().getArch()) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
@@ -10317,9 +10314,9 @@ unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
   }
 }
 
-unsigned getConstantEvaluatedBuiltinID(const ASTContext &Ctx,
-                                       const CallExpr *E) {
-  return getConstantEvaluatedBuiltinID(Ctx, E->getBuiltinCallee());
+unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
+                                        const CallExpr *E) {
+  return ConvertBuiltinIDToX86BuiltinID(Ctx, E->getBuiltinCallee());
 }
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
@@ -10396,7 +10393,7 @@ bool PointerExprEvaluator::visitNonBuiltinCallExpr(const CallExpr *E) {
 bool PointerExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return visitNonBuiltinCallExpr(E);
-  return VisitBuiltinCallExpr(E, getConstantEvaluatedBuiltinID(Info.Ctx, E));
+  return VisitBuiltinCallExpr(E, ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E));
 }
 
 // Determine if T is a character type for which we guarantee that
@@ -12333,7 +12330,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
 
-  unsigned BuiltinOp = getConstantEvaluatedBuiltinID(Info.Ctx, E);
+  unsigned BuiltinOp = ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E);
 
   auto EvaluateBinOpExpr =
       [&](llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -16469,7 +16466,7 @@ tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
-  return VisitBuiltinCallExpr(E, getConstantEvaluatedBuiltinID(Info.Ctx, E));
+  return VisitBuiltinCallExpr(E, ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E));
 }
 
 static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
@@ -20042,7 +20039,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
 
-  unsigned BuiltinOp = getConstantEvaluatedBuiltinID(Info.Ctx, E);
+  unsigned BuiltinOp = ConvertBuiltinIDToX86BuiltinID(Info.Ctx, E);
 
   switch (BuiltinOp) {
   default:

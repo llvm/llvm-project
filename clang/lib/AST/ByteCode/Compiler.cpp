@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler.h"
-#include "../ExprConstShared.h"
 #include "ByteCodeEmitter.h"
 #include "Context.h"
 #include "FixedPoint.h"
@@ -2806,8 +2805,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
 
   bool IsBcpCall = false;
   if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
-      CE && getConstantEvaluatedBuiltinID(Ctx.getASTContext(), CE) ==
-                Builtin::BI__builtin_constant_p) {
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
     IsBcpCall = true;
   }
 

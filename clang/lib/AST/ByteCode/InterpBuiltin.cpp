@@ -4511,12 +4511,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 
-  // Normalize an auxiliary x86 target builtin ID to its canonical X86::BI*
-  // value so the target-specific cases below (and the handlers they call)
-  // match. This is a cheap integer operation (a single comparison for the
-  // common, target-independent case); we deliberately avoid re-deriving the ID
-  // from the call expression, which is comparatively slow.
-  BuiltinID = getConstantEvaluatedBuiltinID(ASTCtx, BuiltinID);
+  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
+  // so the target-specific cases below (and the handlers they call) match. This
+  // is a cheap integer operation (a single comparison for the common,
+  // target-independent case); we deliberately avoid re-deriving the ID from the
+  // call expression, which is comparatively slow.
+  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
 
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
