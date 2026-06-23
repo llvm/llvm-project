@@ -521,12 +521,10 @@ public:
   Scaled64 getFloatingBlockFreq(const BlockNode &Node) const;
 
   BlockFrequency getBlockFreq(const BlockNode &Node) const;
-  std::optional<uint64_t>
-  getBlockProfileCount(const Function &F, const BlockNode &Node,
-                       bool AllowSynthetic = false) const;
-  std::optional<uint64_t>
-  getProfileCountFromFreq(const Function &F, BlockFrequency Freq,
-                          bool AllowSynthetic = false) const;
+  std::optional<uint64_t> getBlockProfileCount(const Function &F,
+                                               const BlockNode &Node) const;
+  std::optional<uint64_t> getProfileCountFromFreq(const Function &F,
+                                                  BlockFrequency Freq) const;
   bool isIrrLoopHeader(const BlockNode &Node);
 
   void setBlockFreq(const BlockNode &Node, BlockFrequency Freq);
@@ -1000,18 +998,14 @@ public:
     return BlockFrequencyInfoImplBase::getBlockFreq(getNode(BB));
   }
 
-  std::optional<uint64_t>
-  getBlockProfileCount(const Function &F, const BlockT *BB,
-                       bool AllowSynthetic = false) const {
-    return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB),
-                                                            AllowSynthetic);
+  std::optional<uint64_t> getBlockProfileCount(const Function &F,
+                                               const BlockT *BB) const {
+    return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB));
   }
 
-  std::optional<uint64_t>
-  getProfileCountFromFreq(const Function &F, BlockFrequency Freq,
-                          bool AllowSynthetic = false) const {
-    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq,
-                                                               AllowSynthetic);
+  std::optional<uint64_t> getProfileCountFromFreq(const Function &F,
+                                                  BlockFrequency Freq) const {
+    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq);
   }
 
   bool isIrrLoopHeader(const BlockT *BB) {
