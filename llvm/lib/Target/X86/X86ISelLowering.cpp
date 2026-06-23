@@ -54657,7 +54657,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG, Subtarget))
     return ScalarStore;
 
-
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
