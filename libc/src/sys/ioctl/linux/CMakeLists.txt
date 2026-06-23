@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../ioctl.h
   DEPENDS
     libc.include.sys_ioctl
-    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
