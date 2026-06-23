@@ -58,7 +58,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeJMCInstrumenterPass(Registry);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeLiveDebugValuesLegacyPass(Registry);
+#endif
   initializeLiveDebugVariablesWrapperLegacyPass(Registry);
   initializeLiveIntervalsWrapperPassPass(Registry);
   initializeLiveRangeShrinkPass(Registry);
@@ -89,7 +91,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineModuleInfoWrapperPassPass(Registry);
   initializeMachineOptimizationRemarkEmitterPassPass(Registry);
   initializeMachineOutlinerPass(Registry);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeMachinePipelinerPass(Registry);
+#endif
   initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
@@ -98,7 +102,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineSinkingLegacyPass(Registry);
   initializeMachineUniformityAnalysisPassPass(Registry);
   initializeMachineUniformityInfoPrinterPassPass(Registry);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeMachineVerifierLegacyPassPass(Registry);
+#endif
   initializeObjCARCContractLegacyPassPass(Registry);
   initializeOptimizePHIsLegacyPass(Registry);
   initializePEILegacyPass(Registry);

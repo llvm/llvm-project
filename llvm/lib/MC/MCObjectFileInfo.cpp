@@ -1070,15 +1070,18 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
 
   const Triple &TheTriple = Ctx->getTargetTriple();
   switch (Ctx->getObjectFileType()) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   case MCContext::IsMachO:
     initMachOMCObjectFileInfo(TheTriple);
     break;
   case MCContext::IsCOFF:
     initCOFFMCObjectFileInfo(TheTriple);
     break;
+#endif
   case MCContext::IsELF:
     initELFMCObjectFileInfo(TheTriple, LargeCodeModel);
     break;
+#ifndef EJIT_TRIM_LLVM_BACKEND
   case MCContext::IsGOFF:
     initGOFFMCObjectFileInfo(TheTriple);
     break;
@@ -1094,6 +1097,9 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   case MCContext::IsDXContainer:
     initDXContainerObjectFileInfo(TheTriple);
     break;
+#endif
+  default:
+    break;
   }
 }
 
@@ -1103,9 +1109,11 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::ELF:
     return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
                               utostr(Hash), /*IsComdat=*/true);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
                                utostr(Hash), MCSection::NonUniqueID);
+#endif
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:
