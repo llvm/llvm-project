@@ -6143,6 +6143,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       } else {
         if (ResultPtr->getType() != I8PtrTy)
           ResultPtr = Builder.CreatePointerCast(ResultPtr, I8PtrTy);
+
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(Addr)) {
+          // Do not revert the gep unmerging optimization.
+          if (GEP->getMetadata("cgp.unmerged_gep"))
+            return Modified;
+        }
+
         SunkAddr = Builder.CreatePtrAdd(ResultPtr, ResultIndex, "sunkaddr",
                                         AddrMode.InBounds);
       }
@@ -8827,6 +8834,8 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     if (NewIdx.isNegative() && TargetFlags.hasNoUnsignedWrap())
       TargetFlags = TargetFlags.withoutNoUnsignedWrap();
     UGEPI->setNoWrapFlags(TargetFlags);
+    UGEPI->setMetadata("cgp.unmerged_gep",
+                       MDNode::get(UGEPI->getContext(), {}));
   }
   // After unmerging, verify that GEPIOp is actually only used in SrcBlock (not
   // alive on IndirectBr edges).
