@@ -8,4 +8,4 @@ subroutine acc_routine20()
 end subroutine
 end module
 
-!CHECK: {{.*}}warning: Compiler directive ignored here{{.*}}
+!CHECK: {{.*}}warning: OpenACC routine directive without name must be placed in a subroutine or function

@@ -88,11 +88,24 @@ static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
+struct WarnUnnamedOpenACCRoutineDirective {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &state) const {
+    state.Say("OpenACC routine directive without name must be placed in a "
+              "subroutine or function"_warn_en_US);
+    return {Success{}};
+  }
+};
+static constexpr WarnUnnamedOpenACCRoutineDirective
+    warnUnnamedOpenACCRoutineDirective;
+
 // In a module-subprogram-part, a bare `!$ACC ROUTINE` line (without a name)
 // cannot be attached to a specific routine. Accept and ignore it so parsing
 // can continue to the following subprogram.
 static constexpr auto ignoredBareRoutineOpenACCDirective{
-    (skipStuffBeforeStatement >> "!$ACC "_sptok >> "ROUTINE"_tok / endOfLine) >>
+    ((skipStuffBeforeStatement >> "!$ACC "_sptok >>
+         "ROUTINE"_tok / endOfLine) >>
+        warnUnnamedOpenACCRoutineDirective) >>
     construct<CompilerDirective>(pure<CompilerDirective::Unrecognized>())};
 
 // R501 program -> program-unit [program-unit]...
