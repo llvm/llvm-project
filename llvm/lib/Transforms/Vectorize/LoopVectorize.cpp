@@ -5833,6 +5833,42 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor::Disabled(), nullptr};
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
+  auto IsUnprofitableOneScalarTail =
+      [&](const VectorizationFactor &CurrentFactor, bool HasTail,
+          bool ForceVectorization, const ElementCount &ExactTC,
+          const VectorizationFactor &ScalarFactor,
+          const InstructionCost &ScalarCost) {
+        if (ForceVectorization || !HasTail || !ExactTC.isFixed() ||
+            CurrentFactor.Width.isScalable())
+          return false;
+
+        unsigned TC = ExactTC.getFixedValue();
+        if (TC == 0 || TC > TTI.getMinTripCountTailFoldingThreshold())
+          return false;
+
+        unsigned EstimatedWidth = estimateElementCount(
+            CurrentFactor.Width, Config.getVScaleForTuning());
+        if (TC != EstimatedWidth + 1)
+          return false;
+
+        InstructionCost VectorCost =
+            getCostForKnownTripCount(CurrentFactor, TC, HasTail);
+        InstructionCost ScalarCostForTC =
+            getCostForKnownTripCount(ScalarFactor, TC, /*HasTail=*/false);
+        // Be conservative for the one-scalar-tail shape. It introduces extra
+        // control flow and a scalar epilogue for a single element, so require
+        // the vectorized form to save at least one scalar iteration.
+        InstructionCost AdjustedVectorCost = VectorCost + ScalarCost;
+        if (!AdjustedVectorCost.isValid() ||
+            AdjustedVectorCost < ScalarCostForTC)
+          return false;
+
+        LLVM_DEBUG(dbgs() << "LV: Rejecting VF " << CurrentFactor.Width
+                          << " for one-scalar-tail low trip count: vector cost "
+                          << AdjustedVectorCost << " >= scalar cost "
+                          << ScalarCostForTC << ".\n");
+        return true;
+      };
 
   ElementCount UserVF = Config.getHints().getWidth();
   if (VPlans.size() == 1) {
@@ -5859,23 +5895,10 @@ LoopVectorizationPlanner::computeBestVF() {
 
           InstructionCost Cost = cost(FirstPlan, UserVF, /*RU=*/nullptr);
           VectorizationFactor UserFactor(UserVF, Cost, ScalarCost);
-
-          InstructionCost VectorCost =
-              getCostForKnownTripCount(UserFactor, TC, /*HasTail=*/true);
           VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
-          InstructionCost ScalarCostForTC =
-              getCostForKnownTripCount(ScalarFactor, TC, /*HasTail=*/false);
-          // Be conservative for the one-scalar-tail shape. It introduces
-          // extra control flow and a scalar epilogue for a single element, so
-          // require the vectorized form to save at least one scalar iteration.
-          InstructionCost AdjustedVectorCost = VectorCost + ScalarCost;
-          if (VectorCost.isValid() && ScalarCostForTC.isValid() &&
-              AdjustedVectorCost >= ScalarCostForTC) {
-            LLVM_DEBUG(dbgs()
-                       << "LV: Rejecting VF " << UserVF
-                       << " for one-scalar-tail low trip count: vector cost "
-                       << AdjustedVectorCost << " >= scalar cost "
-                       << ScalarCostForTC << ".\n");
+          if (IsUnprofitableOneScalarTail(UserFactor, FirstPlan.hasScalarTail(),
+                                          ForceVectorization, ExactTC,
+                                          ScalarFactor, ScalarCost)) {
             return {ScalarFactor, &FirstPlan};
           }
         }
@@ -5924,39 +5947,6 @@ LoopVectorizationPlanner::computeBestVF() {
 
   VPlan *PlanForBestVF = &FirstPlan;
   ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  auto IsUnprofitableOneScalarTail =
-      [&](const VectorizationFactor &CurrentFactor, bool HasTail) {
-        if (ForceVectorization || !HasTail || !ExactTC.isFixed() ||
-            CurrentFactor.Width.isScalable())
-          return false;
-
-        unsigned TC = ExactTC.getFixedValue();
-        if (TC == 0 || TC > TTI.getMinTripCountTailFoldingThreshold())
-          return false;
-
-        unsigned EstimatedWidth = estimateElementCount(
-            CurrentFactor.Width, Config.getVScaleForTuning());
-        if (TC != EstimatedWidth + 1)
-          return false;
-
-        InstructionCost VectorCost =
-            getCostForKnownTripCount(CurrentFactor, TC, HasTail);
-        InstructionCost ScalarCostForTC =
-            getCostForKnownTripCount(ScalarFactor, TC, /*HasTail=*/false);
-        // Be conservative for the one-scalar-tail shape. It introduces extra
-        // control flow and a scalar epilogue for a single element, so require
-        // the vectorized form to save at least one scalar iteration.
-        InstructionCost AdjustedVectorCost = VectorCost + ScalarCost;
-        if (!VectorCost.isValid() || !ScalarCostForTC.isValid() ||
-            AdjustedVectorCost < ScalarCostForTC)
-          return false;
-
-        LLVM_DEBUG(dbgs() << "LV: Rejecting VF " << CurrentFactor.Width
-                          << " for one-scalar-tail low trip count: vector cost "
-                          << AdjustedVectorCost << " >= scalar cost "
-                          << ScalarCostForTC << ".\n");
-        return true;
-      };
 
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
@@ -5993,7 +5983,9 @@ LoopVectorizationPlanner::computeBestVF() {
           cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (IsUnprofitableOneScalarTail(CurrentFactor, P->hasScalarTail()))
+      if (IsUnprofitableOneScalarTail(CurrentFactor, P->hasScalarTail(),
+                                      ForceVectorization, ExactTC, ScalarFactor,
+                                      ScalarCost))
         continue;
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
