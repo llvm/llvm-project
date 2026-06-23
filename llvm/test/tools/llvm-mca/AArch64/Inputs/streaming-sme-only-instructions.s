@@ -16,14 +16,23 @@ bfcvt z0.h, {z0.s, z1.s}
 bfcvtn z0.h, {z0.s, z1.s}
 bfclamp {z0.h, z1.h}, z0.h, z0.h
 bfdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h
+fdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h
 bfmax {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 bfmaxnm {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 bfmin {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 bfminnm {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 bfmla za.h[w8, 0, vgx2], {z0.h, z1.h}, z0.h
 bfmlal za.s[w8, 0:1, vgx2], {z0.h, z1.h}, z0.h
+bfmlal za.s[w8, 0:1], z1.h, z0.h
+bfmlal za.s[w8, 0:1], z1.h, z0.h[0]
+fmlal za.s[w8, 0:1], z1.h, z0.h
+fmlal za.s[w8, 0:1], z1.h, z0.h[0]
 bfmls za.h[w8, 0, vgx2], {z0.h, z1.h}, z0.h
 bfmlsl za.s[w8, 0:1, vgx2], {z0.h, z1.h}, z0.h
+bfmlsl za.s[w8, 0:1], z1.h, z0.h
+bfmlsl za.s[w8, 0:1], z1.h, z0.h[0]
+fmlsl za.s[w8, 0:1], z1.h, z0.h
+fmlsl za.s[w8, 0:1], z1.h, z0.h[0]
 bfmopa za0.s, p0/m, p0/m, z0.h, z0.h
 bfmops za0.s, p0/m, p0/m, z0.h, z0.h
 bfvdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h[0]
@@ -63,6 +72,7 @@ fscale {z0.s, z1.s}, {z0.s, z1.s}, z0.s
 luti2 {z0.h - z1.h}, zt0, z0[0]
 luti4 {z0.h - z1.h}, zt0, z0[0]
 mova {z0.s, z1.s}, za0h.s[w12, 0:1]
+mova za0h.b[w12, 0], p0/m, z0.b
 movt zt0[0], x0
 movt x0, zt0[0]
 sclamp {z0.h, z1.h}, z0.h, z0.h
@@ -77,6 +87,8 @@ sel {z0.h, z1.h}, pn8, {z0.h, z1.h}, {z0.h, z1.h}
 sel {z0.h, z1.h, z2.h, z3.h}, pn8, {z0.h, z1.h, z2.h, z3.h}, {z0.h, z1.h, z2.h, z3.h}
 smlal za.s[w8, 0:1], z0.h, z0.h
 smlall za.s[w8, 0:3], z0.b, z0.b
+sumlall za.s[w11, 4:7, vgx2], {z0.b - z1.b}, z8.b[3]
+sumlall za.s[w11, 4:7], z0.b, z8.b[3]
 smlsl za.s[w8, 0:1], z0.h, z0.h
 smlsll za.s[w8, 0:3], z0.b, z0.b
 umlal za.s[w8, 0:1], z0.h, z0.h
@@ -87,6 +99,7 @@ smopa za0.s, p0/m, p0/m, z0.h, z0.h
 smops za0.s, p0/m, p0/m, z0.h, z0.h
 umopa za0.s, p0/m, p0/m, z0.h, z0.h
 umops za0.s, p0/m, p0/m, z0.h, z0.h
+sqcvt z0.h, {z0.s - z1.s}
 sqcvtn z0.h, {z0.s, z1.s}
 sqcvtun z0.b, {z0.s - z3.s}
 uqcvtn z0.h, {z0.s, z1.s}
@@ -101,6 +114,8 @@ srshl {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 urshl {z0.h, z1.h}, {z0.h, z1.h}, z0.h
 sudot za.s[w8, 0, vgx2], {z0.b, z1.b}, z0.b
 usdot za.s[w8, 0, vgx2], {z0.b, z1.b}, z0.b
+udot za.s[w8, 0, vgx2], {z0.b, z1.b}, z0.b
+sdot za.s[w8, 0, vgx2], {z0.b, z1.b}, z0.b
 usmlall za.s[w8, 0:3], z0.b, z0.b
 sumopa za0.s, p0/m, p0/m, z0.b, z0.b
 sumops za0.s, p0/m, p0/m, z0.b, z0.b
@@ -112,6 +127,7 @@ suvdot za.s[w8, 0, vgx4], {z0.b - z3.b}, z0.b[0]
 uvdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h[0]
 svdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h[0]
 usvdot za.s[w8, 0, vgx4], {z0.b - z3.b}, z0.b[0]
+uzp  {z0.q - z1.q}, z0.q, z0.q
 uzp1 z31.s, z31.s, z31.s
 uzp2 z31.s, z31.s, z31.s
 zero za.d[w8, 0, vgx2]

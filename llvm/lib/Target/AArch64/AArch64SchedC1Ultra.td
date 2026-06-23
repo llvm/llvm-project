@@ -2658,6 +2658,7 @@ def : InstRW<[C1UWr_ZBFDOT_CME, C1URd_ZBFDOT, C1URd_ZBFDOT], (instrs BFDOT_ZZI, 
 // Matrix multiply accumulate
 def : InstRW<[C1UWr_ZBFMMA, C1URd_ZBFMMA, C1URd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
+
 // Multiply accumulate long
 def : InstRW<[C1UWr_ZBFMAL_CME, C1URd_ZBFMAL, C1URd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZI?")>;
 
@@ -2883,9 +2884,8 @@ def : InstRW<[C1UWrite_4c_1V0], (instregex "^SM4E(KEY)?_ZZZ_S$")>;
 // SVE instructions added by SME and available when not in Streaming SVE mode
 // -----------------------------------------------------------------------------
 // BFloat16 floating-point multiply-subtract long from single-precision vector and indexed form
-def : InstRW<[C1UWrite_4c_1V_StreamingCMEMML0], (instregex "^BFMLSLB_",
-                                                           "^BFMLSLT_")>;
-
+def : InstRW<[C1UWrite_4c_1V_StreamingCMEMML0], (instregex "^BFMLSLB_Z",
+                                                           "^BFMLSLT_Z")>;
 // Floating-point clamp to minimum/maximu m number
 def : InstRW<[C1UWrite_2c_1V_StreamingCMEVXALU_5c], (instregex "^FCLAMP_ZZZ")>;
 
@@ -2941,6 +2941,7 @@ def : InstRW<[C1UWrite_1c_1M], (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_CXX_[
 
 // Instructions added by SME and only available in streaming SVE mode
 // For these, we return the CME write as a default even if not in streaming.
+
 
 // Horizontal and vertical ZA reductions.
 def : InstRW<[C1UWrite_4c_1CMEVXALU_4rc],
@@ -3017,30 +3018,35 @@ def : InstRW<[C1UWrite_11c_1CMEVXALU_2rc],
                         "^BF[12]CVTL(T_ZZ|_2ZZ)_BtoH$")>;
 def : InstRW<[C1UWrite_8c_1CMEVXALU_PERMS_1rc],
              (instregex "^(SQCVT|UQCVT|SQCVTU|SQCVTN|SQCVTUN|UQCVTN)_Z4Z_",
+                        "^(SQCVT|UQCVT|SQCVTU)_Z2Z_StoH",
                         "^SQRSHRU_VG2_Z2ZI_",
                         "^(SQRSHR|UQRSHR|SQRSHRU|SQRSHRN|UQRSHRN|SQRSHRUN)_VG4_Z4ZI_")>;
 
 // SME integer and floating-point dot and multiply-accumulate families.
 def : InstRW<[C1UWrite_4c_1CMEMML0],
-             (instregex "^FMLALL_MZZI_BtoS$", "^FMLALL_MZZ_BtoS$")>;
+             (instregex "^FMLALL_MZZI_BtoS$", "^FMLALL_MZZ_BtoS$", 
+                        "^BFMLAL_MZZ", "^BFMLSL_MZZ",
+                        "^FMLAL_MZZ",  "^FMLSL_MZZ")>;
 def : InstRW<[C1UWrite_2c_1CMEMML0_1rc],
              (instregex "^(SUDOT|USDOT)_VG2_M2(ZZI|ZZ|Z2Z)_BToS$",
+                        "^(SDOT|UDOT)_VG2_M2(ZZI|ZZ|Z2Z)_(BtoS|HtoS)",
                         "^(SMLAL|UMLAL|SMLSL|UMLSL)_(MZZI|MZZ|VG2_M2)",
                         "^(SMLALL|UMLALL|USMLALL|SMLSLL|UMLSLL)_(MZZI|MZZ|VG2_M2ZZI|VG2_M2ZZ|VG2_M2Z2Z)_(BtoS|HtoD)$",
-                        "^(SUMLALL|USMLALL)_(VG2_M2ZZI|VG2_M2ZZ|VG2_M2Z2Z)_BtoS$",
+                        "^(SUMLALL|USMLALL)_(VG2_M2ZZI|VG2_M2ZZ|VG2_M2Z2Z|MZZI|MZZ)_BtoS$",
                         "^(SVDOT|UVDOT)_VG2_M2ZZI_")>;
 def : InstRW<[C1UWrite_2c_1CMEMML0_2rc],
              (instregex "^(SUDOT|USDOT)_VG4_M4(ZZI|ZZ|Z4Z)_BToS$",
+                        "^(SDOT|UDOT)_VG4_M4(ZZI|ZZ|Z2Z)_(BtoS|HtoS)",
                         "^(SMLAL|UMLAL|SMLSL|UMLSL)_VG4_M4",
                         "^(SMLALL|UMLALL|USMLALL|SMLSLL|UMLSLL)_(VG4_M4ZZI|VG4_M4ZZ|VG4_M4Z4Z)_(BtoS|HtoD)$",
                         "^(SUMLALL|USMLALL)_(VG4_M4ZZI|VG4_M4ZZ|VG4_M4Z4Z)_BtoS$")>;
 def : InstRW<[C1UWrite_4c_1CMEMML0_1rc],
-             (instregex "^(BFDOT|FMLA|FMLS|BFMLA|BFMLS)_VG2_M2(ZZI|ZZ|Z2Z)(_HtoS|_[HSD])?$",
+             (instregex "^(FDOT|BFDOT|FMLA|FMLS|BFMLA|BFMLS)_VG2_M2(ZZI|ZZ|Z2Z)(_HtoS|_[HSD])?$",
                         "^(FMLAL|FMLSL|BFMLAL|BFMLSL)_VG2_M2(ZZI|ZZ|Z2Z)(_BtoH|_HtoS)?$",
                         "^FMLALL_VG2_M2(ZZI|ZZ|Z2Z)_BtoS$",
                         "^(FVDOT|BFVDOT)_VG2_M2ZZI_HtoS$")>;
 def : InstRW<[C1UWrite_4c_1CMEMML0_2rc],
-             (instregex "^(BFDOT|FMLA|FMLS|BFMLA|BFMLS)_VG4_M4(ZZI|ZZ|Z4Z)(_HtoS|_[HSD])?$",
+             (instregex "^(FDOT|BFDOT|FMLA|FMLS|BFMLA|BFMLS)_VG4_M4(ZZI|ZZ|Z4Z)(_HtoS|_[HSD])?$",
                         "^(FMLAL|FMLSL|BFMLAL|BFMLSL)_VG4_M4(ZZI|ZZ|Z4Z)(_BtoH|_HtoS)?$",
                         "^FMLALL_VG4_M4(ZZI|ZZ|Z4Z)_BtoS$",
                         "^FVDOT[BT]_VG4_M2ZZI_BtoS$")>;
@@ -3060,7 +3066,8 @@ def : InstRW<[C1UWrite_4c_1CMEPERM],
 def : InstRW<[C1UWrite_5c_1CMEPERM_2rc],
              (instregex "^SEL_VG4_4ZC4Z4Z_")>;
 def : InstRW<[C1UWrite_5c_1CMEMML0_1rc],
-             (instregex "^MOVA_MXI2Z_", "^MOVA_VG2_MXI2Z$")>;
+             (instregex "^MOVA_MXI2Z_", "^MOVA_VG2_MXI2Z$",
+                        "^INSERT_MXIPZ")>;
 def : InstRW<[C1UWrite_2c_1CMEMML0_2rc],
              (instregex "^MOVA_MXI4Z_", "^MOVA_VG4_MXI4Z$")>;
 def : InstRW<[C1UWrite_9c_1CMEMML1],

@@ -17,6 +17,7 @@ andv b0, p7, z31.b
 clastb w0, p0, w0, z2.s
 cpy z0.s, p0/m, w0
 dup z0.s, w0
+fdup z0.h, #1.00000
 ext z0.b, z0.b, z1.b, #1
 tbl z0.b, { z0.b, z1.b }, z2.b
 fadd z0.s, p0/m, z0.s, z1.s

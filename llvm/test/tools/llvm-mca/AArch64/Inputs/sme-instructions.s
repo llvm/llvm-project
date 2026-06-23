@@ -62,5 +62,3 @@ uqcvtn z0.h, {z0.s, z1.s}
 sqrshrn z0.b, {z0.s - z3.s}, #32
 sqrshrun z0.b, {z0.s - z3.s}, #32
 uqrshrn z0.b, {z0.s - z3.s}, #32
-
-
