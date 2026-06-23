@@ -1671,6 +1671,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SINT_TO_FP, VT, Custom);
       setOperationAction(ISD::FP_TO_UINT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::MSTORE, VT, Legal);
       setOperationAction(ISD::MUL, VT, Custom);
@@ -5178,16 +5180,13 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   assert(SatWidth <= DstElementWidth &&
          "Saturation width cannot exceed result width");
 
-  // TODO: Consider lowering to SVE operations, as in LowerVectorFP_TO_INT.
-  // Currently, the `llvm.fpto[su]i.sat.*` intrinsics don't accept scalable
-  // types, so this is hard to reach.
-  if (DstVT.isScalableVector())
-    return SDValue();
-
   EVT SrcElementVT = SrcVT.getVectorElementType();
   if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
       SrcElementVT != MVT::f16 && SrcElementVT != MVT::bf16)
     return SDValue();
+
+  if (SDValue Res = tryLowerFPToIntToSVE(Op, DAG))
+    return Res;
 
   // Returns true if the operation can be matched by an isel pattern directly.
   auto CanHandleNatively = [&DstVT, &SatWidth](EVT SrcVT) -> bool {
@@ -5201,7 +5200,8 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
            (SrcVT.getScalarSizeInBits() < SatWidth ||
             // NEON has no vector MIN/MAX for i64, so it's simpler to scalarize
             // (at least until sqxtn is selected).
-            SrcVT.getVectorElementType() == MVT::f64);
+            (SrcVT.getVectorElementType() == MVT::f64 &&
+             !SrcVT.isScalableVector()));
   };
 
   // Try to promote the operation to a wider type if SrcVT < DstVT,
@@ -5210,7 +5210,8 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   switch (SrcVT.getVectorElementType().getSimpleVT().SimpleTy) {
   case MVT::f16:
   case MVT::bf16:
-    if (DstVT.getScalarSizeInBits() == 32 || !Subtarget->hasFullFP16()) {
+    if (SrcVT.getVectorElementCount() != ElementCount::getScalable(2) &&
+        (DstVT.getScalarSizeInBits() == 32 || !Subtarget->hasFullFP16())) {
       PromVT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorElementCount());
       break;
     }
@@ -33939,10 +33940,20 @@ SDValue AArch64TargetLowering::tryLowerFPToIntToSVE(SDValue Op,
 
   unsigned NewOpcode;
   switch (Op.getOpcode()) {
+  case ISD::FP_TO_UINT_SAT:
+    // Only saturation to the destination type is natively supported.
+    if (VT.getVectorElementType() != cast<VTSDNode>(Op.getOperand(1))->getVT())
+      return SDValue();
+    [[fallthrough]];
   case ISD::FP_TO_UINT:
   case ISD::STRICT_FP_TO_UINT:
     NewOpcode = AArch64ISD::FCVTZU_MERGE_PASSTHRU;
     break;
+  case ISD::FP_TO_SINT_SAT:
+    // Only saturation to the destination type is natively supported.
+    if (VT.getVectorElementType() != cast<VTSDNode>(Op.getOperand(1))->getVT())
+      return SDValue();
+    [[fallthrough]];
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
     NewOpcode = AArch64ISD::FCVTZS_MERGE_PASSTHRU;
