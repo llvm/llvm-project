@@ -1471,7 +1471,6 @@ TEST_F(PointerFlowTest, ReturnRefPtr) {
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"foo", 1U, true}, {"f", 1U, true}}}));
 }
 
-
 //////////////////////////////////////////////////////////////
 //          System-header contributor opt-out gate.         //
 //          Spec: tu-summary-extraction,                    //
