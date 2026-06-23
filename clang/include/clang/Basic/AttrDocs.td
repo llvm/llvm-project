@@ -9148,7 +9148,7 @@ point."
 def AnnotateDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-This attribute is used to add annotations to declarations or statements,
+The `annotate` attribute is used to add annotations to declarations or statements,
 typically for use by static analysis tools that are not integrated into the
 core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
 It is a counterpart to the `annotate_type` attribute, which serves the same
