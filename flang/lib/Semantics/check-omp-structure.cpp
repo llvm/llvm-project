@@ -4394,15 +4394,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
 
       if (version <= 45 && !valid45.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s%s"_warn_en_US, subName, modName,
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
             ThisVersion(version), suggest(minVersion(sub)));
       } else if (version <= 51 && !valid50.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s%s"_warn_en_US, subName, modName,
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
             ThisVersion(version), suggest(minVersion(sub)));
       } else if (version <= 52 && !valid52.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s%s"_warn_en_US, subName, modName,
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
             ThisVersion(version), suggest(minVersion(sub)));
       } else if (!valid60.test(sub)) {
         context_.Say(modifierSource,
