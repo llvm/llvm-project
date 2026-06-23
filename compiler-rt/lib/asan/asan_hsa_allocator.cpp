@@ -24,6 +24,7 @@
 #  include "sanitizer_common/sanitizer_allocator_checks.h"
 #  include "sanitizer_common/sanitizer_errno.h"
 #  include "sanitizer_common/sanitizer_hsa.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
@@ -186,7 +187,8 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
         ptr, size, address, alignment, flags);
     if (status == HSA_STATUS_SUCCESS && ptr && *ptr)
       __sanitizer::VmemGpuReserveTracker::Get().OnReserve(
-          reinterpret_cast<uptr>(*ptr), size);
+          reinterpret_cast<uptr>(*ptr), size, StackDepotPut(*stack),
+          GetCurrentTidOrInvalid());
     return status;
   }
 
@@ -234,15 +236,21 @@ hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
     case VmemGpuReserveTracker::kFirstFree: {
       const hsa_status_t status = REAL(hsa_amd_vmem_address_free)(ptr, size);
       if (status == HSA_STATUS_SUCCESS)
-        VmemGpuReserveTracker::Get().MarkFreed(ptr_uptr, size);
+        VmemGpuReserveTracker::Get().MarkFreed(
+            ptr_uptr, size, StackDepotPut(*stack), GetCurrentTidOrInvalid());
       return status;
     }
     case VmemGpuReserveTracker::kSizeMismatch:
       errno = errno_EINVAL;
       return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-    case VmemGpuReserveTracker::kDoubleFree:
-      ReportDoubleFree(ptr_uptr, stack);
+    case VmemGpuReserveTracker::kDoubleFree: {
+      VmemGpuReserveTracker::ReservationInfo info = {};
+      VmemGpuReserveTracker::Get().GetReservationInfo(ptr_uptr, &info);
+      ReportVmemDoubleFree(ptr_uptr, size, info.reserve_stack_id,
+                           info.reserve_tid, info.first_free_stack_id,
+                           info.first_free_tid, stack);
       return HSA_STATUS_SUCCESS;
+    }
   }
   // Passthrough: untracked vmem frees (eg: fixed-address reservations) go
   // straight to ROCr.

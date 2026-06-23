@@ -334,13 +334,18 @@ void VmemGpuReserveTracker::EnsureInited() {
   atomic_store(&inited_, 1, memory_order_release);
 }
 
-void VmemGpuReserveTracker::OnReserve(uptr ptr, uptr size) {
+void VmemGpuReserveTracker::OnReserve(uptr ptr, uptr size, u32 reserve_stack_id,
+                                      u32 reserve_tid) {
   EnsureInited();
   SpinMutexLock l(&mu_);
   VmemGpuReservation entry;
   entry.ptr = ptr;
   entry.size = size;
   entry.freed = false;
+  entry.reserve_stack_id = reserve_stack_id;
+  entry.reserve_tid = reserve_tid;
+  entry.first_free_stack_id = 0;
+  entry.first_free_tid = 0;
   reservations_.push_back(entry);
 }
 
@@ -361,16 +366,39 @@ VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::CheckFree(uptr ptr,
   return kNotTracked;
 }
 
-void VmemGpuReserveTracker::MarkFreed(uptr ptr, uptr size) {
+void VmemGpuReserveTracker::MarkFreed(uptr ptr, uptr size, u32 free_stack_id,
+                                      u32 free_tid) {
   EnsureInited();
   SpinMutexLock l(&mu_);
   for (uptr i = 0; i < reservations_.size(); ++i) {
     VmemGpuReservation& r = reservations_[i];
     if (r.ptr == ptr && r.size == size) {
       r.freed = true;
+      r.first_free_stack_id = free_stack_id;
+      r.first_free_tid = free_tid;
       return;
     }
   }
+}
+
+bool VmemGpuReserveTracker::GetReservationInfo(uptr ptr, ReservationInfo* out) {
+  if (!out)
+    return false;
+  EnsureInited();
+  SpinMutexLock l(&mu_);
+  for (uptr i = 0; i < reservations_.size(); ++i) {
+    const VmemGpuReservation& r = reservations_[i];
+    if (r.ptr != ptr)
+      continue;
+    out->base = r.ptr;
+    out->size = r.size;
+    out->reserve_stack_id = r.reserve_stack_id;
+    out->reserve_tid = r.reserve_tid;
+    out->first_free_stack_id = r.first_free_stack_id;
+    out->first_free_tid = r.first_free_tid;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace __sanitizer

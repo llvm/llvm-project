@@ -27,10 +27,9 @@ int main() {
 
   // NOTE: To use `hipMallocManaged` way of reserving memory,
   // use `HSA_AMD_VMEM_ADDRESS_NO_REGISTER` in `flags`.
-  if (hsa_amd_vmem_address_reserve_align(
-          &mem, kSize, /*address=*/0,
-          /*alignment=*/4096,
-          /*flags=*/HSA_AMD_VMEM_ADDRESS_NO_REGISTER) != HSA_STATUS_SUCCESS ||
+  if (hsa_amd_vmem_address_reserve_align(&mem, kSize, /*address=*/0,
+                                         /*alignment=*/4096,
+                                         /*flags=*/0) != HSA_STATUS_SUCCESS ||
       !mem) {
     fprintf(stderr, "hsa_amd_vmem_address_reserve_align failed\n");
     return 1;
@@ -43,5 +42,8 @@ int main() {
   return 0;
 }
 
-// CHECK: ERROR: AddressSanitizer: attempting double-free
+// CHECK: ERROR: AddressSanitizer: attempting double-free on {{0x[0-9a-f]+}} in thread T0
+// CHECK: is a device VMEM reservation of size {{[0-9]+}}
+// CHECK: first freed by thread T0 here:
+// CHECK: previously reserved by thread T0 here:
 // CHECK: SUMMARY: AddressSanitizer: double-free
