@@ -859,13 +859,11 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
 /// by a previous merge in this same call (\p MergedGroupIndices).
 ///
 /// Returns {ChecksBefore, ChecksAfter}.
-static std::pair<unsigned, unsigned>
-computeStencilMergeCost(const RuntimePointerChecking &RtCheck,
-                        ArrayRef<unsigned> GroupIndices,
-                        const SmallDenseSet<unsigned, 4> &MergedGroupIndices,
-                        ArrayRef<const SCEV *> LocalStridesNeedingPreds,
-                        const SmallDenseSet<const SCEV *, 4>
-                            &CommittedStridePredicates) {
+static std::pair<unsigned, unsigned> computeStencilMergeCost(
+    const RuntimePointerChecking &RtCheck, ArrayRef<unsigned> GroupIndices,
+    const SmallDenseSet<unsigned, 4> &MergedGroupIndices,
+    ArrayRef<const SCEV *> LocalStridesNeedingPreds,
+    const SmallDenseSet<const SCEV *, 4> &CommittedStridePredicates) {
   ArrayRef<RuntimeCheckingPtrGroup> CheckingGroups = RtCheck.CheckingGroups;
   unsigned NumGroups = GroupIndices.size();
   SmallDenseSet<unsigned, 4> GroupIndexSet(GroupIndices.begin(),
