@@ -1500,6 +1500,8 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   BitVector FinalRegsToZero(TRI.getNumRegs());
 
+  bool HasVRegister = false;
+
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       FinalRegsToZero.set(getPhysicalGPR(TRI, Reg).id());
@@ -1511,7 +1513,22 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());
+    } else if (RISCV::VRRegClass.contains(Reg)) {
+      if (!STI.hasStdExtV())
+        continue;
+      HasVRegister = true;
+      FinalRegsToZero.set(Reg.id());
     }
+  }
+
+  if (HasVRegister) {
+    RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(1, /*Fractional=*/false);
+    unsigned VTypeImm = RISCVVType::encodeVTYPE(
+        VLMUL, /*SEW=*/32, /*TailAgnostic=*/false, /*MaskAgnostic=*/false);
+
+    BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), RISCV::X5)
+        .addReg(RISCV::X0)
+        .addImm(VTypeImm);
   }
 
   for (MCRegister Reg : FinalRegsToZero.set_bits())
