@@ -5,13 +5,8 @@ define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr getelementptr inbounds (i8, ptr null, i64 6), align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr getelementptr (i8, ptr null, i64 12), align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr null, align 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i16> poison, i16 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP12]], i16 [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i16> [[TMP4]], i16 [[TMP10]], i32 3
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> [[TMP13]], <4 x i16> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i16> @llvm.experimental.vp.strided.load.v3i16.p0.i64(ptr align 2 null, i64 6, <3 x i1> splat (i1 true), i32 3)
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <3 x i16> [[TMP1]], <3 x i16> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i16> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr getelementptr (i8, ptr null, i64 18), align 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i16 [[TMP8]], 0

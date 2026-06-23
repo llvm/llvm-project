@@ -51,12 +51,7 @@ public:
   using ReturnObjectBufferFunction =
       std::function<void(std::unique_ptr<MemoryBuffer>)>;
 
-  /// Construct an ObjectLinkingLayer using the ExecutorProcessControl
-  /// instance's memory manager.
-  ObjectLinkingLayer(ExecutionSession &ES)
-      : LinkGraphLinkingLayer(ES), BaseObjectLayer(ES) {}
-
-  /// Construct an ObjectLinkingLayer using a custom memory manager.
+  /// Construct an ObjectLinkingLayer.
   ObjectLinkingLayer(ExecutionSession &ES,
                      jitlink::JITLinkMemoryManager &MemMgr)
       : LinkGraphLinkingLayer(ES, MemMgr), BaseObjectLayer(ES) {}

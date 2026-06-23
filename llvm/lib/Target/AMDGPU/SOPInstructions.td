@@ -494,11 +494,6 @@ let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
                  (S_CVT_I32_F32 (f32 $src0))>;
     def : GCNPat<(i32 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i32)),
                  (S_CVT_U32_F32 (f32 $src0))>;
-
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint_sat_gi> f32:$src0)),
-                 (S_CVT_I32_F32 (f32 $src0))>;
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint_sat_gi> f32:$src0)),
-                 (S_CVT_U32_F32 (f32 $src0))>;
 }
 
 let hasSideEffects = 1 in {
@@ -705,12 +700,10 @@ def S_SUB_I32 : SOP2_32 <"s_sub_i32",
 
 let Uses = [SCC] in { // Carry in comes from SCC
 let isCommutable = 1 in {
-def S_ADDC_U32 : SOP2_32 <"s_addc_u32",
-  [(set i32:$sdst, (UniformBinFrag<adde> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_ADDC_U32 : SOP2_32 <"s_addc_u32">;
 } // End isCommutable = 1
 
-def S_SUBB_U32 : SOP2_32 <"s_subb_u32",
-  [(set i32:$sdst, (UniformBinFrag<sube> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_SUBB_U32 : SOP2_32 <"s_subb_u32">;
 } // End Uses = [SCC]
 
 let isCommutable = 1 in {
@@ -855,8 +848,7 @@ def S_ASHR_I64 : SOP2_64_32 <"s_ashr_i64",
 } // End Defs = [SCC]
 
 let isReMaterializable = 1 in {
-def S_BFM_B32 : SOP2_32 <"s_bfm_b32",
-  [(set i32:$sdst, (UniformBinFrag<AMDGPUbfm> i32:$src0, i32:$src1))]>;
+def S_BFM_B32 : SOP2_32 <"s_bfm_b32">;
 def S_BFM_B64 : SOP2_64_32_32 <"s_bfm_b64">;
 
 def S_MUL_I32 : SOP2_32 <"s_mul_i32",
@@ -907,16 +899,16 @@ let SubtargetPredicate = isGFX9Plus in {
 
   let Defs = [SCC] in {
     def S_LSHL1_ADD_U32 : SOP2_32<"s_lshl1_add_u32",
-      [(set i32:$sdst, (shl1_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl1_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
     def S_LSHL2_ADD_U32 : SOP2_32<"s_lshl2_add_u32",
-      [(set i32:$sdst, (shl2_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl2_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
     def S_LSHL3_ADD_U32 : SOP2_32<"s_lshl3_add_u32",
-      [(set i32:$sdst, (shl3_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl3_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
     def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32",
-      [(set i32:$sdst, (shl4_add SSrc_b32:$src0, SSrc_b32:$src1))]
+      [(set i32:$sdst, (UniformBinFrag<shl4_add> SSrc_b32:$src0, SSrc_b32:$src1))]
     >;
   } // End Defs = [SCC]
 
@@ -1731,10 +1723,13 @@ let SubtargetPredicate = HasAsyncMark in {
 def ASYNCMARK : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_asyncmark)]> {
    let maybeAtomic = 0;
+   let isMeta = 1;
 }
 def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
     [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
     let maybeAtomic = 0;
+    let Size = 0;
+    let isMeta = 1;
 }
 }
 
@@ -2075,13 +2070,6 @@ let AddedComplexity = 20 in {
   >;
 }
 
-// V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
-// case, the sgpr-copies pass will fix this to use the vector version.
-def : GCNPat <
-  (i32 (addc i32:$src0, i32:$src1)),
-  (S_ADD_U32 $src0, $src1)
->;
-
 // FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
 // REG_SEQUENCE patterns don't support instructions with multiple
 // outputs.
@@ -2132,6 +2120,20 @@ let WaveSizePredicate = isWave64 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),
   (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
+// v2i64 shl is legal, we need a way to select scalar code
+let SubtargetPredicate = HasPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE SReg_128,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       (i32 (EXTRACT_SUBREG $src1, sub0))), SGPR_64)), sub0_sub1,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       (i32 (EXTRACT_SUBREG $src1, sub2))), SGPR_64)), sub2_sub3))
 >;
 }
 

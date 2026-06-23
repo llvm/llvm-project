@@ -20,7 +20,6 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -30,7 +29,6 @@ using namespace VPlanPatternMatch;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
-  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -61,8 +59,7 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
-      : VPDT(VPDT), TypeInfo(TypeInfo) {}
+  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -96,9 +93,14 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    // In region form, VPCurrentIterationPHIRecipe must be the first header phi
+    // recipe. In a plain CFG VPlan, it must either be the first or second.
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
-      errs() << "CurrentIteration PHI is not immediately after canonical IV\n";
+        (VPBB->getPlan()->getVectorLoopRegion()
+             ? RecipeI->getIterator() != VPBB->begin()
+             : RecipeI->getIterator() != VPBB->begin() &&
+                   RecipeI->getIterator() != std::next(VPBB->begin()))) {
+      errs() << "CurrentIteration PHI is not the first/second recipe\n";
       return false;
     }
 
@@ -148,7 +150,7 @@ static bool isKnownMonotonic(VPValue *V) {
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
-    return WidenIV->isCanonical();
+    return WidenIV->isCanonical() || WidenIV->hasNoUnsignedWrap();
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
     return match(Steps->getOperand(0),
                  m_CombineOr(
@@ -174,12 +176,30 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
-    if (vputils::isHeaderMask(Op, Plan))
+    VPValue *Mask = Op;
+    VPValue *HeaderMask;
+
+    // Look through any `and`s with a loop_dependence_war_mask, which is always
+    // a prefix mask. TODO: Verify the full loop.dependence.mask chain.
+    if (match(Op,
+              m_c_BinaryAnd(
+                  m_VPValue(HeaderMask),
+                  m_CombineOr(
+                      m_c_BinaryAnd(
+                          m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                          m_VPValue()),
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>()))))
+      Mask = HeaderMask;
+
+    if (vputils::isHeaderMask(Mask, Plan))
+      continue;
+
+    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
       continue;
 
     CmpPredicate Pred;
     VPValue *LHS, *RHS;
-    if (match(Op, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
+    if (match(Mask, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
         (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) &&
         isKnownMonotonic(LHS) &&
         (vputils::isUniformAcrossVFsAndUFs(RHS) ||
@@ -220,13 +240,16 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
-      // Verify that we can infer a scalar type for each defined value. With
-      // assertions enabled, inferScalarType will perform some consistency
-      // checks during type inference.
-      if (!TypeInfo.inferScalarType(V)) {
-        errs() << "Failed to infer scalar type!\n";
+      // Verify that each defined value has a scalar type.
+      if (!V->getScalarType()) {
+        errs() << "VPValue without scalar type!\n";
         return false;
       }
+
+      // MaskedCond may be used from blocks it don't dominate; the block will be
+      // linearized and it will dominate its users after linearization.
+      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()))
+        continue;
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
@@ -272,6 +295,19 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
             continue;
         }
 
+        // Recipes in blocks with a MaskedCond may be used in exit blocks; the
+        // block will be linearized and its recipes will dominate their users
+        // after linearization.
+        bool BlockHasMaskedCond = any_of(*VPBB, [](const VPRecipeBase &R) {
+          return match(&R, m_VPInstruction<VPInstruction::MaskedCond>());
+        });
+        if (BlockHasMaskedCond &&
+            any_of(VPBB->getPlan()->getExitBlocks(), [UI](VPIRBasicBlock *EB) {
+              return is_contained(EB->getPredecessors(), UI->getParent());
+            })) {
+          continue;
+        }
+
         errs() << "Use before def!\n";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
         VPSlotTracker Tracker(VPBB->getPlan());
@@ -314,24 +350,42 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   return true;
 }
 
-/// Utility function that checks whether \p VPBlockVec has duplicate
-/// VPBlockBases.
-static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
-  SmallDenseSet<const VPBlockBase *, 8> VPBlockSet;
-  for (const auto *Block : VPBlockVec) {
-    if (!VPBlockSet.insert(Block).second)
-      return true;
-  }
-  return false;
-}
-
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
   if (VPBB && !isa<VPIRBasicBlock>(VPB)) {
-    if (VPB->getNumSuccessors() > 1 ||
-        (VPBB->getParent() && VPBB->isExiting() &&
-         !VPBB->getParent()->isReplicator())) {
+    // For plain CFG VPlans, verify header and latch block structure.
+    if (!VPBB->getParent()) {
+      if (VPBlockUtils::isHeader(VPBB, VPDT)) {
+        if (VPB->getNumPredecessors() != 2) {
+          errs()
+              << "Header block in plain CFG VPlan must have 2 predecessors!\n";
+          return false;
+        }
+        // Predecessor 0 is preheader, predecessor 1 is latch.
+        if (!VPBlockUtils::isLatch(VPB->getPredecessors()[1], VPDT)) {
+          errs() << "Header's second predecessor must be the latch!\n";
+          return false;
+        }
+      }
+
+      if (VPBlockUtils::isLatch(VPBB, VPDT)) {
+        auto BranchTerminator =
+            m_CombineOr(m_BranchOnCond(),
+                        m_CombineOr(m_BranchOnCount(), m_BranchOnTwoConds()));
+        if (!match(VPBB->getTerminator(), BranchTerminator)) {
+          errs() << "Latch block must have a branch terminator!\n";
+          return false;
+        }
+        // Successor 0 is middle block, successor 1 is header.
+        if (VPBlockUtils::isHeader(VPB->getSuccessors()[0], VPDT)) {
+          errs() << "Latch's first successor must not be the header (must be "
+                    "middle block)!\n";
+          return false;
+        }
+      }
+    } else if (VPB->getNumSuccessors() > 1 ||
+               (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
       if (!VPBB->getTerminator()) {
         errs() << "Block has multiple successors but doesn't "
                   "have a proper branch recipe!\n";
@@ -345,13 +399,6 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
 
   // Check block's successors.
   const auto &Successors = VPB->getSuccessors();
-  // There must be only one instance of a successor in block's successor list.
-  // TODO: This won't work for switch statements.
-  if (hasDuplicates(Successors)) {
-    errs() << "Multiple instances of the same successor.\n";
-    return false;
-  }
-
   for (const VPBlockBase *Succ : Successors) {
     // There must be a bi-directional link between block and successor.
     const auto &SuccPreds = Succ->getPredecessors();
@@ -363,13 +410,6 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
 
   // Check block's predecessors.
   const auto &Predecessors = VPB->getPredecessors();
-  // There must be only one instance of a predecessor in block's predecessor
-  // list.
-  // TODO: This won't work for switch statements.
-  if (hasDuplicates(Predecessors)) {
-    errs() << "Multiple instances of the same predecessor.\n";
-    return false;
-  }
 
   for (const VPBlockBase *Pred : Predecessors) {
     // Block and predecessor must be inside the same region.
@@ -453,12 +493,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
-    errs() << "VPlan vector loop header does not start with a "
-              "VPCanonicalIVPHIRecipe\n";
-    return false;
-  }
-
   const VPBasicBlock *Exiting = dyn_cast<VPBasicBlock>(TopRegion->getExiting());
   if (!Exiting) {
     errs() << "VPlan exiting block is not a VPBasicBlock\n";
@@ -485,7 +519,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
-  VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo);
+  VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);
 }

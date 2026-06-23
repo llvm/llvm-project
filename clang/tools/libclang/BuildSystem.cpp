@@ -155,5 +155,25 @@ void clang_ModuleMapDescriptor_dispose(CXModuleMapDescriptor MMD) {
 void clang_ModuleCache_prune(const char *Path, time_t PruneInterval,
                              time_t PruneAfter) {
   if (Path)
-    clang::maybePruneImpl(Path, PruneInterval, PruneAfter);
+    clang::maybePruneImpl(Path, PruneInterval, PruneAfter,
+                          /*PruneTopLevel=*/true);
+}
+
+void clang_ModuleCache_pruneWithCallback(const char *Path, time_t PruneInterval,
+                                         time_t PruneAfter,
+                                         CXModuleCachePruneCallback Callback,
+                                         void *UserData) {
+  if (!Path)
+    return;
+  llvm::function_ref<void(StringRef)> OnPrune;
+  llvm::SmallString<256> Buffer;
+  auto Trampoline = [&](StringRef Pruned) {
+    Buffer.assign(Pruned.begin(), Pruned.end());
+    Buffer.push_back('\0');
+    Callback(Buffer.data(), UserData);
+  };
+  if (Callback)
+    OnPrune = Trampoline;
+  clang::maybePruneImpl(Path, PruneInterval, PruneAfter,
+                        /*PruneTopLevel=*/true, OnPrune);
 }

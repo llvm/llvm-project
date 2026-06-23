@@ -21,7 +21,7 @@ $_ZNSt14__array_traitsIiLm2EE6_S_refERA2_Kim = comdat any
 ; Function Attrs: mustprogress nounwind uwtable
 define dso_local void @foo(i32 noundef %arg, ptr noundef nonnull align 4 dereferenceable(8) %arg1) #0 {
 ; CHECK-LABEL: define dso_local void @foo(
-; CHECK-SAME: i32 noundef [[ARG:%.*]], ptr noundef nonnull writeonly align 4 captures(none) dereferenceable(8) [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[ARG:%.*]], ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(8) [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    [[I9:%.*]] = sdiv i32 [[ARG]], 128
 ; CHECK-NEXT:    [[I10:%.*]] = shl nsw i32 [[I9]], 7

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes=loop-vectorize,simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefixes=GCN %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes=loop-vectorize < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes=loop-vectorize -pass-remarks-analysis='loop-vectorize' < %s 2>&1 | FileCheck -check-prefixes=REMARK %s
 
 ; GCN-LABEL: @runtime_check_divergent_target(
@@ -10,7 +10,7 @@ define amdgpu_kernel void @runtime_check_divergent_target(ptr addrspace(1) nocap
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds half, ptr addrspace(1) %b, i64 %indvars.iv
   %load = load half, ptr addrspace(1) %arrayidx, align 4
@@ -22,7 +22,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, 1024
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 

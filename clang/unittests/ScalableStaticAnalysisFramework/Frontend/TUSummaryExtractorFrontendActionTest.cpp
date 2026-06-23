@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormat.h"
@@ -48,8 +49,6 @@ public:
 };
 } // namespace
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFNoOpExtractorAnchorSource = 0;
 static TUSummaryExtractorRegistry::Add<NoOpExtractor>
     RegisterNoOp("NoOpExtractor", "No-op extractor for frontend action tests");
 
@@ -99,18 +98,117 @@ public:
     return failing("writeLUSummaryEncoding");
   }
 
+  llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override {
+    return failing("readWPASuite");
+  }
+
+  llvm::Error writeWPASuite(const WPASuite &Suite,
+                            llvm::StringRef Path) override {
+    return failing("writeWPASuite");
+  }
+
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override {
+    return failing("readArtifact");
+  }
+
+  llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override {
+    return failing("writeArtifact");
+  }
+
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef Path) override {
+    return failing("readArtifactEncoding");
+  }
+
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &E,
+                                    llvm::StringRef Path) override {
+    return failing("writeArtifactEncoding");
+  }
+
   void forEachRegisteredAnalysis(
       llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>
           Callback) const override {}
 };
 } // namespace
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFFailingSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<FailingSerializationFormat>
     RegisterFormat(
         "FailingSerializationFormat",
         "A serialization format that fails on every possible operation.");
+
+namespace {
+/// Records the \c CompilationUnit namespace name of the most recently written
+/// \c TUSummary into a static, so tests can assert that the runner threads
+/// the configured CU name verbatim into the produced summary.
+class CapturingSerializationFormat final : public SerializationFormat {
+public:
+  static std::string &lastCapturedName() {
+    static std::string Name;
+    return Name;
+  }
+
+  static void resetCapturedName() { lastCapturedName().clear(); }
+
+  llvm::Expected<TUSummary> readTUSummary(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeTUSummary(const TUSummary &Summary,
+                             llvm::StringRef) override {
+    lastCapturedName() = getName(getTUNamespace(Summary));
+    return llvm::Error::success();
+  }
+  llvm::Expected<TUSummaryEncoding>
+  readTUSummaryEncoding(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &,
+                                     llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<LUSummary> readLUSummary(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeLUSummary(const LUSummary &, llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<LUSummaryEncoding>
+  readLUSummaryEncoding(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &,
+                                     llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<WPASuite> readWPASuite(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeWPASuite(const WPASuite &, llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<Artifact> readArtifact(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeArtifact(const Artifact &, llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeArtifactEncoding(const ArtifactEncoding &,
+                                    llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  void forEachRegisteredAnalysis(
+      llvm::function_ref<void(llvm::StringRef, llvm::StringRef)>)
+      const override {}
+};
+} // namespace
+
+static SerializationFormatRegistry::Add<CapturingSerializationFormat>
+    RegisterCapturingFormat(
+        "CapturingSerializationFormat",
+        "A serialization format that captures the CU namespace name.");
 
 using EventLog = std::vector<std::string>;
 
@@ -202,8 +300,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
   // Configure valid SSAF options so the failure is purely from the wrapped
   // action, not from runner creation.
   std::string Output = makePath("output.MockSerializationFormat");
-  Compiler->getFrontendOpts().SSAFTUSummaryFile = Output;
-  Compiler->getFrontendOpts().SSAFExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "test-cu";
 
   TUSummaryExtractorFrontendAction ExtractorAction(
       std::make_unique<FailingAction>());
@@ -217,8 +316,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
        RunnerFailsWithInvalidFormat_WrappedConsumerStillRuns) {
   // Use an unregistered format extension so TUSummaryRunner::create fails.
   std::string Output = makePath("output.xyz");
-  Compiler->getFrontendOpts().SSAFTUSummaryFile = Output;
-  Compiler->getFrontendOpts().SSAFExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "test-cu";
 
   auto Wrapped = std::make_unique<RecordingAction>();
   const EventLog &Log = Wrapped->getLog();
@@ -246,8 +346,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
 TEST_F(TUSummaryExtractorFrontendActionTest,
        RunnerFailsWithUnknownExtractor_WrappedConsumerStillRuns) {
   std::string Output = makePath("output.MockSerializationFormat");
-  Compiler->getFrontendOpts().SSAFTUSummaryFile = Output;
-  Compiler->getFrontendOpts().SSAFExtractSummaries = {"NonExistentExtractor"};
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NonExistentExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "test-cu";
 
   auto Wrapped = std::make_unique<RecordingAction>();
   const EventLog &Log = Wrapped->getLog();
@@ -270,8 +371,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
 TEST_F(TUSummaryExtractorFrontendActionTest,
        RunnerSucceeds_ASTConsumerCallbacksPropagate) {
   std::string Output = makePath("output.MockSerializationFormat");
-  Compiler->getFrontendOpts().SSAFTUSummaryFile = Output;
-  Compiler->getFrontendOpts().SSAFExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "test-cu";
 
   auto Wrapped = std::make_unique<RecordingAction>();
   const EventLog &Log = Wrapped->getLog();
@@ -324,8 +426,9 @@ struct OrderCheckingAction : public ASTFrontendAction {
 TEST_F(TUSummaryExtractorFrontendActionTest,
        RunnerSucceeds_WrappedRunsBeforeRunner) {
   std::string Output = makePath("output.MockSerializationFormat");
-  Compiler->getFrontendOpts().SSAFTUSummaryFile = Output;
-  Compiler->getFrontendOpts().SSAFExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "test-cu";
 
   auto Wrapped = std::make_unique<OrderCheckingAction>();
   Wrapped->OutputPath = Output;
@@ -345,8 +448,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
 
 TEST_F(TUSummaryExtractorFrontendActionTest, RunnerFailsToWrite) {
   std::string Output = makePath("output.FailingSerializationFormat");
-  Compiler->getFrontendOpts().SSAFTUSummaryFile = Output;
-  Compiler->getFrontendOpts().SSAFExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "test-cu";
 
   TUSummaryExtractorFrontendAction Action(std::make_unique<RecordingAction>());
 
@@ -361,6 +465,71 @@ TEST_F(TUSummaryExtractorFrontendActionTest, RunnerFailsToWrite) {
 
   // No output should have been created due to the failure.
   EXPECT_FALSE(llvm::sys::fs::exists(Output));
+}
+
+TEST_F(TUSummaryExtractorFrontendActionTest,
+       MissingCompilationUnitIdDiagnoses) {
+  std::string Output = makePath("output.MockSerializationFormat");
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  // SSAFCompilationUnitId left empty.
+
+  auto Wrapped = std::make_unique<RecordingAction>();
+  const EventLog &Log = Wrapped->getLog();
+  TUSummaryExtractorFrontendAction ExtractorAction(std::move(Wrapped));
+
+  EXPECT_FALSE(Compiler->ExecuteAction(ExtractorAction));
+
+  EXPECT_THAT(Log, Contains("Wrapped::Initialize"));
+  EXPECT_THAT(Log, Contains("Wrapped::HandleTranslationUnit"));
+
+  EXPECT_THAT(
+      errorsMsgsOf(DiagBuf),
+      UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
+                           "'--ssaf-compilation-unit-id=' to be set"));
+
+  EXPECT_FALSE(llvm::sys::fs::exists(Output));
+}
+
+TEST_F(TUSummaryExtractorFrontendActionTest,
+       EmptyCompilationUnitIdDiagnoses) {
+  std::string Output = makePath("output.MockSerializationFormat");
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = "";
+
+  auto Wrapped = std::make_unique<RecordingAction>();
+  const EventLog &Log = Wrapped->getLog();
+  TUSummaryExtractorFrontendAction ExtractorAction(std::move(Wrapped));
+
+  EXPECT_FALSE(Compiler->ExecuteAction(ExtractorAction));
+
+  EXPECT_THAT(Log, Contains("Wrapped::Initialize"));
+  EXPECT_THAT(Log, Contains("Wrapped::HandleTranslationUnit"));
+
+  EXPECT_THAT(
+      errorsMsgsOf(DiagBuf),
+      UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
+                           "'--ssaf-compilation-unit-id=' to be set"));
+
+  EXPECT_FALSE(llvm::sys::fs::exists(Output));
+}
+
+TEST_F(TUSummaryExtractorFrontendActionTest,
+       CompilationUnitIdThreadsToSummary) {
+  CapturingSerializationFormat::resetCapturedName();
+
+  const std::string CUId = "cu-X-test";
+  std::string Output = makePath("output.CapturingSerializationFormat");
+  Compiler->getSSAFOpts().TUSummaryFile = Output;
+  Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
+  Compiler->getSSAFOpts().CompilationUnitId = CUId;
+
+  TUSummaryExtractorFrontendAction Action(std::make_unique<RecordingAction>());
+  EXPECT_TRUE(Compiler->ExecuteAction(Action));
+  EXPECT_EQ(DiagBuf.getNumErrors(), 0U);
+
+  EXPECT_EQ(CapturingSerializationFormat::lastCapturedName(), CUId);
 }
 
 } // namespace

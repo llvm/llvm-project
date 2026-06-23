@@ -119,14 +119,6 @@ template <> struct DenseMapInfo<BasicBlockEdge> {
 
   LLVM_ABI static unsigned getHashValue(const BasicBlockEdge *V);
 
-  static inline BasicBlockEdge getEmptyKey() {
-    return BasicBlockEdge(BBInfo::getEmptyKey(), BBInfo::getEmptyKey());
-  }
-
-  static inline BasicBlockEdge getTombstoneKey() {
-    return BasicBlockEdge(BBInfo::getTombstoneKey(), BBInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const BasicBlockEdge &Edge) {
     return hash_combine(BBInfo::getHashValue(Edge.getStart()),
                         BBInfo::getHashValue(Edge.getEnd()));
@@ -289,21 +281,19 @@ public:
 
 /// Printer pass for the \c DominatorTree.
 class DominatorTreePrinterPass
-    : public PassInfoMixin<DominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<DominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit DominatorTreePrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c DominatorTree.
-struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
+struct DominatorTreeVerifierPass
+    : RequiredPassInfoMixin<DominatorTreeVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Enables verification of dominator trees.

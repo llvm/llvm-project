@@ -91,7 +91,7 @@ defvar NumericTypesNoDbl = [Int16Ty, UInt16Ty, HalfTy, IntTy, UIntTy,
 // These classes are usable in both argument and return type positions.
 //===----------------------------------------------------------------------===//
 
-// The varying type — expanded per VaryingTypes.
+// The varying type - expanded per VaryingTypes.
 // As an argument: the arg type varies with each overload.
 // As a return type: returns the same type as the varying arg.
 def Varying : HLSLArgType, HLSLReturnType;
@@ -210,7 +210,7 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Whether the function has the convergent attribute
   bit IsConvergent = 0;
 
-  // Argument element types — drives overload expansion.
+  // Argument element types - drives overload expansion.
   // One overload set is generated per type (scalar + vectors + matrices).
   // Only used when Args contains Varying entries.
   list<HLSLType> VaryingTypes = [];
@@ -324,14 +324,14 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
   let VaryingMatDims = [];
 }
 
-// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
+// Unsigned abs is a constexpr identity - unsigned values are already non-negative.
 def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let Doc = [{
 \fn T abs(T Val)
 \brief Returns the absolute value of the input value, \a Val.
 \param Val The input value.
 
-Unsigned overload — unsigned values are already non-negative, so this
+Unsigned overload - unsigned values are already non-negative, so this
 function returns its input unchanged.
 }];
   let ParamNames = ["V"];
@@ -457,7 +457,6 @@ determine the correct quadrant.
 \param x The x-coordinate.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Returns the smallest integer value that is greater than or equal to the
@@ -995,8 +994,60 @@ with regard to the x and y screen space coordinates.
   let VaryingMatDims = [];
 }
 
-// Blocks execution of all threads in a group until all group shared accesses
+// Blocks execution of all threads in a group until all memory accesses
+// have been completed.
+def hlsl_all_memory_barrier :
+    HLSLBuiltin<"AllMemoryBarrier",
+                "__builtin_hlsl_all_memory_barrier"> {
+  let Doc = [{
+\fn void AllMemoryBarrier(void)
+\brief Blocks execution of all threads in a group until all memory
+accesses have been completed.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all memory accesses
 // have been completed and all threads in the group have reached this call.
+def hlsl_all_memory_barrier_with_group_sync :
+    HLSLBuiltin<"AllMemoryBarrierWithGroupSync",
+                "__builtin_hlsl_all_memory_barrier_with_group_sync"> {
+  let Doc = [{
+\fn void AllMemoryBarrierWithGroupSync(void)
+\brief Blocks execution of all threads in a group until all memory
+accesses have been completed and all threads in the group have reached this call.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all device memory accesses
+// have been completed.
+def hlsl_device_memory_barrier :
+    HLSLBuiltin<"DeviceMemoryBarrier",
+                "__builtin_hlsl_device_memory_barrier"> {
+  let Doc = [{
+\fn void DeviceMemoryBarrier(void)
+\brief Blocks execution of all threads in a group until all device memory
+accesses have been completed.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all device memory accesses
+// have been completed and all threads in the group have reached this call.
+def hlsl_device_memory_barrier_with_group_sync :
+    HLSLBuiltin<"DeviceMemoryBarrierWithGroupSync",
+                "__builtin_hlsl_device_memory_barrier_with_group_sync"> {
+  let Doc = [{
+\fn void DeviceMemoryBarrierWithGroupSync(void)
+\brief Blocks execution of all threads in a group until all device memory
+accesses have been completed and all threads in the group have reached this call.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all group shared accesses
+// have been completed.
 def hlsl_group_memory_barrier :
     HLSLBuiltin<"GroupMemoryBarrier",
                 "__builtin_hlsl_group_memory_barrier"> {
@@ -1284,12 +1335,23 @@ def hlsl_quad_read_across_x :
   let VaryingMatDims = [];
 }
 
-// Reads the value from the lane across the X axis of the quad.
+// Reads the value from the lane across the Y axis of the quad.
 def hlsl_quad_read_across_y :
     HLSLOneArgBuiltin<"QuadReadAcrossY",
                       "__builtin_hlsl_quad_read_across_y"> {
   let Doc = [{
 \brief Reads the value from the lane across the Y axis of the quad.
+\param Val The input value.
+}];
+  let VaryingTypes = AllNumericTypes;
+  let IsConvergent = 1;
+  let VaryingMatDims = [];
+}
+
+// Reads the value from the lane diagonally opposite from the current lane in the quad.
+def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal", "__builtin_hlsl_quad_read_across_diagonal"> {
+  let Doc = [{
+\brief Returns the value from the lane diagonally opposite from the current lane in the quad.
 \param Val The input value.
 }];
   let VaryingTypes = AllNumericTypes;
@@ -1564,20 +1626,9 @@ group. Otherwise, the result is false.
 \return True if all values across all lanes are equal, false otherwise
 }];
   let ReturnType = VaryingShape<BoolTy>;
-  let VaryingTypes = [IntTy, UIntTy, FloatTy, Int64Ty, UInt64Ty, DoubleTy];
+  let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
   let Availability = SM6_0;
-  let VaryingMatDims = [];
-}
-
-// WaveActiveAllEqual — half and 16-bit integer types. The 6.2 availability 
-// annotations for the half and 16-bit types are emitted automatically.
-def hlsl_wave_active_all_equal_16bit :
-    HLSLOneArgBuiltin<"WaveActiveAllEqual",
-                "__builtin_hlsl_wave_active_all_equal"> {
-  let ReturnType = VaryingShape<BoolTy>;
-  let VaryingTypes = [HalfTy, Int16Ty, UInt16Ty];
-  let IsConvergent = 1;
   let VaryingMatDims = [];
 }
 
@@ -1702,6 +1753,7 @@ def hlsl_wave_active_max :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1714,6 +1766,7 @@ def hlsl_wave_active_min :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1727,6 +1780,7 @@ def hlsl_wave_active_product :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1739,6 +1793,7 @@ def hlsl_wave_active_sum :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1801,6 +1856,7 @@ def hlsl_wave_prefix_product :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1813,6 +1869,7 @@ def hlsl_wave_prefix_sum :
 }];
   let VaryingTypes = AllNumericTypes;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }
 
@@ -1828,5 +1885,6 @@ the specified wave.
   let Args = [Varying, UIntTy];
   let VaryingTypes = AllTypesWithBool;
   let IsConvergent = 1;
+  let Availability = SM6_0;
   let VaryingMatDims = [];
 }

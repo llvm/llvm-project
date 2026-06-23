@@ -128,7 +128,7 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.6(0x00000000), %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CBranch undef [[DEF1]], %bb.6
+  ; CHECK-NEXT:   CBranch undef [[DEF1]], %bb.6, 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.3(0x3e000000), %bb.1(0x04000000), %bb.6(0x00000000), %bb.2(0x3e000000)
@@ -164,7 +164,7 @@ body:             |
   bb.4:
     successors: %bb.6(0x00000000), %bb.5(0x80000000)
 
-    CBranch undef %11, %bb.6
+    CBranch undef %11, %bb.6, 0
 
   bb.5:
     successors: %bb.3(0x3e000000), %bb.1(0x04000000), %bb.6(0x00000000), %bb.2(0x3e000000)

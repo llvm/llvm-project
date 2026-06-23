@@ -24,8 +24,7 @@ define i1 @test() {
 ; CHECK-NEXT:    [[CMP3_I_25_I355_I_I:%.*]] = icmp ugt i32 [[CONV85_25_I354_I_I]], 0
 ; CHECK-NEXT:    [[SHL_I111_25_I356_I_I:%.*]] = select i1 [[CMP3_I_25_I355_I_I]], i32 0, i32 0
 ; CHECK-NEXT:    [[C25_I357_I_I:%.*]] = shl i32 [[CONV85_25_I354_I_I]], [[SHL_I111_25_I356_I_I]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP4]], [[C22_I336_I_I]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 0, [[C22_I336_I_I]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i32 [[C23_I343_I_I]], [[C24_I350_I_I]]
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = and i32 [[OP_RDX]], [[OP_RDX1]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = and i32 [[OP_RDX2]], [[C25_I357_I_I]]

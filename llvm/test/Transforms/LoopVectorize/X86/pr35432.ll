@@ -125,21 +125,21 @@ entry:
   %cmp8 = icmp eq i32 %conv17, 0
   br i1 %cmp8, label %for.body.lr.ph, label %for.end12
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.inc9
+for.body:
   %storemerge.in9 = phi i32 [ %0, %for.body.lr.ph ], [ %add, %for.inc9 ]
   %conv52 = and i32 %storemerge.in9, 255
   %cmp63 = icmp ult i32 %0, %conv52
   br i1 %cmp63, label %for.body8.lr.ph, label %for.inc9
 
-for.body8.lr.ph:                                  ; preds = %for.body
+for.body8.lr.ph:
   %conv3 = trunc i32 %storemerge.in9 to i8
   %.promoted = load i32, ptr @a, align 16
   br label %for.body8
 
-for.body8:                                        ; preds = %for.body8.lr.ph, %for.body8
+for.body8:
   %inc5 = phi i32 [ %.promoted, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %c.04 = phi i8 [ %conv3, %for.body8.lr.ph ], [ %dec, %for.body8 ]
   %inc = add i32 %inc5, 1
@@ -150,35 +150,33 @@ for.body8:                                        ; preds = %for.body8.lr.ph, %f
   %cmp6 = icmp ult i32 %0, %conv5
   br i1 %cmp6, label %for.body8, label %for.cond4.for.inc9_crit_edge
 
-for.cond4.for.inc9_crit_edge:                     ; preds = %for.body8
+for.cond4.for.inc9_crit_edge:
   %inc.lcssa = phi i32 [ %inc, %for.body8 ]
   store i32 %inc.lcssa, ptr @a, align 16
   br label %for.inc9
 
-for.inc9:                                         ; preds = %for.cond4.for.inc9_crit_edge, %for.body
+for.inc9:
   %conv10 = and i32 %storemerge.in9, 65535
   %add = add nuw nsw i32 %conv10, 1
   %conv1 = and i32 %add, 65472
   %cmp = icmp eq i32 %conv1, 0
   br i1 %cmp, label %for.body, label %for.cond.for.end12_crit_edge
 
-for.cond.for.end12_crit_edge:                     ; preds = %for.inc9
+for.cond.for.end12_crit_edge:
   %add.lcssa = phi i32 [ %add, %for.inc9 ]
   %storemerge = trunc i32 %add.lcssa to i16
   store i16 %storemerge, ptr %s, align 2
   br label %for.end12
 
-for.end12:                                        ; preds = %for.cond.for.end12_crit_edge, %entry
+for.end12:
   %call13 = call i32 (ptr, ...) @foo(ptr nonnull %s) #3
   call void @llvm.lifetime.end.p0(ptr nonnull %s) #3
   call void @llvm.lifetime.end.p0(ptr nonnull %i) #3
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare i32 @goo(...) #2
 
 declare i32 @foo(...) #2
 
-declare void @llvm.lifetime.end.p0(ptr nocapture) #1

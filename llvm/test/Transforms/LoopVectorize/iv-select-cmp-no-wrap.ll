@@ -54,7 +54,7 @@ define i64 @select_icmp_nuw_nsw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -67,7 +67,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 
@@ -124,7 +124,7 @@ define i64 @select_icmp_nsw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -137,7 +137,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 
@@ -197,7 +197,7 @@ define i64 @select_icmp_nuw(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -210,7 +210,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 
@@ -245,7 +245,7 @@ define i64 @select_icmp_noflag(ptr %a, ptr %b, i64 %ii, i64 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[BROADCAST_SPLAT]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.vector.extract.last.active.v4i64(<4 x i64> [[TMP6]], <4 x i1> [[TMP5]], i64 [[TMP8]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -272,7 +272,7 @@ define i64 @select_icmp_noflag(ptr %a, ptr %b, i64 %ii, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %rdx = phi i64 [ %cond, %for.body ], [ %ii, %entry ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
@@ -285,7 +285,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:                                             ; preds = %for.body
+exit:
   ret i64 %cond
 }
 ;.

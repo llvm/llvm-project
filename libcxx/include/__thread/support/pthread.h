@@ -144,7 +144,9 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_execute_once(__libcpp_exec_once_flag* 
 //
 // Thread id
 //
-#if defined(__MVS__)
+#if _LIBCPP_LIBC_LLVM_LIBC
+typedef pthread_id_np_t __libcpp_thread_id;
+#elif defined(__MVS__)
 typedef unsigned long long __libcpp_thread_id;
 #else
 typedef pthread_t __libcpp_thread_id;
@@ -163,11 +165,18 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id __t
 //
 // Thread
 //
-#define _LIBCPP_NULL_THREAD ((__libcpp_thread_t()))
+#if defined(PTHREAD_NULL)
+#  define _LIBCPP_NULL_THREAD PTHREAD_NULL
+#else
+#  define _LIBCPP_NULL_THREAD ((__libcpp_thread_t()))
+#endif
 typedef pthread_t __libcpp_thread_t;
 
 inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t* __t) {
-#if defined(__MVS__)
+#if _LIBCPP_LIBC_LLVM_LIBC
+  __libcpp_thread_id __id;
+  return pthread_getunique_np(__t, &__id) ? 0 : __id;
+#elif defined(__MVS__)
   return __t->__;
 #else
   return *__t;
@@ -183,8 +192,12 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_create(__libcpp_thread_t* __t, 
 }
 
 inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_current_id() {
+#if _LIBCPP_LIBC_LLVM_LIBC
+  return pthread_getthreadid_np();
+#else
   const __libcpp_thread_t __current_thread = pthread_self();
   return __libcpp_thread_get_id(&__current_thread);
+#endif
 }
 
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_join(__libcpp_thread_t* __t) { return pthread_join(*__t, nullptr); }

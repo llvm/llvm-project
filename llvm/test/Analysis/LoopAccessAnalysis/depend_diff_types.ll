@@ -561,17 +561,11 @@ exit:
   ret void
 }
 
-; TODO: Relax HasSameSize check in isSafeDependenceDistance.
 define void @different_type_sizes_safe_dep_dist(i16  %n, ptr %p) {
 ; CHECK-LABEL: 'different_type_sizes_safe_dep_dist'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i32 0, ptr %gep.iv, align 1 ->
-; CHECK-NEXT:            store i16 1, ptr %gep.off.iv, align 1
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

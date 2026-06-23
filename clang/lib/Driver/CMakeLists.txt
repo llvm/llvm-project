@@ -86,6 +86,7 @@ add_clang_library(clangDriver
   ToolChains/OHOS.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
+  ToolChains/Serenity.cpp
   ToolChains/Solaris.cpp
   ToolChains/SPIRV.cpp
   ToolChains/SPIRVOpenMP.cpp
@@ -114,6 +115,7 @@ add_clang_library(clangDriver
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangSerialization
   clangLex
   clangOptions

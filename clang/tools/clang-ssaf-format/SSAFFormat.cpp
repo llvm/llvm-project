@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -30,21 +29,17 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <system_error>
 
 using namespace llvm;
 using namespace clang::ssaf;
 
 namespace {
 
-namespace fs = llvm::sys::fs;
-namespace path = llvm::sys::path;
-
 //===----------------------------------------------------------------------===//
 // Summary Type
 //===----------------------------------------------------------------------===//
 
-enum class SummaryType { TU, LU };
+enum class SummaryType { Auto, TU, LU, WPA };
 
 //===----------------------------------------------------------------------===//
 // Command-Line Options
@@ -57,18 +52,25 @@ cl::list<std::string> LoadPlugins("load",
                                   cl::value_desc("path"),
                                   cl::cat(SsafFormatCategory));
 
-// --type and the input file are required for convert/validateInput operations
-// but must be optional at the cl layer so that --list can be used standalone.
+// Defaults to 'auto', which inspects the file's self-describing 'type'
+// field and dispatches to the matching reader/writer. Explicit values
+// force the use of the corresponding kind-specific reader/writer.
 cl::opt<SummaryType> Type(
-    "type", cl::desc("Summary type (required unless --list is given)"),
-    cl::values(clEnumValN(SummaryType::TU, "tu", "Translation unit summary"),
-               clEnumValN(SummaryType::LU, "lu", "Link unit summary")),
-    cl::cat(SsafFormatCategory));
+    "type",
+    cl::desc("Summary type (defaults to 'auto', which uses the file's "
+             "self-describing 'type' field)"),
+    cl::values(clEnumValN(SummaryType::Auto, "auto",
+                          "Detect type from the file's 'type' field"),
+               clEnumValN(SummaryType::TU, "tu", "Translation unit summary"),
+               clEnumValN(SummaryType::LU, "lu", "Link unit summary"),
+               clEnumValN(SummaryType::WPA, "wpa",
+                          "Whole-program analysis suite")),
+    cl::init(SummaryType::Auto), cl::cat(SsafFormatCategory));
 
 cl::opt<std::string> InputPath(cl::Positional, cl::desc("<input file>"),
                                cl::cat(SsafFormatCategory));
 
-cl::opt<std::string> OutputPath("o", cl::desc("Output summary path"),
+cl::opt<std::string> OutputPath("o", cl::desc("Output file path"),
                                 cl::value_desc("path"),
                                 cl::cat(SsafFormatCategory));
 
@@ -81,19 +83,6 @@ cl::opt<bool> ListFormats("list",
                           cl::desc("List registered serialization formats and "
                                    "analyses, then exit"),
                           cl::init(false), cl::cat(SsafFormatCategory));
-
-//===----------------------------------------------------------------------===//
-// Error Messages
-//===----------------------------------------------------------------------===//
-
-namespace LocalErrorMessages {
-
-constexpr const char *OutputFileAlreadyExists = "Output file already exists";
-
-constexpr const char *InputOutputSamePath =
-    "Input and Output resolve to the same path";
-
-} // namespace LocalErrorMessages
 
 //===----------------------------------------------------------------------===//
 // Format Listing
@@ -229,8 +218,8 @@ void listFormats() {
 //===----------------------------------------------------------------------===//
 
 struct FormatInput {
-  SummaryFile InputFile;
-  std::optional<SummaryFile> OutputFile;
+  FormatFile InputFile;
+  std::optional<FormatFile> OutputFile;
 };
 
 FormatInput validateInput() {
@@ -238,61 +227,20 @@ FormatInput validateInput() {
 
   FormatInput FI;
 
-  // Validate Type explicitly since we don't want to specify it if --list is
-  // provided.
-  if (!Type.getNumOccurrences()) {
-    fail("'--type' option is required");
-  }
-
   // Validate the input path.
   {
     if (InputPath.empty()) {
       fail("no input file specified");
     }
 
-    llvm::SmallString<256> RealInputPath;
-    std::error_code EC =
-        fs::real_path(InputPath, RealInputPath, /*expand_tilde=*/true);
-    if (EC) {
-      fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
-    }
-
-    FI.InputFile = SummaryFile::fromPath(RealInputPath);
+    FI.InputFile = FormatFile::fromInputPath(InputPath);
   }
 
   // Validate the output path.
   if (!OutputPath.empty()) {
-    llvm::StringRef ParentDir = path::parent_path(OutputPath);
-    llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
-
-    if (!fs::exists(DirToCheck)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           ErrorMessages::OutputDirectoryMissing);
-    }
-
-    // Reconstruct the real output path from the real parent directory and the
-    // output filename. The output file does not exist yet so real_path cannot
-    // be called on the full output path directly.
-    llvm::SmallString<256> RealParentDir;
-    if (std::error_code EC = fs::real_path(DirToCheck, RealParentDir)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath, EC.message());
-    }
-
-    llvm::SmallString<256> RealOutputPath = RealParentDir;
-    path::append(RealOutputPath, path::filename(OutputPath));
-
-    if (RealOutputPath == FI.InputFile.Path) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           LocalErrorMessages::InputOutputSamePath);
-    }
-
-    if (fs::exists(RealOutputPath)) {
-      fail(ErrorMessages::CannotValidateSummary, OutputPath,
-           LocalErrorMessages::OutputFileAlreadyExists);
-    }
-
-    FI.OutputFile = SummaryFile::fromPath(RealOutputPath);
+    FI.OutputFile = FormatFile::fromOutputPath(OutputPath);
   }
+
   return FI;
 }
 
@@ -320,6 +268,15 @@ void run(const FormatInput &FI, ReadFn Read, WriteFn Write) {
 
 void convert(const FormatInput &FI) {
   switch (Type) {
+  case SummaryType::Auto:
+    if (UseEncoding) {
+      run(FI, &SerializationFormat::readArtifactEncoding,
+          &SerializationFormat::writeArtifactEncoding);
+    } else {
+      run(FI, &SerializationFormat::readArtifact,
+          &SerializationFormat::writeArtifact);
+    }
+    return;
   case SummaryType::TU:
     if (UseEncoding) {
       run(FI, &SerializationFormat::readTUSummaryEncoding,
@@ -337,6 +294,10 @@ void convert(const FormatInput &FI) {
       run(FI, &SerializationFormat::readLUSummary,
           &SerializationFormat::writeLUSummary);
     }
+    return;
+  case SummaryType::WPA:
+    run(FI, &SerializationFormat::readWPASuite,
+        &SerializationFormat::writeWPASuite);
     return;
   }
 

@@ -19,7 +19,6 @@
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
 #include "orc-rt/SimpleSymbolTable.h"
-#include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/TaskGroup.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -28,9 +27,10 @@
 #include "orc-rt-c/WrapperFunction.h"
 
 #include <cassert>
-#include <future>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <type_traits>
 #include <vector>
 
@@ -105,6 +105,18 @@ public:
   using ErrorReporterFn = move_only_function<void(Error)>;
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
+
+  /// Callback used by the Session to run incoming wrapper-function calls.
+  ///
+  /// A ManagedCodeTaskGroup token is created for each call to this callback,
+  /// and implementations must eventually call either Fn (typically as
+  /// Fn(S, CallId, Return, ArgBytes.release())), or call Return directly to
+  /// bail out of the call (typically with
+  /// WrapperFunctionBuffer::createOutOfBandError(...)). Failing to do either
+  /// will block Session shutdown indefinitely.
+  using RunWrapperCall = move_only_function<void(
+      orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
+      orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
 
   using HandlerTag = void *;
   using OnCallHandlerCompleteFn =
@@ -207,9 +219,13 @@ public:
   /// program are not generally visible to ORC-RT, but can optionally be
   /// reported by calling the orc_rt_Session_reportError function.)
   ///
+  /// The RunCall callback will be invoked for every incoming wrapper-function
+  /// call, and is responsible for arranging the call to be run (inline,
+  /// queued, or posted to a thread pool, at the caller's discretion).
+  ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(ExecutorProcessInfo EPI, std::unique_ptr<TaskDispatcher> Dispatcher,
+  Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
           ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
@@ -218,14 +234,15 @@ public:
   Session(Session &&) = delete;
   Session &operator=(Session &&) = delete;
 
+  /// Destroy the session object.
+  ///
+  /// This will trigger shutdown if it has not happened already. Destruction
+  /// will block until the Session lifecycle completes.
   ~Session();
 
   /// Provides information about the host process that the Session is running
   /// in.
   const ExecutorProcessInfo &processInfo() const noexcept { return EPI; }
-
-  /// Dispatch a task using the Session's TaskDispatcher.
-  void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -270,6 +287,18 @@ public:
   /// take ownership of CA or call its connect method.
   void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
 
+  /// Construct a ControllerAccessT with the given args, then immediately
+  /// attach using the given BootstrapInfo.
+  ///
+  /// This enables one-line attach operations in the common case where the
+  /// ControllerAccess implementation does not require any further
+  /// configuration after construction.
+  template <typename ControllerAccessT, typename... ArgTs>
+  void attach(BootstrapInfo BI, ArgTs &&...Args) {
+    attach(std::make_shared<ControllerAccessT>(std::forward<ArgTs>(Args)...),
+           std::move(BI));
+  }
+
   /// Initiate detach from the controller.
   ///
   /// Signals that controller access is permanently unavailable and notifies
@@ -292,14 +321,9 @@ public:
   ///      complete (via ManagedCodeTaskGroup).
   ///   3. Shutdown services: Calls onShutdown on all Services in reverse
   ///      order.
-  ///   4. Shutdown TaskDispatcher.
   ///
-  /// The optional OnShutdown callback is called after step (3), before
-  /// the TaskDispatcher is shut down.
+  /// The optional OnShutdown callback is called after step (3).
   void shutdown(OnShutdownFn OnShutdown = {});
-
-  /// Initiate session shutdown and block until complete.
-  void waitForShutdown();
 
   /// Register a callback to be called when the Session detaches from the
   /// controller. If the Session has already detached, the callback will be
@@ -426,7 +450,6 @@ private:
   };
 
   class NotificationService;
-  NotificationService &addNotificationService();
 
   void appendService(std::unique_ptr<Service> Srv);
 
@@ -451,27 +474,21 @@ private:
       return;
     }
 
-    dispatch(makeGenericTask([=, ArgBytes = std::move(ArgBytes)]() mutable {
-      Fn(wrap(this), CallId, wrapperReturn, ArgBytes.release());
-    }));
+    RunCall(wrap(this), CallId, &wrapperReturn, Fn, std::move(ArgBytes));
   }
 
-  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
-    if (auto TmpCA = std::atomic_load(&CA))
-      TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-    ManagedCodeTaskGroup->releaseToken();
-  }
-
+  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
   ExecutorProcessInfo EPI;
-  std::unique_ptr<TaskDispatcher> Dispatcher;
+  RunWrapperCall RunCall;
   std::shared_ptr<TaskGroup> ManagedCodeTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 
   mutable std::mutex M;
+  std::condition_variable CV;
   State CurrentState = State::Start;
   State TargetState = State::None;
   std::vector<std::unique_ptr<Service>> Services;

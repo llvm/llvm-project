@@ -39,6 +39,8 @@
 #include "llvm/TargetParser/Host.h"
 
 #include <asl.h>
+#include <cassert>
+#include <cerrno>
 #include <crt_externs.h>
 #include <cstdio>
 #include <cstdlib>
@@ -73,6 +75,8 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 
 #include "../cfcpp/CFCBundle.h"
@@ -614,9 +618,14 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
               break;
             ++offset;
           }
-          // Now extract all arguments
+
+          // Skip argv[0] as we already have the file name from the executable path.
+          if (argc > 0)
+            process_info.SetArg0(data.GetCStr(&offset));
+
+          // Now extract the rest of the arguments.
           Args &proc_args = process_info.GetArguments();
-          for (int i = 0; i < static_cast<int>(argc); ++i) {
+          for (int i = 1; i < static_cast<int>(argc); ++i) {
             cstr = data.GetCStr(&offset);
             if (cstr)
               proc_args.AppendArgument(llvm::StringRef(cstr));
@@ -679,34 +688,87 @@ static bool GetMacOSXProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   return false;
 }
 
+/// Fetches the list of all processes into \p kinfos.
+static llvm::Error GetProcessList(std::vector<struct kinfo_proc> &kinfos) {
+  int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
+
+  // How often we retry fetching the process list.
+  static constexpr unsigned g_retry_count = 200;
+  // The rate at which we increase the adjusted buffer size to
+  // account for newly created processes between two sysctl calls.
+  static constexpr unsigned g_expected_new_pids = 500;
+  // We keep increasing the expected growth rate between the two
+  // sysctl calls. Check that the last attempt does not create an
+  // unreasonbly large buffer. It is unlikely we run on a system where
+  // 100k processes are repeatedly created between each attempted sysctl
+  // pair.
+  static_assert(
+      g_retry_count * g_expected_new_pids <= 100'000,
+      "Final retry attempt assumes an unlikely amount of new processes.");
+
+  // This is an inherently racy API. We have to first query the size for our
+  // buffer and then pass it back to sysctl. If more processes spawn between the
+  // size query and the actual call to fetch, then sysctl returns ENOMEM.
+  // We keep retrying until we get a passing result.
+  for (unsigned attempt = 1; attempt < g_retry_count; ++attempt) {
+    // Fetch the buffer size sysctl would return.
+    size_t current_pid_size = 0;
+    if (::sysctl(mib, 3, nullptr, &current_pid_size, nullptr, 0) != 0)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+
+    // Convert the byte length result to number of elements.
+    const size_t current_num_processes =
+        current_pid_size / sizeof(struct kinfo_proc);
+
+    // Adjust the buffer for new processes that spawned between the
+    // previous and next sysctl call. We increase this growth each attempt
+    // to account for systems where a lot of new processes spawn between
+    // these two calls.
+    const size_t expected_growth = attempt * g_expected_new_pids;
+
+    // Allocate the buffer for the sysctl result.
+    kinfos.resize(current_num_processes + expected_growth);
+
+    // Fetch the actual process list and let sysctl adjust actual_pid_size.
+    size_t actual_pid_size = kinfos.size() * sizeof(struct kinfo_proc);
+    if (::sysctl(mib, 3, &kinfos[0], &actual_pid_size, nullptr, 0) == 0) {
+      // Shrink the buffer to the actual number of processes returned.
+      kinfos.resize(actual_pid_size / sizeof(struct kinfo_proc));
+      return llvm::Error::success();
+    }
+
+    // Errno is set to ENOMEM if our estimated_pid_size is too small, in which
+    // case we retry with a bigger buffer. Any other error is unexpected.
+    if (errno != ENOMEM)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+  }
+
+  // The only way to exit the loop above is by repeatedly hitting ENOMEM. The
+  // only way this can happen is if the process list somehow grew extremely
+  // large between the two sysctl calls.
+  assert(errno == ENOMEM &&
+         "loop should only be left via the ENOMEM retry path");
+  return llvm::createStringErrorV(
+      "Failed to read process list: sysctl kept returning ENOMEM after {0} "
+      "attempts",
+      g_retry_count);
+}
+
 uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
   std::vector<struct kinfo_proc> kinfos;
-
-  int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
-
-  size_t pid_data_size = 0;
-  if (::sysctl(mib, 3, nullptr, &pid_data_size, nullptr, 0) != 0)
+  if (llvm::Error error = GetProcessList(kinfos)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host | LLDBLog::Process), std::move(error),
+                   "failed to read process list: {0}");
     return 0;
-
-  // Add a few extra in case a few more show up
-  const size_t estimated_pid_count =
-      (pid_data_size / sizeof(struct kinfo_proc)) + 10;
-
-  kinfos.resize(estimated_pid_count);
-  pid_data_size = kinfos.size() * sizeof(struct kinfo_proc);
-
-  if (::sysctl(mib, 3, &kinfos[0], &pid_data_size, nullptr, 0) != 0)
-    return 0;
-
-  const size_t actual_pid_count = (pid_data_size / sizeof(struct kinfo_proc));
+  }
 
   bool all_users = match_info.GetMatchAllUsers();
   const lldb::pid_t our_pid = getpid();
   const uid_t our_uid = getuid();
-  for (size_t i = 0; i < actual_pid_count; i++) {
-    const struct kinfo_proc &kinfo = kinfos[i];
-
+  for (const struct kinfo_proc &kinfo : kinfos) {
     bool kinfo_user_matches = false;
     if (all_users)
       kinfo_user_matches = true;
@@ -1237,15 +1299,15 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
                      eErrorTypePOSIX);
       if (error.Fail()) {
         LLDB_LOG(log,
-                 "error: {0}, "
+                 "error: {}, "
                  "posix_spawnattr_set_use_sec_transition_shims_np(&attr, 0)",
                  error);
         return error;
       }
     } else {
       LLDB_LOG(log,
-               "error: posix_spawnattr_set_use_sec_transition_shims_np not "
-               "available",
+               "error: {}, posix_spawnattr_set_use_sec_transition_shims_np "
+               "not available",
                error);
     }
   }
@@ -1278,8 +1340,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
                        eErrorTypePOSIX);
         if (error.Fail())
           LLDB_LOG(log,
-                   "error: {0}, ::posix_spawnattr_setarchpref_np ( &attr, 1, "
-                   "cpu_type = {1:x}, cpu_subtype = {1:x}, count => {2} )",
+                   "error: {}, ::posix_spawnattr_setarchpref_np ( &attr, 1, "
+                   "cpu_type = {:x}, cpu_subtype = {:x}, count => {} )",
                    error, cpu_type, cpu_subtype, ocount);
 
         if (error.Fail() || ocount != 1)
