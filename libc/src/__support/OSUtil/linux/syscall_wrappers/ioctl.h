@@ -34,8 +34,7 @@ struct IoctlArg {
   // for passing the correct pointer type.
   LIBC_INLINE IoctlArg(const void *ptr)
       : val(reinterpret_cast<unsigned long>(ptr)) {}
-  LIBC_INLINE IoctlArg(void *ptr)
-      : val(reinterpret_cast<unsigned long>(ptr)) {}
+  LIBC_INLINE IoctlArg(void *ptr) : val(reinterpret_cast<unsigned long>(ptr)) {}
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   LIBC_INLINE constexpr IoctlArg(T num = 0)
