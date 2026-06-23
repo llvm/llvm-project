@@ -98,6 +98,7 @@ TEST_F(CodeCompletionTest, TwoDecls) {
 
 TEST_F(CodeCompletionTest, CompFunDeclsNoError) {
   auto Err = llvm::Error::success();
+  runComp("void app(", Err);
   EXPECT_EQ((bool)Err, false);
 }
 
