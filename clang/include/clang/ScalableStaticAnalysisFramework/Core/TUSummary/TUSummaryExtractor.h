@@ -15,7 +15,6 @@
 #include <optional>
 
 namespace clang::ssaf {
-class SSAFOptions;
 class TUSummaryBuilder;
 
 class TUSummaryExtractor : public ASTConsumer {
@@ -32,9 +31,6 @@ public:
   /// and sets its linkage atomically.
   /// \returns the EntityId, or std::nullopt if EntityName creation fails.
   std::optional<EntityId> addEntityForReturn(const FunctionDecl *FD);
-
-  /// \returns the \c SSAFOptions of the builder.
-  const SSAFOptions &getOptions() const;
 
 protected:
   TUSummaryBuilder &SummaryBuilder;

@@ -345,8 +345,6 @@ class FileSystemOpts<string base>
   : KeyPathAndMacro<"FileSystemOpts.", base, "FILE_SYSTEM_"> {}
 class AnalyzerOpts<string base>
   : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
-class SSAFOpts<string base>
-  : KeyPathAndMacro<"SSAFOpts.", base, "SSAF_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
 
@@ -949,7 +947,7 @@ def _ssaf_extract_summaries :
   Group<SSAF_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Comma-separated list of summary names to extract">,
-  MarshallingInfoStringVector<SSAFOpts<"ExtractSummaries">>;
+  MarshallingInfoStringVector<FrontendOpts<"SSAFExtractSummaries">>;
 def _ssaf_tu_summary_file :
   Joined<["--"], "ssaf-tu-summary-file=">,
   MetaVarName<"<path>.<format>">,
@@ -958,19 +956,19 @@ def _ssaf_tu_summary_file :
   HelpText<
     "The output file for the extracted summaries. "
     "The extension selects which file format to use.">,
-  MarshallingInfoString<SSAFOpts<"TUSummaryFile">>;
+  MarshallingInfoString<FrontendOpts<"SSAFTUSummaryFile">>;
 def _ssaf_list_extractors :
   Flag<["--"], "ssaf-list-extractors">,
   Group<SSAF_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Display the list of available SSAF summary extractors">,
-  MarshallingInfoFlag<SSAFOpts<"ShowExtractors">>;
+  MarshallingInfoFlag<FrontendOpts<"SSAFShowExtractors">>;
 def _ssaf_list_formats :
   Flag<["--"], "ssaf-list-formats">,
   Group<SSAF_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Display the list of available SSAF serialization formats">,
-  MarshallingInfoFlag<SSAFOpts<"ShowFormats">>;
+  MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
 def _ssaf_compilation_unit_id :
   Joined<["--"], "ssaf-compilation-unit-id=">,
   MetaVarName<"<id>">,
@@ -980,7 +978,7 @@ def _ssaf_compilation_unit_id :
     "Stable identifier used as the CompilationUnit namespace name of every "
     "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
     "set.">,
-  MarshallingInfoString<SSAFOpts<"CompilationUnitId">>;
+  MarshallingInfoString<FrontendOpts<"SSAFCompilationUnitId">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
