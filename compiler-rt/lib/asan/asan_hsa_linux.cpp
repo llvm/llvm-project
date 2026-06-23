@@ -14,13 +14,13 @@
 
 #if SANITIZER_AMDHSA
 
-#  include "asan_hsa_linux.h"
-#  include "asan_interceptors.h"
-#  include "asan_interceptors_memintrinsics.h"
-#  include "asan_internal.h"
-#  include "asan_report.h"
-#  include "asan_stack.h"
-#  include "asan_suppressions.h"
+#include "asan_hsa_linux.h"
+#include "asan_interceptors.h"
+#include "asan_interceptors_memintrinsics.h"
+#include "asan_internal.h"
+#include "asan_report.h"
+#include "asan_stack.h"
+#include "asan_suppressions.h"
 
 using namespace __asan;
 
@@ -39,11 +39,11 @@ DEFINE_REAL(hsa_status_t, hsa_memory_free, void* ptr)
 DEFINE_REAL(hsa_status_t, hsa_amd_memory_async_copy, void*, hsa_agent_t,
             const void*, hsa_agent_t, size_t, uint32_t, const hsa_signal_t*,
             hsa_signal_t)
-#  if HSA_AMD_INTERFACE_VERSION_MINOR >= 1
+#if HSA_AMD_INTERFACE_VERSION_MINOR >= 1
 DEFINE_REAL(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void*,
             hsa_agent_t, const void*, hsa_agent_t, size_t, uint32_t,
             const hsa_signal_t*, hsa_signal_t, hsa_amd_sdma_engine_id_t, bool)
-#  endif
+#endif
 DEFINE_REAL(hsa_status_t, hsa_amd_ipc_memory_create, void* ptr, size_t len,
             hsa_amd_ipc_memory_t* handle)
 DEFINE_REAL(hsa_status_t, hsa_amd_ipc_memory_attach,
@@ -63,8 +63,7 @@ static void ENSURE_HSA_INITED() {
   // The HSA interceptors are initialized lazily: if the program calls into HSA
   // before ASan's global interceptor init runs, we still need the REAL() slots
   // to be populated so we can call through to ROCr.
-  if (!REAL(hsa_init))
-    InitializeAmdgpuInterceptors();
+  if (!REAL(hsa_init)) InitializeAmdgpuInterceptors();
 }
 
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
@@ -132,7 +131,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy, void* dst,
                                          completion_signal);
 }
 
-#  if HSA_AMD_INTERFACE_VERSION_MINOR >= 1
+#if HSA_AMD_INTERFACE_VERSION_MINOR >= 1
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void* dst,
             hsa_agent_t dst_agent, const void* src, hsa_agent_t src_agent,
             size_t size, uint32_t num_dep_signals,
@@ -152,7 +151,7 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void* dst,
       dst, dst_agent, src, src_agent, size, num_dep_signals, dep_signals,
       completion_signal, engine_id, force_copy_on_sdma);
 }
-#  endif
+#endif
 
 INTERCEPTOR(hsa_status_t, hsa_amd_ipc_memory_create, void* ptr, size_t len,
             hsa_amd_ipc_memory_t* handle) {
@@ -214,9 +213,9 @@ void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
   ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy);
-#  if HSA_AMD_INTERFACE_VERSION_MINOR >= 1
+#if HSA_AMD_INTERFACE_VERSION_MINOR >= 1
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy_on_engine);
-#  endif
+#endif
   ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_create);
   ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_attach);
   ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_detach);

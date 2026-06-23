@@ -1,5 +1,5 @@
-// RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib -lhsa-runtime64 \
-// RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
+// RUN: %clangxx_asan -O0 -isystem %rocm_include %s -o %t -L%rocm_lib
+// -lhsa-runtime64 \ RUN:   -Wl,-rpath,%rocm_lib -Wl,-rpath,%compiler_rt_libdir
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // Regression test for the AddressSanitizer hsa_amd_vmem_address_reserve_align /
@@ -9,22 +9,20 @@
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
-#include "hsa_amd_test_helpers.h"
-
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
-
 #include <stdio.h>
 
+#include "hsa_amd_test_helpers.h"
+
 int main() {
-  if (hsa_amd_test_require_init())
-    return 1;
+  if (hsa_amd_test_require_init()) return 1;
 
   // Size must be a non-zero multiple of the page size; address must be 0 so
   // the interceptor records the reservation for double-free diagnosis (see
   // asan_hsa_amd_vmem_address_reserve_align).
   const size_t kSize = 4096;
-  void *mem = nullptr;
+  void* mem = nullptr;
 
   // NOTE: To use `hipMallocManaged` way of reserving memory,
   // use either `HSA_AMD_VMEM_ADDRESS_NO_REGISTER` in flags.
