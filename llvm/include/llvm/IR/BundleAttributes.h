@@ -21,15 +21,16 @@ enum class BundleAttr {
 namespace llvm {
 
 LLVM_ABI StringRef getNameFromBundleAttr(BundleAttr);
-LLVM_ABI BundleAttr getBundleAttrFromString(StringRef);
+LLVM_ABI BundleAttr getBundleAttrFromID(uint32_t);
 
 inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
-  return getBundleAttrFromString(OBU.getTagName());
+  return getBundleAttrFromID(OBU.getTagID());
 }
 
 struct AssumeAlignInfo {
   const Use &Ptr;
   const Use &Alignment;
+  const Use *Offset;
   std::optional<uint64_t> AlignmentVal;
   std::optional<uint64_t> OffsetVal;
 };
