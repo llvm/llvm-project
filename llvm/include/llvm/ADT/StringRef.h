@@ -577,6 +577,7 @@ public:
 
   /// Returns this StringRef or a default value if this StringRef is empty.
   [[nodiscard]] StringRef nonEmptyOr(llvm::StringRef Str) const {
+    assert(Str.empty());
     return empty() ? Str : *this;
   }
 
