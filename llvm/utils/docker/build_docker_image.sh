@@ -170,8 +170,8 @@ BUILD_DIR=$(mktemp -d)
 trap "rm -rf $BUILD_DIR" EXIT
 echo "Using a temporary directory for the build: $BUILD_DIR"
 
-cp -r "$SOURCE_DIR/$IMAGE_SOURCE" "$BUILD_DIR/$IMAGE_SOURCE"
-cp -r "$SOURCE_DIR/scripts" "$BUILD_DIR/scripts"
+cp -R "$SOURCE_DIR/$IMAGE_SOURCE" "$BUILD_DIR/$IMAGE_SOURCE"
+cp -R "$SOURCE_DIR/scripts" "$BUILD_DIR/scripts"
 
 mkdir "$BUILD_DIR/checksums"
 if [ "$CHECKSUMS_FILE" != "" ]; then

@@ -272,6 +272,28 @@ if is_configured("lldb_executable"):
             "Could not get lldb version from {}: {}".format(config.lldb_executable, e)
         )
 
+    # Discover the directory that contains the 'lldb' Python module once here,
+    # so each dotest invocation doesn't have to spawn '<lldb> -P' itself.
+    try:
+        lldb_dash_p_output = subprocess.check_output(
+            [config.lldb_executable, "-P"],
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        for line in lldb_dash_p_output.splitlines():
+            line = line.strip()
+            if os.path.isdir(line) and os.path.exists(
+                os.path.join(line, "lldb", "__init__.py")
+            ):
+                dotest_cmd += ["--lldb-python-dir", line]
+                break
+    except (subprocess.CalledProcessError, OSError) as e:
+        lit_config.warning(
+            "Could not discover lldb python path from {}: {}".format(
+                config.lldb_executable, e
+            )
+        )
+
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
 
