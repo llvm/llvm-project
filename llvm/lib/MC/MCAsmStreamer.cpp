@@ -398,7 +398,8 @@ public:
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
   void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
                              SMLoc Loc) override;
-  void emitCFILLVMSetRAState(unsigned State, int64_t Offset, SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                             SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
                                int64_t R2, int64_t R2Size, SMLoc Loc) override;

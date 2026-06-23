@@ -874,8 +874,7 @@ bool CFI_Parser<A>::parseFDEInstructions(
         results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset + offset;
         _LIBUNWIND_TRACE_DWARF(
             "DW_CFA_AARCH64_set_ra_state(state=%" PRId64 ",pc=0x%" PRIx64 ")\n",
-            value,
-            static_cast<uint64_t>(results->ptrAuthDiversifier));
+            value, static_cast<uint64_t>(results->ptrAuthDiversifier));
       } break;
 #endif
 

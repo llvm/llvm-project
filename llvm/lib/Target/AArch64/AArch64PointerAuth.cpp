@@ -28,8 +28,8 @@ namespace {
 /// Control the emission of .cfi_llvm_set_ra_state, which replaces the
 /// deprecated .cfi_negate_ra_state_with_pc [1].
 ///
-/// The latter is fundamentally unable to express some program orders [2], as the
-/// dwarf 'program' reads functions in a linear scan of their addresses to
+/// The latter is fundamentally unable to express some program orders [2], as
+/// the dwarf 'program' reads functions in a linear scan of their addresses to
 /// reconstruct the state of the frame, whereas control flow may enter and exit
 /// such regions arbitrarily (such as in hot-cold-split, and shrinkwrapped
 /// fucntions), and thus the negate-based cfi is unable to encode the address of
