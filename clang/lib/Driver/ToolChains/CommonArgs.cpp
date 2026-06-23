@@ -1894,7 +1894,7 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
                                   const InputInfo &Output) {
   auto AddPostfix = [JA](auto &F) {
     if (JA.getOffloadingDeviceKind() == Action::OFK_HIP)
-      F += (Twine("_") + JA.getOffloadingArch()).str();
+      F += (Twine("_") + JA.getOffloadingArch().ArchName).str();
     F += ".dwo";
   };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
