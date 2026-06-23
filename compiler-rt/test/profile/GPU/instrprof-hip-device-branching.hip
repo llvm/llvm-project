@@ -13,11 +13,13 @@
 // RUN: llvm-profdata show --all-functions %t.profdata \
 // RUN:   | FileCheck %s --check-prefix=PROF
 //
-// Device functions should appear with non-zero counters.
-// PROF-DAG: _Z8classifyi
+// Device functions should appear with non-zero counters. The __device__
+// classify() helper is inlined into the histogram kernel, so it does not get a
+// separate profile record; its branching is captured within the kernel's
+// counters instead.
 // PROF-DAG: _Z9histogramPKiPii
 // PROF-DAG: main
-// PROF: Total functions: 3
+// PROF: Total functions: 2
 // PROF: Maximum function count: {{[1-9][0-9]*}}
 
 #include <hip/hip_runtime.h>
