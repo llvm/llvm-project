@@ -848,9 +848,8 @@ template <class LP> void Writer::createLoadCommands() {
 
   if (config->emitChainedFixups) {
     in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
-    if (in.exports->isNeeded()) {
+    if (config->outputType != MH_KEXT_BUNDLE)
       in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
-    }
   } else if (config->outputType != MH_KEXT_BUNDLE) {
     in.header->addLoadCommand(make<LCDyldInfo>(
         in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
@@ -1420,19 +1419,21 @@ void macho::createSyntheticSections() {
       in.getOrCreateCStringSection(section_names::objcMethname,
                                    /*forceDedupStrings=*/true));
   in.wordLiteralSection = make<WordLiteralSection>();
-  if (config->emitChainedFixups) {
+  if (config->emitChainedFixups)
     in.chainedFixups = make<ChainedFixupsSection>();
-  } else if (config->outputType != MH_KEXT_BUNDLE) {
+  else if (config->outputType != MH_KEXT_BUNDLE) {
     in.rebase = make<RebaseSection>();
     in.binding = make<BindingSection>();
     in.weakBinding = make<WeakBindingSection>();
     in.lazyBinding = make<LazyBindingSection>();
     in.lazyPointers = make<LazyPointerSection>();
     in.stubHelper = make<StubHelperSection>();
-    in.exports = make<ExportSection>();
   }
   if (config->outputType == MH_KEXT_BUNDLE) {
-    in.localRelocs = make<LocalRelocSection>();
+    if (!config->emitChainedFixups)
+      in.localRelocs = make<LocalRelocSection>();
+  } else {
+    in.exports = make<ExportSection>();
   }
   in.got = make<GotSection>();
   if (config->outputType != MH_KEXT_BUNDLE) {
@@ -1444,9 +1445,8 @@ void macho::createSyntheticSections() {
   in.objCImageInfo = make<ObjCImageInfoSection>();
   in.initOffsets = make<InitOffsetsSection>();
   in.objcMethList = make<ObjCMethListSection>();
-  if (config->outputType == MH_KEXT_BUNDLE) {
+  if (config->outputType == MH_KEXT_BUNDLE)
     in.extRelocs = make<ExternalRelocSection>();
-  }
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
