@@ -65,15 +65,26 @@ jobs:
         with:
           release-version: ${{ inputs.release-version }}
 
-  prepare:
-    name: Prepare to build documentation
+  release-documentation:
+    name: Build and Upload Release Documentation and Man Pages
+    environment:
+      name: release
+      deployment: false
     runs-on: ubuntu-24.04
-    if: github.repository_owner == 'llvm'
+    permissions:
+      contents: write
+    needs:
+      - release-man-pages-validate-input
     outputs:
+      man-page-digest: ${{ steps.man-page-digest.outputs.digest }}
+      man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
+
       man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
       man-page-tarball-name: ${{ steps.vars.outputs.man-page-tarball-name }}
       man-page-upload: ${{${{ steps.vars.outputs.man-page-upload }}
       man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
+    env:
+      upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Collect Variables
         id: vars
@@ -90,23 +101,6 @@ jobs:
             echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
           } >> "$GITHUB_OUT"
 
-  release-documentation:
-    name: Build and Upload Release Documentation and Man Pages
-    environment:
-      name: release
-      deployment: false
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    needs:
-      - release-man-pages-validate-input
-      - prepare
-    outputs:
-      man-page-digest: ${{ steps.man-page-digest.outputs.digest }}
-      man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
-    env:
-      upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
-    steps:
       - name: Checkout LLVM
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -144,7 +138,7 @@ jobs:
         id: man-page-digest
         shell: bash
         env:
-          TARBALL_NAME: ${{ needs.prepare.outputs.man-page-tarball-name }}
+          TARBALL_NAME: ${{ steps.vars.outputs.man-page-tarball-name }}
         run: |
             echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUT
 
@@ -152,7 +146,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           path: |
-            ${{ needs.prepare.outputs.man-page-tarball-name }}
+            ${{ steps.vars.outputs.man-page-tarball-name }}
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -192,7 +186,6 @@ jobs:
     name: "Upload Man Pages"
     runs-on: ubuntu-24.04
     needs:
-      - prepare
       - release-documentation
     if: >-
       github.event_name != 'pull_request'
@@ -206,10 +199,10 @@ jobs:
        id: man-page-artifact-upload
        uses: ./.github/workflows/upload-release-artifact
        with:
-         release-version: ${{ needs.prepare.outputs.man-page-release-version }}
+         release-version: ${{ needs.release-documentation.outputs.man-page-release-version }}
          artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
-         attestation-name: ${{ needs.prepare.outputs.man-page-attestation-name }}
+         attestation-name: ${{ needs.release-documentation.outputs.man-page-attestation-name }}
          digest: ${{ needs.release-documentation.outputs.man-page-digest }}
-         upload: ${{ needs.prepare.outputs.man-page-upload }}
+         upload: ${{ needs.release-documentation.outputs.man-page-upload }}
          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
