@@ -112,6 +112,20 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
   J.objectEnd();
 }
 
+template <typename Map>
+static StringRef closestOption(const Map &Options, StringRef Missing) {
+  uint32_t MaxEdit = 5;
+  StringRef Closest;
+  for (auto Key : Options.keys()) {
+    auto EditDist = Missing.edit_distance_insensitive(Key, true, MaxEdit);
+    if (EditDist < MaxEdit) {
+      Closest = Key;
+      MaxEdit = EditDist;
+    }
+  }
+  return Closest;
+}
+
 bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
                         LLVMContext &Ctx, vfs::FileSystem &FS) {
   if (InputFile.empty())
@@ -182,10 +196,15 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
             break;
           }
         } else if (!StringRef(ObjIt.first).ends_with(".description")) {
-          Ctx.diagnose(DiagnosticInfoInstrumentation(
-              Twine("configuration key '") + StringRef(ObjIt.first) +
-                  Twine("' not found and ignored"),
-              DS_Warning));
+          Twine NoMatchingMsg = Twine("configuration key '") +
+                                StringRef(ObjIt.first) +
+                                Twine("' not found and ignored");
+          StringRef Closest = closestOption(BCOMap, ObjIt.first);
+          Twine Diag =
+              NoMatchingMsg + (Closest.empty() ? Twine()
+                                               : Twine("; did you mean '") +
+                                                     Closest + Twine("'?"));
+          Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
       continue;
@@ -202,16 +221,27 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
       }
       auto *IO = IChoiceMap.lookup(ObjIt.first);
       if (!IO) {
-        Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine NoMatchingMsg =
             Twine("malformed JSON configuration, expected an object matching "
-                  "an instrumentor choice, got ") +
-                StringRef(ObjIt.first),
-            DS_Warning));
+                  "an instrumentor choice, got '") +
+            StringRef(ObjIt.first) + Twine("'");
+        StringRef Closest = closestOption(IChoiceMap, ObjIt.first);
+        Twine Diag = NoMatchingMsg +
+                     (Closest.empty()
+                          ? Twine()
+                          : Twine("; did you mean '") + Closest + Twine("'?"));
+        Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         continue;
       }
       SeenIOs.insert(IO);
       StringMap<bool> ValueMap, ReplaceMap;
       StringRef FilterStr;
+      StringSet<> IOOpts;
+      IOOpts.insert("enabled");
+      IOOpts.insert("filter");
+      for (auto &IRArg : IO->IRTArgs) {
+        IOOpts.insert(IRArg.Name);
+      }
       for (auto &InnerObjIt : *InnerObj) {
         auto Name = StringRef(InnerObjIt.first);
         if (Name == "filter") {
@@ -221,6 +251,17 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
           ReplaceMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
         } else {
           ValueMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
+        }
+        if (!IOOpts.contains(Name)) {
+          Twine NoMatchingMsg = Twine("unrecognized JSON property '") +
+                                StringRef(Name) + ("' in configuration for '") +
+                                IO->getName() + Twine("'");
+          StringRef Closest = closestOption(IOOpts, Name);
+          Twine Diag =
+              NoMatchingMsg + (Closest.empty() ? Twine()
+                                               : Twine("; did you mean '") +
+                                                     Closest + Twine("'?"));
+          Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
       IO->Enabled = ValueMap["enabled"];
