@@ -1422,18 +1422,18 @@ void macho::createSyntheticSections() {
   in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();
-  } else if (config->outputType == MH_KEXT_BUNDLE) {
-    in.extRelocs = make<ExternalRelocSection>();
-    in.localRelocs = make<LocalRelocSection>();
-  } else {
+  } else if (config->outputType != MH_KEXT_BUNDLE) {
     in.rebase = make<RebaseSection>();
     in.binding = make<BindingSection>();
     in.weakBinding = make<WeakBindingSection>();
     in.lazyBinding = make<LazyBindingSection>();
     in.lazyPointers = make<LazyPointerSection>();
     in.stubHelper = make<StubHelperSection>();
+    in.exports = make<ExportSection>();
   }
-  in.exports = make<ExportSection>();
+  if (config->outputType == MH_KEXT_BUNDLE) {
+    in.localRelocs = make<LocalRelocSection>();
+  }
   in.got = make<GotSection>();
   if (config->outputType != MH_KEXT_BUNDLE) {
     in.tlvPointers = make<TlvPointerSection>();
@@ -1444,6 +1444,9 @@ void macho::createSyntheticSections() {
   in.objCImageInfo = make<ObjCImageInfoSection>();
   in.initOffsets = make<InitOffsetsSection>();
   in.objcMethList = make<ObjCMethListSection>();
+  if (config->outputType == MH_KEXT_BUNDLE) {
+    in.extRelocs = make<ExternalRelocSection>();
+  }
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.

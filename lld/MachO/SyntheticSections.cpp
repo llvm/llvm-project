@@ -141,10 +141,10 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MH_DYLIB && config->applicationExtension)
     hdr->flags |= MH_APP_EXTENSION_SAFE;
 
-  if (in.exports->hasWeakSymbol || hasNonWeakDefinition())
+  if (in.exports && (in.exports->hasWeakSymbol || hasNonWeakDefinition()))
     hdr->flags |= MH_WEAK_DEFINES;
 
-  if (in.exports->hasWeakSymbol || hasWeakBinding())
+  if (in.exports && (in.exports->hasWeakSymbol || hasWeakBinding()))
     hdr->flags |= MH_BINDS_TO_WEAK;
 
   for (const OutputSegment *seg : outputSegments) {
