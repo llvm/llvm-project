@@ -6248,8 +6248,8 @@ static void CheckAbstractClassUsage(AbstractUsageInfo &Info,
     if (D->isImplicit()) continue;
 
     // Step through friends to the befriended declaration.
-    if (D->getKind() == Decl::Friend) {
-      D = cast<FriendDecl>(D)->getFriendDecl();
+    if (auto *FD = dyn_cast<FriendDecl>(D)) {
+      D = FD->getFriendDecl();
       if (!D) continue;
     }
 
@@ -7367,9 +7367,9 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
       if (!isa<CXXDestructorDecl>(M))
         CompleteMemberFunction(M);
-    } else if (D->getKind() == Decl::Friend) {
+    } else if (auto *F = dyn_cast<FriendDecl>(D)) {
       CheckForDefaultedFunction(
-          dyn_cast_or_null<FunctionDecl>(cast<FriendDecl>(D)->getFriendDecl()));
+          dyn_cast_or_null<FunctionDecl>(F->getFriendDecl()));
     }
   }
 
