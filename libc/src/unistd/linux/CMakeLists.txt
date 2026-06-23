@@ -342,10 +342,11 @@ add_entrypoint_object(
   HDRS
     ../isatty.h
   DEPENDS
-    libc.hdr.unistd_macros
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_ioctl
-    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
 
