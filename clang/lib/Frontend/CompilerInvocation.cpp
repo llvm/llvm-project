@@ -32,6 +32,7 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -133,7 +134,8 @@ CompilerInvocationBase::CompilerInvocationBase()
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
       DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
-      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()),
+      SSAFOpts(std::make_shared<ssaf::SSAFOptions>()) {}
 
 CompilerInvocationBase &
 CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
@@ -151,6 +153,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
     DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
     PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
+    SSAFOpts = make_shared_copy(X.getSSAFOpts());
   }
   return *this;
 }
@@ -171,6 +174,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+    SSAFOpts = X.SSAFOpts;
   }
   return *this;
 }
@@ -235,6 +239,10 @@ FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
 
 FrontendOptions &CowCompilerInvocation::getMutFrontendOpts() {
   return ensureOwned(FrontendOpts);
+}
+
+ssaf::SSAFOptions &CowCompilerInvocation::getMutSSAFOpts() {
+  return ensureOwned(SSAFOpts);
 }
 
 DependencyOutputOptions &CowCompilerInvocation::getMutDependencyOutputOpts() {
@@ -1032,6 +1040,30 @@ static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
   }
 
   // Nothing to generate for FullCompilerInvocation.
+}
+
+static void GenerateSSAFArgs(const ssaf::SSAFOptions &Opts,
+                             ArgumentConsumer Consumer) {
+  const ssaf::SSAFOptions *SSAFOpts = &Opts;
+
+#define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
+#include "clang/Options/Options.inc"
+#undef SSAF_OPTION_WITH_MARSHALLING
+}
+
+static bool ParseSSAFArgs(ssaf::SSAFOptions &Opts, ArgList &Args,
+                          DiagnosticsEngine &Diags) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
+  ssaf::SSAFOptions *SSAFOpts = &Opts;
+
+#define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Options/Options.inc"
+#undef SSAF_OPTION_WITH_MARSHALLING
+
+  return Diags.getNumErrors() == NumErrorsBefore;
 }
 
 static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
@@ -5083,6 +5115,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
+  ParseSSAFArgs(Res.getSSAFOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
@@ -5435,6 +5468,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
   GenerateMigratorArgs(getMigratorOpts(), Consumer);
   GenerateAnalyzerArgs(getAnalyzerOpts(), Consumer);
+  GenerateSSAFArgs(getSSAFOpts(), Consumer);
   GenerateDiagnosticArgs(getDiagnosticOpts(), Consumer,
                          /*DefaultDiagColor=*/false);
   GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);
