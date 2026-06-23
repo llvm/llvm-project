@@ -794,13 +794,10 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
     // value does not depend on the load's operands, so reaching a load here
     // (only possible via its mask operand) would be a false positive.
     for (VPUser *U : Cur->users()) {
-      auto *SDR = dyn_cast<VPSingleDefRecipe>(U);
-      if (!SDR)
+      if (match(U, m_VPInstruction<Instruction::Load>()))
         continue;
-      auto *VPI = dyn_cast<VPInstruction>(U);
-      if (VPI && VPI->getOpcode() == Instruction::Load)
-        continue;
-      WorkList.push_back(SDR);
+      if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
+        WorkList.push_back(SDR);
     }
   }
   return false;
