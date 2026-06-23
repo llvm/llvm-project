@@ -147,6 +147,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangLex
   clangStaticAnalyzerCore
