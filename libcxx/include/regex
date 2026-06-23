@@ -1140,7 +1140,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator
   // which the fixed-size logic below could not handle.
   typename string_type::size_type __sep = __d.find('.');
   if (__sep != string_type::npos)
-	  __d.erase(__sep, string_type::npos);
+    __d.erase(__sep, string_type::npos);
 #    else
   switch (__d.size()) {
   case 1:
