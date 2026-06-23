@@ -2834,6 +2834,7 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -2979,6 +2980,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3134,6 +3136,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
