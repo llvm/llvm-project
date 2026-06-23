@@ -16,7 +16,7 @@
 #include "hsa.h"
 
 #ifndef __cplusplus
-#  include <stdbool.h>
+#include <stdbool.h>
 #endif
 
 #define HSA_AMD_INTERFACE_VERSION_MAJOR 1

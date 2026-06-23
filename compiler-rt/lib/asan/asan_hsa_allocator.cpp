@@ -14,16 +14,16 @@
 
 #if SANITIZER_AMDHSA
 
-#  include "asan_allocator.h"
-#  include "asan_hsa_allocator.h"
-#  include "asan_interceptors.h"
-#  include "asan_internal.h"
-#  include "asan_mapping.h"
-#  include "asan_poisoning.h"
-#  include "asan_report.h"
-#  include "sanitizer_common/sanitizer_allocator_checks.h"
-#  include "sanitizer_common/sanitizer_errno.h"
-#  include "sanitizer_common/sanitizer_hsa.h"
+#include "asan_allocator.h"
+#include "asan_hsa_allocator.h"
+#include "asan_interceptors.h"
+#include "asan_internal.h"
+#include "asan_mapping.h"
+#include "asan_poisoning.h"
+#include "asan_report.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
+#include "sanitizer_common/sanitizer_errno.h"
+#include "sanitizer_common/sanitizer_hsa.h"
 
 namespace __asan {
 
@@ -51,13 +51,13 @@ DECLARE_REAL(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
 // Always align to page boundary to match current ROCr behavior.
 static const size_t kPageSize_ = 4096;
 
-#  if SANITIZER_CAN_USE_ALLOCATOR64
+#if SANITIZER_CAN_USE_ALLOCATOR64
 static_assert(AP64<LocalAddressSpaceView>::kMetadataSize == 0,
               "HSA IPC/VMem wrappers require zero allocator metadata");
-#  else
+#else
 static_assert(AP32<LocalAddressSpaceView>::kMetadataSize == 0,
               "HSA IPC/VMem wrappers require zero allocator metadata");
-#  endif
+#endif
 
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
     hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void** ptr,
@@ -122,8 +122,7 @@ hsa_status_t asan_hsa_amd_ipc_memory_attach(const hsa_amd_ipc_memory_t* handle,
       PoisonShadow(tail_beg, mapped_end - tail_beg, kAsanHeapLeftRedzoneMagic);
 
     uptr size_rounded_down = RoundDownTo(len, ASAN_SHADOW_GRANULARITY);
-    if (size_rounded_down)
-      PoisonShadow(user_beg, size_rounded_down, 0);
+    if (size_rounded_down) PoisonShadow(user_beg, size_rounded_down, 0);
 
     if (len != size_rounded_down && CanPoisonMemory()) {
       u8* shadow = (u8*)MemToShadow(user_beg + size_rounded_down);
@@ -173,8 +172,7 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
     return REAL(hsa_amd_vmem_address_reserve_align)(ptr, size, address,
                                                     alignment, flags);
 
-  if (alignment < kPageSize_)
-    alignment = kPageSize_;
+  if (alignment < kPageSize_) alignment = kPageSize_;
 
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;

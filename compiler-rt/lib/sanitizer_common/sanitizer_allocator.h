@@ -25,7 +25,7 @@
 #include "sanitizer_type_traits.h"
 
 #if SANITIZER_AMDHSA
-#  include "sanitizer_common/sanitizer_hsa.h"
+#include "sanitizer_common/sanitizer_hsa.h"
 #endif
 
 namespace __sanitizer {
