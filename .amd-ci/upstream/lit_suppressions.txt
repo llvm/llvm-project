@@ -18,3 +18,7 @@ AddressSanitizer-i386-linux-dynamic :: TestCases/strcat-overlap.cpp
 # Intermittent hardware topology detection failure.
 # "KMP_HW_SUBSET ignored: all hardware resources would be filtered"
 libomp :: affinity/kmp-abs-hw-subset.c
+
+# libcxx/test/std/time/time.zone/time.zone.timezone/time.zone.members/sys_info.zdump.pass.cpp
+# System timezone database inconsistencies (RHEL8).
+llvm-libc++-shared.cfg.in :: std/time/time.zone/time.zone.timezone/time.zone.members/sys_info.zdump.pass.cpp
