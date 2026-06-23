@@ -1871,6 +1871,13 @@ static bool ScopeHasCUDAModuleVariables(const Scope &scope) {
       if (object->cudaDataAttr()) {
         return true;
       }
+      const DeclTypeSpec *type{object->type()};
+      const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+      if (derived &&
+          FindUltimateComponent(*derived,
+              [](const Symbol &component) { return HasCUDAAttr(component); })) {
+        return true;
+      }
     }
   }
   return false;
