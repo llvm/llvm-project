@@ -31,6 +31,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -99,7 +100,7 @@ ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
 
 OperandRange transform::AlternativesOp::getEntrySuccessorOperands(
     RegionSuccessor successor) {
-  if (!successor.isParent() && getOperation()->getNumOperands() == 1)
+  if (!successor.isOperation() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -117,12 +118,12 @@ void transform::AlternativesOp::getSuccessorRegions(
     regions.emplace_back(&alternative);
   }
   if (!point.isParent())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getOperation()->getResults();
   return successor.getSuccessor()->getArguments();
 }
@@ -324,47 +325,8 @@ DiagnosedSilenceableFailure transform::ApplyDeadCodeEliminationOp::applyToOne(
   if (!payloadCheck.succeeded())
     return payloadCheck;
 
-  // Maintain a worklist of potentially dead ops.
-  SetVector<Operation *> worklist;
-
-  // Helper function that adds all defining ops of used values (operands and
-  // operands of nested ops).
-  auto addDefiningOpsToWorklist = [&](Operation *op) {
-    op->walk([&](Operation *op) {
-      for (Value v : op->getOperands())
-        if (Operation *defOp = v.getDefiningOp())
-          if (target->isProperAncestor(defOp))
-            worklist.insert(defOp);
-    });
-  };
-
-  // Helper function that erases an op.
-  auto eraseOp = [&](Operation *op) {
-    // Remove op and nested ops from the worklist.
-    op->walk([&](Operation *op) {
-      const auto *it = llvm::find(worklist, op);
-      if (it != worklist.end())
-        worklist.erase(it);
-    });
-    rewriter.eraseOp(op);
-  };
-
-  // Initial walk over the IR.
-  target->walk<WalkOrder::PostOrder>([&](Operation *op) {
-    if (op != target && isOpTriviallyDead(op)) {
-      addDefiningOpsToWorklist(op);
-      eraseOp(op);
-    }
-  });
-
-  // Erase all ops that have become dead.
-  while (!worklist.empty()) {
-    Operation *op = worklist.pop_back_val();
-    if (!isOpTriviallyDead(op))
-      continue;
-    addDefiningOpsToWorklist(op);
-    eraseOp(op);
-  }
+  for (Region &region : target->getRegions())
+    eliminateTriviallyDeadOps(rewriter, region);
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -1749,12 +1711,12 @@ void transform::ForeachOp::getSuccessorRegions(
              &getBody() &&
          "unexpected region index");
   regions.emplace_back(bodyRegion);
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange transform::ForeachOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults())
-                              : ValueRange(getBody().getArguments());
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getBody().getArguments());
 }
 
 OperandRange
@@ -3004,14 +2966,14 @@ void transform::SequenceOp::getSuccessorRegions(
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::SequenceOp::getSuccessorInputs(RegionSuccessor successor) {
   if (getNumOperands() == 0)
     return ValueRange();
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }

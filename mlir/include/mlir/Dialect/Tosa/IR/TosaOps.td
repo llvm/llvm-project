@@ -116,6 +116,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -161,6 +162,7 @@ def Tosa_AvgPool2dAdaptiveOp
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -453,6 +455,44 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul", [NoMemoryEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: matmul_t
+//===----------------------------------------------------------------------===//
+def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
+  let summary = "Matrix multiplication with transposed B operator.";
+
+  let description = [{
+    Performs two dimensional matrix multiplications. `A` matrix is of shape
+    `N x H x C`. `B` matrix is of shape `D x W x C`. This is effectively a
+    matrix multiply of `A` by the transposed `B` matrix. If the batched 
+    dimension of input `B` is of size 1, the `B` matrix is broadcast.
+  }];
+
+  let arguments = (ins Tosa_Tensor3D:$a, Tosa_Tensor3D:$b,
+      Tosa_ScalarIntOrFloatTensor:$a_zp, Tosa_ScalarIntOrFloatTensor:$b_zp);
+
+  let results = (outs Tosa_Tensor3D:$output);
+
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
+                  Tosa_EXT_BF16]>,
+  ];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getAZeroPoint();
+    FailureOr<int64_t> getBZeroPoint();
+    LogicalResult verifyAZeroPoint(int64_t zp);
+    LogicalResult verifyBZeroPoint(int64_t zp);
+  }];
+
+  let builders = [Tosa_MatMulTOpQuantInfoBuilder];
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: matmul_t_block_scaled
 //===----------------------------------------------------------------------===//
 def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", [NoMemoryEffect]> {
@@ -536,7 +576,7 @@ def Tosa_MaxPool2dAdaptiveOp
     This performs a max pooling over the given input tensor. A sliding window of
     size given by <kernel size> is passed over the input tensor, with the
     maximum value being placed in the output tensor.
-    Compared to MAX_POOL2D, MAX_POOL2D_ADAPTIVE has the kernel, stride, 
+    Compared to MAX_POOL2D, MAX_POOL2D_ADAPTIVE has the kernel, stride,
     pad arguments as inputs rather than attributes.
   }];
 
@@ -557,6 +597,7 @@ def Tosa_MaxPool2dAdaptiveOp
   ];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -2204,7 +2245,6 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat", [Pure]> {
   ];
 
   let hasCanonicalizer = 1;
-  let hasFolder = 1;
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -2349,8 +2389,12 @@ def Tosa_ReshapeBlockScaledOp
 // Operator: reverse
 //===----------------------------------------------------------------------===//
 def Tosa_ReverseOp: Tosa_Op<"reverse", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, Pure]> {
+      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                ["inferReturnTypeComponents"]>,
+      SameOperandsAndResultRank,
+      SameOperandsAndResultShape,
+      SameOperandsAndResultElementType,
+      Pure]> {
   let summary = "Reverse operator.";
 
   let description = [{
@@ -2520,6 +2564,42 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather", [NoMemoryEffect]> {
     Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: row_gather
+//===----------------------------------------------------------------------===//
+def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
+  let summary = "Row gather operation.";
+
+  let description = [{
+    Generate a tensor based on the input indices and row_count. The number of
+    consecutive rows gathered for each index is specified in row_count. N is 
+    the number of batches, W is the number of indices in each batch, K is
+    the range of each index, and C is the number of data channels for each
+    index. The values tensor has shape [N, K, C] and the output tensor has shape
+    [N, W * row_count, C].
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    indices are out of range.
+  }];
+
+  let arguments = (ins Tosa_Tensor3D:$values, Tosa_IndexTensor2D:$indices,
+      Tosa_ScalarInt32Tensor:$row_count);
+
+  let results = (outs Tosa_Tensor3D:$output);
+
+  list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+                                     Extension<[Tosa_EXT_FP8E4M3,
+                                                Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+                                                Tosa_EXT_INT64]>,
+  ];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
   let assemblyFormat =

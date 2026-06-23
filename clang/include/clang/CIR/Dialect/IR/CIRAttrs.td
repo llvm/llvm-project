@@ -538,45 +538,55 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "cir::DataMemberType">:$type,
                         OptionalParameter<
-                            "std::optional<unsigned>">:$member_index);
+                            "mlir::DenseI32ArrayAttr">:$member_path);
   let description = [{
     A data member attribute is a literal attribute that represents a constant
     pointer-to-data-member value.
 
-    The `member_index` parameter represents the index of the pointed-to member
-    within its containing record. It is an optional parameter; lack of this
-    parameter indicates a null pointer-to-data-member value.
+    The `member_path` parameter is a GEP-like sequence of field indices
+    navigating from `classTy` down to the pointed-to member.  An absent
+    `member_path` represents a null pointer-to-data-member.
 
-    Example:
+    Examples:
     ```
-    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+    // int Point::*p = &Point::z  (z is field 2)
+    #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_Point>
 
-    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    // int Derived::*p = &Derived::x  (Base subobject at [0], x at [0])
+    #cir.data_member<[0, 0]> : !cir.data_member<!s32i in !rec_Derived>
+
+    // null
+    #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
     ```
   }];
 
   let builders = [
+    // Null pointer-to-data-member.
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
-      return $_get(type.getContext(), type, std::nullopt);
+      return $_get(type.getContext(), type, mlir::DenseI32ArrayAttr{});
     }]>,
+    // Non-null pointer-to-data-member with an explicit field-index path.
     AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
-                                        "unsigned":$member_index), [{
-      return $_get(type.getContext(), type, member_index);
+                                       "llvm::ArrayRef<int32_t>":$path), [{
+      return $_get(type.getContext(), type,
+                   mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
   ];
 
-  // This attribute gets lowered during CXXABILowering
+  // This attribute gets lowered during CXXABILowering.
   let hasAttrToValueLowering = 0;
 
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
-    `<` ($member_index^):(`null`)? `>`
+    `<` custom<DataMemberPath>($member_path) `>`
   }];
 
   let extraClassDeclaration = [{
-    bool isNullPtr() const {
-      return !getMemberIndex().has_value();
+    bool isNullPtr() const { return !getMemberPath(); }
+    llvm::ArrayRef<int32_t> getPath() const {
+      assert(!isNullPtr() && "getPath() called on null data member pointer");
+      return getMemberPath().asArrayRef();
     }
   }];
 }
@@ -995,6 +1005,11 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
     }
   }];
 }
+
+// Used by OpenCL kernel argument metadata for the addr_space field.
+def CIR_LangAddressSpaceArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_LangAddressSpaceAttr,
+                             "language address space array attribute">;
 
 //===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
@@ -1454,25 +1469,32 @@ def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
 // CIR_BlockAddrInfoAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
-  let summary = "Block Addres attribute";
+def CIR_BlockAddrInfoAttr
+    : CIR_ValueLikeAttr<"BlockAddrInfo", "block_addr_info"> {
+  let summary = "Block address attribute";
   let description = [{
     This attribute is used to represent the address of a basic block
     within a function. It combines the symbol reference to a function
     with the name of a label inside that function.
   }];
-  let parameters = (ins "mlir::FlatSymbolRefAttr":$func,
-                        "mlir::StringAttr":$label);
+  let parameters = (ins
+      AttributeSelfTypeParameter<
+          "", "cir::PointerType",
+          "cir::PointerType::get(cir::VoidType::get($_ctxt))">:$type,
+      "mlir::FlatSymbolRefAttr":$func,
+      "mlir::StringAttr":$label);
 
   let assemblyFormat = "`<` $func `,` $label `>`";
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$func_name,
-                     "llvm::StringRef":$label_name
-                     ), [{
-      return $_get($_ctxt, mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                     "llvm::StringRef":$label_name), [{
+      return $_get($_ctxt,
+                   cir::PointerType::get(cir::VoidType::get($_ctxt)),
+                   mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
                    mlir::StringAttr::get($_ctxt, label_name));
     }]>
   ];
+
   let canHaveIllegalCXXABIType = 0;
 }
 
@@ -1528,6 +1550,65 @@ def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
   let parameters = (ins "mlir::StringAttr":$name);
   let assemblyFormat = "`<` $name `>`";
   let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// ThreadLocalGlobalWrapperInitAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_ThreadLocalGlobalWrapperInitAttr : CIR_Attr<
+    "ThreadLocalGlobalWrapperInit", "tls_wrapper_init"> {
+    let summary = "Wrapper and Init function names for thread local variables";
+    let description = [{
+      Contains the mangled name of the wrapper function, init function, and
+      guard variable for a namespace/global scope thread local variable. The
+      guard variable is optional, as it is only required for unordered thread
+      local variables, as ordered thread local variables share a guard.
+
+      Unordered global thread local variables (such as variable template
+      instantiations) are individually initialized when first used on a thread.
+      Ordered global thread local variables are ALL initialized together when
+      any that require initialization are referenced.
+
+      This is accomplished by rewriting all calls to these variables as calls to
+      the wrapper.  If the variable requires initialization, the wrapper calls
+      the init function, then returns the global variable reference.
+
+      Throughout CIR though, these are just represented as normal `get_global`
+      calls to `global`s with `ctor`/`dtor` regions (if necessary).  The
+      lowering-prepare pass manages the generation of the wrapper,x
+      initialization, and call rewrites.
+
+      Example:
+      ```
+      cir.global tls_dyn dyn_tls_refs = <"_ZTW7tls_var", "_ZTH7tls_var"> @_ZZZ7tls_var = ...
+      ...
+      cir.get_global thread_local @ZZZ7tls_var : !cir.ptr<!s32i>
+      ```
+    }];
+    let parameters = (ins
+        "mlir::StringAttr" : $wrapper_name,
+        "mlir::StringAttr" : $init_name,
+        OptionalParameter<"mlir::StringAttr">: $guard_name
+        );
+
+    let builders = [
+      AttrBuilder<(ins "llvm::StringRef"
+                   : $wrapper, "llvm::StringRef"
+                   : $init, "llvm::StringRef"
+                   : $guard),
+                  [{
+                    mlir::StringAttr guardAttr;
+                    if (!guard.empty())
+                      guardAttr = mlir::StringAttr::get($_ctxt, guard);
+                    return $_get($_ctxt, mlir::StringAttr::get($_ctxt, wrapper),
+                                 mlir::StringAttr::get($_ctxt, init),
+                                 guardAttr);
+                  }]>,
+    ];
+    let assemblyFormat =
+        "`<` $wrapper_name `,` $init_name (`,` $guard_name^)? `>`";
+    let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1625,9 +1706,10 @@ def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
 }
 
 def CIR_AnnotationArrayAttr
-    : TypedArrayAttrBase<CIR_AnnotationAttr,
-                         "array of cir.annotation attributes">;
+    : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
+                             "array of cir.annotation attributes">;
 
+include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

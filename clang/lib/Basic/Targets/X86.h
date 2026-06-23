@@ -391,7 +391,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     bool Only64Bit = getTriple().getArch() != llvm::Triple::x86;
     CPU = llvm::X86::parseArchX86(Name, Only64Bit);
     return CPU != llvm::X86::CK_None;
@@ -968,6 +968,8 @@ public:
       : WindowsX86_64TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LargeArrayMinWidth = 0;
+    LargeArrayAlign = 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -981,6 +983,9 @@ public:
   getCallingConvKind(bool ClangABICompat4) const override {
     return CCK_MicrosoftWin64;
   }
+
+  unsigned getMinGlobalAlign(uint64_t TypeSize,
+                             bool HasNonWeakDef) const override;
 };
 
 // x86-64 MinGW target

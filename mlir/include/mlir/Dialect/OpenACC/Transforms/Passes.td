@@ -79,7 +79,14 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
            "variables between combined constructs (e.g., 'parallel loop') and "
            "separate constructs (e.g., 'parallel' followed by 'loop'), where "
            "the OpenACC spec requires copy semantics for the former but "
-           "firstprivate would normally apply for the latter.">
+           "firstprivate would normally apply for the latter.">,
+    Option<"ignoreDefaultNone", "ignore-default-none", "bool", "false",
+           "When disabled (default), if the region has a default(none) clause, "
+           "this pass does not generate implicit data attributes. When enabled, "
+           "implicit data is generated even with default(none). This is useful "
+           "when the frontend has robust default(none) verification: user "
+           "variables are already verified, so any remaining live-ins are "
+           "variables that still need mapping handling.">
   ];
 }
 
@@ -168,6 +175,23 @@ def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
       "mlir::arith::ArithDialect"];
 }
 
+
+def ACCEmitRemarksLoop : Pass<"acc-emit-remarks-loop", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC loop parallelism mapping remarks";
+  let description = [{
+    This pass emits optimization remarks describing how loops inside OpenACC
+    compute regions are mapped to parallelism levels (gang, worker, vector,
+    sequential) and the corresponding GPU parallel dimensions.
+
+    The pass walks `acc.compute_region` operations that originated from OpenACC
+    compute constructs and reports remarks for each loop carrying an
+    `acc.par_dims` attribute.
+  }];
+  let options = [
+    Option<"gpuDimSeparator", "gpu-dim-separator", "std::string", "\".\"",
+           "Separator between GPU index prefix and axis name in remarks ">
+  ];
+}
 
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   let summary = "Tile OpenACC loops with tile clauses";

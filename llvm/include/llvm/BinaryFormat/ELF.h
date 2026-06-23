@@ -648,6 +648,7 @@ enum {
   EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
   EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
   EF_HEXAGON_ISA_V91 = 0x00000091,  // Hexagon V91 ISA
+  EF_HEXAGON_ISA_V93 = 0x00000093,  // Hexagon V93 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 
   // Tiny core flag, bit[15]
@@ -682,6 +683,7 @@ enum {
   EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
   EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
   EF_HEXAGON_MACH_V91 = EF_HEXAGON_ISA_V91,      // Hexagon V91
+  EF_HEXAGON_MACH_V93 = EF_HEXAGON_ISA_V93,      // Hexagon V93
 
   EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };
@@ -830,6 +832,7 @@ enum {
   X(0x53, EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")            \
   X(0x54, EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")                \
   X(0x55, EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152")                            \
+  X(0x57, EF_AMDGPU_MACH_AMDGCN_GFX1154, "gfx1154")                            \
   X(0x58, EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153")                            \
   X(0x59, EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")                \
   X(0x5a, EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251")                            \

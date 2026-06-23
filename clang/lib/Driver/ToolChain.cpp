@@ -93,6 +93,7 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
       CachedExceptionsMode(CalculateExceptionsMode(Args)) {
+  assert(T.str() == T.normalize() && "triple should be normalized");
   auto addIfExists = [this](path_list &List, const std::string &Path) {
     if (getVFS().exists(Path))
       List.push_back(Path);
@@ -516,8 +517,23 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerArgs
-ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
-  SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs, BoundArch BA,
+                            Action::OffloadKind DeviceOffloadKind) const {
+  // When -fno-gpu-sanitize is specified for GPU targets, don't emit
+  // diagnostics about unsupported sanitizers for specific GPU arches,
+  // since sanitizers are disabled for the GPU anyway.
+  bool DiagnoseBoundArchErrors =
+      BoundArchSanitizerArgsChecked.insert(BA.ArchName).second;
+  if (BA && getTriple().isGPU() &&
+      !JobArgs.hasFlag(options::OPT_fgpu_sanitize,
+                       options::OPT_fno_gpu_sanitize, true)) {
+    DiagnoseBoundArchErrors = false;
+  }
+
+  SanitizerArgs SanArgs(*this, JobArgs,
+                        /*DiagnoseErrors=*/!SanitizerArgsChecked,
+                        DiagnoseBoundArchErrors, BA, DeviceOffloadKind);
+
   SanitizerArgsChecked = true;
   return SanArgs;
 }
@@ -971,7 +987,10 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
     if ((OMPRuntime == Driver::OMPRT_OMP &&
          RuntimeLib == ToolChain::RLT_Libgcc) &&
         !getTriple().isKnownWindowsMSVCEnvironment()) {
-      CmdArgs.push_back("-latomic");
+      if (getTriple().isOSAIX())
+        CmdArgs.push_back("-lcompiler_rt");
+      else
+        CmdArgs.push_back("-latomic");
     }
   }
 }
@@ -1135,6 +1154,12 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     return getFallbackAndroidTargetPath(BaseDir);
 
   return {};
+}
+
+std::optional<std::string> ToolChain::getDefaultIntrinsicModuleDir() const {
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, "finclude", "flang");
+  return getTargetSubDirPath(P);
 }
 
 std::optional<std::string> ToolChain::getRuntimePath() const {
@@ -1312,6 +1337,60 @@ bool ToolChain::HasNativeLLVMSupport() const {
   return false;
 }
 
+LTOKind ToolChain::getDefaultLTOMode() const { return LTOK_None; }
+
+bool ToolChain::isUsingLTO(const llvm::opt::ArgList &Args,
+                           Action::OffloadKind Kind) const {
+  return getLTOMode(Args, Kind) != LTOK_None;
+}
+
+static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
+                            llvm::opt::OptSpecifier OptEq,
+                            llvm::opt::OptSpecifier OptNeg) {
+  if (!Args.hasFlag(OptEq, OptNeg, false))
+    return LTOK_None;
+
+  const Arg *A = Args.getLastArg(OptEq);
+  StringRef LTOName = A->getValue();
+
+  return llvm::StringSwitch<LTOKind>(LTOName)
+      .Case("full", LTOK_Full)
+      .Case("thin", LTOK_Thin)
+      .Case("none", LTOK_None)
+      .Default(LTOK_Unknown);
+}
+
+LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
+                              Action::OffloadKind Kind) const {
+  bool IsOffload = Kind != Action::OFK_None;
+  auto OptEq = IsOffload ? options::OPT_foffload_lto_EQ : options::OPT_flto_EQ;
+  auto OptNeg = IsOffload ? options::OPT_fno_offload_lto : options::OPT_fno_lto;
+
+  // -fopenmp-target-jit implies -foffload-lto=full for device compilations,
+  // overriding any explicit -fno-offload-lto.
+  if (IsOffload && Args.hasFlag(options::OPT_fopenmp_target_jit,
+                                options::OPT_fno_openmp_target_jit, false)) {
+    if (Arg *A = Args.getLastArg(OptEq, OptNeg))
+      if (parseLTOMode(Args, OptEq, OptNeg) != LTOK_Full)
+        getDriver().Diag(diag::err_drv_incompatible_options)
+            << A->getSpelling() << "-fopenmp-target-jit";
+    return LTOK_Full;
+  }
+
+  if (!Args.hasArg(OptEq, OptNeg))
+    return getDefaultLTOMode();
+
+  LTOKind Mode = parseLTOMode(Args, OptEq, OptNeg);
+
+  if (Mode == LTOK_Unknown) {
+    const Arg *A = Args.getLastArg(OptEq);
+    getDriver().Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
+    return LTOK_None;
+  }
+  return Mode;
+}
+
 bool ToolChain::isCrossCompiling() const {
   llvm::Triple HostTriple(LLVM_HOST_TRIPLE);
   switch (HostTriple.getArch()) {
@@ -1351,7 +1430,7 @@ bool ToolChain::isThreadModelSupported(const StringRef Model) const {
   return false;
 }
 
-std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
+std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
                                          types::ID InputType) const {
   switch (getTriple().getArch()) {
   default:
@@ -1405,8 +1484,9 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
 }
 
 std::string ToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                   BoundArch BA,
                                                    types::ID InputType) const {
-  return ComputeLLVMTriple(Args, InputType);
+  return ComputeLLVMTriple(Args, BA, InputType);
 }
 
 std::string ToolChain::computeSysRoot() const {
@@ -1419,7 +1499,7 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void ToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadKind) const {}
 
 void ToolChain::addClangCC1ASTargetOptions(const ArgList &Args,
@@ -1757,7 +1837,9 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
   return SmallVector<std::string>();
 }
 
-SanitizerMask ToolChain::getSupportedSanitizers() const {
+SanitizerMask
+ToolChain::getSupportedSanitizers(BoundArch BA,
+                                  Action::OffloadKind DeviceOffloadKind) const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
 
@@ -1797,7 +1879,7 @@ void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+ToolChain::getDeviceLibs(const ArgList &DriverArgs, BoundArch BA,
                          const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
@@ -1897,7 +1979,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
       llvm::Triple TT = normalizeOffloadTriple(A->getValue(0));
 
       // Passing device args: -Xopenmp-target=<triple> -opt=val.
-      if (TT.getTriple() == getTripleString())
+      if (TT.isCompatibleWith(getTriple()))
         Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
       else
         continue;
@@ -2017,7 +2099,7 @@ static bool isXArchCompatibleTripleArch(const llvm::Triple &TT,
 }
 
 llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
-    const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+    const llvm::opt::DerivedArgList &Args, BoundArch BA,
     Action::OffloadKind OFK,
     SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
@@ -2035,8 +2117,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
       Skip = IsDevice;
     } else if (A->getOption().matches(options::OPT_Xarch__)) {
       StringRef Val = A->getValue();
-      NeedTrans = Val == getArchName() ||
-                  (!BoundArch.empty() && Val == BoundArch) ||
+      NeedTrans = Val == getArchName() || (BA && Val == BA.ArchName) ||
                   isXArchCompatibleTripleArch(Triple, Val);
       Skip = !NeedTrans;
     }

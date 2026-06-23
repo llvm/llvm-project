@@ -267,10 +267,6 @@ public:
     Options.Update = Update;
   }
 
-  /// Allow generating valid, but non-deterministic output.
-  void setAllowNonDeterministicOutput(bool) override { /* Nothing to do. */
-  }
-
   /// Set whether to keep the enclosing function for a static variable.
   void setKeepFunctionForStatic(bool KeepFunctionForStatic) override {
     Options.KeepFunctionForStatic = KeepFunctionForStatic;
@@ -280,6 +276,9 @@ public:
   void setNumThreads(unsigned NumThreads) override {
     Options.Threads = NumThreads;
   }
+
+  /// The classic linker does not use a shared thread pool.
+  void setThreadPool(ThreadPoolInterface *Pool) override {}
 
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {

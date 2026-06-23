@@ -34,7 +34,8 @@ PipeWindows::PipeWindows()
 }
 
 PipeWindows::PipeWindows(pipe_t read, pipe_t write)
-    : m_read((HANDLE)read), m_write((HANDLE)write),
+    : m_read(reinterpret_cast<HANDLE>(read)),
+      m_write(reinterpret_cast<HANDLE>(write)),
       m_read_fd(PipeWindows::kInvalidDescriptor),
       m_write_fd(PipeWindows::kInvalidDescriptor) {
   assert(read != LLDB_INVALID_PIPE || write != LLDB_INVALID_PIPE);
@@ -103,6 +104,11 @@ Status PipeWindows::CreateNew(llvm::StringRef name) {
   if (INVALID_HANDLE_VALUE == m_read)
     return Status(::GetLastError(), eErrorTypeWin32);
   m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+  if (m_read_fd < 0) {
+    ::CloseHandle(m_read);
+    m_read = INVALID_HANDLE_VALUE;
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+  }
   ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
   m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
@@ -170,21 +176,31 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
 
   if (is_read) {
     m_read = ::CreateFileA(pipe_path.c_str(), GENERIC_READ, 0, &attributes,
-                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (INVALID_HANDLE_VALUE == m_read)
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+    if (m_read_fd < 0) {
+      ::CloseHandle(m_read);
+      m_read = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
     m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
   } else {
     m_write = ::CreateFileA(pipe_path.c_str(), GENERIC_WRITE, 0, &attributes,
-                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (INVALID_HANDLE_VALUE == m_write)
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_write_fd = _open_osfhandle((intptr_t)m_write, _O_WRONLY);
+    if (m_write_fd < 0) {
+      ::CloseHandle(m_write);
+      m_write = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_write_overlapped, sizeof(m_write_overlapped));
     m_write_overlapped.hEvent = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);

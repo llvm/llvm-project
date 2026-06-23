@@ -495,6 +495,8 @@ StringRef Triple::getOSTypeName(OSType Kind) {
     return "firmware";
   case QURT:
     return "qurt";
+  case H2:
+    return "h2";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -965,6 +967,7 @@ static Triple::OSType parseOS(StringRef OSName) {
       .StartsWith("chipstar", Triple::ChipStar)
       .StartsWith("firmware", Triple::Firmware)
       .StartsWith("qurt", Triple::QURT)
+      .StartsWith("h2", Triple::H2)
       .Default(Triple::UnknownOS);
 }
 
@@ -1741,9 +1744,12 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     } else if (Version.getMajor() < 25) {
       // darwin20-24 corresponds to macOS 11-15.
       Version = VersionTuple(11 + Version.getMajor() - 20);
-    } else {
-      // darwin25 corresponds with macOS26+.
+    } else if ((Version.getMajor() == 25) || (Version.getMajor() == 26)) {
+      // darwin25-26 corresponds to macOS 26-27.
       Version = VersionTuple(Version.getMajor() + 1);
+    } else {
+      // Starting with darwin27, it naturally corresponds to the same macOS
+      // version.
     }
     break;
   case MacOSX:
@@ -2639,6 +2645,12 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
       return VersionTuple(26, 0);
     if (!IsInValidRange)
       return Version.withMajorReplaced(Version.getMajor() + WatchOSRangeBump);
+    break;
+  }
+  case DriverKit: {
+    // DriverKit26 is canonicalized to 27.
+    if (Version.getMajor() == 26U)
+      return Version.withMajorReplaced(27);
     break;
   }
   default:

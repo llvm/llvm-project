@@ -884,31 +884,39 @@ public:
 /// is an integral constant expression (if known).
 struct EvaluatedStmt {
   /// Whether this statement was already evaluated.
-  bool WasEvaluated : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned WasEvaluated : 1;
 
   /// Whether this statement is being evaluated.
-  bool IsEvaluating : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsEvaluating : 1;
 
   /// Whether this variable is known to have constant initialization. This is
   /// currently only computed in C++, for static / thread storage duration
   /// variables that might have constant initialization and for variables that
   /// are usable in constant expressions.
-  bool HasConstantInitialization : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasConstantInitialization : 1;
 
   /// Whether this variable is known to have constant destruction. That is,
   /// whether running the destructor on the initial value is a side-effect
   /// (and doesn't inspect any state that might have changed during program
   /// execution). This is currently only computed if the destructor is
   /// non-trivial.
-  bool HasConstantDestruction : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasConstantDestruction : 1;
 
   /// In C++98, whether the initializer is an ICE. This affects whether the
   /// variable is usable in constant expressions.
-  bool HasICEInit : 1;
-  bool CheckedForICEInit : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasICEInit : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CheckedForICEInit : 1;
 
-  bool HasSideEffects : 1;
-  bool CheckedForSideEffects : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasSideEffects : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CheckedForSideEffects : 1;
 
   LazyDeclStmtPtr Value;
   APValue Evaluated;
@@ -1426,7 +1434,7 @@ public:
   APValue *evaluateValue() const;
 
 private:
-  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
                              bool IsConstantInitialization) const;
 
 public:
@@ -1728,6 +1736,10 @@ public:
   /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
+  /// Apply a deduced address space, if one isn't already set.
+  void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);
+  void deduceParmAddressSpace(const ASTContext &Ctxt);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
@@ -1762,16 +1774,7 @@ enum class ImplicitParamKind {
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
-public:
-  /// Create implicit parameter.
-  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, ImplicitParamKind ParamKind);
-  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
-                                   ImplicitParamKind ParamKind);
-
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
-
+protected:
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
@@ -1789,6 +1792,16 @@ public:
     setImplicit();
   }
 
+public:
+  /// Create implicit parameter.
+  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
+
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
   /// Returns the implicit parameter kind.
   ImplicitParamKind getParameterKind() const {
     return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
@@ -3117,6 +3130,10 @@ public:
   /// represents.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
+
+  /// True if both __host__ and __device__ are implicit attributes and this is
+  /// (or is a member of) an explicit template instantiation.
+  bool isImplicitHDExplicitInstantiation() const;
 
   /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.

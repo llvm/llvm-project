@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-predicateinfo < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<predicate-info>' < %s 2>&1 | FileCheck %s
 
 declare void @foo()
 declare void @llvm.assume(i1)

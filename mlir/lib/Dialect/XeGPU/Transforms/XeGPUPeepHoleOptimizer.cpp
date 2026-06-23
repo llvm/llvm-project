@@ -256,9 +256,11 @@ public:
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(
-        chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
-        "Expecting target chip to be pvc or bmg for transpose optimization.");
+    assert(chipStr &&
+           (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+            chipStr.value() == "cri") &&
+           "Expecting target chip to be pvc, bmg or cri for transpose "
+           "optimization.");
     const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
@@ -567,19 +569,32 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // This pass is only meant for PVC and BMG targets. If unsupported target
-    // is found, exit early.
+    // This pass is only meant for PVC, BMG or CRI targets. If unsupported
+    // target is found, exit early.
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+                      chipStr.value() == "cri"))
         isTargetSupported = true;
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC and BMG targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG targets."
              << "\n";
       return;
+    }
+
+    // Run array length optimization patterns first so that subsequent transpose
+    // peephole patterns operate on the array-length-optimized tensor descs.
+    {
+      RewritePatternSet arrayLenPatterns(&context);
+      xegpu::populateXeGPUArrayLengthOptimizationPatterns(arrayLenPatterns);
+      if (failed(applyPatternsGreedily(getOperation(),
+                                       std::move(arrayLenPatterns)))) {
+        DBGS() << "Array length optimization patterns failed.\n";
+        return signalPassFailure();
+      }
     }
 
     // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be

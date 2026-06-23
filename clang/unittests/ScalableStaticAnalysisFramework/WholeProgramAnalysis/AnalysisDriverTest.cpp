@@ -180,10 +180,6 @@ public:
   }
 };
 
-// These static registrations are safe without SSAFBuiltinTestForceLinker.h
-// because this translation unit is compiled directly into the test binary -
-// the linker cannot dead-strip it, so all static initializers are guaranteed
-// to run.
 static AnalysisRegistry::Add<Analysis1> RegAnalysis1("Analysis for Analysis1");
 
 class Analysis2 final
@@ -308,7 +304,8 @@ protected:
   std::unique_ptr<LUSummary> makeLUSummary() {
     NestedBuildNamespace NS(
         {BuildNamespace(BuildNamespaceKind::LinkUnit, "TestLU")});
-    return std::make_unique<LUSummary>(std::move(NS));
+    return std::make_unique<LUSummary>(llvm::Triple("arm64-apple-macosx"),
+                                       std::move(NS));
   }
 
   EntityId addEntity(LUSummary &LU, llvm::StringRef USR) {

@@ -117,8 +117,8 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
 /// corresponding to the symbol @c Sym.
 /// If none found, returns std::nullopt.
 static std::optional<unsigned>
-findArgIdxOfSymbol(ProgramStateRef CurrSt, const LocationContext *LCtx,
-                   SymbolRef &Sym, std::optional<CallEventRef<>> CE) {
+findArgIdxOfSymbol(ProgramStateRef CurrSt, const StackFrame *SF, SymbolRef &Sym,
+                   std::optional<CallEventRef<>> CE) {
   if (!CE)
     return std::nullopt;
 
@@ -157,7 +157,7 @@ static std::string findAllocatedObjectName(const Stmt *S, QualType QT) {
 }
 
 static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
-                                           const LocationContext *LCtx,
+                                           const StackFrame *SF,
                                            const RefVal &CurrV, SymbolRef &Sym,
                                            const Stmt *S,
                                            llvm::raw_string_ostream &os) {
@@ -165,7 +165,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
     // Get the name of the callee (if it is available)
     // from the tracked SVal.
-    SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), LCtx);
+    SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), SF);
     const FunctionDecl *FD = X.getAsFunctionDecl();
 
     // If failed, try to get it from AST.
@@ -184,7 +184,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   } else {
     assert(isa<ObjCMessageExpr>(S));
     CallEventRef<ObjCMethodCall> Call = Mgr.getObjCMethodCall(
-        cast<ObjCMessageExpr>(S), CurrSt, LCtx, {nullptr, 0});
+        cast<ObjCMessageExpr>(S), CurrSt, SF, {nullptr, 0});
 
     switch (Call->getMessageKind()) {
     case OCM_Message:
@@ -199,8 +199,8 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
-  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx, {nullptr, 0});
-  auto Idx = findArgIdxOfSymbol(CurrSt, LCtx, Sym, CE);
+  std::optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, SF, {nullptr, 0});
+  auto Idx = findArgIdxOfSymbol(CurrSt, SF, Sym, CE);
 
   // If index is not found, we assume that the symbol was returned.
   if (!Idx) {
@@ -303,15 +303,15 @@ private:
 
 /// Find the first node with the parent stack frame.
 static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
-  const StackFrameContext *SC = Pred->getStackFrame();
-  if (SC->inTopFrame())
+  const StackFrame *SF = Pred->getStackFrame();
+  if (SF->inTopFrame())
     return nullptr;
-  const StackFrameContext *PC = SC->getParent()->getStackFrame();
-  if (!PC)
+  const StackFrame *PSF = SF->getParent();
+  if (!PSF)
     return nullptr;
 
   const ExplodedNode *N = Pred;
-  while (N && N->getStackFrame() != PC) {
+  while (N && N->getStackFrame() != PSF) {
     N = N->getFirstPred();
   }
   return N;
@@ -422,7 +422,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   const ExplodedNode *PrevNode = N->getFirstPred();
   ProgramStateRef PrevSt = PrevNode->getState();
   ProgramStateRef CurrSt = N->getState();
-  const LocationContext *LCtx = N->getLocationContext();
+  const StackFrame *SF = N->getStackFrame();
 
   const RefVal* CurrT = getRefBinding(CurrSt, Sym);
   if (!CurrT)
@@ -447,9 +447,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   if (!PrevT) {
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
 
-    if (isa<ObjCIvarRefExpr>(S) &&
-        isSynthesizedAccessor(LCtx->getStackFrame())) {
-      S = LCtx->getStackFrame()->getCallSite();
+    if (isa<ObjCIvarRefExpr>(S) && isSynthesizedAccessor(SF)) {
+      S = SF->getCallSite();
     }
 
     if (isa<ObjCArrayLiteral>(S)) {
@@ -477,10 +476,10 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     } else if (isa<ObjCIvarRefExpr>(S)) {
       os << "Object loaded from instance variable";
     } else {
-      generateDiagnosticsForCallLike(CurrSt, LCtx, CurrV, Sym, S, os);
+      generateDiagnosticsForCallLike(CurrSt, SF, CurrV, Sym, S, os);
     }
 
-    PathDiagnosticLocation Pos(S, SM, N->getLocationContext());
+    PathDiagnosticLocation Pos(S, SM, N->getStackFrame());
     return std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
   }
 
@@ -508,16 +507,15 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
-        if (CurrSt->getSValAsScalarOrLoc(*AI, LCtx).getAsLocSymbol() != Sym)
+        if (CurrSt->getSValAsScalarOrLoc(*AI, SF).getAsLocSymbol() != Sym)
           continue;
 
         // We have an argument.  Get the effect!
         DeallocSent = true;
       }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
-      if (const Expr *receiver = ME->getInstanceReceiver()) {
-        if (CurrSt->getSValAsScalarOrLoc(receiver, LCtx)
-              .getAsLocSymbol() == Sym) {
+      if (const Expr *R = ME->getInstanceReceiver()) {
+        if (CurrSt->getSValAsScalarOrLoc(R, SF).getAsLocSymbol() == Sym) {
           // The symbol we are tracking is the receiver.
           DeallocSent = true;
         }
@@ -532,15 +530,14 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     return nullptr; // We have nothing to say!
 
   const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                                N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, sbuf);
 
   // Add the range by scanning the children of the statement for any bindings
   // to Sym.
   for (const Stmt *Child : S->children())
     if (const Expr *Exp = dyn_cast_or_null<Expr>(Child))
-      if (CurrSt->getSValAsScalarOrLoc(Exp, LCtx).getAsLocSymbol() == Sym) {
+      if (CurrSt->getSValAsScalarOrLoc(Exp, SF).getAsLocSymbol() == Sym) {
         P->addRange(Exp->getSourceRange());
         break;
       }
@@ -598,16 +595,16 @@ namespace {
 // Find the first node in the current function context that referred to the
 // tracked symbol and the memory location that value was stored to. Note, the
 // value is only reported if the allocation occurred in the same function as
-// the leak. The function can also return a location context, which should be
+// the leak. The function can also return a stack frame, which should be
 // treated as interesting.
 struct AllocationInfo {
   const ExplodedNode* N;
   const MemRegion *R;
-  const LocationContext *InterestingMethodContext;
-  AllocationInfo(const ExplodedNode *InN,
-                 const MemRegion *InR,
-                 const LocationContext *InInterestingMethodContext) :
-    N(InN), R(InR), InterestingMethodContext(InInterestingMethodContext) {}
+  const StackFrame *InterestingMethodStackFrame;
+  AllocationInfo(const ExplodedNode *InN, const MemRegion *InR,
+                 const StackFrame *InterestingMethodStackFrame)
+      : N(InN), R(InR),
+        InterestingMethodStackFrame(InterestingMethodStackFrame) {}
 };
 } // end anonymous namespace
 
@@ -616,15 +613,15 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   const ExplodedNode *AllocationNode = N;
   const ExplodedNode *AllocationNodeInCurrentOrParentContext = N;
   const MemRegion *FirstBinding = nullptr;
-  const LocationContext *LeakContext = N->getLocationContext();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
 
-  // The location context of the init method called on the leaked object, if
+  // The stack frame of the init method called on the leaked object, if
   // available.
-  const LocationContext *InitMethodContext = nullptr;
+  const StackFrame *InitMethodStackFrame = nullptr;
 
   while (N) {
     ProgramStateRef St = N->getState();
-    const LocationContext *NContext = N->getLocationContext();
+    const StackFrame *NStackFrame = N->getStackFrame();
 
     if (!getRefBinding(St, Sym))
       break;
@@ -637,7 +634,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       // Do not show local variables belonging to a function other than
       // where the error is reported.
       if (const auto *MR = R->getMemorySpaceAs<StackSpaceRegion>(St))
-        if (MR->getStackFrame() == LeakContext->getStackFrame())
+        if (MR->getStackFrame() == LeakStackFrame)
           FirstBinding = R;
     }
 
@@ -651,19 +648,20 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
     // the case where an allocation happens in a block that captures a reference
     // to it and that reference is overwritten/dropped by another call to
     // the block.
-    if (NContext == LeakContext || NContext->isParentOf(LeakContext))
+    if (NStackFrame == LeakStackFrame ||
+        NStackFrame->isParentOf(LeakStackFrame))
       AllocationNodeInCurrentOrParentContext = N;
 
     // Find the last init that was called on the given symbol and store the
-    // init method's location context.
-    if (!InitMethodContext)
+    // init method's stack frame.
+    if (!InitMethodStackFrame)
       if (auto CEP = N->getLocation().getAs<CallEnter>()) {
         const Stmt *CE = CEP->getCallExpr();
         if (const auto *ME = dyn_cast_or_null<ObjCMessageExpr>(CE)) {
           if (const Expr *RecExpr = ME->getInstanceReceiver()) {
-            SVal RecV = St->getSVal(RecExpr, NContext);
+            SVal RecV = St->getSVal(RecExpr, NStackFrame);
             if (ME->getMethodFamily() == OMF_init && RecV.getAsSymbol() == Sym)
-              InitMethodContext = CEP->getCalleeContext();
+              InitMethodStackFrame = CEP->getCalleeStackFrame();
           }
         }
       }
@@ -673,13 +671,13 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 
   // If we are reporting a leak of the object that was allocated with alloc,
   // mark its init method as interesting.
-  const LocationContext *InterestingMethodContext = nullptr;
-  if (InitMethodContext) {
+  const StackFrame *InterestingMethodStackFrame = nullptr;
+  if (InitMethodStackFrame) {
     const ProgramPoint AllocPP = AllocationNode->getLocation();
     if (std::optional<StmtPoint> SP = AllocPP.getAs<StmtPoint>())
       if (const ObjCMessageExpr *ME = SP->getStmtAs<ObjCMessageExpr>())
         if (ME->getMethodFamily() == OMF_alloc)
-          InterestingMethodContext = InitMethodContext;
+          InterestingMethodStackFrame = InitMethodStackFrame;
   }
 
   // If allocation happened in a function different from the leak node context,
@@ -687,12 +685,11 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
   assert(N && "Could not find allocation node");
 
   if (AllocationNodeInCurrentOrParentContext &&
-      AllocationNodeInCurrentOrParentContext->getLocationContext() !=
-      LeakContext)
+      AllocationNodeInCurrentOrParentContext->getStackFrame() != LeakStackFrame)
     FirstBinding = nullptr;
 
   return AllocationInfo(AllocationNodeInCurrentOrParentContext, FirstBinding,
-                        InterestingMethodContext);
+                        InterestingMethodStackFrame);
 }
 
 PathDiagnosticPieceRef
@@ -809,7 +806,7 @@ void RefLeakReport::deriveParamLocation(CheckerContext &Ctx) {
           PathDiagnosticLocation::create(PDecl, SMgr);
       Location = ParamLocation;
       UniqueingLocation = ParamLocation;
-      UniqueingDecl = Ctx.getLocationContext()->getDecl();
+      UniqueingDecl = Ctx.getStackFrame()->getDecl();
     }
   }
 }
@@ -832,7 +829,7 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx) {
 
   AllocNode = AllocI.N;
   AllocFirstBinding = AllocI.R;
-  markInteresting(AllocI.InterestingMethodContext);
+  markInteresting(AllocI.InterestingMethodStackFrame);
 
   // Get the SourceLocation for the allocation site.
   // FIXME: This will crash the analyzer if an allocation comes from an
@@ -846,13 +843,13 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx) {
   }
 
   PathDiagnosticLocation AllocLocation = PathDiagnosticLocation::createBegin(
-      AllocStmt, SMgr, AllocNode->getLocationContext());
+      AllocStmt, SMgr, AllocNode->getStackFrame());
   Location = AllocLocation;
 
   // Set uniqieing info, which will be used for unique the bug reports. The
   // leaks should be uniqued on the allocation site.
   UniqueingLocation = AllocLocation;
-  UniqueingDecl = AllocNode->getLocationContext()->getDecl();
+  UniqueingDecl = AllocNode->getStackFrame()->getDecl();
 }
 
 void RefLeakReport::createDescription(CheckerContext &Ctx) {

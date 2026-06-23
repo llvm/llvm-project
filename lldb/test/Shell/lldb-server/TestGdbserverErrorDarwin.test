@@ -1,0 +1,4 @@
+REQUIRES: system-darwin
+
+RUN: not %lldb-server gdbserver 2>&1 | FileCheck %s
+CHECK: gdbserver mode is not supported on Apple platforms. Use debugserver instead.

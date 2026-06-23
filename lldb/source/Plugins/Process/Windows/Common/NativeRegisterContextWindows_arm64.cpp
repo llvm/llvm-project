@@ -14,11 +14,11 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Host/windows/windows.h"
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -101,35 +101,78 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
       target_arch, RegisterInfoPOSIX_arm64::eRegsetMaskDefault);
 }
 
-static Status GetThreadContextHelper(lldb::thread_t thread_handle,
-                                     PCONTEXT context_ptr,
-                                     const DWORD control_flag) {
+static Status GetThreadContextLength(DWORD context_flags,
+                                     DWORD &context_length) {
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
 
-  memset(context_ptr, 0, sizeof(::CONTEXT));
-  context_ptr->ContextFlags = control_flag;
-  if (!::GetThreadContext(thread_handle, context_ptr)) {
+  if (InitializeContext(nullptr, context_flags, nullptr, &context_length)) {
+    error = Status::FromErrorString("InitializeContext succeeded unexpectedly");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} GetThreadContext failed with error {1}", __FUNCTION__,
+    LLDB_LOG(log,
+             "InitializeContext failed with unexpected error {0}, expected "
+             "ERROR_INSUFFICIENT_BUFFER",
              error);
     return error;
   }
+
+  return error;
+}
+
+static Status GetThreadContextHelper(lldb::thread_t thread_handle,
+                                     DWORD context_flags, PCONTEXT &context,
+                                     DataBufferHeap *context_buffer) {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+  DWORD context_length = 0;
+
+  if (!context_buffer) {
+    error = Status::FromErrorString("context buffer not allocated");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  error = GetThreadContextLength(context_flags, context_length);
+  if (error.Fail())
+    return error;
+
+  if (context_buffer->SetByteSize(context_length) != context_length) {
+    error = Status::FromErrorString("failed to resize context buffer");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (!InitializeContext(context_buffer->GetBytes(), context_flags, &context,
+                         &context_length)) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "InitializeContext failed with error {0}", error);
+    return error;
+  }
+
+  if (!::GetThreadContext(thread_handle, context)) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "GetThreadContext failed with error {0}", error);
+    return error;
+  }
+
   return Status();
 }
 
 static Status SetThreadContextHelper(lldb::thread_t thread_handle,
-                                     PCONTEXT context_ptr) {
+                                     PCONTEXT context) {
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
-  // It's assumed that the thread has stopped.
-  if (!::SetThreadContext(thread_handle, context_ptr)) {
+  if (!::SetThreadContext(thread_handle, context)) {
     error = Status(GetLastError(), eErrorTypeWin32);
-    LLDB_LOG(log, "{0} SetThreadContext failed with error {1}", __FUNCTION__,
-             error);
+    LLDB_LOG(log, "SetThreadContext failed with error {0}", error);
     return error;
   }
-  return Status();
+  return error;
 }
 
 std::unique_ptr<NativeRegisterContextWindows>
@@ -143,7 +186,8 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)) {
+          native_thread, CreateRegisterInfoInterface(target_arch)),
+      m_context(nullptr), m_context_buffer(nullptr) {
   // Currently, there is no API to query the maximum supported hardware
   // breakpoints and watchpoints on Windows. The values set below are based
   // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
@@ -171,10 +215,7 @@ NativeRegisterContextWindows_arm64::GetRegisterSet(uint32_t set_index) const {
 
 Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
                                                    RegisterValue &reg_value) {
-  ::CONTEXT tls_context;
-  DWORD context_flag = CONTEXT_CONTROL | CONTEXT_INTEGER;
-  Status error =
-      GetThreadContextHelper(GetThreadHandle(), &tls_context, context_flag);
+  Status error = CacheAllRegisterValues();
   if (error.Fail())
     return error;
 
@@ -208,23 +249,23 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
   case gpr_x26_arm64:
   case gpr_x27_arm64:
   case gpr_x28_arm64:
-    reg_value.SetUInt64(tls_context.X[reg - gpr_x0_arm64]);
+    reg_value.SetUInt64(m_context->X[reg - gpr_x0_arm64]);
     break;
 
   case gpr_fp_arm64:
-    reg_value.SetUInt64(tls_context.Fp);
+    reg_value.SetUInt64(m_context->Fp);
     break;
   case gpr_sp_arm64:
-    reg_value.SetUInt64(tls_context.Sp);
+    reg_value.SetUInt64(m_context->Sp);
     break;
   case gpr_lr_arm64:
-    reg_value.SetUInt64(tls_context.Lr);
+    reg_value.SetUInt64(m_context->Lr);
     break;
   case gpr_pc_arm64:
-    reg_value.SetUInt64(tls_context.Pc);
+    reg_value.SetUInt64(m_context->Pc);
     break;
   case gpr_cpsr_arm64:
-    reg_value.SetUInt32(tls_context.Cpsr);
+    reg_value.SetUInt32(m_context->Cpsr);
     break;
 
   case gpr_w0_arm64:
@@ -257,7 +298,7 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
   case gpr_w27_arm64:
   case gpr_w28_arm64:
     reg_value.SetUInt32(
-        static_cast<uint32_t>(tls_context.X[reg - gpr_w0_arm64] & 0xffffffff));
+        static_cast<uint32_t>(m_context->X[reg - gpr_w0_arm64] & 0xffffffff));
     break;
   }
 
@@ -267,11 +308,15 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
 Status
 NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
                                              const RegisterValue &reg_value) {
-  ::CONTEXT tls_context;
-  DWORD context_flag = CONTEXT_CONTROL | CONTEXT_INTEGER;
+  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  DWORD context_flags = CONTEXT_CONTROL | CONTEXT_INTEGER;
   auto thread_handle = GetThreadHandle();
-  Status error =
-      GetThreadContextHelper(thread_handle, &tls_context, context_flag);
+
+  Status error = GetThreadContextHelper(thread_handle, context_flags, context,
+                                        &context_buffer);
   if (error.Fail())
     return error;
 
@@ -305,23 +350,23 @@ NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
   case gpr_x26_arm64:
   case gpr_x27_arm64:
   case gpr_x28_arm64:
-    tls_context.X[reg - gpr_x0_arm64] = reg_value.GetAsUInt64();
+    context->X[reg - gpr_x0_arm64] = reg_value.GetAsUInt64();
     break;
 
   case gpr_fp_arm64:
-    tls_context.Fp = reg_value.GetAsUInt64();
+    context->Fp = reg_value.GetAsUInt64();
     break;
   case gpr_sp_arm64:
-    tls_context.Sp = reg_value.GetAsUInt64();
+    context->Sp = reg_value.GetAsUInt64();
     break;
   case gpr_lr_arm64:
-    tls_context.Lr = reg_value.GetAsUInt64();
+    context->Lr = reg_value.GetAsUInt64();
     break;
   case gpr_pc_arm64:
-    tls_context.Pc = reg_value.GetAsUInt64();
+    context->Pc = reg_value.GetAsUInt64();
     break;
   case gpr_cpsr_arm64:
-    tls_context.Cpsr = reg_value.GetAsUInt32();
+    context->Cpsr = reg_value.GetAsUInt32();
     break;
 
   case gpr_w0_arm64:
@@ -353,19 +398,16 @@ NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
   case gpr_w26_arm64:
   case gpr_w27_arm64:
   case gpr_w28_arm64:
-    tls_context.X[reg - gpr_w0_arm64] = reg_value.GetAsUInt32();
+    context->X[reg - gpr_w0_arm64] = reg_value.GetAsUInt32();
     break;
   }
 
-  return SetThreadContextHelper(thread_handle, &tls_context);
+  return SetThreadContextHelper(thread_handle, context);
 }
 
 Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
                                                    RegisterValue &reg_value) {
-  ::CONTEXT tls_context;
-  DWORD context_flag = CONTEXT_CONTROL | CONTEXT_FLOATING_POINT;
-  Status error =
-      GetThreadContextHelper(GetThreadHandle(), &tls_context, context_flag);
+  Status error = CacheAllRegisterValues();
   if (error.Fail())
     return error;
 
@@ -402,7 +444,7 @@ Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
   case fpu_v29_arm64:
   case fpu_v30_arm64:
   case fpu_v31_arm64:
-    reg_value.SetBytes(tls_context.V[reg - fpu_v0_arm64].B, 16,
+    reg_value.SetBytes(m_context->V[reg - fpu_v0_arm64].B, 16,
                        endian::InlHostByteOrder());
     break;
 
@@ -438,7 +480,7 @@ Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
   case fpu_s29_arm64:
   case fpu_s30_arm64:
   case fpu_s31_arm64:
-    reg_value.SetFloat(tls_context.V[reg - fpu_s0_arm64].S[0]);
+    reg_value.SetFloat(m_context->V[reg - fpu_s0_arm64].S[0]);
     break;
 
   case fpu_d0_arm64:
@@ -473,15 +515,15 @@ Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
   case fpu_d29_arm64:
   case fpu_d30_arm64:
   case fpu_d31_arm64:
-    reg_value.SetDouble(tls_context.V[reg - fpu_d0_arm64].D[0]);
+    reg_value.SetDouble(m_context->V[reg - fpu_d0_arm64].D[0]);
     break;
 
   case fpu_fpsr_arm64:
-    reg_value.SetUInt32(tls_context.Fpsr);
+    reg_value.SetUInt32(m_context->Fpsr);
     break;
 
   case fpu_fpcr_arm64:
-    reg_value.SetUInt32(tls_context.Fpcr);
+    reg_value.SetUInt32(m_context->Fpcr);
     break;
   }
 
@@ -491,11 +533,15 @@ Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
 Status
 NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
                                              const RegisterValue &reg_value) {
-  ::CONTEXT tls_context;
-  DWORD context_flag = CONTEXT_CONTROL | CONTEXT_FLOATING_POINT;
+  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  DWORD context_flags = CONTEXT_CONTROL | CONTEXT_FLOATING_POINT;
   auto thread_handle = GetThreadHandle();
-  Status error =
-      GetThreadContextHelper(thread_handle, &tls_context, context_flag);
+
+  Status error = GetThreadContextHelper(thread_handle, context_flags, context,
+                                        &context_buffer);
   if (error.Fail())
     return error;
 
@@ -532,7 +578,7 @@ NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
   case fpu_v29_arm64:
   case fpu_v30_arm64:
   case fpu_v31_arm64:
-    memcpy(tls_context.V[reg - fpu_v0_arm64].B, reg_value.GetBytes(), 16);
+    memcpy(context->V[reg - fpu_v0_arm64].B, reg_value.GetBytes(), 16);
     break;
 
   case fpu_s0_arm64:
@@ -567,7 +613,7 @@ NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
   case fpu_s29_arm64:
   case fpu_s30_arm64:
   case fpu_s31_arm64:
-    tls_context.V[reg - fpu_s0_arm64].S[0] = reg_value.GetAsFloat();
+    context->V[reg - fpu_s0_arm64].S[0] = reg_value.GetAsFloat();
     break;
 
   case fpu_d0_arm64:
@@ -602,19 +648,19 @@ NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
   case fpu_d29_arm64:
   case fpu_d30_arm64:
   case fpu_d31_arm64:
-    tls_context.V[reg - fpu_d0_arm64].D[0] = reg_value.GetAsDouble();
+    context->V[reg - fpu_d0_arm64].D[0] = reg_value.GetAsDouble();
     break;
 
   case fpu_fpsr_arm64:
-    tls_context.Fpsr = reg_value.GetAsUInt32();
+    context->Fpsr = reg_value.GetAsUInt32();
     break;
 
   case fpu_fpcr_arm64:
-    tls_context.Fpcr = reg_value.GetAsUInt32();
+    context->Fpcr = reg_value.GetAsUInt32();
     break;
   }
 
-  return SetThreadContextHelper(thread_handle, &tls_context);
+  return SetThreadContextHelper(thread_handle, context);
 }
 
 Status
@@ -677,52 +723,72 @@ Status NativeRegisterContextWindows_arm64::WriteRegister(
 
 Status NativeRegisterContextWindows_arm64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
-  const size_t data_size = REG_CONTEXT_SIZE;
-  data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
-  ::CONTEXT tls_context;
-  Status error =
-      GetThreadContextHelper(GetThreadHandle(), &tls_context, CONTEXT_ALL);
+  Log *log = GetLog(WindowsLog::Registers);
+
+  Status error = CacheAllRegisterValues();
   if (error.Fail())
     return error;
 
-  uint8_t *dst = data_sp->GetBytes();
-  ::memcpy(dst, &tls_context, data_size);
+  if (!m_context_buffer) {
+    error = Status::FromErrorString("register context buffer is not available");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  data_sp = std::make_shared<DataBufferHeap>(m_context_buffer->GetBytes(),
+                                             m_context_buffer->GetByteSize());
+
   return error;
 }
 
 Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
+  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
-  const size_t data_size = REG_CONTEXT_SIZE;
+
   if (!data_sp) {
-    error = Status::FromErrorStringWithFormat(
-        "NativeRegisterContextWindows_arm64::%s invalid data_sp provided",
-        __FUNCTION__);
+    error = Status::FromErrorString("invalid data_sp");
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
-  if (data_sp->GetByteSize() != data_size) {
+  DWORD context_flags = CONTEXT_ALL;
+  DWORD context_length = 0;
+
+  error = GetThreadContextLength(context_flags, context_length);
+  if (error.Fail())
+    return error;
+
+  if (data_sp->GetByteSize() != context_length) {
     error = Status::FromErrorStringWithFormatv(
         "data_sp contained mismatched data size, expected {0}, actual {1}",
-        data_size, data_sp->GetByteSize());
+        context_length, data_sp->GetByteSize());
+    LLDB_LOG(log, "{0}", error);
     return error;
   }
 
-  ::CONTEXT tls_context;
-  memcpy(&tls_context, data_sp->GetBytes(), data_size);
-  return SetThreadContextHelper(GetThreadHandle(), &tls_context);
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  error = GetThreadContextHelper(GetThreadHandle(), context_flags, context,
+                                 &context_buffer);
+  if (error.Fail())
+    return error;
+
+  ::memcpy(context_buffer.GetBytes(), data_sp->GetBytes(), context_length);
+
+  return SetThreadContextHelper(GetThreadHandle(), context);
 }
 
 llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
-  ::CONTEXT tls_context;
-  Status error = GetThreadContextHelper(GetThreadHandle(), &tls_context,
-                                        CONTEXT_DEBUG_REGISTERS);
+  Status error = CacheAllRegisterValues();
   if (error.Fail())
     return error.ToError();
 
   for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
-    m_hwp_regs[i].address = tls_context.Wvr[i];
-    m_hwp_regs[i].control = tls_context.Wcr[i];
+    m_hwp_regs[i].address = m_context->Wvr[i];
+    m_hwp_regs[i].control = m_context->Wcr[i];
   }
 
   return llvm::Error::success();
@@ -730,20 +796,52 @@ llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
 
 llvm::Error
 NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
-  ::CONTEXT tls_context;
-  Status error = GetThreadContextHelper(GetThreadHandle(), &tls_context,
-                                        CONTEXT_DEBUG_REGISTERS);
+  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+
+  PCONTEXT context = nullptr;
+  DataBufferHeap context_buffer;
+  DWORD context_flags = CONTEXT_DEBUG_REGISTERS;
+  auto thread_handle = GetThreadHandle();
+
+  Status error = GetThreadContextHelper(thread_handle, context_flags, context,
+                                        &context_buffer);
   if (error.Fail())
     return error.ToError();
 
   if (hwbType == eDREGTypeWATCH) {
     for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
-      tls_context.Wvr[i] = m_hwp_regs[i].address;
-      tls_context.Wcr[i] = m_hwp_regs[i].control;
+      context->Wvr[i] = m_hwp_regs[i].address;
+      context->Wcr[i] = m_hwp_regs[i].control;
     }
   }
 
-  return SetThreadContextHelper(GetThreadHandle(), &tls_context).ToError();
+  return SetThreadContextHelper(GetThreadHandle(), context).ToError();
+}
+
+void NativeRegisterContextWindows_arm64::InvalidateAllRegisters() {
+  m_context = nullptr;
+  m_context_buffer.reset();
+}
+
+Status NativeRegisterContextWindows_arm64::CacheAllRegisterValues() {
+  Status error;
+  DWORD context_flags = CONTEXT_ALL;
+
+  if (m_context && (m_context->ContextFlags & context_flags) == context_flags)
+    return error;
+
+  m_context = nullptr;
+
+  if (!m_context_buffer)
+    m_context_buffer = std::make_shared<DataBufferHeap>();
+
+  error = GetThreadContextHelper(GetThreadHandle(), context_flags, m_context,
+                                 m_context_buffer.get());
+
+  if (error.Fail())
+    m_context = nullptr;
+
+  return error;
 }
 
 #endif // defined(__aarch64__) || defined(_M_ARM64)
