@@ -1027,6 +1027,13 @@ TEST(APFloatTest, Denormal) {
     EXPECT_TRUE(NegT.isDenormal());
     EXPECT_EQ(fcNegSubnormal, NegT.classify());
   }
+
+  // Test E8M0
+  {
+    APInt bits(8, 0);
+    APFloat minExp(APFloat::Float8E8M0FNU(), bits);
+    EXPECT_FALSE(minExp.isDenormal());
+  }
 }
 
 TEST(APFloatTest, IsSmallestNormalized) {
@@ -7374,6 +7381,70 @@ TEST(APFloatTest, x87Next) {
   APFloat F(APFloat::x87DoubleExtended(), "-1.0");
   F.next(false);
   EXPECT_TRUE(ilogb(F) == -1);
+}
+
+static bool isBitcastRoundtripSafe(APFloat value) {
+  APInt bits = value.bitcastToAPInt();
+  APFloat fromBits = APFloat(value.getSemantics(), bits);
+  return (value.isNaN() || value == fromBits) && value.bitwiseIsEqual(fromBits);
+}
+
+TEST(APFloatTest, bitcast) {
+  // 4, 6, and 8 bit types are handled in Float[468]ExhaustivePair below
+  for (APFloat::Semantics Sem : {
+           APFloat::S_IEEEhalf,
+           APFloat::S_BFloat,
+           APFloat::S_IEEEsingle,
+           APFloat::S_IEEEdouble,
+           APFloat::S_IEEEquad,
+           APFloat::S_PPCDoubleDouble,
+           APFloat::S_Float8E5M2,
+           APFloat::S_Float8E4M3,
+           APFloat::S_Float8E3M4,
+           APFloat::S_FloatTF32,
+           APFloat::S_x87DoubleExtended,
+       }) {
+    const fltSemantics &S = APFloatBase::EnumToSemantics(Sem);
+
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getLargest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getLargest(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, true)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, false)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSNaN(S, true)));
+  }
+
+  {
+    // PPCDoubleDoubleLegacy format supports most but not all operations
+    const fltSemantics &S =
+        APFloatBase::EnumToSemantics(APFloat::S_PPCDoubleDoubleLegacy);
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, true)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, false)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, true)));
+  }
 }
 
 TEST(APFloatTest, Float8ExhaustivePair) {
