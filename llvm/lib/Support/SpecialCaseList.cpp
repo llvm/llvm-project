@@ -24,7 +24,6 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -45,7 +44,7 @@ namespace {
 // Lagacy v1 matcher.
 class RegexMatcher {
 public:
-  Error insert(StringRef Pattern, unsigned LineNumber, bool SlashAgnostic);
+  Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
   StringRef findRule(unsigned LineNo) const;
 
@@ -63,7 +62,7 @@ private:
 
 class GlobMatcher {
 public:
-  Error insert(StringRef Pattern, unsigned LineNumber, bool SlashAgnostic);
+  Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
   StringRef findRule(unsigned LineNo) const;
 
@@ -96,7 +95,6 @@ struct QueryOptions {
   bool UseGlobs = true;
   bool RemoveDotSlash = false;
   bool WarnDotSlashMatch = false;
-  bool SlashAgnostic = false;
 };
 
 /// Represents a set of patterns and their line numbers
@@ -118,8 +116,7 @@ private:
   mutable std::once_flag Warned;
 };
 
-Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber,
-                           bool SlashAgnostic) {
+Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument,
                              "Supplied regex was blank");
@@ -158,13 +155,11 @@ StringRef RegexMatcher::findRule(unsigned LineNo) const {
   return {};
 }
 
-Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber,
-                          bool SlashAgnostic) {
+Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument, "Supplied glob was blank");
 
-  auto Res =
-      GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024, SlashAgnostic);
+  auto Res = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024);
   if (auto Err = Res.takeError())
     return Err;
   Globs.emplace_back(Pattern, LineNumber, std::move(Res.get()));
@@ -262,11 +257,7 @@ Matcher::Matcher(QueryOptions QOpts) : Options(QOpts) {
 }
 
 Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
-  return std::visit(
-      [&](auto &V) {
-        return V.insert(Pattern, LineNumber, Options.SlashAgnostic);
-      },
-      M);
+  return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
 /// Matches Query against the patterns. The behavior is controlled by
@@ -415,15 +406,6 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   bool UseGlobs = MinVersion(2);
   bool RemoveDotSlash = MinVersion(3);
   bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
-  // TODO: Improve efficiency on Windows.
-  // `SlashAgnostic` makes `GlobMatcher` lookup inefficient by reducing the part
-  // of the pattern handled by the RadixTree. This was already the case even
-  // before `SlashAgnostic` because `GlobMatcher` pessimizes on escape sequences
-  // needed to represent Windows backslashes. A possible, but not unique,
-  // solution is to assume (or convert Windows query) backslashes, and
-  // preprocess the Glob pattern to use different escape sequences.
-  bool SlashAgnostic = MinVersion(4) && llvm::sys::path::is_style_windows(
-                                            llvm::sys::path::Style::native);
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
@@ -475,7 +457,6 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     if (llvm::is_contained(PathPrefixes, Prefix)) {
       QOpts.RemoveDotSlash = RemoveDotSlash;
       QOpts.WarnDotSlashMatch = WarnDotSlash;
-      QOpts.SlashAgnostic = SlashAgnostic;
     }
 
     auto [Pattern, Category] = Postfix.split("=");
