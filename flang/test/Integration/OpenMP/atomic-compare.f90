@@ -260,14 +260,17 @@ subroutine atomic_compare_weak(x, e, d)
   if (x == e) x = d
 end 
 
-! Integer equality compare+capture: cmpxchg + store old value
+! Integer equality compare+capture (prefix): v=x; if(x==e) x=d
+! v captures old value of x
 !CHECK-LABEL: define void @atomic_compare_capture_int_eq_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
 !CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
 !CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
-!CHECK: store i32 %[[OLD]], ptr %[[V]]
+!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+!CHECK: %[[CAPTURED:.*]] = select i1 %[[SUCCESS]], i32 %[[EVAL]], i32 %[[OLD]]
+!CHECK: store i32 %[[CAPTURED]], ptr %[[V]]
 subroutine atomic_compare_capture_int_eq(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture
@@ -276,19 +279,64 @@ subroutine atomic_compare_capture_int_eq(x, e, d, v)
   !$omp end atomic
 end
 
-! Compare+capture with clause order reversed: capture compare
+! Compare+capture with clause order reversed: capture compare (still prefix read)
 !CHECK-LABEL: define void @atomic_capture_compare_int_eq_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
 !CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
 !CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
-!CHECK: store i32 %[[OLD]], ptr %[[V]]
+!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+!CHECK: %[[CAPTURED:.*]] = select i1 %[[SUCCESS]], i32 %[[EVAL]], i32 %[[OLD]]
+!CHECK: store i32 %[[CAPTURED]], ptr %[[V]]
 subroutine atomic_capture_compare_int_eq(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic capture compare
     v = x
     if (x == e) x = d
+  !$omp end atomic
+end
+
+! Postfix compare+capture: if (x == e) x = d; v = x
+! v captures new value (d if swapped, old x if not)
+!CHECK-LABEL: define void @atomic_compare_capture_postfix_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+!CHECK: %[[NEWVAL:.*]] = select i1 %[[SUCCESS]], i32 %[[DVAL]], i32 %[[OLD]]
+!CHECK: store i32 %[[NEWVAL]], ptr %[[V]]
+subroutine atomic_compare_capture_postfix(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) x = d
+    v = x
+  !$omp end atomic
+end
+
+! Fail-only compare+capture: if (x == e) x = d; else v = x
+! v is only written when the comparison fails
+!CHECK-LABEL: define void @atomic_compare_capture_fail_only_(
+!CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]], ptr noalias %[[V:.*]])
+!CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]]
+!CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
+!CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
+!CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+!CHECK: br i1 %[[SUCCESS]], label %[[EXIT:.*]], label %[[CONT:.*]]
+!CHECK: {{.*}}:
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
+!CHECK: br label %[[EXIT2:.*]]
+subroutine atomic_compare_capture_fail_only(x, e, d, v)
+  integer :: x, e, d, v
+  !$omp atomic compare capture
+    if (x == e) then
+      x = d
+    else
+      v = x
+    end if
   !$omp end atomic
 end
 

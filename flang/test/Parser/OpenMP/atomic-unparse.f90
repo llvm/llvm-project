@@ -211,6 +211,19 @@ program main
       i = k
    end if
 !$omp end atomic
+!$omp atomic compare capture
+   if (i .eq. j) then
+      i = k
+   end if
+   k = i
+!$omp end atomic
+!$omp atomic compare capture
+   if (i .eq. j) then
+      i = k
+   else
+      k = i
+   end if
+!$omp end atomic
 
 !ATOMIC
 !$omp atomic
@@ -323,6 +336,10 @@ end program main
 !CHECK: !$OMP ATOMIC CAPTURE COMPARE
 !CHECK: !$OMP END ATOMIC
 !CHECK: !$OMP ATOMIC CAPTURE COMPARE WEAK
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
+!CHECK: !$OMP END ATOMIC
+!CHECK: !$OMP ATOMIC COMPARE CAPTURE
 !CHECK: !$OMP END ATOMIC
 
 !ATOMIC

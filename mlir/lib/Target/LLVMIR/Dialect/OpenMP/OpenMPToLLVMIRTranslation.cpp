@@ -4974,15 +4974,28 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     llvmAtomicX.IsSigned = isSigned;
 
     llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+    // In OMPIRBuilder::createAtomicCompare:
+    //   IsPostfixUpdate=true  → select(success, D, OldValue) → new value
+    //   IsPostfixUpdate=false → select(success, E, OldValue) → old value
+    // Prefix read (v=x; if(x==e) x=d): v captures old → IsPostfixUpdate=false
+    // Postfix read (if(x==e) x=d; v=x): v captures new → IsPostfixUpdate=true
+    // Fail-only: conditional store only on failure → IsPostfixUpdate=false
+    bool isPostfixUpdate =
+        !isa<omp::AtomicReadOp>(atomicCaptureOp.getFirstOp());
     bool isFailOnly = atomicCaptureOp.getFailOnly();
-    bool isPostfixUpdate = !isFailOnly;
 
+    // For fail-only, the OMPIRBuilder's conditional store logic is under
+    // the !IsPostfixUpdate path, so force it to false.
+    if (isFailOnly)
+      isPostfixUpdate = false;
+
+    bool isWeak = atomicCompareOp.getWeak();
     bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
         ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, llvmAtomicV,
                                         llvmAtomicR, eVal, dVal, atomicOrdering,
                                         compareOp, isXBinopExpr,
-                                        isPostfixUpdate, isFailOnly);
+                                        isPostfixUpdate, isFailOnly, isWeak);
     ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
     if (failed(handleError(afterIP, *atomicCaptureOp)))
