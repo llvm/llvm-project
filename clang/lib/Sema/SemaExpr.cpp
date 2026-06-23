@@ -1753,6 +1753,10 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   // At this point, we have two different arithmetic types.
 
+  if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
+      (LHSType->isBitIntType() && RHSType->isFixedPointType()))
+    return QualType();
+
   // Diagnose attempts to convert between __ibm128, __float128 and long double
   // where such conversions currently can't be handled.
   if (unsupportedTypeConversion(*this, LHSType, RHSType))
