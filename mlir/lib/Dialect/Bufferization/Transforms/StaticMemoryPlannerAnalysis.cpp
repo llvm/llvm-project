@@ -197,9 +197,9 @@ public:
     }
 
     // Step 3: Run the planning algorithm
-    llvm::SmallVector<int64_t> offsets = 
+    llvm::SmallVector<int64_t> offsets =
         trivialMemoryPlanner(maxAlignment, allocInfos);
-    
+
     // Assign computed offsets back to candidates
     int64_t totalSize = 0;
     for (size_t i = 0; i < candidates.size(); ++i) {
