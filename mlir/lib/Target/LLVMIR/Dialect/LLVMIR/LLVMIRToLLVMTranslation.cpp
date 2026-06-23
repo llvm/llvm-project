@@ -100,17 +100,17 @@ getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
   return convertibleMetadata;
 }
 
-/// Converts the given profiling metadata `node` to an MLIR profiling attribute
-/// and attaches it to the imported operation if the translation succeeds.
-/// Returns failure otherwise.
+/// Extracts an unsigned 64-bit integer from an LLVM metadata constant.
 static std::optional<uint64_t> getUInt64Metadata(llvm::Metadata *metadata) {
-  llvm::ConstantInt *constant =
-      llvm::mdconst::dyn_extract<llvm::ConstantInt>(metadata);
+  auto *constant = llvm::mdconst::dyn_extract<llvm::ConstantInt>(metadata);
   if (!constant)
     return std::nullopt;
   return constant->getValue().tryZExtValue();
 }
 
+/// Converts the given profiling metadata `node` to an MLIR profiling attribute
+/// and attaches it to the imported operation if the translation succeeds.
+/// Returns failure otherwise.
 static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
                                       Operation *op,
                                       LLVM::ModuleImport &moduleImport) {
