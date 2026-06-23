@@ -1,9 +1,9 @@
-# Header too short
-
+## Test that llvm-readobj produces a warning when the cxx module metadata header is too short.
 # RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=HEADER-SIZE %s
 
 # HEADER-SIZE: warning: {{.*}} insufficient size: got 5, expected more than 8
+
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
@@ -17,12 +17,12 @@ sections:
 symbols:
 ...
 
-# Module data too long
-
+## Test that llvm-readobj produces a warning when the module metadata size exceeds the section size.
 # RUN: yaml2obj --docnum=2 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=MODULE-TOO-LONG %s
 
 # MODULE-TOO-LONG: module data size too big: got 10, section size is 10
+
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
@@ -36,8 +36,7 @@ sections:
 symbols:
 ...
 
-# Module data too short
-
+## Test that llvm-readobj produces a warning when the module metadata size is too small where the header wouldn't fit.
 # RUN: yaml2obj --docnum=3 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=MODULE-TOO-SHORT %s
 
@@ -56,8 +55,7 @@ sections:
 symbols:
 ...
 
-# Invalid module index width
-
+## Test that llvm-readobj produces a warning when the module index width is unsupported.
 # RUN: yaml2obj --docnum=4 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=INVALID-MODULE-WIDTH %s
 
@@ -76,8 +74,7 @@ sections:
 symbols:
 ...
 
-# Invalid symbol index width
-
+## Test that llvm-readobj produces a warning when the symbol index width is unsupported.
 # RUN: yaml2obj --docnum=5 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=INVALID-SYMBOL-WIDTH %s
 
@@ -96,8 +93,7 @@ sections:
 symbols:
 ...
 
-# Invalid version (2)
-
+## Test that llvm-readobj produces a warning when the version is unsupported.
 # RUN: yaml2obj --docnum=6 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=VERSION2 %s
 

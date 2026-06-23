@@ -1,5 +1,4 @@
-# Unterminated list
-
+## Test that llvm-readobj produces a warning when it encounters an unterminated list.
 # RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=UNTERMINATED-LIST %s
 
@@ -38,8 +37,8 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
 ...
 
-# Unaligned end sentinel. This shouldn't terminate the list parsing.
-
+## Test that llvm-readobj doesn't stop at an unaligned sentinel.
+## Furthermore, it should generate a warning for referenced symbols that don't exist.
 # RUN: yaml2obj --docnum=2 %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t 2>err.txt | FileCheck --check-prefix=UNALIGNED %s
 # RUN: cat err.txt | FileCheck --check-prefix=UNALIGNED-ERR %s

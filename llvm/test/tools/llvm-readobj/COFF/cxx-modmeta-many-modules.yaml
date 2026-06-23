@@ -1,3 +1,4 @@
+## Test that llvm-readobj can show the cxx module metadata when the module index width is 2.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t | FileCheck %s
 
@@ -50,7 +51,7 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT: }
 
-# This was created by compiling a module with 256 dependencies named `mod{i}`.
+## This was created by compiling a module with 256 dependencies named `mod{i}`.
 
 --- !COFF
 header:

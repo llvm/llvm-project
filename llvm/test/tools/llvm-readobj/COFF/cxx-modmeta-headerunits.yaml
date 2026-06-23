@@ -1,3 +1,4 @@
+## Test that llvm-readobj indicates header units in the cxx module metadata correctly.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --coff-cxx-module-metadata %t | FileCheck %s
 
@@ -42,32 +43,32 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT: }
 
-# This was created with the following commands and inputs:
+## This was created with the following commands and inputs:
 
-# cl unit.hpp /exportHeader /Founit.hpp.obj /std:c++20 /c
-# cl unit2.hpp /exportHeader /Founit2.hpp.obj /std:c++20 /c
-# cl o.ixx /std:c++20 /c                                   
-# cl /headerUnit unit.hpp=unit.hpp.ifc /headerUnit unit2.hpp=unit2.hpp.ifc main.cpp /std:c++20 /c
+## cl unit.hpp /exportHeader /Founit.hpp.obj /std:c++20 /c
+## cl unit2.hpp /exportHeader /Founit2.hpp.obj /std:c++20 /c
+## cl o.ixx /std:c++20 /c                                   
+## cl /headerUnit unit.hpp=unit.hpp.ifc /headerUnit unit2.hpp=unit2.hpp.ifc main.cpp /std:c++20 /c
 
-# unit.hpp:
-# inline int diff(int a, int b) { return a - b; }
+## unit.hpp:
+## inline int diff(int a, int b) { return a - b; }
 
-# unit2.hpp:
-# inline int sum(int a, int b) { return a + b; }
+## unit2.hpp:
+## inline int sum(int a, int b) { return a + b; }
 
-# o.ixx:
-# export module o;
-# int foo = 42;
-# export int getO() { return foo; }
+## o.ixx:
+## export module o;
+## int foo = 42;
+## export int getO() { return foo; }
 
-# main.cpp:
-# import "unit.hpp";
-# import "unit2.hpp";
-# import o;
-# int main() {
-#   int d = diff(2, 3);
-#   return sum(1, d) + getO();
-# }
+## main.cpp:
+## import "unit.hpp";
+## import "unit2.hpp";
+## import o;
+## int main() {
+##   int d = diff(2, 3);
+##   return sum(1, d) + getO();
+## }
 
 --- !COFF
 header:

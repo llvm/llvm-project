@@ -30,7 +30,7 @@ Expected<uint32_t> COFFCxxModuleMetadataReader::readModuleID() {
   switch (ModuleIndexWidth) {
   case 1: {
     uint8_t V = static_cast<uint8_t>(ModuleData[0]);
-    // Extend the end sentinel to 32 bit, so it's the same regardless of module
+    // Extend the end sentinel to 32 bits, so it's the same regardless of module
     // width.
     if (V == std::numeric_limits<uint8_t>::max())
       ID = std::numeric_limits<uint32_t>::max();
@@ -40,7 +40,7 @@ Expected<uint32_t> COFFCxxModuleMetadataReader::readModuleID() {
   case 2: {
     uint16_t V =
         support::endian::read<uint16_t>(ModuleData.data(), endianness::little);
-    // Extend the end sentinel to 32 bit.
+    // Extend the end sentinel to 32 bits.
     if (V == std::numeric_limits<uint16_t>::max())
       ID = std::numeric_limits<uint32_t>::max();
     else
@@ -48,7 +48,7 @@ Expected<uint32_t> COFFCxxModuleMetadataReader::readModuleID() {
   } break;
   case 4: {
     ID = support::endian::read<uint32_t>(ModuleData.data(), endianness::little);
-    // No need to extend, it's already 32 bit.
+    // No need to extend the sentinel value, as it's already 32 bits.
   } break;
   default:
     return createStringError("unsupported index width: %d", ModuleIndexWidth);
