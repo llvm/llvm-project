@@ -5,7 +5,7 @@
 ;; cannot load the file from disk.
 ;;
 ;; --source-dir: each flag appends one directory to the search list, so when
-;; several ``--source-dir`` paths could supply the same file name, the first
+;; several --source-dir paths could supply the same file name, the first
 ;; flag on the command line is tried before later ones.
 ;;
 ;; --substitute-path: rules are tried in command-line order; the first match
@@ -15,26 +15,48 @@
 ; RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t.o | FileCheck %s --check-prefix=LINE
+
+; LINE: <foo>:
+; LINE-NEXT: ; foo():
+; LINE-NEXT: ; {{.*}}source-interleave-x86_64.c:2
+; LINE-NEXT: pushq
+; LINE: ; {{.*}}source-interleave-x86_64.c:3
+; LINE-NEXT: movq
+; LINE-NEXT: movl
+; LINE-NEXT: popq
+; LINE-NEXT: retq
+
 ; RUN: llvm-objdump --no-print-imm-hex -d --source %t.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+
+; SOURCE-MISSING: warning: '[[FILE]]': failed to find source {{[/\\]}}wrong{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong %/p %t.o | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --source-dir %/p/Inputs %t.o | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE
 
+; SOURCE: <foo>:
+; SOURCE-NEXT: ; int foo() {
+; SOURCE-NEXT: pushq
+; SOURCE: ; return a;
+; SOURCE-NEXT: movq
+; SOURCE-NEXT: movl
+; SOURCE-NEXT: popq
+; SOURCE-NEXT: retq
+
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wron %/p %t.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
 
-;; ``%/p/Inputs`` is listed first and already contains the source; ``%/p`` is
-;; only needed if the first directories do not resolve the file.
+;; %/p/Inputs is listed first and already contains the source; %/p is only
+;; needed if the first directories do not resolve the file.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
 ; RUN:   --source-dir %/p/Inputs --source-dir %/p %t.o | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE
 
-;; Two ``--source-dir`` trees both contain ``source-interleave-x86_64.c`` (same
-;; line count; distinct in-line markers). The copy from the **earlier** flag
-;; must be the one interleaved (search order is first-to-last on the command line).
+;; Two --source-dir trees both contain source-interleave-x86_64.c (same line
+;; count; distinct in-line markers). The copy from the **earlier** flag must
+;; be the one interleaved (search order is first-to-last on the command line).
 ; RUN: mkdir -p %t.sd1 %t.sd2
 ; RUN: sed -e 's/int foo() {/int foo() { \/\/SDR-FIRST/' \
 ; RUN:   %p/Inputs/source-interleave-x86_64.c > %t.sd1/source-interleave-x86_64.c
@@ -42,10 +64,18 @@
 ; RUN:   %p/Inputs/source-interleave-x86_64.c > %t.sd2/source-interleave-x86_64.c
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
 ; RUN:   --source-dir %t.sd1 --source-dir %t.sd2 %t.o | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-DIR-ORDER12
+; RUN:   FileCheck %s --check-prefix=SOURCE-DIR-ORDER12 --implicit-check-not=SDR-SECOND
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
 ; RUN:   --source-dir %t.sd2 --source-dir %t.sd1 %t.o | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-DIR-ORDER21
+; RUN:   FileCheck %s --check-prefix=SOURCE-DIR-ORDER21 --implicit-check-not=SDR-FIRST
+
+; SOURCE-DIR-ORDER12: <foo>:
+; SOURCE-DIR-ORDER12-NEXT: ; int foo() { //SDR-FIRST
+; SOURCE-DIR-ORDER12-NEXT: pushq
+
+; SOURCE-DIR-ORDER21: <foo>:
+; SOURCE-DIR-ORDER21-NEXT: ; int foo() { //SDR-SECOND
+; SOURCE-DIR-ORDER21-NEXT: pushq
 
 ;; More specific rule listed first wins (GDB example: /wrong/Inputs before /wrong).
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
@@ -58,6 +88,8 @@
 ; RUN:   --substitute-path /wrong /nowhere \
 ; RUN:   --substitute-path /wrong/Inputs %/p/Inputs %t.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING-SUBST -DFILE=%t.o
+
+; SOURCE-MISSING-SUBST: warning: '[[FILE]]': failed to find source {{[/\\]}}nowhere{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
 
 ;; First substitute rule is a no-match; second matching rule remaps the path.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
@@ -72,7 +104,12 @@
 
 ;; Empty <to> without --source-dir: relative path is not resolved; warn once, no crash.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong "" %t.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-EMPTY-TO -DFILE=%t.o
+; RUN:   FileCheck %s --check-prefix=SOURCE-EMPTY-TO -DFILE=%t.o \
+; RUN:     --implicit-check-not="; int foo() {"
+
+; SOURCE-EMPTY-TO: <foo>:
+; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source Inputs{{[/\\]}}source-interleave-x86_64.c
+; SOURCE-EMPTY-TO: pushq
 
 ;; Empty <from> is rejected .
 ; RUN: not llvm-objdump --substitute-path "" %/p  %t.o 2>&1 | \
@@ -88,6 +125,13 @@
 ; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers \
 ; RUN:   --substitute-path /wrong/Inputs /Inputs --prefix %/p %t.o | \
 ; RUN:   FileCheck %s --check-prefix=LINE-SUBST-PREFIX -DPREFIX=%/p
+
+; LINE-SUBST-PREFIX: <foo>:
+; LINE-SUBST-PREFIX-NEXT: ; foo():
+; LINE-SUBST-PREFIX-NEXT: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:2
+; LINE-SUBST-PREFIX-NEXT: pushq
+; LINE-SUBST-PREFIX: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:3
+; LINE-SUBST-PREFIX-NEXT: movq
 
 ;; --prefix alone cannot fix /wrong/Inputs, but --source-dir finds the file
 ;; via basename lookup under the search directory.
@@ -107,48 +151,3 @@
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong "" %t.o \
 ; RUN:   --prefix myprefix --source-dir %/p/Inputs %t.o | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE
-
-; LINE: <foo>:
-; LINE-NEXT: ; foo():
-; LINE-NEXT: ; {{.*}}source-interleave-x86_64.c:2
-; LINE-NEXT: pushq
-; LINE: ; {{.*}}source-interleave-x86_64.c:3
-; LINE-NEXT: movq
-; LINE-NEXT: movl
-; LINE-NEXT: popq
-; LINE-NEXT: retq
-
-; SOURCE-MISSING: warning: '[[FILE]]': failed to find source {{[/\\]}}wrong{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
-
-; SOURCE-MISSING-SUBST: warning: '[[FILE]]': failed to find source {{[/\\]}}nowhere{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
-
-; SOURCE-EMPTY-TO: <foo>:
-; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source Inputs{{[/\\]}}source-interleave-x86_64.c
-; SOURCE-EMPTY-TO: pushq
-; SOURCE-EMPTY-TO-NOT: ; int foo
-
-; SOURCE-DIR-ORDER12: <foo>:
-; SOURCE-DIR-ORDER12-NEXT: ; int foo() { //SDR-FIRST
-; SOURCE-DIR-ORDER12-NEXT: pushq
-; SOURCE-DIR-ORDER12-NOT: SDR-SECOND
-
-; SOURCE-DIR-ORDER21: <foo>:
-; SOURCE-DIR-ORDER21-NEXT: ; int foo() { //SDR-SECOND
-; SOURCE-DIR-ORDER21-NEXT: pushq
-; SOURCE-DIR-ORDER21-NOT: SDR-FIRST
-
-; SOURCE: <foo>:
-; SOURCE-NEXT: ; int foo() {
-; SOURCE-NEXT: pushq
-; SOURCE: ; return a;
-; SOURCE-NEXT: movq
-; SOURCE-NEXT: movl
-; SOURCE-NEXT: popq
-; SOURCE-NEXT: retq
-
-; LINE-SUBST-PREFIX: <foo>:
-; LINE-SUBST-PREFIX-NEXT: ; foo():
-; LINE-SUBST-PREFIX-NEXT: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:2
-; LINE-SUBST-PREFIX-NEXT: pushq
-; LINE-SUBST-PREFIX: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:3
-; LINE-SUBST-PREFIX-NEXT: movq
