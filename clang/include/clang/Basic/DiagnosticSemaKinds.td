@@ -11838,6 +11838,8 @@ def err_sampler_initializer_not_integer : Error<
   "sampler_t initialization requires 32-bit integer, not %0">;
 def warn_sampler_initializer_invalid_bits : Warning<
   "sampler initializer has invalid %0 bits">, InGroup<SpirCompat>, DefaultIgnore;
+def warn_sampler_argument_invalid_filter : Warning<
+  "'%0' sampler must use CLK_FILTER_NEAREST">, InGroup<SpirCompat>;
 def err_sampler_argument_required : Error<
   "sampler_t variable required - got %0">;
 def err_wrong_sampler_addressspace: Error<

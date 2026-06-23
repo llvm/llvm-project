@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
@@ -7285,6 +7286,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                               diag::err_wasm_table_as_function_parameter));
       }
     }
+  }
+
+  // Check read_image{i|ui} sampler argument before ConvertArgumentsForCall
+  // replaces sampler DeclRefExprs with their integer initializers.
+  if (getLangOpts().OpenCL && FDecl) {
+    OpenCL().checkBuiltinReadImage(FDecl, TheCall);
   }
 
   if (Proto) {
