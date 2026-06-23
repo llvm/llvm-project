@@ -39,6 +39,6 @@ References
 
 This check corresponds to the CERT C++ Coding Standard rules
 `MSC51-CPP. Ensure your random number generator is properly seeded
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC51-CPP.+Ensure+your+random+number+generator+is+properly+seeded>`_ and
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/miscellaneous-msc/msc51-cpp/>`_ and
 `MSC32-C. Properly seed pseudorandom number generators
-<https://wiki.sei.cmu.edu/confluence/display/c/MSC32-C.+Properly+seed+pseudorandom+number+generators>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/miscellaneous-msc/msc32-c/>`_.
