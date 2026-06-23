@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -O2 -disable-llvm-passes %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O2 -disable-llvm-passes %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 extern "C++" {
 extern char *strrchr(char *__s, int __c) __attribute__((__nothrow__))
@@ -30,6 +30,9 @@ extern "C" void caller(char *s) {
   }
 }
 
+// The trivially-recursive strrchr body is dropped, so no available_externally
+// definition of it is emitted; @caller is still emitted normally.
 // CIR-NOT: cir.func {{.*}}available_externally @strrchr
+// CIR: cir.func{{.*}}@caller(
 // LLVM-NOT: define {{.*}}available_externally{{.*}}@strrchr
-// OGCG-NOT: define {{.*}}available_externally{{.*}}@strrchr
+// LLVM: define{{.*}}@caller(

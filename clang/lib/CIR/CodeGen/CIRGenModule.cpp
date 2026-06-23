@@ -1594,7 +1594,7 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   // body just calls itself (via asm label or __builtin_* lowering on the
   // same name) is not a valid stand-in for the real implementation.  Drop
   // it from the IR so the optimizer doesn't reason about its body.
-  return !fd->isTriviallyRecursive(getCXXABI().getMangleContext());
+  return !getCXXABI().getMangleContext().isTriviallyRecursive(fd);
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
