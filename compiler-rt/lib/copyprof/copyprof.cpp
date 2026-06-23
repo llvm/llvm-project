@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "copyprof_allocator.h"
+#include "copyprof_file_backend.h"
 #include "copyprof_flags.h"
 #include "copyprof_interceptors.h"
 #include "copyprof_interface_internal.h"
@@ -41,7 +42,10 @@ static void CheckUnwind() {
   trace.Print();
 }
 
-static ReportBackend* CreateReportBackend() { return StdoutBackend::Create(); }
+static ReportBackend* CreateReportBackend() {
+  ReportBackend* backend = FileBackend::Create(flags()->report_output_file);
+  return backend != nullptr ? backend : StdoutBackend::Create();
+}
 
 static void Initialize() {
   if (LIKELY(copyprof_is_initialized))

@@ -18,12 +18,14 @@
 #include "llvm/HTTP/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/CopyProfReader.h"
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/ProfileData/MemProfSummaryBuilder.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
@@ -77,7 +79,7 @@ cl::SubCommand MergeSubcommand(
     "https://llvm.org/docs/CommandGuide/llvm-profdata.html#profdata-merge");
 
 namespace {
-enum ProfileKinds { instr, sample, memory };
+enum ProfileKinds { instr, sample, memory, copyprof };
 enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
 
 enum ProfileFormat {
@@ -455,7 +457,17 @@ static cl::opt<ProfileKinds> ShowProfileKind(
     cl::init(instr),
     cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
                clEnumVal(sample, "Sample profile"),
-               clEnumVal(memory, "MemProf memory access profile")));
+               clEnumVal(memory, "MemProf memory access profile"),
+               clEnumValN(ProfileKinds::copyprof, "copyprof",
+                          "CopyProf copy profile profile")));
+static cl::opt<std::string> CopyProfReportFile(
+    "copyprof-report", cl::init(""),
+    cl::desc("Path to CopyProf report file (required for CopyProf profile)"),
+    cl::sub(ShowSubcommand));
+static cl::opt<bool> CopyProfDemangle(
+    "demangle", cl::init(false),
+    cl::desc("Demangle C++ symbol names in CopyProf profile output"),
+    cl::sub(ShowSubcommand));
 static cl::opt<uint32_t> TopNFunctions(
     "topn", cl::init(0),
     cl::desc("Show the list of functions with the largest internal counts"),
@@ -3505,6 +3517,24 @@ static Error showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   return Error::success();
 }
 
+static Error showCopyProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+  if (SFormat == ShowFormat::Json)
+    return makeError("JSON output is not supported for CopyProf");
+
+  using namespace llvm::copyprof;
+
+  auto CopyProfReader = RawCopyProfReader::create(Filename, ProfiledBinary);
+  if (Error E = CopyProfReader.takeError())
+    return makeError(std::move(E), Filename);
+
+  std::unique_ptr<RawCopyProfReader> Reader = std::move(CopyProfReader.get());
+  if (Error E = Reader->readAndSymbolize())
+    return makeError(std::move(E), Filename);
+
+  Reader->printYAML(OS, CopyProfDemangle);
+  return Error::success();
+}
+
 static Error showDebugInfoCorrelation(const std::string &Filename,
                                       ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
@@ -3568,6 +3598,8 @@ static Error show_main(StringRef ProgName) {
     return showInstrProfile(SFormat, OS);
   if (ShowProfileKind == sample)
     return showSampleProfile(SFormat, OS);
+  if (ShowProfileKind == ProfileKinds::copyprof)
+    return showCopyProfProfile(SFormat, OS);
   return showMemProfProfile(SFormat, OS);
 }
 
