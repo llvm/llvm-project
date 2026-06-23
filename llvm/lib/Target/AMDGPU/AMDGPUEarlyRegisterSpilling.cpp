@@ -540,7 +540,14 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
   std::vector<DomGroup> Groups;
   for (auto *Use : DominatedUses) {
     MachineLoop *UseLoop = MLI->getLoopFor(Use->getParent());
-    if (UseLoop) {
+    if (Use->isPHI()) {
+      // In case of phi nodes, the restore instructions are emitted at the
+      // bottom of the incoming blocks.
+      for (MachineBasicBlock *PhiOpMBB :
+           getPhiBlocksOfSpillReg(Use, RegToSpill)) {
+        Groups.emplace_back(Use, PhiOpMBB);
+      }
+    } else if (UseLoop) {
       if (CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
         // If the high register pressure point and the use are in the same
         // loop nest then the restore instruction is emitted before the use.
@@ -553,13 +560,6 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
         MachineBasicBlock *OutermostLoopPreheader =
             OutermostLoop->getLoopPreheader();
         Groups.emplace_back(Use, OutermostLoopPreheader);
-      }
-    } else if (Use->isPHI()) {
-      // In case of phi nodes, the restore instructions are emitted at the
-      // bottom of the incoming blocks.
-      for (MachineBasicBlock *PhiOpMBB :
-           getPhiBlocksOfSpillReg(Use, RegToSpill)) {
-        Groups.emplace_back(Use, PhiOpMBB);
       }
     } else {
       // Emit restore before Use.
