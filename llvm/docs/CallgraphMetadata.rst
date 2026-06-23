@@ -5,9 +5,10 @@ Callgraph Metadata
 Introduction
 ============
 
-The ``!callgraph`` metadata is introduced to support the generation of a call graph
-section in the object file. It associates a function definition with its generalized
-type identifier.
+The ``!callgraph`` metadata associates a function definition with its type identifier.
+It uses the same generalized type encoding as the `!type` metadata used for CFI and
+WPD, and allows us to emit a call graph section in the object file that can be used to
+compute a conservative and precise static call graph in a linked binary.
 
 Syntax
 ======
