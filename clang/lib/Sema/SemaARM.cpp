@@ -331,10 +331,11 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   // Arg 0 should be the pointer type. The pointee type must be a
   // scalar integral or floating-point type of 8, 16, 32 or 64 bits.
   ASTContext &Context = getASTContext();
-  Expr *PtrArg = TheCall->getArg(0);
-  auto PtrArgRes = SemaRef.DefaultFunctionArrayLvalueConversion(PtrArg);
+  auto PtrArgRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
   if (PtrArgRes.isInvalid())
     return true;
+  auto *PtrArg = PtrArgRes.get();
   auto *PtrTy = PtrArg->getType()->getAs<PointerType>();
   if (!PtrTy)
     return Diag(TheCall->getBeginLoc(),
@@ -395,17 +396,17 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   auto HintArg =
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3)).get();
   std::optional<llvm::APSInt> HintAP = HintArg->getIntegerConstantExpr(Context);
-  if (!HintAP)
-    return Diag(TheCall->getBeginLoc(),
-                diag::warn_atomic_hint_has_invalid_hint_type)
-           << HintArg->getType() << HintArg->getSourceRange();
+  if (!HintAP) {
+    Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
+        << HintArg->getType() << HintArg->getSourceRange();
+    return false;
+  }
 
   unsigned Hint = HintAP->getZExtValue();
   if (llvm::getAtomicStoreHintFromMD(Hint) ==
       llvm::AArch64AtomicStoreHint::HINT_NONE)
-    return Diag(TheCall->getBeginLoc(),
-                diag::warn_atomic_hint_has_invalid_hint_type)
-           << *HintAP << HintArg->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
+        << *HintAP << HintArg->getSourceRange();
 
   return false;
 }

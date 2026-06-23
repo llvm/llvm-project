@@ -2167,15 +2167,15 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
     llvm_unreachable(
         "Expected integer hint argument to atomic store with hint.");
   unsigned HintArg = Result.Val.getInt().getExtValue();
-  assert((getAtomicStoreHintFromMD(HintArg) !=
-          AArch64AtomicStoreHint::HINT_NONE) &&
-         "Invalid hint type");
 
-  MDNode *HintMDVal =
-      MDNode::get(CGM.getLLVMContext(),
-                  llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg)));
-  Store->setMetadata(CGM.getModule().getMDKindID("aarch64.atomic.hint"),
-                     HintMDVal);
+  // Attach the hint if valid
+  if (getAtomicStoreHintFromMD(HintArg) != AArch64AtomicStoreHint::HINT_NONE) {
+    MDNode *HintMDVal =
+        MDNode::get(CGM.getLLVMContext(),
+                    llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg)));
+    Store->setMetadata(CGM.getModule().getMDKindID("aarch64.atomic.hint"),
+                       HintMDVal);
+  }
 
   return Store;
 }

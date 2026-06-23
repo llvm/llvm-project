@@ -2893,8 +2893,6 @@ AArch64InstrInfo::decodeAtomicHintFlags(MachineMemOperand::Flags MMOFlags) {
   if (MMOFlags & MOAtomicHintBit1)
     AtomicHint += 0b10;
 
-  if (!isValidAArch64AtomicHintValue(AtomicHint))
-    return AArch64AtomicStoreHint::HINT_NONE;
   return static_cast<AArch64AtomicStoreHint>(AtomicHint);
 }
 
