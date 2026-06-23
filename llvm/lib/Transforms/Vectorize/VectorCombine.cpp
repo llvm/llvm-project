@@ -5950,7 +5950,7 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found bitorder reverse and swap: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
-  if (!NewCost.isValid() || NewCost > OldCost)
+  if (!NewCost.isValid() || NewCost >= OldCost)
     return false;
 
   // Perform transform: bitcast(arg, <N x i8>), bitreverse, bitcast back
