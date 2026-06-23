@@ -274,10 +274,12 @@ public:
              "vector.load/store requires unit trailing memref stride");
       if (enableGEPInboundsNuw) {
         noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
-        // `nuw` additionally requires non-negative strides; skip it when the
-        // memref has dynamic or negative strides to avoid emitting poison.
-        if (memref::hasNonNegativeStaticStrides(memRefTy))
-          noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+
+        // `nuw` additionally requires non-negative strides.
+        assert(
+            !(memref::hasNegativeStaticStride(memRefTy)) &&
+            "Invalid MemRef type - should have been rejected by Op verifier.");
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
       }
     }
     auto vtype = cast<VectorType>(

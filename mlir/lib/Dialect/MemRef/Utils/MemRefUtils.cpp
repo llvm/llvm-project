@@ -344,13 +344,6 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
   return success();
 }
 
-bool hasNonNegativeStaticStrides(MemRefType memRefTy) {
-  auto [strides, offset] = memRefTy.getStridesAndOffset();
-  return llvm::all_of(strides, [](int64_t stride) {
-    return ShapedType::isStatic(stride) && stride >= 0;
-  });
-}
-
 bool hasNegativeStaticStride(MemRefType memRefTy) {
   auto [strides, offset] = memRefTy.getStridesAndOffset();
   return llvm::any_of(strides, [](int64_t stride) {
