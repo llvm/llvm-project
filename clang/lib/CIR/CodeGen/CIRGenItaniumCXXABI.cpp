@@ -530,10 +530,12 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
                  "emitVTableDefinitions: WholeProgramVTables");
   }
 
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
-  if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
-  }
+  // TODO: we don't try to generate alias here like:
+  // clang/lib/CodeGen/ItaniumCXXABI.cpp Instead, we create alias variable on
+  // LowerToLLVM assert(!cir::MissingFeatures::vtableRelativeLayout()); if
+  // (cgm.getLangOpts().RelativeCXXABIVTables) {
+  //   cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
+  // }
 }
 
 mlir::Value CIRGenItaniumCXXABI::emitVirtualDestructorCall(
@@ -1223,11 +1225,6 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   const char *vTableName = vTableClassNameForType(cgm, ty);
 
   // Check if the alias exists. If it doesn't, then get or create the global.
-  if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
-    return;
-  }
-
   mlir::Type vtableGlobalTy = builder.getPointerTo(builder.getUInt8PtrTy());
   llvm::Align align = cgm.getDataLayout().getABITypeAlign(vtableGlobalTy);
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
@@ -1235,16 +1232,18 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
       CharUnits::fromQuantity(align));
 
   // The vtable address point is 2.
+  SmallVector<mlir::Attribute, 4> offsets{
+      cgm.getBuilder().getI32IntegerAttr(2)};
+  auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
   mlir::Attribute field{};
-  if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
-  } else {
-    SmallVector<mlir::Attribute, 4> offsets{
-        cgm.getBuilder().getI32IntegerAttr(2)};
-    auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
-    field = cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
-                                               vTable, indices);
-  }
+
+  // We don't have to change this when support relative vtable.
+  // This is something like: @_ZTI1A = constant { ptr, ptr } { ptr getelementptr
+  // inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr
+  // @_ZTS1A }, align 8
+  // don't use relative offset here.
+  field = cgm.getBuilder().getGlobalViewAttr(cgm.getBuilder().getUInt8PtrTy(),
+                                             vTable, indices);
 
   assert(field && "expected attribute");
   fields.push_back(field);
@@ -1951,8 +1950,17 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
 
     mlir::Value vfuncLoad;
     if (cgm.getLangOpts().RelativeCXXABIVTables) {
-      assert(!cir::MissingFeatures::vtableRelativeLayout());
-      cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
+      // Relative vtables store 32-bit offsets in the vtable entries.
+      //
+      // Keep this as a CIR-level relative virtual call operation and let
+      // the CIR-to-LLVM lowering translate it to:
+      //
+      //   call ptr @llvm.load.relative.i32(ptr %vtable,
+      //                                   i32 (vtableIndex * 4))
+      //
+      // The result is the resolved virtual function pointer.
+      vfuncLoad = cir::VTableGetRelativeVirtualFnAddrOp::create(
+          builder, loc, tyPtr, vtable, vtableIndex);
     } else {
       auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
           builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
@@ -2057,8 +2065,11 @@ mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(
 
   mlir::Value vbaseOffset;
   if (cgm.getLangOpts().RelativeCXXABIVTables) {
-    assert(!cir::MissingFeatures::vtableRelativeLayout());
-    cgm.errorNYI(loc, "getVirtualBaseClassOffset: relative layout");
+    mlir::Value offsetPtr = builder.createBitcast(
+        vbaseOffsetPtr, builder.getPointerTo(cgm.sInt32Ty));
+    vbaseOffset = cgf.getBuilder().createLoad(
+        loc, Address(offsetPtr, cgm.sInt32Ty,
+                     CharUnits::fromQuantity(4))); // vbase.offset
   } else {
     mlir::Value offsetPtr = builder.createBitcast(
         vbaseOffsetPtr, builder.getPointerTo(cgm.ptrDiffTy));
@@ -2637,8 +2648,8 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
         cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
-      assert(!cir::MissingFeatures::vtableRelativeLayout());
-      cgf.cgm.errorNYI("virtual adjustment for relative layout vtables");
+      offset = builder.createAlignedLoad(loc, builder.getSInt32Ty(), offsetPtr,
+                                         CharUnits::fromQuantity(4));
     } else {
       offset = builder.createAlignedLoad(loc, cgf.ptrDiffTy, offsetPtr,
                                          cgf.getPointerAlign());

@@ -305,7 +305,7 @@ struct MissingFeatures {
   static bool vlas() { return false; }
   static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }
-  static bool vtableRelativeLayout() { return false; }
+  static bool vtableRelativeLayout() { return true; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool msvcCXXPersonality() { return false; }

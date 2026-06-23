@@ -52,9 +52,13 @@ class CIRGenVTables {
   cir::FuncOp deletedVirtualFn = nullptr;
 
   mlir::Attribute
-  getVTableComponent(const VTableLayout &layout, unsigned componentIndex,
+  getVTableComponent(const VTableLayout &layout, cir::GlobalOp &vtableOp,
+                     unsigned componentIndex, unsigned vtableIndex,
                      mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
                      unsigned vtableAddressPoint, bool vtableHasLocalLinkage);
+
+  mlir::Attribute
+  getVTableIntegerOrNullComponent(const VTableComponent &component);
 
   mlir::Type getVTableComponentType();
 
@@ -116,6 +120,8 @@ public:
   /// arrays of pointers, with one struct element for each vtable in the vtable
   /// group.
   cir::RecordType getVTableType(const clang::VTableLayout &layout);
+
+  cir::GlobalOp getRTTIProxy(cir::GlobalOp &vtable, mlir::Attribute rtti);
 };
 
 } // namespace clang::CIRGen
