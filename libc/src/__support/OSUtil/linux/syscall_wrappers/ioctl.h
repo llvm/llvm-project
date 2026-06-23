@@ -30,19 +30,16 @@ namespace linux_syscalls {
 struct IoctlArg {
   unsigned long val;
 
-  LIBC_INLINE constexpr IoctlArg() : val(0) {}
-  LIBC_INLINE constexpr IoctlArg(cpp::nullptr_t) : val(0) {}
-
-  template <typename T, cpp::enable_if_t<cpp::is_pointer_v<T>, int> = 0>
-  LIBC_INLINE IoctlArg(T ptr) : val(reinterpret_cast<unsigned long>(ptr)) {}
+  LIBC_INLINE IoctlArg(const void *ptr)
+      : val(reinterpret_cast<unsigned long>(ptr)) {}
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  LIBC_INLINE constexpr IoctlArg(T num)
+  LIBC_INLINE constexpr IoctlArg(T num = 0)
       : val(static_cast<unsigned long>(num)) {}
 };
 
 LIBC_INLINE ErrorOr<int> ioctl(int fd, unsigned long request,
-                               IoctlArg arg = {}) {
+                               IoctlArg arg = 0) {
   return syscall_checked<int>(SYS_ioctl, fd, request, arg.val);
 }
 
