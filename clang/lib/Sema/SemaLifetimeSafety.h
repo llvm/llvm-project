@@ -682,10 +682,10 @@ private:
     if (OriginExprChain.empty())
       return;
 
-    const Expr *LastExpr = OriginExprChain.front();
+    const Expr *LastExpr = OriginExprChain.back();
     std::string IssueStr = getDiagSubjectDescription(LastExpr);
 
-    for (const Expr *CurrExpr : OriginExprChain.drop_front()) {
+    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
       if (!shouldShowInAliasChain(CurrExpr, LastExpr))
         continue;
       S.Diag(CurrExpr->getBeginLoc(),

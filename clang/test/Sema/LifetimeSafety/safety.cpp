@@ -4078,6 +4078,47 @@ void discarded_body_local() {
 // Since it is off, we expect NO warnings or notes here.
 View suggestion_disabled_test(View a) {
   return a;
+
+//===----------------------------------------------------------------------===//
+// buildOriginFlowChain
+//===----------------------------------------------------------------------===//
+
+void used_variable_reassigned() {
+  View p, q, r;
+  {
+    MyObj a;
+    p = a; // expected-warning {{local variable 'a' does not live long enough}}
+    q = p; // expected-note {{local variable 'p' aliases the storage of local variable 'a'}}
+    r = q; // expected-note {{local variable 'q' aliases the storage of local variable 'a'}}
+  }        // expected-note {{destroyed here}}
+  r.use(); // expected-note {{later used here}}
+
+  MyObj b;
+  r = b;
+  r.use();
+}
+
+void multi_reassigned(bool condition) {
+  MyObj v1, v2, v3;
+  View p1, p2, p3, p4;
+  {
+    MyObj v4;
+
+    p1 = v1;
+    p2 = v2;
+    p3 = v3;
+    p4 = v4;    // expected-warning {{local variable 'v4' does not live long enough}}
+
+    while (condition) {
+      View temp = p1;
+      p1 = p2;  // expected-note {{local variable 'p2' aliases the storage of local variable 'v4'}}
+      p2 = p3;  // expected-note {{local variable 'p3' aliases the storage of local variable 'v4'}}
+      p3 = p4;  // expected-note {{local variable 'p4' aliases the storage of local variable 'v4'}}
+      p4 = temp;
+    }
+  }  // expected-note {{destroyed here}}
+
+  p1.use();  // expected-note {{later used here}}
 }
 
 // Test case for false positive involving conditional operator in a loop.

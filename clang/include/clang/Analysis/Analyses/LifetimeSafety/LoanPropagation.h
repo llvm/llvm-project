@@ -40,7 +40,7 @@ public:
 
   /// Builds the chain of origins through which a loan has propagated.
   ///
-  /// Starting from StartPoint where StartOID currently holds TargetLoan,
+  /// Starting from the last fact of the block containg StartPoint,
   /// this function traces backwards through OriginFlowFacts to identify the
   /// sequence of origins through which the loan flowed, ending at the origin
   /// where the loan was originally issued.

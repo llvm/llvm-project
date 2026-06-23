@@ -222,35 +222,6 @@ public:
                     llvm::dbgs() << "StartOriginID: " << StartOID
                                  << ", TargetLoanID: " << TargetLoan << "\n\n");
 
-    std::optional<OriginID> FinalOID;
-    llvm::DenseMap<OriginID, OriginID> VistedOriginIDs;
-
-    const auto OriginFlowChainFilter = [&VistedOriginIDs](OriginID FinalOID) {
-      llvm::SmallVector<OriginID> OriginFlowChain;
-      while (true) {
-        OriginFlowChain.push_back(FinalOID);
-        const auto NextOriginID = VistedOriginIDs.find(FinalOID);
-        if (NextOriginID == VistedOriginIDs.end())
-          break;
-        FinalOID = NextOriginID->second;
-      }
-      return OriginFlowChain;
-    };
-
-    const auto InsertVistedOriginIDs =
-        [&VistedOriginIDs, &FinalOID](llvm::ArrayRef<OriginID> OriginFlowChain,
-                                      OriginID &StartOID) {
-          if (!VistedOriginIDs.empty())
-            VistedOriginIDs.insert({OriginFlowChain[0], StartOID});
-
-          for (size_t i = 0; i < OriginFlowChain.size() - 1; ++i)
-            VistedOriginIDs.insert(
-                {OriginFlowChain[i + 1], OriginFlowChain[i]});
-
-          StartOID = OriginFlowChain.back();
-          FinalOID = StartOID;
-        };
-
     const CFGBlock *EndBlock = nullptr;
     size_t BlockID = FactMgr.getBlockID(StartPoint);
     for (const CFGBlock *Block : *Cfg)
@@ -259,14 +230,14 @@ public:
         break;
       }
 
-    using SearchContext = std::pair<const CFGBlock *, OriginID>;
-    std::queue<SearchContext> PendingContext;
-    llvm::SmallSet<SearchContext, 32> VistedContext;
-    PendingContext.push({EndBlock, StartOID});
+    OriginID CurrOID = StartOID;
+    llvm::SmallVector<OriginID> OriginFlowChain;
+    std::queue<const CFGBlock *> PendingState;
+    PendingState.push(EndBlock);
 
-    while (!PendingContext.empty()) {
-      auto [CurrBlock, CurrOID] = PendingContext.front();
-      PendingContext.pop();
+    while (!PendingState.empty()) {
+      const CFGBlock *CurrBlock = PendingState.front();
+      PendingState.pop();
 
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "CurrBlockID: " << CurrBlock->getBlockID()
@@ -274,20 +245,19 @@ public:
 
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
-      if (!BuildResult.empty())
-        InsertVistedOriginIDs(BuildResult, CurrOID);
+      if (!BuildResult.empty()) {
+        OriginFlowChain.append(BuildResult);
+        CurrOID = BuildResult.back();
+      }
 
       if (Complete)
-        return OriginFlowChainFilter(*FinalOID);
+        return OriginFlowChain;
 
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "EndOriginID: " << CurrOID << "\n");
 
-      for (const CFGBlock *Block : CurrBlock->preds()) {
-        SearchContext Context = {Block, CurrOID};
-        if (Block && VistedContext.insert(Context).second)
-          PendingContext.push(Context);
-      }
+      for (const CFGBlock *Block : CurrBlock->preds())
+        PendingState.push(Block);
     }
 
     llvm_unreachable(
