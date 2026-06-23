@@ -724,6 +724,11 @@ namespace cwg242 { // cwg242: 2.8
     // expected-error@-1 {{ambiguous conversion from derived class 'cwg242::D' to base class 'cwg242::A'}}
   }
 
+  D &ref_downcast(A &r) {
+    return (D &)(r);
+    // expected-error@-1 {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D'}}
+  }
+
   int D::*ptm_cast(int A::*p) {
     return (int D::*)(p);
     // expected-error@-1 {{ambiguous conversion from pointer to member of base class 'cwg242::A' to pointer to member of derived class 'cwg242::D'}}
