@@ -51,19 +51,36 @@ class VmemGpuReserveTracker {
     kDoubleFree,
   };
 
+  // Provenance returned for a double-freed reservation so the reporter can
+  // print the reserve and first-free stacks (captured as StackDepot ids).
+  struct ReservationInfo {
+    uptr base;
+    uptr size;
+    u32 reserve_stack_id;
+    u32 reserve_tid;
+    u32 first_free_stack_id;
+    u32 first_free_tid;
+  };
+
   static VmemGpuReserveTracker& Get();
 
-  void OnReserve(uptr ptr, uptr size);
+  void OnReserve(uptr ptr, uptr size, u32 reserve_stack_id, u32 reserve_tid);
   // CheckFree validates without updating state; call MarkFreed only after the
   // real hsa_amd_vmem_address_free succeeds.
   FreeResult CheckFree(uptr ptr, uptr size);
-  void MarkFreed(uptr ptr, uptr size);
+  void MarkFreed(uptr ptr, uptr size, u32 free_stack_id, u32 free_tid);
+  // Fills *out for the reservation at ptr. Returns false when untracked.
+  bool GetReservationInfo(uptr ptr, ReservationInfo* out);
 
  private:
   struct VmemGpuReservation {
     uptr ptr;
     uptr size;
     bool freed;
+    u32 reserve_stack_id;
+    u32 reserve_tid;
+    u32 first_free_stack_id;
+    u32 first_free_tid;
   };
 
   void EnsureInited();
