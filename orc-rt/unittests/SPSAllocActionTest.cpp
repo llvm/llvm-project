@@ -126,3 +126,27 @@ TEST(SPSAllocActionTest, RunActionWithUndecodableArgs) {
   EXPECT_STREQ(B.getOutOfBandError(),
                "Could not deserialize allocation action argument buffer");
 }
+
+// Test the ORC_RT_SPS_ALLOC_ACTION macro.
+static Error check_values_equal(int32_t X, int32_t Y) {
+  if (X == Y)
+    return Error::success();
+  return make_error<StringError>("X and Y differ");
+}
+ORC_RT_SPS_ALLOC_ACTION(macro_defined_allocaction, (int32_t, int32_t),
+                        check_values_equal)
+
+TEST(SPSAllocActionTest, RunMacroDefinedAllocActionWithErrorSuccessReturn) {
+  AllocAction AA(macro_defined_allocaction,
+                 *spsSerialize<SPSArgList<int32_t, int32_t>>(42, 42));
+  auto B = AA();
+  EXPECT_EQ(B.getOutOfBandError(), nullptr);
+}
+
+TEST(SPSAllocActionTest, RunMacroDefinedAllocActionWithErrorFailureReturn) {
+  AllocAction AA(macro_defined_allocaction,
+                 *spsSerialize<SPSArgList<int32_t, int32_t>>(42, 7));
+  auto B = AA();
+  ASSERT_NE(B.getOutOfBandError(), nullptr);
+  EXPECT_STREQ(B.getOutOfBandError(), "X and Y differ");
+}
