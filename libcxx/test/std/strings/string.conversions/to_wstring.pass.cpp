@@ -10,12 +10,12 @@
 
 // <string>
 
-// wstring to_wstring(int val);
-// wstring to_wstring(unsigned val);
-// wstring to_wstring(long val);
-// wstring to_wstring(unsigned long val);
-// wstring to_wstring(long long val);
-// wstring to_wstring(unsigned long long val);
+// wstring to_wstring(int val);                 // constexpr since C++26
+// wstring to_wstring(unsigned val);            // constexpr since C++26
+// wstring to_wstring(long val);                // constexpr since C++26
+// wstring to_wstring(unsigned long val);       // constexpr since C++26
+// wstring to_wstring(long long val);           // constexpr since C++26
+// wstring to_wstring(unsigned long long val);  // constexpr since C++26
 // wstring to_wstring(float val);
 // wstring to_wstring(double val);
 // wstring to_wstring(long double val);
