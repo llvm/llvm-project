@@ -20,9 +20,8 @@
 
 #else // Overlay mode
 
-#include <arpa/inet.h>
-// Or #include <netinet/in.h>. Both files should define these.
+#include <netinet/in.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_INET_ADDRESS_MACROS_H

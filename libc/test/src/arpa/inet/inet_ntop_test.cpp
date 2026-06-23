@@ -58,6 +58,7 @@ TEST_F(LlvmLibcInetNtopTest, IPv4Tests) {
 
   EXPECT_STREQ("127.0.0.1", LIBC_NAMESPACE::inet_ntop(
                                 AF_INET, ipv4(127, 0, 0, 1), buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // Test buffer too small (needs 10 bytes including null terminator)
   EXPECT_EQ(static_cast<const char *>(nullptr),
@@ -66,10 +67,12 @@ TEST_F(LlvmLibcInetNtopTest, IPv4Tests) {
 
   EXPECT_STREQ("127.0.0.1",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(127, 0, 0, 1), buf, 10));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("255.255.255.255",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(255, 255, 255, 255), buf,
                                          sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // Test buffer too small (needs 16 bytes)
   EXPECT_EQ(
@@ -80,24 +83,31 @@ TEST_F(LlvmLibcInetNtopTest, IPv4Tests) {
   // Boundary conditions for the number of digits.
   EXPECT_STREQ("0.0.0.0",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 0), buf, 10));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0.0.0.1",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 1), buf, 10));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0.0.0.9",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 9), buf, 10));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0.0.0.10",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 10), buf, 11));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0.0.0.11",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 11), buf, 11));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0.0.0.99",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 99), buf, 11));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0.0.0.100",
                LIBC_NAMESPACE::inet_ntop(AF_INET, ipv4(0, 0, 0, 100), buf, 12));
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_F(LlvmLibcInetNtopTest, IPv6Tests) {
@@ -107,6 +117,7 @@ TEST_F(LlvmLibcInetNtopTest, IPv6Tests) {
   EXPECT_STREQ("1:2:3:4:5:6:7:8",
                LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(1, 2, 3, 4, 5, 6, 7, 8),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // Compression, fully compressed.
   EXPECT_STREQ(static_cast<const char *>(nullptr),
@@ -116,10 +127,12 @@ TEST_F(LlvmLibcInetNtopTest, IPv6Tests) {
 
   EXPECT_STREQ("::", LIBC_NAMESPACE::inet_ntop(
                          AF_INET6, ipv6(0, 0, 0, 0, 0, 0, 0, 0), buf, 3));
+  ASSERT_ERRNO_SUCCESS();
 
   // Leading block of zeroes.
   EXPECT_STREQ("::1", LIBC_NAMESPACE::inet_ntop(
                           AF_INET6, ipv6(0, 0, 0, 0, 0, 0, 0, 1), buf, 4));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_EQ(static_cast<const char *>(nullptr),
             LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(0, 0, 0, 0, 0, 0, 0, 1),
@@ -128,106 +141,131 @@ TEST_F(LlvmLibcInetNtopTest, IPv6Tests) {
 
   EXPECT_STREQ("::1:2:3", LIBC_NAMESPACE::inet_ntop(
                               AF_INET6, ipv6(0, 0, 0, 0, 0, 1, 2, 3), buf, 8));
+  ASSERT_ERRNO_SUCCESS();
 
   // Trailing block of zeroes.
   EXPECT_STREQ("1::", LIBC_NAMESPACE::inet_ntop(
                           AF_INET6, ipv6(1, 0, 0, 0, 0, 0, 0, 0), buf, 4));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("1:2::", LIBC_NAMESPACE::inet_ntop(
                             AF_INET6, ipv6(1, 2, 0, 0, 0, 0, 0, 0), buf, 6));
+  ASSERT_ERRNO_SUCCESS();
 
   // Middle of string.
   EXPECT_STREQ("2001:db8::1",
                LIBC_NAMESPACE::inet_ntop(AF_INET6,
                                          ipv6(0x2001, 0x0db8, 0, 0, 0, 0, 0, 1),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("2001:db8:0:1::1",
                LIBC_NAMESPACE::inet_ntop(AF_INET6,
                                          ipv6(0x2001, 0x0db8, 0, 1, 0, 0, 0, 1),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // Longer block wins.
   EXPECT_STREQ("2001:0:0:1::1", LIBC_NAMESPACE::inet_ntop(
                                     AF_INET6, ipv6(0x2001, 0, 0, 1, 0, 0, 0, 1),
                                     buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("0:0:1:1::",
                LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(0, 0, 1, 1, 0, 0, 0, 0),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // In case of ties, the first block wins.
   EXPECT_STREQ("::1:0:0:1:0:0",
                LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(0, 0, 1, 0, 0, 1, 0, 0),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // A single zero is not compressed, no matter it's position.
   EXPECT_STREQ("0:1:1:1:1:1:1:1",
                LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(0, 1, 1, 1, 1, 1, 1, 1),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("1:0:1:1:1:1:1:1",
                LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(1, 0, 1, 1, 1, 1, 1, 1),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("1:1:1:1:1:1:1:0",
                LIBC_NAMESPACE::inet_ntop(AF_INET6, ipv6(1, 1, 1, 1, 1, 1, 1, 0),
                                          buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // V4 mapped addresses.
   EXPECT_STREQ("::ffff:192.168.0.1",
                LIBC_NAMESPACE::inet_ntop(
                    AF_INET6, ipv6(0, 0, 0, 0, 0, 0xffff, 0xc0a8, 1), buf, 19));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("::192.168.0.1", LIBC_NAMESPACE::inet_ntop(
                                     AF_INET6, ipv6(0, 0, 0, 0, 0, 0, 0xc0a8, 1),
                                     buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // If only the last component is set, we don't v4-map.
   EXPECT_STREQ("::dead", LIBC_NAMESPACE::inet_ntop(
                              AF_INET6, ipv6(0, 0, 0, 0, 0, 0, 0, 0xdead), buf,
                              sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // But we do for the penultimate.
   EXPECT_STREQ("::10.13.0.0", LIBC_NAMESPACE::inet_ntop(
                                   AF_INET6, ipv6(0, 0, 0, 0, 0, 0, 0x0a0d, 0),
                                   buf, sizeof(buf)));
+  ASSERT_ERRNO_SUCCESS();
 
   // Edge cases for numbers of digits.
   EXPECT_STREQ("0:1::", LIBC_NAMESPACE::inet_ntop(
                             AF_INET6, ipv6(0, 1, 0, 0, 0, 0, 0, 0), buf, 6));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("1:1::", LIBC_NAMESPACE::inet_ntop(
                             AF_INET6, ipv6(1, 1, 0, 0, 0, 0, 0, 0), buf, 6));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("2:1::", LIBC_NAMESPACE::inet_ntop(
                             AF_INET6, ipv6(2, 1, 0, 0, 0, 0, 0, 0), buf, 6));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("4:1::", LIBC_NAMESPACE::inet_ntop(
                             AF_INET6, ipv6(4, 1, 0, 0, 0, 0, 0, 0), buf, 6));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("8:1::", LIBC_NAMESPACE::inet_ntop(
                             AF_INET6, ipv6(8, 1, 0, 0, 0, 0, 0, 0), buf, 6));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("10:1::",
                LIBC_NAMESPACE::inet_ntop(
                    AF_INET6, ipv6(0x10, 1, 0, 0, 0, 0, 0, 0), buf, 7));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("ff:1::",
                LIBC_NAMESPACE::inet_ntop(
                    AF_INET6, ipv6(0xff, 1, 0, 0, 0, 0, 0, 0), buf, 7));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("100:1::",
                LIBC_NAMESPACE::inet_ntop(
                    AF_INET6, ipv6(0x100, 1, 0, 0, 0, 0, 0, 0), buf, 8));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("fff:1::",
                LIBC_NAMESPACE::inet_ntop(
                    AF_INET6, ipv6(0xfff, 1, 0, 0, 0, 0, 0, 0), buf, 8));
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_STREQ("1000:1::",
                LIBC_NAMESPACE::inet_ntop(
                    AF_INET6, ipv6(0x1000, 1, 0, 0, 0, 0, 0, 0), buf, 9));
+  ASSERT_ERRNO_SUCCESS();
 
   // Maximum length address.
   EXPECT_STREQ("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
@@ -235,6 +273,8 @@ TEST_F(LlvmLibcInetNtopTest, IPv6Tests) {
                                          ipv6(0xffff, 0xffff, 0xffff, 0xffff,
                                               0xffff, 0xffff, 0xffff, 0xffff),
                                          buf, 40));
+  ASSERT_ERRNO_SUCCESS();
+
   EXPECT_EQ(static_cast<const char *>(nullptr),
             LIBC_NAMESPACE::inet_ntop(AF_INET6,
                                       ipv6(0xffff, 0xffff, 0xffff, 0xffff,
@@ -247,6 +287,8 @@ TEST_F(LlvmLibcInetNtopTest, IPv6Tests) {
       "::ffff:255.255.255.255",
       LIBC_NAMESPACE::inet_ntop(
           AF_INET6, ipv6(0, 0, 0, 0, 0, 0xffff, 0xffff, 0xffff), buf, 23));
+  ASSERT_ERRNO_SUCCESS();
+
   EXPECT_EQ(
       static_cast<const char *>(nullptr),
       LIBC_NAMESPACE::inet_ntop(

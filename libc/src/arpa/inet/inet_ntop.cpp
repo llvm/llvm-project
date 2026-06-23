@@ -32,10 +32,10 @@ LLVM_LIBC_FUNCTION(const char *, inet_ntop,
 
   bool success;
   if (af == AF_INET) {
-    success = net::ipv4_to_str(*static_cast<const struct in_addr *>(src),
+    success = net::ipv4_to_str(*reinterpret_cast<const struct in_addr *>(src),
                                cpp::span<char>(dst, size));
   } else if (af == AF_INET6) {
-    success = net::ipv6_to_str(*static_cast<const struct in6_addr *>(src),
+    success = net::ipv6_to_str(*reinterpret_cast<const struct in6_addr *>(src),
                                cpp::span<char>(dst, size));
   } else {
     libc_errno = EAFNOSUPPORT;

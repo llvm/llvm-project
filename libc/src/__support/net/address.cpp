@@ -72,8 +72,8 @@ namespace {
 
 size_t ipv4_num_bytes(cpp::span<const uint8_t> src) {
   size_t result = 8; // four digits, three dots and '\0'
-  for (unsigned i = 0; i < 4; ++i)
-    result += (src[i] >= 10) + (src[i] >= 100);
+  for (uint8_t val : src)
+    result += (val >= 10) + (val >= 100);
   return result;
 }
 
@@ -84,17 +84,15 @@ size_t ipv4_to_str_unchecked(cpp::span<const uint8_t> src,
     uint8_t val = src[i];
     if (val >= 100) {
       uint8_t cent = val / 100;
-      val -= cent * 100;
-      uint8_t dec = val / 10;
-      dst[pos++] = '0' + cent;
-      dst[pos++] = '0' + dec;
-      dst[pos++] = '0' + val % 10;
+      uint8_t rem = val % 100;
+      dst[pos++] = internal::int_to_b36_char(cent);
+      dst[pos++] = internal::int_to_b36_char(rem / 10);
+      dst[pos++] = internal::int_to_b36_char(rem % 10);
     } else if (val >= 10) {
-      uint8_t dec = val / 10;
-      dst[pos++] = '0' + dec;
-      dst[pos++] = '0' + val % 10;
+      dst[pos++] = internal::int_to_b36_char(val / 10);
+      dst[pos++] = internal::int_to_b36_char(val % 10);
     } else {
-      dst[pos++] = '0' + val;
+      dst[pos++] = internal::int_to_b36_char(val);
     }
     dst[pos++] = i < 3 ? '.' : '\0';
   }
@@ -127,27 +125,27 @@ size_t ipv6_to_str_unchecked(const struct in6_addr &src, cpp::span<char> dst) {
       (best.len == 6 || (best.len == 5 && src.s6_addr16[5] == 0xffff));
   unsigned num_words = is_mapped ? 6 : 8;
 
-  char *pos = dst.data();
+  size_t pos = 0;
   auto append_word = [&](unsigned i) {
     uint16_t word = Endian::from_big_endian(src.s6_addr16[i]);
     static constexpr char DIGITS[] = "0123456789abcdef";
     if (word >= 0x1000) {
-      pos[0] = DIGITS[word >> 12];
-      pos[1] = DIGITS[(word >> 8) & 0xf];
-      pos[2] = DIGITS[(word >> 4) & 0xf];
-      pos[3] = DIGITS[word & 0xf];
+      dst[pos] = DIGITS[word >> 12];
+      dst[pos + 1] = DIGITS[(word >> 8) & 0xf];
+      dst[pos + 2] = DIGITS[(word >> 4) & 0xf];
+      dst[pos + 3] = DIGITS[word & 0xf];
       pos += 4;
     } else if (word >= 0x100) {
-      pos[0] = DIGITS[word >> 8];
-      pos[1] = DIGITS[(word >> 4) & 0xf];
-      pos[2] = DIGITS[word & 0xf];
+      dst[pos] = DIGITS[word >> 8];
+      dst[pos + 1] = DIGITS[(word >> 4) & 0xf];
+      dst[pos + 2] = DIGITS[word & 0xf];
       pos += 3;
     } else if (word >= 0x10) {
-      pos[0] = DIGITS[(word >> 4) & 0xf];
-      pos[1] = DIGITS[word & 0xf];
+      dst[pos] = DIGITS[(word >> 4) & 0xf];
+      dst[pos + 1] = DIGITS[word & 0xf];
       pos += 2;
     } else {
-      pos[0] = DIGITS[word];
+      dst[pos] = DIGITS[word];
       pos += 1;
     }
   };
@@ -156,43 +154,43 @@ size_t ipv6_to_str_unchecked(const struct in6_addr &src, cpp::span<char> dst) {
     // No compression
     for (unsigned i = 0; i < 7; ++i) {
       append_word(i);
-      *pos++ = ':';
+      dst[pos++] = ':';
     }
     append_word(7);
-    *pos++ = '\0';
-    return static_cast<size_t>(pos - dst.data());
+    dst[pos++] = '\0';
+    return pos;
   }
 
   // Left part
   for (unsigned i = 0; i < best.start; ++i) {
     append_word(i);
-    *pos++ = ':';
+    dst[pos++] = ':';
   }
   // Compressed part
   if (best.start == 0)
-    *pos++ = ':';
-  *pos++ = ':';
+    dst[pos++] = ':';
+  dst[pos++] = ':';
 
   // Right part (if it exists)
   if (best.start + best.len < num_words) {
     unsigned end = num_words - 1;
     for (unsigned i = best.start + best.len; i < end; ++i) {
       append_word(i);
-      *pos++ = ':';
+      dst[pos++] = ':';
     }
     append_word(end);
     if (num_words == 6)
-      *pos++ = ':';
+      dst[pos++] = ':';
   }
 
   if (is_mapped) {
     cpp::span<const uint8_t> ipv4_part(src.s6_addr + 12, 4);
-    pos += ipv4_to_str_unchecked(ipv4_part, cpp::span<char>(pos, dst.end()));
+    pos += ipv4_to_str_unchecked(ipv4_part, dst.subspan(pos));
   } else {
-    *pos++ = '\0';
+    dst[pos++] = '\0';
   }
 
-  return static_cast<size_t>(pos - dst.data());
+  return pos;
 }
 
 } // anonymous namespace
