@@ -8854,7 +8854,13 @@ static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
     return nullptr;
 
   ConstantFP *C;
-  if (!match(LHSI->getOperand(1), m_ConstantFP(C)) || match(C, m_AnyZeroFP()))
+  if (!match(LHSI->getOperand(1), m_ConstantFP(C)) || C->isZero())
+    return nullptr;
+
+  Type *FPTy = LHSI->getType()->getScalarType();
+  if (FPTy->isHalfTy() ||
+      I.getFunction()->getDenormalMode(FPTy->getFltSemantics()) !=
+          DenormalMode::getIEEE())
     return nullptr;
 
   if (C->isNegative())
