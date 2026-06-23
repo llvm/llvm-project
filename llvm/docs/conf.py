@@ -39,7 +39,14 @@ except ImportError:
     if not tags.has("builder-man"):
         raise
 else:
-    myst_enable_extensions = ["substitution"]
+    myst_enable_extensions = ["deflist", "substitution"]
+    myst_url_schemes = {
+        "http": None,
+        "https": None,
+        "mailto": None,
+        "ftp": None,
+        "doxygen": {"url": "/doxygen/{{path}}"},
+    }
 
 # Automatic anchors for markdown titles
 myst_heading_anchors = 6
