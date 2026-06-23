@@ -52,11 +52,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: call i32 @__kmpc_target_init
 // CHECK: call void @[[OUTLINED:__omp_offloading_[A-Za-z0-9_.]*]]
 // CHECK: define internal void @[[OUTLINED]]
-// CHECK: %[[MASTER:.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2
+// CHECK: %[[MASTER:.+]] = call i32 @__kmpc_gpu_xteam_reduce_nowait
 // CHECK: icmp eq i32 %[[MASTER]], 1
 // CHECK: i1 %{{.+}}, label %[[THEN:[A-Za-z0-9_.]*]], label %[[DONE:[A-Za-z0-9_.]*]]
 
 // CHECK: [[THEN]]:
+// CHECK-NEXT: call void @_omp_reduction_global_to_list_copy_func
 // CHECK-NEXT: %[[FINAL_LHS:[A-Za-z0-9_.]*]] = load i32
 // CHECK-NEXT: %[[FINAL_RHS:[A-Za-z0-9_.]*]] = load i32
 // CHECK-NEXT: %[[FINAL_RESULT:[A-Za-z0-9_.]*]] = add i32 %[[FINAL_LHS]], %[[FINAL_RHS]]
