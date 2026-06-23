@@ -6757,7 +6757,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   bool IsLastInChain =
       RdxPhi->getBackedgeValue() == WidenRecipe ||
       RdxPhi->getBackedgeValue() == ExitValue ||
-      (Chain.Blend && RdxPhi->getBackedgeValue() == Chain.Blend);
+      RdxPhi->getBackedgeValue() == Chain.Blend;
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
@@ -6987,6 +6987,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   if (!RdxResult)
     return std::nullopt;
   VPValue *ExitValue = RdxResult->getOperand(0);
+  match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
   SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
@@ -7000,9 +7001,13 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     if (auto *B = dyn_cast<VPBlendRecipe>(CurrentValue)) {
       if (B->getNumIncomingValues() != 2)
         return std::nullopt;
+      assert(!B->isNormalized() && "Expect Blend not to be normalized.");
 
       Blend = B;
       CurrentValue = B->getIncomingValue(0);
+
+      if (!CurrentValue->hasOneUse())
+        return std::nullopt;
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
@@ -7023,6 +7028,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
       std::swap(Op, PrevValue);
     }
 
+    // Look for VPBlend(cond_reduce(PrevValue, Op), PrevValue), where
+    // cond_reduce is equal to CurrentValue.
     if (Blend && Blend->getIncomingValue(1) != PrevValue)
       return std::nullopt;
 
@@ -7068,13 +7075,16 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   if (ChainsByPhi.empty())
     return;
 
-  // Build set of partial reduction operations for extend user validation and
-  // a map of reduction bin ops to their scale factors for scale validation.
+  // Build set of partial reduction operations and blends for extend user validation
+  // and a map of reduction bin ops to their scale factors for scale validation.
   SmallPtrSet<VPRecipeBase *, 4> PartialReductionOps;
+  SmallPtrSet<VPBlendRecipe *, 4> PartialReductionBlends;
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
   for (const auto &[_, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains) {
       PartialReductionOps.insert(Chain.ExtendedOp.ExtendsUser);
+      if (Chain.Blend)
+        PartialReductionBlends.insert(Chain.Blend);
       ScaledReductionMap[Chain.ReductionBinOp] = Chain.ScaleFactor;
     }
 
@@ -7123,16 +7133,15 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         Chains.clear();
         break;
       }
-      auto UseIsValid = [&, RedPhiR = RedPhiR, &Chains = Chains](VPUser *U) {
+      auto UseIsValid = [&, RedPhiR = RedPhiR](VPUser *U) {
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
 
-        if (auto *Blend = dyn_cast<VPBlendRecipe>(U))
-          return any_of(Chains, [Blend](const VPPartialReductionChain &C) {
-            return C.Blend == Blend;
-          });
-
         auto *R = cast<VPSingleDefRecipe>(U);
+
+        if (auto *Blend = dyn_cast<VPBlendRecipe>(R))
+          return Blend == Chain.Blend || PartialReductionBlends.contains(Blend);
+
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
                match(R, m_ComputeReductionResult(
                             m_Specific(Chain.ReductionBinOp))) ||
