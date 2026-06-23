@@ -8035,6 +8035,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // features enabled through -Xclang -target-feature flags.
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
 
+  // Add -fsanitize-compilation-dir, implied by -ffile-compilation-dir.
+  if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ)) {
+    SmallString<256> Dir(A->getValue());
+    if (!llvm::sys::path::is_absolute(Dir))
+      if (auto CWD = D.getVFS().getCurrentWorkingDirectory())
+        llvm::sys::path::make_absolute(*CWD, Dir);
+    llvm::sys::path::remove_dots(Dir, /*remove_dot_dot=*/true);
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-compilation-dir=" + Twine(Dir)));
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_falloc_token_max_EQ);
 
 #if CLANG_ENABLE_CIR

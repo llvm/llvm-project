@@ -929,10 +929,9 @@ Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
 
-- Added ``-fsanitize-compilation-dir=`` to set the compilation directory for
-  sanitizer metadata (UBSan diagnostics and ASan module names), making
-  absolute paths relative for reproducible builds. Also implied by
-  ``-ffile-compilation-dir=``.
+- ``-ffile-compilation-dir=`` now also makes absolute paths relative in
+  sanitizer metadata (UBSan diagnostics and ASan module names) for
+  reproducible builds.
 
 Python Binding Changes
 ----------------------

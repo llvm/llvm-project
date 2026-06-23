@@ -47,10 +47,9 @@ in error messages add ``-fno-omit-frame-pointer``.  To get perfect stack traces
 you may need to disable inlining (just use ``-O1``) and tail call elimination
 (``-fno-optimize-sibling-calls``).
 
-To produce reproducible builds, use ``-fsanitize-compilation-dir=<dir>`` (or
-``-ffile-compilation-dir=<dir>`` which also sets it for debug info and
-coverage) to make absolute paths in ASan metadata relative to the given
-directory. See `Remapping source paths`_ for details.
+To produce reproducible builds, use ``-ffile-compilation-dir=<dir>`` to make
+absolute paths in ASan metadata relative to the given directory (this also
+covers debug info and coverage). See `Remapping source paths`_ for details.
 
 .. code-block:: console
 
@@ -417,14 +416,10 @@ Remapping source paths
 ----------------------
 
 AddressSanitizer embeds the source file path in global metadata. For
-reproducible builds, the option ``-fsanitize-compilation-dir=<dir>`` can be
+reproducible builds, the option ``-ffile-compilation-dir=<dir>`` can be
 used to set the compilation directory. Absolute source paths that start with
-``<dir>`` are made relative to it.
-
-The option ``-ffile-compilation-dir=<dir>`` can also be used, which
-additionally sets the compilation directory for debug info and coverage
-mapping. When both ``-ffile-compilation-dir`` and ``-fsanitize-compilation-dir``
-are specified, the last one on the command line wins for sanitizer metadata.
+``<dir>`` are made relative to it. This option also sets the compilation
+directory for debug info and coverage mapping.
 
 Example
 ^^^^^^^
@@ -432,9 +427,6 @@ Example
 .. code-block:: console
 
   # Make absolute paths relative to the build directory
-  $ clang -fsanitize=address -fsanitize-compilation-dir=/build/dir source.c
-
-  # Using -ffile-compilation-dir to also cover debug info and coverage
   $ clang -fsanitize=address -ffile-compilation-dir=/home/user/project source.c
 
 Limitations

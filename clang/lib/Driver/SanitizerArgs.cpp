@@ -1697,18 +1697,6 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.has(SanitizerKind::MemtagStack) &&
       !hasTargetFeatureMTE(CmdArgs))
     TC.getDriver().Diag(diag::err_stack_tagging_requires_hardware_feature);
-
-  // Add sanitize compilation dir.
-  if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
-                               options::OPT_fsanitize_compilation_dir_EQ)) {
-    SmallString<256> Dir(A->getValue());
-    if (!llvm::sys::path::is_absolute(Dir))
-      if (auto CWD = TC.getDriver().getVFS().getCurrentWorkingDirectory())
-        llvm::sys::path::make_absolute(*CWD, Dir);
-    llvm::sys::path::remove_dots(Dir, /*remove_dot_dot=*/true);
-    CmdArgs.push_back(
-        Args.MakeArgString("-fsanitize-compilation-dir=" + Twine(Dir)));
-  }
 }
 
 SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,

@@ -1812,7 +1812,7 @@ def fcoverage_compilation_dir_EQ : Joined<["-"], "fcoverage-compilation-dir=">,
     HelpText<"The compilation directory to embed in the coverage mapping.">,
     MarshallingInfoString<CodeGenOpts<"CoverageCompilationDir">>;
 def fsanitize_compilation_dir_EQ : Joined<["-"], "fsanitize-compilation-dir=">,
-    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    Group<f_Group>, Visibility<[CC1Option]>,
     HelpText<"The compilation directory to use for sanitizer metadata.">,
     MarshallingInfoString<CodeGenOpts<"SanitizeCompilationDir">>;
 def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_Group>,
