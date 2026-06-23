@@ -25,23 +25,23 @@ enum FileType : unsigned {
   /// \brief MachO Bundle file.
   MachO_Bundle = 1U << 2,
 
-  /// \brief MachO Kext Bundle file.
-  MachO_KextBundle = 1U << 3,
-
   /// Text-based stub file (.tbd) version 1.0
-  TBD_V1 = 1U << 4,
+  TBD_V1 = 1U << 3,
 
   /// Text-based stub file (.tbd) version 2.0
-  TBD_V2 = 1U << 5,
+  TBD_V2 = 1U << 4,
 
   /// Text-based stub file (.tbd) version 3.0
-  TBD_V3 = 1U << 6,
+  TBD_V3 = 1U << 5,
 
   /// Text-based stub file (.tbd) version 4.0
-  TBD_V4 = 1U << 7,
+  TBD_V4 = 1U << 6,
 
   /// Text-based stub file (.tbd) version 5.0
-  TBD_V5 = 1U << 8,
+  TBD_V5 = 1U << 7,
+
+  /// \brief MachO Kernel Extension Bundle file.
+  MachO_KextBundle = 1U << 8,
 
   All = ~0U,
 
