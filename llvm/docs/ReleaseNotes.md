@@ -97,6 +97,11 @@ Makes programs 10x faster by doing Special New Thing.
 * The ``modular-format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+* Added support for ``callgraph`` metadata. The `!callgraph` metadata
+  associates a function definition with its type identifier and used for call
+  graph section generation. See [CallgraphMetadata](CallgraphMetadata.md) for
+  details.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
