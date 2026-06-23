@@ -18410,7 +18410,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
                                Kind == NestedNameSpecifier::Kind::Namespace;
     if (IsNamespaceOrGlobal) {
       Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def)
-          << SS.getScopeRep() << FixItHint::CreateRemoval(SS.getRange());
+          << SS.getScopeRep();
       SS.clear();
     }
   }
@@ -18625,15 +18625,10 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   if (D.isFunctionDefinition()) {
     // Qualified friend function definition.
     if (SS.isNotEmpty()) {
-      // FIXME: We should only do this if the scope specifier names the
-      // innermost enclosing namespace; otherwise the fixit changes the
-      // meaning of the code.
       SemaDiagnosticBuilder DB =
           Diag(SS.getRange().getBegin(), diag::err_qualified_friend_def);
 
       DB << SS.getScopeRep();
-      if (DC->isFileContext())
-        DB << FixItHint::CreateRemoval(SS.getRange());
 
       // Friend function defined in a local class.
     } else if (FunctionContainingLocalClass) {
