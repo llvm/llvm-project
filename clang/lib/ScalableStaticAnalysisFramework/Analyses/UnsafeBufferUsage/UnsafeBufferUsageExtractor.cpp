@@ -72,7 +72,7 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     ASTContext &Ctx) {
   std::vector<const NamedDecl *> Contributors;
 
-  findContributors(Ctx, Contributors);
+  findContributors(Ctx, getOptions(), Contributors);
   for (auto *CD : Contributors) {
     // Templates are skipped, but their instantiations are handled. The idea
     // is that we can conclude facts about a template through all of its

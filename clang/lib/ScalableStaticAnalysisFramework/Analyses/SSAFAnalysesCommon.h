@@ -21,6 +21,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::ssaf {
+class SSAFOptions;
+
 ///\return a short descriptions of a json::Value
 std::string describeJSONValue(const llvm::json::Value &V);
 ///\return a short descriptions of a json::Array
@@ -67,7 +69,14 @@ inline void logWarningFromError(llvm::Error Err) {
 }
 
 /// Find all contributors in an AST.
-void findContributors(ASTContext &Ctx,
+///
+/// \p Options controls which declarations qualify as contributors. By default
+/// the visitor preserves the original SSAF behavior of skipping block-scope
+/// (function-local) variable declarations; setting
+/// \c Options.IncludeLocalEntities to \c true also collects local variables
+/// (excluding function parameters, which are addressed via their parent
+/// function's USR).
+void findContributors(ASTContext &Ctx, const SSAFOptions &Options,
                       std::vector<const NamedDecl *> &Contributors);
 
 /// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.

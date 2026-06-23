@@ -41,9 +41,16 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ShowFormats : 1;
 
+  /// Include block-scope (function-local) declarations in extracted SSAF
+  /// summaries. Defaults to false to preserve the original behavior.
+  /// Controlled by: --ssaf-include-local-entities
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IncludeLocalEntities : 1;
+
   SSAFOptions() {
     ShowExtractors = false;
     ShowFormats = false;
+    IncludeLocalEntities = false;
   };
 };
 
