@@ -382,6 +382,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
     mlir::Value vtablePtr =
         cir::LoadOp::create(b, loc, vtablePtrPtr, /*isDeref=*/false,
                             /*isVolatile=*/false,
+                            /*isNontemporal=*/false,
                             /*alignment=*/mlir::IntegerAttr(),
                             /*sync_scope=*/cir::SyncScopeKindAttr{},
                             /*mem_order=*/cir::MemOrderAttr());
@@ -409,6 +410,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
                                              cir::CastKind::bitcast, vfpAddr);
     auto fnPtr = cir::LoadOp::create(b, loc, vfpPtr,
                                      /*isDeref=*/false, /*isVolatile=*/false,
+                                     /*isNontemporal=*/false,
                                      /*alignment=*/mlir::IntegerAttr(),
                                      /*sync_scope=*/cir::SyncScopeKindAttr{},
                                      /*mem_order=*/cir::MemOrderAttr());
@@ -782,6 +784,7 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       builder, loc, vptrPtr,
       /*isDeref=*/false,
       /*is_volatile=*/false,
+      /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
       /*mem_order=*/cir::MemOrderAttr());
@@ -795,6 +798,7 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       builder, loc, offsetToTopSlotPtr,
       /*isDeref=*/false,
       /*is_volatile=*/false,
+      /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
       /*mem_order=*/cir::MemOrderAttr());
@@ -904,6 +908,7 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
       builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
   return cir::LoadOp::create(
       builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
+      /*isNontemporal=*/false,
       builder.getI64IntegerAttr(countAlignment.getQuantity()),
       cir::SyncScopeKindAttr(), cir::MemOrderAttr());
 }
