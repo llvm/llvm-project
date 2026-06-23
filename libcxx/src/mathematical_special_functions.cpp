@@ -7,11 +7,46 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <boost/math/special_functions.hpp>
+#include <cmath>
+#include <optional>
+#include <type_traits>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-namespace {}
+namespace __math {
+namespace {
+template <class _Ret>
+optional<_Ret> __check_nan() {
+  return nullopt;
+}
+
+template <class _Ret, class _Arg, class... _Args>
+optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
+  if constexpr (is_floating_point_v<_Arg>)
+    if (isnan(__arg))
+      return __arg;
+  return __check_nan<_Ret>(__args...);
+}
+
+template <class Func, class... _Args, class _Ret = std::invoke_result_t<Func, _Args...>>
+__sf_result<_Ret> invoke_boost_math(Func f, _Args... __args) {
+  if (auto __maybe_nan = __check_nan<_Ret>(__args...); __maybe_nan.has_value())
+    return {.__domain_error = false, .__ret = *__maybe_nan};
+
+  try {
+    return {.__domain_error = false, .__ret = f(__args...)};
+  } catch (...) {
+    return {.__domain_error = true, .__ret = numeric_limits<_Ret>::quiet_NaN()};
+  }
+}
+} // namespace
+
+__sf_result<float> __assoc_laguerre(unsigned int __n, unsigned int __m, float __x) noexcept {
+  return invoke_boost_math([&](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+}
+} // namespace __math
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
