@@ -137,10 +137,12 @@ public:
   /// Closes the file.
   virtual std::error_code close() = 0;
 
-  /// Returns true if this is a real file and the requested text mode differs
-  /// from the current mode. Always returns false for non-real files.
+  /// Checks if this is a real file and the requested text mode differs
+  /// from the current mode. For real files with a text mode mismatch where
+  /// the buffer was previously requested, this will call llvm::report_fatal_error.
+  /// Always returns false for non-real files.
   /// Default implementation returns false for non-real files.
-  virtual bool realFileTextMismatch(bool RequestedIsText) const {
+  virtual bool checkTextModeMismatch(bool RequestedIsText) const {
     return false;
   }
 
