@@ -174,10 +174,22 @@ A false_negatives(std::span<int> span_pt, span<A> span_A) {
 
 }
 
-void test_incomplete_type(std::span<char> S) {
-  (struct IncompleteStruct *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
-  (class IncompleteClass *)S.data();   // expected-warning{{unsafe invocation of 'data'}}
-  (union IncompleteUnion *)S.data();   // expected-warning{{unsafe invocation of 'data'}}
+struct IncompleteStruct;
+class IncompleteClass;
+union IncompleteUnion;
+
+void test_incomplete_dest_type(std::span<char> S) {
+  (IncompleteStruct *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+  (IncompleteClass *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+  (IncompleteUnion *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+}
+
+void test_incomplete_source_type(std::span<IncompleteStruct> S) {
+  (float *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+}
+
+void test_incomplete_array_dest_type(std::span<char> S) {
+  (IncompleteStruct(*)[])S.data(); // expected-warning{{unsafe invocation of 'data'}}
 }
 
 void test_complete_type(std::span<long> S) {
