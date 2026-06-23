@@ -11,10 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/alloc-checker.h"
+#include "src/stdlib/environ_internal.h"
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/setenv.h"
 #include "src/stdlib/unsetenv.h"
-#include "src/stdlib/environ_internal.h"
 #include "src/string/strcmp.h"
 #include "src/unistd/environ.h"
 
@@ -130,12 +131,15 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_EQ(setenv("DUP_VAL1", "1", 1), 0);
     ASSERT_EQ(setenv("DUP_VAL2", "2", 1), 0);
 
-    char *d1 = new char[14];
+    AllocChecker ac;
+    char *d1 = new (ac) char[14];
+    ASSERT_TRUE(ac);
     const char *s1 = "DUP_VAR=first";
     for (size_t i = 0; i < 14; ++i)
       d1[i] = s1[i];
 
-    char *d2 = new char[15];
+    char *d2 = new (ac) char[15];
+    ASSERT_TRUE(ac);
     const char *s2 = "DUP_VAR=second";
     for (size_t i = 0; i < 15; ++i)
       d2[i] = s2[i];

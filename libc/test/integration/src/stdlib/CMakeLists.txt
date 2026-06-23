@@ -42,6 +42,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.stdlib.unsetenv
       libc.src.string.strcmp
       libc.src.unistd.environ
+      libc.src.__support.alloc_checker
   )
 
   add_integration_test(
