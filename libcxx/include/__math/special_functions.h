@@ -15,7 +15,10 @@
 #include <__math/traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_integral.h>
+#include <cerrno>
+#include <cfenv>
 #include <limits>
+#include <math.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,6 +27,28 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
+
+namespace __math {
+template <class _Tp>
+struct __sf_result {
+  bool __domain_error;
+  _Tp __ret;
+
+  operator _Tp() const {
+#  if math_errhandling & MATH_ERRNO
+    if (__domain_error)
+      errno = EDOM;
+#  endif
+
+#  if math_errhandling & MATH_ERREXCEPT
+    if (__domain_error)
+      feraiseexcept(FE_INVALID);
+#  endif
+
+    return __ret;
+  }
+};
+} // namespace __math
 
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
