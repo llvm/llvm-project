@@ -77,7 +77,7 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
       return createError("invalid AMD ABI version, must be version 5 or above");
     if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
         (Header.e_flags & EF_AMDGPU_MACH) >
-            EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC)
+            EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC)
       return createError("unsupported AMDGPU architecture");
   } else if (Header.e_machine == EM_CUDA) {
     if (Header.e_ident[EI_ABIVERSION] == ELFABIVERSION_CUDA_V1) {
