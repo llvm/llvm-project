@@ -1666,10 +1666,12 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 // ProfileSummaryInfo::getEntryCount().
 //===----------------------------------------------------------------------===//
 template <>
-std::optional<Function::ProfileCount>
+std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
-  return F->getFunction().getEntryCount();
+  if (!F->getFunction().getEntryCount().has_value())
+    return std::nullopt;
+  return F->getFunction().getEntryCount()->getCount();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
