@@ -7606,7 +7606,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // `PointerOps` and their indicies in `PointerOps`.
   SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
-  // Track to make sure that only VecSz different base pointers are consumed
+  // Track to make sure that only VecSz different stride multiples are consumed
   // Prevents cases such as:
   // 1, x + 0, x + 1, 2x + 0 from being recognized as legal RT strided as there
   // are 2 "0" and 2 "1" offsets and a stride of "x" between both offsets
