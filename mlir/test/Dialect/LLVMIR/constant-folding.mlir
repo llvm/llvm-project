@@ -211,3 +211,23 @@ llvm.func @blockaddress_select(%arg: i1) -> !llvm.ptr {
   llvm.blocktag <id = 1>
   llvm.return %1 : !llvm.ptr
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @shl_bitwidth_mismatch
+llvm.func @shl_bitwidth_mismatch() -> i64 {
+  %0 = llvm.mlir.constant(1 : i8) : i64
+  // CHECK: llvm.shl
+  %1 = llvm.shl %0, %0 : i64
+  llvm.return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @or_bitwidth_mismatch
+llvm.func @or_bitwidth_mismatch() -> i64 {
+  %0 = llvm.mlir.constant(1 : i8) : i64
+  // CHECK: llvm.or
+  %1 = llvm.or %0, %0 : i64
+  llvm.return %1 : i64
+}
