@@ -190,13 +190,11 @@ protected:
     Opts.ExtractFromSystemHeaders = ExtractFromSystemHeaders;
     std::string SysWithPragma =
         ("#pragma clang system_header\n" + SysHeaderCode).str();
-    tooling::FileContentMappings VirtFiles = {
-        {"/sysinc/sys.h", SysWithPragma}};
+    tooling::FileContentMappings VirtFiles = {{"/sysinc/sys.h", SysWithPragma}};
     AST = tooling::buildASTFromCodeWithArgs(
         Code,
         {"-Wno-unused-value", "-Wno-int-to-pointer-cast", "-isystem/sysinc"},
-        "input.cc", "clang-tool",
-        std::make_shared<PCHContainerOperations>(),
+        "input.cc", "clang-tool", std::make_shared<PCHContainerOperations>(),
         tooling::getClangStripDependencyFileAdjuster(), VirtFiles);
 
     for (auto &E : clang::ssaf::TUSummaryExtractorRegistry::entries()) {
