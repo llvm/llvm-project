@@ -2606,8 +2606,7 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName == MDProfLabels::FunctionEntryCount ||
-                ProfName == MDProfLabels::SyntheticFunctionEntryCount,
+      Check(ProfName == MDProfLabels::FunctionEntryCount,
             "first operand should be 'function_entry_count'"
             " or 'synthetic_function_entry_count'",
             MD);

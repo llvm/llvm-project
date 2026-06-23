@@ -1085,8 +1085,7 @@ void Function::setEntryCount(uint64_t Count,
     S = &ImportGUIDs;
 
   MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_prof,
-              MDB.createFunctionEntryCount(Count, false, S));
+  setMetadata(LLVMContext::MD_prof, MDB.createFunctionEntryCount(Count, S));
 }
 
 std::optional<uint64_t> Function::getEntryCount() const {

@@ -116,8 +116,6 @@ const char *MDProfLabels::BranchWeights = "branch_weights";
 const char *MDProfLabels::ExpectedBranchWeights = "expected";
 const char *MDProfLabels::ValueProfile = "VP";
 const char *MDProfLabels::FunctionEntryCount = "function_entry_count";
-const char *MDProfLabels::SyntheticFunctionEntryCount =
-    "synthetic_function_entry_count";
 const char *MDProfLabels::UnknownBranchWeightsMarker = "unknown";
 const char *llvm::LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
 
