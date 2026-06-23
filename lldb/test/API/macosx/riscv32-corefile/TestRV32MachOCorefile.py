@@ -14,6 +14,7 @@ class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @no_debug_info_test
+    @skipIfLLVMTargetMissing("RISCV")
     def test_riscv32_gpr_corefile_registers(self):
         corefile = self.getBuildArtifact("core")
         self.yaml2macho_core("riscv32-registers.yaml", corefile)

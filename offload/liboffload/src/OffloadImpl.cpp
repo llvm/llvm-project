@@ -259,7 +259,7 @@ template <typename HandleT> Error olDestroy(HandleT Handle) {
   return Error::success();
 }
 
-constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
+ol_platform_backend_t pluginNameToBackend(StringRef Name) {
   if (Name == "amdgpu") {
     return OL_PLATFORM_BACKEND_AMDGPU;
   } else if (Name == "cuda") {

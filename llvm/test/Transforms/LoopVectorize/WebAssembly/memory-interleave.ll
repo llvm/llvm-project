@@ -135,7 +135,7 @@ define hidden void @three_ints(ptr noalias nocapture noundef writeonly %0, ptr n
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 2: 61 (Estimated cost per lane: 30.5)
+; CHECK:  Cost for VF 2: 62 (Estimated cost per lane: 31)
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%13>, ir<%14>
@@ -145,7 +145,7 @@ define hidden void @three_ints(ptr noalias nocapture noundef writeonly %0, ptr n
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 4: 115 (Estimated cost per lane: 28.8)
+; CHECK:  Cost for VF 4: 116 (Estimated cost per lane: 29)
 ; CHECK:  LV: Selecting VF: 1.
 ;
   %5 = icmp eq i32 %3, 0
@@ -194,7 +194,7 @@ define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 2: 61 (Estimated cost per lane: 30.5)
+; CHECK:  Cost for VF 2: 62 (Estimated cost per lane: 31)
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%13>, ir<%14>
@@ -204,7 +204,7 @@ define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 4: 115 (Estimated cost per lane: 28.8)
+; CHECK:  Cost for VF 4: 116 (Estimated cost per lane: 29)
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE store ir<%13>, ir<%14>
@@ -214,7 +214,7 @@ define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 8: 223 (Estimated cost per lane: 27.9)
+; CHECK:  Cost for VF 8: 224 (Estimated cost per lane: 28)
 ; CHECK:  LV: Selecting VF: 1.
 ;
   %5 = icmp eq i32 %3, 0
@@ -551,7 +551,7 @@ define hidden void @five_shorts(ptr noalias nocapture noundef writeonly %0, ptr 
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%34> = load ir<%33>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%36> = load ir<%35>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%37>, ir<%38>
-; CHECK:  Cost for VF 2: 99 (Estimated cost per lane: 49.5)
+; CHECK:  Cost for VF 2: 100 (Estimated cost per lane: 50)
 ; CHECK:  Cost of 42 for VF 4: INTERLEAVE-GROUP with factor 5, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%16> = load from index 1
@@ -668,7 +668,7 @@ define hidden void @two_bytes_same_op(ptr noalias nocapture noundef writeonly %0
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%16> = load ir<%15>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%18> = load ir<%17>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%19>, ir<%20>
-; CHECK:  Cost for VF 2: 52 (Estimated cost per lane: 26)
+; CHECK:  Cost for VF 2: 53 (Estimated cost per lane: 26.5)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%16> = load from index 1
@@ -737,7 +737,7 @@ define hidden void @two_bytes_vary_op(ptr noalias nocapture noundef writeonly %0
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%16> = load ir<%15>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%18> = load ir<%17>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%19>, ir<%20>
-; CHECK:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
+; CHECK:  Cost for VF 2: 48 (Estimated cost per lane: 24)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%16> = load from index 1
@@ -809,7 +809,7 @@ define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly 
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 2: 61 (Estimated cost per lane: 30.5)
+; CHECK:  Cost for VF 2: 62 (Estimated cost per lane: 31)
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%13>, ir<%14>
@@ -819,7 +819,7 @@ define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly 
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 4: 115 (Estimated cost per lane: 28.8)
+; CHECK:  Cost for VF 4: 116 (Estimated cost per lane: 29)
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE store ir<%13>, ir<%14>
@@ -829,7 +829,7 @@ define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly 
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 8: 223 (Estimated cost per lane: 27.9)
+; CHECK:  Cost for VF 8: 224 (Estimated cost per lane: 28)
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE store ir<%13>, ir<%14>
@@ -839,7 +839,7 @@ define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly 
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 16: 439 (Estimated cost per lane: 27.4)
+; CHECK:  Cost for VF 16: 440 (Estimated cost per lane: 27.5)
 ; CHECK:  LV: Selecting VF: 1.
 ;
   %5 = icmp eq i32 %3, 0
@@ -888,7 +888,7 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 2: 61 (Estimated cost per lane: 30.5)
+; CHECK:  Cost for VF 2: 62 (Estimated cost per lane: 31)
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%13>, ir<%14>
@@ -898,7 +898,7 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 12 for VF 4: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 4: 115 (Estimated cost per lane: 28.8)
+; CHECK:  Cost for VF 4: 116 (Estimated cost per lane: 29)
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE store ir<%13>, ir<%14>
@@ -908,7 +908,7 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 24 for VF 8: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 8: 223 (Estimated cost per lane: 27.9)
+; CHECK:  Cost for VF 8: 224 (Estimated cost per lane: 28)
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%10> = load ir<%9>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%12> = load ir<%11>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE store ir<%13>, ir<%14>
@@ -918,7 +918,7 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%22> = load ir<%21>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE ir<%24> = load ir<%23>
 ; CHECK:  Cost of 48 for VF 16: REPLICATE store ir<%25>, ir<%26>
-; CHECK:  Cost for VF 16: 439 (Estimated cost per lane: 27.4)
+; CHECK:  Cost for VF 16: 440 (Estimated cost per lane: 27.5)
 ; CHECK:  LV: Selecting VF: 1.
 ;
   %5 = icmp eq i32 %3, 0
@@ -970,7 +970,7 @@ define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%28> = load ir<%27>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%30> = load ir<%29>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%31>, ir<%32>
-; CHECK:  Cost for VF 2: 80 (Estimated cost per lane: 40)
+; CHECK:  Cost for VF 2: 81 (Estimated cost per lane: 40.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%16> = load from index 1
@@ -1077,7 +1077,7 @@ define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly 
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%28> = load ir<%27>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%30> = load ir<%29>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%31>, ir<%32>
-; CHECK:  Cost for VF 2: 90 (Estimated cost per lane: 45)
+; CHECK:  Cost for VF 2: 91 (Estimated cost per lane: 45.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%16> = load from index 1
@@ -1185,7 +1185,7 @@ define hidden void @four_bytes_interleave_op(ptr noalias nocapture noundef write
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%28> = load ir<%27>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%30> = load ir<%29>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%31>, ir<%32>
-; CHECK:  Cost for VF 2: 80 (Estimated cost per lane: 40)
+; CHECK:  Cost for VF 2: 81 (Estimated cost per lane: 40.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%16> = load from index 1
@@ -1857,7 +1857,7 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
 ; CHECK:    store ir<%28> to index 1
 ; CHECK:    store ir<%38> to index 2
 ; CHECK:    store ir<%48> to index 3
-; CHECK:  Cost for VF 2: 88 (Estimated cost per lane: 44)
+; CHECK:  Cost for VF 2: 89 (Estimated cost per lane: 44.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
@@ -1954,7 +1954,7 @@ define hidden void @four_bytes_into_four_ints_vary_op(ptr noalias nocapture noun
 ; CHECK:    store ir<%23> to index 1
 ; CHECK:    store ir<%31> to index 2
 ; CHECK:    store ir<%38> to index 3
-; CHECK:  Cost for VF 2: 71 (Estimated cost per lane: 35.5)
+; CHECK:  Cost for VF 2: 72 (Estimated cost per lane: 36)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%9>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%18> = load from index 1
@@ -2084,7 +2084,7 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%38> = load ir<%37>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%41> = load ir<%40>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%48>, ir<%49>
-; CHECK:  Cost for VF 2: 80 (Estimated cost per lane: 40)
+; CHECK:  Cost for VF 2: 82 (Estimated cost per lane: 41)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
@@ -2199,7 +2199,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%28>, ir<%29>
-; CHECK:  Cost for VF 2: 52 (Estimated cost per lane: 26)
+; CHECK:  Cost for VF 2: 54 (Estimated cost per lane: 27)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
@@ -2384,7 +2384,7 @@ define hidden void @two_bytes_two_floats_same_op(ptr noundef readonly captures(n
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%mul11> to index 1
-; CHECK:  Cost for VF 2: 51 (Estimated cost per lane: 25.5)
+; CHECK:  Cost for VF 2: 52 (Estimated cost per lane: 26)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -2439,7 +2439,7 @@ define hidden void @two_bytes_two_floats_vary_op(ptr noundef readonly captures(n
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%add> to index 0
 ; CHECK:    store ir<%sub> to index 1
-; CHECK:  Cost for VF 2: 51 (Estimated cost per lane: 25.5)
+; CHECK:  Cost for VF 2: 52 (Estimated cost per lane: 26)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -2495,7 +2495,7 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv9>, ir<%y11>
-; CHECK:  Cost for VF 2: 46 (Estimated cost per lane: 23)
+; CHECK:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -2549,7 +2549,7 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv8>, ir<%y10>
-; CHECK:  Cost for VF 2: 46 (Estimated cost per lane: 23)
+; CHECK:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -2975,7 +2975,7 @@ define hidden void @four_bytes_four_floats_same_op(ptr noundef readonly captures
 ; CHECK:    store ir<%mul11> to index 1
 ; CHECK:    store ir<%mul19> to index 2
 ; CHECK:    store ir<%mul27> to index 3
-; CHECK:  Cost for VF 2: 98 (Estimated cost per lane: 49)
+; CHECK:  Cost for VF 2: 99 (Estimated cost per lane: 49.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -3060,7 +3060,7 @@ define hidden void @four_bytes_four_floats_vary_op(ptr noundef readonly captures
 ; CHECK:    store ir<%add> to index 1
 ; CHECK:    store ir<%div> to index 2
 ; CHECK:    store ir<%sub> to index 3
-; CHECK:  Cost for VF 2: 98 (Estimated cost per lane: 49)
+; CHECK:  Cost for VF 2: 99 (Estimated cost per lane: 49.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -3146,7 +3146,7 @@ define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv9>, ir<%y11>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv16>, ir<%z18>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv23>, ir<%w25>
-; CHECK:  Cost for VF 2: 88 (Estimated cost per lane: 44)
+; CHECK:  Cost for VF 2: 89 (Estimated cost per lane: 44.5)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
@@ -3228,7 +3228,7 @@ define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv8>, ir<%y10>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv14>, ir<%z16>
 ; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv20>, ir<%w22>
-; CHECK:  Cost for VF 2: 88 (Estimated cost per lane: 44)
+; CHECK:  Cost for VF 2: 89 (Estimated cost per lane: 44.5)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1

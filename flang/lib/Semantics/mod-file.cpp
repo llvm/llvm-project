@@ -11,6 +11,7 @@
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/unparse.h"
 #include "flang/Semantics/scope.h"
@@ -72,6 +73,7 @@ static bool FileContentsMatch(
     const std::string &, const std::string &, const std::string &);
 static ModuleCheckSumType ComputeCheckSum(const std::string_view &);
 static std::string CheckSumString(ModuleCheckSumType);
+static bool ProgramHasCUDAAttrs(const parser::Program &);
 
 // Collect symbols needed for a subprogram interface
 class SubprogramSymbolCollector {
@@ -387,7 +389,7 @@ static void PutOpenMPRequirements(
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
-      decls->printClauseSet(os, reqs);
+      decls->printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
       os << "\n";
     }
   }
@@ -405,7 +407,24 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_declare_target, version))
            << " ";
-        decls->printClauseSet(os, dtgt, symbol.name());
+        decls->printClauseSet(
+            os, dtgt, llvm::omp::Directive::OMPD_declare_target, symbol.name());
+        os << "\n";
+      }
+      // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
+      // this module recovers the directive from the .mod file. Common-block
+      // names must be wrapped in slashes when reparsed.
+      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
+        if (symbol.detailsIf<CommonBlockDetails>())
+          os << '/' << symbol.name() << '/';
+        else
+          os << symbol.name();
+        os << ") ";
+        decls->printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
         os << "\n";
       }
     }
@@ -1686,6 +1705,13 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     return nullptr;
   }
   parser::Program &parseTree{context_.SaveParseTree(std::move(*parsedProgram))};
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC) &&
+      !context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+      ProgramHasCUDAAttrs(parseTree)) {
+    Say("use", name, ancestorName,
+        "CUDA is not enabled, but '%s' defines CUDA symbols"_err_en_US,
+        sourceFile->path());
+  }
   Scope *parentScope; // the scope this module/submodule goes into
   if (!isIntrinsic.has_value()) {
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
@@ -1804,6 +1830,26 @@ static std::optional<SourceName> GetSubmoduleParent(
   } else {
     return std::nullopt;
   }
+}
+
+struct CUDAAttrProgramVisitor {
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
+  bool Pre(const common::CUDADataAttr &) {
+    foundCUDAAttrs = true;
+    return false;
+  }
+  bool Pre(const common::CUDASubprogramAttrs &) {
+    foundCUDAAttrs = true;
+    return false;
+  }
+  bool foundCUDAAttrs{false};
+};
+
+static bool ProgramHasCUDAAttrs(const parser::Program &program) {
+  CUDAAttrProgramVisitor visitor;
+  parser::Walk(program, visitor);
+  return visitor.foundCUDAAttrs;
 }
 
 void SubprogramSymbolCollector::Collect() {
