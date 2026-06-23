@@ -263,4 +263,52 @@ define i16 @set.inactive_demanded_i16_sext(i16 %src) nounwind {
   ret i16 %trunc
 }
 
+define i16 @set.inactive_demanded_i16_i16_sext(i16 %src1, i16 %src2) nounwind {
+; GCN-LABEL: set.inactive_demanded_i16_i16_sext:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %sext1 = sext i16 %src1 to i32
+  %sext2 = sext i16 %src2 to i32
+  %set.inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %sext1, i32 %sext2)
+  %trunc = trunc i32 %set.inactive to i16
+  ret i16 %trunc
+}
 
+define i16 @set.inactive_demanded_i16_i16_zext(i16 %src1, i16 %src2) nounwind {
+; GCN-LABEL: set.inactive_demanded_i16_i16_zext:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %zext1 = zext i16 %src1 to i32
+  %zext2 = zext i16 %src2 to i32
+  %set.inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %zext1, i32 %zext2)
+  %trunc = trunc i32 %set.inactive to i16
+  ret i16 %trunc
+}
+
+define i16 @set.inactive_demanded_i32_i16_sext(i32 %src1, i16 %src2) nounwind {
+; GCN-LABEL: set.inactive_demanded_i32_i16_sext:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %sext = sext i16 %src2 to i32
+  %set.inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1, i32 %sext)
+  %trunc = trunc i32 %set.inactive to i16
+  ret i16 %trunc
+}
+
+define i16 @set.inactive_demanded_i16_i32_sext(i16 %src1, i32 %src2) nounwind {
+; GCN-LABEL: set.inactive_demanded_i16_i32_sext:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %sext = sext i16 %src1 to i32
+  %set.inactive = call i32 @llvm.amdgcn.set.inactive.i32(i32 %sext, i32 %src2)
+  %trunc = trunc i32 %set.inactive to i16
+  ret i16 %trunc
+}

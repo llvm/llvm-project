@@ -5851,11 +5851,22 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
     switch (Op.getConstantOperandVal(0)) {
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_wwm: {
       if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
                                OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;
+      break;
+    }
+    case Intrinsic::amdgcn_set_inactive: {
+      KnownBits KnownInactive;
+      if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                               OriginalDemandedElts, Known, TLO, Depth + 1))
+        return true;
+      if (SimplifyDemandedBits(Op.getOperand(2), OriginalDemandedBits,
+                               OriginalDemandedElts, KnownInactive, TLO,
+                               Depth + 1))
+        return true;
+      Known = Known.intersectWith(KnownInactive);
       break;
     }
     default:
