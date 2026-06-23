@@ -59617,12 +59617,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       return SDValue();
     if (!Mul) {
       // First time an extract_elt's source vector is visited. Must be a MUL
-      // with 2X number of vector elements than the BUILD_VECTOR.
+      // with at least 2X number of vector elements than the BUILD_VECTOR.
       // Both extracts must be from same MUL.
       Mul = Vec0L;
       if ((Mul.getOpcode() != ISD::MUL && Mul.getOpcode() != ISD::SHL &&
            Mul.getOpcode() != ISD::SIGN_EXTEND) ||
-          Mul.getValueType().getVectorNumElements() != 2 * e)
+          Mul.getValueType().getVectorNumElements() < (2 * e))
         return SDValue();
     }
     // Check that the extract is from the same MUL previously seen.
@@ -59632,6 +59632,7 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
 
   EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
                                  VT.getVectorNumElements() * 2);
+  EVT MulVT = TruncVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
 
   SDValue N0, N1;
   if (Mul.getOpcode() == ISD::MUL) {
@@ -59641,15 +59642,17 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
         Mode == ShrinkMode::MULU16)
       return SDValue();
 
-    N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
-    N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+    N0 = DAG.getExtractSubvector(DL, MulVT, Mul.getOperand(0), 0);
+    N1 = DAG.getExtractSubvector(DL, MulVT, Mul.getOperand(1), 0);
+    N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N0);
+    N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N1);
   } else if (Mul.getOpcode() == ISD::SHL) {
     SDValue ShVal = Mul.getOperand(0);
     if (ShVal.getOpcode() != ISD::SIGN_EXTEND)
       return SDValue();
 
     N0 = ShVal.getOperand(0);
-    if (N0.getValueType() != TruncVT)
+    if (N0.getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
     // A shift by more than 15 would overflow an i16.
@@ -59658,17 +59661,18 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
         }))
       return SDValue();
 
+    N0 = DAG.getExtractSubvector(DL, TruncVT, N0, 0);
+    N1 = DAG.getExtractSubvector(DL, MulVT, Mul.getOperand(1), 0);
     N1 = DAG.getNode(ISD::SHL, DL, TruncVT, DAG.getConstant(1, DL, TruncVT),
-                     DAG.getZExtOrTrunc(Mul.getOperand(1), DL, TruncVT));
+                     DAG.getZExtOrTrunc(N1, DL, TruncVT));
   } else {
     assert(Mul.getOpcode() == ISD::SIGN_EXTEND);
 
-    // Add a trivial multiplication with 1 so that we can make use of VPMADDWD.
-    N0 = Mul.getOperand(0);
-
-    if (N0.getValueType() != TruncVT)
+    if (Mul.getOperand(0).getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
+    // Add a trivial multiplication with 1 so that we can make use of VPMADDWD.
+    N0 = DAG.getExtractSubvector(DL, TruncVT, Mul.getOperand(0), 0);
     N1 = DAG.getConstant(1, DL, TruncVT);
   }
 
