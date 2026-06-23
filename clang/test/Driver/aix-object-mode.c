@@ -19,6 +19,9 @@
 // RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK32 %s
 
 // RUN: env OBJECT_MODE=any \
+// RUN: %clang --target=powerpc64-ibm-aix -print-target-triple | FileCheck -check-prefix=CHECK64 %s
+
+// RUN: env OBJECT_MODE=any \
 // RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK32 %s
 
 // Command-line options win.
