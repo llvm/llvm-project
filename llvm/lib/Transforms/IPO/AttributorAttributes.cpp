@@ -5424,7 +5424,7 @@ struct AAAlignFloating : AAAlignImpl {
           uint32_t gcd =
               std::gcd(uint32_t(abs((int32_t)Offset)), uint32_t(PA.value()));
           Alignment = llvm::bit_floor(gcd);
-        } else {
+        } else if (V.getType()->isPointerTy()) {
           Alignment = V.getPointerAlignment(DL).value();
         }
         // Use only IR information if we did not strip anything.
