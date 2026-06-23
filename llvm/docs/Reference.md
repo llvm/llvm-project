@@ -56,6 +56,7 @@ ContentAddressableStorage
 CIBestPractices
 AIToolPolicy
 CalleeTypeMetadata
+CallgraphMetadata
 CallGraphSection
 InterfaceExportAnnotations
 PCSectionsMetadata
