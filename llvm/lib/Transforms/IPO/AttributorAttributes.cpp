@@ -5344,7 +5344,9 @@ struct AAAlignImpl : AAAlign {
     ChangeStatus Changed = AAAlign::manifest(A);
 
     Align InheritAlign =
-        getAssociatedValue().getPointerAlignment(A.getDataLayout());
+        getAssociatedValue().getType()->isPointerTy()
+            ? getAssociatedValue().getPointerAlignment(A.getDataLayout())
+            : Align(1);
     if (InheritAlign >= getAssumedAlign())
       return InstrChanged;
     return Changed | InstrChanged;
@@ -5496,7 +5498,9 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
         return ChangeStatus::UNCHANGED;
     ChangeStatus Changed = AAAlignImpl::manifest(A);
     Align InheritAlign =
-        getAssociatedValue().getPointerAlignment(A.getDataLayout());
+        getAssociatedValue().getType()->isPointerTy()
+            ? getAssociatedValue().getPointerAlignment(A.getDataLayout())
+            : Align(1);
     if (InheritAlign >= getAssumedAlign())
       Changed = ChangeStatus::UNCHANGED;
     return Changed;
