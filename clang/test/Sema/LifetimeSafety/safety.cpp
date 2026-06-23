@@ -855,6 +855,18 @@ void lifetimebound_multiple_args_potential(bool cond) {
   v.use();                         // expected-note 2 {{later used here}}
 }
 
+// FIXME: Detect this.
+void func_pointer() {
+  View p;
+  View (*func_ptr)(View v [[clang::lifetimebound]]);
+  {
+   MyObj s;
+   View a = Identity(s);
+   p = func_ptr(a);
+  }
+  p.use();
+}
+
 View SelectFirst(View a [[clang::lifetimebound]], View b);
 void lifetimebound_mixed_args() {
   View v;
