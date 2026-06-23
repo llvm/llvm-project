@@ -52,8 +52,6 @@
 #include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
 #include <algorithm>
@@ -2851,17 +2849,11 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     Value::ImplicitPointerInfo implicit_pointer =
         m_value.GetImplicitPointerInfo();
-    auto *dwarf_symbol_file = llvm::dyn_cast<plugin::dwarf::SymbolFileDWARF>(
-        symbol_file->GetBackingSymbolFile());
-    if (!dwarf_symbol_file) {
-      error = Status::FromErrorString(
-          "cannot resolve DW_OP_implicit_pointer without DWARF symbol file");
-      return ValueObjectSP();
-    }
-
-    ValueObjectSP result_sp = dwarf_symbol_file->ResolveImplicitPointer(
-        implicit_pointer.die_offset, implicit_pointer.byte_offset, pointee_type,
-        exe_ctx.GetBestExecutionContextScope(), GetVariable().get());
+    ValueObjectSP result_sp =
+        symbol_file->GetBackingSymbolFile()->ResolveImplicitPointer(
+            implicit_pointer.die_offset, implicit_pointer.byte_offset,
+            pointee_type, exe_ctx.GetBestExecutionContextScope(),
+            GetVariable().get());
     if (!result_sp) {
       error = Status::FromErrorStringWithFormat(
           "cannot resolve DW_OP_implicit_pointer target DIE 0x%" PRIx64,

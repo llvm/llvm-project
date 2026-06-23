@@ -3462,8 +3462,8 @@ lldb::ValueObjectSP SymbolFileDWARF::ResolveImplicitPointer(
                                       eSymbolContextFunction |
                                       eSymbolContextBlock);
 
-  DWARFDIE target_die = DebugInfo().GetDIE(DIERef::Section::DebugInfo,
-                                           die_offset);
+  DWARFDIE target_die =
+      DebugInfo().GetDIE(DIERef::Section::DebugInfo, die_offset);
   if (!target_die)
     return nullptr;
 

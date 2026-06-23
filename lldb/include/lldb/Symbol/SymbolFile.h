@@ -207,6 +207,11 @@ public:
                        std::vector<SourceModule> &imported_modules) = 0;
   virtual size_t ParseBlocksRecursive(Function &func) = 0;
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;
+  virtual lldb::ValueObjectSP ResolveImplicitPointer(
+      uint64_t die_offset, int64_t byte_offset, CompilerType pointee_type,
+      ExecutionContextScope *exe_scope, Variable *context_var) {
+    return {};
+  }
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid) = 0;
 
   /// The characteristics of an array type.

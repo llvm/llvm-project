@@ -140,7 +140,7 @@ public:
                                              int64_t byte_offset,
                                              CompilerType pointee_type,
                                              ExecutionContextScope *exe_scope,
-                                             Variable *context_var);
+                                             Variable *context_var) override;
 
   std::optional<ArrayInfo>
   GetDynamicArrayInfoForUID(lldb::user_id_t type_uid,
