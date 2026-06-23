@@ -30,6 +30,7 @@ inline BundleAttr getBundleAttrFromOBU(OperandBundleUse OBU) {
 struct AssumeAlignInfo {
   const Use &Ptr;
   const Use &Alignment;
+  const Use *Offset;
   std::optional<uint64_t> AlignmentVal;
   std::optional<uint64_t> OffsetVal;
 };

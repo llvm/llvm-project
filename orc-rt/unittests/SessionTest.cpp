@@ -28,8 +28,6 @@ using namespace orc_rt;
 using ::testing::Eq;
 using ::testing::Optional;
 
-using TaskQueue = std::deque<move_only_function<void()>>;
-
 class MockService : public Service {
 public:
   enum class Op { Detach, Shutdown };
@@ -269,10 +267,9 @@ private:
 };
 
 /// Build a PostFn for MockControllerAccess that pushes its work onto the
-/// supplied queue. With this, a single
-/// QueueingRunner<TaskQueue>::runFIFOUntilEmpty(Q) call advances both
-/// Session-side and controller-side work.
-inline MockControllerAccess::PostFn postOnto(TaskQueue &Q) {
+/// supplied queue. With this, a single QueueingRunner::runFIFOUntilEmpty(Q)
+/// call advances both Session-side and controller-side work.
+inline MockControllerAccess::PostFn postOnto(QueueingRunner<>::WorkQueue &Q) {
   return
       [&Q](move_only_function<void()> Work) { Q.push_back(std::move(Work)); };
 }
@@ -363,7 +360,7 @@ TEST(SessionTest, ScheduleShutdownFromOnDetachHandler) {
 
 TEST(SessionTest, RedundantAsyncShutdown) {
   // Check that redundant calls to shutdown have their callbacks run.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
   // Initiate shutdown here, and wait for the on-shutdown callbacks to start
@@ -387,7 +384,7 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   bool SessionShutdownComplete = false;
 
   {
-    TaskQueue Tasks;
+    QueueingRunner<>::WorkQueue Tasks;
     Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
@@ -403,7 +400,7 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
 }
 
 TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
   size_t OpIdx = 0;
@@ -646,12 +643,12 @@ TEST(SessionTest, TryCreateServiceFailure) {
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
   S.attach(std::make_shared<MockControllerAccess>(S, postOnto(Tasks)),
            BootstrapInfo(S));
 
-  QueueingRunner<TaskQueue>::runFIFOUntilEmpty(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 }
 
 static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
@@ -666,7 +663,7 @@ static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
 
 TEST(ControllerAccessTest, ValidCallToController) {
   // Simulate a call to a controller handler.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
   S.attach(std::make_shared<MockControllerAccess>(S, postOnto(Tasks)),
            BootstrapInfo(S));
@@ -676,14 +673,14 @@ TEST(ControllerAccessTest, ValidCallToController) {
       S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
-  QueueingRunner<TaskQueue>::runFIFOUntilEmpty(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   EXPECT_EQ(Result, 42);
 }
 
 TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   // Expect calls to the controller prior to attaching to fail.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
   Error Err = Error::success();
@@ -700,7 +697,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
 TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   // Expect calls to the controller prior to attaching to fail.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
   S.attach(std::make_shared<MockControllerAccess>(S, postOnto(Tasks)),
            BootstrapInfo(S));
@@ -721,7 +718,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
 
 TEST(ControllerAccessTest, CallFromController) {
   // Simulate a call from the controller.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S, postOnto(Tasks));
   S.attach(CA, BootstrapInfo(S));
@@ -731,7 +728,7 @@ TEST(ControllerAccessTest, CallFromController) {
       CallViaMockControllerAccess(*CA, add_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
-  QueueingRunner<TaskQueue>::runFIFOUntilEmpty(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   EXPECT_EQ(Result, 42);
 }

@@ -497,6 +497,27 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
+  if (BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI) {
+    // `obj.*pm` / `objptr->*pm` names a member of the object, so a borrow of it
+    // borrows the object; flow the object's origin into the result. For `.*`
+    // the object is the LHS; for `->*` it is the LHS pointer's pointee.
+    //
+    // Only the result's outer (storage) origin relates to the object: borrowing
+    // the member borrows the object's storage. Deeper levels of the result (a
+    // pointer/view member's own pointee) are the member's value, with no
+    // counterpart in the object's origin -- so the lists may differ in length
+    // and we flow just the top level, leaving the member's value untouched.
+    OriginList *Dst = getOriginsList(*BO);
+    OriginList *ObjSrc =
+        BO->getOpcode() == BO_PtrMemD
+            ? getOriginsList(*BO->getLHS())
+            : getRValueOrigins(BO->getLHS(), getOriginsList(*BO->getLHS()));
+    if (Dst && ObjSrc)
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          Dst->getOuterOriginID(), ObjSrc->getOuterOriginID(), /*Kill=*/true));
+    handleUse(BO->getLHS());
+    return;
+  }
   if (BO->getOpcode() == BO_Comma) {
     killAndFlowOrigin(*BO, *BO->getRHS());
     return;
@@ -886,6 +907,12 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
        I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
     const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
     if (!PVD->getType()->isRValueReferenceType())
+      continue;
+    // Skip lifetime annotated r-value reference parameters. Lifetime annotation
+    // indicates that the parameter is borrowed (not consumed), so it should not
+    // be marked as moved even though it's an r-value reference.
+    if (PVD->hasAttr<LifetimeBoundAttr>() ||
+        PVD->hasAttr<LifetimeCaptureByAttr>())
       continue;
     const Expr *Arg = Args[I];
     OriginList *MovedOrigins = getOriginsList(*Arg);

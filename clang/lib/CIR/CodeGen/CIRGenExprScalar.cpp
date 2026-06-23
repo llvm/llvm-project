@@ -2773,16 +2773,18 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
       return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+          loc, cir::IntAttr::get(cgf.cgm.sizeTy,
                                  e->EvaluateKnownConstInt(cgf.getContext())));
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty, vecTy.getSize()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
   }
 
+  // The result type is size_t (target-dependent width); use it so the IntAttr
+  // width matches the APInt from EvaluateKnownConstInt.
   return builder.getConstant(
-      loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+      loc, cir::IntAttr::get(cgf.cgm.sizeTy,
                              e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
