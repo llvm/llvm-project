@@ -1,9 +1,15 @@
-//===-- Implementation header for __addtf3 ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This header exposes LLVM-libc's __addtf3 implementation as
+/// builtins::addtf3 so that it can be reused by compiler-rt's builtins.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_BUILTINS_ADDTF3_H
