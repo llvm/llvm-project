@@ -6,22 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Missing powl
-// XFAIL: LLVM-LIBC-FIXME
-
 // REQUIRES: std-at-least-c++17
 
 // <cmath>
 //
 // [sf.cmath.assoc.laguerre], associated Laguerre polynomials
-// floating-point-type assoc_laguerre(unsigned n, unsigned m, floating-point-type x);
 // float               assoc_laguerref(unsigned n, unsigned m, float x);
-// long double         assoc_laguerrel(unsigned n, unsigned m, long double x);
 
+#include <cassert>
 #include <cmath>
 
-int main(int, char**) {
-  std::assoc_laguerref(0, 0, 0.0f);
-
-  return 0;
+int main() {
+  // Single value tested against known solution.
+  // Note, underlying Boost.Math is itself well-tested.
+  assert(std::abs(std::assoc_laguerref(2, 10, 0.5f) - 60.125f) < 0.001f);
 }
