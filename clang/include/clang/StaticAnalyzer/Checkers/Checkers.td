@@ -512,7 +512,14 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "NoStoreFuncVisitor.",
                   "true",
                   Released,
-                  Hide>
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelAllocationFailure",
+                  "At allocation functions, add extra execution branches for "
+                  "failed memory allocation (function returns null value when "
+                  "size is non-null) if applicable.",
+                  "false",
+                  Released>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,
