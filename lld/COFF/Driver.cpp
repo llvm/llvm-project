@@ -2940,10 +2940,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     doICF(ctx);
   }
 
-  // Remove duplicate .pdata entries that arise after ICF folds functions.
-  if (config->machine == AMD64)
-    removeDuplicatePdataChunks(ctx);
-
   // Write the result.
   writeResult(ctx);
 

@@ -22,6 +22,9 @@
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/Timer.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -39,9 +42,17 @@ public:
   void run();
 
 private:
+  void recordPdataRefs();
   void segregate(size_t begin, size_t end, bool constant);
 
-  bool assocEquals(const SectionChunk *a, const SectionChunk *b);
+  bool sectionEquals(const SectionChunk *a, const SectionChunk *b,
+                     bool constant);
+  bool pdataEquals(const SectionChunk *a, const SectionChunk *b,
+                   bool constant);
+  bool describedPdataEquals(const SectionChunk *a, const SectionChunk *b,
+                            bool constant);
+  bool assocEquals(const SectionChunk *a, const SectionChunk *b,
+                   bool constant);
 
   bool equalsConstant(const SectionChunk *a, const SectionChunk *b);
   bool equalsVariable(const SectionChunk *a, const SectionChunk *b);
@@ -56,6 +67,7 @@ private:
   void forEachClass(std::function<void(size_t, size_t)> fn);
 
   std::vector<SectionChunk *> chunks;
+  DenseMap<const SectionChunk *, SmallVector<SectionChunk *, 1>> pdataRefs;
   int cnt = 0;
   std::atomic<bool> repeat = {false};
 
@@ -75,7 +87,8 @@ private:
 // of the Visual C++ linker.
 bool ICF::isEligible(SectionChunk *c) {
   // Non-comdat chunks, dead chunks, and writable chunks are not eligible.
-  bool writable = c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
+  bool writable =
+      c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
   if (!c->isCOMDAT() || !c->live || writable)
     return false;
 
@@ -98,6 +111,87 @@ bool ICF::isEligible(SectionChunk *c) {
 
   // Anything else not in an address-significance table is eligible.
   return !c->keepUnique;
+}
+
+static SectionChunk *getSectionChunk(Symbol *sym) {
+  if (auto *d = dyn_cast_or_null<Defined>(sym))
+    return dyn_cast_or_null<SectionChunk>(d->getChunk());
+  return nullptr;
+}
+
+static bool isPDataMachine(MachineTypes machine) {
+  return machine == AMD64 || machine == ARM64;
+}
+
+static size_t getPDataSize(MachineTypes machine) {
+  if (machine == ARM64)
+    return 8;
+  return 12;
+}
+
+static bool isPDataReloc(const coff_relocation &rel, MachineTypes machine) {
+  bool addr32 = machine == ARM64
+                    ? rel.Type == llvm::COFF::IMAGE_REL_ARM64_ADDR32 ||
+                          rel.Type == llvm::COFF::IMAGE_REL_ARM64_ADDR32NB
+                    : rel.Type == llvm::COFF::IMAGE_REL_AMD64_ADDR32 ||
+                          rel.Type == llvm::COFF::IMAGE_REL_AMD64_ADDR32NB;
+  return addr32 && rel.VirtualAddress < getPDataSize(machine) &&
+         rel.VirtualAddress % 4 == 0;
+}
+
+static const coff_relocation *findRelocAt(ArrayRef<coff_relocation> relocs,
+                                          uint32_t virtualAddress) {
+  for (const coff_relocation &rel : relocs)
+    if (rel.VirtualAddress == virtualAddress)
+      return &rel;
+  return nullptr;
+}
+
+static bool isPData(const SectionChunk *sc) {
+  return sc && isPDataMachine(sc->getMachine()) &&
+         sc->getSectionName().split('$').first == ".pdata";
+}
+
+void ICF::recordPdataRefs() {
+  for (Chunk *c : ctx.driver.getChunks()) {
+    auto *sc = dyn_cast<SectionChunk>(c);
+    if (!sc || !sc->live || !isPData(sc))
+      continue;
+
+    MachineTypes machine = sc->getMachine();
+
+    ArrayRef<coff_relocation> relocs = sc->getRelocs();
+    if (sc->getContents().size() != getPDataSize(machine))
+      continue;
+
+    const coff_relocation *beginRel = findRelocAt(relocs, 0);
+    if (!beginRel || !llvm::all_of(relocs, [&](const coff_relocation &rel) {
+          return isPDataReloc(rel, machine);
+        }))
+      continue;
+
+    SectionChunk *begin =
+        getSectionChunk(sc->file->getSymbol(beginRel->SymbolTableIndex));
+    if (!begin || !(begin->getOutputCharacteristics() &
+                    llvm::COFF::IMAGE_SCN_MEM_EXECUTE))
+      continue;
+
+    pdataRefs[begin].push_back(sc);
+  }
+
+  for (auto &it : pdataRefs) {
+    llvm::stable_sort(it.second, [](const SectionChunk *a,
+                                    const SectionChunk *b) {
+      if (a->getSectionName() != b->getSectionName())
+        return a->getSectionName() < b->getSectionName();
+      ArrayRef<uint8_t> ac = a->getContents();
+      ArrayRef<uint8_t> bc = b->getContents();
+      if (!std::equal(ac.begin(), ac.end(), bc.begin(), bc.end()))
+        return std::lexicographical_compare(ac.begin(), ac.end(), bc.begin(),
+                                            bc.end());
+      return a < b;
+    });
+  }
 }
 
 // Split an equivalence class into smaller classes.
@@ -126,8 +220,110 @@ void ICF::segregate(size_t begin, size_t end, bool constant) {
   }
 }
 
+bool ICF::sectionEquals(const SectionChunk *a, const SectionChunk *b,
+                        bool constant) {
+  if (constant)
+    return equalsConstant(a, b);
+  return equalsVariable(a, b);
+}
+
+static bool isXData(const SectionChunk *sc) {
+  return sc && sc->getSectionName().split('$').first == ".xdata";
+}
+
+static bool sectionNamesEqual(const SectionChunk *a, const SectionChunk *b) {
+  if (isXData(a) || isXData(b))
+    return isXData(a) && isXData(b) &&
+           a->getSectionName().split('$').first ==
+               b->getSectionName().split('$').first;
+  return a->getSectionName() == b->getSectionName();
+}
+
+// On AMD64 and ARM64, .pdata contributes runtime-function table entries that
+// map code ranges to unwind data used by stack unwinding and EH dispatch. That
+// makes .pdata part of a function's semantic identity: two functions with
+// identical .text may still behave differently if their .pdata records refer to
+// different .xdata. Associative COMDAT children normally make that dependency
+// visible to ICF, but old MSVC-produced object files do not always associate
+// .xdata with the parent .text section. Follow .pdata relocations defensively so
+// folding is allowed only when the reachable unwind info is equivalent.
+bool ICF::pdataEquals(const SectionChunk *ap, const SectionChunk *bp,
+                      bool constant) {
+  if (!isPData(ap) || !isPData(bp) || ap->getMachine() != bp->getMachine())
+    return false;
+
+  MachineTypes machine = ap->getMachine();
+  if (ap->getOutputCharacteristics() != bp->getOutputCharacteristics() ||
+      ap->getSectionName().split('$').first !=
+          bp->getSectionName().split('$').first ||
+      ap->header->SizeOfRawData != bp->header->SizeOfRawData ||
+      ap->checksum != bp->checksum || ap->getContents() != bp->getContents() ||
+      ap->getContents().size() != getPDataSize(machine))
+    return false;
+
+  ArrayRef<coff_relocation> ar = ap->getRelocs();
+  ArrayRef<coff_relocation> br = bp->getRelocs();
+  if (ar.size() != br.size())
+    return false;
+
+  auto eqSym = [&](Symbol *as, Symbol *bs) {
+    if (as == bs)
+      return true;
+
+    auto *ad = dyn_cast<DefinedRegular>(as);
+    auto *bd = dyn_cast<DefinedRegular>(bs);
+    if (!ad || !bd)
+      return false;
+
+    SectionChunk *ac = dyn_cast_or_null<SectionChunk>(ad->getChunk());
+    SectionChunk *bc = dyn_cast_or_null<SectionChunk>(bd->getChunk());
+    if (isXData(ac) || isXData(bc)) {
+      if (!ac || !bc || (constant && ad->getValue() != bd->getValue()))
+        return false;
+      return sectionEquals(ac, bc, constant);
+    }
+
+    if (constant && ad->getValue() != bd->getValue())
+      return false;
+    return ad->getChunk()->eqClass[cnt % 2] ==
+           bd->getChunk()->eqClass[cnt % 2];
+  };
+
+  for (size_t i = 0; i != ar.size(); ++i) {
+    if (!isPDataReloc(ar[i], machine) || ar[i].Type != br[i].Type ||
+        ar[i].VirtualAddress != br[i].VirtualAddress)
+      return false;
+
+    Symbol *as = ap->file->getSymbol(ar[i].SymbolTableIndex);
+    Symbol *bs = bp->file->getSymbol(br[i].SymbolTableIndex);
+    if (!eqSym(as, bs))
+      return false;
+  }
+
+  return true;
+}
+
+bool ICF::describedPdataEquals(const SectionChunk *a, const SectionChunk *b,
+                               bool constant) {
+  auto ai = pdataRefs.find(a);
+  auto bi = pdataRefs.find(b);
+  if (ai == pdataRefs.end() || bi == pdataRefs.end())
+    return ai == pdataRefs.end() && bi == pdataRefs.end();
+
+  ArrayRef<SectionChunk *> ar = ai->second;
+  ArrayRef<SectionChunk *> br = bi->second;
+  if (ar.size() != br.size())
+    return false;
+
+  return std::equal(ar.begin(), ar.end(), br.begin(), br.end(),
+                    [&](const SectionChunk *ap, const SectionChunk *bp) {
+                      return pdataEquals(ap, bp, constant);
+                    });
+}
+
 // Returns true if two sections' associative children are equal.
-bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
+bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b,
+                      bool constant) {
   // Ignore associated metadata sections that don't participate in ICF, such as
   // debug info and CFGuard metadata.
   auto considerForICF = [](const SectionChunk &assoc) {
@@ -139,7 +335,7 @@ bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
   auto rb = make_filter_range(b->children(), considerForICF);
   return std::equal(ra.begin(), ra.end(), rb.begin(), rb.end(),
                     [&](const SectionChunk &ia, const SectionChunk &ib) {
-                      return ia.eqClass[cnt % 2] == ib.eqClass[cnt % 2];
+                      return sectionEquals(&ia, &ib, constant);
                     });
 }
 
@@ -148,6 +344,9 @@ bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
 bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
   if (a->relocsSize != b->relocsSize)
     return false;
+
+  if (isPData(a) || isPData(b))
+    return isPData(a) && isPData(b) && pdataEquals(a, b, true);
 
   // Compare relocations.
   auto eq = [&](const coff_relocation &r1, const coff_relocation &r2) {
@@ -162,7 +361,8 @@ bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
     if (auto *d1 = dyn_cast<DefinedRegular>(b1))
       if (auto *d2 = dyn_cast<DefinedRegular>(b2))
         return d1->getValue() == d2->getValue() &&
-               d1->getChunk()->eqClass[cnt % 2] == d2->getChunk()->eqClass[cnt % 2];
+               d1->getChunk()->eqClass[cnt % 2] ==
+                   d2->getChunk()->eqClass[cnt % 2];
     return false;
   };
   if (!std::equal(a->getRelocs().begin(), a->getRelocs().end(),
@@ -171,21 +371,26 @@ bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
 
   // Compare section attributes and contents.
   return a->getOutputCharacteristics() == b->getOutputCharacteristics() &&
-         a->getSectionName() == b->getSectionName() &&
+         sectionNamesEqual(a, b) &&
          a->header->SizeOfRawData == b->header->SizeOfRawData &&
          a->checksum == b->checksum && a->getContents() == b->getContents() &&
-         a->getMachine() == b->getMachine() && assocEquals(a, b);
+         a->getMachine() == b->getMachine() && assocEquals(a, b, true) &&
+         describedPdataEquals(a, b, true);
 }
 
 // Compare "moving" part of two sections, namely relocation targets.
 bool ICF::equalsVariable(const SectionChunk *a, const SectionChunk *b) {
+  if (isPData(a) || isPData(b))
+    return isPData(a) && isPData(b) && pdataEquals(a, b, false);
+
   // Compare relocations.
   auto eqSym = [&](Symbol *b1, Symbol *b2) {
     if (b1 == b2)
       return true;
     if (auto *d1 = dyn_cast<DefinedRegular>(b1))
       if (auto *d2 = dyn_cast<DefinedRegular>(b2))
-        return d1->getChunk()->eqClass[cnt % 2] == d2->getChunk()->eqClass[cnt % 2];
+        return d1->getChunk()->eqClass[cnt % 2] ==
+               d2->getChunk()->eqClass[cnt % 2];
     return false;
   };
   auto eq = [&](const coff_relocation &r1, const coff_relocation &r2) {
@@ -201,7 +406,7 @@ bool ICF::equalsVariable(const SectionChunk *a, const SectionChunk *b) {
 
   return std::equal(a->getRelocs().begin(), a->getRelocs().end(),
                     b->getRelocs().begin(), eq) &&
-         assocEquals(a, b);
+         assocEquals(a, b, false) && describedPdataEquals(a, b, false);
 }
 
 // Find the first Chunk after Begin that has a different class from Begin.
@@ -257,6 +462,8 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> fn) {
 void ICF::run() {
   llvm::TimeTraceScope timeScope("ICF");
   ScopedTimer t(ctx.icfTimer);
+
+  recordPdataRefs();
 
   // Collect only mergeable sections and group by hash value.
   uint32_t nextId = 1;
