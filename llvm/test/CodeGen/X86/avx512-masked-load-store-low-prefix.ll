@@ -56,6 +56,36 @@ define void @mload_mstore_v33i8_low32(ptr %src, ptr %dst) {
   ret void
 }
 
+define void @mload_mstore_v32i8_low31(ptr %src, ptr %dst) {
+; CHECK-LABEL: mload_mstore_v32i8_low31:
+; CHECK:       ## %bb.0:
+; CHECK:         movl	$2147483647, %eax
+; CHECK:         kmovd	%eax, %k1
+; CHECK-NOT:     %xmm
+; CHECK:         vmovdqu8	(%rdi), %ymm0 {%k1} {z}
+; CHECK:         vmovdqu8	%ymm0, (%rsi) {%k1}
+; CHECK-NOT:     %xmm
+; CHECK:         retq
+  %val = tail call <32 x i8> @llvm.masked.load.v32i8.p0(ptr %src, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>, <32 x i8> poison)
+  tail call void @llvm.masked.store.v32i8.p0(<32 x i8> %val, ptr %dst, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
+  ret void
+}
+
+define void @mload_mstore_v33i8_low31(ptr %src, ptr %dst) {
+; CHECK-LABEL: mload_mstore_v33i8_low31:
+; CHECK:       ## %bb.0:
+; CHECK:         movl	$2147483647, %eax
+; CHECK:         kmovd	%eax, %k1
+; CHECK-NOT:     %zmm
+; CHECK:         vmovdqu8	(%rdi), %ymm0 {%k1} {z}
+; CHECK:         vmovdqu8	%ymm0, (%rsi) {%k1}
+; CHECK-NOT:     %zmm
+; CHECK:         retq
+  %val = tail call <33 x i8> @llvm.masked.load.v33i8.p0(ptr %src, <33 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <33 x i8> poison)
+  tail call void @llvm.masked.store.v33i8.p0(<33 x i8> %val, ptr %dst, <33 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>)
+  ret void
+}
+
 define void @mstore_v9i32_gap_mask(ptr %dst, <9 x i32> %val) {
 ; CHECK-LABEL: mstore_v9i32_gap_mask:
 ; CHECK:       ## %bb.0:
@@ -98,5 +128,7 @@ declare <9 x i32> @llvm.masked.load.v9i32.p0(ptr, <9 x i1>, <9 x i32>)
 declare void @llvm.masked.store.v9i32.p0(<9 x i32>, ptr, <9 x i1>)
 declare <17 x i8> @llvm.masked.load.v17i8.p0(ptr, <17 x i1>, <17 x i8>)
 declare void @llvm.masked.store.v17i8.p0(<17 x i8>, ptr, <17 x i1>)
+declare <32 x i8> @llvm.masked.load.v32i8.p0(ptr, <32 x i1>, <32 x i8>)
+declare void @llvm.masked.store.v32i8.p0(<32 x i8>, ptr, <32 x i1>)
 declare <33 x i8> @llvm.masked.load.v33i8.p0(ptr, <33 x i1>, <33 x i8>)
 declare void @llvm.masked.store.v33i8.p0(<33 x i8>, ptr, <33 x i1>)
