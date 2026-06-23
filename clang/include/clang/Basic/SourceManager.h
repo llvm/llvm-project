@@ -50,6 +50,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TextEncoding.h"
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -155,6 +156,11 @@ public:
   ///
   /// FIXME: Remove this once OrigEntry is a FileEntryRef with a stable name.
   StringRef Filename;
+
+  /// Information on whether this is associated with a FileID for a file (as
+  /// opposed to a buffer) and, if so, what conversion (if any) was requested.
+  llvm::PointerIntPair<llvm::TextEncodingConverter *, 1u, bool>
+      FileIDConverterInfo;
 
   /// A bump pointer allocated array of offsets for each source line.
   ///
