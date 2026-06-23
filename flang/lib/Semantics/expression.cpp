@@ -3082,7 +3082,9 @@ static bool IsCUDADeviceCallable(const Symbol &symbol) {
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution, bool isSubroutine) {
-  if (isSubroutine || !resolution || !IsProcedure(*resolution) ||
+  if (isSubroutine ||
+      !context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) ||
+      !resolution || !IsProcedure(*resolution) ||
       resolution->attrs().test(semantics::Attr::INTRINSIC) ||
       !semantics::FindCUDADeviceContext(&context.FindScope(callSite))) {
     return false;
