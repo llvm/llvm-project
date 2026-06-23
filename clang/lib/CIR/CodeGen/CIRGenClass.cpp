@@ -901,33 +901,17 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // For a memcpy-equivalent assignment operator, copy the whole object, then
-  // fall through to emit the trailing `return *this`.
-  if (assignOp->isMemcpyEquivalentSpecialMember(getContext())) {
-    CanQualType recordTy =
-        getContext().getCanonicalTagType(assignOp->getParent());
-    LValue dest = makeNaturalAlignAddrLValue(loadCXXThis(), recordTy);
-    mlir::Value srcPtr = builder.createLoad(getLoc(assignOp->getLocation()),
-                                            getAddrOfLocalVar(args.back()));
-    LValue src = makeNaturalAlignAddrLValue(srcPtr, recordTy);
-    emitAggregateAssign(dest, src, recordTy);
-
-    // The whole-object copy above subsumes the implicit memberwise field
-    // copies -- per-field assignment expressions, or a builtin memcpy call for
-    // array members -- so only the trailing `return *this` still needs to be
-    // emitted.  Those copies are all expressions; assert that nothing else
-    // appears rather than silently dropping an unexpected statement.
-    for (Stmt *s : rootCS->body()) {
-      if (isa<ReturnStmt>(s)) {
-        if (emitStmt(s, /*useCurrentScope=*/true).failed())
-          cgm.error(s->getBeginLoc(),
-                    "failed to emit return in implicit assignment operator");
-        continue;
-      }
-      assert(isa<Expr>(s) &&
-             "unexpected statement in memcpy-equivalent assignment operator "
-             "body");
-    }
+  // A defaulted union copy/move assignment has an empty synthesized body:
+  // Sema skips union fields (the FIXME in SemaDeclCXX::buildSingleCopyAssign),
+  // so there is no AST expression for the implied whole-object memcpy.
+  // Emitting that body would silently drop the copy, so report NYI instead.
+  // Struct/array memcpy-equivalent assignments carry the implicit memberwise
+  // copies in the AST (per-field assignment expressions, or a builtin memcpy
+  // call for array members) and lower correctly through the loop below.
+  if (assignOp->isMemcpyEquivalentSpecialMember(getContext()) &&
+      assignOp->getParent()->isUnion()) {
+    cgm.errorNYI(assignOp->getSourceRange(),
+                 "defaulted union copy/move assignment operator");
     return;
   }
 
