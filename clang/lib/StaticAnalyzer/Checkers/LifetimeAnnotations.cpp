@@ -1,4 +1,5 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -10,31 +11,26 @@ using namespace clang;
 using namespace ento;
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
-REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef, LifetimeSourceSet)
+REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SVal, LifetimeSourceSet)
 
-REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *,
-                               LifetimeSourceSet)
 REGISTER_SET_WITH_PROGRAMSTATE(DeallocatedSourceSet, const MemRegion *)
+
+static bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State, CheckerContext &C);
+static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal, const MemRegion *Source);
 
 namespace {
 class LifetimeAnnotations
-    : public Checker<check::PostCall, check::EndFunction, check::Location> {
+    : public Checker<check::PostCall, check::EndFunction, check::Location, check::DeadSymbols> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
-  ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
-                             const MemRegion *Source) const;
-  bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
-                         CheckerContext &C) const;
   void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
                             CheckerContext &C) const;
   void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
                            CheckerContext &C) const;
 
-  template <typename MapTy, typename KeyTy>
-  void checkReturnedBorrower(const MapTy &Map, const KeyTy RetKey,
-                             ProgramStateRef State, CheckerContext &C) const;
+  void checkReturnedBorrower(SVal Val, ProgramStateRef State, CheckerContext &C) const;
   void reportDanglingBorrower(const LifetimeSourceSet *Sources,
                               CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
@@ -47,24 +43,14 @@ public:
 
 } // namespace
 
-ProgramStateRef LifetimeAnnotations::bindValues(ProgramStateRef State,
-                                                SVal RetVal,
-                                                const MemRegion *Source) const {
+ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal, const MemRegion *Source) {
   LifetimeSourceSet::Factory &F =
       State->getStateManager().get_context<LifetimeSourceSet>();
 
-  if (SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true)) {
-    const LifetimeSourceSet *LBSet = State->get<LifetimeBoundMap>(RetValSym);
-    LifetimeSourceSet Set = LBSet ? *LBSet : F.getEmptySet();
-    Set = F.add(Set, Source);
-    State = State->set<LifetimeBoundMap>(RetValSym, Set);
-  } else if (const MemRegion *RetValRegion = RetVal.getAsRegion()) {
-    const LifetimeSourceSet *LBValSet =
-        State->get<LifetimeBoundMapVal>(RetValRegion);
-    LifetimeSourceSet Set = LBValSet ? *LBValSet : F.getEmptySet();
-    Set = F.add(Set, Source);
-    State = State->set<LifetimeBoundMapVal>(RetValRegion, Set);
-  }
+  const LifetimeSourceSet *LSet = State->get<LifetimeBoundMap>(RetVal);
+  LifetimeSourceSet Set = LSet ? *LSet : F.getEmptySet();
+  Set = F.add(Set, Source);
+  State = State->set<LifetimeBoundMap>(RetVal, Set);
   return State;
 }
 
@@ -101,9 +87,7 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-bool LifetimeAnnotations::hasDanglingSource(const MemRegion *Source,
-                                            ProgramStateRef State,
-                                            CheckerContext &C) const {
+static bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) {
   // FIXME: The checker currently handles stack-region sources. Other
   // region kinds require separate methodology. For example, heap
   // regions do not go out of scope at the end of a stack frame, so
@@ -119,18 +103,16 @@ bool LifetimeAnnotations::hasDanglingSource(const MemRegion *Source,
   return false;
 }
 
-template <typename MapTy, typename KeyTy>
-void LifetimeAnnotations::checkReturnedBorrower(const MapTy &Map,
-                                                const KeyTy RetKey,
-                                                ProgramStateRef State,
-                                                CheckerContext &C) const {
-  for (auto &&[Origin, SourceSet] : Map) {
-    if (Origin == RetKey) {
-      for (const MemRegion *Region : SourceSet) {
-        if (hasDanglingSource(Region, State, C))
-          if (ExplodedNode *N = C.generateNonFatalErrorNode())
-            reportDanglingSource(Region, N, C);
-      }
+void LifetimeAnnotations::checkReturnedBorrower(SVal Val, ProgramStateRef State, CheckerContext &C) const {
+  auto LBMap = State->get<LifetimeBoundMap>();
+  ExplodedNode *N = C.generateNonFatalErrorNode();
+  if (!N)
+    return;
+
+  if (auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
+    for (const MemRegion *Region : *SourceSet) {
+      if (hasDanglingSource(Region, State, C))
+        reportDanglingSource(Region, N, C);
     }
   }
 }
@@ -142,9 +124,8 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS,
 
   ProgramStateRef State = C.getState();
   auto LBMap = State->get<LifetimeBoundMap>();
-  auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  if (LBMap.isEmpty() && LBMapVal.isEmpty())
+  if (LBMap.isEmpty())
     return;
 
   const Expr *RetExpr = RS->getRetValue();
@@ -153,17 +134,7 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS,
 
   RetExpr = RetExpr->IgnoreParens();
   SVal RetVal = C.getSVal(RetExpr);
-
-  SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true);
-  const MemRegion *RetValRegion = RetVal.getAsRegion();
-  if (!RetValSym && !RetValRegion)
-    return;
-
-  if (RetValSym)
-    checkReturnedBorrower(LBMap, RetValSym, State, C);
-
-  if (RetValRegion)
-    checkReturnedBorrower(LBMapVal, RetValRegion, State, C);
+  checkReturnedBorrower(RetVal, State, C);
 }
 
 void LifetimeAnnotations::reportDanglingBorrower(
@@ -182,9 +153,8 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   auto LBMap = State->get<LifetimeBoundMap>();
-  auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  if (LBMap.isEmpty() && LBMapVal.isEmpty())
+  if (LBMap.isEmpty())
     return;
 
   // FIXME: If a borrower has multiple bound sources the callback
@@ -192,75 +162,64 @@ void LifetimeAnnotations::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   // should be used to trace and identify which annotated parameter
   // recorded the binding. Attaching this information as path notes
   // would make the diagnostics more useful to the user.
-  if (SymbolRef LocSym = Loc.getAsSymbol(true)) {
-    if (auto *SourceSet = State->get<LifetimeBoundMap>(LocSym))
-      reportDanglingBorrower(SourceSet, C);
-  }
-
-  if (const MemRegion *LocRegion = Loc.getAsRegion()) {
-    if (auto *SourceSet = State->get<LifetimeBoundMapVal>(LocRegion))
-      reportDanglingBorrower(SourceSet, C);
-  }
+  if (auto *SourceSet = State->get<LifetimeBoundMap>(Loc))
+    reportDanglingBorrower(SourceSet, C);
 }
 
 void LifetimeAnnotations::reportDanglingSource(const MemRegion *Region,
                                                ExplodedNode *N,
                                                CheckerContext &C) const {
-  std::string ErrorMessage =
-      (llvm::Twine("Returning value bound to '") + Region->getString() +
+  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, (llvm::Twine("Returning value bound to '") + Region->getString() +
        "' that will go out of scope")
-          .str();
-  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, ErrorMessage, N);
+          .str(), N);
   C.emitReport(std::move(BR));
 }
 
 void LifetimeAnnotations::reportUseAfterScope(const MemRegion *Region,
                                               ExplodedNode *N,
                                               CheckerContext &C) const {
-  std::string ErrorMessage = (llvm::Twine("Use of '") + Region->getString() +
+  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, (llvm::Twine("Use of '") + Region->getString() +
                               "' after its lifetime ended.")
-                                 .str();
-  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, ErrorMessage, N);
+                                 .str(), N);
   C.emitReport(std::move(BR));
 }
 
 void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper,
                                            CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-
-  // Get both maps since both of them needs to be cleaned up
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
-  LifetimeBoundMapValTy LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  for (const SymExpr *Sym : llvm::make_first_range(LBMap)) {
-    if (!SymReaper.isLive(Sym))
-      State = State->remove<LifetimeBoundMap>(Sym);
+  DeallocatedSourceSetTy Sources = State->get<DeallocatedSourceSet>();
+
+  for (SVal Val : llvm::make_first_range(LBMap)) {
+    if (const MemRegion *ValRegion = Val.getAsRegion()) {
+      if (!SymReaper.isLiveRegion(ValRegion))
+        State = State->remove<LifetimeBoundMap>(Val);
+    } else if (SymbolRef ValRef = Val.getAsSymbol(/*IncludeBaseRegions=*/true)) {
+      if (!SymReaper.isLive(ValRef))
+        State = State->remove<LifetimeBoundMap>(Val);
+    }
   }
 
-  for (const MemRegion *Region : llvm::make_first_range(LBMapVal)) {
+  for (const MemRegion *Region : Sources) {
     if (!SymReaper.isLiveRegion(Region))
-      State = State->remove<LifetimeBoundMapVal>(Region);
+      State = State->remove<DeallocatedSourceSet>(Region);
   }
-  if (State != C.getState())
-    C.addTransition(State);
+
+  C.addTransition(State);
 }
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
                                      const char *NL, const char *Sep) const {
   auto LBMap = State->get<LifetimeBoundMap>();
-  auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
-  if (LBMap.isEmpty() && LBMapVal.isEmpty())
+  if (LBMap.isEmpty())
     return;
 
   Out << Sep << "LifetimeBound bindings:" << NL;
   for (auto &&[OriginSym, SourceSet] : LBMap) {
     for (const auto *Region : SourceSet)
       Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
-  }
-  for (auto &&[OriginRegion, SourceSet] : LBMapVal) {
-    for (const auto *Region : SourceSet)
-      Out << " Origin " << OriginRegion << " contains Loan " << Region << NL;
   }
 }
 
@@ -306,35 +265,16 @@ void DebugLifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call,
     return;
 
   SVal ArgSVal = Call.getArgSVal(0);
-
-  const MemRegion *ArgValRegion = ArgSVal.getAsRegion();
-  SymbolRef ArgSValSym = ArgSVal.getAsSymbol(/*IncludeBaseRegions=*/true);
-
-  llvm::SmallString<128> Str;
-  llvm::raw_svector_ostream OS(Str);
   ExplodedNode *N = C.generateNonFatalErrorNode();
   if (!N)
     return;
-
-  if (ArgSValSym) {
-    if (auto *SourceSet = State->get<LifetimeBoundMap>(ArgSValSym)) {
-      for (const auto *Region : *SourceSet) {
-        OS << " Origin " << ArgSValSym << " bound to " << Region;
-        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
-        C.emitReport(std::move(BR));
-        Str.clear();
-      }
-    }
-  }
-
-  if (ArgValRegion) {
-    if (auto *SourceSet = State->get<LifetimeBoundMapVal>(ArgValRegion)) {
-      for (const auto *Region : *SourceSet) {
-        OS << " Origin " << ArgValRegion << " bound to " << Region;
-        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
-        C.emitReport(std::move(BR));
-        Str.clear();
-      }
+  if (auto *SourceSet = State->get<LifetimeBoundMap>(ArgSVal)) {
+    for (const auto *Region : *SourceSet) {
+      llvm::SmallString<128> Str;
+      llvm::raw_svector_ostream OS(Str);
+      OS << " Origin " << ArgSVal << " bound to " << Region;
+      auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+      C.emitReport(std::move(BR));
     }
   }
 }
