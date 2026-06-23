@@ -695,7 +695,7 @@ namespace cwg241 { // cwg241: 9
   }
 } // namespace cwg241
 
-namespace cwg242 { // cwg242: 2.8
+namespace cwg242 { // cwg242: 3.0
   struct A {};
   struct I1 : A {};
   struct I2 : A {};
@@ -703,12 +703,18 @@ namespace cwg242 { // cwg242: 2.8
 
   A *upcast(D *p) {
     return (A *)(p);
-    // expected-error@-1 {{error: ambiguous conversion from derived class 'cwg242::D' to base class 'cwg242::A'}}
+    /* expected-error@-1
+    {{ambiguous conversion from derived class 'D' to base class 'A':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
   }
 
   D *downcast(A *p) {
     return (D *)(p);
-    // expected-error@-1 {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D'}}
+    /* expected-error@-1
+    {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D':
+    A -> I1 -> struct cwg242::D
+    A -> I2 -> struct cwg242::D}}*/
   }
 
   struct V {};
@@ -721,17 +727,42 @@ namespace cwg242 { // cwg242: 2.8
 
   A &ref_upcast(D &r) {
     return (A &)(r);
-    // expected-error@-1 {{ambiguous conversion from derived class 'cwg242::D' to base class 'cwg242::A'}}
+    /* expected-error@-1
+    {{ambiguous conversion from derived class 'D' to base class 'A':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
   }
 
   D &ref_downcast(A &r) {
     return (D &)(r);
-    // expected-error@-1 {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D'}}
+    /* expected-error@-1
+    {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D':
+    A -> I1 -> struct cwg242::D
+    A -> I2 -> struct cwg242::D}}*/
+  }
+
+  A *qual_upcast(const D *p) {
+    return (A *)(p);
+    /* expected-error@-1
+    {{ambiguous conversion from derived class 'D' to base class 'A':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
+  }
+
+  D *qual_downcast(const A *p) {
+    return (D *)(p);
+    /* expected-error@-1
+    {{ambiguous cast from base 'cwg242::A' to derived 'cwg242::D':
+    A -> I1 -> struct cwg242::D
+    A -> I2 -> struct cwg242::D}}*/
   }
 
   int D::*ptm_cast(int A::*p) {
     return (int D::*)(p);
-    // expected-error@-1 {{ambiguous conversion from pointer to member of base class 'cwg242::A' to pointer to member of derived class 'cwg242::D'}}
+    /* expected-error@-1
+    {{ambiguous conversion from pointer to member of base class 'A' to pointer to member of derived class 'D':
+    struct cwg242::D -> I1 -> A
+    struct cwg242::D -> I2 -> A}}*/
   }
 } // namespace cwg242
 
