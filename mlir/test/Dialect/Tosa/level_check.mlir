@@ -1278,6 +1278,15 @@ func.func @test_matmul_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %a
 
 // -----
 
+func.func @test_matmul_t_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %arg1: tensor<23178x28x19xf32>) -> tensor<23178x20000x28xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<23178x20000x19xf32>, tensor<23178x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<23178x20000x28xf32>
+  return %0 : tensor<23178x20000x28xf32>
+}
+
+// -----
+
 func.func @test_gather_tensor_size_invalid(%arg0: tensor<536870912x21x3xf32>, %arg1: tensor<536870912x26xi32>) -> tensor<536870912x26x3xf32> {
   // expected-error@+1 {{'tosa.gather' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<536870912x21x3xf32>, tensor<536870912x26xi32>) -> tensor<536870912x26x3xf32>

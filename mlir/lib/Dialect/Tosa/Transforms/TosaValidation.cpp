@@ -107,7 +107,8 @@ static LogicalResult checkConstantOperandConvOps(Operation *op,
 
 static LogicalResult checkConstantOperandMatMul(Operation *op,
                                                 const TargetEnv &env) {
-  if (!env.allows(Extension::dynamic) && isa<tosa::MatMulOp>(op)) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::MatMulOp, tosa::MatMulTOp>(op)) {
     // Check 'A_zp' and 'B_zp'
     return checkConstantOperands(op, {2, 3});
   }
@@ -838,6 +839,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatMulT);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(MaxPool2dAdaptive);

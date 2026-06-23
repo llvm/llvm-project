@@ -455,6 +455,44 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul", [NoMemoryEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: matmul_t
+//===----------------------------------------------------------------------===//
+def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
+  let summary = "Matrix multiplication with transposed B operator.";
+
+  let description = [{
+    Performs two dimensional matrix multiplications. `A` matrix is of shape
+    `N x H x C`. `B` matrix is of shape `D x W x C`. This is effectively a
+    matrix multiply of `A` by the transposed `B` matrix. If the batched 
+    dimension of input `B` is of size 1, the `B` matrix is broadcast.
+  }];
+
+  let arguments = (ins Tosa_Tensor3D:$a, Tosa_Tensor3D:$b,
+      Tosa_ScalarIntOrFloatTensor:$a_zp, Tosa_ScalarIntOrFloatTensor:$b_zp);
+
+  let results = (outs Tosa_Tensor3D:$output);
+
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
+                  Tosa_EXT_BF16]>,
+  ];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getAZeroPoint();
+    FailureOr<int64_t> getBZeroPoint();
+    LogicalResult verifyAZeroPoint(int64_t zp);
+    LogicalResult verifyBZeroPoint(int64_t zp);
+  }];
+
+  let builders = [Tosa_MatMulTOpQuantInfoBuilder];
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: matmul_t_block_scaled
 //===----------------------------------------------------------------------===//
 def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", [NoMemoryEffect]> {
