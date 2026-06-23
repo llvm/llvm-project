@@ -3128,9 +3128,11 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
 
     const DataLayout &DL = M->getDataLayout();
     EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_FALSE(haveNoCommonBitsSet(RHS, LHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
   }
   {
     // Check for an inverted mask: (X & ~M) op (Y & M) where M is noundef.
@@ -3149,9 +3151,11 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
 
     const DataLayout &DL = M->getDataLayout();
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
   }
   {
     // Check for (A & B) and ~(A | B)
@@ -3174,16 +3178,20 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
     EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_FALSE(haveNoCommonBitsSet(RHS, LHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
 
     auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
     auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
     EXPECT_FALSE(haveNoCommonBitsSet(LHS2, RHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
     EXPECT_FALSE(haveNoCommonBitsSet(RHS2, LHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
   {
     // Check for (A & B) and ~(A | B) where A and B are noundef
@@ -3206,16 +3214,20 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
 
     auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
     auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
   {
     // Check for (A & B) and ~(A | B) in vector version
@@ -3238,16 +3250,20 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
     EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_FALSE(haveNoCommonBitsSet(RHS, LHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
 
     auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
     auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
     EXPECT_FALSE(haveNoCommonBitsSet(LHS2, RHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
     EXPECT_FALSE(haveNoCommonBitsSet(RHS2, LHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::OnlyIfUndefIgnored,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
   {
     // Check for (A & B) and ~(A | B) in vector version where A and B are
@@ -3271,16 +3287,20 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     auto *LHS = findInstructionByNameOrNull(F, "LHS");
     auto *RHS = findInstructionByNameOrNull(F, "RHS");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, DL));
 
     auto *LHS2 = findInstructionByNameOrNull(F, "LHS2");
     auto *RHS2 = findInstructionByNameOrNull(F, "RHS2");
     EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(LHS2, RHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS2, RHS2, DL));
     EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
-    EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL, /*CheckNoUndef=*/false));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
 }
 

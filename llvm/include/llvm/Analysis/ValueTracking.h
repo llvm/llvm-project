@@ -123,11 +123,26 @@ LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                              const SimplifyQuery &Q,
                                              unsigned Depth = 0);
 
+enum class NoCommonBitsSetResult {
+  /// Not known to have no common set bits.
+  Unknown,
+
+  /// Known to have no common set bits only if undef values are ignored.
+  OnlyIfUndefIgnored,
+
+  /// Known to have no common set bits.
+  Known,
+};
+
+/// Return how strongly LHS and RHS are known to have no common set bits.
+LLVM_ABI NoCommonBitsSetResult getNoCommonBitsSetResult(
+    const WithCache<const Value *> &LHSCache,
+    const WithCache<const Value *> &RHSCache, const SimplifyQuery &SQ);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
-                                  const SimplifyQuery &SQ,
-                                  bool CheckNoUndef = true);
+                                  const SimplifyQuery &SQ);
 
 /// Return true if the given value is known to have exactly one bit set when
 /// defined. For vectors return true if every element is known to be a power
