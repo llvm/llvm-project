@@ -10251,9 +10251,9 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   const ConstantFPSDNode *FPTV = dyn_cast<ConstantFPSDNode>(TrueV);
   const ConstantFPSDNode *FPFV = dyn_cast<ConstantFPSDNode>(FalseV);
   if (FPTV && FPFV) {
-    if (FPTV->isExactlyValue(1.0) && FPFV->isPosZero())
+    if (FPTV->isOne() && FPFV->isPosZero())
       return DAG.getNode(ISD::SINT_TO_FP, DL, VT, CondV);
-    if (FPTV->isPosZero() && FPFV->isExactlyValue(1.0)) {
+    if (FPTV->isPosZero() && FPFV->isOne()) {
       SDValue XOR = DAG.getNode(ISD::XOR, DL, XLenVT, CondV,
                                 DAG.getConstant(1, DL, XLenVT));
       return DAG.getNode(ISD::SINT_TO_FP, DL, VT, XOR);
@@ -21967,7 +21967,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (N0->getOpcode() != ISD::FCOPYSIGN)
       return SDValue();
     ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N0->getOperand(0));
-    if (!C || !C->getValueAPF().isExactlyValue(+1.0))
+    if (!C || !C->getValueAPF().isOne())
       return SDValue();
     if (VT.isVector() || !isOperationLegal(ISD::FCOPYSIGN, VT))
       return SDValue();

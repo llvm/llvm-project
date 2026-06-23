@@ -187,8 +187,8 @@ class zeroinitializer<ValueType vt> :
 
 def fpimm_pos_inf : FPImmLeaf<fAny, [{ return Imm.isPosInfinity(); }]>;
 def fpimm_0 : FPImmLeaf<fAny, [{ return Imm.isZero(); }]>;
-def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(1.0); }]>;
-def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-1.0); }]>;
+def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isOne(); }]>;
+def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isMinusOne(); }]>;
 
 
 // Operands which can hold a Register or an Immediate.

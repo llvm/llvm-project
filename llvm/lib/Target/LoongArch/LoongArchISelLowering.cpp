@@ -929,7 +929,7 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   // use floating point load from the constant pool.
   auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
   int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
-  if (InsNum > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
+  if (InsNum > MaterializeFPImmInsNum && !FPVal.isOne())
     return SDValue();
 
   switch (VT.getSimpleVT().SimpleTy) {
@@ -10564,7 +10564,7 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
     return false;
-  return (Imm.isZero() || Imm.isExactlyValue(1.0) || isFPImmVLDILegal(Imm, VT));
+  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT));
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
