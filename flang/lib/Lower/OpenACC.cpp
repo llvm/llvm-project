@@ -4687,7 +4687,15 @@ void Fortran::lower::materializeOpenACCRoutineBindTargets(
           ? converter.getMLIRSymbolTable()
           : nullptr;
 
-  for (mlir::acc::RoutineOp routineOp : module.getOps<mlir::acc::RoutineOp>()) {
+  auto appendAttrs = [](mlir::ArrayAttr attrs,
+                        llvm::SmallVector<mlir::Attribute> &out) {
+    if (attrs)
+      out.append(attrs.begin(), attrs.end());
+  };
+
+  llvm::SmallVector<mlir::acc::RoutineOp> routineOps(
+      module.getOps<mlir::acc::RoutineOp>());
+  for (mlir::acc::RoutineOp routineOp : routineOps) {
     // bind renames the same callable, so clone the decorated routine's type.
     mlir::func::FuncOp decorated = fir::FirOpBuilder::getNamedFunction(
         module, symbolTable, routineOp.getFuncName());
@@ -4696,20 +4704,45 @@ void Fortran::lower::materializeOpenACCRoutineBindTargets(
                   : mlir::FunctionType::get(builder.getContext(), {}, {});
 
     auto declare = [&](llvm::StringRef name) {
-      if (!fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
-        fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module, name,
-                                          type, symbolTable);
+      if (mlir::func::FuncOp func =
+              fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
+        return func;
+      return fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module,
+                                               name, type, symbolTable);
+    };
+
+    auto createRoutineForBindTarget = [&](mlir::func::FuncOp target) {
+      if (target->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+        return;
+
+      llvm::SmallVector<mlir::Attribute> emptyBindIdNames, emptyBindStrNames,
+          emptyBindIdNameDeviceTypes, emptyBindStrNameDeviceTypes,
+          gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
+          workerDeviceTypes, vectorDeviceTypes;
+      appendAttrs(routineOp.getGangAttr(), gangDeviceTypes);
+      appendAttrs(routineOp.getGangDimAttr(), gangDimValues);
+      appendAttrs(routineOp.getGangDimDeviceTypeAttr(), gangDimDeviceTypes);
+      appendAttrs(routineOp.getSeqAttr(), seqDeviceTypes);
+      appendAttrs(routineOp.getWorkerAttr(), workerDeviceTypes);
+      appendAttrs(routineOp.getVectorAttr(), vectorDeviceTypes);
+
+      createOpenACCRoutineConstruct(
+          converter, routineOp.getLoc(), module, target, target.getName().str(),
+          routineOp.getNohost(), emptyBindIdNames, emptyBindStrNames,
+          emptyBindIdNameDeviceTypes, emptyBindStrNameDeviceTypes,
+          gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
+          workerDeviceTypes, vectorDeviceTypes);
     };
 
     // bind(identifier) is mangled; bind("string") is a verbatim asm name.
     if (mlir::ArrayAttr binds = routineOp.getBindIdNameAttr())
       for (mlir::Attribute bind : binds)
         if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind))
-          declare(symRef.getLeafReference());
+          createRoutineForBindTarget(declare(symRef.getLeafReference()));
     if (mlir::ArrayAttr binds = routineOp.getBindStrNameAttr())
       for (mlir::Attribute bind : binds)
         if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind))
-          declare(strAttr.getValue());
+          createRoutineForBindTarget(declare(strAttr.getValue()));
   }
 }
 
