@@ -4362,6 +4362,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
       };
       static OmpDirectiveSet valid50{
           valid45 | OmpDirectiveSet{llvm::omp::Directive::OMPD_simd}};
+      // 5.1 is the same as 5.0.
       static OmpDirectiveSet valid52{
           valid50 | OmpDirectiveSet{llvm::omp::Directive::OMPD_teams}};
       static OmpDirectiveSet valid60{valid52 |
