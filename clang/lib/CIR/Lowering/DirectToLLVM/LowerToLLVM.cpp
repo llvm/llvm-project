@@ -1449,7 +1449,7 @@ mlir::LogicalResult CIRToLLVMBuiltinIntCastOpLowering::matchAndRewrite(
   unsigned srcWidth = srcIntTy.getWidth();
   unsigned dstWidth = dstIntTy.getWidth();
 
-  // Fixed-width builtin integers must match the CIR integer wdith.
+  // Fixed-width builtin integers must match the CIR integer width.
   // If the converted LLVM widths differ, the non-CIR side must have been
   // 'index' type (target dependent width).
   assert((srcWidth == dstWidth ||
