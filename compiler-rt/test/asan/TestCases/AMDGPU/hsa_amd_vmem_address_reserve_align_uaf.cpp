@@ -3,7 +3,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // Regression test for the AddressSanitizer hsa_amd_vmem_address_reserve_align /
-// hsa_amd_vmem_address_free interceptors: Using the same freed reserved range twice is diagnosed as double-free.
+// hsa_amd_vmem_address_free interceptors: Using the same freed reserved range is diagnosed as use-after-free.
 //
 // REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
 // UNSUPPORTED: android
@@ -37,11 +37,13 @@ int main() {
   }
 
   (void)hsa_amd_vmem_address_free(mem, kSize);
-  (void)hsa_amd_vmem_address_free(mem, kSize);
+  auto *p = reinterpret_cast<volatile char *>(mem);
+  p[0] = 1; // Use-after-free
 
   fprintf(stderr, "expected double-free report\n");
   return 0;
 }
 
-// CHECK: ERROR: AddressSanitizer: attempting double-free
-// CHECK: SUMMARY: AddressSanitizer: double-free
+// CHECK: ERROR: AddressSanitizer: heap-use-after-free
+// CHECK-NEXT: WRITE of size 1 at {{0x[0-9a-f]+}} thread T0
+// CHECK: SUMMARY: AddressSanitizer: heap-use-after-free {{.*}}hsa_amd_vmem_address_reserve_align_uaf.cpp:41:{{[0-9]+}} in main
