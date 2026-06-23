@@ -1641,8 +1641,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
   }};
 
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
-  auto &dir{std::get<parser::OmpDirectiveName>(dirSpec.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_atomic);
   llvm::omp::Clause kind{x.GetKind()};
 
   checkExclusive(atomic, "atomic", dirSpec.Clauses());
@@ -1663,10 +1661,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
   default:
     break;
   }
-}
-
-void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
-  dirContext_.pop_back();
 }
 
 // Rewrite min/max:

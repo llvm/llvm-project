@@ -134,8 +134,7 @@ define i1 @align_with_offset_on_gep(ptr %base) {
 
 define void @align_with_constant_offset_0(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_0(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -145,8 +144,7 @@ define void @align_with_constant_offset_0(ptr %ptr) {
 
 define void @align_with_constant_offset_1(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_1(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -157,8 +155,7 @@ define void @align_with_constant_offset_1(ptr %ptr) {
 
 define void @align_with_constant_offset_4(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_4(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -169,8 +166,7 @@ define void @align_with_constant_offset_4(ptr %ptr) {
 
 define void @align_with_constant_offset_8(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_8(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -180,8 +176,7 @@ define void @align_with_constant_offset_8(ptr %ptr) {
 
 define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @align_with_variable_offset(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -196,6 +191,16 @@ define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
 ;
   %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
+define void @align_on_gep_keeping_alignment_variable_offset(ptr %ptr, i64 %offset, i64 %offset2) {
+; CHECK-LABEL: @align_on_gep_keeping_alignment_variable_offset(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 [[OFFSET2:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 %offset2) ]
   ret void
 }
 
@@ -239,6 +244,22 @@ define void @non_power_of_two_align(ptr %ptr) {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3) ]
+  ret void
+}
+
+define void @non_power_of_two_align_variable_offset(ptr %ptr, i64 %i) {
+; CHECK-LABEL: @non_power_of_two_align_variable_offset(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3, i64 %i) ]
+  ret void
+}
+
+define void @align_1_variable_offset(ptr %ptr, i64 %i) {
+; CHECK-LABEL: @align_1_variable_offset(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 1, i64 %i) ]
   ret void
 }
 
@@ -601,10 +622,7 @@ define void @redundant_nonnull3(ptr %ptr) {
 
 define void @partially_redundant(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5) {
 ; CHECK-LABEL: @partially_redundant(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR2:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]), "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]), "nonnull"(ptr [[PTR:%.*]]), "nonnull"(ptr [[PTR2:%.*]]) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr2) ]
