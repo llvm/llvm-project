@@ -1305,14 +1305,12 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // TODO: there are other patterns besides zero that we can usefully memset,
   // like -1, which happens to be the pattern used by member-pointers.
   if (!cgm.getTypes().isZeroInitializable(ty)) {
-    // The only non-zero-initializable shape exercised here is an aggregate
-    // whose null pattern comes from a pointer to data member, which
-    // emitNullConstant fills in per field (-1 for member-pointer fields).
-    // Virtual bases are the one reachable shape it cannot lower yet; assert
-    // they are absent rather than emitting an untested constant.
-    [[maybe_unused]] const auto *rd = ty->getAsCXXRecordDecl();
-    assert((!rd || rd->getNumVBases() == 0) &&
-           "emitNullInitialization: virtual bases not yet supported");
+    // Only the pointer-to-data-member case is tested here; emitNullConstant
+    // owns the NYIs for shapes it cannot build (virtual bases, non-zero-init
+    // arrays).
+    assert((ty->isMemberDataPointerType() || ty->isRecordType()) &&
+           "emitNullInitialization: only pointer-to-data-member (directly or "
+           "within a record) null initialization is implemented");
     mlir::Value nullVal = cgm.emitNullConstant(ty, loc);
     builder.createStore(loc, nullVal, destPtr);
     return;
