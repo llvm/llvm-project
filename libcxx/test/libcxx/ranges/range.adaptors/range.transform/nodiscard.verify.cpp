@@ -98,16 +98,14 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
 
-  {
-    auto ncsv = NonCommonSimpleView{} | std::views::transform(std::identity{});
-    auto c_it = std::as_const(ncsv).begin();
-    auto sst  = ncsv.end();
+  auto ncsv = NonCommonSimpleView{} | std::views::transform(std::identity{});
+  auto c_it = std::as_const(ncsv).begin();
+  auto sst  = ncsv.end();
 
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    sst - c_it;
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    c_it - sst;
-  }
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  sst - c_it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  c_it - sst;
 
   // [range.transform.overview]
 
