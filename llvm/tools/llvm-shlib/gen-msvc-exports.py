@@ -23,11 +23,8 @@
 # You can use the --output flag to set the name of the export file.
 #
 # ===------------------------------------------------------------------------===#
-from tempfile import mkstemp
-from contextlib import contextmanager
-from subprocess import check_call
+from subprocess import check_output
 import argparse
-import os
 import re
 
 
@@ -37,20 +34,6 @@ _UNDERSCORE_REGEX = {
 }
 
 
-@contextmanager
-def removing(path):
-    try:
-        yield path
-    finally:
-        os.unlink(path)
-
-
-def touch_tempfile(*args, **kwargs):
-    fd, name = mkstemp(*args, **kwargs)
-    os.close(fd)
-    return name
-
-
 def gen_llvm_c_export(output, underscore, libs, nm):
     """Generate the export file for the LLVM-C DLL.
 
@@ -58,25 +41,22 @@ def gen_llvm_c_export(output, underscore, libs, nm):
     to `output`. If `underscore` is true, symbols will
     be assumed to be prefixed with an underscore.
     """
-    with removing(touch_tempfile(prefix="dumpout", suffix=".txt")) as dumpout:
+    # Get the right regex.
+    p = _UNDERSCORE_REGEX[underscore]
 
-        # Get the right regex.
-        p = _UNDERSCORE_REGEX[underscore]
+    with open(output, "w+t") as output_f:
 
-        with open(output, "w+t") as output_f:
+        # For each lib get the LLVM* functions it exports.
+        for lib in libs:
+            # Capture nm output directly to avoid temp file issues on Windows
+            # during parallel builds.
+            nm_output = check_output([nm, "-g", lib], text=True)
 
-            # For each lib get the LLVM* functions it exports.
-            for lib in libs:
-                # Call dumpbin.
-                with open(dumpout, "w+t") as dumpout_f:
-                    check_call([nm, "-g", lib], stdout=dumpout_f)
-
-                # Get the matching lines.
-                with open(dumpout) as dumpbin:
-                    for line in dumpbin:
-                        m = p.match(line)
-                        if m is not None:
-                            output_f.write(m.group(1) + "\n")
+            # Get the matching lines.
+            for line in nm_output.splitlines():
+                m = p.match(line)
+                if m is not None:
+                    output_f.write(m.group(1) + "\n")
 
 
 def main():

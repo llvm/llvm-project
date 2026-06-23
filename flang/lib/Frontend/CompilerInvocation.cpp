@@ -1551,6 +1551,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
       opts.PrepareForThinLTO = true;
   }
 
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
+
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_ffat_lto_objects,
