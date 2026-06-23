@@ -3360,7 +3360,7 @@ void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
-  ifLeafs.clear();
+  ifLeafs_.clear();
 }
 
 // Clauses
@@ -4418,7 +4418,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
   if (appliesTo != llvm::omp::Directive::OMPD_unknown) {
     parser::CharBlock source{GetContext().clauseSource};
     for (auto leaf : llvm::omp::getLeafConstructsOrSelf(appliesTo)) {
-      auto pair{ifLeafs.try_emplace(leaf, source)};
+      auto pair{ifLeafs_.try_emplace(leaf, source)};
       if (!pair.second) {
         std::string ifName{GetUpperName(llvm::omp::Clause::OMPC_if, version)};
         context_

@@ -392,7 +392,7 @@ private:
   // Mapping of directive-name-modifier constituents to the sources of the
   // IF clauses that referenced them. If there was no modifier, the entire
   // directive is assumed to be listed.
-  std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs;
+  std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into
   // and out of OpenMP constructs.
