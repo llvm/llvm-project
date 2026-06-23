@@ -1933,12 +1933,18 @@ void ClauseProcessor::processMapObjectsWithIterator(
     return;
   }
 
+  // Inside a declare mapper, the mapper variable's components are mapped
+  // directly, allowing member locators such as v%a(i). Mapping a derived-type
+  // member outside a declare mapper requires parent/member handling that
+  // iterator modifiers do not support yet.
+  bool inDeclareMapper = mlir::isa_and_present<mlir::omp::DeclareMapperOp>(
+      converter.getFirOpBuilder().getRegion().getParentOp());
+
   // Objects in an iterator-modified clause may independently reference
   // iterator variables, so handle each object separately.
   for (const omp::Object &object : objects) {
     if (hasIteratorIVReference(object, *ivSyms)) {
-      if (directive != llvm::omp::Directive::OMPD_unknown &&
-          getBaseObject(object, semaCtx))
+      if (!inDeclareMapper && getBaseObject(object, semaCtx))
         TODO(clauseLocation, "iterator modifier with derived type member map");
       result.mapIterated.push_back(buildIteratedMapEntry(
           converter, semaCtx, clauseLocation, iteratorRanges, object,

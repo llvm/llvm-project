@@ -1366,45 +1366,55 @@ getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
   const semantics::Symbol *sym = object.sym();
   assert(sym && "expected symbol for iterator object");
 
+  mlir::Value addr;
   if (!sym->owner().IsDerivedType()) {
     // Keep the same base address as ordinary map lowering for non-component
     // objects.
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::getDataOperandBaseAddr(converter, builder, *sym, loc,
                                                /*unwrapFirBox=*/false);
-    return hlfir::Entity{info.addr};
+    addr = info.addr;
+  } else {
+    const std::optional<ExprTy> &ref = object.ref();
+    if (!ref)
+      return std::nullopt;
+
+    auto arrayRef = Fortran::lower::detail::getRef<evaluate::ArrayRef>(*ref);
+    if (!arrayRef)
+      return std::nullopt;
+
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    std::optional<ExprTy> arrayBase;
+    const evaluate::NamedEntity &base = arrayRef->base();
+    // Component array references carry the component base separately from the
+    // subscript list. Lower that base, e.g. v%a in v%a(i), and leave the
+    // subscript-dependent part to the iterator-local map bounds below.
+    if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
+      arrayBase = ea.Designate(evaluate::DataRef{*symRef});
+    else if (const evaluate::Component *component = base.UnwrapComponent())
+      arrayBase = ea.Designate(evaluate::DataRef{*component});
+    else
+      llvm_unreachable("unexpected NamedEntity");
+
+    assert(arrayBase);
+    // Use mutable-box lowering for allocatable and pointer bases. The shared
+    // descriptor load below turns the box address into a box value.
+    fir::ExtendedValue dataExv;
+    if (semantics::IsAllocatableOrPointer(base.GetLastSymbol()))
+      dataExv = converter.genExprMutableBox(loc, *arrayBase);
+    else
+      dataExv = converter.genExprAddr(loc, *arrayBase, stmtCtx);
+    addr = fir::getBase(dataExv);
   }
 
-  const std::optional<ExprTy> &ref = object.ref();
-  if (!ref)
-    return std::nullopt;
-
-  auto arrayRef = Fortran::lower::detail::getRef<evaluate::ArrayRef>(*ref);
-  if (!arrayRef)
-    return std::nullopt;
-
-  evaluate::ExpressionAnalyzer ea{semaCtx};
-  std::optional<ExprTy> arrayBase;
-  const evaluate::NamedEntity &base = arrayRef->base();
-  // Component array references carry the component base separately from the
-  // subscript list. Lower that base, e.g. v%a in v%a(i), and leave the
-  // subscript-dependent part to the iterator-local map bounds below.
-  if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
-    arrayBase = ea.Designate(evaluate::DataRef{*symRef});
-  else if (const evaluate::Component *component = base.UnwrapComponent())
-    arrayBase = ea.Designate(evaluate::DataRef{*component});
-  else
-    llvm_unreachable("unexpected NamedEntity");
-
-  assert(arrayBase);
-  // Preserve mutable-box lowering for allocatable and pointer bases; MapInfoOp
-  // still records the address returned by the lowered base expression.
-  fir::ExtendedValue dataExv;
-  if (semantics::IsAllocatableOrPointer(base.GetLastSymbol()))
-    dataExv = converter.genExprMutableBox(loc, *arrayBase);
-  else
-    dataExv = converter.genExprAddr(loc, *arrayBase, stmtCtx);
-  return hlfir::Entity{fir::getBase(dataExv)};
+  // Allocatable and pointer locators yield a descriptor address
+  // (!fir.ref<!fir.box<...>>) for both whole objects and components. Load the
+  // descriptor so var_ptr maps the array data, not the descriptor.
+  // Assumed-shape arrays and non-allocatable components are already box values
+  // or plain addresses and need no load.
+  if (fir::isBoxAddress(addr.getType()))
+    addr = fir::LoadOp::create(builder, loc, addr);
+  return hlfir::Entity{addr};
 }
 
 // Build normalized map bounds for an iterator-dependent map/motion object.

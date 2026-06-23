@@ -82,6 +82,106 @@ end subroutine
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
+subroutine target_update_allocatable(a, n)
+  integer, allocatable :: a(:)
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp target update to(iterator(i = 1:n): a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_allocatable
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_update_allocatableEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:   %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%[[DIMS0]]#0 : index) {stride_in_bytes = true}
+! CHECK:   %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+subroutine target_update_pointer(a, n)
+  integer, pointer :: a(:)
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp target update to(iterator(i = 1:n): a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_pointer
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtarget_update_pointerEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:   %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:   %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%[[DIMS0]]#0 : index) {stride_in_bytes = true}
+! CHECK:   %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ptr<!fir.array<?xi32>>, i32) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+subroutine target_update_allocatable_2d(a, n, m)
+  integer, allocatable :: a(:, :)
+  integer, intent(in) :: n, m
+  integer :: i, j
+
+  !$omp target update to(iterator(i = 1:n, j = 1:m): a(i, j))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_allocatable_2d
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_update_allocatable_2dEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK:   %[[BOUNDS0:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[BOUNDS1:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?x?xi32>>, i32) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS0]], %[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+subroutine target_update_deferred_char(a, n)
+  character(:), allocatable :: a(:)
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp target update to(iterator(i = 1:n): a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_deferred_char
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_update_deferred_charEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.char<1,?>) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+subroutine target_update_class_star(a, n)
+  class(*), allocatable :: a(:)
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp target update to(iterator(i = 1:n): a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_class_star
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_update_class_starEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.heap<!fir.array<?xnone>>
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xnone>>, none) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
 subroutine target_update_to_section()
   integer, parameter :: n = 16
   integer :: a(n)
@@ -313,6 +413,30 @@ end subroutine
 ! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
 ! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[X]]#0 : !fir.ref<!fir.array<10x!fir.type<_QFtarget_update_iterated_default_mapperTs{a:i32}>>>, !fir.array<10x!fir.type<_QFtarget_update_iterated_default_mapperTs{a:i32}>>) map_clauses(to) capture(ByRef) mapper(@_QQFtarget_update_iterated_default_mappers_omp_default_mapper) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+! Assumed-shape array of a derived type with a mapper, mapped per iteration.
+subroutine target_update_assumed_shape_mapper(x, n)
+  type :: s
+    integer :: a
+  end type
+  type(s) :: x(:)
+  integer, intent(in) :: n
+  integer :: i
+
+  !$omp declare mapper(s :: v) map(to: v%a)
+  !$omp target update to(iterator(i = 1:n): x(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_assumed_shape_mapper
+! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtarget_update_assumed_shape_mapperEx"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[DIMS:.*]]:3 = fir.box_dims %[[X]]#0, %{{.*}} : (!fir.box<!fir.array<?x!fir.type<_QFtarget_update_assumed_shape_mapperTs{a:i32}>>>, index) -> (index, index, index)
+! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS]]#1 : index) stride(%[[DIMS]]#2 : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[BASE:.*]] = fir.box_addr %[[X]]#0 : (!fir.box<!fir.array<?x!fir.type<_QFtarget_update_assumed_shape_mapperTs{a:i32}>>>) -> !fir.ref<!fir.array<?x!fir.type<_QFtarget_update_assumed_shape_mapperTs{a:i32}>>>
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ref<!fir.array<?x!fir.type<_QFtarget_update_assumed_shape_mapperTs{a:i32}>>>, !fir.type<_QFtarget_update_assumed_shape_mapperTs{a:i32}>) map_clauses(to) capture(ByRef) mapper(@_QQFtarget_update_assumed_shape_mappers_omp_default_mapper) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
 ! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
