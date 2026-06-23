@@ -280,7 +280,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
