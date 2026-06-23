@@ -238,7 +238,7 @@ def BasePtr : MemOperand<GPR>;
 
 def SPMem : MemOperand<SP>;
 
-def GPRCMem : MemOperand<GPRC>;
+def BasePtrC : MemOperand<GPRC>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
@@ -1955,9 +1955,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32, isCodeGenOnly = 0 in
-def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tlsdesc", "$dst, $src">;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32 in
+def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []>;
 
 def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";

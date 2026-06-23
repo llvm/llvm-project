@@ -1283,8 +1283,7 @@ void Parser::parseOMPContextSelectorSet(
     Diag(Tok.getLocation(), diag::warn_omp_declare_variant_expected)
         << "="
         << ("context set name \"" + getOpenMPContextTraitSetName(TISet.Kind) +
-            "\"")
-               .str();
+            "\"");
 
   // Parse '{'.
   if (Tok.is(tok::l_brace)) {

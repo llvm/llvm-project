@@ -2222,25 +2222,20 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        handles traversal of template args and qualifier.                       \
        For explicit specializations ("template<> set<int> {...};"),            \
        we traverse template args here since there is no EID. */                \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {  \
-        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
-            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
-      }                                                                        \
-    }                                                                          \
-                                                                               \
-    if (getDerived().shouldVisitTemplateInstantiations() ||                    \
-        D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
-      /* Traverse base definition for explicit specializations */              \
-      TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
-    } else {                                                                   \
+    if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
+      const auto *ArgsWritten = D->getTemplateArgsAsWritten();                 \
+      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
+          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+    } else if (!getDerived().shouldVisitTemplateInstantiations()) {            \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \
          which contains the instantiated members of the template. */           \
       return true;                                                             \
     }                                                                          \
+                                                                               \
+    /* Traverse base definition for explicit specializations */                \
+    TRY_TO(Traverse##DECLKIND##Helper(D));                                     \
   })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)

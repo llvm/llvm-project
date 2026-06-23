@@ -756,14 +756,14 @@ emitc.field @testField : !emitc.array<1xf32>
 
 // -----
 
-// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+// expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
 %1 = emitc.get_field @testField : !emitc.array<1xf32>
 
 // -----
 
 emitc.func @testMethod() {
   %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  // expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
   %1 = get_field @testField : !emitc.array<1xf32>
   %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
   return

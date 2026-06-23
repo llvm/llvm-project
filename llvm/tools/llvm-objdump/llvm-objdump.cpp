@@ -1200,8 +1200,10 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!DisAsm)
     reportError(Obj.getFileName(), "no disassembler for target " + TripleName);
 
-  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
     DisAsm->setABIVersion(ELFObj->getEIdentABIVersion());
+    DisAsm->emitTargetIDIfSupported(outs(), ELFObj->getPlatformFlags());
+  }
 
   InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
 
@@ -1377,7 +1379,7 @@ static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
       if (Expected<StringRef> NameOrErr = Symbol.getName()) {
         if (!NameOrErr->empty())
           AllSymbols[SectionNames[Plt.Section]].emplace_back(
-              Plt.Address, Saver.save((*NameOrErr + "@plt").str()), SymbolType);
+              Plt.Address, Saver.save(*NameOrErr + "@plt"), SymbolType);
         continue;
       } else {
         // The warning has been reported in disassembleObject().
