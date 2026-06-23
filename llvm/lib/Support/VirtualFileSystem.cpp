@@ -194,11 +194,14 @@ class RealFile : public File {
   file_t FD;
   Status S;
   std::string RealName;
+  bool IsTextMode;
+  mutable bool BufferEverReturned = false;
 
-  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName)
+  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName,
+           bool IsText)
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
-        RealName(NewRealPathName.str()) {
+        RealName(NewRealPathName.str()), IsTextMode(IsText) {
     assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
   }
 
@@ -210,7 +213,8 @@ public:
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &Name,
                                                    int64_t FileSize,
                                                    bool RequiresNullTerminator,
-                                                   bool IsVolatile) override;
+                                                   bool IsVolatile,
+                                                   bool IsText) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
 };
@@ -238,12 +242,24 @@ ErrorOr<std::string> RealFile::getName() {
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 RealFile::getBuffer(const Twine &Name, int64_t FileSize,
-                    bool RequiresNullTerminator, bool IsVolatile) {
+                    bool RequiresNullTerminator, bool IsVolatile, bool IsText) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
-  return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
-                                   IsVolatile);
+  
+  // Check if the cached file's mode matches the requested mode
+  // If buffer was previously returned and text mode differs, report fatal error
+  if (BufferEverReturned && (IsTextMode != IsText)) {
+    llvm::report_fatal_error(
+        "Text mode mismatch: file '" + Name.str() +
+        "' was previously accessed with a different text mode");
+  }
+  
+  auto Result = MemoryBuffer::getOpenFile(FD, Name, FileSize,
+                                          RequiresNullTerminator, IsVolatile);
+  if (Result)
+    BufferEverReturned = true;
+  return Result;
 }
 
 std::error_code RealFile::close() {
@@ -320,8 +336,9 @@ private:
         adjustPath(Name, Storage), Flags, &RealName);
     if (!FDOrErr)
       return errorToErrorCode(FDOrErr.takeError());
+    bool IsText = (Flags & sys::fs::OF_Text) != sys::fs::OF_None;
     return std::unique_ptr<File>(
-        new RealFile(*FDOrErr, Name.str(), RealName.str()));
+        new RealFile(*FDOrErr, Name.str(), RealName.str(), IsText));
   }
 
   struct WorkingDirectory {

@@ -539,15 +539,16 @@ FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
     FileSize = -1;
 
   StringRef Filename = FE.getName();
-  // If the file is already open, use the open file descriptor.
+
+  // If the file is already open, use the cached file descriptor.
   if (Entry->File) {
     auto Result = Entry->File->getBuffer(Filename, FileSize,
-                                         RequiresNullTerminator, isVolatile);
+                                         RequiresNullTerminator, isVolatile, IsText);
     Entry->closeFile();
     return Result;
   }
 
-  // Otherwise, open the file.
+  // Open the file with the requested mode.
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
                               RequiresNullTerminator, IsText);
 }
