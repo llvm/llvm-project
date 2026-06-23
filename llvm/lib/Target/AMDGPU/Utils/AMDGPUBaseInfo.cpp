@@ -1097,22 +1097,20 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
-namespace IsaInfo {
+TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                              StringRef FeatureString) {
+  TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
+                    STI.getFeatureBits().test(FeatureSupportsXNACK)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported,
+                    STI.getFeatureBits().test(FeatureSupportsSRAMECC)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported);
 
-AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
-    : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any) {
-  if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
-    XnackSetting = TargetIDSetting::Unsupported;
-  if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
-    SramEccSetting = TargetIDSetting::Unsupported;
-}
-
-void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
   // Check if xnack or sramecc is explicitly enabled or disabled.  In the
   // absence of the target features we assume we must generate code that can run
   // in any environment.
-  SubtargetFeatures Features(FS);
+  SubtargetFeatures Features(FeatureString);
   std::optional<bool> XnackRequested;
   std::optional<bool> SramEccRequested;
 
@@ -1127,13 +1125,16 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
       SramEccRequested = false;
   }
 
-  bool XnackSupported = isXnackSupported();
-  bool SramEccSupported = isSramEccSupported();
+  // Only allow changing xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support keep their initial setting (Any).
+
+  bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
+  bool SramEccSupported = TargetID.isSramEccSupported();
 
   if (XnackRequested) {
     if (XnackSupported) {
-      XnackSetting =
-          *XnackRequested ? TargetIDSetting::On : TargetIDSetting::Off;
+      TargetID.setXnackSetting(*XnackRequested ? TargetIDSetting::On
+                                               : TargetIDSetting::Off);
     } else {
       // If a specific xnack setting was requested and this GPU does not support
       // xnack emit a warning. Setting will remain set to "Unsupported".
@@ -1149,8 +1150,8 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
 
   if (SramEccRequested) {
     if (SramEccSupported) {
-      SramEccSetting =
-          *SramEccRequested ? TargetIDSetting::On : TargetIDSetting::Off;
+      TargetID.setSramEccSetting(*SramEccRequested ? TargetIDSetting::On
+                                                   : TargetIDSetting::Off);
     } else {
       // If a specific sramecc setting was requested and this GPU does not
       // support sramecc emit a warning. Setting will remain set to
@@ -1164,72 +1165,11 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
       }
     }
   }
+
+  return TargetID;
 }
 
-static TargetIDSetting
-getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.ends_with("-"))
-    return TargetIDSetting::Off;
-  if (FeatureString.ends_with("+"))
-    return TargetIDSetting::On;
-
-  llvm_unreachable("Malformed feature string");
-}
-
-void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
-  SmallVector<StringRef, 3> TargetIDSplit;
-  TargetID.split(TargetIDSplit, ':');
-
-  for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
-}
-
-void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
-  const Triple &TargetTriple = STI.getTargetTriple();
-  auto Version = getIsaVersion(STI.getCPU());
-
-  StreamRep << TargetTriple.getArchName() << '-' << TargetTriple.getVendorName()
-            << '-' << TargetTriple.getOSName() << '-'
-            << TargetTriple.getEnvironmentName() << '-';
-
-  std::string Processor;
-  // TODO: Following else statement is present here because we used various
-  // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
-  // Remove once all aliases are removed from GCNProcessors.td.
-  if (Version.Major >= 9)
-    Processor = STI.getCPU().str();
-  else
-    Processor = (Twine("gfx") + Twine(Version.Major) + Twine(Version.Minor) +
-                 Twine(Version.Stepping))
-                    .str();
-
-  std::string Features;
-  if (TargetTriple.getOS() == Triple::AMDHSA) {
-    // sramecc.
-    if (getSramEccSetting() == TargetIDSetting::Off)
-      Features += ":sramecc-";
-    else if (getSramEccSetting() == TargetIDSetting::On)
-      Features += ":sramecc+";
-    // xnack.
-    if (getXnackSetting() == TargetIDSetting::Off)
-      Features += ":xnack-";
-    else if (getXnackSetting() == TargetIDSetting::On)
-      Features += ":xnack+";
-  }
-
-  StreamRep << Processor << Features;
-}
-
-std::string AMDGPUTargetID::toString() const {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS << *this;
-  return Str;
-}
+namespace IsaInfo {
 
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureInstCacheLineSize128))
@@ -3918,19 +3858,18 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
 } // namespace AMDGPU
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AMDGPU::IsaInfo::TargetIDSetting S) {
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S) {
   switch (S) {
-  case (AMDGPU::IsaInfo::TargetIDSetting::Unsupported):
+  case (AMDGPU::TargetIDSetting::Unsupported):
     OS << "Unsupported";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Any):
+  case (AMDGPU::TargetIDSetting::Any):
     OS << "Any";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Off):
+  case (AMDGPU::TargetIDSetting::Off):
     OS << "Off";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::On):
+  case (AMDGPU::TargetIDSetting::On):
     OS << "On";
     break;
   }
