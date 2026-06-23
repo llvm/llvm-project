@@ -508,6 +508,10 @@ void HexagonPassConfig::addPreEmitPass() {
       addPass(&HexagonLiveVariablesID);
   }
 
+  // Emit KCFI checks for indirect calls. Must run before packetization so
+  // the check and call can be bundled together into a VLIW packet.
+  addPass(createKCFIPass());
+
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
 

@@ -7619,6 +7619,11 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // `PointerOps` and their indicies in `PointerOps`.
   SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
+  // Track to make sure that only VecSz different base pointers are consumed
+  // Prevents cases such as:
+  // 1, x + 0, x + 1, 2x + 0 from being recognized as legal RT strided as there
+  // are 2 "0" and 2 "1" offsets and a stride of "x" between both offsets
+  SmallDenseSet<const SCEV *> StrideMultiples;
   for (auto [Idx, Ptr] : enumerate(PointerOps)) {
     const SCEV *PtrSCEV = SE->getSCEV(Ptr);
     if (!PtrSCEV)
@@ -7626,6 +7631,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
     const auto *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
     int64_t Offset = 0;
+    const SCEV *StrideMultiple = PtrSCEV;
     if (Add) {
       // `Offset` is non-zero.
       for (int I : seq<int>(Add->getNumOperands())) {
@@ -7637,11 +7643,13 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
           Offset = 0;
           continue;
         }
+        StrideMultiple = SE->getMinusSCEV(StrideMultiple, SC);
         break;
       }
     }
     OffsetToPointerOpIdxMap[Offset].first.push_back(Ptr);
     OffsetToPointerOpIdxMap[Offset].second.push_back(Idx);
+    StrideMultiples.insert(StrideMultiple);
   }
   unsigned NumOffsets = OffsetToPointerOpIdxMap.size();
 
@@ -7655,6 +7663,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       return false;
     VecSz = Sz / NumOffsets;
   }
+
+  if (StrideMultiples.size() != VecSz)
+    return false;
+
   if (NumOffsets > 1 || BaseTy->isVectorTy())
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
@@ -25549,6 +25561,27 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return std::nullopt;
     }
   }
+  // A scalar that is a non-copyable (i.e. really vectorized) element in this
+  // PHI-operand node, but a copyable element in another PHI-operand node, is
+  // vectorized here and only gathered/reused there. Both nodes feed different
+  // incoming values of the same vectorized PHI and may be emitted in different
+  // predecessor blocks, so the gathered reuse can end up not dominated by the
+  // vectorized value, producing broken IR. Bail out of scheduling to avoid it.
+  if (EI && EI.UserTE->State == TreeEntry::Vectorize &&
+      EI.UserTE->getOpcode() == Instruction::PHI && any_of(VL, [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I || (HasCopyables && S.isCopyableElement(V)))
+          return false;
+        return any_of(
+            SLP->VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+              return TE->UserTreeIndex &&
+                     TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+                     TE->UserTreeIndex.UserTE->getOpcode() ==
+                         Instruction::PHI &&
+                     TE->hasCopyableElements() && TE->isCopyableElement(V);
+            });
+      }))
+    return std::nullopt;
   if (DoesNotRequireScheduling) {
     // If all operands were replaced by copyables, the operands of this node
     // might be not, so need to recalculate dependencies for schedule data,
@@ -25578,18 +25611,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             ScheduleData *SD = getScheduleData(OpI);
             return SD && SD->hasValidDependencies();
           }))
-        return std::nullopt;
-      if (EI && EI.UserTE->State == TreeEntry::Vectorize &&
-          EI.UserTE->getOpcode() == Instruction::PHI &&
-          any_of(SLP->VectorizableTree,
-                 [&](const std::unique_ptr<TreeEntry> &TE) {
-                   return TE->UserTreeIndex &&
-                          TE->UserTreeIndex.UserTE->State ==
-                              TreeEntry::Vectorize &&
-                          TE->UserTreeIndex.UserTE->getOpcode() ==
-                              Instruction::PHI &&
-                          TE->hasCopyableElements() && TE->isCopyableElement(V);
-                 }))
         return std::nullopt;
       SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
       for (const Use &U : I->operands()) {

@@ -2536,7 +2536,7 @@ protected:
     switch (break_type) {
     case eClearTypeFileAndLine: // Breakpoint by source position
     {
-      const ConstString filename(m_options.m_filename);
+      llvm::StringRef filename(m_options.m_filename);
       BreakpointLocationCollection loc_coll;
 
       for (size_t i = 0; i < num_breakpoints; ++i) {

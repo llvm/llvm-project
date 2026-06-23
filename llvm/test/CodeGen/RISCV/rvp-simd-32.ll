@@ -1310,8 +1310,8 @@ define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.b a0, a0
-; RV64-NEXT:    pwcvtu.b a1, a1
+; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    pwcvtu.wb a1, a1
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
@@ -1346,8 +1346,8 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.b a1, a1
-; RV64-NEXT:    pwcvtu.b a0, a0
+; RV64-NEXT:    pwcvtu.wb a1, a1
+; RV64-NEXT:    pwcvtu.wb a0, a0
 ; RV64-NEXT:    psext.h.b a1, a1
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
@@ -2405,5 +2405,59 @@ define <2 x i16> @test_pabdu_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    pabdu.h a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pabdu.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pas_x_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pas_x_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pas.hx a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pas.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psa_x_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_psa_x_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psa.hx a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psa.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psas_x_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_psas_x_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psas.hx a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psas.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pssa_x_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pssa_x_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssa.hx a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pssa.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_paas_x_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_paas_x_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paas.hx a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.paas.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pasa_x_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pasa_x_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasa.hx a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pasa.v2i16(<2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %res
 }

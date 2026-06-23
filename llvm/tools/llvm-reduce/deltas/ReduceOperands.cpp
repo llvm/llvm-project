@@ -57,8 +57,7 @@ static bool isZero(Use &Op) {
 
 static bool isZeroOrOneFP(Value *Op) {
   const APFloat *C;
-  return match(Op, m_APFloat(C)) &&
-         ((C->isZero() && !C->isNegative()) || C->isExactlyValue(1.0));
+  return match(Op, m_APFloat(C)) && (C->isPosZero() || C->isOne());
 }
 
 static bool shouldReduceOperand(Use &Op) {

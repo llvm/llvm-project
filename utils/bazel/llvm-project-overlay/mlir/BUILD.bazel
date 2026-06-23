@@ -7351,9 +7351,11 @@ cc_library(
         "lib/Conversion/MathToXeVM",
     ],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":GPUCommonTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",

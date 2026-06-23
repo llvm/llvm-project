@@ -15476,8 +15476,25 @@ bool SCEVUnionPredicate::implies(const SCEVPredicate *N,
       return this->implies(I, SE);
     });
 
-  return any_of(Preds,
-                [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); });
+  if (any_of(Preds,
+             [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); }))
+    return true;
+
+  // A wrap predicate may be implied by a wrap predicate in Preds after applying
+  // equal predicates.
+  const auto *NWrap = dyn_cast<SCEVWrapPredicate>(N);
+  if (!NWrap)
+    return false;
+  const Loop *L = NWrap->getExpr()->getLoop();
+  return any_of(Preds, [&](const SCEVPredicate *I) {
+    const auto *IWrap = dyn_cast<SCEVWrapPredicate>(I);
+    if (!IWrap)
+      return false;
+    const auto *RewrittenAR = dyn_cast<SCEVAddRecExpr>(
+        SE.rewriteUsingPredicate(IWrap->getExpr(), L, *this));
+    return RewrittenAR &&
+           SE.getWrapPredicate(RewrittenAR, IWrap->getFlags())->implies(N, SE);
+  });
 }
 
 void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
@@ -15603,6 +15620,12 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   updateGeneration();
 }
 
+void PredicatedScalarEvolution::addPredicates(
+    ArrayRef<const SCEVPredicate *> Preds) {
+  for (const SCEVPredicate *P : Preds)
+    addPredicate(*P);
+}
+
 const SCEVPredicate &PredicatedScalarEvolution::getPredicate() const {
   return *Preds;
 }
@@ -15617,34 +15640,14 @@ void PredicatedScalarEvolution::updateGeneration() {
   }
 }
 
-void PredicatedScalarEvolution::setNoOverflow(
-    Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags) {
-  const SCEV *Expr = getSCEV(V);
-  const auto *AR = cast<SCEVAddRecExpr>(Expr);
-
-  auto ImpliedFlags = SCEVWrapPredicate::getImpliedFlags(AR, SE);
-
-  // Clear the statically implied flags.
-  Flags = SCEVWrapPredicate::clearFlags(Flags, ImpliedFlags);
-  addPredicate(*SE.getWrapPredicate(AR, Flags));
-
-  auto II = FlagsMap.insert({V, Flags});
-  if (!II.second)
-    II.first->second = SCEVWrapPredicate::setFlags(Flags, II.first->second);
-}
-
 bool PredicatedScalarEvolution::hasNoOverflow(
     Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags) {
-  const SCEV *Expr = getSCEV(V);
-  const auto *AR = cast<SCEVAddRecExpr>(Expr);
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(getSCEV(V));
+  if (!AR)
+    return false;
 
   Flags = SCEVWrapPredicate::clearFlags(
       Flags, SCEVWrapPredicate::getImpliedFlags(AR, SE));
-
-  auto II = FlagsMap.find(V);
-
-  if (II != FlagsMap.end())
-    Flags = SCEVWrapPredicate::clearFlags(Flags, II->second);
 
   return Flags == SCEVWrapPredicate::IncrementAnyWrap;
 }
@@ -15663,8 +15666,7 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
     return New;
   }
 
-  for (const auto *P : NewPreds)
-    addPredicate(*P);
+  addPredicates(NewPreds);
 
   RewriteMap[SE.getSCEV(V)] = {Generation, New};
   return New;
@@ -15675,10 +15677,7 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
       Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
                                                  SE)),
-      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {
-  for (auto I : Init.FlagsMap)
-    FlagsMap.insert(I);
-}
+      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {}
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
   // For each block.

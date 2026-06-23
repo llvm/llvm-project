@@ -532,6 +532,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
     auto load = cir::LoadOp::create(builder, call.getLoc(), origRetTy, sretSlot,
                                     /*isDeref=*/mlir::UnitAttr(),
                                     /*isVolatile=*/mlir::UnitAttr(),
+                                    /*is_nontemporal=*/mlir::UnitAttr(),
                                     /*alignment=*/mlir::IntegerAttr(),
                                     /*sync_scope=*/cir::SyncScopeKindAttr(),
                                     /*mem_order=*/cir::MemOrderAttr());

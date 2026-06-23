@@ -5310,7 +5310,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 /// packed. This can sometimes eliminate allocas because structs cannot get
 /// promoted to LLVM values, but vectors can.
 ///
-/// We only apply this transformation when all users of the alloca are memory
+/// We only apply this transformation when all users of the partition are memory
 /// intrinsics. Otherwise, if there is a load or store of some other type to the
 /// partition, SROA would select that type.
 ///
@@ -5347,20 +5347,27 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   if (StructSize != VectorSize)
     return nullptr;
 
-  for (const Slice &S : P) {
+  auto IsIgnorableOrMemIntrinsicSlice = [](const Slice &S) {
     if (S.isDead())
-      continue;
+      return true;
     auto *U = S.getUse();
     if (!U)
-      continue;
+      return true;
 
     User *Usr = U->getUser();
     if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      continue;
+      return true;
 
-    if (!isa<MemIntrinsic>(Usr))
+    return isa<MemIntrinsic>(Usr);
+  };
+
+  for (const Slice &S : P)
+    if (!IsIgnorableOrMemIntrinsicSlice(S))
       return nullptr;
-  }
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!IsIgnorableOrMemIntrinsicSlice(*S))
+      return nullptr;
 
   return VTy;
 }

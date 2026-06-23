@@ -206,6 +206,28 @@ __packed_sh1add(psh1add_u32x2, uint32x2_t)
 __packed_sh1sadd(pssh1sadd_i16x4, int16x4_t)
 __packed_sh1sadd(pssh1sadd_i32x2, int32x2_t)
 
+/* Packed Exchanged Addition and Subtraction (32-bit) */
+__packed_binary_builtin(pas_x_i16x2, int16x2_t, __builtin_riscv_pas_x_i16x2)
+__packed_binary_builtin(psa_x_i16x2, int16x2_t, __builtin_riscv_psa_x_i16x2)
+__packed_binary_builtin(psas_x_i16x2, int16x2_t, __builtin_riscv_psas_x_i16x2)
+__packed_binary_builtin(pssa_x_i16x2, int16x2_t, __builtin_riscv_pssa_x_i16x2)
+__packed_binary_builtin(paas_x_i16x2, int16x2_t, __builtin_riscv_paas_x_i16x2)
+__packed_binary_builtin(pasa_x_i16x2, int16x2_t, __builtin_riscv_pasa_x_i16x2)
+
+/* Packed Exchanged Addition and Subtraction (64-bit) */
+__packed_binary_builtin(pas_x_i16x4, int16x4_t, __builtin_riscv_pas_x_i16x4)
+__packed_binary_builtin(psa_x_i16x4, int16x4_t, __builtin_riscv_psa_x_i16x4)
+__packed_binary_builtin(psas_x_i16x4, int16x4_t, __builtin_riscv_psas_x_i16x4)
+__packed_binary_builtin(pssa_x_i16x4, int16x4_t, __builtin_riscv_pssa_x_i16x4)
+__packed_binary_builtin(paas_x_i16x4, int16x4_t, __builtin_riscv_paas_x_i16x4)
+__packed_binary_builtin(pasa_x_i16x4, int16x4_t, __builtin_riscv_pasa_x_i16x4)
+__packed_binary_builtin(pas_x_i32x2, int32x2_t, __builtin_riscv_pas_x_i32x2)
+__packed_binary_builtin(psa_x_i32x2, int32x2_t, __builtin_riscv_psa_x_i32x2)
+__packed_binary_builtin(psas_x_i32x2, int32x2_t, __builtin_riscv_psas_x_i32x2)
+__packed_binary_builtin(pssa_x_i32x2, int32x2_t, __builtin_riscv_pssa_x_i32x2)
+__packed_binary_builtin(paas_x_i32x2, int32x2_t, __builtin_riscv_paas_x_i32x2)
+__packed_binary_builtin(pasa_x_i32x2, int32x2_t, __builtin_riscv_pasa_x_i32x2)
+
 /* Packed Minimum and Maximum (32-bit) */
 __packed_binary_builtin(pmin_i8x4, int8x4_t, __builtin_elementwise_min)
 __packed_binary_builtin(pmin_i16x2, int16x2_t, __builtin_elementwise_min)

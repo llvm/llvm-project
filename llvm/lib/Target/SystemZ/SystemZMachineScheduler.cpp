@@ -19,55 +19,6 @@ static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
 }
 
-void SystemZPreRASchedStrategy::initializeLatencyReduction() {
-  // Enable latency reduction for a region that has a considerable amount of
-  // data sequences that should be interlaved. These are SUs that only have
-  // one data predecessor / successor edge(s) to their adjacent instruction(s)
-  // in the input order. Disable if region has many SUs relative to the
-  // overall height.
-  unsigned DAGHeight = 0;
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
-    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
-  RegionPolicy.DisableLatencyHeuristic =
-      DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
-  if ((HasDataSequences = !RegionPolicy.DisableLatencyHeuristic)) {
-    unsigned CurrSequence = 0, NumSeqNodes = 0;
-    auto countSequence = [&CurrSequence, &NumSeqNodes]() {
-      if (CurrSequence >= 2)
-        NumSeqNodes += CurrSequence;
-      CurrSequence = 0;
-    };
-    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-      const SUnit *SU = &DAG->SUnits[Idx];
-      bool InDataSequence = true;
-      // One Data pred to MI just above, or no preds.
-      unsigned NumPreds = 0;
-      for (const SDep &Pred : SU->Preds)
-        if (++NumPreds != 1 || Pred.getKind() != SDep::Data ||
-            Pred.getSUnit()->NodeNum != Idx - 1)
-          InDataSequence = false;
-      // One Data succ or no succs (ignoring ExitSU).
-      unsigned NumSuccs = 0;
-      for (const SDep &Succ : SU->Succs)
-        if (Succ.getSUnit() != &DAG->ExitSU &&
-            (++NumSuccs != 1 || Succ.getKind() != SDep::Data))
-          InDataSequence = false;
-      // Another type of node or one that does not have a single data pred
-      // ends any previous sequence.
-      if (!InDataSequence || !NumPreds)
-        countSequence();
-      if (InDataSequence)
-        CurrSequence++;
-    }
-    countSequence();
-    if (NumSeqNodes >= std::max(size_t(4), DAG->SUnits.size() / 4)) {
-      LLVM_DEBUG(dbgs() << "Number of nodes in def-use sequences: "
-                        << NumSeqNodes << ". ";);
-    } else
-      HasDataSequences = false;
-  }
-}
-
 bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
                                                bool CCDef) const {
   if (Cmp0SrcReg != SystemZ::NoRegister && MI->getNumOperands() &&
@@ -77,6 +28,30 @@ bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
       return true;
   }
   return false;
+}
+
+bool SystemZPreRASchedStrategy::closesLiveRange(const SUnit *SU,
+                                                ScheduleDAGMILive *DAG) const {
+  if (SU->getInstr()->isCopy())
+    return false;
+
+  // Extract the PressureChanges that all fp/vector or GR64/GR32/GRH32 regs
+  // affect respectively. misched-prera-pdiffs.mir tests against any future
+  // change in the PressureSets modelling, so simply hard-code them here.
+  int VR16PChange = 0, GRX32PChange = 0;
+  const PressureDiff &PDiff = DAG->getPressureDiff(SU);
+  for (const PressureChange &PC : PDiff) {
+    if (!PC.isValid())
+      break;
+    if (PC.getPSet() == SystemZ::VR16Bit)
+      VR16PChange = PC.getUnitInc();
+    else if (PC.getPSet() == SystemZ::GRX32Bit)
+      GRX32PChange = PC.getUnitInc();
+  }
+
+  // Return true for a (vreg) def when register pressure is reduced. Prioritize
+  // FP/vector regs over GPRs.
+  return VR16PChange < 0 || (!VR16PChange && GRX32PChange < 0);
 }
 
 bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
@@ -94,20 +69,26 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   if (tryBiasPhysRegs(TryCand, Cand, Zone, /*BiasPRegsExtra=*/true))
     return TryCand.Reason != NoCand;
 
-  // Don't extend the scheduled latency in regions with many nodes in data
-  // sequences, or for (single block loop) regions that are acyclically
-  // (within a single loop iteration) latency limited. IsAcyclicLatencyLimited
-  // is set only after initialization in registerRoots(), which is why it is
-  // checked here instead of earlier.
-  if (!RegionPolicy.DisableLatencyHeuristic &&
-      (HasDataSequences || Rem.IsAcyclicLatencyLimited))
+  if (RegionPolicy.ShouldTrackPressure) {
+    auto schedLow = [&](const SUnit *SU) {
+      return SU->getHeight() <= Zone->getScheduledLatency() &&
+             SU->getHeight() < LivenessHeightCutOff && closesLiveRange(SU, DAG);
+    };
+    // One SU closes a live range while preserving the scheduled latency.
+    if (tryGreater(schedLow(TryCand.SU), schedLow(Cand.SU), TryCand, Cand,
+                   RegExcess))
+      return TryCand.Reason != NoCand;
+  }
+
+  if (!RegionPolicy.DisableLatencyHeuristic)
     if (const SUnit *HigherSU =
             TryCand.SU->getHeight() > Cand.SU->getHeight()   ? TryCand.SU
             : TryCand.SU->getHeight() < Cand.SU->getHeight() ? Cand.SU
                                                              : nullptr)
       if (HigherSU->getHeight() > Zone->getScheduledLatency() &&
           HigherSU->getDepth() < computeRemLatency(*Zone)) {
-        // One or both SUs increase the scheduled latency.
+        // The higher SU increases the scheduled latency but is not on the
+        // Critical Path by Depth, so put it above the other one.
         tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
                 GenericSchedulerBase::BotHeightReduce);
         return TryCand.Reason != NoCand;
@@ -135,16 +116,20 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
-  // Avoid setting up the register pressure tracker for small regions to save
-  // compile time. Currently only used for computeCyclicCriticalPath() which
-  // is used for single block loops.
-  MachineBasicBlock *MBB = Begin->getParent();
-  RegionPolicy.ShouldTrackPressure =
-      MBB->isSuccessor(MBB) && NumRegionInstrs >= 8;
+  // TopRegionSUs is the number of SUs that is considered to be part of the
+  // "top" of a region. Liveness reduction is not done in regions smaller than
+  // this. The idea is to prioritize latency more after branches and help
+  // liveness only when the decoder is ahead of execution anyway.
+  static const unsigned TopRegionSUs = 36;
+
+  // Avoid setting up the register pressure tracker unless needed to save
+  // compile time.
+  RegionPolicy.ShouldTrackPressure = NumRegionInstrs > TopRegionSUs;
 
   // These heuristics has so far seemed to work better without adding a
   // top-down boundary.
   RegionPolicy.OnlyBottomUp = true;
+
   BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;
 }
@@ -154,9 +139,17 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
 
   Cmp0SrcReg = SystemZ::NoRegister;
 
-  initializeLatencyReduction();
-  LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
-                    << "enabled for data sequences.\n";);
+  unsigned DAGHeight = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+
+  if (RegionPolicy.ShouldTrackPressure)
+    LivenessHeightCutOff = DAGHeight / (DAG->SUnits.size() < 50 ? 4 : 2);
+
+  // Disable latency reduction if region has many SUs relative to the
+  // overall height.
+  RegionPolicy.DisableLatencyHeuristic =
+      DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
 }
 
 void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {

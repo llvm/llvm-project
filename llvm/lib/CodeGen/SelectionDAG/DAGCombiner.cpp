@@ -4774,6 +4774,13 @@ SDValue DAGCombiner::visitUSUBO_CARRY(SDNode *N) {
       return DAG.getNode(ISD::USUBO, SDLoc(N), N->getVTList(), N0, N1);
   }
 
+  // Iff the flag result is dead:
+  // (usubo_carry (sub X, Y), 0, Carry) -> (usubo_carry X, Y, Carry)
+  if (N0.getOpcode() == ISD::SUB && isNullConstant(N1) &&
+      !N->hasAnyUseOfValue(1))
+    return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), N->getVTList(),
+                       N0.getOperand(0), N0.getOperand(1), CarryIn);
+
   return SDValue();
 }
 
@@ -18787,10 +18794,10 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
   auto FuseFADD = [&](SDValue X, SDValue Y) {
     if (X.getOpcode() == ISD::FADD && (Aggressive || X->hasOneUse())) {
       if (auto *C = isConstOrConstSplatFP(X.getOperand(1), true)) {
-        if (C->isExactlyValue(+1.0))
+        if (C->isOne())
           return DAG.getNode(PreferredFusedOpcode, SL, VT, X.getOperand(0), Y,
                              Y);
-        if (C->isExactlyValue(-1.0))
+        if (C->isMinusOne())
           return DAG.getNode(PreferredFusedOpcode, SL, VT, X.getOperand(0), Y,
                              DAG.getNode(ISD::FNEG, SL, VT, Y));
       }
@@ -18810,20 +18817,20 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
   auto FuseFSUB = [&](SDValue X, SDValue Y) {
     if (X.getOpcode() == ISD::FSUB && (Aggressive || X->hasOneUse())) {
       if (auto *C0 = isConstOrConstSplatFP(X.getOperand(0), true)) {
-        if (C0->isExactlyValue(+1.0))
+        if (C0->isOne())
           return DAG.getNode(PreferredFusedOpcode, SL, VT,
                              DAG.getNode(ISD::FNEG, SL, VT, X.getOperand(1)), Y,
                              Y);
-        if (C0->isExactlyValue(-1.0))
+        if (C0->isMinusOne())
           return DAG.getNode(PreferredFusedOpcode, SL, VT,
                              DAG.getNode(ISD::FNEG, SL, VT, X.getOperand(1)), Y,
                              DAG.getNode(ISD::FNEG, SL, VT, Y));
       }
       if (auto *C1 = isConstOrConstSplatFP(X.getOperand(1), true)) {
-        if (C1->isExactlyValue(+1.0))
+        if (C1->isOne())
           return DAG.getNode(PreferredFusedOpcode, SL, VT, X.getOperand(0), Y,
                              DAG.getNode(ISD::FNEG, SL, VT, Y));
-        if (C1->isExactlyValue(-1.0))
+        if (C1->isMinusOne())
           return DAG.getNode(PreferredFusedOpcode, SL, VT, X.getOperand(0), Y,
                              Y);
       }
@@ -19306,7 +19313,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
     return DAG.getNode(ISD::FADD, DL, VT, N0, N0);
 
   // fold (fmul X, -1.0) -> (fsub -0.0, X)
-  if (N1CFP && N1CFP->isExactlyValue(-1.0)) {
+  if (N1CFP && N1CFP->isMinusOne()) {
     if (!LegalOperations || TLI.isOperationLegal(ISD::FSUB, VT)) {
       return DAG.getNode(ISD::FSUB, DL, VT,
                          DAG.getConstantFP(-0.0, DL, VT), N0, Flags);
@@ -19362,11 +19369,11 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
       case ISD::SETUGE:
       case ISD::SETGT:
       case ISD::SETGE:
-        if (TrueOpnd->isExactlyValue(-1.0) && FalseOpnd->isExactlyValue(1.0) &&
+        if (TrueOpnd->isMinusOne() && FalseOpnd->isOne() &&
             TLI.isOperationLegal(ISD::FNEG, VT))
           return DAG.getNode(ISD::FNEG, DL, VT,
                    DAG.getNode(ISD::FABS, DL, VT, X));
-        if (TrueOpnd->isExactlyValue(1.0) && FalseOpnd->isExactlyValue(-1.0))
+        if (TrueOpnd->isOne() && FalseOpnd->isMinusOne())
           return DAG.getNode(ISD::FABS, DL, VT, X);
 
         break;
@@ -19430,9 +19437,9 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     }
   }
 
-  if (N0CFP && N0CFP->isExactlyValue(1.0))
+  if (N0CFP && N0CFP->isOne())
     return DAG.getNode(ISD::FADD, DL, VT, N1, N2);
-  if (N1CFP && N1CFP->isExactlyValue(1.0))
+  if (N1CFP && N1CFP->isOne())
     return DAG.getNode(ISD::FADD, DL, VT, N0, N2);
 
   // Canonicalize (fma c, x, y) -> (fma x, c, y)
@@ -19462,10 +19469,10 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // (fma x, -1, y) -> (fadd (fneg x), y)
   if (N1CFP) {
-    if (N1CFP->isExactlyValue(1.0))
+    if (N1CFP->isOne())
       return DAG.getNode(ISD::FADD, DL, VT, N0, N2);
 
-    if (N1CFP->isExactlyValue(-1.0) &&
+    if (N1CFP->isMinusOne() &&
         (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))) {
       SDValue RHSNeg = DAG.getNode(ISD::FNEG, DL, VT, N0);
       AddToWorklist(RHSNeg.getNode());
@@ -19554,7 +19561,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // Skip if current node is a reciprocal/fneg-reciprocal.
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   ConstantFPSDNode *N0CFP = isConstOrConstSplatFP(N0, /* AllowUndefs */ true);
-  if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
+  if (N0CFP && (N0CFP->isOne() || N0CFP->isMinusOne()))
     return SDValue();
 
   // Exit early if the target does not want this transform or if there can't

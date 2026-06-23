@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1151 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1152 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1153 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1154 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1170 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1171 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1172 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s

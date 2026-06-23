@@ -202,10 +202,15 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
   } else {
     // Itanium C++ ABI 2.3:
     //   A pointer to data member is an offset from the base address of
-    //   the class object containing it, represented as a ptrdiff_t
-    unsigned memberIndex = attr.getMemberIndex().value();
-    memberOffset =
-        attr.getType().getClassTy().getElementOffset(layout, memberIndex);
+    //   the class object containing it, represented as a ptrdiff_t.
+    // Walk the GEP-style path, accumulating the byte offset at each step.
+    memberOffset = 0;
+    mlir::Type currentTy = attr.getType().getClassTy();
+    for (int32_t idx : attr.getPath()) {
+      auto recTy = mlir::cast<cir::RecordType>(currentTy);
+      memberOffset += static_cast<int64_t>(recTy.getElementOffset(layout, idx));
+      currentTy = recTy.getMembers()[idx];
+    }
   }
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
@@ -377,6 +382,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
     mlir::Value vtablePtr =
         cir::LoadOp::create(b, loc, vtablePtrPtr, /*isDeref=*/false,
                             /*isVolatile=*/false,
+                            /*isNontemporal=*/false,
                             /*alignment=*/mlir::IntegerAttr(),
                             /*sync_scope=*/cir::SyncScopeKindAttr{},
                             /*mem_order=*/cir::MemOrderAttr());
@@ -404,6 +410,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
                                              cir::CastKind::bitcast, vfpAddr);
     auto fnPtr = cir::LoadOp::create(b, loc, vfpPtr,
                                      /*isDeref=*/false, /*isVolatile=*/false,
+                                     /*isNontemporal=*/false,
                                      /*alignment=*/mlir::IntegerAttr(),
                                      /*sync_scope=*/cir::SyncScopeKindAttr{},
                                      /*mem_order=*/cir::MemOrderAttr());
@@ -777,6 +784,7 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       builder, loc, vptrPtr,
       /*isDeref=*/false,
       /*is_volatile=*/false,
+      /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
       /*mem_order=*/cir::MemOrderAttr());
@@ -790,6 +798,7 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       builder, loc, offsetToTopSlotPtr,
       /*isDeref=*/false,
       /*is_volatile=*/false,
+      /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
       /*mem_order=*/cir::MemOrderAttr());
@@ -899,6 +908,7 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
       builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
   return cir::LoadOp::create(
       builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
+      /*isNontemporal=*/false,
       builder.getI64IntegerAttr(countAlignment.getQuantity()),
       cir::SyncScopeKindAttr(), cir::MemOrderAttr());
 }

@@ -565,6 +565,132 @@ int32x2_t test_pssh1sadd_i32x2(int32x2_t a, int32x2_t b) {
   return __riscv_pssh1sadd_i32x2(a, b);
 }
 
+// CHECK-LABEL: test_pas_x_i16x2:
+// CHECK:       pas.hx
+int16x2_t test_pas_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pas_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_psa_x_i16x2:
+// CHECK:       psa.hx
+int16x2_t test_psa_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_psa_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_psas_x_i16x2:
+// CHECK:       psas.hx
+int16x2_t test_psas_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_psas_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pssa_x_i16x2:
+// CHECK:       pssa.hx
+int16x2_t test_pssa_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pssa_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_paas_x_i16x2:
+// CHECK:       paas.hx
+int16x2_t test_paas_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_paas_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pasa_x_i16x2:
+// CHECK:       pasa.hx
+int16x2_t test_pasa_x_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pasa_x_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pas_x_i16x4:
+// RV32:        pas.dhx
+// RV64:        pas.hx
+int16x4_t test_pas_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pas_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_psa_x_i16x4:
+// RV32:        psa.dhx
+// RV64:        psa.hx
+int16x4_t test_psa_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_psa_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_psas_x_i16x4:
+// RV32:        psas.dhx
+// RV64:        psas.hx
+int16x4_t test_psas_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_psas_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pssa_x_i16x4:
+// RV32:        pssa.dhx
+// RV64:        pssa.hx
+int16x4_t test_pssa_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pssa_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_paas_x_i16x4:
+// RV32:        paas.dhx
+// RV64:        paas.hx
+int16x4_t test_paas_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_paas_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pasa_x_i16x4:
+// RV32:        pasa.dhx
+// RV64:        pasa.hx
+int16x4_t test_pasa_x_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pasa_x_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pas_x_i32x2:
+// RV32:        add{{[[:space:]]}}
+// RV32:        sub{{[[:space:]]}}
+// RV64:        pas.wx
+int32x2_t test_pas_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pas_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_psa_x_i32x2:
+// RV32:        sub{{[[:space:]]}}
+// RV32:        add{{[[:space:]]}}
+// RV64:        psa.wx
+int32x2_t test_psa_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_psa_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_psas_x_i32x2:
+// RV32:        sadd{{[[:space:]]}}
+// RV32:        ssub{{[[:space:]]}}
+// RV64:        psas.wx
+int32x2_t test_psas_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_psas_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pssa_x_i32x2:
+// RV32:        ssub{{[[:space:]]}}
+// RV32:        sadd{{[[:space:]]}}
+// RV64:        pssa.wx
+int32x2_t test_pssa_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pssa_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_paas_x_i32x2:
+// RV32:        aadd{{[[:space:]]}}
+// RV32:        asub{{[[:space:]]}}
+// RV64:        paas.wx
+int32x2_t test_paas_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_paas_x_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pasa_x_i32x2:
+// RV32:        asub{{[[:space:]]}}
+// RV32:        aadd{{[[:space:]]}}
+// RV64:        pasa.wx
+int32x2_t test_pasa_x_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pasa_x_i32x2(a, b);
+}
+
 // CHECK-LABEL: test_pmin_i8x4:
 // CHECK:       pmin.b
 int8x4_t test_pmin_i8x4(int8x4_t a, int8x4_t b) {

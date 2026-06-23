@@ -1404,9 +1404,7 @@ public:
   /// Target the specified CPU.
   ///
   /// \return  False on error (invalid CPU name).
-  virtual bool setCPU(const std::string &Name) {
-    return false;
-  }
+  virtual bool setCPU(StringRef Name) { return false; }
 
   /// Fill a SmallVectorImpl with the valid values to setCPU.
   virtual void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {}

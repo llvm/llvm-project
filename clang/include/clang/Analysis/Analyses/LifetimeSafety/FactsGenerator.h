@@ -57,6 +57,7 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitStmtExpr(const StmtExpr *SE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);

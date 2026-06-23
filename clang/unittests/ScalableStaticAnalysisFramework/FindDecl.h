@@ -21,9 +21,13 @@ const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
     StringRef SearchingName;
     const NamedDecl *FoundDecl = nullptr;
 
-    NamedDeclFinder(StringRef SearchingName) : SearchingName(SearchingName) {}
+    NamedDeclFinder(StringRef SearchingName) : SearchingName(SearchingName) {
+      ShouldVisitTemplateInstantiations = true;
+    }
 
     bool VisitDecl(Decl *D) override {
+      if (D->isTemplated())
+        return true;
       if (const auto *ND = dyn_cast<SomeDecl>(D)) {
         if (ND->getNameAsString() == SearchingName) {
           FoundDecl = ND;

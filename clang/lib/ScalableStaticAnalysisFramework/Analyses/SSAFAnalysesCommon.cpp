@@ -34,6 +34,11 @@ class ContributorFinder : public DynamicRecursiveASTVisitor {
 public:
   std::set<const NamedDecl *> Contributors;
 
+  ContributorFinder() {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = false;
+  }
+
   bool VisitFunctionDecl(FunctionDecl *D) override {
     Contributors.insert(D);
     return true;

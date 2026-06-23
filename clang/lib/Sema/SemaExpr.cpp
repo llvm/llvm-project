@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
@@ -1752,6 +1753,10 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     return Context.getCommonSugaredType(LHSType, RHSType);
 
   // At this point, we have two different arithmetic types.
+
+  if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
+      (LHSType->isBitIntType() && RHSType->isFixedPointType()))
+    return QualType();
 
   // Diagnose attempts to convert between __ibm128, __float128 and long double
   // where such conversions currently can't be handled.
@@ -7281,6 +7286,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                               diag::err_wasm_table_as_function_parameter));
       }
     }
+  }
+
+  // Check read_image{i|ui} sampler argument before ConvertArgumentsForCall
+  // replaces sampler DeclRefExprs with their integer initializers.
+  if (getLangOpts().OpenCL && FDecl) {
+    OpenCL().checkBuiltinReadImage(FDecl, TheCall);
   }
 
   if (Proto) {

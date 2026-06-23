@@ -104,6 +104,7 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1151), // gfx1151
     GFX(1152), // gfx1152
     GFX(1153), // gfx1153
+    GFX(1154), // gfx1154
     GFX(1170), // gfx1170
     GFX(1171), // gfx1171
     GFX(1172), // gfx1172

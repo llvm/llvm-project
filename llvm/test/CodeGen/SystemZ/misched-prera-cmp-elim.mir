@@ -3,37 +3,54 @@
 # RUN:   | FileCheck %s
 # REQUIRES: asserts
 
-# Schedule the AGHIK that defines the compare source low to help comparison
+# Schedule the NRK that defines the compare source low to help comparison
 # elimination.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.1
-# CHECK:      Queue BotQ.A: 1 0
-# CHECK-NEXT:   Cand SU(1) FIRST
-# CHECK-NEXT:   Cand SU(0) WEAK
+# CHECK:      Queue BotQ.A: 4 5
+# CHECK-NEXT:   Cand SU(4) FIRST
 # CHECK-NEXT: Pick Bot WEAK       [pre-RA]
-# CHECK-NEXT: Scheduling SU(0) %2:gr64bit = AGHIK %0:gr64bit, -1, impl
+# CHECK-NEXT: Scheduling SU(4) %7:gr32bit = NRK %6:gr32bit, %0:gr32bit, implicit-def dead $cc
 # CHECK:      *** Final schedule for %bb.1 ***
-# CHECK-NEXT: SU(1):   dead %3:gr64bit = AGHIK %1:gr64bit, 1, implicit-def dead $cc
-# CHECK-NEXT: SU(0):   %2:gr64bit = AGHIK %0:gr64bit, -1, implicit-def dead $cc
-# CHECK-NEXT: SU(2):   CGHI %2:gr64bit, 0, implicit-def $cc
+# CHECK-NEXT: SU(0):   %5:gr32bit = NRK %2:gr32bit, %0:gr32bit, implicit-def dead $cc
+# CHECK-NEXT: SU(1):   CHIMux %5:gr32bit, 0, implicit-def $cc
+# CHECK-NEXT: SU(2):   %6:gr32bit = LHIMux 0
+# CHECK-NEXT: SU(3):   %6:gr32bit = LOCHIMux %6:gr32bit(tied-def 0), 1, 14, 8, implicit $cc
+# CHECK-NEXT: SU(5):   %3:addr32bit = OILMux %3:addr32bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(4):   %7:gr32bit = NRK %6:gr32bit, %0:gr32bit, implicit-def dead $cc
+# CHECK-NEXT: SU(6):   %8:gr32bit = SLLK %1:gr32bit, %3:addr32bit, 0
+# CHECK-NEXT: SU(7):   CHIMux %7:gr32bit, 0, implicit-def $cc
+# CHECK-NEXT: SU(8):   %8:gr32bit = LOCHIMux %8:gr32bit(tied-def 0), 0, 14, 8, implicit $cc
+# CHECK-NEXT: SU(9):   %4:gr32bit = ORK %8:gr32bit, %4:gr32bit, implicit-def dead $cc
+# CHECK-NEXT: SU(10):  %2:gr32bit = LHIMux 1
+# CHECK-NEXT: SU(11):  %3:addr32bit = LHIMux 0
 ---
 name:            fun0
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $r2d, $r3d
+    liveins: $r2l
 
-    %0:gr64bit = COPY $r2d
-    %1:gr64bit = COPY $r3d
+    %0:gr32bit = COPY $r2l
+    %1:gr32bit = LHIMux 1
+    %2:gr32bit = LHIMux 0
+    %3:addr32bit = LHIMux 1
+    %4:gr32bit = LHIMux 0
 
   bb.1:
-    %2:gr64bit = AGHIK %0, -1, implicit-def dead $cc
-    %3:gr64bit = AGHIK %1, 1, implicit-def dead $cc
-    CGHI %2:gr64bit, 0, implicit-def $cc
-    BRC 14, 8, %bb.1, implicit killed $cc
-
-  bb.2:
-    Return
+    %5:gr32bit = NRK %2, %0, implicit-def dead $cc
+    CHIMux %5, 0, implicit-def $cc
+    %6:gr32bit = LHIMux 0
+    %6:gr32bit = LOCHIMux %6, 1, 14, 8, implicit killed $cc
+    %7:gr32bit = NRK %6, %0, implicit-def dead $cc
+    %3:addr32bit = OILMux %3, 1, implicit-def dead $cc
+    %8:gr32bit = SLLK %1, %3, 0
+    CHIMux %7, 0, implicit-def $cc
+    %8:gr32bit = LOCHIMux %8, 0, 14, 8, implicit killed $cc
+    %4:gr32bit = ORK %8, %4, implicit-def dead $cc
+    %2:gr32bit = LHIMux 1
+    %3:addr32bit = LHIMux 0
+    J %bb.1
 ...

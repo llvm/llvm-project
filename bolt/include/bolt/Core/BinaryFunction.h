@@ -37,6 +37,7 @@
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -193,7 +194,9 @@ public:
     /// Keeps track of other functions we depend on because there is a reference
     /// to the constant islands in them.
     IslandProxiesType Proxies, ColdProxies;
-    SmallPtrSet<BinaryFunction *, 1> Dependency; // The other way around
+    SetVector<BinaryFunction *, SmallVector<BinaryFunction *, 1>,
+              SmallPtrSet<BinaryFunction *, 1>>
+        Dependency; // The other way around
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};

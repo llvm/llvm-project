@@ -622,6 +622,20 @@ struct InstructionIO : public InstrumentationOpportunity {
   }
 };
 
+/// Common getters use across different instrumentation opportunities.
+///{
+LLVM_ABI Value *getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getTypeSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB);
+LLVM_ABI Value *getTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                          InstrumentorIRBuilderTy &IIRB);
+///}
+
 /// The instrumentation opportunity for functions.
 struct FunctionIO final : public InstrumentationOpportunity {
   FunctionIO(InstrumentationLocation::KindTy Kind)
@@ -1171,12 +1185,6 @@ struct NumericIO final
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
 
-  LLVM_ABI static Value *getLeft(Value &V, Type &Ty,
-                                 InstrumentationConfig &IConf,
-                                 InstrumentorIRBuilderTy &IIRB);
-  LLVM_ABI static Value *getRight(Value &V, Type &Ty,
-                                  InstrumentationConfig &IConf,
-                                  InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
                                   InstrumentationConfig &IConf,
                                   InstrumentorIRBuilderTy &IIRB);
@@ -1188,6 +1196,59 @@ struct NumericIO final
     PreIO->init(IConf, IIRB);
     auto *PostIO =
         IConf.allocate<NumericIO>(InstrumentationLocation::INSTRUCTION_POST);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
+struct CompareIO final
+    : public InstructionIO<Instruction::ICmp, Instruction::FCmp> {
+  CompareIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
+
+  enum ConfigKind {
+    PassOpTypeId,
+    PassOpSize,
+    PassOpcode,
+    PassPredicate,
+    PassLeft,
+    PassRight,
+    PassResultTypeId,
+    PassResultSize,
+    PassResult,
+    ReplaceResult,
+    PassFlags,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  StringRef getName() const override { return "compare"; }
+
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
+
+  LLVM_ABI static Value *getOperandTypeId(Value &V, Type &Ty,
+                                          InstrumentationConfig &IConf,
+                                          InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getOperandSize(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPredicate(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO =
+        IConf.allocate<CompareIO>(InstrumentationLocation::INSTRUCTION_PRE);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO =
+        IConf.allocate<CompareIO>(InstrumentationLocation::INSTRUCTION_POST);
     PostIO->init(IConf, IIRB);
   }
 };

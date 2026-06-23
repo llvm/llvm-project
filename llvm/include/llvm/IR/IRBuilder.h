@@ -112,35 +112,9 @@ public:
 
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
-  /// Pairs of (metadata kind, MDNode *) that should be added to all newly
-  /// created instructions, excluding !dbg metadata, which is stored in the
-  /// StoredDL field.
-  SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
   /// The DebugLoc that will be applied to instructions inserted by this
   /// builder.
   DebugLoc StoredDL;
-
-  /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
-  /// null. If \p MD is null, remove the entry with \p Kind.
-  void AddOrRemoveMetadataToCopy(unsigned Kind, MDNode *MD) {
-    assert(Kind != LLVMContext::MD_dbg &&
-           "MD_dbg metadata must be stored in StoredDL");
-
-    if (!MD) {
-      erase_if(MetadataToCopy, [Kind](const std::pair<unsigned, MDNode *> &KV) {
-        return KV.first == Kind;
-      });
-      return;
-    }
-
-    for (auto &KV : MetadataToCopy)
-      if (KV.first == Kind) {
-        KV.second = MD;
-        return;
-      }
-
-    MetadataToCopy.emplace_back(Kind, MD);
-  }
 
 protected:
   BasicBlock *BB;
@@ -171,7 +145,7 @@ public:
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
     Inserter.InsertHelper(I, Name, InsertPt);
-    AddMetadataToInst(I);
+    SetInstDebugLocation(I);
     return I;
   }
 
@@ -257,38 +231,12 @@ public:
     StoredDL = std::move(L);
   }
 
-  /// Set nosanitize metadata.
-  void SetNoSanitizeMetadata() {
-    AddOrRemoveMetadataToCopy(llvm::LLVMContext::MD_nosanitize,
-                              llvm::MDNode::get(getContext(), {}));
-  }
-
-  /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
-  /// added to all created instructions. Entries present in MedataDataToCopy but
-  /// not on \p Src will be dropped from MetadataToCopy.
-  void CollectMetadataToCopy(Instruction *Src,
-                             ArrayRef<unsigned> MetadataKinds) {
-    for (unsigned K : MetadataKinds) {
-      if (K == LLVMContext::MD_dbg)
-        SetCurrentDebugLocation(Src->getDebugLoc());
-      else
-        AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
-    }
-  }
-
   /// Get location information used by debugging information.
   LLVM_ABI DebugLoc getCurrentDebugLocation() const;
 
   /// If this builder has a current debug location, set it on the
   /// specified instruction.
   LLVM_ABI void SetInstDebugLocation(Instruction *I) const;
-
-  /// Add all entries in MetadataToCopy to \p I.
-  void AddMetadataToInst(Instruction *I) const {
-    for (const auto &KV : MetadataToCopy)
-      I->setMetadata(KV.first, KV.second);
-    SetInstDebugLocation(I);
-  }
 
   /// Get the return type of the current function that we're emitting
   /// into.

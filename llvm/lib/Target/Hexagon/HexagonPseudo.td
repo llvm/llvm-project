@@ -621,6 +621,16 @@ defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
 let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
 def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
 
+// KCFI type check pseudo -- lowered in the AsmPrinter to a
+// load-compare-trap sequence before indirect calls. On mismatch, a
+// misaligned load faults.
+// Defs: R6/R7 default scratch (R8 fallback if AddrReg conflicts), P0 for
+// compare, D13 for the crash load.
+let hasSideEffects = 1, mayLoad = 1, isPseudo = 1, isCodeGenOnly = 1,
+    Defs = [R6, R7, R8, P0, D13], Size = 28 in
+def KCFI_CHECK : InstHexagon<(outs), (ins IntRegs:$ptr, i32imm:$type),
+                              "", [], "", PSEUDO, TypePSEUDO>;
+
 // This is actual trap1 instruction from before v65. It's here since it is
 // no longer included in DepInstrInfo.td.
 def PS_trap1 : HInst<(outs), (ins u8_0Imm:$Ii), "trap1(#$Ii)", tc_53c851ab,

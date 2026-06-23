@@ -12738,6 +12738,49 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case clang::X86::BI__builtin_ia32_mpsadbw128:
+  case clang::X86::BI__builtin_ia32_mpsadbw256: {
+    APValue SourceA, SourceB;
+    APSInt SourceImm;
+    if (!EvaluateVector(E->getArg(0), SourceA, Info) ||
+        !EvaluateVector(E->getArg(1), SourceB, Info) ||
+        !EvaluateInteger(E->getArg(2), SourceImm, Info))
+      return false;
+    unsigned SourceLen = SourceA.getVectorLength();
+    constexpr unsigned LaneSize = 16;
+    assert((SourceLen == LaneSize || SourceLen == 2 * LaneSize) &&
+           "MPSADBW operates on 128-bit or 256-bit vectors");
+    unsigned NumLanes = SourceLen / LaneSize;
+    unsigned Imm = SourceImm.getZExtValue();
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+      unsigned Ctrl = (Imm >> (3 * Lane)) & 0x7;
+      unsigned AOff = ((Ctrl >> 2) & 1) * 4;
+      unsigned BOff = (Ctrl & 3) * 4;
+      for (unsigned J = 0; J != 8; ++J) {
+        uint16_t Sad = 0;
+        for (unsigned K = 0; K != 4; ++K) {
+          uint8_t A = static_cast<uint8_t>(
+              SourceA.getVectorElt(Lane * LaneSize + AOff + J + K)
+                  .getInt()
+                  .getZExtValue());
+          uint8_t B = static_cast<uint8_t>(
+              SourceB.getVectorElt(Lane * LaneSize + BOff + K)
+                  .getInt()
+                  .getZExtValue());
+          Sad += (A > B) ? (A - B) : (B - A);
+        }
+        ResultElements.push_back(APValue(APSInt(APInt(16, Sad), DestUnsigned)));
+      }
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
   case clang::X86::BI__builtin_ia32_pmulhuw512:

@@ -23,7 +23,7 @@ See the {ref}`migration <markdown_migration_guidelines>` section for more inform
 
 This article is located in `docs/SphinxQuickstartTemplate.md`.
 To use it as a template, make a copy and open it in a text editor.
-You can then write your docs, and open a [GitHub PR](project:GitHub.rst) to request a review.
+You can then write your docs, and open a [GitHub PR](project:GitHub.md) to request a review.
 
 To view the Markdown source file for this article, click **Show Source** on the right sidebar.
 
@@ -167,7 +167,7 @@ without any syntax highlighting like this:
 
 You can generate the HTML documentation from the sources locally if you want to
 see what they would look like. In addition to the normal
-[build tools](project:GettingStarted.rst)
+[build tools](project:GettingStarted.md)
 you need to install [Sphinx] and the necessary extensions
 using the following command inside the `llvm-project` checkout:
 

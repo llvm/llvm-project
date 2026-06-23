@@ -336,12 +336,12 @@ public:
 
   /// Return the filename without the extension part
   ///
-  /// Returns a ConstString that represents the filename of this object
+  /// Returns a StringRef that represents the filename of this object
   /// without the extension part (e.g. for a file named "foo.bar", "foo" is
   /// returned)
   ///
-  /// \return Returns the filename without extension as a ConstString object.
-  ConstString GetFileNameStrippingExtension() const;
+  /// \return Returns the filename without extension as a StringRef object.
+  llvm::StringRef GetFileNameStrippingExtension() const;
 
   /// Get the memory cost of this object.
   ///

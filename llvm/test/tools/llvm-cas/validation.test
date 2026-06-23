@@ -42,5 +42,7 @@ RUN: llvm-cas --cas %t/ac --validate
 
 # Note: records are 40 bytes (32 hash bytes + 8 byte value), so trim the last
 # allocated record, leaving it invalid.
-RUN: truncate -s -40 %t/ac/v1.1/actions.v1
+# FIXME: Use `truncate -s -40` once Ubuntu 26.04 is the LTS support baseline,
+# see https://github.com/uutils/coreutils/issues/9128
+RUN: %python -c "with open(r'%t/ac/v1.1/actions.v1', 'r+b') as f: f.truncate(f.seek(0, 2) - 40)"
 RUN: not llvm-cas --cas %t/ac --validate

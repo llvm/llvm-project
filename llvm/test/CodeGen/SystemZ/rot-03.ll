@@ -8,10 +8,10 @@ define i128 @f1(i128 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vrepib %v1, 100
-; CHECK-NEXT:    vsrlb %v2, %v0, %v1
-; CHECK-NEXT:    vsrl %v1, %v2, %v1
 ; CHECK-NEXT:    vrepib %v2, 28
+; CHECK-NEXT:    vsrlb %v3, %v0, %v1
 ; CHECK-NEXT:    vslb %v0, %v0, %v2
+; CHECK-NEXT:    vsrl %v1, %v3, %v1
 ; CHECK-NEXT:    vsl %v0, %v0, %v2
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
@@ -47,19 +47,19 @@ define i128 @f3(i128 %val, i128 %amt) {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    l %r0, 12(%r4)
-; CHECK-NEXT:    vlvgp %v1, %r0, %r0
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vrepb %v1, %v1, 15
-; CHECK-NEXT:    vslb %v2, %v0, %v1
-; CHECK-NEXT:    vsl %v1, %v2, %v1
-; CHECK-NEXT:    vrepib %v2, 1
+; CHECK-NEXT:    vlvgp %v1, %r0, %r0
 ; CHECK-NEXT:    xilf %r0, 4294967295
-; CHECK-NEXT:    vsrl %v0, %v0, %v2
 ; CHECK-NEXT:    vlvgp %v2, %r0, %r0
+; CHECK-NEXT:    vrepib %v3, 1
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vsrl %v3, %v0, %v3
 ; CHECK-NEXT:    vrepb %v2, %v2, 15
-; CHECK-NEXT:    vsrlb %v0, %v0, %v2
-; CHECK-NEXT:    vsrl %v0, %v0, %v2
-; CHECK-NEXT:    vo %v0, %v1, %v0
+; CHECK-NEXT:    vslb %v0, %v0, %v1
+; CHECK-NEXT:    vsrlb %v3, %v3, %v2
+; CHECK-NEXT:    vsl %v0, %v0, %v1
+; CHECK-NEXT:    vsrl %v1, %v3, %v2
+; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
 

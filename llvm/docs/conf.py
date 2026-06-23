@@ -39,7 +39,14 @@ except ImportError:
     if not tags.has("builder-man"):
         raise
 else:
-    myst_enable_extensions = ["substitution"]
+    myst_enable_extensions = ["deflist", "substitution"]
+    myst_url_schemes = {
+        "http": None,
+        "https": None,
+        "mailto": None,
+        "ftp": None,
+        "doxygen": {"url": "/doxygen/{{path}}"},
+    }
 
 # Automatic anchors for markdown titles
 myst_heading_anchors = 6
@@ -292,7 +299,7 @@ def process_rst(name):
 
 for name in os.listdir(command_guide_path):
     # Process Markdown files
-    if name.endswith(".md"):
+    if name.endswith(".md") and name != "index.md":
         process_md(name)
     # Process ReST files apart from the index page.
     elif name.endswith(".rst") and name != "index.rst":

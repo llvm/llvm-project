@@ -1,0 +1,627 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z17 -verify-machineinstrs \
+# RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler \
+# RUN:   2>&1 | FileCheck %s
+
+--- |
+
+  define void @fun0() { ret void }
+  define void @fun1() { ret void }
+  define void @fun2() { ret void }
+  define void @fun3() { ret void }
+  define void @fun4() { ret void }
+  define void @fun5() { ret void }
+  define void @fun6(ptr %Arg) { ret void }
+...
+
+# The LHIMux could be scheduled below the CGHI to avoid the overlap of %0 and
+# %3, but this is not done in small regions like this.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun0:%bb.0
+# CHECK-NOT:  Pick Bot REG-EXCESS [pre-RA]
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:gr64bit = COPY $r2d
+# CHECK-NEXT: SU(2):   %2:gr64bit = LCGR %0:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(3):   %3:gr64bit = RISBGN undef %3:gr64bit(tied-def 0), %2:gr64bit, 29, 188, 0
+# CHECK-NEXT: SU(1):   %1:gr32bit = LHIMux 1
+# CHECK-NEXT: SU(4):   CGHI %3:gr64bit, 0, implicit-def $cc
+# CHECK: fun0:%bb.1
+---
+name:            fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r2d
+
+    %0:gr64bit = COPY $r2d
+    %1:gr32bit = LHIMux 1
+    %2:gr64bit = LCGR %0, implicit-def dead $cc
+    %3:gr64bit = RISBGN undef %3, %2, 29, 188, 0
+    CGHI %3, 0, implicit-def $cc
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    %5:gr64bit = LLGFR %1
+    $r2d = COPY %5
+    Return implicit $r2d
+
+  bb.2:
+    $r2d = LGHI 0
+    Return implicit $r2d
+...
+
+# This test tries to capture that one of the higher SUs is not scheduled low
+# for the sake of closing a live range. The %4 DLGR is such a node where the
+# result is live out and all operands are already live. It is still later
+# scheduled relative low (although not as low as possible), but for the
+# reason of latency reduction, below SU(33) which is higher.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun1:%bb.0
+# CHECK:      SU(5):   %4:gr128bit = DLGR %3:gr128bit(tied-def 0), %1:gr64bit
+# CHECK:      Height             : 29
+# CHECK:      Pressure Diff      : GRX32Bit -4
+# CHECK:      SU(6):
+# CHECK:      SU(33):   %32:gr64bit = AGFI %31:gr64bit(tied-def 0), 1, implicit-def $cc
+# CHECK:      Height             : 35
+# CHECK:      SU(34):
+#
+# CHECK:      Move SU(5) into Available Q
+# CHECK:      Queue BotQ.A: 39 5
+# CHECK-NOT:  Cand SU(5) REG-EXCESS
+# CHECK-NOT:  Scheduling SU(5)
+# CHECK:      Scheduling SU(39)
+#
+# CHECK:      Queue BotQ.A: 33 5
+# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK-NEXT: Scheduling SU(5)
+#
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(5):    %4:gr128bit = DLGR %3:gr128bit(tied-def 0), %1:gr64bit
+# CHECK-NEXT: SU(34):   %33:gr64bit = AGFI %32:gr64bit(tied-def 0), 1, implicit-def $cc
+# CHECK-NEXT: SU(35):   %34:gr64bit = AGFI %33:gr64bit(tied-def 0), 1, implicit-def $cc
+# CHECK-NEXT: SU(36):   %35:gr64bit = AGFI %34:gr64bit(tied-def 0), 1, implicit-def $cc
+# CHECK-NEXT: SU(37):   undef %36.subreg_h64:gr128bit = LLILL 0
+# CHECK-NEXT: SU(38):   %36.subreg_l64:gr128bit = COPY %35:gr64bit
+# CHECK-NEXT: SU(39):   %37:gr128bit = COPY %36:gr128bit
+# CHECK-NEXT: SU(40):   dead %38:gr128bit = DLGR %37:gr128bit(tied-def 0), %1:gr64bit
+# CHECK: fun1:%bb.1
+---
+name:            fun1
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d
+  %0:gr64bit = COPY $r2d
+  %1:gr64bit = COPY $r3d
+
+  undef %2.subreg_h64:gr128bit = LLILL 0
+  %2.subreg_l64:gr128bit = COPY %0
+  %3:gr128bit = COPY %2
+  %4:gr128bit = DLGR %3, %1
+
+  %5:gr64bit = AGFI %0, 1, implicit-def $cc
+  %6:gr64bit = AGFI %5, 1, implicit-def $cc
+  %7:gr64bit = AGFI %6, 1, implicit-def $cc
+  %8:gr64bit = AGFI %7, 1, implicit-def $cc
+  %9:gr64bit = AGFI %8, 1, implicit-def $cc
+  %10:gr64bit = AGFI %9, 1, implicit-def $cc
+  %11:gr64bit = AGFI %10, 1, implicit-def $cc
+  %12:gr64bit = AGFI %11, 1, implicit-def $cc
+  %13:gr64bit = AGFI %12, 1, implicit-def $cc
+  %14:gr64bit = AGFI %13, 1, implicit-def $cc
+  %15:gr64bit = AGFI %14, 1, implicit-def $cc
+  %16:gr64bit = AGFI %15, 1, implicit-def $cc
+  %17:gr64bit = AGFI %16, 1, implicit-def $cc
+  %18:gr64bit = AGFI %17, 1, implicit-def $cc
+  %19:gr64bit = AGFI %18, 1, implicit-def $cc
+  %20:gr64bit = AGFI %19, 1, implicit-def $cc
+  %21:gr64bit = AGFI %20, 1, implicit-def $cc
+  %22:gr64bit = AGFI %21, 1, implicit-def $cc
+  %23:gr64bit = AGFI %22, 1, implicit-def $cc
+  %24:gr64bit = AGFI %23, 1, implicit-def $cc
+  %25:gr64bit = AGFI %24, 1, implicit-def $cc
+  %26:gr64bit = AGFI %25, 1, implicit-def $cc
+  %27:gr64bit = AGFI %26, 1, implicit-def $cc
+  %28:gr64bit = AGFI %27, 1, implicit-def $cc
+  %29:gr64bit = AGFI %28, 1, implicit-def $cc
+  %30:gr64bit = AGFI %29, 1, implicit-def $cc
+  %31:gr64bit = AGFI %30, 1, implicit-def $cc
+  %32:gr64bit = AGFI %31, 1, implicit-def $cc
+  %33:gr64bit = AGFI %32, 1, implicit-def $cc
+  %34:gr64bit = AGFI %33, 1, implicit-def $cc
+  %35:gr64bit = AGFI %34, 1, implicit-def $cc
+
+  undef %36.subreg_h64:gr128bit = LLILL 0
+  %36.subreg_l64:gr128bit = COPY %35
+  %37:gr128bit = COPY %36
+  %38:gr128bit = DLGR %37, %1
+
+  bb.1:
+  STG %35:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+
+  STG %1:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  %100:gr64bit = COPY %3.subreg_h64:gr128bit
+  STG %100:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  %103:gr64bit = COPY %4.subreg_h64:gr128bit
+  STG %103:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  Return
+...
+
+# In this test, instead of a DLGR an MSGRKC with shorter latency is high in
+# the input order with result and uses live. This node should be scheduled
+# low to close the live range, but should also wait until it does not extend
+# the scheduled latency.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun2:%bb.0
+# CHECK:      SU(2):   %2:gr64bit = MSGRKC %0:gr64bit, %1:gr64bit, implicit-def dead $cc
+# CHECK:      Height             : 3
+# CHECK:      Pressure Diff      : GRX32Bit -2
+# CHECK:      SU(3):
+# CHECK:      SU(33):   %33:gr64bit = AGFI %32:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK:      Height             : 3
+# CHECK:      SU(34):   %34:gr64bit = AGFI %33:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK:      Height             : 2
+# CHECK:      SU(35):
+# CHECK:      SU(36):   %36:gr64bit = AGFI %35:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK:      Height             : 0
+#
+# CHECK:      Queue BotQ.A: 36 2
+# CHECK-NOT:  Cand SU(2) REG-EXCESS
+# CHECK-NOT:  Scheduling SU(2)
+# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK-NEXT: Scheduling SU(36)
+# CHECK:      Queue BotQ.A: 2 32
+# CHECK:      Pick Bot REG-EXCESS [pre-RA]
+# CHECK-NEXT: Scheduling SU(2)
+#
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(32):   %32:gr64bit = AGFI %31:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(2):    %2:gr64bit = MSGRKC %0:gr64bit, %1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(33):   %33:gr64bit = AGFI %32:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(34):   %34:gr64bit = AGFI %33:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(35):   %35:gr64bit = AGFI %34:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(36):   %36:gr64bit = AGFI %35:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK: fun2:%bb.1
+---
+name:            fun2
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d
+  %0:gr64bit = COPY $r2d
+  %1:gr64bit = COPY $r3d
+
+  %2:gr64bit = MSGRKC %0, %1, implicit-def dead $cc
+
+  %5:gr64bit = AGFI %0, 1, implicit-def dead $cc
+  %6:gr64bit = AGFI %5, 1, implicit-def dead $cc
+  %7:gr64bit = AGFI %6, 1, implicit-def dead $cc
+  %8:gr64bit = AGFI %7, 1, implicit-def dead $cc
+  %9:gr64bit = AGFI %8, 1, implicit-def dead $cc
+  %10:gr64bit = AGFI %9, 1, implicit-def dead $cc
+  %11:gr64bit = AGFI %10, 1, implicit-def dead $cc
+  %12:gr64bit = AGFI %11, 1, implicit-def dead $cc
+  %13:gr64bit = AGFI %12, 1, implicit-def dead $cc
+  %14:gr64bit = AGFI %13, 1, implicit-def dead $cc
+  %15:gr64bit = AGFI %14, 1, implicit-def dead $cc
+  %16:gr64bit = AGFI %15, 1, implicit-def dead $cc
+  %17:gr64bit = AGFI %16, 1, implicit-def dead $cc
+  %18:gr64bit = AGFI %17, 1, implicit-def dead $cc
+  %19:gr64bit = AGFI %18, 1, implicit-def dead $cc
+  %20:gr64bit = AGFI %19, 1, implicit-def dead $cc
+  %21:gr64bit = AGFI %20, 1, implicit-def dead $cc
+  %22:gr64bit = AGFI %21, 1, implicit-def dead $cc
+  %23:gr64bit = AGFI %22, 1, implicit-def dead $cc
+  %24:gr64bit = AGFI %23, 1, implicit-def dead $cc
+  %25:gr64bit = AGFI %24, 1, implicit-def dead $cc
+  %26:gr64bit = AGFI %25, 1, implicit-def dead $cc
+  %27:gr64bit = AGFI %26, 1, implicit-def dead $cc
+  %28:gr64bit = AGFI %27, 1, implicit-def dead $cc
+  %29:gr64bit = AGFI %28, 1, implicit-def dead $cc
+  %30:gr64bit = AGFI %29, 1, implicit-def dead $cc
+  %31:gr64bit = AGFI %30, 1, implicit-def dead $cc
+  %32:gr64bit = AGFI %31, 1, implicit-def dead $cc
+  %33:gr64bit = AGFI %32, 1, implicit-def dead $cc
+  %34:gr64bit = AGFI %33, 1, implicit-def dead $cc
+  %35:gr64bit = AGFI %34, 1, implicit-def dead $cc
+  %36:gr64bit = AGFI %35, 1, implicit-def dead $cc
+  %37:gr64bit = AGFI %36, 1, implicit-def dead $cc
+  %38:gr64bit = AGFI %37, 1, implicit-def dead $cc
+
+  bb.1:
+  STG %0:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  STG %1:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  STG %2:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  STG %38:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  Return
+...
+
+# Check a case (AGR) where a use is tied to the def which means the register
+# is live into the instruction and there is no point in scheduling it low
+# (pressure diff is empty). It still ends up low in the final schedule due to
+# the latency reduction heuristic.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun3:%bb.0
+#
+# CHECK:      SU(3):   %2:gr64bit = AGR %2:gr64bit(tied-def 0), %1:gr64bit, implicit-def dead $cc
+# CHECK:      Height             : 0
+# CHECK:      Pressure Diff      : {{$}}
+# CHECK:      SU(36):   %35:gr64bit = AGFI %34:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK:      Height             : 1
+# CHECK:      Pressure Diff      : {{$}}
+# CHECK:      SU(37):   %36:gr64bit = AGFI %35:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK:      Height             : 0
+# CHECK:      Pressure Diff      : {{$}}
+#
+# CHECK:      Queue BotQ.A: 37 3
+# CHECK:      Scheduling SU(37)
+# CHECK:      Queue BotQ.A: 3 36
+# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK-NEXT: Scheduling SU(3)
+#
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(36):  %35:gr64bit = AGFI %34:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK-NEXT: SU(3):   %2:gr64bit = AGR %2:gr64bit(tied-def 0), %1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(37):  %36:gr64bit = AGFI %35:gr64bit(tied-def 0), 1, implicit-def dead $cc
+# CHECK: fun3:%bb.1
+---
+name:            fun3
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d
+  %0:gr64bit = COPY $r2d
+  %1:gr64bit = COPY $r3d
+
+  %2:gr64bit = COPY %1
+  %2:gr64bit = AGR %2, %1, implicit-def dead $cc
+
+  %3:gr64bit = AGFI %0, 1, implicit-def dead $cc
+  %4:gr64bit = AGFI %3, 1, implicit-def dead $cc
+  %5:gr64bit = AGFI %4, 1, implicit-def dead $cc
+  %6:gr64bit = AGFI %5, 1, implicit-def dead $cc
+  %7:gr64bit = AGFI %6, 1, implicit-def dead $cc
+  %8:gr64bit = AGFI %7, 1, implicit-def dead $cc
+  %9:gr64bit = AGFI %8, 1, implicit-def dead $cc
+  %10:gr64bit = AGFI %9, 1, implicit-def dead $cc
+  %11:gr64bit = AGFI %10, 1, implicit-def dead $cc
+  %12:gr64bit = AGFI %11, 1, implicit-def dead $cc
+  %13:gr64bit = AGFI %12, 1, implicit-def dead $cc
+  %14:gr64bit = AGFI %13, 1, implicit-def dead $cc
+  %15:gr64bit = AGFI %14, 1, implicit-def dead $cc
+  %16:gr64bit = AGFI %15, 1, implicit-def dead $cc
+  %17:gr64bit = AGFI %16, 1, implicit-def dead $cc
+  %18:gr64bit = AGFI %17, 1, implicit-def dead $cc
+  %19:gr64bit = AGFI %18, 1, implicit-def dead $cc
+  %20:gr64bit = AGFI %19, 1, implicit-def dead $cc
+  %21:gr64bit = AGFI %20, 1, implicit-def dead $cc
+  %22:gr64bit = AGFI %21, 1, implicit-def dead $cc
+  %23:gr64bit = AGFI %22, 1, implicit-def dead $cc
+  %24:gr64bit = AGFI %23, 1, implicit-def dead $cc
+  %25:gr64bit = AGFI %24, 1, implicit-def dead $cc
+  %26:gr64bit = AGFI %25, 1, implicit-def dead $cc
+  %27:gr64bit = AGFI %26, 1, implicit-def dead $cc
+  %28:gr64bit = AGFI %27, 1, implicit-def dead $cc
+  %29:gr64bit = AGFI %28, 1, implicit-def dead $cc
+  %30:gr64bit = AGFI %29, 1, implicit-def dead $cc
+  %31:gr64bit = AGFI %30, 1, implicit-def dead $cc
+  %32:gr64bit = AGFI %31, 1, implicit-def dead $cc
+  %33:gr64bit = AGFI %32, 1, implicit-def dead $cc
+  %34:gr64bit = AGFI %33, 1, implicit-def dead $cc
+  %35:gr64bit = AGFI %34, 1, implicit-def dead $cc
+  %36:gr64bit = AGFI %35, 1, implicit-def dead $cc
+
+  bb.1:
+  STG %1:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  STG %2:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  STG %36:gr64bit, undef %101:addr64bit, 0, undef %102:addr64bit
+  Return
+...
+
+# Test that an instruction gets scheduled low as soon as its use operands
+# become live, and not before.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun4:%bb.0
+#
+# CHECK:      SU(30):   %M0:vr64bit = nofpexcept WFMDB %Z0:fp64bit, %Z0:fp64bit, implicit $fpc
+# CHECK:      Height             : 6
+# CHECK:      Pressure Diff      : FP16Bit 1
+# CHECK:      SU(31):   %M1:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK:      Height             : 6
+# CHECK:      Pressure Diff      : FP16Bit 1
+# CHECK:      SU(32):   %M2:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK:      Height             : 6
+# CHECK:      Pressure Diff      : FP16Bit 1
+# CHECK:      SU(33):   %M3:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK:      Height             : 6
+# CHECK:      SU(36):   %M6:vr64bit = nofpexcept WFMDB %M5:vr64bit, %Z0:fp64bit, implicit $fpc
+# CHECK:      Height             : 6
+# CHECK:      SU(37):
+# CHECK:      SU(38):   %M9:vr64bit = nofpexcept WFMDB %M7:vr64bit, %M7:vr64bit, implicit $fpc
+# CHECK:      Height             : 6
+#
+# CHECK:      Queue BotQ.A: 27 38 36 34 33 32 31 30
+# CHECK:      Pick Bot ORDER      [pre-RA]
+# CHECK-NEXT: Scheduling SU(38)
+# CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31 37
+# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK-NEXT: Scheduling SU(36)
+# CHECK:      Queue BotQ.A: 27 30 37 34 33 32 31 35
+# CHECK:      Pick Bot REG-EXCESS [pre-RA]
+# CHECK-NEXT: Scheduling SU(30)
+#
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(28):   %Z0:fp64bit = LZDR
+# CHECK-NEXT: SU(29):   %Z1:fp64bit = LZDR
+# CHECK-NEXT: SU(31):   %M1:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(32):   %M2:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(33):   %M3:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(34):   %M4:vr64bit = nofpexcept WFMDB %Z1:fp64bit, %Z1:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(30):   %M0:vr64bit = nofpexcept WFMDB %Z0:fp64bit, %Z0:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(36):   %M6:vr64bit = nofpexcept WFMDB %M5:vr64bit, %Z0:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(38):   %M9:vr64bit = nofpexcept WFMDB %M7:vr64bit, %M7:vr64bit, implicit $fpc
+# CHECK-NEXT: SU(39):   VST64 %M0:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(40):   VST64 %M1:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(41):   VST64 %M2:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(42):   VST64 %M3:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(43):   VST64 %M4:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(44):   VST64 %M6:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(45):   VST64 %M9:vr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(46):   $f0d = LZDR
+---
+name:            fun4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
+    %D0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
+    %D1:vr64bit = nofpexcept WFDDB %D0:vr64bit, undef %RHS1:fp64bit, implicit $fpc
+    %D2:vr64bit = nofpexcept WFDDB %D1:vr64bit, undef %RHS2:fp64bit, implicit $fpc
+    %D3:vr64bit = nofpexcept WFDDB %D2:vr64bit, undef %RHS3:fp64bit, implicit $fpc
+    %D4:vr64bit = nofpexcept WFDDB %D3:vr64bit, undef %RHS4:fp64bit, implicit $fpc
+    %D5:vr64bit = nofpexcept WFDDB %D4:vr64bit, undef %RHS5:fp64bit, implicit $fpc
+    %D6:vr64bit = nofpexcept WFDDB %D5:vr64bit, undef %RHS6:fp64bit, implicit $fpc
+    %D7:vr64bit = nofpexcept WFDDB %D6:vr64bit, undef %RHS7:fp64bit, implicit $fpc
+    %D8:vr64bit = nofpexcept WFDDB %D7:vr64bit, undef %RHS8:fp64bit, implicit $fpc
+    %D9:vr64bit = nofpexcept WFDDB %D8:vr64bit, undef %RHS9:fp64bit, implicit $fpc
+    %D10:vr64bit = nofpexcept WFDDB %D9:vr64bit, undef %RHS10:fp64bit, implicit $fpc
+    %D11:vr64bit = nofpexcept WFDDB %D10:vr64bit, undef %RHS11:fp64bit, implicit $fpc
+    %D12:vr64bit = nofpexcept WFDDB %D11:vr64bit, undef %RHS12:fp64bit, implicit $fpc
+    %D13:vr64bit = nofpexcept WFDDB %D12:vr64bit, undef %RHS13:fp64bit, implicit $fpc
+    %D14:vr64bit = nofpexcept WFDDB %D13:vr64bit, undef %RHS14:fp64bit, implicit $fpc
+    %D15:vr64bit = nofpexcept WFDDB %D14:vr64bit, undef %RHS15:fp64bit, implicit $fpc
+    %D16:vr64bit = nofpexcept WFDDB %D15:vr64bit, undef %RHS16:fp64bit, implicit $fpc
+    %D17:vr64bit = nofpexcept WFDDB %D16:vr64bit, undef %RHS17:fp64bit, implicit $fpc
+    %D18:vr64bit = nofpexcept WFDDB %D17:vr64bit, undef %RHS18:fp64bit, implicit $fpc
+    %D19:vr64bit = nofpexcept WFDDB %D18:vr64bit, undef %RHS19:fp64bit, implicit $fpc
+    %D20:vr64bit = nofpexcept WFDDB %D19:vr64bit, undef %RHS20:fp64bit, implicit $fpc
+    %D21:vr64bit = nofpexcept WFDDB %D20:vr64bit, undef %RHS21:fp64bit, implicit $fpc
+    %D22:vr64bit = nofpexcept WFDDB %D21:vr64bit, undef %RHS22:fp64bit, implicit $fpc
+    %D23:vr64bit = nofpexcept WFDDB %D22:vr64bit, undef %RHS23:fp64bit, implicit $fpc
+    %D24:vr64bit = nofpexcept WFDDB %D23:vr64bit, undef %RHS24:fp64bit, implicit $fpc
+    %D25:vr64bit = nofpexcept WFDDB %D24:vr64bit, undef %RHS25:fp64bit, implicit $fpc
+    %D26:vr64bit = nofpexcept WFDDB %D25:vr64bit, undef %RHS26:fp64bit, implicit $fpc
+    %D27:vr64bit = nofpexcept WFDDB %D26:vr64bit, undef %RHS27:fp64bit, implicit $fpc
+
+    %Z0:fp64bit = LZDR
+    %Z1:fp64bit = LZDR
+    %M0:vr64bit = nofpexcept WFMDB %Z0, %Z0, implicit $fpc
+    %M1:vr64bit = nofpexcept WFMDB %Z1, %Z1, implicit $fpc
+    %M2:vr64bit = nofpexcept WFMDB %Z1, %Z1, implicit $fpc
+    %M3:vr64bit = nofpexcept WFMDB %Z1, %Z1, implicit $fpc
+    %M4:vr64bit = nofpexcept WFMDB %Z1, %Z1, implicit $fpc
+
+    %M5:vr64bit = nofpexcept WFMDB undef %F0:vr64bit, undef %F0, implicit $fpc
+    %M6:vr64bit = nofpexcept WFMDB %M5, %Z0, implicit $fpc
+
+    %M7:vr64bit = nofpexcept WFMDB undef %F1:vr64bit, undef %F1, implicit $fpc
+    %M9:vr64bit = nofpexcept WFMDB %M7, %M7, implicit $fpc
+
+    VST64 %M0, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    VST64 %M1, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    VST64 %M2, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    VST64 %M3, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    VST64 %M4, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    VST64 %M6, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    VST64 %M9, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+
+    $f0d = LZDR
+    Return implicit $f0d
+...
+
+# Same, with GPR registers.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun5:%bb.0
+#
+# CHECK:      SU(30):   %A0:gr64bit = AGRK %Z0:gr64bit, %Z0:gr64bit, implicit-def dead $cc
+# CHECK:      Height             : 1
+# CHECK:      SU(31):   %A1:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
+# CHECK:      Height             : 1
+# CHECK:      SU(32):
+# CHECK:      SU(36):   %A6:gr64bit = AGRK %A5:gr64bit, %Z0:gr64bit, implicit-def dead $cc
+# CHECK:      Height             : 1
+# CHECK:      SU(37):
+# CHECK:      SU(38):   %A9:gr64bit = AGRK %A7:gr64bit, %A7:gr64bit, implicit-def dead $cc
+# CHECK:      Height             : 1
+# CHECK:      SU(39):
+#
+# CHECK:      Queue BotQ.A: 27 38 36 34 33 32 31 30
+# CHECK:      Pick Bot ORDER      [pre-RA]
+# CHECK-NEXT: Scheduling SU(38)
+# CHECK:      Queue BotQ.A: 27 30 36 34 33 32 31 37
+# CHECK:      Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK-NEXT: Scheduling SU(36)
+# CHECK:      Queue BotQ.A: 27 30 37 34 33 32 31 35
+# CHECK:      Pick Bot REG-EXCESS [pre-RA]
+# CHECK-NEXT: Scheduling SU(30)
+#
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(28):   %Z0:gr64bit = LGHI 1
+# CHECK-NEXT: SU(29):   %Z1:gr64bit = LGHI 1
+# CHECK-NEXT: SU(31):   %A1:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(32):   %A2:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(33):   %A3:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(35):   %A5:gr64bit = AGRK undef %F0:gr64bit, undef %F0:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(37):   %A7:gr64bit = AGRK undef %F1:gr64bit, undef %F1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(34):   %A4:gr64bit = AGRK %Z1:gr64bit, %Z1:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(30):   %A0:gr64bit = AGRK %Z0:gr64bit, %Z0:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(36):   %A6:gr64bit = AGRK %A5:gr64bit, %Z0:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(38):   %A9:gr64bit = AGRK %A7:gr64bit, %A7:gr64bit, implicit-def dead $cc
+# CHECK-NEXT: SU(39):   STG %A0:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(40):   STG %A1:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(41):   STG %A2:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(42):   STG %A3:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(43):   STG %A4:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(44):   STG %A6:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(45):   STG %A9:gr64bit, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(46):   $r2d = LGHI 0
+---
+name:            fun5
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
+    %D0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
+    %D1:vr64bit = nofpexcept WFDDB %D0:vr64bit, undef %RHS1:fp64bit, implicit $fpc
+    %D2:vr64bit = nofpexcept WFDDB %D1:vr64bit, undef %RHS2:fp64bit, implicit $fpc
+    %D3:vr64bit = nofpexcept WFDDB %D2:vr64bit, undef %RHS3:fp64bit, implicit $fpc
+    %D4:vr64bit = nofpexcept WFDDB %D3:vr64bit, undef %RHS4:fp64bit, implicit $fpc
+    %D5:vr64bit = nofpexcept WFDDB %D4:vr64bit, undef %RHS5:fp64bit, implicit $fpc
+    %D6:vr64bit = nofpexcept WFDDB %D5:vr64bit, undef %RHS6:fp64bit, implicit $fpc
+    %D7:vr64bit = nofpexcept WFDDB %D6:vr64bit, undef %RHS7:fp64bit, implicit $fpc
+    %D8:vr64bit = nofpexcept WFDDB %D7:vr64bit, undef %RHS8:fp64bit, implicit $fpc
+    %D9:vr64bit = nofpexcept WFDDB %D8:vr64bit, undef %RHS9:fp64bit, implicit $fpc
+    %D10:vr64bit = nofpexcept WFDDB %D9:vr64bit, undef %RHS10:fp64bit, implicit $fpc
+    %D11:vr64bit = nofpexcept WFDDB %D10:vr64bit, undef %RHS11:fp64bit, implicit $fpc
+    %D12:vr64bit = nofpexcept WFDDB %D11:vr64bit, undef %RHS12:fp64bit, implicit $fpc
+    %D13:vr64bit = nofpexcept WFDDB %D12:vr64bit, undef %RHS13:fp64bit, implicit $fpc
+    %D14:vr64bit = nofpexcept WFDDB %D13:vr64bit, undef %RHS14:fp64bit, implicit $fpc
+    %D15:vr64bit = nofpexcept WFDDB %D14:vr64bit, undef %RHS15:fp64bit, implicit $fpc
+    %D16:vr64bit = nofpexcept WFDDB %D15:vr64bit, undef %RHS16:fp64bit, implicit $fpc
+    %D17:vr64bit = nofpexcept WFDDB %D16:vr64bit, undef %RHS17:fp64bit, implicit $fpc
+    %D18:vr64bit = nofpexcept WFDDB %D17:vr64bit, undef %RHS18:fp64bit, implicit $fpc
+    %D19:vr64bit = nofpexcept WFDDB %D18:vr64bit, undef %RHS19:fp64bit, implicit $fpc
+    %D20:vr64bit = nofpexcept WFDDB %D19:vr64bit, undef %RHS20:fp64bit, implicit $fpc
+    %D21:vr64bit = nofpexcept WFDDB %D20:vr64bit, undef %RHS21:fp64bit, implicit $fpc
+    %D22:vr64bit = nofpexcept WFDDB %D21:vr64bit, undef %RHS22:fp64bit, implicit $fpc
+    %D23:vr64bit = nofpexcept WFDDB %D22:vr64bit, undef %RHS23:fp64bit, implicit $fpc
+    %D24:vr64bit = nofpexcept WFDDB %D23:vr64bit, undef %RHS24:fp64bit, implicit $fpc
+    %D25:vr64bit = nofpexcept WFDDB %D24:vr64bit, undef %RHS25:fp64bit, implicit $fpc
+    %D26:vr64bit = nofpexcept WFDDB %D25:vr64bit, undef %RHS26:fp64bit, implicit $fpc
+    %D27:vr64bit = nofpexcept WFDDB %D26:vr64bit, undef %RHS27:fp64bit, implicit $fpc
+
+    %Z0:gr64bit = LGHI 1
+    %Z1:gr64bit = LGHI 1
+    %A0:gr64bit = AGRK %Z0, %Z0, implicit-def dead $cc
+    %A1:gr64bit = AGRK %Z1, %Z1, implicit-def dead $cc
+    %A2:gr64bit = AGRK %Z1, %Z1, implicit-def dead $cc
+    %A3:gr64bit = AGRK %Z1, %Z1, implicit-def dead $cc
+    %A4:gr64bit = AGRK %Z1, %Z1, implicit-def dead $cc
+
+    %A5:gr64bit = AGRK undef %F0:gr64bit, undef %F0, implicit-def dead $cc
+    %A6:gr64bit = AGRK %A5, %Z0, implicit-def dead $cc
+
+    %A7:gr64bit = AGRK undef %F1:gr64bit, undef %F1, implicit-def dead $cc
+    %A9:gr64bit = AGRK %A7, %A7, implicit-def dead $cc
+
+    STG %A0, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG %A1, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG %A2, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG %A3, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG %A4, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG %A6, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    STG %A9, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+
+    $r2d = LGHI 0
+    Return implicit $r2d
+...
+
+# Test the priorization of vector (/fp) registers over GPRs. The VL64 is
+# scheduled low to close the vr64 live range, even though the address
+# register %1 becomes live.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun6:%bb.0
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun6:%bb.0
+#
+# CHECK:      SU(35):   %L0:vr64bit = VL64 %1:addr64bit, 0, $noreg :: (load (s64) from %ir.Arg)
+# CHECK:      Height             : 3
+# CHECK:      Pressure Diff      : VR16Bit -1    GRX32Bit 2
+# CHECK:      SU(36):   %L1:addr64bit = LG %1:addr64bit, 0, $noreg :: (load (s64) from `ptr null`)
+# CHECK:      Height             : 3
+# CHECK:      Pressure Diff      : {{$}}
+# CHECK:      SU(37):   %L2:addr64bit = LG %0:addr64bit, 0, $noreg :: (load (s64) from %ir.Arg)
+# CHECK:      Height             : 3
+# CHECK:      Pressure Diff      : {{$}}
+#
+# CHECK:      Queue BotQ.A: 37 36 35 34
+# CHECK:      Cand SU(37) FIRST
+# CHECK:      Scheduling SU(37)
+# CHECK:      Queue BotQ.A: 34 36 35 0
+# CHECK:      Cand SU(35) REG-EXCESS
+# CHECK:      Scheduling SU(35)
+#
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK:      SU(36):   %L1:addr64bit = LG %1:addr64bit, 0, $noreg :: (load (s64) from `ptr null`)
+# CHECK-NEXT: SU(35):   %L0:vr64bit = VL64 %1:addr64bit, 0, $noreg :: (load (s64) from %ir.Arg)
+# CHECK-NEXT: SU(37):   %L2:addr64bit = LG %0:addr64bit, 0, $noreg :: (load (s64) from %ir.Arg)
+---
+name:            fun6
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d
+  
+    %0:addr64bit = COPY $r3d
+    %1:addr64bit = COPY $r2d
+
+    ; Make for a top of region in terms of height, enabling heuristic for lower SUs.
+    %D0:vr64bit = nofpexcept WFDDB undef %LHS0:fp64bit, undef %RHS0:fp64bit, implicit $fpc
+    %D1:vr64bit = nofpexcept WFDDB %D0:vr64bit, undef %RHS1:fp64bit, implicit $fpc
+    %D2:vr64bit = nofpexcept WFDDB %D1:vr64bit, undef %RHS2:fp64bit, implicit $fpc
+    %D3:vr64bit = nofpexcept WFDDB %D2:vr64bit, undef %RHS3:fp64bit, implicit $fpc
+    %D4:vr64bit = nofpexcept WFDDB %D3:vr64bit, undef %RHS4:fp64bit, implicit $fpc
+    %D5:vr64bit = nofpexcept WFDDB %D4:vr64bit, undef %RHS5:fp64bit, implicit $fpc
+    %D6:vr64bit = nofpexcept WFDDB %D5:vr64bit, undef %RHS6:fp64bit, implicit $fpc
+    %D7:vr64bit = nofpexcept WFDDB %D6:vr64bit, undef %RHS7:fp64bit, implicit $fpc
+    %D8:vr64bit = nofpexcept WFDDB %D7:vr64bit, undef %RHS8:fp64bit, implicit $fpc
+    %D9:vr64bit = nofpexcept WFDDB %D8:vr64bit, undef %RHS9:fp64bit, implicit $fpc
+    %D10:vr64bit = nofpexcept WFDDB %D9:vr64bit, undef %RHS10:fp64bit, implicit $fpc
+    %D11:vr64bit = nofpexcept WFDDB %D10:vr64bit, undef %RHS11:fp64bit, implicit $fpc
+    %D12:vr64bit = nofpexcept WFDDB %D11:vr64bit, undef %RHS12:fp64bit, implicit $fpc
+    %D13:vr64bit = nofpexcept WFDDB %D12:vr64bit, undef %RHS13:fp64bit, implicit $fpc
+    %D14:vr64bit = nofpexcept WFDDB %D13:vr64bit, undef %RHS14:fp64bit, implicit $fpc
+    %D15:vr64bit = nofpexcept WFDDB %D14:vr64bit, undef %RHS15:fp64bit, implicit $fpc
+    %D16:vr64bit = nofpexcept WFDDB %D15:vr64bit, undef %RHS16:fp64bit, implicit $fpc
+    %D17:vr64bit = nofpexcept WFDDB %D16:vr64bit, undef %RHS17:fp64bit, implicit $fpc
+    %D18:vr64bit = nofpexcept WFDDB %D17:vr64bit, undef %RHS18:fp64bit, implicit $fpc
+    %D19:vr64bit = nofpexcept WFDDB %D18:vr64bit, undef %RHS19:fp64bit, implicit $fpc
+    %D20:vr64bit = nofpexcept WFDDB %D19:vr64bit, undef %RHS20:fp64bit, implicit $fpc
+    %D21:vr64bit = nofpexcept WFDDB %D20:vr64bit, undef %RHS21:fp64bit, implicit $fpc
+    %D22:vr64bit = nofpexcept WFDDB %D21:vr64bit, undef %RHS22:fp64bit, implicit $fpc
+    %D23:vr64bit = nofpexcept WFDDB %D22:vr64bit, undef %RHS23:fp64bit, implicit $fpc
+    %D24:vr64bit = nofpexcept WFDDB %D23:vr64bit, undef %RHS24:fp64bit, implicit $fpc
+    %D25:vr64bit = nofpexcept WFDDB %D24:vr64bit, undef %RHS25:fp64bit, implicit $fpc
+    %D26:vr64bit = nofpexcept WFDDB %D25:vr64bit, undef %RHS26:fp64bit, implicit $fpc
+    %D27:vr64bit = nofpexcept WFDDB %D26:vr64bit, undef %RHS27:fp64bit, implicit $fpc
+    %D28:vr64bit = nofpexcept WFDDB %D27:vr64bit, undef %RHS28:fp64bit, implicit $fpc
+    %D29:vr64bit = nofpexcept WFDDB %D28:vr64bit, undef %RHS29:fp64bit, implicit $fpc
+    %D30:vr64bit = nofpexcept WFDDB %D29:vr64bit, undef %RHS3:fp64bit, implicit $fpc
+    %D31:vr64bit = nofpexcept WFDDB %D30:vr64bit, undef %RHS31:fp64bit, implicit $fpc
+    %D32:vr64bit = nofpexcept WFDDB %D31:vr64bit, undef %RHS32:fp64bit, implicit $fpc
+
+    %L0:vr64bit = VL64 %1, 0, $noreg :: (load (s64) from %ir.Arg)
+    %L1:addr64bit = LG %1, 0, $noreg :: (load (s64) from `ptr null`)
+    %L2:addr64bit = LG %0, 0, $noreg :: (load (s64) from %ir.Arg)
+    CallBASR implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
+    STG %L1, $noreg, 0, $noreg
+    VST64 %L0, $noreg, 0, $noreg
+    STG %L2, $noreg, 0, $noreg
+    Return
+...

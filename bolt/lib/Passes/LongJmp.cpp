@@ -22,8 +22,6 @@ using namespace llvm;
 namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
-extern llvm::cl::opt<unsigned> AlignText;
-extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
@@ -318,7 +316,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
     uint64_t DotAddress) {
   DotAddress =
-      alignTo(DotAddress, std::max<uint64_t>(opts::AlignFunctions,
+      alignTo(DotAddress, std::max<uint64_t>(BC.AlignFunctions,
                                              BC.MaxColdCodeAlignment.load()));
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
@@ -375,11 +373,11 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     // after the last non-cold section. Account for it before assigning cold
     // fragment addresses so range checks see the hot-to-cold gap.
     if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
     DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
     ColdLayoutDone = true;
     if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
   };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
@@ -446,8 +444,7 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
     // Initial padding
     if (EstimatedTextSize <= BC.OldTextSectionSize) {
       DotAddress = BC.OldTextSectionAddress;
-      uint64_t Pad =
-          offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
+      uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.AlignText));
       if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
         DotAddress += Pad;
       }
@@ -456,7 +453,7 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
 
   if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
     uint64_t TextAlign =
-        std::max<uint64_t>(opts::AlignText, BC.MaxMainCodeAlignment.load());
+        std::max<uint64_t>(BC.AlignText, BC.MaxMainCodeAlignment.load());
     DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
   }
 

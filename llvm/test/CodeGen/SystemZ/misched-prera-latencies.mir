@@ -8,7 +8,6 @@
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.1
-# CHECK: Number of nodes in def-use sequences: 10. Latency scheduling enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.1 ***
 # CHECK-NEXT: SU(0):   %4:fp64bit = LZDR
 # CHECK-NEXT: SU(5):   %9:fp64bit = LZDR
@@ -53,7 +52,6 @@ body:             |
 # This function has a data flow sequence and latency scheduling puts the WFDDB high.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun1:%bb.0
-# CHECK:      Number of nodes in def-use sequences: 4. Latency scheduling enabled for data sequences.
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(1):   undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
 # CHECK-NEXT: SU(2):   %4:fp64bit = COPY %1.subreg_h64:vr128bit
@@ -73,33 +71,12 @@ body:             |
     Return
 ...
 
-# Same, but there is no sequence, so no latency scheduling is done.
+# Single block loop that should also have latency enabled.
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun2:%bb.0
-# CHECK:      Latency scheduling not enabled for data sequences.
-# CHECK:      *** Final schedule for %bb.0 ***
-# CHECK-NEXT: SU(0):   dead %0:fp64bit = LZDR
-# CHECK-NEXT: SU(1):   undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
-# CHECK-NEXT: SU(2):   VST64 %1.subreg_h64:vr128bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
----
-name:            fun2
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    %0:fp64bit = LZDR
-    undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
-    VST64 %1.subreg_h64:vr128bit , $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
-    Return
-...
-
-# Use the GenericScheduler latency heuristic for this single block loop.
-# CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun3:%bb.1
-# CHECK: Latency scheduling not enabled for data sequences.
-# CHECK: ACYCLIC LATENCY LIMIT
+# CHECK-NEXT: fun2:%bb.1
 # CHECK: Pick Bot BOT-HEIGHT [pre-RA]
 ---
-name:            fun3
+name:            fun2
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -128,8 +105,7 @@ body:             |
 # "wide".  Don't interleave the data flows in cases like this, as it could
 # result in too much ILP and spilling.
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun4:%bb.0
-# CHECK:      Latency scheduling not enabled for data sequences.
+# CHECK-NEXT: fun3:%bb.0
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:gr64bit = COPY undef %1:gr64bit
 # CHECK-NEXT: SU(1):   dead %2:gr64bit = AGRK %0:gr64bit, %0:gr64bit,
@@ -144,7 +120,7 @@ body:             |
 # CHECK-NEXT: SU(10):  %11:gr64bit = COPY undef %1:gr64bit
 # CHECK-NEXT: SU(11):  dead %12:gr64bit = AGRK %11:gr64bit, %11:gr64bit,
 ---
-name:            fun4
+name:            fun3
 tracksRegLiveness: true
 body:             |
   bb.0:
@@ -166,10 +142,9 @@ body:             |
 # The TMLL64 should be scheduled first even though the LA is available and of
 # lesser height, because the TMLL64 Depth equals the remaining latency (on CP).
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun5:%bb.0
+# CHECK-NEXT: fun4:%bb.0
 # CHECK:      ********** MI Scheduling **********
-# CHECK-NEXT: fun5:%bb.1
-# CHECK:      Number of nodes in def-use sequences: 4. Latency scheduling enabled for data sequences.
+# CHECK-NEXT: fun4:%bb.1
 # CHECK:      SU(0):   dead %2:addr64bit = LA %0:addr64bit, 1, $noreg
 # CHECK-NEXT:   # preds left       : 0
 # CHECK-NEXT:   # succs left       : 0
@@ -192,7 +167,7 @@ body:             |
 # CHECK-NEXT: SU(0):   dead %2:addr64bit = LA %0:addr64bit, 1, $noreg
 # CHECK-NEXT: SU(4):   TMLL64 %5:gr64bit, 1, implicit-def $cc
 ---
-name:            fun5
+name:            fun4
 tracksRegLiveness: true
 body:             |
   bb.0:

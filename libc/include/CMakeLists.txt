@@ -131,6 +131,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  libgen
+  ../libc/include/libgen.yaml
+  libgen.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
@@ -877,6 +885,7 @@ add_header_macro(
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
+    .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t

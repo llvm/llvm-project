@@ -1442,12 +1442,10 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
       Status error;
       if (!LoadScriptingResourceInTargetForModule(*module, *target, error)) {
         if (error.Fail() && error.AsCString()) {
-          error = Status::FromErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormatv(
               "unable to load scripting data for "
-              "module %s - error reported was %s",
-              module->GetFileSpec()
-                  .GetFileNameStrippingExtension()
-                  .GetCString(),
+              "module {0} - error reported was {1}",
+              module->GetFileSpec().GetFileNameStrippingExtension(),
               error.AsCString());
           errors.push_back(std::move(error));
           if (!continue_on_error)

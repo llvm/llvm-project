@@ -73,6 +73,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # libgen.h entrypoints
+    libc.src.libgen.basename
+    libc.src.libgen.dirname
+
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
     libc.src.stdbit.stdc_bit_ceil_ui

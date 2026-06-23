@@ -47,7 +47,6 @@ struct MissingFeatures {
 
   // Load/store attributes
   static bool opLoadEmitScalarRangeCheck() { return false; }
-  static bool opLoadStoreNontemporal() { return false; }
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
