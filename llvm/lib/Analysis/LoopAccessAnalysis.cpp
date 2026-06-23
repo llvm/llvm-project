@@ -827,6 +827,109 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   return D;
 }
 
+/// Local cost model: count the runtime checks required before and after
+/// replacing one DepSet's groups (\p GroupIndices) with the single merged
+/// group.
+///
+/// The unit is one runtime check: a single bounds comparison emitted between
+/// two groups (the low bound of one against the high bound of the other). Two
+/// groups only produce a check when needsChecking() says so. We assume every
+/// such check costs the same before and after merging (each is the same pair of
+/// pointer comparisons in the IR), so we can just count them.
+///
+///   NumGroups         - groups in this DepSet; all of them collapse into the
+///                       one merged group.
+///   NumExternalChecks - groups *outside* this DepSet that need a check against
+///                       at least one member of it. The merged group will still
+///                       be checked against exactly these.
+///
+/// Before merging, each of the NumGroups groups is checked against each of the
+/// NumExternalChecks external groups, giving NumGroups * NumExternalChecks
+/// checks. Every group in this DepSet is read-only and shares the same
+/// (DependencySetId, AliasSetId), and needsChecking() looks only at those IDs
+/// and at whether a group writes memory. So toward any given external group
+/// either all of these groups need a check or none do, making the count exactly
+/// the product above. After merging only the single merged group remains, so
+/// just NumExternalChecks checks, plus one extra check (a SCEV predicate) for
+/// each stride we must prove positive and have not already paid for in an
+/// earlier DepSet (those already in \p CommittedStridePredicates).
+///
+/// To find the external groups we walk *all* checking groups and keep the ones
+/// that are neither part of this DepSet (\p GroupIndices) nor already consumed
+/// by a previous merge in this same call (\p MergedGroupIndices).
+///
+/// Returns {ChecksBefore, ChecksAfter}.
+static std::pair<unsigned, unsigned>
+computeStencilMergeCost(const RuntimePointerChecking &RtCheck,
+                        ArrayRef<unsigned> GroupIndices,
+                        const SmallDenseSet<unsigned, 4> &MergedGroupIndices,
+                        ArrayRef<const SCEV *> LocalStridesNeedingPreds,
+                        const SmallDenseSet<const SCEV *, 4>
+                            &CommittedStridePredicates) {
+  ArrayRef<RuntimeCheckingPtrGroup> CheckingGroups = RtCheck.CheckingGroups;
+  unsigned NumGroups = GroupIndices.size();
+  SmallDenseSet<unsigned, 4> GroupIndexSet(GroupIndices.begin(),
+                                           GroupIndices.end());
+  unsigned NumExternalChecks = 0;
+  for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
+    if (GroupIndexSet.contains(I) || MergedGroupIndices.contains(I))
+      continue;
+    for (unsigned GI : GroupIndices) {
+      if (RtCheck.needsChecking(CheckingGroups[GI], CheckingGroups[I])) {
+        ++NumExternalChecks;
+        break;
+      }
+    }
+  }
+
+  // Each not-yet-committed positive-stride predicate becomes one extra runtime
+  // check, so it counts against the saving.
+  unsigned NewPredicates = 0;
+  for (const SCEV *Stride : LocalStridesNeedingPreds)
+    if (!CommittedStridePredicates.contains(Stride))
+      ++NewPredicates;
+
+  LLVM_DEBUG(dbgs() << "LAA:   Cost model: NumGroups=" << NumGroups
+                    << ", NumExternalChecks=" << NumExternalChecks
+                    << ", predicates=" << NewPredicates << ", checks "
+                    << NumGroups * NumExternalChecks << "->"
+                    << NumExternalChecks + NewPredicates << "\n");
+
+  return {NumGroups * NumExternalChecks, NumExternalChecks + NewPredicates};
+}
+
+/// Build the merged stencil group for one DepSet, after the cost model has
+/// decided the merge is profitable. Constructs the bounding group over
+/// \p AllMembers with bounds [\p MergedLow, \p MergedHigh], and registers with
+/// \p PSE a positive-stride SCEV predicate for each stride in
+/// \p LocalStridesNeedingPreds that has not already been committed (tracked in
+/// \p CommittedStridePredicates across DepSets). Returns the new group.
+static RuntimeCheckingPtrGroup buildMergedStencilGroup(
+    const RuntimePointerChecking &RtCheck, PredicatedScalarEvolution &PSE,
+    ScalarEvolution &SE, ArrayRef<unsigned> AllMembers, const SCEV *MergedLow,
+    const SCEV *MergedHigh, ArrayRef<unsigned> GroupIndices,
+    ArrayRef<const SCEV *> LocalStridesNeedingPreds,
+    SmallDenseSet<const SCEV *, 4> &CommittedStridePredicates) {
+  RuntimeCheckingPtrGroup CandidateGroup(AllMembers[0], RtCheck);
+  CandidateGroup.Low = MergedLow;
+  CandidateGroup.High = MergedHigh;
+  append_range(CandidateGroup.Members, drop_begin(AllMembers));
+  for (unsigned GI : GroupIndices)
+    CandidateGroup.NeedsFreeze |= RtCheck.CheckingGroups[GI].NeedsFreeze;
+
+  // Register the positive-stride SCEV predicates with PSE, skipping any stride
+  // an earlier DepSet already added a predicate for.
+  for (const SCEV *Stride : LocalStridesNeedingPreds) {
+    if (!CommittedStridePredicates.insert(Stride).second)
+      continue;
+    const SCEV *Zero = SE.getZero(Stride->getType());
+    PSE.addPredicate(*SE.getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero));
+    LLVM_DEBUG(dbgs() << "LAA:   Adding positive-stride predicate for "
+                      << *Stride << "\n");
+  }
+  return CandidateGroup;
+}
+
 void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
                                                 Loop &L) {
   LLVM_DEBUG(dbgs() << "LAA: Attempting stencil group merging on "
@@ -1166,94 +1269,21 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
 
     // Local cost model: decide whether replacing this DepSet's groups with the
     // single merged group actually reduces the number of runtime checks.
-    //
-    // The unit is one runtime check: a single bounds comparison emitted between
-    // two groups (the low bound of one against the high bound of the other).
-    // Two groups only produce a check when needsChecking() says so. We assume
-    // every such check costs the same before and after merging (each is the
-    // same pair of pointer comparisons in the IR), so we can just count them.
-    //
-    //   NumGroups         - groups in this DepSet; all of them collapse into
-    //   the
-    //                       one merged group.
-    //   NumExternalChecks - groups *outside* this DepSet that need a check
-    //                       against at least one member of it. The merged group
-    //                       will still be checked against exactly these.
-    //
-    // Before merging, each of the NumGroups groups is checked against each of
-    // the NumExternalChecks external groups, giving NumGroups *
-    // NumExternalChecks checks. Every group in this DepSet is read-only and
-    // shares the same (DependencySetId, AliasSetId), and needsChecking() looks
-    // only at those IDs and at whether a group writes memory. So toward any
-    // given external group either all of these groups need a check or none do,
-    // making the count exactly the product above. After merging only the single
-    // merged group remains, so just NumExternalChecks checks, plus one extra
-    // check (a SCEV predicate) for each stride we must prove positive and have
-    // not already paid for in an earlier DepSet.
-    //
-    // To find the external groups we walk *all* checking groups and keep the
-    // ones that are neither part of this DepSet (GroupIndexSet) nor already
-    // consumed by a previous merge in this same call (MergedGroupIndices).
-    unsigned NumGroups = GroupIndices.size();
-    SmallDenseSet<unsigned, 4> GroupIndexSet(GroupIndices.begin(),
-                                             GroupIndices.end());
-    unsigned NumExternalChecks = 0;
-    for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
-      if (GroupIndexSet.contains(I) || MergedGroupIndices.contains(I))
-        continue;
-      for (unsigned GI : GroupIndices) {
-        if (needsChecking(CheckingGroups[GI], CheckingGroups[I])) {
-          ++NumExternalChecks;
-          break;
-        }
-      }
-    }
-
-    // Each not-yet-committed positive-stride predicate becomes one extra
-    // runtime check, so it counts against the saving.
-    unsigned NewPredicates = 0;
-    for (const SCEV *Stride : LocalStridesNeedingPreds)
-      if (!CommittedStridePredicates.contains(Stride))
-        ++NewPredicates;
-
-    unsigned ChecksBefore = NumGroups * NumExternalChecks;
-    unsigned ChecksAfter = NumExternalChecks + NewPredicates;
-
-    LLVM_DEBUG(dbgs() << "LAA:   Cost model: NumGroups=" << NumGroups
-                      << ", NumExternalChecks=" << NumExternalChecks
-                      << ", predicates=" << NewPredicates << ", checks "
-                      << ChecksBefore << "->" << ChecksAfter);
-
+    auto [ChecksBefore, ChecksAfter] = computeStencilMergeCost(
+        *this, GroupIndices, MergedGroupIndices,
+        LocalStridesNeedingPreds.getArrayRef(), CommittedStridePredicates);
     if (ChecksAfter >= ChecksBefore) {
-      LLVM_DEBUG(dbgs() << " (skipping, not beneficial)\n");
+      LLVM_DEBUG(dbgs() << "LAA:   Not beneficial, skipping DepSet\n");
       continue;
     }
-    LLVM_DEBUG(dbgs() << " (merging, net saving " << ChecksBefore - ChecksAfter
-                      << ")\n");
+    LLVM_DEBUG(dbgs() << "LAA:   Merging, net saving "
+                      << ChecksBefore - ChecksAfter << "\n");
 
-    // Build the merged group (after deciding to merge).
-    RuntimeCheckingPtrGroup CandidateGroup(AllMembers[0], *this);
-    CandidateGroup.Low = MergedLow;
-    CandidateGroup.High = MergedHigh;
-    append_range(CandidateGroup.Members, drop_begin(AllMembers));
-    for (unsigned GI : GroupIndices)
-      CandidateGroup.NeedsFreeze |= CheckingGroups[GI].NeedsFreeze;
-
-    // We have decided to merge, so now actually register the positive-stride
-    // SCEV predicates with PSE (skipping any stride an earlier DepSet already
-    // added a predicate for).
-    for (const SCEV *Stride : LocalStridesNeedingPreds) {
-      if (!CommittedStridePredicates.insert(Stride).second)
-        continue;
-      const SCEV *Zero = SE->getZero(Stride->getType());
-      PSE.addPredicate(
-          *SE->getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero));
-      LLVM_DEBUG(dbgs() << "LAA:   Adding positive-stride predicate for "
-                        << *Stride << "\n");
-    }
-
+    // Build the merged group and register its positive-stride predicates.
+    NewMergedGroups.push_back(buildMergedStencilGroup(
+        *this, PSE, *SE, AllMembers, MergedLow, MergedHigh, GroupIndices,
+        LocalStridesNeedingPreds.getArrayRef(), CommittedStridePredicates));
     MergedGroupIndices.insert(GroupIndices.begin(), GroupIndices.end());
-    NewMergedGroups.push_back(std::move(CandidateGroup));
   }
 
   // Rebuild CheckingGroups if we merged anything.
