@@ -150,7 +150,6 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
     auto AVI = AffectedValues.find_as(AV.Assume);
     if (AVI == AffectedValues.end())
       continue;
-
     bool Found = false;
     bool HasNonnull = false;
     for (ResultElem &Elem : AVI->second) {
