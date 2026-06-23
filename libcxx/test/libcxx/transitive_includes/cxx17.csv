@@ -156,6 +156,7 @@ bitset algorithm
 bitset atomic
 bitset bit
 bitset cctype
+bitset cerrno
 bitset climits
 bitset cmath
 bitset compare
@@ -2130,6 +2131,7 @@ string algorithm
 string atomic
 string bit
 string cctype
+string cerrno
 string climits
 string cmath
 string compare

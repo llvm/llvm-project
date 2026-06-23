@@ -330,24 +330,6 @@ inline wide_printf get_swprintf() {
 
 } // unnamed namespace
 
-#ifndef _LIBCPP_PREFERRED_OVERLOAD
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long);
-
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long);
-#  endif
-#endif
-
 string to_string(int val) { return std::__integer_to_string<string>(val); }
 string to_string(long val) { return std::__integer_to_string<string>(val); }
 string to_string(long long val) { return std::__integer_to_string<string>(val); }
