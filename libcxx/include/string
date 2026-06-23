@@ -3780,40 +3780,14 @@ stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
 
-#  if _LIBCPP_STD_VER >= 26
-
-template <class _String, class _Integer>
-constexpr _String __integer_to_string(_Integer __val) {
-  // numeric_limits::digits10 returns value less on 1 than desired for unsigned numbers.
-  // For example, for 1-byte unsigned value digits10 is 2 (999 can not be represented), so we need +1 here.
-  constexpr size_t __buf_size = numeric_limits<_Integer>::digits10 + 2; // +1 for minus, +1 for digits10
-  char __buf[__buf_size];
-  const auto [__ptr, __ec] = std::to_chars(__buf, __buf + __buf_size, __val);
-  _LIBCPP_ASSERT_INTERNAL(__ec == errc(), "__buf_size must be large enough to accommodate the value");
-  return _String(__buf, __ptr);
-}
-
-inline namespace __cpp26 {
-
-[[nodiscard]] constexpr string to_string(int __val) { return std::__integer_to_string<string>(__val); }
-[[nodiscard]] constexpr string to_string(unsigned __val) { return std::__integer_to_string<string>(__val); }
-[[nodiscard]] constexpr string to_string(long __val) { return std::__integer_to_string<string>(__val); }
-[[nodiscard]] constexpr string to_string(unsigned long __val) { return std::__integer_to_string<string>(__val); }
-[[nodiscard]] constexpr string to_string(long long __val) { return std::__integer_to_string<string>(__val); }
-[[nodiscard]] constexpr string to_string(unsigned long long __val) { return std::__integer_to_string<string>(__val); }
-
-} // namespace __cpp26
-
-#  else // _LIBCPP_STD_VER >= 26
-
+#  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_PREFERRED_OVERLOAD)
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
-
-#  endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_PREFERRED_OVERLOAD)
 
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
@@ -3833,36 +3807,122 @@ stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
 
-#    if _LIBCPP_STD_VER >= 26
-
-inline namespace __cpp26 {
-
-[[nodiscard]] constexpr wstring to_wstring(int __val) { return std::__integer_to_string<wstring>(__val); }
-[[nodiscard]] constexpr wstring to_wstring(unsigned __val) { return std::__integer_to_string<wstring>(__val); }
-[[nodiscard]] constexpr wstring to_wstring(long __val) { return std::__integer_to_string<wstring>(__val); }
-[[nodiscard]] constexpr wstring to_wstring(unsigned long __val) { return std::__integer_to_string<wstring>(__val); }
-[[nodiscard]] constexpr wstring to_wstring(long long __val) { return std::__integer_to_string<wstring>(__val); }
-[[nodiscard]] constexpr wstring to_wstring(unsigned long long __val) {
-  return std::__integer_to_string<wstring>(__val);
-}
-
-} // namespace __cpp26
-
-#    else // _LIBCPP_STD_VER >= 26
-
+#    if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_PREFERRED_OVERLOAD)
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
-
-#    endif // _LIBCPP_STD_VER >= 26
+#    endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_PREFERRED_OVERLOAD)
 
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+#  if _LIBCPP_STD_VER >= 26
+
+// Note: _LIBCPP_ALWAYS_INLINE is used for generating direct invocations to dylib versions for Clang,
+// which avoids code size regression in C++26.
+
+template <class _String, class _Integer>
+constexpr _String __integer_to_string(_Integer __val) {
+  // numeric_limits::digits10 returns value less on 1 than desired for unsigned numbers.
+  // For example, for 1-byte unsigned value digits10 is 2 (999 can not be represented), so we need +1 here.
+  constexpr size_t __buf_size = numeric_limits<_Integer>::digits10 + 2; // +1 for minus, +1 for digits10
+  char __buf[__buf_size];
+  const auto [__ptr, __ec] = std::to_chars(__buf, __buf + __buf_size, __val);
+  _LIBCPP_ASSERT_INTERNAL(__ec == errc(), "__buf_size must be large enough to accommodate the value");
+  return _String(__buf, __ptr);
+}
+
+template <class _Integer>
+_LIBCPP_ALWAYS_INLINE constexpr string __to_string(_Integer __val) {
+#    if _LIBCPP_PREFERRED_OVERLOAD
+  if !consteval {
+    return std::to_string(__val);
+  } else
+#    endif // _LIBCPP_PREFERRED_OVERLOAD
+  {
+    return std::__integer_to_string<string>(__val);
+  }
+}
+
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
+template <class _Integer>
+_LIBCPP_ALWAYS_INLINE constexpr wstring __to_wstring(_Integer __val) {
+#      if _LIBCPP_PREFERRED_OVERLOAD
+  if !consteval {
+    return std::to_wstring(__val);
+  } else
+#      endif // _LIBCPP_PREFERRED_OVERLOAD
+  {
+    return std::__integer_to_string<wstring>(__val);
+  }
+}
+#    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
+
+inline namespace __cpp26 {
+
+#    ifdef _LIBCPP_PREFERRED_OVERLOAD
+#      define _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE _LIBCPP_PREFERRED_OVERLOAD
+#    else // _LIBCPP_PREFERRED_OVERLOAD
+#      define _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE
+#    endif // _LIBCPP_PREFERRED_OVERLOAD
+
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr string to_string(int __val) {
+  return std::__to_string(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr string to_string(unsigned __val) {
+  return std::__to_string(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr string to_string(long __val) {
+  return std::__to_string(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr string
+to_string(unsigned long __val) {
+  return std::__to_string(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr string
+to_string(long long __val) {
+  return std::__to_string(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr string
+to_string(unsigned long long __val) {
+  return std::__to_string(__val);
+}
+
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr wstring to_wstring(int __val) {
+  return std::__to_wstring(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr wstring
+to_wstring(unsigned __val) {
+  return std::__to_wstring(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr wstring to_wstring(long __val) {
+  return std::__to_wstring(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr wstring
+to_wstring(unsigned long __val) {
+  return std::__to_wstring(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr wstring
+to_wstring(long long __val) {
+  return std::__to_wstring(__val);
+}
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE constexpr wstring
+to_wstring(unsigned long long __val) {
+  return std::__to_wstring(__val);
+}
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+#    undef _LIBCPP_PREFERRED_OVERLOAD_IF_AVAILABLE
+
+} // namespace __cpp26
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_TEMPLATE_DATA_VIS const typename basic_string<_CharT, _Traits, _Allocator>::size_type
