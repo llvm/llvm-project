@@ -481,6 +481,12 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
+  // When the array can be represented as a single dense constant, emit one
+  // llvm.mlir.constant instead of a chain of llvm.insertvalue ops.
+  if (std::optional<mlir::Attribute> denseAttr =
+          lowerConstArrayAttr(attr, converter))
+    return mlir::LLVM::ConstantOp::create(rewriter, loc, llvmTy, *denseAttr);
+
   if (attr.hasTrailingZeros()) {
     mlir::Type arrayTy = attr.getType();
     result = mlir::LLVM::ZeroOp::create(rewriter, loc,
@@ -1854,15 +1860,12 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
-  // TODO: nontemporal.
-  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
-
   std::optional<llvm::StringRef> llvmSyncScope =
       getLLVMSyncScope(op.getSyncScope());
 
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
-      op.getIsVolatile(), /*isNonTemporal=*/false,
+      op.getIsVolatile(), /*isNonTemporal=*/op.getIsNontemporal(),
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
       llvmSyncScope.value_or(std::string()));
 
@@ -1910,8 +1913,6 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // Convert adapted value to its memory type if needed.
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
-  // TODO: nontemporal.
-  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
 
   std::optional<llvm::StringRef> llvmSyncScope =
@@ -1920,8 +1921,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
-      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
-      llvmSyncScope.value_or(std::string()));
+      /*isNonTemporal=*/op.getIsNontemporal(), /*isInvariantGroup=*/false,
+      memorder, llvmSyncScope.value_or(std::string()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
@@ -2503,11 +2504,27 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         }
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
-    } else if (mlir::isa<cir::ConstVectorAttr, cir::ConstRecordAttr,
-                         cir::ConstPtrAttr, cir::ConstComplexAttr,
-                         cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
-                         cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
-                   init.value())) {
+    } else if (auto constRecord =
+                   mlir::dyn_cast<cir::ConstRecordAttr>(init.value())) {
+      // Bulk-emit llvm.mlir.global when every member of the record can be
+      // lowered to a constant attribute. The LLVM dialect global translation
+      // turns an ArrayAttr (one element per struct field) into an
+      // llvm::ConstantStruct, so the whole initializer becomes a single
+      // attribute on the global instead of an insertvalue region.
+      mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+      if (std::optional<mlir::Attribute> bulkInit =
+              lowerConstRecordAttr(constRecord, typeConverter, modOp)) {
+        mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+            op, llvmType, isConst, linkage, symbol, bulkInit.value(), alignment,
+            addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
+        return mlir::success();
+      }
+      return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
+    } else if (mlir::isa<cir::ConstVectorAttr, cir::ConstPtrAttr,
+                         cir::ConstComplexAttr, cir::GlobalViewAttr,
+                         cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
+                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
