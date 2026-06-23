@@ -1615,10 +1615,18 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
   return semantics::FindCommonBlockContaining(sym);
 }
 
+static constexpr std::size_t largeLocalArrayBytes = std::size_t{1} << 31;
+
 /// Is the symbol `sym` a global?
 bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
+  const semantics::Scope &scope = sym.owner();
+  const semantics::Symbol *proc = scope.symbol();
   return (semantics::IsSaved(sym) && semantics::CanCUDASymbolBeGlobal(sym)) ||
-         lower::definedInCommonBlock(sym) || semantics::IsNamedConstant(sym);
+         lower::definedInCommonBlock(sym) || semantics::IsNamedConstant(sym) ||
+         (sym.Rank() > 0 && sym.size() > largeLocalArrayBytes &&
+          !semantics::IsDummy(sym) && !semantics::IsAllocatableOrPointer(sym) &&
+          scope.kind() == semantics::Scope::Kind::Subprogram && proc &&
+          !proc->attrs().test(semantics::Attr::RECURSIVE));
 }
 
 namespace {
