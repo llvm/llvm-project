@@ -673,8 +673,8 @@ KnownBits KnownBits::pext(const KnownBits &Val, const KnownBits &Mask) {
       ++M1;
   }
 
-  // Output bits at J >= M0 have no source (popcount(RHS) <= J), in
-  // which case they default to 0.
+  // Output bits at J >= M0 may have no source (popcount(Mask) may be <= J), so
+  // they may be 0.
   Res.One.clearBits(M0, BitWidth);
   return Res;
 }
