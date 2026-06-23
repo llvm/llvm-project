@@ -542,8 +542,8 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
-  void computeKnownBitsForSRetPointer(KnownBits &Known,
-                                      const MachineFunction &MF) const override;
+  void computeKnownBitsForStackObjectPointer(
+      KnownBits &Known, const MachineFunction &MF) const override;
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;

@@ -4424,10 +4424,11 @@ public:
                                              KnownBits &Known,
                                              const MachineFunction &MF) const;
 
-  /// Determine which bits of an sret pointer are known to be 0.
+  /// Determine which bits of a stack object pointer are known to be 0.
   /// The default implementation preserves the known bits passed into it.
-  virtual void computeKnownBitsForSRetPointer(KnownBits &Known,
-                                              const MachineFunction &MF) const;
+  virtual void
+  computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                        const MachineFunction &MF) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
@@ -5119,9 +5120,9 @@ public:
     return true;
   }
 
-  /// Annotate an sret pointer with known-bits assertions.
-  SDValue annotateSRetPointer(SDValue Ptr, SelectionDAG &DAG,
-                              const SDLoc &DL) const;
+  /// Annotate a stack object pointer with known-bits assertions.
+  SDValue annotateStackObjectPointer(SDValue Ptr, SelectionDAG &DAG,
+                                     const SDLoc &DL) const;
 
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should

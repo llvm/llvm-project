@@ -2219,7 +2219,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
-    RetPtr = TLI.annotateSRetPointer(RetPtr, DAG, getCurSDLoc());
+    RetPtr = TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc());
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;

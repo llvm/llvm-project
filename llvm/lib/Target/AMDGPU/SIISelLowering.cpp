@@ -3729,7 +3729,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-      Val = annotateSRetPointer(Val, DAG, DL);
+      Val = annotateStackObjectPointer(Val, DAG, DL);
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -19709,7 +19709,7 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-void SITargetLowering::computeKnownBitsForSRetPointer(
+void SITargetLowering::computeKnownBitsForStackObjectPointer(
     KnownBits &Known, const MachineFunction &) const {
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
@@ -19721,7 +19721,7 @@ void SITargetLowering::computeKnownBitsForFrameIndex(
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address
   // calculation won't overflow, so assume the sign bit is never set.
-  computeKnownBitsForSRetPointer(Known, MF);
+  computeKnownBitsForStackObjectPointer(Known, MF);
 }
 
 static void knownBitsForWorkitemID(const GCNSubtarget &ST,
