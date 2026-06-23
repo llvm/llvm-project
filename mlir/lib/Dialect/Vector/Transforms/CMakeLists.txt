@@ -53,6 +53,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRTensorDialect
   MLIRTransforms
   MLIRVectorDialect
+  MLIRVectorHoisting
   MLIRVectorInterfaces
   MLIRVectorUtils
   )
