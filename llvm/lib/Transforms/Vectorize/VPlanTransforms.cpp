@@ -7012,9 +7012,6 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     VPValue *Op = UpdateR->getOperand(1);
     VPValue *PrevValue = UpdateR->getOperand(0);
 
-    if (Blend && Blend->getIncomingValue(1) != PrevValue)
-      return std::nullopt;
-
     // Find the extended operand. The other operand (PrevValue) is the next link
     // in the reduction chain.
     std::optional<ExtendedReductionOperand> ExtendedOp =
@@ -7025,6 +7022,9 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
         return std::nullopt;
       std::swap(Op, PrevValue);
     }
+
+    if (Blend && Blend->getIncomingValue(1) != PrevValue)
+      return std::nullopt;
 
     Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
     TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
@@ -7127,8 +7127,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
 
-        if (Chain.Blend == U)
-          return true;
+        if (auto *Blend = dyn_cast<VPBlendRecipe>(U))
+          return any_of(Chains, [Blend](const VPPartialReductionChain &C) {
+            return C.Blend == Blend;
+          });
 
         auto *R = cast<VPSingleDefRecipe>(U);
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
