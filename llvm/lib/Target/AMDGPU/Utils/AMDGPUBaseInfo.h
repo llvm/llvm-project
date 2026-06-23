@@ -16,6 +16,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <array>
 #include <functional>
 #include <utility>
@@ -155,12 +156,19 @@ enum class TargetIDSetting { Unsupported, Any, Off, On };
 
 class AMDGPUTargetID {
 private:
-  const MCSubtargetInfo &STI;
+  GPUKind Arch;
+  std::string TargetTripleString;
   TargetIDSetting XnackSetting;
   TargetIDSetting SramEccSetting;
+  bool IsAMDHSA;
 
 public:
-  explicit AMDGPUTargetID(const MCSubtargetInfo &STI);
+  explicit AMDGPUTargetID(const MCSubtargetInfo &STI, StringRef FeatureString);
+
+  AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
+                 TargetIDSetting XnackSetting, TargetIDSetting SramEccSetting,
+                 bool IsAMDHSA);
+
   ~AMDGPUTargetID() = default;
 
   /// \return True if the current xnack setting is not "Unsupported".
@@ -217,14 +225,31 @@ public:
     SramEccSetting = NewSramEccSetting;
   }
 
-  void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
+
+  GPUKind getGPUKind() const { return Arch; }
+
+  StringRef getTargetTripleString() const { return TargetTripleString; }
+
+  /// \returns True if this is an AMDHSA target.
+  bool isAMDHSA() const { return IsAMDHSA; }
+
+  /// Parse a target ID directive string (e.g.,
+  /// "amdgcn-amd-amdhsa--gfx1010:xnack-") and return an AMDGPUTargetID.
+  /// \returns AMDGPUTargetID or std::nullopt if malformed.
+  static std::optional<AMDGPUTargetID>
+  parseTargetIDString(StringRef TargetIDDirective);
 
   /// Write string representation to \p OS
   void print(raw_ostream &OS) const;
 
   /// \returns String representation of an object.
   std::string toString() const;
+
+  bool operator==(const AMDGPUTargetID &Other) const;
+  bool operator!=(const AMDGPUTargetID &Other) const {
+    return !(*this == Other);
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
@@ -375,10 +400,23 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
                                       unsigned MaxWaves,
                                       unsigned TotalNumVGPRs);
 
-/// \returns Occupancy for a given \p SGPRs usage, \p MaxWaves possible, and \p
-/// Gen.
+/// \returns Whether allocated SGPRs can reduce occupancy on subtarget \p STI
+/// (true pre-GFX10). One named capability so callers don't test the version.
+bool isSGPROccupancyLimited(const MCSubtargetInfo &STI);
+
+/// \returns SGPR-limited occupancy (waves per EU) for subtarget \p STI: the
+/// inverse of getMaxNumSGPRs(). Unlike getMaxNumSGPRs() the budget is not
+/// clamped to the addressable count, since the allocated count callers pass in
+/// can exceed it.
+unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs);
+
+/// \returns SGPR-limited occupancy computed from explicit budget parameters
+/// (\p MaxWaves, \p TotalNumSGPRs, \p Granule, \p TrapReserve). Subtarget-free
+/// core shared by the overload above and the occupancy MCExpr. Callers must
+/// check isSGPROccupancyLimited() first.
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
-                                  AMDGPUSubtarget::Generation Gen);
+                                  unsigned TotalNumSGPRs, unsigned Granule,
+                                  unsigned TrapReserve);
 
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used. We actually return the number of blocks -1, since
@@ -1019,12 +1057,6 @@ bool isTrue16Inst(unsigned Opc);
 LLVM_READONLY
 FPType getFPDstSelType(unsigned Opc);
 
-LLVM_READONLY
-bool isInvalidSingleUseConsumerInst(unsigned Opc);
-
-LLVM_READONLY
-bool isInvalidSingleUseProducerInst(unsigned Opc);
-
 bool isDPMACCInstruction(unsigned Opc);
 
 LLVM_READONLY
@@ -1056,14 +1088,6 @@ std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef TupleString);
 /// width. Does not validate the number of registers exists in the class.
 std::tuple<char, unsigned, unsigned>
 parseAsmConstraintPhysReg(StringRef Constraint);
-
-/// \returns Integer value requested using \p F's \p Name attribute.
-///
-/// \returns \p Default if attribute is not present.
-///
-/// \returns \p Default and emits error if requested value cannot be converted
-/// to integer.
-int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
@@ -1105,26 +1129,6 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
-
-/// Represents the hardware counter limits for different wait count types.
-struct HardwareLimits {
-  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
-  unsigned ExpcntMax;
-  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
-  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
-  unsigned SamplecntMax; // gfx12+ only.
-  unsigned BvhcntMax;    // gfx12+ only.
-  unsigned KmcntMax;     // gfx12+ only.
-  unsigned XcntMax;      // gfx1250.
-  unsigned AsyncMax;     // gfx1250.
-  unsigned VaVdstMax;    // gfx12+ expert mode only.
-  unsigned VmVsrcMax;    // gfx12+ expert mode only.
-
-  HardwareLimits() = default;
-
-  /// Initializes hardware limits from ISA version.
-  HardwareLimits(const IsaVersion &IV);
-};
 
 // The following methods are only meaningful on targets that support
 // S_WAITCNT.
@@ -1450,8 +1454,6 @@ unsigned getInitialPSInputAddr(const Function &F);
 bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
-
-bool hasDynamicVGPR(const Function &F);
 
 // Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
 // the attribute is missing or its value is invalid.
@@ -1816,11 +1818,6 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 /// instructions. Note that some forms of the instruction disallow negative
 /// offsets.
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
-
-/// \returns true if this offset is small enough to fit in the SMRD
-/// offset field.  \p ByteOffset should be the offset in bytes and
-/// not the encoded offset.
-bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
 inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {

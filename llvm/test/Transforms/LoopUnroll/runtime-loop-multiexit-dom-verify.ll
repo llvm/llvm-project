@@ -251,8 +251,7 @@ define void @test4(i16 %c3) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    [[C1:%.*]] = zext i32 undef to i64
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[C1]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[UMAX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[C1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
