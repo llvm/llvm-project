@@ -3730,30 +3730,32 @@ void VPlanTransforms::createInterleaveGroups(
           return !IRMemberToRecipe.contains(Member);
         })) {
       auto &DL = Plan.getDataLayout();
-      for (unsigned I = 0; I < IG->getFactor(); ++I)
-        if (Instruction *Member = IG->getMember(I)) {
-          // Fix addresses of members that still have recipes.
-          if (auto *MemberR = IRMemberToRecipe.lookup(Member)) {
-            auto *LoadR = cast<VPWidenLoadRecipe>(MemberR->getAsRecipe());
-            VPBuilder Builder(LoadR);
-            VPValue *Base = MemberR->getAddr();
-            Type *IndexTy = DL.getIndexType(Base->getScalarType());
-            VPValue *StepVec =
-                Builder.createNaryOp(VPInstruction::StepVector, {}, IndexTy);
-            int64_t Stride = IG->getFactor();
-            if (IG->isReverse())
-              Stride = -Stride;
-            VPValue *StrideVPV = Plan.getConstantInt(IndexTy, (uint64_t)Stride,
-                                                     /*IsSigned=*/true);
-            VPValue *Idx = Builder.createOverflowingOp(Instruction::Mul,
-                                                       {StepVec, StrideVPV});
-            auto *WidenGEP =
-                new VPWidenGEPRecipe(getLoadStoreType(Member), {Base, Idx}, {},
-                                     LoadR->getDebugLoc());
-            Builder.insert(WidenGEP);
-            LoadR->setOperand(0, WidenGEP);
-          }
-        }
+      for (unsigned I = 0; I < IG->getFactor(); ++I) {
+        Instruction *Member = IG->getMember(I);
+        if (!Member)
+          continue;
+        auto *MemberR = IRMemberToRecipe.lookup(Member);
+        if (!MemberR)
+          continue;
+        // Fix addresses of members that still have recipes.
+        auto *LoadR = cast<VPWidenLoadRecipe>(MemberR->getAsRecipe());
+        VPBuilder Builder(LoadR);
+        VPValue *Base = MemberR->getAddr();
+        Type *IndexTy = DL.getIndexType(Base->getScalarType());
+        VPValue *StepVec =
+            Builder.createNaryOp(VPInstruction::StepVector, {}, IndexTy);
+        int64_t Stride = IG->getFactor();
+        if (IG->isReverse())
+          Stride = -Stride;
+        VPValue *StrideVPV = Plan.getConstantInt(IndexTy, (uint64_t)Stride,
+                                                 /*IsSigned=*/true);
+        VPValue *Idx =
+            Builder.createOverflowingOp(Instruction::Mul, {StepVec, StrideVPV});
+        auto *WidenGEP = new VPWidenGEPRecipe(
+            getLoadStoreType(Member), {Base, Idx}, {}, LoadR->getDebugLoc());
+        Builder.insert(WidenGEP);
+        LoadR->setOperand(0, WidenGEP);
+      }
       continue;
     }
 
