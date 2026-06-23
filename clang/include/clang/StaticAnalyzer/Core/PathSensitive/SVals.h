@@ -103,7 +103,9 @@ public:
   bool operator<(SVal R) const {
     return std::tie(Data, Kind) < std::tie(R.Data, R.Kind);
   }
-  bool operator==(SVal R) const { return Kind == R.Kind && Data == R.Data; }
+  bool operator==(SVal R) const {
+    return std::tie(Data, Kind) == std::tie(R.Data, R.Kind);
+  }
   bool operator!=(SVal R) const { return !(*this == R); }
 
   bool isUnknown() const { return getKind() == UnknownValKind; }
