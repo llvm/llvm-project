@@ -90,9 +90,9 @@ set(environ_internal_deps
 )
 set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
 
-if("environ" IN_LIST TARGET_ENTRYPOINT_NAME_LIST)
+if("libc.src.unistd.environ" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND environ_internal_deps libc.src.unistd.environ)
-  list(APPEND environ_internal_compile_options "-DLIBC_SUPPORT_ENVIRON")
+  list(APPEND environ_internal_compile_options "-DLIBC_COPT_SUPPORT_ENVIRON")
 endif()
 
 add_object_library(

@@ -14,6 +14,8 @@ add_subdirectory(netinet)
 add_subdirectory(stdbit)
 add_subdirectory(stdfix)
 add_subdirectory(stdio)
+# unistd must be added before stdlib because stdlib's environ_internal
+# target conditionally depends on unistd's environ target.
 add_subdirectory(unistd)
 add_subdirectory(stdlib)
 add_subdirectory(string)

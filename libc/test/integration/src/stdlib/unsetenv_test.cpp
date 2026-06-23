@@ -1,17 +1,20 @@
-//===----------------------------------------------------------------------===//
+//===-- Integration tests for unsetenv -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+///
 /// \file
 /// Integration tests for unsetenv.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/setenv.h"
 #include "src/stdlib/unsetenv.h"
+#include "src/stdlib/environ_internal.h"
 #include "src/string/strcmp.h"
 #include "src/unistd/environ.h"
 
@@ -37,14 +40,14 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_EQ(unsetenv("DOES_NOT_EXIST"), 0);
   }
 
-  // Test: Empty name returns EINVAL
+  // Test: Empty name sets errno to EINVAL
   {
     errno = 0;
     ASSERT_EQ(unsetenv(""), -1);
     ASSERT_ERRNO_EQ(EINVAL);
   }
 
-  // Test: Name with '=' returns EINVAL
+  // Test: Name with '=' sets errno to EINVAL
   {
     errno = 0;
     ASSERT_EQ(unsetenv("BAD=NAME"), -1);
@@ -120,6 +123,48 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
       }
     }
     ASSERT_FALSE(found);
+  }
+
+  // Test: Unset removes all duplicate instances of a variable
+  {
+    ASSERT_EQ(setenv("DUP_VAL1", "1", 1), 0);
+    ASSERT_EQ(setenv("DUP_VAL2", "2", 1), 0);
+
+    char *d1 = new char[14];
+    const char *s1 = "DUP_VAR=first";
+    for (size_t i = 0; i < 14; ++i)
+      d1[i] = s1[i];
+
+    char *d2 = new char[15];
+    const char *s2 = "DUP_VAR=second";
+    for (size_t i = 0; i < 15; ++i)
+      d2[i] = s2[i];
+
+    internal::EnvironmentManager &mgr =
+        internal::EnvironmentManager::get_instance();
+    char **env_array = mgr.begin();
+    size_t count = mgr.size();
+
+    size_t idx1 = count;
+    size_t idx2 = count;
+    for (size_t i = 0; i < count; ++i) {
+      cpp::string_view curr(env_array[i]);
+      if (curr.starts_with("DUP_VAL1="))
+        idx1 = i;
+      if (curr.starts_with("DUP_VAL2="))
+        idx2 = i;
+    }
+    ASSERT_TRUE(idx1 < count);
+    ASSERT_TRUE(idx2 < count);
+
+    delete[] env_array[idx1];
+    delete[] env_array[idx2];
+
+    env_array[idx1] = d1;
+    env_array[idx2] = d2;
+
+    ASSERT_EQ(unsetenv("DUP_VAR"), 0);
+    ASSERT_TRUE(getenv("DUP_VAR") == nullptr);
   }
 
   return 0;

@@ -18,7 +18,7 @@
 #include "src/__support/alloc-checker.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#ifdef LIBC_SUPPORT_ENVIRON
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
 #include "src/unistd/environ.h"
 #endif
 
@@ -145,7 +145,7 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
     // Update the global environ pointer.
     app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
-#ifdef LIBC_SUPPORT_ENVIRON
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
     environ = storage;
 #endif
 
@@ -174,7 +174,7 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
   // Update the global environ pointer.
   app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
-#ifdef LIBC_SUPPORT_ENVIRON
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
   environ = storage;
 #endif
 
@@ -242,17 +242,25 @@ int EnvironmentManager::unset(cpp::string_view name) {
 
   char **env_array = get_array();
 
-  // Free the string if we allocated it.
-  if (ownership[*idx].can_free())
-    delete[] env_array[*idx];
+  // Loop to remove all instances of the variable (e.g. duplicates from execve).
+  while (idx) {
+    size_t i = *idx;
+    if (ownership[i].can_free())
+      delete[] env_array[i];
 
-  // Compact: shift remaining entries left to fill the gap.
-  for (size_t i = *idx; i < count - 1; i++) {
-    env_array[i] = env_array[i + 1];
-    ownership[i] = ownership[i + 1];
+    // Compact: shift remaining entries left to fill the gap.
+    // Shifting elements preserves the order of environment variables, which is
+    // desirable to maintain consistency with getenv resolution order and
+    // typical environ iteration behavior.
+    for (size_t j = i; j < count - 1; j++) {
+      env_array[j] = env_array[j + 1];
+      ownership[j] = ownership[j + 1];
+    }
+    count--;
+    env_array[count] = nullptr;
+
+    idx = find_var(name);
   }
-  count--;
-  env_array[count] = nullptr;
 
   return 0;
 }
