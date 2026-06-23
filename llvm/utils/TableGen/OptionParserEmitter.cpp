@@ -149,7 +149,6 @@ size_t MarshallingInfo::NextTableIndex = 0;
 static MarshallingInfo createMarshallingInfo(const Record &R) {
   assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
          !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
-         !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
          "MarshallingInfo must have a provide a keypath, default value and a "
          "value merger");
 

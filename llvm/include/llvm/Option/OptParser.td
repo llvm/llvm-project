@@ -134,8 +134,6 @@ class Option<list<string> prefixes, string name, OptionKind kind,
   code NormalizedValuesScope = "";
   code Normalizer = "";
   code Denormalizer = "";
-  code ValueMerger = "mergeForwardValue";
-  code ValueExtractor = "extractForwardValue";
   list<code> NormalizedValues = ?;
   list<SubCommand> SubCommands = subcommands;
 }
@@ -272,8 +270,6 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; }
-class ValueMerger<code merger> { code ValueMerger = merger; }
-class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
 // Predefined options.
 
