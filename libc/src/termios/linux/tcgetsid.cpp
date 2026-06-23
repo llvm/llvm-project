@@ -20,6 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   pid_t sid;
+
   auto ret = linux_syscalls::ioctl(fd, TIOCGSID, &sid);
   if (!ret.has_value()) {
     libc_errno = ret.error();

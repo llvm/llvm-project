@@ -1042,17 +1042,21 @@ static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
   // Nothing to generate for FullCompilerInvocation.
 }
 
-static void GenerateSSAFArgs(const ssaf::SSAFOptions &SSAFOpts,
+static void GenerateSSAFArgs(const ssaf::SSAFOptions &Opts,
                              ArgumentConsumer Consumer) {
+  const ssaf::SSAFOptions *SSAFOpts = &Opts;
+
 #define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Options/Options.inc"
 #undef SSAF_OPTION_WITH_MARSHALLING
 }
 
-static bool ParseSSAFArgs(ssaf::SSAFOptions &SSAFOpts, ArgList &Args,
+static bool ParseSSAFArgs(ssaf::SSAFOptions &Opts, ArgList &Args,
                           DiagnosticsEngine &Diags) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
+
+  ssaf::SSAFOptions *SSAFOpts = &Opts;
 
 #define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)

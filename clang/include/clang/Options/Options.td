@@ -346,7 +346,7 @@ class FileSystemOpts<string base>
 class AnalyzerOpts<string base>
   : KeyPathAndMacro<"AnalyzerOpts->", base, "ANALYZER_"> {}
 class SSAFOpts<string base>
-  : KeyPathAndMacro<"SSAFOpts.", base, "SSAF_"> {}
+  : KeyPathAndMacro<"SSAFOpts->", base, "SSAF_"> {}
 class MigratorOpts<string base>
   : KeyPathAndMacro<"MigratorOpts.", base, "MIGRATOR_"> {}
 
