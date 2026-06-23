@@ -1,0 +1,43 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// Round-trip test for the !cir.metadata type, the #cir.md_string / #cir.md_node
+// attributes, and the cir.metadata_as_value op.
+
+module {
+  // CHECK-LABEL: cir.func @md_string
+  cir.func @md_string() {
+    // CHECK: %{{.*}} = cir.metadata_as_value #cir.md_string<"agent-one-as">
+    %0 = cir.metadata_as_value #cir.md_string<"agent-one-as">
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @md_node_nested
+  cir.func @md_node_nested() {
+    // CHECK: %{{.*}} = cir.metadata_as_value #cir.md_node<#cir.md_string<"sp">>
+    %0 = cir.metadata_as_value #cir.md_node<#cir.md_string<"sp">>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @md_node_multi
+  cir.func @md_node_multi() {
+    // CHECK: %{{.*}} = cir.metadata_as_value #cir.md_node<#cir.md_string<"a">, #cir.md_string<"b">>
+    %0 = cir.metadata_as_value #cir.md_node<#cir.md_string<"a">, #cir.md_string<"b">>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @md_node_empty
+  cir.func @md_node_empty() {
+    // CHECK: %{{.*}} = cir.metadata_as_value #cir.md_node<>
+    %0 = cir.metadata_as_value #cir.md_node<>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @md_as_intrinsic_arg
+  cir.func @md_as_intrinsic_arg() {
+    // CHECK: %[[MD:.*]] = cir.metadata_as_value #cir.md_string<"foo">
+    // CHECK: cir.call_llvm_intrinsic "test.md.string" %[[MD]] : (!cir.metadata) -> ()
+    %0 = cir.metadata_as_value #cir.md_string<"foo">
+    cir.call_llvm_intrinsic "test.md.string" %0 : (!cir.metadata) -> ()
+    cir.return
+  }
+}
