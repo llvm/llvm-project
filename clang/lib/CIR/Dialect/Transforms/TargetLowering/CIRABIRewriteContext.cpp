@@ -17,14 +17,13 @@ using namespace mlir;
 using namespace mlir::abi;
 
 // This rewrite context supports the Direct (with or without coercion),
-// Extend, Ignore, and Indirect-return (sret) classifications.  Indirect
-// arguments (byval) and Expand still emit an errorNYI here rather than
-// silently passing through, because the IR they would produce is wrong
-// (e.g. Expand should flatten an aggregate into multiple primitives, not
-// pass it through as a single value).  byval and struct coercion are not
-// yet handled here; they need the signature-shaping that goes with them
-// (byval inserts an extra pointer argument, struct coercion replaces one
-// argument with several).
+// Extend, Ignore, Indirect-return (sret), and Indirect-argument (byval and
+// byref) classifications.  For byval (ArgClassification::byVal == true) the
+// callee gets llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal ==
+// false) the callee gets llvm.byref without the ownership attrs.  Both pass
+// through an alloca+store at the call site; the attribute distinction
+// communicates ownership semantics to the optimizer.  Expand still emits an
+// errorNYI rather than silently passing through.
 
 namespace {
 
@@ -42,10 +41,10 @@ bool needsRewrite(const FunctionClassification &fc) {
 }
 
 /// Build the new argument-type list for a function whose ABI classification
-/// is \p fc.  Handles Direct (with or without coercion), Extend, and Ignore.
-/// Indirect (byval) arguments and Expand emit an error.  The sret return
-/// pointer, when present, is prepended by rewriteFunctionDefinition rather
-/// than here.
+/// is \p fc.  Handles Direct (with or without coercion), Extend, Ignore, and
+/// Indirect (byval and byref) arguments.  Expand emits an error.  The sret
+/// return pointer, when present, is prepended by rewriteFunctionDefinition
+/// rather than here.
 mlir::LogicalResult
 buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
                  const FunctionClassification &fc,
@@ -79,9 +78,13 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
       newArgTypes.push_back(origTy);
       break;
     case ArgKind::Indirect:
-      emitError() << "Indirect at arg " << idx
-                  << " not yet implemented in CallConvLowering";
-      return mlir::failure();
+      // byval and byref both use a pointer wire type.  The attribute
+      // distinction (llvm.byval vs llvm.byref) is applied in updateArgAttrs;
+      // the call-site rewrite guards against byref separately because passing
+      // a byref pointer from a CIR value requires the original alloca address,
+      // which the rewriter does not yet track.
+      newArgTypes.push_back(cir::PointerType::get(origTy));
+      break;
     }
   }
   return mlir::success();
@@ -131,37 +134,65 @@ mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
   return cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
 }
 
-/// Build an updated arg_attrs ArrayAttr that drops Ignore'd args and adds
-/// llvm.signext / llvm.zeroext on Extend args.  Preserves any existing arg
-/// attributes on retained arg slots.
+/// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
+/// llvm.signext / llvm.zeroext on Extend args, and adds llvm.byval /
+/// llvm.align on Indirect args.  Preserves any existing arg attributes on
+/// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
+/// each arg slot (needed to compute the llvm.byval pointee type).
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
+                               ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
                                const FunctionClassification &fc) {
+  mlir::Builder builder(ctx);
   SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(fc.argInfos.size());
   for (auto [oldIdx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
-    mlir::DictionaryAttr existing = mlir::DictionaryAttr::get(ctx);
+    mlir::DictionaryAttr existing = builder.getDictionaryAttr({});
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = mlir::cast<mlir::DictionaryAttr>(existingArgAttrs[oldIdx]);
     if (ac.kind == ArgKind::Extend) {
       StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
-      mlir::NamedAttribute extAttr(mlir::StringAttr::get(ctx, attrName),
-                                   mlir::UnitAttr::get(ctx));
-      if (existing.empty()) {
-        newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, {extAttr}));
-      } else {
-        SmallVector<mlir::NamedAttribute> attrs(existing.begin(),
-                                                existing.end());
-        attrs.push_back(extAttr);
-        newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, attrs));
+      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
+      attrs.push_back(builder.getNamedAttr(attrName, builder.getUnitAttr()));
+      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+    } else if (ac.kind == ArgKind::Indirect) {
+      // byval: caller-allocated copy; callee receives pointer to copy.
+      // byref: callee receives pointer to the caller's original storage.
+      // Both use llvm.align(A).  The ownership flag differs: llvm.byval(T)
+      // vs llvm.byref(T).  Both are typed attributes carrying the pointee
+      // type T (the pre-rewrite arg type); T is recorded explicitly because
+      // it cannot be recovered from the opaque LLVM pointer after lowering.
+      //
+      // For byval, two additional attributes match classic CodeGen:
+      //   llvm.noundef -- the copy is always fully defined (the caller's
+      //     original must be defined or UB has already occurred, and the
+      //     copy inherits that property).
+      //   llvm.noalias -- the copy is a fresh caller-allocated alloca that
+      //     no other pointer in the function can alias.  Classic CodeGen
+      //     emits this when -fpass-by-value-is-noalias is set; here we
+      //     emit it unconditionally because our call-site rewrite always
+      //     produces a fresh alloca+store.
+      mlir::Type pointeeTy = origArgTypes[oldIdx];
+      StringRef ownershipAttr = ac.byVal ? "llvm.byval" : "llvm.byref";
+      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
+      attrs.push_back(builder.getNamedAttr(
+          "llvm.align", builder.getI64IntegerAttr(ac.indirectAlign.value())));
+      attrs.push_back(
+          builder.getNamedAttr(ownershipAttr, mlir::TypeAttr::get(pointeeTy)));
+      if (ac.byVal) {
+        attrs.push_back(
+            builder.getNamedAttr("llvm.noalias", builder.getUnitAttr()));
+        attrs.push_back(
+            builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
       }
+      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
     } else {
       newArgAttrs.push_back(existing);
     }
   }
-  return mlir::ArrayAttr::get(ctx, newArgAttrs);
+  return builder.getArrayAttr(newArgAttrs);
 }
 
 /// Build an updated res_attrs ArrayAttr (single entry, since CIR funcs have
@@ -308,30 +339,53 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
   mlir::Block &entry = body.front();
 
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
-    if (ac.kind != ArgKind::Direct || !ac.coercedType)
+    // Only two classifications need an entry-block fixup: a Direct arg with a
+    // coerced wire type, and an Indirect (byval/byref) arg.  Extend, Ignore,
+    // and Direct-without-coercion keep the original block-argument type, so
+    // the body already sees the right value and there is nothing to do.
+    bool needsCoercion = ac.kind == ArgKind::Direct && ac.coercedType;
+    if (!needsCoercion && ac.kind != ArgKind::Indirect)
       continue;
+
     unsigned blockIdx = idx + hasSRetArg;
     if (blockIdx >= entry.getNumArguments())
       continue;
 
     mlir::BlockArgument blockArg = entry.getArgument(blockIdx);
-    mlir::Type oldArgTy = blockArg.getType();
-    mlir::Type newArgTy = ac.coercedType;
-    if (oldArgTy == newArgTy)
-      continue;
 
-    blockArg.setType(newArgTy);
+    if (needsCoercion) {
+      mlir::Type oldArgTy = blockArg.getType();
+      mlir::Type newArgTy = ac.coercedType;
+      if (oldArgTy == newArgTy)
+        continue;
 
-    builder.setInsertionPointToStart(&entry);
-    SmallPtrSet<mlir::Operation *, 4> coercionOps;
-    mlir::Value adapted = emitCoercion(builder, funcOp.getLoc(), oldArgTy,
-                                       blockArg, funcOp, dl, coercionOps);
+      blockArg.setType(newArgTy);
 
-    // Replace blockArg uses with the adapted value, except inside the helper
-    // ops we just created.  This is critical: the StoreOp's value operand is
-    // blockArg, and if we naively replaceAllUses it gets swapped to adapted
-    // (now of the original type != the alloca's pointee type).
-    blockArg.replaceAllUsesExcept(adapted, coercionOps);
+      builder.setInsertionPointToStart(&entry);
+      SmallPtrSet<mlir::Operation *, 4> coercionOps;
+      mlir::Value adapted = emitCoercion(builder, funcOp.getLoc(), oldArgTy,
+                                         blockArg, funcOp, dl, coercionOps);
+
+      // Replace blockArg uses with the adapted value, except inside the
+      // helper ops we just created.  This is critical: the StoreOp's value
+      // operand is blockArg, and if we naively replaceAllUses it gets swapped
+      // to adapted (now of the original type != the alloca's pointee type).
+      blockArg.replaceAllUsesExcept(adapted, coercionOps);
+    } else {
+      // ArgKind::Indirect.  byval and byref: the wire type is !cir.ptr<T>.
+      // Change the block arg to the pointer type and insert a load so the
+      // body sees the original T.  The body transformation is the same for
+      // both; the distinction between byval (llvm.byval) and byref
+      // (llvm.byref) is in the arg attributes applied by updateArgAttrs.
+      mlir::Type origTy = blockArg.getType();
+      auto ptrTy = cir::PointerType::get(origTy);
+      blockArg.setType(ptrTy);
+
+      builder.setInsertionPointToStart(&entry);
+      auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
+      SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
+      blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+    }
   }
 }
 
@@ -462,7 +516,9 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
 void rewriteIndirectReturnCall(cir::CallOp call,
                                const FunctionClassification &fc,
                                ArrayRef<mlir::Value> newArgs,
-                               mlir::Type origRetTy, mlir::OpBuilder &builder) {
+                               mlir::Type origRetTy,
+                               ArrayRef<mlir::Type> origCallArgTypes,
+                               mlir::OpBuilder &builder) {
   mlir::MLIRContext *ctx = call->getContext();
   auto ptrTy = cir::PointerType::get(origRetTy);
   builder.setInsertionPoint(call);
@@ -511,15 +567,17 @@ void rewriteIndirectReturnCall(cir::CallOp call,
       newCall->setAttr(attr.getName(), attr.getValue());
 
   // Shape the per-argument attrs exactly as the non-sret path does
-  // (signext / zeroext for Extend, drop Ignore slots) before prepending
-  // the sret slot, so sret composes correctly with Extend / Ignore args.
+  // (signext / zeroext for Extend, drop Ignore slots, byval / align for
+  // Indirect) before prepending the sret slot, so sret composes correctly
+  // with Extend / Ignore / Indirect args.
   mlir::ArrayAttr argAttrs = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
   bool needsArgAttrUpdate =
       llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
+               ac.kind == ArgKind::Indirect;
       });
   if (needsArgAttrUpdate)
-    argAttrs = updateArgAttrs(ctx, argAttrs, fc);
+    argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc);
   applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
 
   if (reuseStore) {
@@ -670,15 +728,17 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   funcOp.setFunctionTypeAttr(mlir::TypeAttr::get(newFnTy));
 
   // Rebuild arg_attrs when the function has an sret slot (slot 0 needs the
-  // sret attribute set) or any arg is Ignore (dropped from the output array)
-  // or Extend (needs llvm.signext / llvm.zeroext layered on).
+  // sret attribute set) or any arg is Ignore (dropped from the output array),
+  // Extend (needs llvm.signext / llvm.zeroext), or Indirect (needs
+  // llvm.byval / llvm.align).
   bool needsArgAttrUpdate =
       hasSRet || llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
+               ac.kind == ArgKind::Indirect;
       });
   if (needsArgAttrUpdate) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-    mlir::ArrayAttr updated = updateArgAttrs(ctx, existing, fc);
+    mlir::ArrayAttr updated = updateArgAttrs(ctx, oldArgTypes, existing, fc);
     if (hasSRet) {
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
@@ -728,16 +788,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     switch (ac.kind) {
     case ArgKind::Direct:
     case ArgKind::Ignore:
+    case ArgKind::Extend:
+    case ArgKind::Indirect:
+      // All handled in the arg-building loop below.
       break;
     case ArgKind::Expand:
       return call.emitOpError() << "Expand at call-site arg " << idx
-                                << " not yet implemented in CallConvLowering";
-    case ArgKind::Extend:
-      // Direct (with or without coercion), Ignore, Expand, and Extend are
-      // all handled below.  Extend is attribute-only at the IR level.
-      break;
-    case ArgKind::Indirect:
-      return call.emitOpError() << "Indirect at call-site arg " << idx
                                 << " not yet implemented in CallConvLowering";
     }
   }
@@ -747,6 +803,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   SmallVector<mlir::Value> newArgs;
   mlir::ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
+
+  // Capture original arg types before building newArgs (byval slots change
+  // the wire argument from T to !cir.ptr<T>, so we save the pre-rewrite
+  // types here for use in updateArgAttrs).
+  SmallVector<mlir::Type> origCallArgTypes;
+  llvm::append_range(origCallArgTypes, argOperands.getTypes());
   if (argOperands.size() > fc.argInfos.size())
     return call.emitOpError()
            << "variadic arguments not yet implemented in CallConvLowering";
@@ -757,9 +819,25 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       continue;
     mlir::Value arg = argOperands[idx];
     if (ac.kind == ArgKind::Direct && ac.coercedType &&
-        arg.getType() != ac.coercedType)
+        arg.getType() != ac.coercedType) {
       arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg,
                          enclosingFunc, dl);
+    } else if (ac.kind == ArgKind::Indirect) {
+      // byval and byref: allocate a stack slot, copy the value in, and pass
+      // the pointer.  The alloca+store pattern is identical for both; the
+      // attribute distinction (llvm.byval vs llvm.byref) is applied by
+      // updateArgAttrs.  byref does not receive llvm.noalias or llvm.noundef
+      // because it does not assert exclusive ownership of the storage.
+      mlir::Type argTy = arg.getType();
+      auto ptrTy = cir::PointerType::get(argTy);
+      uint64_t align = ac.indirectAlign.value();
+      StringRef slotName = ac.byVal ? "byval" : "byref";
+      auto slot = cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
+                                        builder.getStringAttr(slotName),
+                                        builder.getI64IntegerAttr(align));
+      cir::StoreOp::create(builder, call.getLoc(), arg, slot);
+      arg = slot;
+    }
     newArgs.push_back(arg);
   }
 
@@ -772,7 +850,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // through a prepended pointer slot, not as a result), so dispatch to a
   // dedicated helper for it; everything below handles the by-value returns.
   if (fc.returnInfo.kind == ArgKind::Indirect && hasResult) {
-    rewriteIndirectReturnCall(call, fc, newArgs, origRetTy, builder);
+    rewriteIndirectReturnCall(call, fc, newArgs, origRetTy, origCallArgTypes,
+                              builder);
     return mlir::success();
   }
 
@@ -803,15 +882,17 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   }
 
   // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
-  // res_attrs for Extend args/return.  Ignore args also require a rebuild
-  // because their slots are dropped from the output array.
+  // res_attrs for Extend args/return.  Ignore args require a rebuild because
+  // their slots are dropped; Indirect args need llvm.byval / llvm.align.
   bool needsArgAttrUpdate =
       llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
+               ac.kind == ArgKind::Indirect;
       });
   if (needsArgAttrUpdate) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-    newCall->setAttr("arg_attrs", updateArgAttrs(ctx, existing, fc));
+    newCall->setAttr("arg_attrs",
+                     updateArgAttrs(ctx, origCallArgTypes, existing, fc));
   }
   if (fc.returnInfo.kind == ArgKind::Extend) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("res_attrs");
