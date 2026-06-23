@@ -66,7 +66,7 @@ void f() {
   }
   {
     std::allocator<int> alloc;
-    std::tuple<std::string&&> t2("hello"); // expected-error {{deleted}}
+    std::tuple<std::string&&> t2("hello");                            // expected-error {{deleted}}
     std::tuple<std::string&&> t3(std::allocator_arg, alloc, "hello"); // expected-error {{deleted}}
   }
 }

@@ -617,8 +617,7 @@ public:
               is_constructible<_Tp, _Up>... > {};
 
   template <class... _Up>
-  struct _EnableUTypesCtorBase
-      : _And<_BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> > {};
+  struct _EnableUTypesCtorBase : _And<_BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> > {};
 
   template <bool, class... _Up>
   struct _EnableUTypesCtorNoDangling : false_type {};
@@ -642,8 +641,7 @@ public:
 #    endif // _LIBCPP_STD_VER >= 23
 
   template <class... _Up>
-  struct _EnableNonDanglingUTypesCtor
-      : _EnableUTypesCtorNoDangling<_EnableUTypesCtorBase<_Up...>::value, _Up...> {};
+  struct _EnableNonDanglingUTypesCtor : _EnableUTypesCtorNoDangling<_EnableUTypesCtorBase<_Up...>::value, _Up...> {};
 
   template <class... _Up, __enable_if_t< _EnableNonDanglingUTypesCtor<_Up...>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_And<is_convertible<_Up, _Tp>...>::value)
@@ -714,11 +712,10 @@ public:
   struct _CtorFromUTypesTupleCreatesDanglingReference : false_type {};
 
   template <class _OtherTuple, class... _Up>
-  struct _CtorFromUTypesTupleCreatesDanglingReference<
-      true,
-      _OtherTuple,
-      tuple<_Up...>,
-      __enable_if_t<sizeof...(_Up) == sizeof...(_Tp)> >
+  struct _CtorFromUTypesTupleCreatesDanglingReference< true,
+                                                       _OtherTuple,
+                                                       tuple<_Up...>,
+                                                       __enable_if_t<sizeof...(_Up) == sizeof...(_Tp)> >
       : _Or<_BoolConstant<__reference_constructs_from_temporary_v<_Tp, __copy_cvref_t<_OtherTuple, _Up> > >...> {};
 
   template <class _OtherTuple>
@@ -737,8 +734,7 @@ public:
   struct _EnableNonDanglingCtorFromUTypesTuple
       : _EnableCtorFromUTypesTupleNoDangling<_EnableCtorFromUTypesTuple<_OtherTuple>::value, _OtherTuple> {};
 
-  template <class... _Up,
-            __enable_if_t< _EnableNonDanglingCtorFromUTypesTuple<const tuple<_Up...>&>::value, int> = 0>
+  template <class... _Up, __enable_if_t< _EnableNonDanglingCtorFromUTypesTuple<const tuple<_Up...>&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_And<is_convertible<const _Up&, _Tp>...>::value)
       tuple(const tuple<_Up...>& __t) noexcept(_And<is_nothrow_constructible<_Tp, const _Up&>...>::value)
       : __base_(__from_tuple(), __t) {}
@@ -751,8 +747,7 @@ public:
       : __base_(allocator_arg_t(), __a, __from_tuple(), __t) {}
 
 #    if _LIBCPP_STD_VER >= 23
-  template <class... _Up,
-            __enable_if_t< _EnableDanglingCtorFromUTypesTuple<const tuple<_Up...>&>::value, long> = 0>
+  template <class... _Up, __enable_if_t< _EnableDanglingCtorFromUTypesTuple<const tuple<_Up...>&>::value, long> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_And<is_convertible<const _Up&, _Tp>...>::value)
       tuple(const tuple<_Up...>&) noexcept(_And<is_nothrow_constructible<_Tp, const _Up&>...>::value) = delete;
 
@@ -786,8 +781,7 @@ public:
 #    endif // _LIBCPP_STD_VER >= 23
 
   // tuple(tuple<U...>&&) constructors (including allocator_arg_t variants)
-  template <class... _Up,
-            __enable_if_t< _EnableNonDanglingCtorFromUTypesTuple<tuple<_Up...>&&>::value, int> = 0>
+  template <class... _Up, __enable_if_t< _EnableNonDanglingCtorFromUTypesTuple<tuple<_Up...>&&>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_And<is_convertible<_Up, _Tp>...>::value)
       tuple(tuple<_Up...>&& __t) noexcept(_And<is_nothrow_constructible<_Tp, _Up>...>::value)
       : __base_(__from_tuple(), std::move(__t)) {}
@@ -812,8 +806,7 @@ public:
 
   // tuple(const tuple<U...>&&) constructors (including allocator_arg_t variants)
 
-  template <class... _Up,
-            enable_if_t< _EnableNonDanglingCtorFromUTypesTuple<const tuple<_Up...>&&>::value>* = nullptr>
+  template <class... _Up, enable_if_t< _EnableNonDanglingCtorFromUTypesTuple<const tuple<_Up...>&&>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!_And<is_convertible<const _Up&&, _Tp>...>::value)
       tuple(const tuple<_Up...>&& __t)
       : __base_(__from_tuple(), std::move(__t)) {}
@@ -860,24 +853,22 @@ public:
 
   template <class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
   struct _CtorFromPairCreatesDanglingReference<true, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> >
-      : _Or<
-            _BoolConstant<__reference_constructs_from_temporary_v<_Tp1, __copy_cvref_t<_Pair, _Up1> > >,
-            _BoolConstant<__reference_constructs_from_temporary_v<_Tp2, __copy_cvref_t<_Pair, _Up2> > > > {};
+      : _Or< _BoolConstant<__reference_constructs_from_temporary_v<_Tp1, __copy_cvref_t<_Pair, _Up1> > >,
+             _BoolConstant<__reference_constructs_from_temporary_v<_Tp2, __copy_cvref_t<_Pair, _Up2> > > > {};
 
   template <class _Pair>
   struct _EnableCtorFromPairNoDangling<true, _Pair> : _Not<_CtorFromPairCreatesDanglingReference<true, _Pair> > {};
 
   template <class _Pair>
-  struct _EnableDanglingCtorFromPair
-      : _CtorFromPairCreatesDanglingReference<_EnableCtorFromPair<_Pair>::value, _Pair> {};
+  struct _EnableDanglingCtorFromPair : _CtorFromPairCreatesDanglingReference<_EnableCtorFromPair<_Pair>::value, _Pair> {
+  };
 #    else
   template <class _Pair>
   struct _EnableCtorFromPairNoDangling<true, _Pair> : true_type {};
 #    endif // _LIBCPP_STD_VER >= 23
 
   template <class _Pair>
-  struct _EnableNonDanglingCtorFromPair
-      : _EnableCtorFromPairNoDangling<_EnableCtorFromPair<_Pair>::value, _Pair> {};
+  struct _EnableNonDanglingCtorFromPair : _EnableCtorFromPairNoDangling<_EnableCtorFromPair<_Pair>::value, _Pair> {};
 
   template <class _Pair>
   struct _NothrowConstructibleFromPair : _CtorPredicateFromPair<is_nothrow_constructible, _Pair> {};
@@ -891,7 +882,7 @@ public:
 
   template <class _Up1,
             class _Up2,
-            template <class...> class _And                                                   = _And,
+            template <class...> class _And                                                              = _And,
             __enable_if_t< _And< _EnableNonDanglingCtorFromPair<const pair<_Up1, _Up2>&> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_BothImplicitlyConvertible<const pair<_Up1, _Up2>&> >::value)
@@ -901,7 +892,7 @@ public:
   template <class _Alloc,
             class _Up1,
             class _Up2,
-            template <class...> class _And                                                   = _And,
+            template <class...> class _And                                                              = _And,
             __enable_if_t< _And< _EnableNonDanglingCtorFromPair<const pair<_Up1, _Up2>&> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_BothImplicitlyConvertible<const pair<_Up1, _Up2>&> >::value)
@@ -911,17 +902,16 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _Up1,
             class _Up2,
-            template <class...> class _And                                                    = _And,
+            template <class...> class _And                                                            = _And,
             __enable_if_t< _And< _EnableDanglingCtorFromPair<const pair<_Up1, _Up2>&> >::value, long> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_BothImplicitlyConvertible<const pair<_Up1, _Up2>&> >::value)
-      tuple(const pair<_Up1, _Up2>&) noexcept(_NothrowConstructibleFromPair<const pair<_Up1, _Up2>&>::value) =
-          delete;
+      tuple(const pair<_Up1, _Up2>&) noexcept(_NothrowConstructibleFromPair<const pair<_Up1, _Up2>&>::value) = delete;
 
   template <class _Alloc,
             class _Up1,
             class _Up2,
-            template <class...> class _And                                                    = _And,
+            template <class...> class _And                                                            = _And,
             __enable_if_t< _And< _EnableDanglingCtorFromPair<const pair<_Up1, _Up2>&> >::value, long> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_BothImplicitlyConvertible<const pair<_Up1, _Up2>&> >::value)
@@ -958,7 +948,7 @@ public:
 
   template <class _Up1,
             class _Up2,
-            template <class...> class _And                                              = _And,
+            template <class...> class _And                                                         = _And,
             __enable_if_t< _And< _EnableNonDanglingCtorFromPair<pair<_Up1, _Up2>&&> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_BothImplicitlyConvertible<pair<_Up1, _Up2>&&> >::value)
@@ -968,7 +958,7 @@ public:
   template <class _Alloc,
             class _Up1,
             class _Up2,
-            template <class...> class _And                                              = _And,
+            template <class...> class _And                                                         = _And,
             __enable_if_t< _And< _EnableNonDanglingCtorFromPair<pair<_Up1, _Up2>&&> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_BothImplicitlyConvertible<pair<_Up1, _Up2>&&> >::value)
@@ -978,7 +968,7 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _Up1,
             class _Up2,
-            template <class...> class _And                                               = _And,
+            template <class...> class _And                                                       = _And,
             __enable_if_t< _And< _EnableDanglingCtorFromPair<pair<_Up1, _Up2>&&> >::value, long> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_BothImplicitlyConvertible<pair<_Up1, _Up2>&&> >::value)
@@ -987,7 +977,7 @@ public:
   template <class _Alloc,
             class _Up1,
             class _Up2,
-            template <class...> class _And                                               = _And,
+            template <class...> class _And                                                       = _And,
             __enable_if_t< _And< _EnableDanglingCtorFromPair<pair<_Up1, _Up2>&&> >::value, long> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_BothImplicitlyConvertible<pair<_Up1, _Up2>&&> >::value)
@@ -1002,9 +992,7 @@ public:
       tuple(const pair<_U1, _U2>&& __p)
       : __base_(__from_tuple(), std::move(__p)) {}
 
-  template <class _U1,
-            class _U2,
-            enable_if_t< _EnableDanglingCtorFromPair<const pair<_U1, _U2>&&>::value>* = nullptr>
+  template <class _U1, class _U2, enable_if_t< _EnableDanglingCtorFromPair<const pair<_U1, _U2>&&>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!_BothImplicitlyConvertible<const pair<_U1, _U2>&&>::value)
       tuple(const pair<_U1, _U2>&&) = delete;
 
