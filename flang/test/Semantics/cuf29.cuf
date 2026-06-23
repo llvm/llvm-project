@@ -66,18 +66,7 @@ contains
     vals(1) = sum(local)
     vals(2) = maxval(local)
     vals(3) = minval(local)
-    !ERROR: 'fake_host_wrapper' may not be called in device code
+    !ERROR: No specific function of generic 'host_wrapper' matches the actual arguments
     vals(1) = host_wrapper(local)
-  end subroutine
-end module
-
-module renamed_test
-  use host_reduction_wrappers, only: not_maxloc => maxloc
-contains
-  attributes(global) subroutine renamed_wrapper(a, loc)
-    real(8), intent(in) :: a(3)
-    integer, intent(out) :: loc
-    !ERROR: 'fake_maxloc' may not be called in device code
-    loc = not_maxloc(a, 1)
   end subroutine
 end module

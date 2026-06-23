@@ -3081,8 +3081,8 @@ static bool IsCUDADeviceCallable(const Symbol &symbol) {
 
 static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
-    const Symbol *resolution) {
-  if (!resolution || !IsProcedure(*resolution) ||
+    const Symbol *resolution, bool isSubroutine) {
+  if (isSubroutine || !resolution || !IsProcedure(*resolution) ||
       resolution->attrs().test(semantics::Attr::INTRINSIC) ||
       !semantics::FindCUDADeviceContext(&context.FindScope(callSite))) {
     return false;
@@ -3346,10 +3346,10 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
     if (IsCudaDeviceIntrinsicShadowedByHostProcedure(
-            name.source, context_, resolution)) {
+            name.source, context_, resolution, isSubroutine)) {
       ActualArguments localArguments{arguments};
       if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
-              CallCharacteristics{symbol->name().ToString(), isSubroutine},
+              CallCharacteristics{name.source.ToString(), isSubroutine},
               localArguments, GetFoldingContext())}) {
         CheckBadExplicitType(*specificCall, *symbol);
         return CalleeAndArguments{
