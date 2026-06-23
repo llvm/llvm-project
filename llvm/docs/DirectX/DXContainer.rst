@@ -415,17 +415,23 @@ string:
     uint32_t ContentSizeInBytes;
   };
 
-``Major`` and ``Minor`` encode the compiler version. ``CommitCount`` is the
-value produced by ``git rev-list --count HEAD`` in the compiler repository, or
-``0`` when that value is unavailable. ``ContentSizeInBytes`` is the combined
-size of the commit SHA and custom version strings, including their null
-terminators but excluding any trailing part padding.
+``Major`` and ``Minor`` encode the compiler version.
 
 The ``Flags`` field is a bitmask. The flag values are:
 
 * ``Default`` (``0``) - default value
 * ``Debug`` (``1``) - indicates whether the compiler was built in debug mode
 * ``Internal`` (``2``) - indicates whether the shader was modified by a validator
+
+``CommitCount`` records how many commits are reachable from the compiler's HEAD
+revision. In DXC, this is the value produced by ``git rev-list --count HEAD``
+in the compiler repository.
+LLVM always emits ``0`` for ``CommitCount``. This is a deliberate difference
+from DXC; the commit SHA in the part data is considered sufficient for
+identifying the compiler build.
+
+``ContentSizeInBytes`` is the combined size of the commit SHA and custom version
+strings, including their null terminators but excluding any trailing part padding.
 
 .. rubric:: Reading this part
 
