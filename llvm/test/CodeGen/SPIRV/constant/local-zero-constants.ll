@@ -39,9 +39,10 @@ define %null.struct @getNullStructConstant() {
 ; CHECK-HLSL-DAG: [[INT_VECTOR_ARRAY:%.+]] = OpTypeArray [[INT_VECTOR]]
 ; CHECK-HLSL-DAG: [[FLOAT_VECTOR_ARRAY:%.+]] = OpTypeArray [[FLOAT_VECTOR]]
 ; CHECK-HLSL-DAG: [[NULL_STRUCT:%.+]] = OpTypeStruct [[I32]] [[F32]] [[INT_VECTOR]] [[FLOAT_VECTOR]]
-; CHECK-HLSL-DAG: [[NULL_F32:%.+]] = OpConstant [[F32]] 0
+; CHECK-HLSL-DAG: [[NULL_I32:%.+]] = OpConstantNull [[I32]]
+; CHECK-HLSL-DAG: [[NULL_F32:%.+]] = OpConstantNull [[F32]]
 ; CHECK-HLSL-DAG: [[NULL_INT_VECTOR:%.+]] = OpConstantNull [[INT_VECTOR]]
-; CHECK-HLSL-DAG: [[NULL_FLOAT_VECTOR:%.+]] = OpConstantComposite [[FLOAT_VECTOR]] [[NULL_F32]] [[NULL_F32]] [[NULL_F32]] [[NULL_F32]]
+; CHECK-HLSL-DAG: [[NULL_FLOAT_VECTOR:%.+]] = OpConstantNull [[FLOAT_VECTOR]]
 ; CHECK-HLSL-DAG: [[NULL_INT_VECTOR_ARRAY:%.+]] = OpConstantNull [[INT_VECTOR_ARRAY]]
 ; CHECK-HLSL-DAG: [[NULL_FLOAT_VECTOR_ARRAY:%.+]] = OpConstantNull [[FLOAT_VECTOR_ARRAY]]
 ; CHECK-HLSL-DAG: [[NULL_STRUCT_CONST:%.+]] = OpConstantNull [[NULL_STRUCT]]
