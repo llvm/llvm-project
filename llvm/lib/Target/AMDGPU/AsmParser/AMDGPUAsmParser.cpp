@@ -5980,13 +5980,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getParser().parseEscapedString(TargetIDDirective))
     return true;
 
-  std::optional<AMDGPU::AMDGPUTargetID> MaybeParsed =
-      AMDGPU::AMDGPUTargetID::parseTargetIDString(TargetIDDirective);
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
   if (!MaybeParsed)
     return getParser().Error(TargetStart, "malformed target ID");
 
-  const AMDGPU::AMDGPUTargetID &ParsedTargetID = *MaybeParsed;
-  const std::optional<AMDGPU::AMDGPUTargetID> &CurrentTargetID =
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
   if (*CurrentTargetID != ParsedTargetID) {
@@ -6692,13 +6692,13 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
 
   StringRef TargetIDDirective = getLexer().getTok().getStringContents();
 
-  std::optional<AMDGPU::AMDGPUTargetID> MaybeParsed =
-      AMDGPU::AMDGPUTargetID::parseTargetIDString(TargetIDDirective);
+  std::optional<AMDGPU::TargetID> MaybeParsed =
+      AMDGPU::TargetID::parseTargetIDString(TargetIDDirective);
   if (!MaybeParsed)
     return Error(getParser().getTok().getLoc(), "malformed target id");
 
-  const AMDGPU::AMDGPUTargetID &ParsedTargetID = *MaybeParsed;
-  const std::optional<AMDGPU::AMDGPUTargetID> &CurrentTargetID =
+  const AMDGPU::TargetID &ParsedTargetID = *MaybeParsed;
+  const std::optional<AMDGPU::TargetID> &CurrentTargetID =
       getTargetStreamer().getTargetID();
 
   if (*CurrentTargetID != ParsedTargetID) {
