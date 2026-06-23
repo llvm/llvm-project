@@ -5443,8 +5443,13 @@ private:
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr, hasManagedOrUnifedSymbols);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 
