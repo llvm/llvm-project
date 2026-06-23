@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
-#include "RISCV.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 
 namespace llvm {
@@ -21,6 +20,8 @@ CCAssignFn CC_RISCV;
 
 /// This is used for assigning return values to locations when making calls.
 CCAssignFn RetCC_RISCV;
+
+class RISCVSubtarget;
 
 namespace RISCV {
 
