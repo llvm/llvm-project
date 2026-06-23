@@ -11,6 +11,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/CallGraph/CallGraphSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
@@ -123,10 +124,11 @@ template <typename... Matchers> auto hasSummaryThat(const Matchers &...Ms) {
 static const SummaryName CallGraphName{CallGraphSummary::Name.str()};
 
 struct CallGraphExtractorTest : ssaf::TestFixture {
+  SSAFOptions Opts;
   TUSummary Summary{
       llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
-  TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
+  TUSummaryBuilder Builder = TUSummaryBuilder(Summary, Opts);
 
   /// Creates the AST and extractor, then extracts the summaries from the AST.
   /// This will update the \c AST \c Builder and \c Summary data members.
