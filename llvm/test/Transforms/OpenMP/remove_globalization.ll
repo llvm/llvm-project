@@ -15,7 +15,8 @@
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:4:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:10:2: Moving globalized variable to the stack.
-; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: remove_globalization.c:6:2: Found thread data sharing on the GPU.
+
 ; UTC_ARGS: --enable
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
@@ -140,7 +141,8 @@ entry:
 define void @unused() {
 ; CHECK-LABEL: define {{[^@]+}}@unused() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4), !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@unused() {
@@ -263,6 +265,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
+; CHECK: attributes #[[ATTR7]] = { nounwind }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }
@@ -283,6 +286,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: [[DBG7]] = !DILocation(line: 4, column: 2, scope: [[META8:![0-9]+]])
 ; CHECK: [[META8]] = distinct !DISubprogram(name: "bar", scope: [[META1]], file: [[META1]], line: 1, type: [[META9:![0-9]+]], scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
 ; CHECK: [[META9]] = !DISubroutineType(types: [[META2]])
+; CHECK: [[DBG10]] = !DILocation(line: 6, column: 2, scope: [[META8]])
 ;.
 ; CHECK-DISABLED: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
 ; CHECK-DISABLED: [[META1]] = !DIFile(filename: "{{.*}}remove_globalization.c", directory: {{.*}})
