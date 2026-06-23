@@ -1185,7 +1185,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   if (!(sec->flags & SHF_ALLOC)) {
     // Non-SHF_ALLOC sections have zero addresses.
     dot = 0;
-  } else if (isTbss) {
+  } else if (isTbss && !sec->addrExpr) {
     // Allow consecutive SHF_TLS SHT_NOBITS output sections. The address range
     // starts from the end address of the previous tbss section.
     if (state->tbssAddr == 0)
