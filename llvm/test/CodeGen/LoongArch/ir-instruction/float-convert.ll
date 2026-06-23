@@ -283,20 +283,9 @@ define i64 @convert_float_to_u64(float %a) nounwind {
 ;
 ; LA64D-LABEL: convert_float_to_u64:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    lu12i.w $a0, 389120
-; LA64D-NEXT:    movgr2fr.w $fa1, $a0
-; LA64D-NEXT:    fcmp.clt.s $fcc0, $fa0, $fa1
-; LA64D-NEXT:    fsub.s $fa1, $fa0, $fa1
-; LA64D-NEXT:    ftintrz.l.s $fa1, $fa1
-; LA64D-NEXT:    movfr2gr.d $a0, $fa1
-; LA64D-NEXT:    lu52i.d $a1, $zero, -2048
-; LA64D-NEXT:    xor $a0, $a0, $a1
-; LA64D-NEXT:    movcf2gr $a1, $fcc0
-; LA64D-NEXT:    masknez $a0, $a0, $a1
-; LA64D-NEXT:    ftintrz.l.s $fa0, $fa0
-; LA64D-NEXT:    movfr2gr.d $a2, $fa0
-; LA64D-NEXT:    maskeqz $a1, $a2, $a1
-; LA64D-NEXT:    or $a0, $a1, $a0
+; LA64D-NEXT:    fcvt.d.s $fa0, $fa0
+; LA64D-NEXT:    vftintrz.lu.d $vr0, $vr0
+; LA64D-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64D-NEXT:    ret
   %1 = fptoui float %a to i64
   ret i64 %1
@@ -562,17 +551,10 @@ define float @convert_u64_to_float(i64 %a) nounwind {
 ;
 ; LA64D-LABEL: convert_u64_to_float:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    srli.d $a1, $a0, 1
-; LA64D-NEXT:    andi $a2, $a0, 1
-; LA64D-NEXT:    or $a1, $a2, $a1
-; LA64D-NEXT:    movgr2fr.d $fa0, $a1
-; LA64D-NEXT:    ffint.s.l $fa0, $fa0
-; LA64D-NEXT:    fadd.s $fa0, $fa0, $fa0
-; LA64D-NEXT:    slti $a1, $a0, 0
-; LA64D-NEXT:    movgr2fr.d $fa1, $a0
-; LA64D-NEXT:    ffint.s.l $fa1, $fa1
-; LA64D-NEXT:    movgr2cf $fcc0, $a1
-; LA64D-NEXT:    fsel $fa0, $fa1, $fa0, $fcc0
+; LA64D-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64D-NEXT:    vffint.d.lu $vr0, $vr0
+; LA64D-NEXT:    vreplvei.d $vr0, $vr0, 0
+; LA64D-NEXT:    fcvt.s.d $fa0, $fa0
 ; LA64D-NEXT:    ret
   %1 = uitofp i64 %a to float
   ret float %1

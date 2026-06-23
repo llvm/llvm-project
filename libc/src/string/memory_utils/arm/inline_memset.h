@@ -79,20 +79,20 @@ set_bytes_and_bump_pointers(Ptr &dst, uint32_t value, size_t size) {
 // not allow unaligned stores so all accesses are aligned.
 [[maybe_unused]] LIBC_INLINE void
 inline_memset_arm_low_end(Ptr dst, uint8_t value, size_t size) {
+  const uint32_t value32 = value * 0x01010101U; // splat value in each byte
   if (size >= 8)
     LIBC_ATTR_LIKELY {
       // Align `dst` to word boundary.
       if (const size_t offset = distance_to_align_up<kWordSize>(dst))
         LIBC_ATTR_UNLIKELY {
-          set_bytes_and_bump_pointers(dst, value, offset);
+          set_bytes_and_bump_pointers(dst, value32, offset);
           size -= offset;
         }
-      const uint32_t value32 = value * 0x01010101U; // splat value in each byte
       consume_by_block<64, AssumeAccess::kAligned>(dst, value32, size);
       consume_by_block<16, AssumeAccess::kAligned>(dst, value32, size);
       consume_by_block<4, AssumeAccess::kAligned>(dst, value32, size);
     }
-  set_bytes_and_bump_pointers(dst, value, size);
+  set_bytes_and_bump_pointers(dst, value32, size);
 }
 
 // Implementation for Cortex-M3, M4, M7, M23, M33, M35P, M52 with hardware
