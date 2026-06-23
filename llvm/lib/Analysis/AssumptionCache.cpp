@@ -119,7 +119,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
-  int ExpectedMatches = 0;
+  DenseMap<Value *, int> ExpectedMatches;
   DenseMap<Value *, bool> VisitedAffected;
 
   for (auto &AV : Affected) {
@@ -144,7 +144,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
     // matches.
     for (ResultElem &Elem : AVI->second)
       if (Elem.Assume == CI)
-        ExpectedMatches++;
+        ExpectedMatches[AV.Assume]++;
   }
 
   for (auto &AV : Affected) {
@@ -158,8 +158,8 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
         Found = true;
         Elem.Assume = nullptr;
 
-        ExpectedMatches--;
-        assert(ExpectedMatches >= 0);
+        ExpectedMatches[AV.Assume]--;
+        assert(ExpectedMatches[AV.Assume] >= 0);
         // After ExpectedMatches == 0, we still need to iterate through this
         // loop to determine the value of HasNonnull, to prevent prematurely
         // AffectedValues.erase(AVI).
@@ -169,7 +169,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
         break;
     }
 
-    if (ExpectedMatches > 0)
+    if (ExpectedMatches[AV.Assume] > 0)
       assert(Found && "already unregistered or incorrect cache state");
 
     if (!HasNonnull)
