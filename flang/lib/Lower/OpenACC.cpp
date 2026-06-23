@@ -4687,11 +4687,57 @@ void Fortran::lower::materializeOpenACCRoutineBindTargets(
           ? converter.getMLIRSymbolTable()
           : nullptr;
 
-  auto appendAttrs = [](mlir::ArrayAttr attrs,
-                        llvm::SmallVector<mlir::Attribute> &out) {
-    if (attrs)
-      out.append(attrs.begin(), attrs.end());
+  mlir::Attribute defaultDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None);
+
+  auto getDeviceType = [](mlir::Attribute attr) -> mlir::acc::DeviceType {
+    return mlir::cast<mlir::acc::DeviceTypeAttr>(attr).getValue();
   };
+
+  auto hasDeviceType = [&](llvm::ArrayRef<mlir::Attribute> deviceTypes,
+                           mlir::Attribute deviceType) {
+    mlir::acc::DeviceType value = getDeviceType(deviceType);
+    return llvm::any_of(deviceTypes, [&](mlir::Attribute attr) {
+      return getDeviceType(attr) == value;
+    });
+  };
+
+  auto deviceTypeAppliesToBindTarget =
+      [&](mlir::Attribute deviceType,
+          llvm::ArrayRef<mlir::Attribute> targetDeviceTypes) {
+        // Clauses without an explicit device_type are the default routine
+        // clauses used as a fallback by later routine lowering.
+        return getDeviceType(deviceType) == mlir::acc::DeviceType::None ||
+               hasDeviceType(targetDeviceTypes, deviceType);
+      };
+
+  auto appendMatchingDeviceTypes =
+      [&](mlir::ArrayAttr attrs, llvm::ArrayRef<mlir::Attribute> deviceTypes,
+          llvm::SmallVector<mlir::Attribute> &out) {
+        if (!attrs)
+          return;
+        for (mlir::Attribute attr : attrs)
+          if (deviceTypeAppliesToBindTarget(attr, deviceTypes))
+            out.push_back(attr);
+      };
+
+  auto appendMatchingAttrs =
+      [&](mlir::ArrayAttr attrs, mlir::ArrayAttr attrDeviceTypes,
+          llvm::ArrayRef<mlir::Attribute> deviceTypes,
+          llvm::SmallVector<mlir::Attribute> &outAttrs,
+          llvm::SmallVector<mlir::Attribute> &outDeviceTypes) {
+        if (!attrs || !attrDeviceTypes)
+          return;
+        assert(attrs.size() == attrDeviceTypes.size() &&
+               "expect same number of attributes");
+        for (auto it : llvm::enumerate(attrDeviceTypes)) {
+          mlir::Attribute deviceType = it.value();
+          if (!deviceTypeAppliesToBindTarget(deviceType, deviceTypes))
+            continue;
+          outAttrs.push_back(attrs[it.index()]);
+          outDeviceTypes.push_back(deviceType);
+        }
+      };
 
   llvm::SmallVector<mlir::acc::RoutineOp> routineOps(
       module.getOps<mlir::acc::RoutineOp>());
@@ -4711,38 +4757,84 @@ void Fortran::lower::materializeOpenACCRoutineBindTargets(
                                                name, type, symbolTable);
     };
 
-    auto createRoutineForBindTarget = [&](mlir::func::FuncOp target) {
-      if (target->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+    auto createRoutineForBindTarget =
+        [&](mlir::func::FuncOp target,
+            llvm::ArrayRef<mlir::Attribute> bindTargetDeviceTypes) {
+          if (target->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+            return;
+
+          llvm::SmallVector<mlir::Attribute> emptyBindIdNames,
+              emptyBindStrNames, emptyBindIdNameDeviceTypes,
+              emptyBindStrNameDeviceTypes, gangDeviceTypes, gangDimValues,
+              gangDimDeviceTypes, seqDeviceTypes, workerDeviceTypes,
+              vectorDeviceTypes;
+          appendMatchingDeviceTypes(routineOp.getGangAttr(),
+                                    bindTargetDeviceTypes, gangDeviceTypes);
+          appendMatchingAttrs(
+              routineOp.getGangDimAttr(), routineOp.getGangDimDeviceTypeAttr(),
+              bindTargetDeviceTypes, gangDimValues, gangDimDeviceTypes);
+          appendMatchingDeviceTypes(routineOp.getSeqAttr(),
+                                    bindTargetDeviceTypes, seqDeviceTypes);
+          appendMatchingDeviceTypes(routineOp.getWorkerAttr(),
+                                    bindTargetDeviceTypes, workerDeviceTypes);
+          appendMatchingDeviceTypes(routineOp.getVectorAttr(),
+                                    bindTargetDeviceTypes, vectorDeviceTypes);
+
+          createOpenACCRoutineConstruct(
+              converter, routineOp.getLoc(), module, target,
+              target.getName().str(), routineOp.getNohost(), emptyBindIdNames,
+              emptyBindStrNames, emptyBindIdNameDeviceTypes,
+              emptyBindStrNameDeviceTypes, gangDeviceTypes, gangDimValues,
+              gangDimDeviceTypes, seqDeviceTypes, workerDeviceTypes,
+              vectorDeviceTypes);
+        };
+
+    struct BindTarget {
+      mlir::func::FuncOp target;
+      llvm::SmallVector<mlir::Attribute> deviceTypes;
+    };
+    llvm::SmallVector<BindTarget> bindTargets;
+
+    auto addBindTarget = [&](mlir::func::FuncOp target,
+                             mlir::Attribute deviceType) {
+      for (BindTarget &bindTarget : bindTargets) {
+        if (bindTarget.target.getOperation() != target.getOperation())
+          continue;
+        if (!hasDeviceType(bindTarget.deviceTypes, deviceType))
+          bindTarget.deviceTypes.push_back(deviceType);
         return;
+      }
+      bindTargets.push_back({target, {deviceType}});
+    };
 
-      llvm::SmallVector<mlir::Attribute> emptyBindIdNames, emptyBindStrNames,
-          emptyBindIdNameDeviceTypes, emptyBindStrNameDeviceTypes,
-          gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
-          workerDeviceTypes, vectorDeviceTypes;
-      appendAttrs(routineOp.getGangAttr(), gangDeviceTypes);
-      appendAttrs(routineOp.getGangDimAttr(), gangDimValues);
-      appendAttrs(routineOp.getGangDimDeviceTypeAttr(), gangDimDeviceTypes);
-      appendAttrs(routineOp.getSeqAttr(), seqDeviceTypes);
-      appendAttrs(routineOp.getWorkerAttr(), workerDeviceTypes);
-      appendAttrs(routineOp.getVectorAttr(), vectorDeviceTypes);
-
-      createOpenACCRoutineConstruct(
-          converter, routineOp.getLoc(), module, target, target.getName().str(),
-          routineOp.getNohost(), emptyBindIdNames, emptyBindStrNames,
-          emptyBindIdNameDeviceTypes, emptyBindStrNameDeviceTypes,
-          gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
-          workerDeviceTypes, vectorDeviceTypes);
+    auto getBindDeviceType = [&](mlir::ArrayAttr deviceTypes,
+                                 unsigned index) -> mlir::Attribute {
+      if (deviceTypes) {
+        assert(index < deviceTypes.size() &&
+               "expect bind name and device_type arrays to match");
+        return deviceTypes[index];
+      }
+      return defaultDeviceTypeAttr;
     };
 
     // bind(identifier) is mangled; bind("string") is a verbatim asm name.
     if (mlir::ArrayAttr binds = routineOp.getBindIdNameAttr())
-      for (mlir::Attribute bind : binds)
-        if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind))
-          createRoutineForBindTarget(declare(symRef.getLeafReference()));
+      for (auto bind : llvm::enumerate(binds))
+        if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind.value()))
+          addBindTarget(
+              declare(symRef.getLeafReference()),
+              getBindDeviceType(routineOp.getBindIdNameDeviceTypeAttr(),
+                                bind.index()));
     if (mlir::ArrayAttr binds = routineOp.getBindStrNameAttr())
-      for (mlir::Attribute bind : binds)
-        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind))
-          createRoutineForBindTarget(declare(strAttr.getValue()));
+      for (auto bind : llvm::enumerate(binds))
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind.value()))
+          addBindTarget(
+              declare(strAttr.getValue()),
+              getBindDeviceType(routineOp.getBindStrNameDeviceTypeAttr(),
+                                bind.index()));
+
+    for (BindTarget &bindTarget : bindTargets)
+      createRoutineForBindTarget(bindTarget.target, bindTarget.deviceTypes);
   }
 }
 
