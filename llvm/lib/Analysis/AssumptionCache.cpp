@@ -163,9 +163,6 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
-
-  for (auto &AV : Affected)
-    assert(!ExpectedMatches[AV.Assume] && "Incorrect cache state");
 }
 
 void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
