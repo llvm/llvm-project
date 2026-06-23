@@ -164,65 +164,6 @@ target_include_directories(RaiserScaffoldingTests PRIVATE
 
 comgr_configure_test_target(RaiserScaffoldingTests)
 
-# -- HotswapToolTests ---------------------------------------------------------
-#
-# Pure device-detection helpers for the HSA_TOOLS_LIB tool
-# (hotswap/comgr-hotswap-tool-detect.h): gfx-target extraction and the A0
-# rewrite gate. Header-only, so no comgr/LLVM sources are compiled in.
-
-add_executable(HotswapToolTests
-  HotswapToolTest.cpp)
-
-llvm_map_components_to_libnames(COMGR_TEST_UNIT_TOOL_LIBS BinaryFormat Support)
-
-target_link_libraries(HotswapToolTests PRIVATE
-  ${COMGR_GTEST_LIBS}
-  ${COMGR_TEST_UNIT_TOOL_LIBS}
-  ${LLVM_PTHREAD_LIB})
-
-# Disable gtest's LLVM-type printers; the tool helpers need no LLVM type support.
-target_compile_definitions(HotswapToolTests PRIVATE GTEST_NO_LLVM_SUPPORT=true)
-
-target_include_directories(HotswapToolTests PRIVATE
-  ${LLVM_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../src
-  ${COMGR_GTEST_INCLUDE_DIRS}
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
-
-comgr_configure_test_target(HotswapToolTests)
-
-# -- HotswapToolLoaderTests ---------------------------------------------------
-#
-# Drives the tool's HSA_TOOLS_LIB entry points (OnLoad/OnUnload) against a stub
-# HSA API table. Compiles the tool TU directly, so it needs the HSA headers and
-# amd_comgr; gated on HOTSWAP_BUILD_TOOL like the tool itself.
-if(HOTSWAP_BUILD_TOOL AND HOTSWAP_TOOL_HSA_INC)
-  add_executable(HotswapToolLoaderTests
-    HotswapToolLoaderTest.cpp
-    ../src/hotswap/comgr-hotswap-tool.cpp)
-
-  llvm_map_components_to_libnames(COMGR_TEST_UNIT_LOADER_LIBS
-    BinaryFormat Support)
-
-  target_link_libraries(HotswapToolLoaderTests PRIVATE
-    ${COMGR_GTEST_LIBS}
-    amd_comgr
-    ${COMGR_TEST_UNIT_LOADER_LIBS}
-    ${LLVM_PTHREAD_LIB})
-
-  target_compile_definitions(HotswapToolLoaderTests PRIVATE
-    GTEST_NO_LLVM_SUPPORT=true)
-
-  target_include_directories(HotswapToolLoaderTests PRIVATE
-    ${LLVM_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src
-    "${HOTSWAP_TOOL_HSA_INC}"
-    ${COMGR_GTEST_INCLUDE_DIRS}
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
-
-  comgr_configure_test_target(HotswapToolLoaderTests)
-endif()
-
 # -- DemangleSymbolNameTest ---------------------------------------------------
 
 add_executable(DemangleSymbolNameTest
@@ -259,14 +200,8 @@ endif()
 add_custom_target(test-unit
   COMMAND $<TARGET_FILE:HotswapElfTests>
   COMMAND $<TARGET_FILE:HotswapMCTests>
-  COMMAND $<TARGET_FILE:HotswapToolTests>
   COMMAND $<TARGET_FILE:RaiserScaffoldingTests>
   COMMAND $<TARGET_FILE:DemangleSymbolNameTest>)
-add_dependencies(test-unit HotswapElfTests HotswapMCTests HotswapToolTests
+add_dependencies(test-unit HotswapElfTests HotswapMCTests
   RaiserScaffoldingTests DemangleSymbolNameTest)
-if(TARGET HotswapToolLoaderTests)
-  add_dependencies(test-unit HotswapToolLoaderTests)
-  add_custom_command(TARGET test-unit POST_BUILD
-    COMMAND $<TARGET_FILE:HotswapToolLoaderTests>)
-endif()
 add_dependencies(check-comgr test-unit)
