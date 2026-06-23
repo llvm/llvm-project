@@ -2106,9 +2106,10 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      // TODO: handle pointer comparison.
-      const APInt &LHSVal = LHS.asInteger();
-      const APInt &RHSVal = RHS.asInteger();
+      const APInt &LHSVal =
+          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
+      const APInt &RHSVal =
+          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(
