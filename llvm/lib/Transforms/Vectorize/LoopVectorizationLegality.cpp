@@ -1400,6 +1400,15 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     if (isa<NoAliasScopeDeclInst>(&I))
       continue;
 
+    // We can predicate blocks with calls to llvm.pseudoprobe, as long as we
+    // drop them when we flatten the CFG via predication. Keeping them would
+    // otherwise turn a conditional probe into one that is sampled every
+    // iteration.
+    if (match(&I, m_Intrinsic<Intrinsic::pseudoprobe>())) {
+      MaskedOp.insert(&I);
+      continue;
+    }
+
     // We can allow masked calls if there's at least one vector variant, even
     // if we end up scalarizing due to the cost model calculations.
     // TODO: Allow other calls if they have appropriate attributes... readonly
