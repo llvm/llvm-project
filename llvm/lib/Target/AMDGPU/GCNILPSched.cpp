@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 
 using namespace llvm;
@@ -290,11 +291,12 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
   auto &SUnits = const_cast<ScheduleDAG&>(DAG).SUnits;
 
   std::vector<unsigned> SavedNumSuccsLeft(SUnits.size());
-  std::vector<char> SavedIsScheduled(SUnits.size());
+  BitVector SavedIsScheduled(SUnits.size());
 
   for (const SUnit &SU : SUnits) {
     SavedNumSuccsLeft[SU.NodeNum] = SU.NumSuccsLeft;
-    SavedIsScheduled[SU.NodeNum] = SU.isScheduled;
+    if (SU.isScheduled)
+      SavedIsScheduled.set(SU.NodeNum);
   }
 
   SUNumbers.assign(SUnits.size(), 0);
@@ -346,7 +348,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
 
   // restore units
   for (auto &SU : SUnits) {
-    SU.isScheduled = SavedIsScheduled[SU.NodeNum];
+    SU.isScheduled = SavedIsScheduled.test(SU.NodeNum);
     SU.NumSuccsLeft = SavedNumSuccsLeft[SU.NodeNum];
     SU.setHeightDirty();
   }

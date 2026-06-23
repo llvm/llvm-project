@@ -357,6 +357,7 @@ class TargetRegisterInfo;
           isHeightCurrent(false), isNode(false), isInst(false),
           SchedulingPref(Sched::None) {}
 
+    // Don't allow copying, SUnit can be very large.
     SUnit(const SUnit &) = delete;
     SUnit &operator=(const SUnit &) = delete;
     SUnit(SUnit &&) = default;
