@@ -247,10 +247,10 @@ define i128 @i128_addc_xor_inv(i128 %a, i128 %b) {
 ;
 ; Z13-LABEL: i128_addc_xor_inv:
 ; Z13:       # %bb.0:
-; Z13-NEXT:    vl %v1, 0(%r4), 3
-; Z13-NEXT:    vl %v0, 0(%r3), 3
-; Z13-NEXT:    vno %v1, %v1, %v1
-; Z13-NEXT:    vscbiq %v0, %v1, %v0
+; Z13-NEXT:    vl %v0, 0(%r4), 3
+; Z13-NEXT:    vl %v1, 0(%r3), 3
+; Z13-NEXT:    vno %v0, %v0, %v0
+; Z13-NEXT:    vscbiq %v0, %v0, %v1
 ; Z13-NEXT:    vst %v0, 0(%r2), 3
 ; Z13-NEXT:    br %r14
   %b.not = xor i128 %b, -1

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/MIFOpConversion.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
@@ -431,7 +430,7 @@ struct MIFThisImageOpConversion
     mlir::Location loc = op.getLoc();
 
     if (op.getCoarray())
-      TODO(loc, "mif.this_image op with coarray argument.");
+      TODO(loc, "coarray: mif.this_image op with coarray argument");
     else {
       mlir::Type i32Ty = builder.getI32Type();
       mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());

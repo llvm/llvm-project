@@ -1135,6 +1135,39 @@ These packets must be sent  _prior_ to sending a "A" packet.
 a target after making a connection to a GDB server that isn't already connected to
 an inferior process.
 
+## QSetSTDIOWindowSize:cols=\<N\>;rows=\<N\>
+
+Set the terminal window size for the inferior's stdio pseudo-terminal prior to
+sending a launch args (`A`) packet.
+
+When launching a program whose stdio is connected to a pseudo-terminal (PTY),
+this packet specifies the initial terminal dimensions:
+```
+QSetSTDIOWindowSize:cols=<N>;rows=<N>
+```
+Both `cols` and `rows` must be unsigned 16-bit integers. They must either both
+be non-zero, or both be zero. Any other combination (e.g. `cols=80;rows=0`) is
+treated as a malformed packet. This packet must be sent _prior_ to the launch
+args (`A`) packet; sending it after the inferior has been launched has no
+effect.
+
+On the server side, the dimensions are stored and applied to the PTY at launch
+time. On POSIX this is done via `TIOCSWINSZ`; on Windows via `ConPTY` resize.
+If both dimensions are zero, the server uses pipes instead of a PTY on all platforms.
+
+The response is either:
+* `OK`: dimensions accepted; they will be applied to the PTY when the
+  inferior is launched.
+* `ENN`: malformed packet.
+* Empty/`+`: packet not supported; the client silently ignores this.
+
+**Priority To Implement:** Low. Only needed when the inferior's stdio is
+connected to a PTY distinct from the terminal hosting lldb (for example, with
+`lldb-dap`, or when the debuggee is launched in its own terminal) and the
+client wants that PTY to reflect the correct window size  (e.g. for proper
+line-wrapping or full-screen TUI apps). This setting does not affect the terminal
+hosting the lldb CLI itself.
+
 ## QSetWorkingDir:\<ascii-hex-path\>
 
 Set the working directory prior to sending an "A" packet.
@@ -1259,7 +1292,7 @@ already has a thread selected (see the `Hg` packet from the standard
 GDB remote protocol documentation) yet the remote GDB server actually
 has another thread selected.
 
-## qAttachOrWaitSupported
+## qVAttachOrWaitSupported
 
 This is a binary "is it supported" query. Return OK if you support
 `vAttachOrWait`.
@@ -1312,7 +1345,7 @@ some key value pairs. The key value pairs in the command are:
   be listed for all users, not just the user that the
   platform is running as
 * `triple` - `string` -
-  An ASCII triple string (`x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
+  An ASCII triple string (for example `x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
 * `args` - `string` -
   A string value containing the process arguments separated by the character `-`,
   where each argument is hex-encoded. It includes `argv[0]`.
@@ -1324,13 +1357,19 @@ documentation.
 
 Sample packet/response:
 ```
-send packet: $qfProcessInfo#00
-read packet: $pid:60001;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
-send packet: $qsProcessInfo#00
-read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:x86_64-apple-macosx;#00
+send packet: $qfProcessInfo:name_match:contains;name:656d616373;all_users:0;#21
+read packet: $pid:4086;ppid:2681;uid:1000;gid:1000;euid:1000;egid:1000;name:2f7573722f62696e2f656d6163732d67746b;args:656d616373-2d2d6461656d6f6e;triple:7838365f36342d2d6c696e75782d676e75;#07
+send packet: $qsProcessInfo#4f
+read packet: $pid:146456;ppid:1;uid:1000;gid:1000;euid:1000;egid:1000;name:2f7573722f62696e2f656d6163732d67746b;args:2f7573722f62696e2f656d616373;triple:7838365f36342d2d6c696e75782d676e75;#e2
 send packet: $qsProcessInfo#00
 read packet: $E04#00
+send packet: $qfProcessInfo:name_match:contains;name:616263;all_users:0;triple:arm64-unknown-linux-gnu;#da
+read packet: $E03#a8
 ```
+
+Note that triples in this packet are normal strings, but triples
+received in response are hex encoded strings.  This difference was
+unintentional but cannot be changed at this point.
 
 **Priority To Implement:** Required
 
@@ -1396,9 +1435,10 @@ read packet: $cputype:16777223;cpusubtype:3;ostype:darwin;vendor:apple;endian:li
 ```
 
 Key value pairs are one of:
+* `arch`: a string for the architecture, not needed if "triple" is specified
 * `cputype`: is a number that is the mach-o CPU type that is being debugged (base 10)
 * `cpusubtype`: is a number that is the mach-o CPU subtype type that is being debugged (base 10)
-* `triple`: a string for the target triple (x86_64-apple-macosx) that can be used to specify arch + vendor + os in one entry
+* `triple`: an ASCII hex encoded string for the target triple (for example, hex encoding of `x86_64-apple-macosx`) that can be used to specify arch + vendor + os in one entry
 * `vendor`: a string for the vendor (apple), not needed if "triple" is specified
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
@@ -1702,7 +1742,7 @@ The key value pairs in the response are:
 * `euid` - `integer` - A string value containing the decimal effective user ID
 * `egid` - `integer` - A string value containing the decimal effective group ID
 * `name` - `ascii-hex` - An ASCII hex string that contains the name of the process
-* `triple` - `string` - A target triple (`x86_64-apple-macosx`, `armv7-apple-ios`)
+* `triple` - `ascii-hex` - An ASCII hex string that contains the target triple (for example, `x86_64-apple-macosx`, `armv7-apple-ios`)
 
 Sample packet/response:
 ```

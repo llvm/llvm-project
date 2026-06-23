@@ -2039,6 +2039,34 @@ define void @store_a2v2i32([2 x <2 x i32>] %data, ptr addrspace(8) inreg %buf) {
   ret void
 }
 
+define [2 x <3 x i32>] @load_a2v3i32(ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define [2 x <3 x i32>] @load_a2v3i32(
+; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET0_OFF_0:%.*]] = call <3 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v3i32(ptr addrspace(8) align 16 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RET0:%.*]] = insertvalue [2 x <3 x i32>] poison, <3 x i32> [[RET0_OFF_0]], 0
+; CHECK-NEXT:    [[RET1_OFF_16:%.*]] = call <3 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v3i32(ptr addrspace(8) align 16 [[BUF]], i32 16, i32 0, i32 0)
+; CHECK-NEXT:    [[RET:%.*]] = insertvalue [2 x <3 x i32>] [[RET0]], <3 x i32> [[RET1_OFF_16]], 1
+; CHECK-NEXT:    ret [2 x <3 x i32>] [[RET]]
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load [2 x <3 x i32>], ptr addrspace(7) %p
+  ret [2 x <3 x i32>] %ret
+}
+
+define void @store_a2v3i32([2 x <3 x i32>] %data, ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define void @store_a2v3i32(
+; CHECK-SAME: [2 x <3 x i32>] [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[DATA0:%.*]] = extractvalue [2 x <3 x i32>] [[DATA]], 0
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA0]], ptr addrspace(8) align 16 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA1:%.*]] = extractvalue [2 x <3 x i32>] [[DATA]], 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA1]], ptr addrspace(8) align 16 [[BUF]], i32 16, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store [2 x <3 x i32>] %data, ptr addrspace(7) %p
+  ret void
+}
+
 define { i32 } @load_sl_i32s(ptr addrspace(8) inreg %buf) {
 ; CHECK-LABEL: define { i32 } @load_sl_i32s(
 ; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {

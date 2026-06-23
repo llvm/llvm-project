@@ -32,7 +32,7 @@ public:
                             YieldResolveResultFn &&OnResolve) = 0;
 };
 
-class DylibSymbolResolver : public ExecutorResolver {
+class LLVM_ABI DylibSymbolResolver : public ExecutorResolver {
 public:
   DylibSymbolResolver(tpctypes::DylibHandle H) : Handle(H) {}
 
