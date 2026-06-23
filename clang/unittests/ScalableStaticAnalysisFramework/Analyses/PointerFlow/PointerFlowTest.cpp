@@ -13,7 +13,6 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
@@ -147,7 +146,6 @@ struct EPLPair {
 
 class PointerFlowTest : public TestFixture {
 protected:
-  SSAFOptions Opts;
   TUSummary TUSum;
   TUSummaryBuilder Builder;
   std::unique_ptr<TUSummaryExtractor> Extractor;
@@ -156,7 +154,7 @@ protected:
   PointerFlowTest()
       : TUSum(llvm::Triple("arm64-apple-macosx"),
               BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
-        Builder(TUSum, Opts), Extractor(nullptr) {}
+        Builder(TUSum), Extractor(nullptr) {}
 
   template <typename ContributorDecl = NamedDecl,
             typename =

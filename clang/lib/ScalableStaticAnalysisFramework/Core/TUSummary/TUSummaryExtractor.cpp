@@ -74,7 +74,3 @@ TUSummaryExtractor::addEntityForReturn(const FunctionDecl *FD) {
     return std::nullopt;
   return SummaryBuilder.addEntity(*Name, getLinkageForDecl(FD));
 }
-
-const SSAFOptions &TUSummaryExtractor::getOptions() const {
-  return SummaryBuilder.getOptions();
-}

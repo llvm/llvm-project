@@ -18,13 +18,11 @@
 namespace clang::ssaf {
 
 class EntityName;
-class SSAFOptions;
 class TUSummary;
 
 class TUSummaryBuilder {
 public:
-  TUSummaryBuilder(TUSummary &Summary, const SSAFOptions &Options)
-      : Summary(Summary), Options(Options) {}
+  explicit TUSummaryBuilder(TUSummary &Summary) : Summary(Summary) {}
 
   EntityId addEntity(const EntityName &EN, EntityLinkageType Linkage);
 
@@ -37,12 +35,8 @@ public:
   std::pair<EntitySummary *, bool>
   addSummary(EntityId Entity, std::unique_ptr<ConcreteEntitySummary> &&Data);
 
-  /// \returns the \c SSAFOptions of this builder.
-  const SSAFOptions &getOptions() const { return Options; }
-
 private:
   TUSummary &Summary;
-  const SSAFOptions &Options;
 
   std::pair<EntitySummary *, bool>
   addSummaryImpl(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
