@@ -49,7 +49,7 @@ pipeline {
                 timeout(240) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         writeFile file: 'build.bat', text: '''@echo off
-call "C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
+call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
 
 cmake -G Ninja ^
     -S llvm ^
