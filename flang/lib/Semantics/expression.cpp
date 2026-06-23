@@ -3791,7 +3791,6 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
-  // Statement functions have implicit interfaces and require the same checks
   bool isStatementFunction{
       procSymbol && procSymbol->flags().test(Symbol::Flag::StmtFunction)};
   std::optional<characteristics::Procedure> chars;
@@ -3864,13 +3863,14 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       }
     }
     if (isStatementFunction) {
-      // Statement functions have implicit interfaces; check for
-      // keyword arguments and other implicit interface constraints
+      // Statement functions have implicit interfaces, so keyword actual
+      // arguments are not allowed. They are exempt from the explicit-interface
+      // requirements of F2023 15.4.2.2.
       parser::ContextualMessages &messages{
           context_.foldingContext().messages()};
       for (auto &arg : arguments) {
         if (arg) {
-          semantics::CheckImplicitInterfaceArg(*arg, messages, context_);
+          semantics::CheckImplicitInterfaceArgKeywords(*arg, messages);
         }
       }
     }
