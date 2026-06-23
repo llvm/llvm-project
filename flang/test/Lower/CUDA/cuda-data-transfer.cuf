@@ -3,6 +3,8 @@
 ! Test CUDA Fortran data transfer using assignment statements.
 
 module mod1
+  real, constant :: c1 = 1.0
+
   type :: t1
     integer :: i
   end type
@@ -495,7 +497,7 @@ subroutine sub25()
 end
 
 ! CHECK-LABEL: func.func @_QPsub25()
-! CHECK: fir.allocmem !fir.array<?xf64>, %15#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: fir.allocmem !fir.array<?xf64>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>
 ! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f64, !fir.ref<f64>
 ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xf64>>
@@ -724,3 +726,13 @@ subroutine sub41()
   
   lm(1:5) = a%m(1:5)
 end subroutine
+
+subroutine sub42()
+  use mod1
+  real :: a
+  a = c1 * c1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub42()
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign
