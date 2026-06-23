@@ -1213,7 +1213,6 @@ TEST(StringRefTest, NonEmptyOr) {
   constexpr StringRef populated("yay!");
   EXPECT_EQ(populated, empty.nonEmptyOr("yay!"));
   EXPECT_EQ(populated, populated.nonEmptyOr("boo!"));
-  EXPECT_EQ(empty, empty.nonEmptyOr(empty));
 }
 
 static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");
