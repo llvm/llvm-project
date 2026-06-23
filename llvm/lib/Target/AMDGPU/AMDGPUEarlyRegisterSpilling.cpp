@@ -40,6 +40,27 @@ static cl::opt<unsigned>
                 cl::desc("The maximum number of VGPRs per wave."),
                 cl::init(96));
 
+/// Helper functions to update the live interval analysis which is used by
+/// the Register Pressure Tracker.
+static void updateIndexes(MachineInstr *MI, SlotIndexes *Indexes) {
+  if (Indexes->hasIndex(*MI))
+    Indexes->removeMachineInstrFromMaps(*MI);
+  Indexes->insertMachineInstrInMaps(*MI);
+}
+
+static void updateLiveness(MachineInstr *MI, LiveIntervals *LIS) {
+  for (auto &MO : MI->operands()) {
+    if (!MO.isReg())
+      continue;
+    auto Reg = MO.getReg();
+    if (!Reg.isVirtual())
+      continue;
+    if (LIS->hasInterval(Reg))
+      LIS->removeInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(Reg);
+  }
+}
+
 class SpillCandidate {
 private:
   Register RegToSpill;
@@ -61,12 +82,6 @@ private:
   SlotIndexes *Indexes;
   MachineDominatorTree *DT;
   const MachineLoopInfo *MLI;
-
-  /// Helper functions to update the live interval analysis which is used by
-  /// the Register Pressure Tracker.
-  void updateIndexes(MachineInstr *MI);
-  void updateLiveness(Register Reg);
-  void updateLiveness(MachineInstr *MI);
 
   /// Emit restore instruction where it is needed
   MachineInstr *emitRestore(Register SpillReg, MachineInstr *UseMI, int FI);
@@ -248,51 +263,24 @@ void SpillCandidate::generateSpillRestoreInstrs(
   }
 
   // Update the live interval analysis.
-  updateIndexes(InstrOfRegToSpill);
-  updateIndexes(SpillInstruction);
-  updateLiveness(InstrOfRegToSpill);
-  updateLiveness(SpillInstruction);
+  updateIndexes(InstrOfRegToSpill, Indexes);
+  updateIndexes(SpillInstruction, Indexes);
+  updateLiveness(InstrOfRegToSpill, LIS);
+  updateLiveness(SpillInstruction, LIS);
 
   if (InstrOfRegToSpill != CurMI) {
-    updateIndexes(CurMI);
-    updateLiveness(CurMI);
+    updateIndexes(CurMI, Indexes);
+    updateLiveness(CurMI, LIS);
   }
 
   for (auto *Use : RestoreInstrs) {
-    updateIndexes(Use);
-    updateLiveness(Use);
+    updateIndexes(Use, Indexes);
+    updateLiveness(Use, LIS);
   }
 
   for (auto *Use : RestoreUses) {
-    updateIndexes(Use);
-    updateLiveness(Use);
-  }
-}
-
-// TODO: Preserve SlotIndexes analysis in getAnalysisUsage()
-void SpillCandidate::updateIndexes(MachineInstr *MI) {
-  if (Indexes->hasIndex(*MI))
-    Indexes->removeMachineInstrFromMaps(*MI);
-  Indexes->insertMachineInstrInMaps(*MI);
-}
-
-// TODO: Preserve LiveIntervals analysis in getAnalysisUsage()
-void SpillCandidate::updateLiveness(Register Reg) {
-  if (LIS->hasInterval(Reg))
-    LIS->removeInterval(Reg);
-  LIS->createAndComputeVirtRegInterval(Reg);
-}
-
-void SpillCandidate::updateLiveness(MachineInstr *MI) {
-  for (auto &MO : MI->operands()) {
-    if (!MO.isReg())
-      continue;
-    auto Reg = MO.getReg();
-    if (!Reg.isVirtual())
-      continue;
-    if (LIS->hasInterval(Reg))
-      LIS->removeInterval(Reg);
-    LIS->createAndComputeVirtRegInterval(Reg);
+    updateIndexes(Use, Indexes);
+    updateLiveness(Use, LIS);
   }
 }
 
