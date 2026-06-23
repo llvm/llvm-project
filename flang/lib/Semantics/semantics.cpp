@@ -416,7 +416,7 @@ const DeclTypeSpec &SemanticsContext::MakeLogicalType(int kind) {
 }
 
 bool SemanticsContext::AnyFatalError() const {
-  return messages_.AnyFatalError(warningsAreErrors_);
+  return messages_.AnyFatalError(warningsAreErrors_, &languageFeatures_);
 }
 bool SemanticsContext::HasError(const Symbol &symbol) {
   return errorSymbols_.count(symbol) > 0;
