@@ -9,6 +9,13 @@ endfunction()
 canonicalize_cmake_boolean(COMGR_SPIRV_BACKEND_AVAILABLE)
 canonicalize_cmake_boolean(COMGR_SPIRV_TRANSLATOR_AVAILABLE)
 
+if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+    set(COMGR_AMDGPU_TARGET_AVAILABLE 1)
+else()
+    set(COMGR_AMDGPU_TARGET_AVAILABLE 0)
+endif()
+canonicalize_cmake_boolean(COMGR_AMDGPU_TARGET_AVAILABLE)
+
 configure_file(lit.site.cfg.py.in lit.site.cfg.py @ONLY)
 
 find_program(LLVM_LIT_PATH

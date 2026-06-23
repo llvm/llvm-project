@@ -9,6 +9,7 @@ config.my_obj_root = _fwd(r'@CMAKE_CURRENT_BINARY_DIR@')
 
 config.comgr_spirv_backend_available = @COMGR_SPIRV_BACKEND_AVAILABLE@
 config.comgr_spirv_translator_available = @COMGR_SPIRV_TRANSLATOR_AVAILABLE@
+config.comgr_amdgpu_target_available = @COMGR_AMDGPU_TARGET_AVAILABLE@
 
 config.llvm_tools_dir = _fwd(r'@LLVM_TOOLS_BINARY_DIR@')
 config.comgr_obj_dir = config.my_obj_root

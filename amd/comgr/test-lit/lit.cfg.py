@@ -16,6 +16,8 @@ if config.comgr_spirv_backend_available:
     config.available_features.add("comgr-has-spirv-backend")
 if config.comgr_spirv_translator_available:
     config.available_features.add("comgr-has-spirv-translator")
+if config.comgr_amdgpu_target_available:
+    config.available_features.add("comgr-has-amdgpu-target")
 
 if platform.system() == "Windows":
     config.available_features.add("system-windows")
