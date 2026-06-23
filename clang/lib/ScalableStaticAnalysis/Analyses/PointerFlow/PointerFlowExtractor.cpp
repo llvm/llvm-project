@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevel.h"

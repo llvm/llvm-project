@@ -11,6 +11,8 @@
 // HELP-NEXT:    Include block-scope (function-local) declarations in extracted SSAF summaries. By default they are omitted.
 // HELP-NEXT:  --ssaf-list-extractors  Display the list of available SSAF summary extractors
 // HELP-NEXT:  --ssaf-list-formats     Display the list of available SSAF serialization formats
+// HELP-NEXT:  --ssaf-no-extract-from-system-headers
+// HELP-NEXT:    Skip declarations in system headers during SSAF contributor enumeration. By default the SSAF TU summary extractors enumerate system-header declarations alongside user-source declarations; this flag opts out of that enumeration.
 // HELP-NEXT:  --ssaf-tu-summary-file=<path>.<format>
 // HELP-NEXT:    The output file for the extracted summaries. The extension selects which file format to use.
 

@@ -12,6 +12,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/SSAFOptions.h"
 #include "llvm/ADT/SetVector.h"
 
@@ -37,22 +38,30 @@ public:
   llvm::SetVector<const NamedDecl *> Contributors;
   const SSAFOptions &Opts;
 
-  ContributorFinder(const SSAFOptions &Opts) : Opts(Opts) {
+  ContributorFinder(ASTContext &Ctx, const SSAFOptions &Opts,
+                     bool ExtractFromSystemHeaders)
+      : Opts(Opts), Ctx(Ctx), ExtractFromSystemHeaders(ExtractFromSystemHeaders) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false;
   }
 
   bool VisitFunctionDecl(FunctionDecl *D) override {
+    if (skipForSystemHeader(D))
+      return true;
     Contributors.insert(D);
     return true;
   }
 
   bool VisitRecordDecl(RecordDecl *D) override {
+    if (skipForSystemHeader(D))
+      return true;
     Contributors.insert(D);
     return true;
   }
 
   bool VisitVarDecl(VarDecl *D) override {
+    if (skipForSystemHeader(D))
+      return true;
     DeclContext *DC = D->getDeclContext();
 
     // Collects Decl for global variables or static data members:
@@ -80,9 +89,28 @@ public:
   bool VisitLambdaExpr(LambdaExpr *L) override {
     // TraverseLambdaExpr directly visits the body stmt, skipping the
     // CXXMethodDecl, which is a contributor that needs to be collected.
+    // The system-header gate fires via the delegated VisitFunctionDecl
+    // (the call operator's spelling location is the lambda's source
+    // location), so no separate gate here.
     VisitFunctionDecl(L->getCallOperator());
     return true;
   }
+
+private:
+  // Returns true when the contributor shall be skipped because its location
+  // is in a system header. The `Loc.isValid()` guard matches the in-tree
+  // precedent at `ReferenceBindingEntityExtractor.cpp` — compiler-generated
+  // decls (builtin FunctionDecls, implicit template instantiations) can reach
+  // the visitor with invalid locations and shall NOT be inadvertently skipped.
+  bool skipForSystemHeader(const Decl *D) const {
+    if (ExtractFromSystemHeaders)
+      return false;
+    SourceLocation Loc = D->getLocation();
+    return Loc.isValid() && Ctx.getSourceManager().isInSystemHeader(Loc);
+  }
+
+  ASTContext &Ctx;
+  bool ExtractFromSystemHeaders;
 };
 
 /// An AST visitor that skips the root node's strict-descendants that are
@@ -146,8 +174,9 @@ public:
 void ssaf::findContributors(
     ASTContext &Ctx, const SSAFOptions &Options,
     llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
-        &Contributors) {
-  ContributorFinder Finder{Options};
+        &Contributors,
+    bool ExtractFromSystemHeaders) {
+  ContributorFinder Finder{Ctx, Options, ExtractFromSystemHeaders};
   Finder.TraverseAST(Ctx);
   for (const NamedDecl *C : Finder.Contributors)
     Contributors[cast<NamedDecl>(C->getCanonicalDecl())].push_back(C);
