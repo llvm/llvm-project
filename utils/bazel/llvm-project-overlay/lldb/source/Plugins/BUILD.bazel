@@ -2422,6 +2422,30 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginProcessWindowsCommon",
+    srcs = glob(["Process/Windows/Common/*.cpp"]),
+    hdrs = glob([
+        "Process/Windows/Common/*.h",
+        "Process/Windows/Common/**/*.h",
+    ]),
+    includes = [".."],
+    target_compatible_with = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":PluginDynamicLoaderWindowsDYLD",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 _DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in DEFAULT_PLUGINS]) + \
                         "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in DEFAULT_SCRIPT_PLUGINS])
 
@@ -2429,9 +2453,17 @@ expand_template(
     name = "plugins_config_gen",
     out = "Plugins.def",
     substitutions = {
-        "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
         "@LLDB_PROCESS_GDB_PLUGIN@": "LLDB_PLUGIN(ProcessGDBRemote)",
     } | select({
+        # ProcessWindowsCommon registers via its dedicated slot in Plugins.def.in
+        # (ordered after all other process plugins, before ProcessGDBRemote).
+        "@platforms//os:windows": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "LLDB_PLUGIN(ProcessWindowsCommon)",
+        },
+        "//conditions:default": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
+        },
+    }) | select({
         "@platforms//os:macos": {
             "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
 LLDB_PLUGIN(ProcessMacOSXKernel)
