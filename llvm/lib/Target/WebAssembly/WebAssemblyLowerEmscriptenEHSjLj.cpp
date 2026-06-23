@@ -1746,7 +1746,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     }
   }
 
-  SmallMapVector<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4> UnwindDestToNewPreds;
+  SmallMapVector<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4>
+      UnwindDestToNewPreds;
   for (auto *CI : LongjmpableCalls) {
     // Even if the callee function has attribute 'nounwind', which is true for
     // all C functions, it can longjmp, which means it can throw a Wasm
