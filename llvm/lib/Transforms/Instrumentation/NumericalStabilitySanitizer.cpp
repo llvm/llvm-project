@@ -1897,8 +1897,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
         break;
       }
 
-      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
-        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
+      if (BitcastTy)
+        if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+          BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);
