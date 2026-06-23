@@ -19,10 +19,10 @@
 
 extern "C" __device__ __host__ int use(int *);
 
-// CUDA-HOST-CIR-DAG: cir.global external @device_var = #cir.undef
+// CUDA-HOST-CIR-DAG: cir.global external @device_var = #cir.poison
 __device__ int device_var;
 
-// CUDA-HOST-CIR-DAG: cir.global external @const_var = #cir.undef
+// CUDA-HOST-CIR-DAG: cir.global external @const_var = #cir.poison
 __constant__ int const_var;
 
 // CUDA-CIR-DAG: cir.global "private" external target_address_space(1) @_ZL17static_device_var__static__b04fd23c98500190
