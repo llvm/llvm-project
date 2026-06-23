@@ -12,6 +12,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_socket_stream.h"
@@ -130,15 +131,17 @@ public:
   }
 
   template <class NumberT> llvm::Error getNumber(NumberT &Number) {
-    // FIXME: Assumes endianness matches.
     if (llvm::Error E = getMessage(sizeof(Number), Message))
       return E;
-    ::memcpy(&Number, Message.begin(), sizeof(Number));
+    Number = llvm::support::endian::read<NumberT>(Message.data(),
+                                                  llvm::endianness::little);
     return llvm::Error::success();
   }
   template <class NumberT> llvm::Error putNumber(NumberT Number) {
-    // FIXME: Assumes endianness matches.
-    return putMessage(sizeof(Number), reinterpret_cast<const char *>(&Number));
+    char Buf[sizeof(Number)];
+    llvm::support::endian::write<NumberT>(Buf, Number,
+                                          llvm::endianness::little);
+    return putMessage(sizeof(Buf), Buf);
   }
 
   enum ResultKind {
