@@ -44,6 +44,44 @@ end subroutine
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
+subroutine target_update_assumed_shape(a, n)
+  integer, intent(in) :: n
+  real :: a(:)
+  integer :: i
+
+  !$omp target update to(iterator(i = 1:n): a(i))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_assumed_shape
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtarget_update_assumed_shapeEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[DIMS:.*]]:3 = fir.box_dims %[[A]]#0, %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+! CHECK:   %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS]]#1 : index) stride(%[[DIMS]]#2 : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.array<?xf32>>, f32) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+subroutine target_update_assumed_shape_2d(a, n, m)
+  integer, intent(in) :: n, m
+  real :: a(:, :)
+  integer :: i, j
+
+  !$omp target update to(iterator(i = 1:n, j = 1:m): a(i, j))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtarget_update_assumed_shape_2d
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtarget_update_assumed_shape_2dEa"}
+! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   %[[DIMS0:.*]]:3 = fir.box_dims %[[A]]#0, %{{.*}} : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+! CHECK:   %[[BOUNDS0:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[DIMS1:.*]]:3 = fir.box_dims %[[A]]#0, %{{.*}} : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+! CHECK:   %[[BOUNDS1:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.array<?x?xf32>>, f32) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS0]], %[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
 subroutine target_update_to_section()
   integer, parameter :: n = 16
   integer :: a(n)

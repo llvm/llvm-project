@@ -1441,6 +1441,12 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
   mlir::Type boundTy = builder.getType<mlir::omp::MapBoundsType>();
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value box;
+  if (entity.isBoxAddressOrValue()) {
+    box = entity.getBase();
+    if (entity.isBoxAddress())
+      box = fir::LoadOp::create(builder, loc, box);
+  }
 
   auto convertToIndex = [&](mlir::Value value) -> mlir::Value {
     if (value.getType().isIndex())
@@ -1461,8 +1467,19 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
   for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
     mlir::Value baseLb =
         convertToIndex(hlfir::genLBound(loc, builder, entity, dim));
-    mlir::Value extent =
-        convertToIndex(hlfir::genExtent(loc, builder, entity, dim));
+    mlir::Value extent;
+    mlir::Value stride = one;
+    bool strideInBytes = false;
+    if (box) {
+      mlir::Value dimValue = builder.createIntegerConstant(loc, idxTy, dim);
+      auto dimInfo = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                            box, dimValue);
+      extent = dimInfo.getExtent();
+      stride = dimInfo.getByteStride();
+      strideInBytes = true;
+    } else {
+      extent = convertToIndex(hlfir::genExtent(loc, builder, entity, dim));
+    }
     mlir::Value lbound;
     mlir::Value ubound;
 
@@ -1507,8 +1524,8 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
     }
 
     mlir::Value bound = mlir::omp::MapBoundsOp::create(
-        builder, loc, boundTy, lbound, ubound, extent, /*stride=*/one,
-        /*stride_in_bytes=*/false, /*start_idx=*/baseLb);
+        builder, loc, boundTy, lbound, ubound, extent, stride,
+        /*stride_in_bytes=*/strideInBytes, /*start_idx=*/baseLb);
     bounds.push_back(bound);
   }
 
