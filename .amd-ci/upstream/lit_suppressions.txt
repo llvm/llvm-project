@@ -13,3 +13,12 @@ Clang :: Driver/sanitizer-ld.c
 # rhel8; i386-linux, i386-linux-dynamic unexpected failure.
 AddressSanitizer-i386-linux :: TestCases/strcat-overlap.cpp
 AddressSanitizer-i386-linux-dynamic :: TestCases/strcat-overlap.cpp
+
+# openmp/runtime/test/affinity/kmp-abs-hw-subset.c
+# Intermittent hardware topology detection failure.
+# "KMP_HW_SUBSET ignored: all hardware resources would be filtered"
+libomp :: affinity/kmp-abs-hw-subset.c
+
+# libcxx/test/std/time/time.zone/time.zone.timezone/time.zone.members/sys_info.zdump.pass.cpp
+# System timezone database inconsistencies (RHEL8).
+llvm-libc++-shared.cfg.in :: std/time/time.zone/time.zone.timezone/time.zone.members/sys_info.zdump.pass.cpp
