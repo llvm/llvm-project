@@ -1061,7 +1061,7 @@ def Annotate : InheritableParamOrStmtAttr {
   }];
   let PragmaAttributeSupport = 1;
   let AcceptsExprPack = 1;
-  let Documentation = [Undocumented];
+  let Documentation = [AnnotateDocs];
 }
 
 def AnnotateType : TypeAttr {
@@ -2413,7 +2413,6 @@ def NoConvergent : InheritableAttr {
   let Spellings = [Clang<"noconvergent">, Declspec<"noconvergent">];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
-  let LangOpts = [CUDA];
   let Documentation = [NoConvergentDocs];
   let SimpleHandler = 1;
 }
