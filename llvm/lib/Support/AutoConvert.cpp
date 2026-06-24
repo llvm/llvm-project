@@ -82,12 +82,24 @@ int enablezOSAutoConversion(int FD) {
   return fcntl(FD, F_CONTROL_CVT, &Query);
 }
 
-std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
-  assert((!Text || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
+int enablezOSAutoConversionCcsid(int FD, int ccsid) {
+  struct f_cnvrt cvt = {
+      SETCVTALL,   // cvtcmd
+      CCSID_UTF_8, // pccsid
+      0,           // fccsid
+  };
+  if (ccsid == FT_UNTAGGED)
+    return -1;
+  cvt.fccsid = ccsid;
+  return fcntl(FD, F_CONTROL_CVT, &cvt);
+}
+
+std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool IsText) {
+  assert((!IsText || (CCSID != FT_UNTAGGED && CCSID != FT_BINARY)) &&
          "FT_UNTAGGED and FT_BINARY are not allowed for text files");
   struct file_tag Tag;
   Tag.ft_ccsid = CCSID;
-  Tag.ft_txtflag = Text;
+  Tag.ft_txtflag = IsText;
   Tag.ft_deferred = 0;
   Tag.ft_rsvflags = 0;
 
@@ -143,6 +155,11 @@ std::error_code llvm::copyFileTagAttributes(const std::string &Source,
   struct stat SourceAttributes;
   if (stat(Source.c_str(), &SourceAttributes) == -1)
     return std::error_code(errno, std::generic_category());
+
+  if (SourceAttributes.st_tag.ft_txtflag)
+    if (enablezOSAutoConversionCcsid(DestinationFD,
+                                     SourceAttributes.st_tag.ft_ccsid) == -1)
+      return errnoAsErrorCode();
 
   return setzOSFileTag(DestinationFD, SourceAttributes.st_tag.ft_ccsid,
                        SourceAttributes.st_tag.ft_txtflag);
