@@ -460,7 +460,7 @@ define amdgpu_kernel void @used_lds_13112() {
 ; GFX10W32:   ; Occupancy: 8{{$}}
 ; GFX1100W64: ; Occupancy: 4{{$}}
 ; GFX1100W32: ; Occupancy: 8{{$}}
-; GFX1250:    ; Occupancy: 10{{$}}
+; GFX1250:    ; Occupancy: 8{{$}}
 @lds8252 = internal addrspace(3) global [8252 x i8] poison, align 4
 define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
   store volatile i8 1, ptr addrspace(3) @lds8252
