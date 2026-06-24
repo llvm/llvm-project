@@ -2015,7 +2015,11 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
     return std::nullopt;
 
   bool is_signed = false;
-  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
+  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed) ||
+                           clang_type.IsPointerOrReferenceType() ||
+                           clang_type.IsMemberFunctionPointerType() ||
+                           clang_type.IsMemberDataPointerType() ||
+                           clang_type.IsNullPtrType();
 
   llvm::APSInt apint(*bit_width, !is_signed);
   apint = value;
@@ -2023,13 +2027,54 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
   if (is_integral)
     return clang::APValue(apint);
 
+  if (clang_type.IsRealFloatingPointType()) {
+    return clang::APValue(llvm::APFloat(
+        ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+  }
+
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (!clang_type.IsRealFloatingPointType())
-    return std::nullopt;
 
-  return clang::APValue(llvm::APFloat(
-      ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+  LLDB_LOG(GetLog(LLDBLog::Types),
+           "MakeAPValue: Unsupported NTTP type class: {0}",
+           clang_type.GetTypeClass());
+
+  lldbassert(false && "Unsupported type for non-type template parameter");
+
+  return std::nullopt;
+}
+
+clang::FieldDecl *DWARFASTParserClang::ResolveFieldFromPtrToMemberValue(
+    const DWARFDIE &die, uint64_t member_byte_offset) {
+  // die (DW_AT_type) → DW_TAG_ptr_to_member_type
+  DWARFDIE type_die = die.GetReferencedDIE(DW_AT_type);
+  if (!type_die || type_die.Tag() != DW_TAG_ptr_to_member_type)
+    return nullptr;
+
+  // → DW_AT_containing_type → struct/class DIE
+  DWARFDIE containing_die = type_die.GetReferencedDIE(DW_AT_containing_type);
+  if (!containing_die)
+    return nullptr;
+
+  // Resolve and complete the containing class
+  Type *containing_type = die.ResolveTypeUID(containing_die);
+  if (!containing_type)
+    return nullptr;
+
+  CompilerType containing_ct = containing_type->GetFullCompilerType();
+  auto *record_decl =
+      m_ast.GetAsCXXRecordDecl(containing_ct.GetOpaqueQualType());
+  if (!record_decl)
+    return nullptr;
+
+  // Walk fields, match by byte offset
+  clang::ASTContext &ast = m_ast.getASTContext();
+  for (auto *field : record_decl->fields()) {
+    if (ast.getFieldOffset(field) / 8 == member_byte_offset)
+      return field;
+  }
+
+  return nullptr;
 }
 
 bool DWARFASTParserClang::ParseTemplateDIE(
@@ -2115,6 +2160,18 @@ bool DWARFASTParserClang::ParseTemplateDIE(
 
       if (tag == DW_TAG_template_value_parameter && uval64_valid) {
         if (auto value = MakeAPValue(ast, clang_type, uval64)) {
+          // For pointer-to-member types, try to resolve to the actual FieldDecl
+          if (clang_type.IsMemberDataPointerType()) {
+            if (auto *field = ResolveFieldFromPtrToMemberValue(die, uval64)) {
+              template_param_infos.InsertArg(
+                  name, clang::TemplateArgument(
+                            field, ClangUtil::GetQualType(clang_type),
+                            is_default_template_arg));
+              return true;
+            }
+            // Failed to resolve FieldDecl, fall through to integer path
+          }
+
           template_param_infos.InsertArg(
               name, clang::TemplateArgument(
                         ast, ClangUtil::GetQualType(clang_type),
