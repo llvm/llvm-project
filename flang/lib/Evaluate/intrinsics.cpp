@@ -1175,6 +1175,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // Aliases for a few generic procedures for legacy compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
+    {"getarg", "get_command_argument"}, 
     {"getenv", "get_environment_variable"},
     {"fseek64", "fseek"},
     {"fseeko64", "fseek"}, // SUN
@@ -1183,6 +1184,7 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"ftello64", "ftell"}, // SUN
     {"ftelli8", "ftell"}, // Intel
     {"imag", "aimag"},
+    {"iargc", "command_argument_count"}, 
     {"lshift", "shiftl"},
     {"or", "ior"},
     {"rshift", "shifta"},
