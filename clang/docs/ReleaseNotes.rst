@@ -496,6 +496,10 @@ Attribute Changes in Clang
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
 
+- The attributes ``[[clang::opencl_global_device]]`` and ``[[clang::opencl_global_host]]``
+  are now deprecated. Clang emits a ``-Wdeprecated-attributes`` warning when
+  they are used.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
