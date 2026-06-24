@@ -1756,6 +1756,12 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   return Vals;
 }
 
+SmallVector<unsigned>
+getMaxNumWorkGroups(const Function &F) {
+  return getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
+                                std::numeric_limits<uint32_t>::max());
+}
+
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   assert((MD.getNumOperands() % 2 == 0) && "invalid number of operands!");
   for (unsigned I = 0, E = MD.getNumOperands() / 2; I != E; ++I) {

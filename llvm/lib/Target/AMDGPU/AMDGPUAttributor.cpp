@@ -200,8 +200,7 @@ public:
   }
 
   SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getMaxNumWorkGroups(F);
+    return AMDGPU::getMaxNumWorkGroups(F);
   }
 
   /// Get code object version.

@@ -1781,9 +1781,9 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
 void GCNTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  SmallVector<unsigned> MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  SmallVector<unsigned> MaxNumWorkgroups = AMDGPU::getMaxNumWorkGroups(F);
   LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
-  LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
+  LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[2]});
   LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});
   std::pair<unsigned, unsigned> FlatWorkGroupSize =
       ST->getFlatWorkGroupSizes(F);
