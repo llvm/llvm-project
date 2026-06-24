@@ -5534,6 +5534,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
     Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
     break;
