@@ -2262,6 +2262,11 @@ private:
   bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS);
 
+  /// Prove a predicate by reasoning about an AddRec on LHS together with the
+  /// loop's iteration bound. May grow additional rules over time.
+  bool isKnownPredicateViaAddRecBound(CmpPredicate Pred, SCEVUse LHS,
+                                      SCEVUse RHS);
+
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
   /// true.

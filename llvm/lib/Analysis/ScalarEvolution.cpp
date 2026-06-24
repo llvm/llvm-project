@@ -11450,6 +11450,13 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
 
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS) {
+  // Analyze AddRec for LHS before
+  // SimplifyICmpOperands can drop the nuw flag on an AddRec
+  // e.g. ULE(AR<nuw>, X) -> ULT(AR-1, X).
+
+  if (isKnownPredicateViaAddRecBound(Pred, LHS, RHS))
+    return true;
+
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
@@ -13123,6 +13130,39 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
     return false;
   };
   llvm_unreachable("unhandled case");
+}
+
+// Prove the predicate by reasoning about an AddRec on LHS together with the
+// loop's iteration bound on RHS.
+//  LHS=affine {start,+,step}<L>  step >u 0 and nuw, RHS loop-invariant in L,
+//      LHS can be replaced by value at MaxIterationValue
+
+bool ScalarEvolution::isKnownPredicateViaAddRecBound(CmpPredicate Pred,
+                                                     SCEVUse LHS, SCEVUse RHS) {
+  if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_UGT) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+  }
+  if (Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_ULT)
+    return false;
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || !AR->isAffine() || !AR->hasNoUnsignedWrap())
+    return false;
+  const Loop *L = AR->getLoop();
+  if (!isLoopInvariant(RHS, L))
+    return false;
+
+  if (!isKnownPositive(AR->getStepRecurrence(*this)))
+    return false;
+
+  const SCEV *BTC = getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return false;
+
+  const SCEV *MaxVal = AR->evaluateAtIteration(BTC, *this);
+
+  // MaxVal is loop-invariant for L, so this does not recurse.
+  return isKnownViaNonRecursiveReasoning(Pred, MaxVal, RHS);
 }
 
 bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
