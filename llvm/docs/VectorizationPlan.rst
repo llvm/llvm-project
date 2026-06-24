@@ -131,6 +131,33 @@ The design of VPlan follows several high-level guidelines:
    detection and formation involves searching for and optimizing instruction
    patterns.
 
+8. The adoption of VPlan components should be done as a gradual, always-on
+   refactoring to retain quality and integrate continuously.
+
+9. Gradually refactor into multiple VPlan-to-VPlan transforms to reduce
+   complexity:
+
+   a. Simplify initial VPlan construction, by moving complexity to
+      transformations (e.g. adjusting fixed-order recurrences as separate
+      transformation)
+
+   b. Canonicalize then specialize: initial VPlans and early transformations
+      should operate on canonical, target-independent VPlans, to enable general
+      transformations. Target-specific concepts and specialization should be
+      introduced closer to VPlan execution (e.g. introduction of
+      active-lane-mask as VPlan-to-VPlan transformation).
+
+   c. Simplify VPlan execution: reduce the complexity of recipes' *::execute*
+      implementations by breaking up complex recipes and model them more
+      accurately in VPlan. Employ gradual lowering to avoid unnecessary
+      complexity early on and keep canonical VPlans consice by modeling
+      concepts using abstract recipes. Lower or expand such abstract recipes
+      before code-gen to a series of simpler, concrete recipes with simple
+      *::execute* implementations (e.g. using predicated *VPReplicateRecipes* in
+      the early stages of the pipeline, which later get expanded to replicate
+      regions; this simplifes a number of transformations, including sinking, by
+      avoiding having to deal with replicate regions).
+
 Definitions
 ===========
 The low-level design of VPlan comprises of the following classes.
