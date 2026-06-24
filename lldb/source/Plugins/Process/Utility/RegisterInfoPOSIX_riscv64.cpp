@@ -16,6 +16,7 @@
 
 #define GPR_OFFSET(idx) ((idx)*8 + 0)
 #define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoPOSIX_riscv64::GPR))
+#define VCSR_OFFSET(idx) ((idx) * 8 + 0)
 
 #define DECLARE_REGISTER_INFOS_RISCV64_STRUCT
 #include "RegisterInfos_riscv64.h"
