@@ -24,8 +24,9 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 40; // 39 for BoundsSafety;
+const uint16_t VERSION_MINOR = 41; // 39 for BoundsSafety;
                                    // 40 for UnsafeBufferUsageAttr
+                                   // 41 for SwiftAttributes
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;

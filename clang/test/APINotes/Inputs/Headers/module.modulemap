@@ -66,6 +66,10 @@ module SwiftReturnOwnershipForObjC {
   header "SwiftReturnOwnershipForObjC.h"
 }
 
+module SwiftAttributes {
+  header "SwiftAttributes.h"
+}
+
 module UnsafeBufferUsage {
   header "UnsafeBufferUsage.h"
   export *
