@@ -1228,12 +1228,11 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (ctor->isTrivial()) {
       // If new expression did not specify value-initialization, then there
       // is no initialization.
-      if (!cce->requiresZeroInitialization())
+      if (!cce->requiresZeroInitialization() || ctor->getParent()->isEmpty())
         return;
 
-      cgm.errorNYI(cce->getSourceRange(),
-                   "emitNewArrayInitializer: trivial ctor zero-init");
-      return;
+      if (tryMemsetInitialization())
+        return;
     }
 
     // Store the new Cleanup position for irregular Cleanups.
