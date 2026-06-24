@@ -3,8 +3,8 @@
 module acc_routine_bad
 
 contains
+!ERROR: ROUTINE directive without name must appear within the specification part of a subroutine or function definition, or within an interface body for a subroutine or function in an interface block
 !$acc routine
-!WARNING: OpenACC routine directive without name must be placed in a subroutine or function
 subroutine acc_routine20()
 end subroutine
 end module

@@ -53,6 +53,8 @@ public:
   static std::optional<ProgramTree> Build(
       const parser::CompilerDirective &, SemanticsContext &);
   static std::optional<ProgramTree> Build(
+      const parser::OpenACCDeclarativeConstruct &, SemanticsContext &);
+  static std::optional<ProgramTree> Build(
       const parser::OpenACCRoutineConstruct &, SemanticsContext &);
 
   ENUM_CLASS(Kind, // kind of node

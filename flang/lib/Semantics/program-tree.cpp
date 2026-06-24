@@ -233,6 +233,11 @@ std::optional<ProgramTree> ProgramTree::Build(
 }
 
 std::optional<ProgramTree> ProgramTree::Build(
+    const parser::OpenACCDeclarativeConstruct &, SemanticsContext &) {
+  return std::nullopt;
+}
+
+std::optional<ProgramTree> ProgramTree::Build(
     const parser::OpenACCRoutineConstruct &, SemanticsContext &) {
   DIE("ProgramTree::Build() called for OpenACCRoutineConstruct");
 }
