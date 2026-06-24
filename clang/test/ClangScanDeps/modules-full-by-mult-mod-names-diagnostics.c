@@ -26,6 +26,20 @@ module root2 { header "root2.h" }
 // RUN: cat %t/error.txt | FileCheck %s --check-prefixes=ERROR
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
+//--- cdb.cc1.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -cc1 -nostdsysteminc -nobuiltininc -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -I DIR -x c"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.json.template > %t/cdb.cc1.json
+// RUN: not clang-scan-deps -compilation-database %t/cdb.cc1.json -format \
+// RUN:   experimental-full -module-names=modA,root,modB,modC,root2 2> \
+// RUN:   %t/error.cc1.txt > %t/result.cc1.json
+// RUN: cat %t/error.cc1.txt | FileCheck %s --check-prefixes=ERROR
+// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+
 // ERROR: Error while scanning dependencies for modA:
 // ERROR-NEXT: module-include.input:1:1: fatal error: module 'modA' not found
 // ERROR-NEXT: Error while scanning dependencies for modB:
