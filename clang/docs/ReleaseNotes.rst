@@ -524,6 +524,10 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang's template type diffing has been improved to accurately display type 
+  qualifiers. Diagnostics will now explicitly show ``const`` and ``volatile`` 
+  qualifiers when comparing template arguments, preventing confusion in cases 
+  where these qualifiers were previously omitted from the error output. (#GH180046)
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
   function template instantiations (#64087).
 

@@ -138,17 +138,13 @@ void test5() {
   set5(Alpha<Beta<Gamma<void, void>, double>, double>());
 }
 // CHECK-ELIDE-NOTREE: no matching function for call to 'set5'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'Alpha<Beta<Gamma<void, void>, double>, double>' to 'Alpha<Beta<Gamma<Delta<int, int>, int>, int>, int>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'Alpha<[...], double>' to 'Alpha<[...], int>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'set5'
 // CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'Alpha<Beta<Gamma<void, void>, double>, double>' to 'Alpha<Beta<Gamma<Delta<int, int>, int>, int>, int>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'set5'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   Alpha<
-// CHECK-ELIDE-TREE:     Beta<
-// CHECK-ELIDE-TREE:       Gamma<
-// CHECK-ELIDE-TREE:         [void != Delta<int, int>],
-// CHECK-ELIDE-TREE:         [void != int]>
-// CHECK-ELIDE-TREE:       [double != int]>
+// CHECK-ELIDE-TREE:     [...],
 // CHECK-ELIDE-TREE:     [double != int]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set5'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
@@ -164,16 +160,12 @@ void test6() {
   set5(Alpha<Beta<Delta<int, int>, int>, int>());
 }
 // CHECK-ELIDE-NOTREE: no matching function for call to 'set5'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'Alpha<Beta<Delta<int, int>, [...]>, [...]>' to 'Alpha<Beta<Gamma<Delta<int, int>, int>, [...]>, [...]>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'Alpha<...>' to 'Alpha<...>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'set5'
 // CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'Alpha<Beta<Delta<int, int>, int>, int>' to 'Alpha<Beta<Gamma<Delta<int, int>, int>, int>, int>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'set5'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
-// CHECK-ELIDE-TREE:   Alpha<
-// CHECK-ELIDE-TREE:     Beta<
-// CHECK-ELIDE-TREE:       [Delta<int, int> != Gamma<Delta<int, int>, int>],
-// CHECK-ELIDE-TREE:       [...]>
-// CHECK-ELIDE-TREE:     [...]>
+// CHECK-ELIDE-TREE:   Alpha<...>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set5'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   Alpha<
@@ -257,22 +249,9 @@ int f9(S9<int, char, U9<const double>>);
 int k9 = f9(V9<double>());
 
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f9'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<[2 * ...], U9<double>>' to 'S9<[2 * ...], U9<const double>>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<...>' to 'S9<...>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f9'
 // CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'S9<int, char, U9<double>>' to 'S9<int, char, U9<const double>>' for 1st argument
-// CHECK-ELIDE-TREE: no matching function for call to 'f9'
-// CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
-// CHECK-ELIDE-TREE:   S9<
-// CHECK-ELIDE-TREE:     [2 * ...],
-// CHECK-ELIDE-TREE:     U9<
-// CHECK-ELIDE-TREE:       [double != const double]>>
-// CHECK-NOELIDE-TREE: no matching function for call to 'f9'
-// CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
-// CHECK-NOELIDE-TREE:   S9<
-// CHECK-NOELIDE-TREE:     int,
-// CHECK-NOELIDE-TREE:     char,
-// CHECK-NOELIDE-TREE:     U9<
-// CHECK-NOELIDE-TREE:       [double != const double]>>
 
 template<typename ...A> class class_types {};
 void set10(class_types<int, int>) {}
@@ -457,14 +436,12 @@ void test16() {
   set16(vector<const vector<const int>>());
 }
 // CHECK-ELIDE-NOTREE: no matching function for call to 'set16'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<const vector<const int>>' to 'vector<const vector<int>>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<...>' to 'vector<...>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'set16'
 // CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<const vector<const int>>' to 'vector<const vector<int>>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'set16'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
-// CHECK-ELIDE-TREE:   vector<
-// CHECK-ELIDE-TREE:     const vector<
-// CHECK-ELIDE-TREE:       [const != (no qualifiers)] int>>
+// CHECK-ELIDE-TREE:   vector<...>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set16'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   vector<
@@ -550,17 +527,14 @@ template<typename T> using U21 = volatile S21<T>;
 int f21(vector<const U21<int>>);
 int k21 = f21(vector<U21<int>>());
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f21'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U21<...>>' to 'vector<const U21<...>>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<volatile U21<...>>' to 'vector<volatile const U21<...>>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f21'
-// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U21<int>>' to 'vector<const U21<int>>' for 1st argument
-// CHECK-ELIDE-TREE: no matching function for call to 'f21'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:    vector<
-// CHECK-ELIDE-TREE:      [(no qualifiers) != const] U21<...>>
-// CHECK-NOELIDE-TREE: no matching function for call to 'f21'
+// CHECK-ELIDE-TREE:      [volatile != volatile const] U21<...>>
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:    vector<
-// CHECK-NOELIDE-TREE:      [(no qualifiers) != const] U21<
+// CHECK-NOELIDE-TREE:      [volatile != volatile const] U21<
 // CHECK-NOELIDE-TREE:        int>>
 
 // Checks that volatile does not show up in diagnostics.
@@ -569,17 +543,15 @@ template<typename T> using U22 = volatile S22<T>;
 int f22(vector<volatile const U22<int>>);
 int k22 = f22(vector<volatile U22<int>>());
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f22'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U22<...>>' to 'vector<const U22<...>>' for 1st argument
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<volatile U22<...>>' to 'vector<volatile const U22<...>>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f22'
-// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U22<int>>' to 'vector<const U22<int>>' for 1st argument
-// CHECK-ELIDE-TREE: no matching function for call to 'f22'
+// CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<volatile U22<int>>' to 'vector<volatile const U22<int>>' for 1st argument
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:    vector<
-// CHECK-ELIDE-TREE:      [(no qualifiers) != const] U22<...>>
-// CHECK-NOELIDE-TREE: no matching function for call to 'f22'
+// CHECK-ELIDE-TREE:      [volatile != volatile const] U22<...>>
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:    vector<
-// CHECK-NOELIDE-TREE:      [(no qualifiers) != const] U22<
+// CHECK-NOELIDE-TREE:      [volatile != volatile const] U22<
 // CHECK-NOELIDE-TREE:        int>>
 
 // Testing qualifiers and typedefs.
@@ -1038,7 +1010,7 @@ namespace DependentInt {
     using T2 = M<C<N>>;
     T2 p;
     T1 x = p;
-    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<C<N, INT<1>>>' to 'M<C<int, INT<0>>>'
+    // CHECK-ELIDE-NOTREE: no viable conversion from 'M<...>' to 'M<...>'
   }
 }
 
@@ -1109,15 +1081,15 @@ int global, global2;
 constexpr int * ptr = nullptr;
 Wrapper<S<ptr>> W = MakeWrapper<S<&global>>();
 // Don't print an extra '&' for 'ptr'
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<ptr aka nullptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 
 // Handle parens correctly
 Wrapper<S<(&global2)>> W2 = MakeWrapper<S<&global>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2>> W3 = MakeWrapper<S<(&global)>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<(&global2)>> W4 = MakeWrapper<S<(&global)>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global>>' to 'Wrapper<S<&global2>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 }
 
 namespace NullPtr {
@@ -1145,33 +1117,33 @@ Wrapper<S<&global, nullptr>> W1 = MakeWrapper<S<&global, ptr>>();
 Wrapper<S<&global, static_cast<int*>(0)>> W2 = MakeWrapper<S<&global, ptr>>();
 
 Wrapper<S<&global, nullptr>> W3 = MakeWrapper<S<&global, &global>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], nullptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global, ptr>> W4 = MakeWrapper<S<&global, &global>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr aka nullptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 
 Wrapper<S<&global2, ptr>> W5 = MakeWrapper<S<&global, nullptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, nullptr>> W6 = MakeWrapper<S<&global, nullptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, ptr2>> W7 = MakeWrapper<S<&global, nullptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, nullptr>> W8 = MakeWrapper<S<&global, ptr2>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, ptr>> W9 = MakeWrapper<S<&global, ptr2>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, ptr2>> W10 = MakeWrapper<S<&global, ptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, static_cast<int *>(0)>> W11 =
     MakeWrapper<S<&global, nullptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global2, nullptr>> W12 =
     MakeWrapper<S<&global, static_cast<int *>(0)>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 
 Wrapper<S<&global, &global>> W13 = MakeWrapper<S<&global, ptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], nullptr>>' to 'Wrapper<S<[...], &global>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 Wrapper<S<&global, ptr>> W14 = MakeWrapper<S<&global, &global>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr aka nullptr>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<...>' to 'Wrapper<...>'
 }
 
 namespace TemplateTemplateDefault {
@@ -1519,4 +1491,16 @@ void Call() {
 namespace pr30831 {
   template <typename T> struct A { static A<T> const a; };
   template <typename T> A<T> A<T>::a = A<T>();
+}
+
+namespace Reproducer_Test {
+  template <typename T> struct S2 {};
+  template <typename T> struct S3 {};
+
+  S3<S2<int>> func() {
+    // CHECK-ELIDE-NOTREE: expected string to force failure
+    // CHECK-NOELIDE-NOTREE: expected string to force failure
+    // CHECK-ELIDE-TREE: expected string to force failure
+    return S3<const S2<int>>();
+  }
 }

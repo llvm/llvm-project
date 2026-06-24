@@ -24,18 +24,16 @@ void set15(vector<const vector<int> >) {}
 void test15() {
   set15(vector<const vector<const int> >());
 }
-// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<const vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}int>>' to 'vector<const vector<int>>' for 1st argument
-// TREE: {{.*}}candidate function not viable: no known conversion from argument type to parameter type for 1st argument
-// TREE:   vector<
-// TREE:     const vector<
-// TREE:       {{\[}}[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}!= [[CYAN]](no qualifiers)[[RESET]]] int>>
+// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<...>' to 'vector<...>' for 1st argument
+// TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
+// TREE:   vector<...>
 
 void set16(vector<vector<int> >) {}
 void test16() {
   set16(vector<const vector<int> >());
 }
 // CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' to 'vector<vector<...>>' for 1st argument
-// TREE: {{.*}}candidate function not viable: no known conversion from argument type to parameter type for 1st argument
+// TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
 // TREE:     {{\[}}[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}!= [[CYAN]](no qualifiers){{ ?}}[[RESET]]]{{ ?}}vector<...>>
 
@@ -43,7 +41,7 @@ void set17(vector<const vector<int> >) {}
 void test17() {
   set17(vector<vector<int> >());
 }
-// CHECK: candidate function not viable: no known conversion from 'vector<vector<...>>' to 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
+// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<vector<...>>' to 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
 // TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
 // TREE:     {{\[}}[[CYAN]](no qualifiers){{ ?}}[[RESET]]{{ ?}}!= [[CYAN]]const[[RESET]]] vector<...>>
@@ -52,7 +50,7 @@ void set18(vector<volatile vector<int> >) {}
 void test18() {
   set18(vector<const vector<int> >());
 }
-// CHECK: candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' to 'vector<[[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
+// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<[[CYAN]]const{{ ?}}[[RESET]]{{ ?}}vector<...>>' to 'vector<[[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
 // TREE: no matching function for call to 'set18'
 // TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
@@ -62,7 +60,7 @@ void set19(vector<const volatile vector<int> >) {}
 void test19() {
   set19(vector<const vector<int> >());
 }
-// CHECK: candidate function not viable: no known conversion from 'vector<const vector<...>>' to 'vector<const [[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
+// CHECK: {{.*}}candidate function not viable: no known conversion from 'vector<const vector<...>>' to 'vector<const [[CYAN]]volatile{{ ?}}[[RESET]]{{ ?}}vector<...>>' for 1st argument
 // TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // TREE:   vector<
 // TREE:     [const != const [[CYAN]]volatile[[RESET]]] vector<...>>
