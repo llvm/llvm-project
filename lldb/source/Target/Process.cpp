@@ -2148,7 +2148,7 @@ void Process::DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
     if (found_addr % alignment) {
       // We need to check the alignment because the FindInMemory uses a special
       // algorithm to efficiently search mememory but doesn't support alignment.
-      start = llvm::alignTo(start + 1, alignment);
+      start = llvm::alignTo(found_addr + 1, alignment);
       continue;
     }
 
