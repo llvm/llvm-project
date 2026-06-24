@@ -118,6 +118,8 @@ void cxx_rewritten_binary_operator_aggr_expr() {
 // CIR: %[[RESULT:.*]] = cir.call @_ZNK15SpaceshipResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> !rec_Result
 // CIR: cir.store {{.*}} %[[RESULT]], %[[R_ADDR]] : !rec_Result, !cir.ptr<!rec_Result>
 
+// The difference between LLVM and OGCG is due to missing ABI lowering.
+
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.Item, i64 1, align 1
 // LLVM: %[[B_ADDR:.*]] = alloca %struct.Item, i64 1, align 1
 // LLVM: %[[R_ADDR:.*]] = alloca %struct.Result, i64 1, align 4
