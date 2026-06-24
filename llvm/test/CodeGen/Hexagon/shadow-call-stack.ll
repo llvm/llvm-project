@@ -20,8 +20,10 @@
 ; CHECK:      r19 = add(r19,#4)
 ; CHECK:      call bar
 ; CHECK:      memw(r19+#-4) = r31
+; CHECK:      {
 ; CHECK-DAG:  r19 = add(r19,#-4)
 ; CHECK-DAG:  r31 = memw(r19+#-4)
+; CHECK:      }
 ; CHECK:      jumpr r31
 
 ;; Multi-call function - only one SCS prologue/epilogue pair, not one per call.
@@ -30,8 +32,10 @@
 ; CHECK:      call bar
 ; CHECK:      memw(r19+#-4) = r31
 ; CHECK:      call bar
+; CHECK:      {
 ; CHECK-DAG:  r19 = add(r19,#-4)
 ; CHECK-DAG:  r31 = memw(r19+#-4)
+; CHECK:      }
 ; CHECK:      jumpr r31
 
 ;; Conditional call (shrink-wrapping): the early-return path is a leaf and
@@ -41,8 +45,10 @@
 ; CHECK:       r19 = add(r19,#4)
 ; CHECK:       call bar
 ; CHECK:       memw(r19+#-4) = r31
+; CHECK:       {
 ; CHECK-DAG:   r19 = add(r19,#-4)
 ; CHECK-DAG:   r31 = memw(r19+#-4)
+; CHECK:       }
 ; CHECK:       jumpr r31
 
 ;; Tail call - SCS prologue and epilogue are both emitted; the epilogue
@@ -50,9 +56,11 @@
 ; CHECK-LABEL: tailcall:
 ; CHECK:      r19 = add(r19,#4)
 ; CHECK:      memw(r19+#-4) = r31
+; CHECK:      {
 ; CHECK-DAG:  r19 = add(r19,#-4)
 ; CHECK-DAG:  r31 = memw(r19+#-4)
 ; CHECK-DAG:  jump bar
+; CHECK:      }
 
 ;; Noreturn call - SCS prologue is emitted but no SCS epilogue since the
 ;; function never returns.
@@ -72,8 +80,10 @@
 ; CFI:        r19 = add(r19,#4)
 ; CFI:        memw(r19+#-4) = r31
 ; CFI:        .cfi_escape 0x16, 0x13, 0x02, 0x83, 0x7c
+; CFI:        {
 ; CFI-DAG:    r31 = memw(r19+#-4)
 ; CFI-DAG:    r19 = add(r19,#-4)
+; CFI:        }
 ; CFI:        .cfi_restore r19
 ; CFI:        jumpr r31
 
@@ -81,8 +91,10 @@
 ; MUSL-LABEL: vararg_musl:
 ; MUSL:       r19 = add(r19,#4)
 ; MUSL:       memw(r19+#-4) = r31
+; MUSL:       {
 ; MUSL-DAG:   r19 = add(r19,#-4)
 ; MUSL-DAG:   r31 = memw(r19+#-4)
+; MUSL:       }
 ; MUSL:       jumpr r31
 
 declare void @bar()
