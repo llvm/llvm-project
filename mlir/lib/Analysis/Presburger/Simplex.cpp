@@ -64,13 +64,36 @@ SimplexBase::SimplexBase(unsigned nVar, bool mustUseBigM,
                          const llvm::SmallBitVector &isSymbol)
     : SimplexBase(nVar, mustUseBigM) {
   assert(isSymbol.size() == nVar && "invalid bitmask!");
-  // Invariant: nSymbol is the number of symbols that have been marked
-  // already and these occupy the columns
-  // [getNumFixedCols(), getNumFixedCols() + nSymbol).
-  for (unsigned symbolIdx : isSymbol.set_bits()) {
-    var[symbolIdx].isSymbol = true;
-    swapColumns(var[symbolIdx].pos, getNumFixedCols() + nSymbol);
-    ++nSymbol;
+  // Iterate through all the variables. Move symbols to the left and non-symbols
+  // to the right while preserving relative ordering.
+  for (unsigned i = 0; i < nVar; ++i) {
+    if (isSymbol[i]) {
+
+      // Move the column from its current position to the end of
+      // the symbols segment and update the position metadata for each column
+      // unknown (which should all be vars at construction time). The
+      // segment of non-symbol up until the current variable's column are
+      // shifted to the right and the current column is then moved before the
+      // right-shifted segment.
+      tableau.moveColumns(var[i].pos, 1, getNumFixedCols() + nSymbol);
+
+      // Update the column position metadata for the unknowns associated with
+      // the right-shifted columns.
+      for (unsigned col = getNumFixedCols() + nSymbol; col < var[i].pos; ++col)
+        unknownFromColumn(col).pos = col + 1;
+
+      // Perform the equivalent rearrangement on the col-to-unknown
+      // mapping.
+      std::rotate(colUnknown.begin() + getNumFixedCols() + nSymbol,
+                  colUnknown.begin() + var[i].pos,
+                  colUnknown.begin() + var[i].pos + 1);
+
+      // Update the column mapping for the current variable.
+      var[i].pos = getNumFixedCols() + nSymbol;
+      var[i].isSymbol = true;
+
+      ++nSymbol;
+    }
   }
 }
 
