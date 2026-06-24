@@ -5244,24 +5244,9 @@ private:
 
 } // end anonymous namespace
 
-SCEV::NoWrapFlags
-ScalarEvolution::proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
+void ScalarEvolution::inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
   if (!AR->isAffine())
-    return SCEV::FlagAnyWrap;
-
-  SCEV::NoWrapFlags Result = SCEV::FlagAnyWrap;
-
-  if (!AR->hasNoSelfWrap()) {
-    const SCEV *BECount = getConstantMaxBackedgeTakenCount(AR->getLoop());
-    if (const SCEVConstant *BECountMax = dyn_cast<SCEVConstant>(BECount)) {
-      ConstantRange StepCR = getSignedRange(AR->getStepRecurrence(*this));
-      const APInt &BECountAP = BECountMax->getAPInt();
-      unsigned NoOverflowBitWidth =
-        BECountAP.getActiveBits() + StepCR.getMinSignedBits();
-      if (NoOverflowBitWidth <= getTypeSizeInBits(AR->getType()))
-        Result = ScalarEvolution::setFlags(Result, SCEV::FlagNW);
-    }
-  }
+    return;
 
   // Force computation of ranges, which will also perform range-based flag
   // inference.
@@ -5271,7 +5256,17 @@ ScalarEvolution::proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
   if (!AR->hasNoUnsignedWrap())
     (void)getUnsignedRange(AR);
 
-  return Result;
+  if (!AR->hasNoSelfWrap()) {
+    const SCEV *BECount = getConstantMaxBackedgeTakenCount(AR->getLoop());
+    if (const SCEVConstant *BECountMax = dyn_cast<SCEVConstant>(BECount)) {
+      ConstantRange StepCR = getSignedRange(AR->getStepRecurrence(*this));
+      const APInt &BECountAP = BECountMax->getAPInt();
+      unsigned NoOverflowBitWidth =
+        BECountAP.getActiveBits() + StepCR.getMinSignedBits();
+      if (NoOverflowBitWidth <= getTypeSizeInBits(AR->getType()))
+        const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(SCEV::FlagNW);
+    }
+  }
 }
 
 SCEV::NoWrapFlags
@@ -5933,10 +5928,8 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
   insertValueToMap(PN, PHISCEV);
 
-  if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
-    setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
-                   (AR->getNoWrapFlags() | proveNoWrapViaConstantRanges(AR)));
-  }
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
+    inferNoWrapViaConstantRanges(AR);
 
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
@@ -6063,11 +6056,8 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         forgetMemoizedResults({SymbolicName});
         insertValueToMap(PN, PHISCEV);
 
-        if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
-          setNoWrapFlags(
-              const_cast<SCEVAddRecExpr *>(AR),
-              (AR->getNoWrapFlags() | proveNoWrapViaConstantRanges(AR)));
-        }
+        if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
+          inferNoWrapViaConstantRanges(AR);
 
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to
