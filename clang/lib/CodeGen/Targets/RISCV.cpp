@@ -989,7 +989,7 @@ public:
       : TargetCodeGenInfo(
             std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {
     SwiftInfo =
-        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/true);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,

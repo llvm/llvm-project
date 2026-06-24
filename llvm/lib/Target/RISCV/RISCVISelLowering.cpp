@@ -24753,6 +24753,8 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   default:
     reportFatalUsageError("Unsupported calling convention");
   case CallingConv::C:
+  case CallingConv::Swift:
+  case CallingConv::SwiftTail:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
   case CallingConv::GRAAL:

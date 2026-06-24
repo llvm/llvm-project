@@ -377,6 +377,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned XLen = Subtarget.getXLen();
   MVT XLenVT = Subtarget.getXLenVT();
 
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  bool IsEABI = ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E;
+
   if (ArgFlags.isNest()) {
     // Static chain parameter must not be passed in normal argument registers,
     // so we assign t2/t3 for it as done in GCC's
@@ -387,15 +390,34 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     // Normal: t2, Branch control flow protection: t3
     const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
 
-    RISCVABI::ABI ABI = Subtarget.getTargetABI();
-    if (HasCFBranch &&
-        (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E))
+    if (HasCFBranch && IsEABI)
       reportFatalUsageError(
           "Nested functions with control flow protection are not "
           "usable with ILP32E or LP64E ABI.");
     if (MCRegister Reg = State.AllocateReg(StaticChainReg)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
+    }
+  }
+
+  if (ArgFlags.isSwiftSelf() || ArgFlags.isSwiftError() ||
+      ArgFlags.isSwiftAsync()) {
+    if (LocVT != XLenVT)
+      reportFatalUsageError(
+          "swiftself, swifterror, and swiftasync arguments must be "
+          "pointer-sized on RISC-V");
+    if (!IsEABI) {
+      MCRegister Reg = RISCV::NoRegister;
+      if (ArgFlags.isSwiftSelf())
+        Reg = State.AllocateReg(RISCV::X18);
+      else if (ArgFlags.isSwiftError())
+        Reg = State.AllocateReg(RISCV::X19);
+      else if (ArgFlags.isSwiftAsync())
+        Reg = State.AllocateReg(RISCV::X20);
+      if (Reg) {
+        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+        return false;
+      }
     }
   }
 
@@ -414,8 +436,6 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool AllowFPRForF16_F32 = false;
   // UseFPRForF64 if targeting an FLEN>=64 ABI and the argument isn't variadic.
   bool AllowFPRForF64 = false;
-
-  RISCVABI::ABI ABI = Subtarget.getTargetABI();
   switch (ABI) {
   default:
     llvm_unreachable("Unexpected ABI");
