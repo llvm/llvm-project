@@ -88,10 +88,12 @@ public:
 
   void dump(Value &V) {
     JOS.attribute("value_id", llvm::to_string(&V));
-    if (!Visited.insert(&V).second)
-      return;
-
     JOS.attribute("kind", debugString(V.getKind()));
+    if (!Visited.insert(&V).second) {
+      JOS.attribute("[in_cycle]", " ");
+      return;
+    }
+    auto EraseVisited = llvm::make_scope_exit([&] { Visited.erase(&V); });
 
     switch (V.getKind()) {
     case Value::Kind::Integer:
@@ -121,13 +123,16 @@ public:
   }
   void dump(const StorageLocation &L) {
     JOS.attribute("location", llvm::to_string(&L));
-    if (!Visited.insert(&L).second)
-      return;
-
     JOS.attribute("type", L.getType().getAsString());
     if (!L.getType()->isRecordType())
       if (auto *V = Env.getValue(L))
         dump(*V);
+
+    if (!Visited.insert(&L).second) {
+      JOS.attribute("[in_cycle]", " ");
+      return;
+    }
+    auto EraseVisited = llvm::make_scope_exit([&] { Visited.erase(&L); });
 
     if (auto *RLoc = dyn_cast<RecordStorageLocation>(&L)) {
       for (const auto &Child : RLoc->children())
