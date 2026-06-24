@@ -131,6 +131,8 @@ public:
   void Enter(const parser::OpenMPCriticalConstruct &);
   void Enter(const parser::OpenMPAtomicConstruct &);
 
+  void Enter(const parser::OmpLocator &x);
+  void Enter(const parser::OmpClauseList &);
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
 
@@ -388,6 +390,10 @@ private:
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
 
+  // Mapping of directive-name-modifier constituents to the sources of the
+  // IF clauses that referenced them. If there was no modifier, the entire
+  // directive is assumed to be listed.
+  std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into
   // and out of OpenMP constructs.
