@@ -1,0 +1,17 @@
+; Verify that llvm-link populates the empty result module's data layout and
+; target triple from the first archive member, rather than warning about every
+; member mismatching an empty layout. The two members intentionally use
+; different layouts to prove the first one wins and the second still warns.
+
+; RUN: llvm-as %S/Inputs/archive-dl-a.ll -o %t.a1.bc
+; RUN: llvm-as %S/Inputs/archive-dl-b.ll -o %t.a2.bc
+; RUN: llvm-ar cr %t.archive.a %t.a1.bc %t.a2.bc
+; RUN: llvm-link %t.archive.a -S -o - 2>&1 | FileCheck %s
+
+; The second member has a different layout, so it should warn.
+; CHECK: warning: Linking two modules of different data layouts
+; The result should have the first archive member's layout, not the second's.
+; CHECK: target datalayout = "e-m:e-p:64:64-i64:64-n8:16:32:64
+; CHECK: target triple = "spirv64-unknown-unknown"
+; CHECK: define void @archive_dl_a()
+; CHECK: define void @archive_dl_b()

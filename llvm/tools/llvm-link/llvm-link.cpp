@@ -219,6 +219,16 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
                          << "'\n";
       return nullptr;
     }
+
+    // The result module starts with an empty data layout and triple.
+    // Populate them from the first member that has them so the linker
+    // doesn't warn about every subsequent member mismatching an empty
+    // layout.  Genuine mismatches between archive members still warn.
+    if (Result->getDataLayoutStr().empty() && !M->getDataLayoutStr().empty())
+      Result->setDataLayout(M->getDataLayout());
+    if (Result->getTargetTriple().empty() && !M->getTargetTriple().empty())
+      Result->setTargetTriple(M->getTargetTriple());
+
     if (Verbose)
       errs() << "Linking member '" << ChildName << "' of archive library.\n";
     if (L.linkInModule(std::move(M)))
