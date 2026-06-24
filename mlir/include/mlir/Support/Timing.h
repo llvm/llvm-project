@@ -367,6 +367,35 @@ public:
   raw_ostream &os;
 };
 
+
+/// Text output format of timing reports
+class OutputTextStrategy : public OutputStrategy {
+public:
+  OutputTextStrategy(llvm::raw_ostream &os);
+  void printHeader(const TimeRecord &total) override;
+  void printFooter() override;
+  void printTime(const TimeRecord &time, const TimeRecord &total) override;
+  void printListEntry(llvm::StringRef name, const TimeRecord &time,
+                      const TimeRecord &total, bool lastEntry) override;
+  void printTreeEntry(unsigned indent, llvm::StringRef name,
+                      const TimeRecord &time, const TimeRecord &total) override;
+  void printTreeEntryEnd(unsigned indent, bool lastEntry) override;
+};
+
+/// JSON output format of timing reports
+class OutputJsonStrategy : public OutputStrategy {
+public:
+  OutputJsonStrategy(llvm::raw_ostream &os);
+  void printHeader(const TimeRecord &total) override;
+  void printFooter() override;
+  void printTime(const TimeRecord &time, const TimeRecord &total) override;
+  void printListEntry(llvm::StringRef name, const TimeRecord &time,
+                      const TimeRecord &total, bool lastEntry) override;
+  void printTreeEntry(unsigned indent, llvm::StringRef name,
+                      const TimeRecord &time, const TimeRecord &total) override;
+  void printTreeEntryEnd(unsigned indent, bool lastEntry) override;
+};
+
 //===----------------------------------------------------------------------===//
 // DefaultTimingManager
 //===----------------------------------------------------------------------===//
@@ -429,6 +458,9 @@ public:
 
   /// Change the stream where the output will be printed to.
   void setOutput(std::unique_ptr<OutputStrategy> output);
+
+  /// Change the output format.
+  void setOutputFormat(OutputFormat outputFormat);
 
   /// Print and clear the timing results. Only call this when there are no more
   /// references to nested timers around, as printing post-processes and clears
