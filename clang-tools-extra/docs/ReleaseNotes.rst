@@ -189,6 +189,12 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+Improvements to clang-include-cleaner
+-------------------------------------
+
+- ``IWYU pragma: export`` on a forward declaration no longer interferes with
+  surrounding ``begin_exports`` blocks.
+
 Improvements to clang-tidy
 --------------------------
 

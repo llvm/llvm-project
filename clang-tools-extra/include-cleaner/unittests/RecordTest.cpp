@@ -589,6 +589,91 @@ TEST_F(PragmaIncludeTest, IWYUExportBlock) {
   EXPECT_TRUE(Exporters.empty()) << GetNames(Exporters);
 }
 
+TEST_F(PragmaIncludeTest, IWYUExportOnForwardDeclDoesNotEndBlock) {
+  Inputs.Code = R"cpp(
+    #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["normal.h"] = R"cpp(
+    // IWYU pragma: begin_exports
+    #include "export1.h"
+    #include "private1.h"
+    // IWYU pragma: end_exports
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = R"cpp(
+    class foo; // IWYU pragma: export
+  )cpp";
+  createEmptyFiles({"private1.h"});
+
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+
+  EXPECT_THAT(PI.getExporters(*FM.getOptionalFileRef("private1.h"), FM),
+              testing::UnorderedElementsAre(FileNamed("normal.h")));
+  EXPECT_THAT(PI.getExporters(*FM.getOptionalFileRef("export1.h"), FM),
+              testing::UnorderedElementsAre(FileNamed("normal.h")));
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportOnForwardDeclDoesNotBreakEndBlock) {
+  Inputs.Code = R"cpp(
+    #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["normal.h"] = R"cpp(
+    // IWYU pragma: begin_exports
+    #include "export1.h"
+    // IWYU pragma: end_exports
+    #include "ordinary.h"
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = R"cpp(
+    class foo; // IWYU pragma: export
+  )cpp";
+  createEmptyFiles({"ordinary.h"});
+
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+
+  EXPECT_THAT(PI.getExporters(*FM.getOptionalFileRef("export1.h"), FM),
+              testing::UnorderedElementsAre(FileNamed("normal.h")));
+  EXPECT_TRUE(
+      PI.getExporters(*FM.getOptionalFileRef("ordinary.h"), FM).empty());
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportOnForwardDeclDoesNotAffectNextInclude) {
+  Inputs.Code = R"cpp(
+    #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["normal.h"] = R"cpp(
+    #include "export1.h"
+    #include "ordinary.h"
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = R"cpp(
+    class foo; // IWYU pragma: export
+  )cpp";
+  createEmptyFiles({"ordinary.h"});
+
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+
+  EXPECT_TRUE(
+      PI.getExporters(*FM.getOptionalFileRef("ordinary.h"), FM).empty());
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportOnSameFileForwardDeclDoesNotApply) {
+  Inputs.Code = R"cpp(
+    #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["normal.h"] = R"cpp(
+    class foo; // IWYU pragma: export
+    #include "ordinary.h"
+  )cpp";
+  createEmptyFiles({"ordinary.h"});
+
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+
+  EXPECT_TRUE(
+      PI.getExporters(*FM.getOptionalFileRef("ordinary.h"), FM).empty());
+}
+
 TEST_F(PragmaIncludeTest, SelfContained) {
   Inputs.Code = R"cpp(
   #include "guarded.h"

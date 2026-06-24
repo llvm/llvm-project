@@ -240,8 +240,10 @@ public:
   void checkForExport(FileID IncludingFile, int HashLine,
                       std::optional<Header> IncludedHeader,
                       OptionalFileEntryRef IncludedFile) {
+    discardStaleExports(IncludingFile, HashLine);
     if (ExportStack.empty())
       return;
+
     auto &Top = ExportStack.back();
     if (Top.SeenAtFile != IncludingFile)
       return;
@@ -255,9 +257,28 @@ public:
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID() && IncludedFile)
         Out->ShouldKeep.insert(IncludedFile->getUniqueID());
+      if (!Top.Block)
+        ExportStack.pop_back();
     }
-    if (!Top.Block) // Pop immediately for single-line export pragma.
+  }
+
+  void discardStaleExports(FileID IncludingFile, int HashLine) {
+    while (!ExportStack.empty() && !ExportStack.back().Block) {
+      auto &Top = ExportStack.back();
+      if (Top.SeenAtFile == IncludingFile && Top.SeenAtLine == HashLine)
+        return;
       ExportStack.pop_back();
+    }
+  }
+
+  void checkForEndExport(FileID CommentFID, int CommentLine) {
+    discardStaleExports(CommentFID, CommentLine);
+    if (!ExportStack.empty()) {
+      // FIXME: be robust on unmatching cases. We should only pop the stack if
+      // the begin_exports and end_exports is in the same file.
+      assert(ExportStack.back().Block);
+      ExportStack.pop_back();
+    }
   }
 
   void checkForKeep(int HashLine, OptionalFileEntryRef IncludedFile) {
@@ -350,12 +371,7 @@ public:
     } else if (Pragma->starts_with("begin_exports")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
     } else if (Pragma->starts_with("end_exports")) {
-      // FIXME: be robust on unmatching cases. We should only pop the stack if
-      // the begin_exports and end_exports is in the same file.
-      if (!ExportStack.empty()) {
-        assert(ExportStack.back().Block);
-        ExportStack.pop_back();
-      }
+      checkForEndExport(CommentFID, CommentLine);
     }
     return false;
   }
