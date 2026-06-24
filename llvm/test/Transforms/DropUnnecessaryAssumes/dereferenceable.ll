@@ -139,6 +139,51 @@ bbl4:
   br label %bbl2
 }
 
+; @test_dup_ptr_used_elsewhere_extra with even more op bundles
+define ptr @test_dup_ptr_used_elsewhere_extra2(i1 %arg, ptr %arg1, ptr %arg2) {
+; CHECK-LABEL: define ptr @test_dup_ptr_used_elsewhere_extra2(
+; CHECK-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
+; CHECK-NEXT:  [[BBL:.*:]]
+; CHECK-NEXT:    br i1 [[ARG]], label %[[BBL3:.*]], label %[[BBL4:.*]]
+; CHECK:       [[BBL2:.*]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[BBL3]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1), "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1), "dereferenceable"(ptr [[ARG1]], i64 1) ]
+; CHECK-NEXT:    br label %[[BBL2]]
+; CHECK:       [[BBL4]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 1), "dereferenceable"(ptr [[ARG2]], i64 1) ]
+; CHECK-NEXT:    br label %[[BBL2]]
+;
+; DROP-DEREF-LABEL: define ptr @test_dup_ptr_used_elsewhere_extra2(
+; DROP-DEREF-SAME: i1 [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) {
+; DROP-DEREF-NEXT:  [[BBL:.*:]]
+; DROP-DEREF-NEXT:    br i1 [[ARG]], label %[[BBL3:.*]], label %[[BBL4:.*]]
+; DROP-DEREF:       [[BBL2:.*]]:
+; DROP-DEREF-NEXT:    ret ptr null
+; DROP-DEREF:       [[BBL3]]:
+; DROP-DEREF-NEXT:    br label %[[BBL2]]
+; DROP-DEREF:       [[BBL4]]:
+; DROP-DEREF-NEXT:    br label %[[BBL2]]
+;
+bbl:
+  br i1 %arg, label %bbl3, label %bbl4
+
+bbl2:
+  ret ptr null
+
+bbl3:
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %arg1, i64 1), "align"(ptr %arg2, i64 8),
+  "dereferenceable"(ptr %arg2, i64 1), "dereferenceable"(ptr %arg1, i64 1),
+  "dereferenceable"(ptr %arg2, i64 1), "dereferenceable"(ptr %arg1, i64 1) ]
+  br label %bbl2
+
+bbl4:
+  call void @llvm.assume(i1 true) [ "align"(ptr %arg1, i64 4), "align"(ptr %arg2, i64 4),
+  "dereferenceable"(ptr %arg1, i64 1), "dereferenceable"(ptr %arg2, i64 1) ]
+  br label %bbl2
+}
+
+
 ; Make sure newly created assumes are handled properly.
 define i8 @test_dereferenceable_with_align_cache_realloc(ptr %p, ptr %q, i1 %c) {
 ; CHECK-LABEL: define i8 @test_dereferenceable_with_align_cache_realloc(
