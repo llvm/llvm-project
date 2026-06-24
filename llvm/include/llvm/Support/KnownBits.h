@@ -366,8 +366,7 @@ public:
       // Shift amount bitwidth is independent of src bitwidth (and we're
       // just shifting by one so don't have any bounds issues).
       assert(LHS == RHS && "Expected matching knownbits");
-      KnownBits Amt = KnownBits::makeConstant(APInt(8, 1));
-      return KnownBits::shl(LHS, Amt, NUW, NSW, /*ShAmtNonZero=*/true);
+      return KnownBits::shl(LHS, 1, NUW, NSW);
     }
     return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
   }
@@ -452,16 +451,29 @@ public:
   /// Compute known bits for abds(LHS, RHS).
   LLVM_ABI static KnownBits abds(KnownBits LHS, KnownBits RHS);
 
+  /// Compute known bits for shl(LHS, ShiftAmt).
+  /// This is shift by constant variant of shl(LHS, RHS).
+  LLVM_ABI static KnownBits shl(const KnownBits &LHS, unsigned ShiftAmt,
+                                bool NUW = false, bool NSW = false);
+
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
                                 bool NUW = false, bool NSW = false,
                                 bool ShAmtNonZero = false);
 
+  /// Compute known bits for lshr(LHS, ShiftAmt).
+  /// This is shift by constant variant of lshr(LHS, RHS).
+  LLVM_ABI static KnownBits lshr(const KnownBits &LHS, unsigned ShiftAmt);
+
   /// Compute known bits for lshr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
   LLVM_ABI static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
+
+  /// Compute known bits for ashr(LHS, ShiftAmt).
+  /// This is shift by constant variant of ashr(LHS, RHS).
+  LLVM_ABI static KnownBits ashr(const KnownBits &LHS, unsigned ShiftAmt);
 
   /// Compute known bits for ashr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
