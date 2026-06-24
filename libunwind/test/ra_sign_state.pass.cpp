@@ -28,6 +28,9 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
+#if defined(_LIBUNWIND_HAVE_GETAUXVAL) || defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+#include <sys/auxv.h>
+#endif
 
 // Note: This test requires FEAT_PAuth (and is setup to pass on other targets).
 
@@ -38,6 +41,19 @@ static bool checkHasPAuth() {
   if (sysctlbyname("hw.optional.arm.FEAT_PAuth", &has_pauth, &size, NULL, 0))
     return false;
   return has_pauth != 0;
+}
+#elif defined(_LIBUNWIND_HAVE_GETAUXVAL)
+static bool checkHasPAuth() {
+  constexpr unsigned long hwcap_paca = (1UL << 30);
+  unsigned long hwcap = getauxval(AT_HWCAP);
+  return (hwcap & hwcap_paca) != 0;
+}
+#elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
+static bool checkHasPAuth() {
+  constexpr unsigned long hwcap_paca = (1UL << 30);
+  unsigned long hwcap = 0;
+  elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+  return (hwcap & hwcap_paca) != 0;
 }
 #else
 static bool checkHasPAuth() {
