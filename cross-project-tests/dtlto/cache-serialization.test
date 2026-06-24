@@ -17,9 +17,9 @@ REQUIRES: ld.lld
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c t1.c t2.c
-RUN: llvm-ar rcs t1.a t1.o
-RUN: llvm-ar rcs t2.a t2.o
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c f1.c f2.c
+RUN: llvm-ar rcs f1.a f1.o
+RUN: llvm-ar rcs f2.a f2.o
 
 RUN: mkdir cache.dir
 
@@ -33,59 +33,69 @@ DEFINE:     -Wl,--save-temps
 
 # 1. None of the backend compilations hit in the ThinLTO cache.
 #
-# Both t1.o and t2.o require backend compilation, so both should be serialized.
+# Both f1.o and f2.o require backend compilation, so both should be serialized.
 # Each backend compilation should produce:
 #   * a native object
 #   * a thinlto.bc file
 #   * a serialized temporary bitcode file (an extracted archive member)
 RUN: mkdir none
-RUN: %{link} -Wl,--whole-archive t1.a t2.a -o none/t.elf
-RUN: ls none | sort | FileCheck %s --check-prefixes=JSON,ELF,NONE
-JSON: {{^}}t.[[#PID:]].dist-file.json{{$}}
-ELF: {{^}}t.elf.resolution.txt{{$}}
-NONE-NEXT: {{^}}t1.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o{{$}}
-NONE-NEXT: {{^}}t1.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc{{$}}
-NONE-NEXT: {{^}}t1.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o{{$}}
-NONE-NEXT: {{^}}t2.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o{{$}}
-NONE-NEXT: {{^}}t2.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
-NONE-NEXT: {{^}}t2.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o{{$}}
-NONE-NOT: {{.}}
+RUN: %{link} -Wl,--whole-archive f1.a f2.a -o none/out.elf
+RUN: ls none | sort | FileCheck %s --check-prefix=NONE
+NONE-NOT: {{^}}f1
+NONE-NOT: {{^}}f2
+NONE-NOT: {{^}}f3
+NONE:      {{^}}f1.a(f1.o at [[#F1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID:]].native.o{{$}}
+NONE-NEXT: {{^}}f1.a(f1.o at [[#F1_OFFSET]]).1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc{{$}}
+NONE-NEXT: {{^}}f1.a(f1.o at [[#F1_OFFSET]]).1.[[#%X,HEXPID]].o{{$}}
+NONE-NEXT: {{^}}f2.a(f2.o at [[#F2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o{{$}}
+NONE-NEXT: {{^}}f2.a(f2.o at [[#F2_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
+NONE-NEXT: {{^}}f2.a(f2.o at [[#F2_OFFSET]]).2.[[#%X,HEXPID]].o{{$}}
+NONE-NOT: {{^}}f1
+NONE-NOT: {{^}}f2
+NONE-NOT: {{^}}f3
 
 # 2. All of the backend compilations hit in the ThinLTO cache.
 #
-# Both t1.o and t2.o are satisfied from the ThinLTO cache. No backend
+# Both f1.o and f2.o are satisfied from the ThinLTO cache. No backend
 # compilation runs, so there should be no .native.o files, no .thinlto.bc files,
 # and no serialized archive-member bitcode files.
 RUN: mkdir all
-RUN: %{link} -Wl,--whole-archive t1.a t2.a -o all/t.elf
-RUN: ls all | sort | FileCheck %s --check-prefixes=ELF,ALL
-ALL-NOT: {{.}}
+RUN: %{link} -Wl,--whole-archive f1.a f2.a -o all/out.elf
+RUN: ls all | sort | FileCheck %s --check-prefix=ALL
+ALL-NOT: {{^}}f1
+ALL-NOT: {{^}}f2
+ALL-NOT: {{^}}f3
 
 # 3. Some backend compilations hit in the ThinLTO cache and some miss.
 #
-# t1.o and t2.o are cached, but the new t3.o misses the cache and imports from
-# t1.o:
-#   * t3.o must be compiled and serialized
-#   * cached t1.o must be serialized because t3.o imports from it.
-#   * cached t2.o should not be serialized or compiled.
-RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c t3.c
-RUN: llvm-ar rcs t3.a t3.o
+# f1.o and f2.o are cached, but the new f3.o misses the cache and imports
+# from f1.o:
+#   * f3.o must be compiled and serialized
+#   * cached f1.o must be serialized because f3.o imports from it.
+#   * cached f2.o should not be serialized or compiled.
+RUN: %clang --target=x86_64-linux-gnu -O2 -flto=thin -c f3.c
+RUN: llvm-ar rcs f3.a f3.o
 RUN: mkdir some
-RUN: %{link} -Wl,--whole-archive t1.a t2.a t3.a -o some/t.elf
-RUN: ls some | sort | FileCheck %s --check-prefixes=JSON,ELF,SOME
-SOME-NEXT: {{^}}t1.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].o{{$}}
-SOME-NEXT: {{^}}t3.a(t3.o at [[#T3_OFFSET:]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o{{$}}
-SOME-NEXT: {{^}}t3.a(t3.o at [[#T3_OFFSET]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc{{$}}
-SOME-NEXT: {{^}}t3.a(t3.o at [[#T3_OFFSET]]).3.[[#%X,HEXPID]].o{{$}}
-SOME-NOT: {{.}}
+RUN: %{link} -Wl,--whole-archive f1.a f2.a f3.a -o some/out.elf
+RUN: ls some | sort | FileCheck %s --check-prefix=SOME
+SOME-NOT: {{^}}f1
+SOME-NOT: {{^}}f2
+SOME-NOT: {{^}}f3
+SOME:      {{^}}f1.a(f1.o at [[#F1_OFFSET:]]).1.[[#%X,HEXPID:]].o{{$}}
+SOME-NEXT: {{^}}f3.a(f3.o at [[#F3_OFFSET:]]).3.[[#%X,HEXPID]].3.[[#PID:]].native.o{{$}}
+SOME-NEXT: {{^}}f3.a(f3.o at [[#F3_OFFSET]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc{{$}}
+SOME-NEXT: {{^}}f3.a(f3.o at [[#F3_OFFSET]]).3.[[#%X,HEXPID]].o{{$}}
+SOME-NOT: {{^}}f1
+SOME-NOT: {{^}}f2
+SOME-NOT: {{^}}f3
 
-#--- t1.c
-__attribute__((retain)) int t1(int x) { return x; }
+#--- f1.c
+__attribute__((retain)) int f1(int x) { return x; }
 
-#--- t2.c
-extern int t1(int);
-__attribute__((retain)) int t2(int x) { return t1(x) + x; }
+#--- f2.c
+extern int f1(int);
+__attribute__((retain)) int f2(int x) { return f1(x) + x; }
 
-#--- t3.c
-extern int t1(int);
-__attribute__((retain)) int t3(int x) { return t1(x) + x; }
+#--- f3.c
+extern int f1(int);
+__attribute__((retain)) int f3(int x) { return f1(x) + x; }
