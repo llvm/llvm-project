@@ -113,6 +113,8 @@ ABI Changes in This Version
   compilers. On most targets this is not a breaking change because ``fastcc``
   and the platform C calling convention agree for ``void(ptr)``. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- Fixed incorrect struct return when single large vector (256/512-bit) used on
+  x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -305,6 +307,10 @@ Non-comprehensive list of changes in this release
   integers including ``_BitInt`` types. This includes constexpr evaluation
   support.
 
+- Added ``__builtin_elementwise_pext`` and ``__builtin_elementwise_pdep`` for
+  parallel bit extract and parallel bit deposit operations on integers including
+  ``_BitInt`` types. This includes constexpr evaluation support.
+
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
@@ -393,6 +399,17 @@ New Compiler Flags
   a hostname when generates the hashes. Known issues -- does not remap the
   source file pathes within PCH/PCM files.
 
+- New ``-cl`` option ``/experimental:deterministic`` added to match CL's option.
+  This enables warning emission on usage of non-deterministic macros __DATE__,
+  __TIME__ and __TIMESTAMP__ and provides reproducable COFF's timestamp for
+  the output object files.
+
+- New ``-cl`` option ``/d1nodatetime`` added to match CL's option. This option
+  undefines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to allow
+  reproducable builds. These macros can be redefined from the command line if
+  necessary. ``/d1nodatetime-`` can be used to turn this feature off if
+  necessary to override the common build settings.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -409,6 +426,12 @@ Modified Compiler Flags
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+- ``-fprofile-update=atomic`` will now promote counter updates out of loops,
+  similar to the non-atomic case ([#202487](https://github.com/llvm/llvm-project/pull/202487)).
+
+- The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
+  and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
+  "1". The previous functionality remains unchanged.
 
 Removed Compiler Flags
 ----------------------
@@ -643,6 +666,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Added ``-Wstringop-overread`` to warn when ``memcpy``, ``memmove``, ``memcmp``,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+  
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -661,6 +687,7 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed an assertion when comparing a fixed point type with a ``_BitInt`` type. (#GH196948)
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
@@ -700,7 +727,11 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed ``clang::Preprocessor::recomputeCurLexerKind`` to avoid default fallback to ``CurLexerCallback = CLK_CachingLexer;``. This prevents code-completion
+  EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
+  in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
@@ -723,6 +754,11 @@ Bug Fixes to Attribute Support
 - Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
   section type conflict with a declaration whose name is not a simple identifier,
   such as a lambda's call operator. (#GH192264)
+- Fixed a regression where attributed types (such as those carrying ``_Nonnull``/``_Nullable`` attributes)
+  were not deduplicated, because the attributes' arguments were not taken into
+  account when uniquing them. The duplications could substantially increase the
+  size of precompiled headers and modules (PCH/PCM), and the time spent loading
+  them. (#GH200961)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -784,6 +820,7 @@ Bug Fixes to AST Handling
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
 - Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
+- Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -818,9 +855,14 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
+- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
 ------------------------
+
+OpenCL Specific Changes
+-----------------------
+- Added support for OpenCL C 3.1 language version (``-cl-std=CL3.1``).
 
 Target Specific Changes
 -----------------------
@@ -921,6 +963,9 @@ AIX Support
   archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
   between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
   the same library name.
+- Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
+  This directive embeds a copyright or identifying string into the compiled object file. 
+  The string is included in the final executable and loaded into memory at program runtime.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -1015,6 +1060,12 @@ Improvements
     - New checkers and features
     - Improvements
     - Moved checkers
+
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- The checker ``unix.cstring.UninitializedRead`` is now out of alpha.
 
 .. _release-notes-sanitizers:
 

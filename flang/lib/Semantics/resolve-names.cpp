@@ -1738,6 +1738,7 @@ public:
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
+  bool Pre(const parser::OmpReservedIdentifier &);
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);
   void Post(const parser::OmpStylizedDeclaration &);
@@ -1936,6 +1937,17 @@ void OmpVisitor::PushScopeWithSource(
     Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
   PushScope(kind, symbol);
   currScope().AddSourceRange(source);
+}
+
+bool OmpVisitor::Pre(const parser::OmpReservedIdentifier &x) {
+  // Create a unique symbol in the global scope.
+  if (auto *symbol{context().globalScope().FindSymbol(x.v.source)}) {
+    x.v.symbol = symbol;
+  } else {
+    MakePlaceholder(x.v, MiscDetails::Kind::None);
+  }
+  x.v.symbol->set(Symbol::Flag::OmpReserved);
+  return false;
 }
 
 void OmpVisitor::Post(const parser::OmpTypeName &x) {
@@ -2205,7 +2217,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               Walk(std::get<0>(names.t));
               Walk(std::get<1>(names.t));
             },
-            [&](const parser::OmpLocator &locator) {
+            [&](const parser::OmpObject &object) {
               // Manually resolve names in CRITICAL directives. This is because
               // these names do not denote Fortran objects, and the CRITICAL
               // directive causes them to be "auto-declared", i.e. inserted into
@@ -2215,7 +2227,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               if (x.DirId() == llvm::omp::Directive::OMPD_critical) {
                 ResolveCriticalName(arg);
               } else {
-                Walk(locator);
+                Walk(object);
               }
             },
         },
@@ -3416,9 +3428,16 @@ void ScopeHandler::ApplyImplicitRules(
 // or variables in COMMON to appear in specification expressions under
 // IMPLICIT NONE(TYPE) when what would otherwise have been their implicit
 // type is default INTEGER.
+// Also allow a named constant defined by a PARAMETER statement to be
+// explicitly typed by a later type declaration statement in the same
+// specification part under IMPLICIT NONE(TYPE); the constant acquires the
+// type it would have had under implicit typing rules (F2023 8.7), which a
+// subsequent declaration must match (F2023 8.6.11 p2).
 bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
+  const bool isNamedConstant{IsNamedConstant(symbol)};
   if (!inSpecificationPart_ || context().HasError(symbol) ||
-      !(IsDummy(symbol) || FindCommonBlockContaining(symbol)) ||
+      !(isNamedConstant || IsDummy(symbol) ||
+          FindCommonBlockContaining(symbol)) ||
       symbol.Rank() != 0 ||
       !context().languageFeatures().IsEnabled(
           common::LanguageFeature::ForwardRefImplicitNone)) {
@@ -3426,12 +3445,20 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
   }
   const DeclTypeSpec *type{
       GetImplicitType(symbol, false /*ignore IMPLICIT NONE*/)};
-  if (!type || !type->IsNumeric(TypeCategory::Integer)) {
+  if (!type) {
     return false;
   }
-  auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
-  if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
-    return false;
+  if (!isNamedConstant) {
+    // For a forward-referenced dummy argument or COMMON variable, only a
+    // default-kind INTEGER implicit type is meaningful (e.g. as an array
+    // bound in a specification expression).
+    if (!type->IsNumeric(TypeCategory::Integer)) {
+      return false;
+    }
+    auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
+    if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
+      return false;
+    }
   }
   if (!ConvertToObjectEntity(symbol)) {
     return false;
@@ -3621,12 +3648,17 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
       return true;
     }
     if ((IsDummy(symbol) ||
-            (!symbol.has<UseDetails>() && FindCommonBlockContaining(symbol))) &&
+            (!symbol.has<UseDetails>() &&
+                (IsNamedConstant(symbol) ||
+                    FindCommonBlockContaining(symbol)))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
-      // Dummy or COMMON was implicitly typed despite IMPLICIT NONE(TYPE) in
-      // ApplyImplicitRules() due to use in a specification expression,
-      // and no explicit type declaration appeared later.
+      // Dummy, COMMON, or PARAMETER named constant was implicitly typed despite
+      // IMPLICIT NONE(TYPE) in ApplyImplicitRules() due to a forward reference,
+      // and no explicit type declaration appeared later.  A use-associated
+      // named constant is excluded: its Symbol::Flag::Implicit may have been
+      // set legitimately by an IMPLICIT statement in the module that defined
+      // it, where IMPLICIT NONE(TYPE) was not in effect.
       Say(symbol.name(), "No explicit type declared for '%s'"_err_en_US);
       context().SetError(symbol);
       return true;
@@ -5979,7 +6011,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     }
   } else {
     // standard-conforming PARAMETER statement (with parentheses)
-    ApplyImplicitRules(symbol);
+    ApplyImplicitRules(symbol, /*allowForwardReference=*/true);
     Walk(expr);
     if (auto converted{EvaluateNonPointerInitializer(symbol, expr, at)}) {
       details->set_init(std::move(*converted));
@@ -10377,10 +10409,11 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
 
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
-        // Implicitly treat allocatable arrays as managed when feature is
-        // enabled. This is done after all explicit CUDA attributes have been
-        // processed. Only applies when CUDA Fortran is enabled; otherwise
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr()) {
+        // Implicitly treat allocatable/pointer arrays as managed when feature
+        // is enabled. This is done after all explicit CUDA attributes have
+        // been processed. Only applies when CUDA Fortran is enabled; otherwise
         // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
@@ -10391,8 +10424,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
         // Implicitly treat allocatable arrays as pinned when feature is
         // enabled.
-        else if (context().languageFeatures().IsEnabled(
-                     common::LanguageFeature::CudaPinned))
+        else if (IsAllocatable(symbol) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
       }
     }

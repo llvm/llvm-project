@@ -700,12 +700,10 @@ def S_SUB_I32 : SOP2_32 <"s_sub_i32",
 
 let Uses = [SCC] in { // Carry in comes from SCC
 let isCommutable = 1 in {
-def S_ADDC_U32 : SOP2_32 <"s_addc_u32",
-  [(set i32:$sdst, (UniformBinFrag<adde> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_ADDC_U32 : SOP2_32 <"s_addc_u32">;
 } // End isCommutable = 1
 
-def S_SUBB_U32 : SOP2_32 <"s_subb_u32",
-  [(set i32:$sdst, (UniformBinFrag<sube> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]>;
+def S_SUBB_U32 : SOP2_32 <"s_subb_u32">;
 } // End Uses = [SCC]
 
 let isCommutable = 1 in {

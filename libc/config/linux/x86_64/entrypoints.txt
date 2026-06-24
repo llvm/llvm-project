@@ -125,6 +125,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.wcstoimax
     libc.src.inttypes.wcstoumax
 
+    # libgen.h entrypoints
+    libc.src.libgen.basename
+    libc.src.libgen.dirname
+
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
     libc.src.stdbit.stdc_bit_ceil_ui
@@ -806,6 +810,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.atanhf16
     libc.src.math.atanpif16
     libc.src.math.canonicalizef16
+    libc.src.math.cbrtf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cosf16
@@ -1295,6 +1300,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
     libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
