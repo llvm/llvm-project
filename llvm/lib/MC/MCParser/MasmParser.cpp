@@ -1940,6 +1940,15 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // identifier ':'   -> Label.
     Lex();
 
+    // MASM 'identifier ::' declares a global (public) label, equivalent to a
+    // plain label followed by a PUBLIC directive. Consume the second colon and
+    // remember to give the symbol global binding once it is created.
+    bool IsGlobalLabel = false;
+    if (getLexer().is(AsmToken::Colon)) {
+      Lex();
+      IsGlobalLabel = true;
+    }
+
     // Diagnose attempt to use '.' as a label.
     if (IDVal == ".")
       return Error(IDLoc, "invalid use of pseudo-symbol '.' as a label");
@@ -1983,8 +1992,12 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     }
 
     // Emit the label.
-    if (!getTargetParser().isParsingMSInlineAsm())
+    if (!getTargetParser().isParsingMSInlineAsm()) {
       Out.emitLabel(Sym, IDLoc);
+      // 'identifier ::' gives the label global (public) binding.
+      if (IsGlobalLabel)
+        Out.emitSymbolAttribute(Sym, MCSA_Global);
+    }
     return false;
   }
 
@@ -3704,8 +3717,12 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
   if (parseOptionalToken(AsmToken::LCurly)) {
     EndToken = AsmToken::RCurly;
   } else if (parseOptionalAngleBracketOpen()) {
+    // Note: parseOptionalAngleBracketOpen() has already incremented
+    // AngleBracketDepth; the matching parseAngleBracketClose() below decrements
+    // it once, so it must not be incremented again here (otherwise the depth
+    // leaks and a later '>' is misparsed as a closing bracket instead of the
+    // GT operator).
     EndToken = AsmToken::Greater;
-    AngleBracketDepth++;
   } else if (FirstToken.is(AsmToken::Identifier) &&
              FirstToken.getString() == "?") {
     // ? initializer; leave EndToken uninitialized to treat as empty.
