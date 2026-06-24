@@ -14965,7 +14965,7 @@ define amdgpu_kernel void @uniform_fadd_bf16(ptr addrspace(1) %result, ptr addrs
 ; GFX7LESS-NEXT:    s_and_b32 s2, s2, 3
 ; GFX7LESS-NEXT:    s_lshl_b32 s10, s2, 3
 ; GFX7LESS-NEXT:    s_load_dword s3, s[4:5], 0x0
-; GFX7LESS-NEXT:    v_mul_f32_e64 v0, 1.0, s6
+; GFX7LESS-NEXT:    v_max_f32_e64 v0, s6, s6
 ; GFX7LESS-NEXT:    s_lshl_b32 s2, 0xffff, s10
 ; GFX7LESS-NEXT:    v_and_b32_e32 v4, 0xffff0000, v0
 ; GFX7LESS-NEXT:    s_not_b32 s2, s2
@@ -16243,8 +16243,8 @@ define amdgpu_kernel void @uniform_fadd_v2bf16(ptr addrspace(1) %result, ptr add
 ; GFX7LESS-NEXT:    s_and_b32 s4, s6, 0xffff0000
 ; GFX7LESS-NEXT:    s_lshl_b32 s5, s6, 16
 ; GFX7LESS-NEXT:    s_load_dword s6, s[2:3], 0x0
-; GFX7LESS-NEXT:    v_mul_f32_e64 v0, 1.0, s5
-; GFX7LESS-NEXT:    v_mul_f32_e64 v1, 1.0, s4
+; GFX7LESS-NEXT:    v_max_f32_e64 v0, s5, s5
+; GFX7LESS-NEXT:    v_max_f32_e64 v1, s4, s4
 ; GFX7LESS-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_and_b32 s4, s6, 0xffff0000
@@ -16257,8 +16257,8 @@ define amdgpu_kernel void @uniform_fadd_v2bf16(ptr addrspace(1) %result, ptr add
 ; GFX7LESS-NEXT:    s_mov_b32 s5, s3
 ; GFX7LESS-NEXT:  .LBB21_1: ; %atomicrmw.start
 ; GFX7LESS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX7LESS-NEXT:    v_mul_f32_e32 v3, 1.0, v3
-; GFX7LESS-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX7LESS-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX7LESS-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX7LESS-NEXT:    s_waitcnt expcnt(0)
 ; GFX7LESS-NEXT:    v_and_b32_e32 v4, 0xffff0000, v3
 ; GFX7LESS-NEXT:    v_and_b32_e32 v5, 0xffff0000, v2
@@ -16282,9 +16282,9 @@ define amdgpu_kernel void @uniform_fadd_v2bf16(ptr addrspace(1) %result, ptr add
 ; GFX7LESS-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7LESS-NEXT:    s_mov_b32 s2, -1
-; GFX7LESS-NEXT:    v_mul_f32_e32 v0, 1.0, v2
+; GFX7LESS-NEXT:    v_max_f32_e32 v0, v2, v2
 ; GFX7LESS-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX7LESS-NEXT:    v_mul_f32_e32 v1, 1.0, v3
+; GFX7LESS-NEXT:    v_max_f32_e32 v1, v3, v3
 ; GFX7LESS-NEXT:    v_alignbit_b32 v0, v0, v1, 16
 ; GFX7LESS-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7LESS-NEXT:    s_endpgm

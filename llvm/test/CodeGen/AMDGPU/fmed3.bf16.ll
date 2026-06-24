@@ -10,7 +10,7 @@ define bfloat @v_test_fmed3_r_i_i_bf16_minimumnum_maximumnum(bfloat %a) #1 {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_max_f32_e32 v0, v0, v0
 ; SI-NEXT:    v_max_f32_e32 v0, 2.0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
 ; SI-NEXT:    v_min_f32_e32 v0, 4.0, v0
@@ -96,8 +96,8 @@ define <2 x bfloat> @v_test_fmed3_r_i_i_v2bf16_minimumnum_maximumnum(<2 x bfloat
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_mul_f32_e32 v1, 1.0, v1
-; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_max_f32_e32 v1, v1, v1
+; SI-NEXT:    v_max_f32_e32 v0, v0, v0
 ; SI-NEXT:    v_max_f32_e32 v1, 2.0, v1
 ; SI-NEXT:    v_max_f32_e32 v0, 2.0, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
