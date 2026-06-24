@@ -48,31 +48,26 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
     return x + FPBits::quiet_nan().get_val();
   }
 
-  // |x| = {0}
-  if (LIBC_UNLIKELY(x_abs == 0)) {
-    return x;
-  }
-
   // Through Exhaustive testing -
   // The last value where tan(x) ~ x is 0x3db8
   if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
-    int rounding = fputil::quick_get_round();
-    // separate case handles it with magnitude of 2^-11
-    if ((xbits.is_pos() && rounding == FE_UPWARD) ||
-        (xbits.is_neg() && rounding == FE_DOWNWARD))
-      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
-    return x;
+    // |x| = {0}
+    if (LIBC_UNLIKELY(x_abs == 0)) {
+      return x;
+    }
+    return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
   }
 
   double xd = static_cast<double>(xf);
-  uint32_t x_abs_d = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
+  uint32_t x_abs_f = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
   double sin_k, cos_k, sin_y, cosm1_y;
 
   // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are
   // available
   // Tracking issue :
   // https://github.com/llvm/llvm-project/issues/202079
-  sincosf_utils_internal::sincosf_eval(xd, x_abs_d, sin_k, cos_k, sin_y, cosm1_y);
+  sincosf_utils_internal::sincosf_eval(xd, x_abs_f, sin_k, cos_k, sin_y,
+                                       cosm1_y);
 
   return fputil::cast<bfloat16>(
       fputil::multiply_add(sin_y, cos_k,
