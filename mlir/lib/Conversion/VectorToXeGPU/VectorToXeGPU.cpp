@@ -380,22 +380,34 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
     baseOffset =
         arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
   }
-  Value indices = gatScatOp.getIndices();
-  VectorType vecType = cast<VectorType>(indices.getType());
 
-  Value strideVector =
-      vector::BroadcastOp::create(rewriter, loc, vecType, strides.back())
-          .getResult();
-  Value stridedIndices =
-      arith::MulIOp::create(rewriter, loc, strideVector, indices).getResult();
+  // The op's index vectors may use a narrower element type (e.g. i32), but
+  // strides and the base vector are always index — cast everything to the
+  // index-typed vector before combining.
+  OperandRange indexVecs = gatScatOp.getIndices();
+  VectorType vecType = gatScatOp.getIndexVectorType();
+  auto indexVecType =
+      VectorType::get(vecType.getShape(), rewriter.getIndexType());
+  Value combinedIndices = arith::ConstantOp::create(
+      rewriter, loc,
+      DenseElementsAttr::get(indexVecType, rewriter.getIndexAttr(0)));
+
+  auto tailStrides = ArrayRef<Value>(strides).take_back(indexVecs.size());
+  for (auto [idx, stride] : llvm::zip_equal(indexVecs, tailStrides)) {
+    Value castIdx = idx;
+    if (vecType != indexVecType)
+      castIdx = arith::IndexCastOp::create(rewriter, loc, indexVecType, idx);
+    Value strideVec =
+        vector::BroadcastOp::create(rewriter, loc, indexVecType, stride);
+    Value stridedIdx = arith::MulIOp::create(rewriter, loc, strideVec, castIdx);
+    combinedIndices =
+        arith::AddIOp::create(rewriter, loc, combinedIndices, stridedIdx);
+  }
 
   Value baseVector =
-      vector::BroadcastOp::create(
-          rewriter, loc,
-          VectorType::get(vecType.getShape(), rewriter.getIndexType()),
-          baseOffset)
+      vector::BroadcastOp::create(rewriter, loc, indexVecType, baseOffset)
           .getResult();
-  return arith::AddIOp::create(rewriter, loc, baseVector, stridedIndices)
+  return arith::AddIOp::create(rewriter, loc, baseVector, combinedIndices)
       .getResult();
 }
 

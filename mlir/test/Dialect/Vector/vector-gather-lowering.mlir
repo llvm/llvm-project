@@ -54,13 +54,11 @@ func.func @gather_memref_1d_i32_index(%base: memref<?xf32>, %v: vector<2xi32>, %
 // CHECK-DAG:     %[[C0:.+]]    = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.+]]    = arith.constant 1 : index
 // CHECK-DAG:     [[PTV0:%.+]]  = vector.extract [[PASS]][0] : vector<3xf32> from vector<2x3xf32>
-// CHECK:         %[[LIN:.+]]   = affine.linearize_index [%[[C0]], %[[C1]]] by
 // CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0, 0] : i1 from vector<2x3xi1>
 // CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXVEC]][0, 0] : index from vector<2x3xindex>
-// CHECK:         %[[FLAT0:.+]] = arith.addi %[[LIN]], [[IDX0]] : index
-// CHECK:         %[[DL0:.+]]:2 = affine.delinearize_index %[[FLAT0]] into
+// CHECK:         %[[OFF0:.+]]  = arith.addi [[IDX0]], %[[C1]] : index
 // CHECK:         [[RES0:%.+]]  = scf.if [[M0]] -> (vector<3xf32>)
-// CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[DL0]]#0, %[[DL0]]#1] : memref<?x?xf32>, vector<1xf32>
+// CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[C0]], %[[OFF0]]] : memref<?x?xf32>, vector<1xf32>
 // CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : f32 from vector<1xf32>
 // CHECK-NEXT:      [[INS0:%.+]]  = vector.insert [[ELEM0]], [[PTV0]] [0] : f32 into vector<3xf32>
 // CHECK-NEXT:      scf.yield [[INS0]] : vector<3xf32>
@@ -231,12 +229,9 @@ func.func @gather_tensor_1d_none_set(%base: tensor<?xf32>, %v: vector<2xindex>, 
   return %0 : vector<2xf32>
 }
 
-// Check that vector.gather of a strided memref is replaced with a
-// vector.gather with indices encoding the original strides. Note that multiple
-// patterns are run for this example, e.g.:
-  //  1. "remove stride from gather source"
-  //  2. "flatten gather"
-// However, the main goal is to the test Pattern 1 above.
+// Check that vector.gather of a rank-reducing strided memref.subview is
+// replaced with a vector.gather on the source memref. The source gather gets
+// an explicit zero index vector for the rank-reduced trailing dimension.
 #map = affine_map<()[s0] -> (s0 * 4096)>
 func.func @strided_gather(%base : memref<100x3xf32>,
                           %idxs : vector<4xindex>,
@@ -256,31 +251,235 @@ func.func @strided_gather(%base : memref<100x3xf32>,
 // CHECK-SAME:                         %[[IDXS:.*]]: vector<4xindex>,
 // CHECK-SAME:                         %[[VAL_4:.*]]: index,
 // CHECK-SAME:                         %[[VAL_5:.*]]: index) -> vector<4xf32> {
-// CHECK:           %[[TRUE:.*]] = arith.constant true
-// CHECK:           %[[CST_3:.*]] = arith.constant dense<3> : vector<4xindex>
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[TRUE:.*]] = arith.constant true
 
-// CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[base]] {{\[\[}}0, 1]] : memref<100x3xf32> into memref<300xf32>
-// CHECK:           %[[NEW_IDXS:.*]] = arith.muli %[[IDXS]], %[[CST_3]] : vector<4xindex>
-
-// CHECK:           %[[IDX_0:.*]] = vector.extract %[[NEW_IDXS]][0] : index from vector<4xindex>
+// CHECK-NOT:       arith.muli
+// CHECK:           %[[IDX_0:.*]] = vector.extract %[[IDXS]][0] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_0:.*]] = vector.load %[[COLLAPSED]][%[[IDX_0]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_0:.*]] = vector.load %[[base]][%[[IDX_0]], %[[C0]]] {alignment = 8 : i64} : memref<100x3xf32>, vector<1xf32>
 // CHECK:             %[[V_0:.*]] = vector.extract %[[M_0]][0] : f32 from vector<1xf32>
 
-// CHECK:           %[[IDX_1:.*]] = vector.extract %[[NEW_IDXS]][1] : index from vector<4xindex>
+// CHECK:           %[[IDX_1:.*]] = vector.extract %[[IDXS]][1] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_1:.*]] = vector.load %[[COLLAPSED]][%[[IDX_1]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_1:.*]] = vector.load %[[base]][%[[IDX_1]], %[[C0]]] {alignment = 8 : i64} : memref<100x3xf32>, vector<1xf32>
 // CHECK:             %[[V_1:.*]] = vector.extract %[[M_1]][0] : f32 from vector<1xf32>
 
-// CHECK:           %[[IDX_2:.*]] = vector.extract %[[NEW_IDXS]][2] : index from vector<4xindex>
+// CHECK:           %[[IDX_2:.*]] = vector.extract %[[IDXS]][2] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_2:.*]] = vector.load %[[COLLAPSED]][%[[IDX_2]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_2:.*]] = vector.load %[[base]][%[[IDX_2]], %[[C0]]] {alignment = 8 : i64} : memref<100x3xf32>, vector<1xf32>
 // CHECK:             %[[V_2:.*]] = vector.extract %[[M_2]][0] : f32 from vector<1xf32>
 
-// CHECK:           %[[IDX_3:.*]] = vector.extract %[[NEW_IDXS]][3] : index from vector<4xindex>
+// CHECK:           %[[IDX_3:.*]] = vector.extract %[[IDXS]][3] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_3:.*]] = vector.load %[[COLLAPSED]][%[[IDX_3]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_3:.*]] = vector.load %[[base]][%[[IDX_3]], %[[C0]]] {alignment = 8 : i64} : memref<100x3xf32>, vector<1xf32>
 // CHECK:             %[[V_3:.*]] = vector.extract %[[M_3]][0] : f32 from vector<1xf32>
+
+// Same as @strided_gather but with non-zero subview offsets. Both subview
+// offsets must end up in the lowered loads: the outer one composed into the
+// first index, the inner one into the second.
+func.func @strided_gather_nonzero_subview_offsets(
+    %base: memref<100x3xf32>, %idxs: vector<4xindex>, %row: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %subview = memref.subview %base[%row, %c2][95, 1][1, 1]
+      : memref<100x3xf32> to memref<95xf32, strided<[3], offset: ?>>
+  %mask = arith.constant dense<true> : vector<4xi1>
+  %pass = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %res = vector.gather %subview[%c0] [%idxs], %mask, %pass
+      : memref<95xf32, strided<[3], offset: ?>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+// CHECK-LABEL: func.func @strided_gather_nonzero_subview_offsets(
+// CHECK-SAME:    %[[BASE:.*]]: memref<100x3xf32>,
+// CHECK-SAME:    %[[IDXS:.*]]: vector<4xindex>,
+// CHECK-SAME:    %[[ROW:.*]]: index)
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[I0:.*]] = vector.extract %[[IDXS]][0]
+// CHECK:         %[[O0:.*]] = arith.addi %[[ROW]], %[[I0]]
+// CHECK:         vector.load %[[BASE]][%[[O0]], %[[C2]]]
+// CHECK:         %[[I1:.*]] = vector.extract %[[IDXS]][1]
+// CHECK:         %[[O1:.*]] = arith.addi %[[ROW]], %[[I1]]
+// CHECK:         vector.load %[[BASE]][%[[O1]], %[[C2]]]
+
+// Dynamic outer subview stride: the rewrite splats the dynamic stride across
+// the index vector and multiplies the original indices by it before lowering
+// to the 2-D gather, so no `subview` survives in the output.
+func.func @strided_gather_dynamic_subview_stride(
+    %base: memref<100x3xf32>, %idxs: vector<4xindex>, %s: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %subview = memref.subview %base[0, 0][100, 1][%s, 1]
+      : memref<100x3xf32> to memref<100xf32, strided<[?]>>
+  %mask = arith.constant dense<true> : vector<4xi1>
+  %pass = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %res = vector.gather %subview[%c0] [%idxs], %mask, %pass
+      : memref<100xf32, strided<[?]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+// CHECK-LABEL: func.func @strided_gather_dynamic_subview_stride(
+// CHECK-SAME:    %[[BASE:.*]]: memref<100x3xf32>,
+// CHECK-SAME:    %[[IDXS:.*]]: vector<4xindex>,
+// CHECK-SAME:    %[[S:.*]]: index)
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[BCAST:.*]] = vector.broadcast %[[S]] : index to vector<4xindex>
+// CHECK:         %[[STRIDED:.*]] = arith.muli %[[IDXS]], %[[BCAST]] : vector<4xindex>
+// CHECK-NOT:     memref.subview
+// CHECK:         %[[I0:.*]] = vector.extract %[[STRIDED]][0]
+// CHECK:         vector.load %[[BASE]][%[[I0]], %[[C0]]]
+// CHECK:         %[[I1:.*]] = vector.extract %[[STRIDED]][1]
+// CHECK:         vector.load %[[BASE]][%[[I1]], %[[C0]]]
+
+// Static non-unit outer subview stride: same shape as the dynamic case, but
+// the multiply is by a constant splat.
+func.func @strided_gather_static_outer_stride(
+    %base: memref<100x3xf32>, %idxs: vector<4xindex>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %subview = memref.subview %base[0, 0][50, 1][2, 1]
+      : memref<100x3xf32> to memref<50xf32, strided<[6]>>
+  %mask = arith.constant dense<true> : vector<4xi1>
+  %pass = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %res = vector.gather %subview[%c0] [%idxs], %mask, %pass
+      : memref<50xf32, strided<[6]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+// CHECK-LABEL: func.func @strided_gather_static_outer_stride(
+// CHECK-SAME:    %[[BASE:.*]]: memref<100x3xf32>,
+// CHECK-SAME:    %[[IDXS:.*]]: vector<4xindex>)
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[CST_2:.*]] = arith.constant dense<2> : vector<4xindex>
+// CHECK:         %[[STRIDED:.*]] = arith.muli %[[IDXS]], %[[CST_2]] : vector<4xindex>
+// CHECK-NOT:     memref.subview
+// CHECK:         %[[I0:.*]] = vector.extract %[[STRIDED]][0]
+// CHECK:         vector.load %[[BASE]][%[[I0]], %[[C0]]]
+// CHECK:         %[[I1:.*]] = vector.extract %[[STRIDED]][1]
+// CHECK:         vector.load %[[BASE]][%[[I1]], %[[C0]]]
+
+// Regression: with a non-unit outer stride AND a non-zero gather offset, the
+// gather's offset is in subview-element units, so it must be scaled by the
+// outer stride before adding to the subview's outer offset. Previously, this
+// pattern silently dropped the scaling.
+func.func @strided_gather_static_stride_nonzero_offset(
+    %base: memref<100x3xf32>, %idxs: vector<4xindex>) -> vector<4xf32> {
+  %c5 = arith.constant 5 : index
+  %subview = memref.subview %base[0, 0][50, 1][2, 1]
+      : memref<100x3xf32> to memref<50xf32, strided<[6]>>
+  %mask = arith.constant dense<true> : vector<4xi1>
+  %pass = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %res = vector.gather %subview[%c5] [%idxs], %mask, %pass
+      : memref<50xf32, strided<[6]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+// CHECK-LABEL: func.func @strided_gather_static_stride_nonzero_offset(
+// CHECK-SAME:    %[[BASE:.*]]: memref<100x3xf32>,
+// CHECK-SAME:    %[[IDXS:.*]]: vector<4xindex>)
+// `5 * 2 = 10` source rows skipped at the gather offset, plus the outer
+// subview offset of 0.
+// CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK:         %[[I0:.*]] = vector.extract %{{.*}}[0]
+// CHECK:         %[[O0:.*]] = arith.addi %[[I0]], %[[C10]]
+// CHECK:         vector.load %[[BASE]][%[[O0]], %{{.*}}]
+
+// Verify that the subview-to-source rewrite handles N-D source memrefs. Both
+// kept source dimensions are multiplied by their subview strides, while the two
+// rank-reduced dimensions are represented as zero index vectors and therefore
+// lower to their composed scalar offsets.
+func.func @strided_gather_nd_rank_reduced(
+    %base: memref<8x9x10x11xf32>,
+    %idx0: vector<2xindex>, %idx1: vector<2xindex>,
+    %off0: index, %off1: index, %off2: index, %off3: index,
+    %gather_off0: index, %gather_off1: index,
+    %stride0: index, %stride2: index) -> vector<2xf32> {
+  %subview = memref.subview
+      %base[%off0, %off1, %off2, %off3][4, 1, 5, 1][%stride0, 1, %stride2, 1]
+      : memref<8x9x10x11xf32> to memref<4x5xf32, strided<[?, ?], offset: ?>>
+  %mask = arith.constant dense<true> : vector<2xi1>
+  %pass = arith.constant dense<0.000000e+00> : vector<2xf32>
+  %res = vector.gather %subview[%gather_off0, %gather_off1] [%idx0, %idx1],
+      %mask, %pass
+      : memref<4x5xf32, strided<[?, ?], offset: ?>>, vector<2xindex>,
+        vector<2xi1>, vector<2xf32> into vector<2xf32>
+  return %res : vector<2xf32>
+}
+// CHECK-LABEL: func.func @strided_gather_nd_rank_reduced(
+// CHECK-SAME:    %[[BASE:[^:]+]]: memref<8x9x10x11xf32>,
+// CHECK-SAME:    %[[IDX0:[^:]+]]: vector<2xindex>, %[[IDX1:[^:]+]]: vector<2xindex>,
+// CHECK-SAME:    %[[OFF0:[^:]+]]: index, %[[OFF1:[^:]+]]: index, %[[OFF2:[^:]+]]: index, %[[OFF3:[^:]+]]: index,
+// CHECK-SAME:    %[[GATHER_OFF0:[^:]+]]: index, %[[GATHER_OFF1:[^:]+]]: index,
+// CHECK-SAME:    %[[STRIDE0:[^:]+]]: index, %[[STRIDE2:[^:]+]]: index)
+// CHECK:         %[[SCALED_OFF0:.*]] = arith.muli %[[GATHER_OFF0]], %[[STRIDE0]] : index
+// CHECK:         %[[BASE_OFF0:.*]] = arith.addi %[[OFF0]], %[[SCALED_OFF0]] : index
+// CHECK:         %[[BCAST0:.*]] = vector.broadcast %[[STRIDE0]] : index to vector<2xindex>
+// CHECK:         %[[STRIDED_IDX0:.*]] = arith.muli %[[IDX0]], %[[BCAST0]] : vector<2xindex>
+// CHECK:         %[[SCALED_OFF2:.*]] = arith.muli %[[GATHER_OFF1]], %[[STRIDE2]] : index
+// CHECK:         %[[BASE_OFF2:.*]] = arith.addi %[[OFF2]], %[[SCALED_OFF2]] : index
+// CHECK:         %[[BCAST2:.*]] = vector.broadcast %[[STRIDE2]] : index to vector<2xindex>
+// CHECK:         %[[STRIDED_IDX1:.*]] = arith.muli %[[IDX1]], %[[BCAST2]] : vector<2xindex>
+// CHECK:         %[[I0_0:.*]] = vector.extract %[[STRIDED_IDX0]][0]
+// CHECK:         %[[LOAD_OFF0_0:.*]] = arith.addi %[[BASE_OFF0]], %[[I0_0]]
+// CHECK:         %[[I1_0:.*]] = vector.extract %[[STRIDED_IDX1]][0]
+// CHECK:         %[[LOAD_OFF2_0:.*]] = arith.addi %[[BASE_OFF2]], %[[I1_0]]
+// CHECK:         vector.load %[[BASE]][%[[LOAD_OFF0_0]], %[[OFF1]], %[[LOAD_OFF2_0]], %[[OFF3]]]
+
+func.func @strided_gather_nd_rank_reduced_scalable(
+    %base: memref<8x9x10x11xf32>,
+    %idx0: vector<[2]xindex>, %idx1: vector<[2]xindex>,
+    %off0: index, %off1: index, %off2: index, %off3: index,
+    %gather_off0: index, %gather_off1: index,
+    %stride0: index, %stride2: index,
+    %mask: vector<[2]xi1>, %pass: vector<[2]xf32>) -> vector<[2]xf32> {
+  %subview = memref.subview
+      %base[%off0, %off1, %off2, %off3][4, 1, 5, 1][%stride0, 1, %stride2, 1]
+      : memref<8x9x10x11xf32> to memref<4x5xf32, strided<[?, ?], offset: ?>>
+  %res = vector.gather %subview[%gather_off0, %gather_off1] [%idx0, %idx1],
+      %mask, %pass
+      : memref<4x5xf32, strided<[?, ?], offset: ?>>, vector<[2]xindex>,
+        vector<[2]xi1>, vector<[2]xf32> into vector<[2]xf32>
+  return %res : vector<[2]xf32>
+}
+// CHECK-LABEL: func.func @strided_gather_nd_rank_reduced_scalable(
+// CHECK-SAME:    %[[BASE:[^:]+]]: memref<8x9x10x11xf32>,
+// CHECK-SAME:    %[[IDX0:[^:]+]]: vector<[2]xindex>, %[[IDX1:[^:]+]]: vector<[2]xindex>,
+// CHECK-SAME:    %[[OFF0:[^:]+]]: index, %[[OFF1:[^:]+]]: index, %[[OFF2:[^:]+]]: index, %[[OFF3:[^:]+]]: index,
+// CHECK-SAME:    %[[GATHER_OFF0:[^:]+]]: index, %[[GATHER_OFF1:[^:]+]]: index,
+// CHECK-SAME:    %[[STRIDE0:[^:]+]]: index, %[[STRIDE2:[^:]+]]: index,
+// CHECK-SAME:    %[[MASK:[^:]+]]: vector<[2]xi1>, %[[PASS:[^:]+]]: vector<[2]xf32>)
+// CHECK-NOT:     memref.collapse_shape
+// CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<[2]xindex>
+// CHECK:         %[[SCALED_OFF0:.*]] = arith.muli %[[GATHER_OFF0]], %[[STRIDE0]] : index
+// CHECK:         %[[BASE_OFF0:.*]] = arith.addi %[[OFF0]], %[[SCALED_OFF0]] : index
+// CHECK:         %[[BCAST0:.*]] = vector.broadcast %[[STRIDE0]] : index to vector<[2]xindex>
+// CHECK:         %[[STRIDED_IDX0:.*]] = arith.muli %[[IDX0]], %[[BCAST0]] : vector<[2]xindex>
+// CHECK:         %[[SCALED_OFF2:.*]] = arith.muli %[[GATHER_OFF1]], %[[STRIDE2]] : index
+// CHECK:         %[[BASE_OFF2:.*]] = arith.addi %[[OFF2]], %[[SCALED_OFF2]] : index
+// CHECK:         %[[BCAST2:.*]] = vector.broadcast %[[STRIDE2]] : index to vector<[2]xindex>
+// CHECK:         %[[STRIDED_IDX1:.*]] = arith.muli %[[IDX1]], %[[BCAST2]] : vector<[2]xindex>
+// CHECK:         %[[GATHER:.*]] = vector.gather %[[BASE]][%[[BASE_OFF0]], %[[OFF1]], %[[BASE_OFF2]], %[[OFF3]]] [%[[STRIDED_IDX0]], %[[ZERO]], %[[STRIDED_IDX1]], %[[ZERO]]], %[[MASK]], %[[PASS]]
+// CHECK-SAME:      : memref<8x9x10x11xf32>, vector<[2]xindex>, vector<[2]xi1>, vector<[2]xf32> into vector<[2]xf32>
+// CHECK:         return %[[GATHER]] : vector<[2]xf32>
+
+// Verify that multi-index gather on a 2D memref correctly offsets each
+// dimension independently.
+// CHECK-LABEL: @gather_memref_2d_multi_index
+// CHECK-SAME:    (%[[BASE:.+]]: memref<?x?xf32>,
+// CHECK-SAME:     %[[IDX0:.+]]: vector<2xindex>, %[[IDX1:.+]]: vector<2xindex>,
+// CHECK-SAME:     %[[MASK:.+]]: vector<2xi1>, %[[PASS:.+]]: vector<2xf32>)
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK:         %[[M0:.+]] = vector.extract %[[MASK]][0]
+// CHECK:         %[[I0_0:.+]] = vector.extract %[[IDX0]][0]
+// CHECK:         %[[I1_0:.+]] = vector.extract %[[IDX1]][0]
+// CHECK:         %[[OFF1_0:.+]] = arith.addi %[[I1_0]], %[[C1]]
+// CHECK:         scf.if %[[M0]]
+// CHECK:           vector.load %[[BASE]][%[[I0_0]], %[[OFF1_0]]]
+func.func @gather_memref_2d_multi_index(
+    %base: memref<?x?xf32>,
+    %idx0: vector<2xindex>, %idx1: vector<2xindex>,
+    %mask: vector<2xi1>, %pass_thru: vector<2xf32>) -> vector<2xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = vector.gather %base[%c0, %c1][%idx0, %idx1], %mask, %pass_thru
+    : memref<?x?xf32>, vector<2xindex>, vector<2xi1>, vector<2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
 
 // CHECK-LABEL: @scalable_gather_1d
 // CHECK-NOT: extract
@@ -292,36 +491,33 @@ func.func @scalable_gather_1d(%base: tensor<?xf32>, %v: vector<[2]xindex>, %mask
   return %0 : vector<[2]xf32>
 }
 
-// Verify that gather on a 2D memref delinearizes the gather index.
-// With zero base offsets, the linearize and addi fold away.
+// Verify that gather on a 2D memref with zero base offsets directly
+// adds each index element to its corresponding offset.
 
-// CHECK-LABEL: @gather_memref_2d_delinearize
+// CHECK-LABEL: @gather_memref_2d_single_index
 // CHECK-SAME:    (%[[BASE:.+]]: memref<4x2xf32>,
 // CHECK-SAME:     %[[IDXVEC:.+]]: vector<4xi32>,
 // CHECK-SAME:     %[[MASK:.+]]: vector<4xi1>,
 // CHECK-SAME:     %[[PASS:.+]]: vector<4xf32>)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
 // CHECK-DAG:     %[[IDXS:.+]] = arith.index_cast %[[IDXVEC]]
 //
-// CHECK-DAG:     %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
-// CHECK:         %[[DL0:.+]]:2 = affine.delinearize_index %[[IDX0]] into (4, 2)
+// CHECK:         %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
 // CHECK:         scf.if
-// CHECK:           vector.load %[[BASE]][%[[DL0]]#0, %[[DL0]]#1] : memref<4x2xf32>, vector<1xf32>
+// CHECK:           vector.load %[[BASE]][%[[C0]], %[[IDX0]]] : memref<4x2xf32>, vector<1xf32>
 //
 // CHECK:         %[[IDX1:.+]] = vector.extract %[[IDXS]][1]
-// CHECK:         affine.delinearize_index %[[IDX1]] into (4, 2)
 // CHECK:         scf.if
-// CHECK:           vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32>, vector<1xf32>
+// CHECK:           vector.load %[[BASE]][%{{.+}}, %[[IDX1]]] : memref<4x2xf32>, vector<1xf32>
 //
 // CHECK:         %[[IDX2:.+]] = vector.extract %[[IDXS]][2]
-// CHECK:         affine.delinearize_index %[[IDX2]] into (4, 2)
 // CHECK:         scf.if
-// CHECK:           vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32>, vector<1xf32>
+// CHECK:           vector.load %[[BASE]][%{{.+}}, %[[IDX2]]] : memref<4x2xf32>, vector<1xf32>
 //
 // CHECK:         %[[IDX3:.+]] = vector.extract %[[IDXS]][3]
-// CHECK:         affine.delinearize_index %[[IDX3]] into (4, 2)
 // CHECK:         scf.if
-// CHECK:           vector.load %[[BASE]][%{{.+}}, %{{.+}}] : memref<4x2xf32>, vector<1xf32>
-func.func @gather_memref_2d_delinearize(
+// CHECK:           vector.load %[[BASE]][%{{.+}}, %[[IDX3]]] : memref<4x2xf32>, vector<1xf32>
+func.func @gather_memref_2d_single_index(
     %base: memref<4x2xf32>,
     %v: vector<4xi32>, %mask: vector<4xi1>,
     %pass_thru: vector<4xf32>) -> vector<4xf32> {
@@ -335,22 +531,20 @@ func.func @gather_memref_2d_delinearize(
 // -----
 
 // Verify that gather on a 2D memref with non-zero base offsets correctly
-// incorporates the offsets via linearize + add + delinearize.
+// adds each index element to the last-dimension offset.
 
-// CHECK-LABEL: @gather_memref_2d_delinearize_nonzero_offsets
+// CHECK-LABEL: @gather_memref_2d_single_index_nonzero_offsets
 // CHECK-SAME:    (%[[BASE:.+]]: memref<4x2xf32>,
 // CHECK-SAME:     %[[OFF0:.+]]: index, %[[OFF1:.+]]: index,
 // CHECK-SAME:     %[[IDXVEC:.+]]: vector<2xi32>,
 // CHECK-SAME:     %[[MASK:.+]]: vector<2xi1>,
 // CHECK-SAME:     %[[PASS:.+]]: vector<2xf32>)
 // CHECK-DAG:     %[[IDXS:.+]] = arith.index_cast %[[IDXVEC]]
-// CHECK:         %[[LIN:.+]] = affine.linearize_index [%[[OFF0]], %[[OFF1]]] by (4, 2)
 // CHECK:         %[[IDX0:.+]] = vector.extract %[[IDXS]][0]
-// CHECK:         %[[FLAT:.+]] = arith.addi %[[LIN]], %[[IDX0]]
-// CHECK:         %[[DL:.+]]:2 = affine.delinearize_index %[[FLAT]] into (4, 2)
+// CHECK:         %[[SUM0:.+]] = arith.addi %[[OFF1]], %[[IDX0]]
 // CHECK:         scf.if
-// CHECK:           vector.load %[[BASE]][%[[DL]]#0, %[[DL]]#1]
-func.func @gather_memref_2d_delinearize_nonzero_offsets(
+// CHECK:           vector.load %[[BASE]][%[[OFF0]], %[[SUM0]]]
+func.func @gather_memref_2d_single_index_nonzero_offsets(
     %base: memref<4x2xf32>,
     %off0: index, %off1: index,
     %v: vector<2xi32>, %mask: vector<2xi1>,
@@ -367,20 +561,12 @@ func.func @gather_memref_2d_delinearize_nonzero_offsets(
 // CHECK-SAME:        %[[BASE:.+]]: memref<6x5xf32>,
 // CHECK-SAME:        %[[IDXS:.+]]: vector<2xindex>
 // CHECK-DAG:       %[[OFFSET:.+]] = arith.constant 3 : index
-// CHECK-DAG:       %[[STRIDE:.+]] = arith.constant dense<5> : vector<2xindex>
-// CHECK:           %[[COLLAPSED:.+]] = memref.collapse_shape %[[BASE]] {{\[\[}}0, 1]] : memref<6x5xf32> into memref<30xf32>
-// Scale each gather lane by the source's trailing dim (stride 5).
-// CHECK:           %[[NEW_IDXS:.+]] = arith.muli %[[IDXS]], %[[STRIDE]]
-// CHECK:           %[[IDX_0:.+]] = vector.extract %[[NEW_IDXS]][0]
-// Shift by the subview's static offset (3) so the flat load address matches
-// the original strided access.
-// CHECK:           %[[ADDR_0:.+]] = arith.addi %[[IDX_0]], %[[OFFSET]]
+// CHECK:           %[[IDX_0:.+]] = vector.extract %[[IDXS]][0]
 // CHECK:           scf.if
-// CHECK:             vector.load %[[COLLAPSED]][%[[ADDR_0]]] : memref<30xf32>
-// CHECK:           %[[IDX_1:.+]] = vector.extract %[[NEW_IDXS]][1]
-// CHECK:           %[[ADDR_1:.+]] = arith.addi %[[IDX_1]], %[[OFFSET]]
+// CHECK:             vector.load %[[BASE]][%[[IDX_0]], %[[OFFSET]]] : memref<6x5xf32>
+// CHECK:           %[[IDX_1:.+]] = vector.extract %[[IDXS]][1]
 // CHECK:           scf.if
-// CHECK:             vector.load %[[COLLAPSED]][%[[ADDR_1]]] : memref<30xf32>
+// CHECK:             vector.load %[[BASE]][%[[IDX_1]], %[[OFFSET]]] : memref<6x5xf32>
 func.func @strided_gather_with_non_zero_offset(%base: memref<6x5xf32>,
                                                %idxs: vector<2xindex>,
                                                %mask: vector<2xi1>,
@@ -397,17 +583,18 @@ func.func @strided_gather_with_non_zero_offset(%base: memref<6x5xf32>,
 
 // -----
 
-// TODO: Support dynamic offsets.
-// CHECK-LABEL:   func.func @negative_strided_gather_with_dynamic_offset(
+// Dynamic subview offsets are composed into the source gather offsets.
+// CHECK-LABEL:   func.func @strided_gather_with_dynamic_subview_offset(
 // CHECK-SAME:        %[[BASE:.+]]: memref<4x3xf32>,
 // CHECK-SAME:        %[[COL:.+]]: index,
-// CHECK-NOT:       memref.collapse_shape
-// CHECK:           %[[SUB:.+]] = memref.subview %[[BASE]][0, %[[COL]]] [4, 1] [1, 1]
-// CHECK-SAME:        : memref<4x3xf32> to memref<4xf32, strided<[3], offset: ?>>
-// CHECK:           %[[RES:.+]] = vector.gather %[[SUB]]
-// CHECK-SAME:        : memref<4xf32, strided<[3], offset: ?>>
-// CHECK:           return %[[RES]]
-func.func @negative_strided_gather_with_dynamic_offset(
+// CHECK-SAME:        %[[IDXS:.+]]: vector<2xindex>
+// CHECK:           %[[IDX_0:.+]] = vector.extract %[[IDXS]][0]
+// CHECK:           scf.if
+// CHECK:             vector.load %[[BASE]][%[[IDX_0]], %[[COL]]] : memref<4x3xf32>
+// CHECK:           %[[IDX_1:.+]] = vector.extract %[[IDXS]][1]
+// CHECK:           scf.if
+// CHECK:             vector.load %[[BASE]][%[[IDX_1]], %[[COL]]] : memref<4x3xf32>
+func.func @strided_gather_with_dynamic_subview_offset(
     %base: memref<4x3xf32>,
     %col: index,
     %idxs: vector<2xindex>,
