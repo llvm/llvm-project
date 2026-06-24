@@ -4,7 +4,7 @@
 # CHECK: lbz 3, 2(2)
 # CHECK-NEXT: R_TOC        x
 # CHECK-LABEL: .read_y
-# CHECK: lbz 3, 0(2)
+# CHECK: lbz 3, 1(2)
 # CHECK-NEXT: R_TOC        y
 
 --- |
