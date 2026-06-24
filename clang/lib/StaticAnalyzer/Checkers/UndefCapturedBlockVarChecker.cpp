@@ -72,7 +72,7 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
       if (ExplodedNode *N = C.generateErrorNode()) {
         auto R = std::make_unique<PathSensitiveBugReport>(
             BT,
-            "Variable '" + VD->getName() +
+            "Variable '" + Twine(VD->getName()) +
                 "' is uninitialized when captured by block",
             N);
         if (const Expr *Ex = FindBlockDeclRefExpr(BE->getBody(), VD))

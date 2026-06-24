@@ -162,7 +162,7 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
 
   auto R = std::make_unique<PathSensitiveBugReport>(
       BT,
-      "Deleting an array of '" + TargetType.getAsString() +
+      "Deleting an array of '" + Twine(TargetType.getAsString()) +
           "' objects as their base class '" +
           SourceType.getAsString(C.getASTContext().getPrintingPolicy()) +
           "' is undefined",
