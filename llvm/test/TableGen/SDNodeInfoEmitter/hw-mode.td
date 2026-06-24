@@ -39,7 +39,14 @@ def my_node_3 : SDNode<
     ]>
 >;
 
-// CHECK:       static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// CHECK:       static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// CHECK-NEXT:      {1, 0, 0}, // NODE_1
+// CHECK-NEXT:      {21, 0, 0}, // NODE_2
+// CHECK-NEXT:      {41, 0, 0}, // NODE_3
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
+// CHECK-NEXT:  static const VTByHwModePair MyTargetVTByHwModeTable[] = {
 // CHECK-NEXT:    /* 0 */ {0, MVT::i8}, {1, MVT::i1}, {2, MVT::i2}, {3, MVT::i4},
 // CHECK-NEXT:    /* 4 */ {1, MVT::i1},
 // CHECK-NEXT:    /* 5 */ {2, MVT::i2},
@@ -54,8 +61,13 @@ def my_node_3 : SDNode<
 // CHECK-SAME:            {SDTCVecEltisVT, 0, 0, 4, 0},
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:      {0, 5, 0, 0, 0, 1, 1, 5}, // NODE_1
-// CHECK-NEXT:      {1, 2, 0, 0, 0, 21, 3, 3}, // NODE_2
-// CHECK-NEXT:      {1, 0, 0, 0, 0, 41, 0, 1}, // NODE_3
+// CHECK-NEXT:  static const SDNodeVerifyDesc MyTargetSDNodeVerifyDescs[] = {
+// CHECK-NEXT:      {0, 5, 0, 1, 5}, // NODE_1
+// CHECK-NEXT:      {1, 2, 0, 3, 3}, // NODE_2
+// CHECK-NEXT:      {1, 0, 0, 0, 1}, // NODE_3
 // CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static const SDNodeVerifyInfo MyTargetSDNodeVerifyInfo = {
+// CHECK-NEXT:      MyTargetSDNodeVerifyDescs, MyTargetVTByHwModeTable,
+// CHECK-NEXT:      MyTargetSDTypeConstraints};
+// CHECK-NEXT:  #endif // NDEBUG
