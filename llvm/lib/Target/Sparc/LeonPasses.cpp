@@ -155,7 +155,7 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
     return false;
 
   // Check for branch to atomic instruction with load in delay slot
-  if (I->isBranch()) {
+  if (I->isBranch() && I->getOperand(0).isMBB()) {
     MachineBasicBlock *TargetMBB = I->getOperand(0).getMBB();
     MachineBasicBlock::iterator MI = TargetMBB->begin();
 
@@ -198,6 +198,8 @@ bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator I = MBB.begin();
   while (I != MBB.end() && I->isMetaInstruction())
     I++;
+  if (I == MBB.end())
+    return false;
   switch (I->getOpcode()) {
   case SP::SWAPrr:
   case SP::SWAPri:
