@@ -10,7 +10,7 @@ define ptr addrspace(1) @test1(ptr addrspace(1) %obj) gc "statepoint-example" {
 entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
 ; Two safepoints in a row (i.e. consistent liveness)
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   ret ptr addrspace(1) %obj
@@ -21,9 +21,9 @@ define ptr addrspace(1) @test2(ptr addrspace(1) %obj) gc "statepoint-example" {
 entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated2 = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated2 = call ptr addrspace(1)
 ; A simple derived pointer
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
@@ -35,8 +35,8 @@ entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
-; CHECK-NEXT: %derived.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
+; CHECK-NEXT: %derived.relocated = call ptr addrspace(1)
 ; CHECK-NEXT: load i8, ptr addrspace(1) %derived.relocated
 ; CHECK-NEXT: load i8, ptr addrspace(1) %obj.relocated
 ; Tests to make sure we visit both the taken and untaken predeccessor
@@ -56,14 +56,14 @@ entry:
 taken:                                            ; preds = %entry
 ; CHECK-LABEL: taken:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   br label %merge
 
 untaken:                                          ; preds = %entry
 ; CHECK-LABEL: untaken:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated2 = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated2 = call ptr addrspace(1)
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   br label %merge
 
@@ -80,7 +80,7 @@ define ptr addrspace(1) @test5(ptr addrspace(1) %obj) gc "ocaml" {
 entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NOT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NOT: %obj.relocated = call ptr addrspace(1)
   %0 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
   ret ptr addrspace(1) %obj
 }

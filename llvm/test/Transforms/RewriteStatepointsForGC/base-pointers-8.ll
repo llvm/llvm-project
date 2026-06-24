@@ -22,8 +22,8 @@ define i32 @null_in_array(ptr addrspace(1) %array_obj) gc "statepoint-example" {
 ; CHECK-NEXT:    [[NEXT_ELEMENT_PTR:%.*]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[CURRENT_ELEMENT_PTR]], i32 1
 ; CHECK-NEXT:    [[NEXT_INDEX]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[NEXT_ELEMENT_PTR]], ptr addrspace(1) [[DOT0]]) ]
-; CHECK-NEXT:    [[NEXT_ELEMENT_PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[ARRAY_OBJ_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[NEXT_ELEMENT_PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[ARRAY_OBJ_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    br label [[LOOP_CHECK]]
 ; CHECK:       not_found:
 ; CHECK-NEXT:    ret i32 -1
