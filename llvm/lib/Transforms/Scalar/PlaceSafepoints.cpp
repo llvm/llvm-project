@@ -629,7 +629,8 @@ InsertSafepointPoll(BasicBlock::iterator InsertBefore,
   // path call - where we need to insert a safepoint (parsepoint).
 
   auto *F = M->getFunction(GCSafepointPollName);
-  assert(F && "gc.safepoint_poll function is missing");
+  if (!F)
+    reportFatalUsageError("gc.safepoint_poll function is missing");
   assert(F->getFunctionType() ==
              FunctionType::get(Type::getVoidTy(M->getContext()), false) &&
          "gc.safepoint_poll declared with wrong type");
