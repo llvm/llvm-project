@@ -2382,10 +2382,15 @@ entry:
 }
 
 define <4 x float> @test_undef_vuzp1q_f32(<4 x float> %a) {
-; CHECK-LABEL: test_undef_vuzp1q_f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_undef_vuzp1q_f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_undef_vuzp1q_f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   ret <4 x float> %shuffle.i

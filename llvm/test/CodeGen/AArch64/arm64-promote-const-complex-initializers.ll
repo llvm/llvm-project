@@ -10,8 +10,10 @@ target triple = "arm64-apple-ios14.0.0"
 define [1 x <4 x float>] @test1() {
 ; CHECK-LABEL:    .p2align    4, 0x0              ; -- Begin function test1
 ; CHECK-NEXT: lCPI0_0:
-; CHECK-NEXT:     .quad   0                       ; 0x0
-; CHECK-NEXT:     .quad   4575657221408423936     ; 0x3f80000000000000
+; CHECK-NEXT:     .long   0                       ; 0x0
+; CHECK-NEXT:     .long   0                       ; 0x0
+; CHECK-NEXT:     .long   0                       ; 0x0
+; CHECK-NEXT:     .long   1065353216              ; 0x3f800000
 ; CHECK-NEXT:     .section    __TEXT,__text,regular,pure_instructions
 ; CHECK-NEXT:     .globl  _test1
 ; CHECK-NEXT:     .p2align    2

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s --check-prefix=BE
 
 @var = dso_local global i32 0, align 4
 
@@ -118,6 +119,19 @@ entry:
 ; CHECK-LABEL: test_vreg_stack:
 ; CHECK: ldr {{q[0-9]+}}, [sp]
   ret <2 x double> %varg_stack;
+}
+
+; Check that a v3f32 argument can be passed by stack after the VPRs are
+; exhausted.
+define dso_local <3 x float> @test_v3f32_vreg_stack([8 x <2 x double>],
+                                                    <3 x float> %arg) {
+; CHECK-LABEL: test_v3f32_vreg_stack:
+; CHECK:       ldr q0, [sp]
+; CHECK-NEXT:  ret
+; BE-LABEL: test_v3f32_vreg_stack:
+; BE:       ldr q0, [sp]
+; BE-NEXT:  ret
+  ret <3 x float> %arg
 }
 
 ; Check that f16 can be passed and returned (ACLE 2.0 extension)
