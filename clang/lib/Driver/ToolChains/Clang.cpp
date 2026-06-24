@@ -6030,6 +6030,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_allow_editor_placeholders);
   Args.addOptInFlag(CmdArgs, options::OPT_fstrict_vtable_pointers,
                     options::OPT_fno_strict_vtable_pointers);
+  Args.addOptInFlag(CmdArgs, options::OPT_fstrict_enum_switch_coverage,
+                    options::OPT_fno_strict_enum_switch_coverage);
   Args.addOptInFlag(CmdArgs, options::OPT_fforce_emit_vtables,
                     options::OPT_fno_force_emit_vtables);
   Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,

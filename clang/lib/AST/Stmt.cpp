@@ -1146,6 +1146,7 @@ SwitchStmt::SwitchStmt(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
   SwitchStmtBits.HasInit = HasInit;
   SwitchStmtBits.HasVar = HasVar;
   SwitchStmtBits.AllEnumCasesCovered = false;
+  SwitchStmtBits.SwitchCasesExhaustive = false;
 
   setCond(Cond);
   setBody(nullptr);
@@ -1162,6 +1163,7 @@ SwitchStmt::SwitchStmt(EmptyShell Empty, bool HasInit, bool HasVar)
   SwitchStmtBits.HasInit = HasInit;
   SwitchStmtBits.HasVar = HasVar;
   SwitchStmtBits.AllEnumCasesCovered = false;
+  SwitchStmtBits.SwitchCasesExhaustive = false;
 }
 
 SwitchStmt *SwitchStmt::Create(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,

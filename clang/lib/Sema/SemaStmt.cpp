@@ -1293,6 +1293,57 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
       << Case->getSourceRange();
 }
 
+static bool areSwitchCasesExhaustive(
+    unsigned CondWidthBeforePromotion, bool CondIsSignedBeforePromotion,
+    unsigned CondWidth, ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseVals,
+    ArrayRef<std::pair<llvm::APSInt, CaseStmt *>> CaseRanges,
+    ArrayRef<llvm::APSInt> HiVals) {
+  // +2 bits: 1 bit to ensure unsigned max values are treated as positive
+  // signed integers, and 1 bit to prevent overflow when evaluating ++Current
+  // at the maximum value.
+  unsigned CheckWidth = std::max(CondWidthBeforePromotion, CondWidth) + 2;
+  llvm::APSInt Min = llvm::APSInt::getMinValue(CondWidthBeforePromotion,
+                                               !CondIsSignedBeforePromotion);
+  llvm::APSInt Max = llvm::APSInt::getMaxValue(CondWidthBeforePromotion,
+                                               !CondIsSignedBeforePromotion);
+  Min = Min.extOrTrunc(CheckWidth);
+  Min.setIsSigned(true);
+  Max = Max.extOrTrunc(CheckWidth);
+  Max.setIsSigned(true);
+
+  llvm::APSInt Current = Min;
+  auto VI = CaseVals.begin(), VE = CaseVals.end();
+  auto RI = CaseRanges.begin(), RE = CaseRanges.end();
+  auto HI = HiVals.begin();
+
+  while (VI != VE || RI != RE) {
+    llvm::APSInt First, Last;
+    if (VI != VE && (RI == RE || VI->first < RI->first)) {
+      First = VI->first;
+      Last = VI->first;
+      ++VI;
+    } else {
+      First = RI->first;
+      Last = *HI;
+      ++RI;
+      ++HI;
+    }
+
+    First = First.extOrTrunc(CheckWidth);
+    First.setIsSigned(true);
+    Last = Last.extOrTrunc(CheckWidth);
+    Last.setIsSigned(true);
+
+    if (Current < First)
+      break;
+    if (Current <= Last) {
+      Current = Last;
+      ++Current;
+    }
+  }
+  return Current > Max;
+}
+
 StmtResult
 Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
                             Stmt *BodyStmt) {
@@ -1485,13 +1536,13 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
     // Detect duplicate case ranges, which usually don't exist at all in
     // the first place.
+    std::vector<llvm::APSInt> HiVals;
     if (!CaseRanges.empty()) {
       // Sort all the case ranges by their low value so we can easily detect
       // overlaps between ranges.
       llvm::stable_sort(CaseRanges);
 
       // Scan the ranges, computing the high values and removing empty ranges.
-      std::vector<llvm::APSInt> HiVals;
       for (unsigned i = 0, e = CaseRanges.size(); i != e; ++i) {
         llvm::APSInt &LoVal = CaseRanges[i].first;
         CaseStmt *CR = CaseRanges[i].second;
@@ -1711,6 +1762,14 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         SS->setAllEnumCasesCovered();
     }
   enum_out:;
+
+    if (!CaseListIsErroneous && !CaseListIsIncomplete && !HasConstantCond &&
+        CondWidthBeforePromotion > 0) {
+      if (areSwitchCasesExhaustive(CondWidthBeforePromotion,
+                                   CondIsSignedBeforePromotion, CondWidth,
+                                   CaseVals, CaseRanges, HiVals))
+        SS->setSwitchCasesExhaustive();
+    }
   }
 
   if (BodyStmt)

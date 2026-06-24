@@ -228,6 +228,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned AllEnumCasesCovered : 1;
 
+    /// True if all possible values of the underlying type are covered by
+    /// 'case' labels, independent of any 'default:' label.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned SwitchCasesExhaustive : 1;
+
     /// The location of the "switch".
     SourceLocation SwitchLoc;
   };
@@ -2678,6 +2683,14 @@ public:
   /// have been explicitly covered.
   bool isAllEnumCasesCovered() const {
     return SwitchStmtBits.AllEnumCasesCovered;
+  }
+
+  void setSwitchCasesExhaustive() {
+    SwitchStmtBits.SwitchCasesExhaustive = true;
+  }
+
+  bool areSwitchCasesExhaustive() const {
+    return SwitchStmtBits.SwitchCasesExhaustive;
   }
 
   SourceLocation getBeginLoc() const { return getSwitchLoc(); }

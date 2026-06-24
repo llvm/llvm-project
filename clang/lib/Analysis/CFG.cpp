@@ -4596,9 +4596,13 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   //       BuildOpts.SwitchReqDefaultCoveredEnum is true.
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
+
+  bool IsExhaustive = BuildOpts.ForceStrictEnumSwitchCoverage
+                          ? Terminator->areSwitchCasesExhaustive()
+                          : Terminator->isAllEnumCasesCovered();
   SwitchAlwaysHasSuccessor |=
-      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
-      Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
+      !BuildOpts.AssumeReachableDefaultInSwitchStatements && IsExhaustive &&
+      Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
 
@@ -5617,7 +5621,10 @@ bool CFGBlock::FilterEdge(const CFGBlock::FilterOptions &F,
     // CaseStmt then filter this edge.
     if (const SwitchStmt *S =
         dyn_cast_or_null<SwitchStmt>(From->getTerminatorStmt())) {
-      if (S->isAllEnumCasesCovered()) {
+      bool IsExhaustive = F.StrictEnumSwitchCoverage
+                              ? S->areSwitchCasesExhaustive()
+                              : S->isAllEnumCasesCovered();
+      if (IsExhaustive) {
         const Stmt *L = To->getLabel();
         if (!L || !isa<CaseStmt>(L))
           return true;
