@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
+#include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
@@ -225,6 +226,20 @@ TEST_F(RandomAccessVisitorTest, MultipleVisits) {
   EXPECT_EQ(3u, TestState->Callbacks.count());
   for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
+}
+
+TEST_F(RandomAccessVisitorTest, TypeTableCollectionDoesNotContainPastEnd) {
+  SmallVector<ArrayRef<uint8_t>> Records;
+  for (const CVType &Type : GlobalState->TypeVector)
+    Records.push_back(Type.data());
+  TypeTableCollection Types(Records);
+
+  EXPECT_TRUE(Types.contains(TypeIndex::fromArrayIndex(0)));
+  EXPECT_TRUE(Types.contains(
+      TypeIndex::fromArrayIndex(GlobalState->TypeVector.size() - 1)));
+  EXPECT_FALSE(Types.contains(
+      TypeIndex::fromArrayIndex(GlobalState->TypeVector.size())));
+  EXPECT_FALSE(Types.contains(TypeIndex::Int32()));
 }
 
 TEST_F(RandomAccessVisitorTest, DescendingWithinChunk) {
