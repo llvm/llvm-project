@@ -508,3 +508,62 @@ func.func @parallel_minnumf_reduce() {
   return
 }
 
+// -----
+
+// CHECK-LABEL:   func.func @parallel_maxsi_reduce() {
+// CHECK:           affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("maxs", "maxs") -> (i32, si32) {
+func.func @parallel_maxsi_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = memref.alloc() : memref<100xsi32>
+  %12:2 = affine.parallel (%i) = (0) to (100) reduce ("maxs", "maxs") -> (i32, si32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    %3 = affine.load %1[%i] : memref<100xsi32>
+    affine.yield %2, %3 : i32, si32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_minsi_reduce() {
+// CHECK:           affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("mins", "mins") -> (i32, si32) {
+func.func @parallel_minsi_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = memref.alloc() : memref<100xsi32>
+  %12:2 = affine.parallel (%i) = (0) to (100) reduce ("mins", "mins") -> (i32, si32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    %3 = affine.load %1[%i] : memref<100xsi32>
+    affine.yield %2, %3 : i32, si32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_maxui_reduce() {
+// CHECK:           affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("maxu", "maxu") -> (i32, ui32) {
+func.func @parallel_maxui_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = memref.alloc() : memref<100xui32>
+  %12:2 = affine.parallel (%i) = (0) to (100) reduce ("maxu", "maxu") -> (i32, ui32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    %3 = affine.load %1[%i] : memref<100xui32>
+    affine.yield %2, %3 : i32, ui32
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @parallel_minui_reduce() {
+// CHECK:           affine.parallel (%[[VAL_0:.*]]) = (0) to (100) reduce ("minu", "minu") -> (i32, ui32) {
+func.func @parallel_minui_reduce() {
+  %0 = memref.alloc() : memref<100xi32>
+  %1 = memref.alloc() : memref<100xui32>
+  %12:2 = affine.parallel (%i) = (0) to (100) reduce ("minu", "minu") -> (i32, ui32) {
+    %2 = affine.load %0[%i] : memref<100xi32>
+    %3 = affine.load %1[%i] : memref<100xui32>
+    affine.yield %2, %3 : i32, ui32
+  }
+  return
+}
