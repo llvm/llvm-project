@@ -59,7 +59,7 @@ This significantly restructures how ``function`` is written to provide better pe
 stable.
 
 ``_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED``
----------------------------------
+----------------------------------------
 Changes the layout of :cpp:type:`std::vector` from pointer-based to size-based.
 
 libc++ supports two different data layouts for :cpp:type:`std::vector`:
