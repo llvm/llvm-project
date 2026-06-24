@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/TypeName.h"
 #include <optional>
@@ -502,6 +503,50 @@ public:
 
   private:
     StringRef patternName;
+  };
+
+  /// A listener that emits all notifyMatchFailure calls
+  /// with the given DiagnosticSeverity (default is Error).
+  /// This can be used so that any notifyMatchFailure calls will be emitted
+  /// as a message with the given severity (Remark will be used for Note)
+  struct MatchFailureEmittingListener : public RewriterBase::Listener {
+
+    MatchFailureEmittingListener(
+        DiagnosticSeverity severity = DiagnosticSeverity::Error) {
+      switch (severity) {
+      case DiagnosticSeverity::Note:
+        // there is no emitNote, so I will just make it a Remark instead
+        emitFn = [](Location loc) -> InFlightDiagnostic {
+          return emitRemark(loc);
+        };
+        break;
+      case DiagnosticSeverity::Warning:
+        emitFn = [](Location loc) -> InFlightDiagnostic {
+          return emitWarning(loc);
+        };
+        break;
+      case DiagnosticSeverity::Error:
+        emitFn = [](Location loc) -> InFlightDiagnostic {
+          return emitError(loc);
+        };
+        break;
+      case DiagnosticSeverity::Remark:
+        emitFn = [](Location loc) -> InFlightDiagnostic {
+          return emitRemark(loc);
+        };
+        break;
+      }
+    }
+
+    void notifyMatchFailure(
+        Location loc,
+        function_ref<void(Diagnostic &)> reasonCallback) override {
+      auto diag = emitFn(loc);
+      reasonCallback(*diag.getUnderlyingDiagnostic());
+    }
+
+  private:
+    function_ref<InFlightDiagnostic(Location loc)> emitFn;
   };
 
   /// Move the blocks that belong to "region" before the given position in
