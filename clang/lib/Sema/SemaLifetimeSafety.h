@@ -482,6 +482,8 @@ private:
 
       // Choose the matching macro defined latest before Loc.
       SourceLocation Location = Def.getLocation();
+      assert(Location.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Location, Loc));
       if (BestLocation.isInvalid() ||
           (Location.isValid() &&
            SM.isBeforeInTranslationUnit(BestLocation, Location))) {
