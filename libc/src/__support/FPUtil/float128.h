@@ -20,7 +20,6 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
