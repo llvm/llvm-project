@@ -45,6 +45,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
@@ -4987,8 +4988,10 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
 void ElementwiseOp::print(OpAsmPrinter &p) {
   p << " kind=";
   p.printAttribute(getKindAttr());
+
   SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
                                            "indexing_maps"};
+
   unsigned arity =
       getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
   unsigned numDims = getResultRank();
@@ -5005,8 +5008,8 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
                          elidedAttrs);
 }
 
-/// Implements the block region builder for the ElementwiseOp. This is called by
-/// 'fillStructuredOpRegion'.
+/// Implements the block region builder for the ElementwiseOp.
+/// This is called by 'fillStructuredOpRegion'.
 void ElementwiseOp::regionBuilder(
     ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
     function_ref<InFlightDiagnostic()> emitError) {
@@ -5038,14 +5041,56 @@ void ElementwiseOp::regionBuilder(
   SmallVector<Value> yields;
   Value result;
 
+  // Cast input value to dst type.
+  // Only same-kind casts are valid (float to float, int to int).
+  auto castToDstType = [&](Value v, Type dstType) -> Value {
+    Type srcType = v.getType();
+    if (srcType == dstType)
+      return v;
+
+    // Float -> Float
+    if (auto srcFloatType = dyn_cast<FloatType>(srcType)) {
+      if (auto dstFloatType = dyn_cast<FloatType>(dstType)) {
+        if (srcFloatType.getWidth() < dstFloatType.getWidth())
+          return arith::ExtFOp::create(b, b.getLoc(), dstType, v).getResult();
+        return arith::TruncFOp::create(b, b.getLoc(), dstType, v).getResult();
+      }
+    }
+
+    // Int -> Int
+    if (auto srcIntType = dyn_cast<IntegerType>(srcType)) {
+      if (auto dstIntType = dyn_cast<IntegerType>(dstType)) {
+        if (srcIntType.getWidth() < dstIntType.getWidth()) {
+          return srcIntType.isUnsigned()
+                     ? arith::ExtUIOp::create(b, b.getLoc(), dstType, v)
+                           .getResult()
+                     : arith::ExtSIOp::create(b, b.getLoc(), dstType, v)
+                           .getResult();
+        }
+        return arith::TruncIOp::create(b, b.getLoc(), dstType, v);
+      }
+    }
+
+    emitError() << "invalid cast from " << srcType << " to " << dstType
+                << " in linalg.elementwise";
+    return nullptr;
+  };
+
+  // Infer the compute element type from result type.
+  Type computeElementType = block.getArguments().back().getType();
+
+  // Create the linalg.generic body.
   if (arityGroup == ElementwiseArityGroup::Unary) {
-    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0));
+    Value in0 = castToDstType(block.getArgument(0), computeElementType);
+    result = helper.buildUnaryFn(kind.unaryFn, in0);
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
-    result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
-                                  block.getArgument(1));
+    Value in0 = castToDstType(block.getArgument(0), computeElementType);
+    Value in1 = castToDstType(block.getArgument(1), computeElementType);
+    result = helper.buildBinaryFn(kind.binaryFn, in0, in1);
 
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
+    // ternary op (select) should not be type casted.
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
