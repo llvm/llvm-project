@@ -770,6 +770,13 @@ protected:
       std::set<SourceName> entities; // names of entities with save attr
       std::set<SourceName> commons; // names of common blocks with save attr
     } saveInfo;
+    // F2023 8.6.1: module-name access-ids from PUBLIC/PRIVATE statements;
+    std::map<SourceName, Attr> moduleAccessibility;
+    // F2023 8.6.1: source positions of duplicate module-name access-ids
+    std::set<const char *> duplicateModuleAccessibility;
+    // F2023 8.6.1: for each USE-associated local symbol name, the set of
+    // module names that contributed it via USE association.
+    std::map<SourceName, std::set<SourceName>> symbolUseModules;
   } specPartState_;
 
   // Some declaration processing can and should be deferred to
@@ -825,6 +832,8 @@ public:
   Symbol &AddGenericUse(GenericDetails &, const SourceName &, const Symbol &);
   void AddAndCheckModuleUse(SourceName, bool isIntrinsic);
   void CollectUseRenames(const parser::UseStmt &);
+  void CollectModuleAccessibility(
+      const std::list<parser::DeclarationConstruct> &);
   void ClearUseRenames() { useRenames_.clear(); }
   void ClearUseOnly() { useOnly_.clear(); }
   void ClearModuleUses() {
@@ -846,6 +855,15 @@ private:
   std::set<SourceName> intrinsicUses_;
   std::set<SourceName> nonIntrinsicUses_;
 
+  void ApplyModuleAccessibility(Symbol &symbol) {
+    // F2023 8.6.1: Record that useModuleScope_ contributed this symbol.
+    // The actual accessibility is computed in FinishSpecificationPart()
+    // once all contributing modules are known.
+    if (useModuleScope_ && useModuleScope_->symbol()) {
+      specPartState_.symbolUseModules[symbol.name()].insert(
+          useModuleScope_->symbol()->name());
+    }
+  }
   Symbol &SetAccess(const SourceName &, Attr attr, Symbol * = nullptr);
   // A rename in a USE statement: local => use
   struct SymbolRename {
@@ -3767,6 +3785,47 @@ void ModuleVisitor::CollectUseRenames(const parser::UseStmt &useStmt) {
       useStmt.u);
 }
 
+// F2023 8.6.1: Pre-scan PUBLIC/PRIVATE statements for plain name access-ids,
+// recording (name, attr) into specPartState_.moduleAccessibility before USE
+// statements are walked.  The scan is purely syntactic - all Name access-ids
+// are inserted regardless of whether they name modules or local entities.
+void ModuleVisitor::CollectModuleAccessibility(
+    const std::list<parser::DeclarationConstruct> &decls) {
+  auto &map{specPartState_.moduleAccessibility};
+  for (const auto &decl : decls) {
+    const auto *specConst{std::get_if<parser::SpecificationConstruct>(&decl.u)};
+    if (!specConst) {
+      continue;
+    }
+    const auto *otherStmt{
+        std::get_if<parser::Statement<parser::OtherSpecificationStmt>>(
+            &specConst->u)};
+    if (!otherStmt) {
+      continue;
+    }
+    const auto *accessInd{std::get_if<common::Indirection<parser::AccessStmt>>(
+        &otherStmt->statement.u)};
+    if (!accessInd) {
+      continue;
+    }
+    const auto &[accessSpec, accessIds] = accessInd->value().t;
+    Attr attr{accessSpec.v == parser::AccessSpec::Kind::Private ? Attr::PRIVATE
+                                                                : Attr::PUBLIC};
+    for (const auto &accessId : accessIds) {
+      const auto &spec{accessId.v.value()};
+      const auto *name{std::get_if<parser::Name>(&spec.u)};
+      if (!name) {
+        continue;
+      }
+      auto [it, inserted]{map.emplace(name->source, attr)};
+      if (!inserted) {
+        specPartState_.duplicateModuleAccessibility.insert(
+            name->source.begin());
+      }
+    }
+  }
+}
+
 bool ModuleVisitor::Pre(const parser::Rename::Names &x) {
   const auto &localName{std::get<0>(x.t)};
   const auto &useName{std::get<1>(x.t)};
@@ -4070,13 +4129,16 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol->implicitAttrs() =
           localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
       localSymbol->flags() = useSymbol.flags();
+      ApplyModuleAccessibility(*localSymbol);
       return;
     }
   }
 
   Symbol &localUltimate{localSymbol->GetUltimate()};
   if (&localUltimate == &useUltimate) {
-    // use-associating the same symbol again -- ok
+    // use-associating the same symbol again -- ok, but record the
+    // contributing module for multi-source accessibility (F2023 8.6.1).
+    ApplyModuleAccessibility(*localSymbol);
     return;
   }
   if (useUltimate.owner().IsModule() && localUltimate.owner().IsSubmodule() &&
@@ -4312,6 +4374,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
           useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
           UseDetails{localName, useUltimate})};
       newSymbol.flags() = useSymbol.flags();
+      // Apply module accessibility if specified
+      ApplyModuleAccessibility(newSymbol);
       return;
     } else {
       for (const auto &ref : useGeneric->specificProcs()) {
@@ -4368,6 +4432,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol->attrs() =
           useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
       localSymbol->flags() = useSymbol.flags();
+      // Apply module accessibility if specified
+      ApplyModuleAccessibility(*localSymbol);
       AddGenericUse(*localGeneric, localName, useUltimate);
       // Don't duplicate specific procedures.
       std::size_t originalLocalSpecifics{localGeneric->specificProcs().size()};
@@ -4410,6 +4476,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
         std::move(generic))};
     newSymbol.flags() = useUltimate.flags();
+    ApplyModuleAccessibility(newSymbol);
     auto &newUseGeneric{newSymbol.get<GenericDetails>()};
     AddGenericUse(newUseGeneric, localName, useUltimate);
     newUseGeneric.AddUse(*localSymbol);
@@ -10042,6 +10109,35 @@ bool ModuleVisitor::Pre(const parser::AccessStmt &x) {
     for (const auto &accessId : accessIds) {
       GenericSpecInfo info{accessId.v.value()};
       auto *symbol{FindInScope(info.symbolName())};
+      // F2023 8.6.1: a module-name access-id sets default accessibility for
+      // entities USE associated from that module.  The (name, attr) pair was
+      // already recorded by CollectModuleAccessibility(); here we just verify
+      // that it resolves to a module, and skip the per-entity SetAccess path.
+      if (info.kind().IsName()) {
+        const Symbol *moduleSymbol{nullptr};
+        Symbol *resolveSymbol{nullptr};
+        if (!symbol) {
+          if (auto it{context().globalScope().find(info.symbolName())};
+              it != context().globalScope().end() &&
+              it->second->has<ModuleDetails>()) {
+            moduleSymbol = &*it->second;
+            resolveSymbol = &*it->second;
+          }
+        } else if (symbol->GetUltimate().has<ModuleDetails>()) {
+          moduleSymbol = &symbol->GetUltimate();
+          resolveSymbol = symbol;
+        }
+        if (moduleSymbol) {
+          if (specPartState_.duplicateModuleAccessibility.count(
+                  info.symbolName().begin())) {
+            Say(info.symbolName(),
+                "The name of module '%s' shall appear at most once in all of the ACCESS statements in a module"_err_en_US,
+                moduleSymbol->name()); // F2023 8.6.1: (C876)
+          }
+          info.Resolve(resolveSymbol);
+          continue;
+        }
+      }
       if (!symbol && !info.kind().IsName()) {
         symbol = &MakeSymbol(info.symbolName(), Attrs{}, GenericDetails{});
       }
@@ -10160,6 +10256,11 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   Walk(accDecls);
   Walk(ompDecls);
   Walk(compilerDirectives);
+  // F2023 8.6.1: collect module-name access-ids before USE walk so that
+  // DoAddUse() can record contributing modules regardless of statement order.
+  if (currScope().IsModule()) {
+    CollectModuleAccessibility(decls);
+  }
   for (const auto &useStmt : useStmts) {
     CollectUseRenames(useStmt.statement.value());
   }
@@ -10368,6 +10469,47 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
 void ResolveNamesVisitor::FinishSpecificationPart(
     const std::list<parser::DeclarationConstruct> &decls) {
   misparsedStmtFuncFound_ = false;
+  // F2023 8.6.1: apply module-name accessibility to USE associated symbols
+  // now that all contributing modules are known.  Skip symbols which already
+  // carry PUBLIC or PRIVATE (from per-entity access-ids).  The rule
+  // applies only when every contributing module is named in an access-stmt:
+  //   * any PUBLIC => PUBLIC
+  //   * all in map && all PRIVATE => PRIVATE
+  //   * not all in map => skip (leave unset)
+  if (!specPartState_.symbolUseModules.empty() &&
+      !specPartState_.moduleAccessibility.empty()) {
+    const auto &accessMap{specPartState_.moduleAccessibility};
+    for (auto &[symName, symbolRef] : currScope()) {
+      Symbol &symbol{*symbolRef};
+      auto symIter{specPartState_.symbolUseModules.find(symbol.name())};
+      if (symIter == specPartState_.symbolUseModules.end()) {
+        continue;
+      }
+      if (symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
+        continue; // per-entity access-id already applied
+      }
+      // F2023 8.6.1: the module-name accessibility rule applies only when
+      // "the name of every module from which it is accessed appears in an
+      // access-stmt in the scoping unit".
+      bool allInMap{true}, anyPublic{false};
+      for (const SourceName &moduleName : symIter->second) {
+        auto modIter{accessMap.find(moduleName)};
+        if (modIter == accessMap.end()) {
+          allInMap = false;
+          break;
+        }
+        if (modIter->second == Attr::PUBLIC) {
+          anyPublic = true;
+        }
+      }
+      if (!allInMap) {
+        continue; // not every contributing module named in access-stmts
+      }
+      // All contributing modules are named: any PUBLIC => PUBLIC, else all
+      // are PRIVATE => PRIVATE.
+      symbol.attrs().set(anyPublic ? Attr::PUBLIC : Attr::PRIVATE);
+    }
+  }
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
   if (inInterfaceBlock()) {
