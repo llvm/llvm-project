@@ -63,9 +63,9 @@ INTERCEPTOR(uptr, signal, int signum, uptr handler) {
     // sigaction().
     return (uptr) nullptr;
 
-  uptr ret = +[](auto signal, int signum, uptr handler) {
+  uptr ret = +[](int signum, uptr handler) {
     SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
-  }(signal, signum, handler);
+  }(signum, handler);
 
   if (ret != sig_err && SetSignalHandlerFromSanitizer(signum, false))
     // If the user sets a signal handler, it becomes uncloaked, even if they
