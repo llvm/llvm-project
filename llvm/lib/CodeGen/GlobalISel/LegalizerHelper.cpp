@@ -4518,6 +4518,16 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_ICMP: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    bitcastSrc(MI, CastTy, 2);
+    bitcastSrc(MI, CastTy, 3);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_SELECT: {
     if (TypeIdx != 0)
       return UnableToLegalize;
