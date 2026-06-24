@@ -32,8 +32,8 @@ body:             |
     ; CHECK-NEXT: add x10, x9, x1
     ; CHECK-NEXT: ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x9]
     ; CHECK-NEXT: ld1b { z4.b - z7.b }, pn8/z, [x0, x10]
-    ; CHECK-NEXT: mov z8.d, z16.d
     ; CHECK-NEXT: mov z9.d, z18.d
+    ; CHECK-NEXT: mov z8.d, z16.d
     ; CHECK-NEXT: mov z21.d, z22.d
     ; CHECK-NEXT: mov z10.d, z19.d
     ; CHECK-NEXT: mov z22.d, z23.d
