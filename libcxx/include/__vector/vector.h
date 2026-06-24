@@ -720,7 +720,7 @@ private:
   }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline void __emplace_back_slow_path(_Args&&... __args);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer __emplace_back_slow_path(_Args&&... __args);
 
   // The following functions are no-ops outside of AddressSanitizer mode.
   // We call annotations for every allocator, unless explicitly disabled.
@@ -1045,13 +1045,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
+vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   _SplitBuffer __v(__recommend(size() + 1), size(), this->__layout_.__alloc());
   //    __v.emplace_back(std::forward<_Args>(__args)...);
   pointer __end = __v.end();
   __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__end), std::forward<_Args>(__args)...);
   __v.__set_sentinel(++__end);
   __layout_.__relocate(__v);
+  return __end;
 }
 
 // This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
@@ -1076,10 +1078,16 @@ template <class _Tp, class _Alloc>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>::__emplace_back_result_t
 vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
+  pointer __end = __layout_.__end_ptr();
   std::__if_likely_else(
       !__layout_.__is_full(),
-      [&] { __emplace_back_assume_capacity(std::forward<_Args>(__args)...); },
-      [&] { __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+      [&] {
+        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+        ++__end;
+      },
+      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+
+  __layout_.__set_bound_using_pointer(__end);
 #if _LIBCPP_STD_VER >= 17
   return back();
 #endif
