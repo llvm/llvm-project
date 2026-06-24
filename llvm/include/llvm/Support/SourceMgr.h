@@ -81,7 +81,11 @@ private:
     const char *getPointerForLineNumberSpecialized(unsigned LineNo) const;
 
     /// This is the location of the parent include, or null if at the top level.
+    /// For macro instantiation buffers, this is the macro call location.
     SMLoc IncludeLoc;
+
+    /// The location in the parent buffer where this macro was defined.
+    SMLoc MacroDefLoc;
 
     SrcBuffer() = default;
     LLVM_ABI SrcBuffer(SrcBuffer &&);
@@ -158,6 +162,23 @@ public:
     return Buffers[i - 1].IncludeLoc;
   }
 
+  unsigned getMacroParentBuf(unsigned i) const {
+    if (SMLoc Loc = getMacroDefLoc(i); Loc.isValid())
+      return FindBufferContainingLoc(getParentIncludeLoc(i));
+    return 0;
+  }
+
+  SMLoc getMacroDefLoc(unsigned i) const {
+    assert(isValidBufferID(i));
+    return Buffers[i - 1].MacroDefLoc;
+  }
+
+  unsigned getMacroDefBuf(unsigned i) const {
+    if (SMLoc Loc = getMacroDefLoc(i); Loc.isValid())
+      return FindBufferContainingLoc(Loc);
+    return 0;
+  }
+
   /// Add a new source buffer to this source manager. This takes ownership of
   /// the memory buffer.
   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
@@ -165,6 +186,16 @@ public:
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
+    Buffers.push_back(std::move(NB));
+    return Buffers.size();
+  }
+
+  unsigned AddMacroInstantiationBuffer(std::unique_ptr<MemoryBuffer> F,
+                                       SMLoc SpellingLoc, SMLoc CallLoc) {
+    SrcBuffer NB;
+    NB.Buffer = std::move(F);
+    NB.IncludeLoc = CallLoc;
+    NB.MacroDefLoc = SpellingLoc;
     Buffers.push_back(std::move(NB));
     return Buffers.size();
   }
@@ -272,6 +303,15 @@ public:
   /// \param IncludeLoc The location of the include.
   /// \param OS the raw_ostream to print on.
   LLVM_ABI void PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const;
+
+  /// Prints the include stack of a buffer unless it is a macro instantiation
+  /// buffer.
+  LLVM_ABI void printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const;
+
+  /// Map a virtual macro instantiation location back to the physical
+  /// definition/signature location of the macro it was called from.
+  LLVM_ABI SMLoc getMacroInstantiationLoc(SMLoc Loc) const;
 };
 
 /// Represents a single fixit, a replacement of one range of text with another.
