@@ -437,8 +437,11 @@ class LLDBDAP(DAP):
         ]
 
     def _sanitize_function_name(self, name: str):  # pylint: disable=no-self-use
-        if name.endswith(" [opt]"):
-            name = name[: -len(" [opt]")]
+        # Remove the tags that LLDB may insert at the end of a function name; these appear in a fixed order, and we
+        # strip them in the reverse of that order below.
+        for tag in ["artificial", "inlined", "opt"]:
+            if name.endswith(f" [{tag}]"):
+                name = name[: -len(f" [{tag}]")]
         return name
 
     def _post_step_hook(self):
