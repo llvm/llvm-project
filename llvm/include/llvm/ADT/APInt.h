@@ -129,7 +129,7 @@ public:
         }
       }
     }
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       U.VAL = val;
       if (implicitTrunc || isSigned)
         clearUnusedBits();
@@ -175,7 +175,7 @@ public:
 
   /// Copy Constructor.
   APInt(const APInt &that) : BitWidth(that.BitWidth) {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL = that.U.VAL;
     else
       initSlowCase(that);
@@ -372,14 +372,14 @@ public:
   bool isAllOnes() const {
     if (BitWidth == 0)
       return true;
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return U.VAL == WORDTYPE_MAX >> (APINT_BITS_PER_WORD - BitWidth);
     return countTrailingOnesSlowCase() == BitWidth;
   }
 
   /// Determine if this value is zero, i.e. all bits are clear.
   bool isZero() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return U.VAL == 0;
     return countLeadingZerosSlowCase() == BitWidth;
   }
@@ -388,7 +388,7 @@ public:
   ///
   /// This checks to see if the value of this APInt is one.
   bool isOne() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return U.VAL == 1;
     return countLeadingZerosSlowCase() == BitWidth - 1;
   }
@@ -404,7 +404,7 @@ public:
   /// This checks to see if the value of this APInt is the maximum signed
   /// value for the APInt's bit width.
   bool isMaxSignedValue() const {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       assert(BitWidth && "zero width values not allowed");
       return U.VAL == ((WordType(1) << (BitWidth - 1)) - 1);
     }
@@ -422,7 +422,7 @@ public:
   /// This checks to see if the value of this APInt is the minimum signed
   /// value for the APInt's bit width.
   bool isMinSignedValue() const {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       assert(BitWidth && "zero width values not allowed");
       return U.VAL == (WordType(1) << (BitWidth - 1));
     }
@@ -439,7 +439,7 @@ public:
   ///
   /// \returns true if the argument APInt value is a power of two > 0.
   bool isPowerOf2() const {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
     }
@@ -489,7 +489,7 @@ public:
   bool isMask(unsigned numBits) const {
     assert(numBits != 0 && "numBits must be non-zero");
     assert(numBits <= BitWidth && "numBits out of range");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return U.VAL == (WORDTYPE_MAX >> (APINT_BITS_PER_WORD - numBits));
     unsigned Ones = countTrailingOnesSlowCase();
     return (numBits == Ones) &&
@@ -500,7 +500,7 @@ public:
   /// the least significant bit with the remainder zero.
   /// Ex. isMask(0x0000FFFFU) == true.
   bool isMask() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return isMask_64(U.VAL);
     unsigned Ones = countTrailingOnesSlowCase();
     return (Ones > 0) && ((Ones + countLeadingZerosSlowCase()) == BitWidth);
@@ -509,7 +509,7 @@ public:
   /// Return true if this APInt value contains a non-empty sequence of ones with
   /// the remainder zero.
   bool isShiftedMask() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
@@ -521,7 +521,7 @@ public:
   /// lowest set bit and \p MaskLen is updated to specify the length of the
   /// mask, else neither are updated.
   bool isShiftedMask(unsigned &MaskIdx, unsigned &MaskLen) const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return isShiftedMask_64(U.VAL, MaskIdx, MaskLen);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
@@ -574,9 +574,7 @@ public:
   /// This is useful for writing out the APInt in binary form without any
   /// conversions.
   const uint64_t *getRawData() const {
-    if (isSingleWord())
-      return &U.VAL;
-    return &U.pVal[0];
+    return isSingleWord() ? &U.VAL : &U.pVal[0];
   }
 
   /// @}
@@ -625,7 +623,7 @@ public:
   APInt &operator=(const APInt &RHS) {
     // The common case (both source or dest being inline) doesn't require
     // allocation or deallocation.
-    if (isSingleWord() && RHS.isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord() && RHS.isSingleWord())) {
       U.VAL = RHS.U.VAL;
       BitWidth = RHS.BitWidth;
       return *this;
@@ -643,7 +641,7 @@ public:
       return *this;
 #endif
     assert(this != &that && "Self-move not supported");
-    if (!isSingleWord())
+    if (LLVM_UNLIKELY(!isSingleWord()))
       delete[] U.pVal;
 
     // Use memcpy so that type based alias analysis sees both VAL and pVal
@@ -663,7 +661,7 @@ public:
   ///
   /// \returns *this after assignment of RHS value.
   APInt &operator=(uint64_t RHS) {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       U.VAL = RHS;
       return clearUnusedBits();
     }
@@ -680,7 +678,7 @@ public:
   /// \returns *this after ANDing with RHS.
   APInt &operator&=(const APInt &RHS) {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL &= RHS.U.VAL;
     else
       andAssignSlowCase(RHS);
@@ -693,7 +691,7 @@ public:
   /// logically zero-extended or truncated to match the bit-width of
   /// the LHS.
   APInt &operator&=(uint64_t RHS) {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       U.VAL &= RHS;
       return *this;
     }
@@ -710,7 +708,7 @@ public:
   /// \returns *this after ORing with RHS.
   APInt &operator|=(const APInt &RHS) {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL |= RHS.U.VAL;
     else
       orAssignSlowCase(RHS);
@@ -723,7 +721,7 @@ public:
   /// logically zero-extended or truncated to match the bit-width of
   /// the LHS.
   APInt &operator|=(uint64_t RHS) {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       U.VAL |= RHS;
       return clearUnusedBits();
     }
@@ -739,7 +737,7 @@ public:
   /// \returns *this after XORing with RHS.
   APInt &operator^=(const APInt &RHS) {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL ^= RHS.U.VAL;
     else
       xorAssignSlowCase(RHS);
@@ -752,7 +750,7 @@ public:
   /// logically zero-extended or truncated to match the bit-width of
   /// the LHS.
   APInt &operator^=(uint64_t RHS) {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       U.VAL ^= RHS;
       return clearUnusedBits();
     }
@@ -791,7 +789,7 @@ public:
   /// \returns *this after shifting left by ShiftAmt
   APInt &operator<<=(unsigned ShiftAmt) {
     assert(ShiftAmt <= BitWidth && "Invalid shift amount");
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       if (ShiftAmt == BitWidth)
         U.VAL = 0;
       else
@@ -840,7 +838,7 @@ public:
   /// Arithmetic right-shift this APInt by ShiftAmt in place.
   void ashrInPlace(unsigned ShiftAmt) {
     assert(ShiftAmt <= BitWidth && "Invalid shift amount");
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       int64_t SExtVAL = SignExtend64(U.VAL, BitWidth);
       if (ShiftAmt == BitWidth)
         U.VAL = SExtVAL >> (APINT_BITS_PER_WORD - 1); // Fill with sign bit.
@@ -864,7 +862,7 @@ public:
   /// Logical right-shift this APInt by ShiftAmt in place.
   void lshrInPlace(unsigned ShiftAmt) {
     assert(ShiftAmt <= BitWidth && "Invalid shift amount");
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       if (ShiftAmt == BitWidth)
         U.VAL = 0;
       else
@@ -1062,7 +1060,7 @@ public:
   /// relationship.
   bool operator==(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Comparison requires equal bit widths");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return U.VAL == RHS.U.VAL;
     return equalSlowCase(RHS);
   }
@@ -1255,7 +1253,7 @@ public:
   /// between this APInt and RHS that are both set.
   bool intersects(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return (U.VAL & RHS.U.VAL) != 0;
     return intersectsSlowCase(RHS);
   }
@@ -1263,7 +1261,7 @@ public:
   /// This operation checks that all bits set in this APInt are also set in RHS.
   bool isSubsetOf(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return (U.VAL & ~RHS.U.VAL) == 0;
     return isSubsetOfSlowCase(RHS);
   }
@@ -1271,7 +1269,7 @@ public:
   /// This operation checks if all bits are set in either this or RHS.
   bool isInverseOf(const APInt &RHS) const {
     assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
     return isInverseOfSlowCase(RHS);
   }
@@ -1340,7 +1338,7 @@ public:
 
   /// Set every bit to 1.
   void setAllBits() {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL = WORDTYPE_MAX;
     else
       // Set all the bits in all the words.
@@ -1353,7 +1351,7 @@ public:
   void setBit(unsigned BitPosition) {
     assert(BitPosition < BitWidth && "BitPosition out of range");
     WordType Mask = maskBit(BitPosition);
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL |= Mask;
     else
       U.pVal[whichWord(BitPosition)] |= Mask;
@@ -1417,7 +1415,7 @@ public:
 
   /// Set every bit to 0.
   void clearAllBits() {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       U.VAL = 0;
     else
       memset(U.pVal, 0, getNumWords() * APINT_WORD_SIZE);
@@ -1473,7 +1471,7 @@ public:
 
   /// Toggle every bit to its opposite value.
   void flipAllBits() {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       U.VAL ^= WORDTYPE_MAX;
       clearUnusedBits();
     } else {
@@ -1561,7 +1559,7 @@ public:
   /// uint64_t. The bitwidth must be <= 64 or the value must fit within a
   /// uint64_t. Otherwise an assertion will result.
   uint64_t getZExtValue() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return U.VAL;
     assert(getActiveBits() <= 64 && "Too many bits for uint64_t");
     return U.pVal[0];
@@ -1583,7 +1581,7 @@ public:
   /// int64_t. The bit width must be <= 64 or the value must fit within an
   /// int64_t. Otherwise an assertion will result.
   int64_t getSExtValue() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return SignExtend64(U.VAL, BitWidth);
     assert(getSignificantBits() <= 64 && "Too many bits for int64_t");
     return int64_t(U.pVal[0]);
@@ -1619,7 +1617,7 @@ public:
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   ///   zeros from the most significant bit to the first one bits.
   unsigned countl_zero() const {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       unsigned unusedBits = APINT_BITS_PER_WORD - BitWidth;
       return llvm::countl_zero(U.VAL) - unusedBits;
     }
@@ -1636,7 +1634,7 @@ public:
   /// \returns 0 if the high order bit is not set, otherwise returns the number
   /// of 1 bits from the most significant to the least
   unsigned countl_one() const {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       if (LLVM_UNLIKELY(BitWidth == 0))
         return 0;
       return llvm::countl_one(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
@@ -1660,7 +1658,7 @@ public:
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   /// zeros from the least significant bit to the first one bit.
   unsigned countr_zero() const {
-    if (isSingleWord()) {
+    if (LLVM_LIKELY(isSingleWord())) {
       unsigned TrailingZeros = llvm::countr_zero(U.VAL);
       return (TrailingZeros > BitWidth ? BitWidth : TrailingZeros);
     }
@@ -1677,7 +1675,7 @@ public:
   /// \returns BitWidth if the value is all ones, otherwise returns the number
   /// of ones from the least significant bit to the first zero bit.
   unsigned countr_one() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return llvm::countr_one(U.VAL);
     return countTrailingOnesSlowCase();
   }
@@ -1691,7 +1689,7 @@ public:
   ///
   /// \returns 0 if the value is zero, otherwise returns the number of set bits.
   unsigned popcount() const {
-    if (isSingleWord())
+    if (LLVM_LIKELY(isSingleWord()))
       return llvm::popcount(U.VAL);
     return countPopulationSlowCase();
   }

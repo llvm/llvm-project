@@ -91,7 +91,7 @@ void APInt::initSlowCase(const APInt& that) {
 
 void APInt::initFromArray(ArrayRef<uint64_t> bigVal) {
   assert(bigVal.data() && "Null pointer detected!");
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL = bigVal[0];
   else {
     // Get memory, cleared to 0
@@ -147,7 +147,7 @@ void APInt::assignSlowCase(const APInt &RHS) {
   reallocate(RHS.getBitWidth());
 
   // Copy the data.
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL = RHS.U.VAL;
   else
     memcpy(U.pVal, RHS.U.pVal, getNumWords() * APINT_WORD_SIZE);
@@ -157,7 +157,7 @@ void APInt::assignSlowCase(const APInt &RHS) {
 void APInt::Profile(FoldingSetNodeID& ID) const {
   ID.AddInteger(BitWidth);
 
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     ID.AddInteger(U.VAL);
     return;
   }
@@ -177,7 +177,7 @@ bool APInt::isAligned(Align A) const {
 
 /// Prefix increment operator. Increments the APInt by one.
 APInt& APInt::operator++() {
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     ++U.VAL;
   else
     tcIncrement(U.pVal, getNumWords());
@@ -186,7 +186,7 @@ APInt& APInt::operator++() {
 
 /// Prefix decrement operator. Decrements the APInt by one.
 APInt& APInt::operator--() {
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     --U.VAL;
   else
     tcDecrement(U.pVal, getNumWords());
@@ -198,7 +198,7 @@ APInt& APInt::operator--() {
 /// Addition assignment operator.
 APInt& APInt::operator+=(const APInt& RHS) {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL += RHS.U.VAL;
   else
     tcAdd(U.pVal, RHS.U.pVal, 0, getNumWords());
@@ -206,7 +206,7 @@ APInt& APInt::operator+=(const APInt& RHS) {
 }
 
 APInt& APInt::operator+=(uint64_t RHS) {
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL += RHS;
   else
     tcAddPart(U.pVal, RHS, getNumWords());
@@ -218,7 +218,7 @@ APInt& APInt::operator+=(uint64_t RHS) {
 /// Subtraction assignment operator.
 APInt& APInt::operator-=(const APInt& RHS) {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL -= RHS.U.VAL;
   else
     tcSubtract(U.pVal, RHS.U.pVal, 0, getNumWords());
@@ -226,7 +226,7 @@ APInt& APInt::operator-=(const APInt& RHS) {
 }
 
 APInt& APInt::operator-=(uint64_t RHS) {
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL -= RHS;
   else
     tcSubtractPart(U.pVal, RHS, getNumWords());
@@ -235,7 +235,7 @@ APInt& APInt::operator-=(uint64_t RHS) {
 
 APInt APInt::operator*(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     return APInt(BitWidth, U.VAL * RHS.U.VAL, /*isSigned=*/false,
                  /*implicitTrunc=*/true);
 
@@ -269,7 +269,7 @@ APInt &APInt::operator*=(const APInt &RHS) {
 }
 
 APInt& APInt::operator*=(uint64_t RHS) {
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     U.VAL *= RHS;
   } else {
     unsigned NumWords = getNumWords();
@@ -284,7 +284,7 @@ bool APInt::equalSlowCase(const APInt &RHS) const {
 
 int APInt::compare(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     return U.VAL < RHS.U.VAL ? -1 : U.VAL > RHS.U.VAL;
 
   return tcCompare(U.pVal, RHS.U.pVal, getNumWords());
@@ -292,7 +292,7 @@ int APInt::compare(const APInt& RHS) const {
 
 int APInt::compareSigned(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     int64_t lhsSext = SignExtend64(U.VAL, BitWidth);
     int64_t rhsSext = SignExtend64(RHS.U.VAL, BitWidth);
     return lhsSext < rhsSext ? -1 : lhsSext > rhsSext;
@@ -410,7 +410,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
   }
 
   // Single word result can be done as a direct bitmask.
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     uint64_t mask = WORDTYPE_MAX >> (APINT_BITS_PER_WORD - subBitWidth);
     U.VAL &= ~(mask << bitPosition);
     U.VAL |= (subBits.U.VAL << bitPosition);
@@ -456,7 +456,7 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
 void APInt::insertBits(uint64_t subBits, unsigned bitPosition, unsigned numBits) {
   uint64_t maskBits = maskTrailingOnes<uint64_t>(numBits);
   subBits &= maskBits;
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     U.VAL &= ~(maskBits << bitPosition);
     U.VAL |= subBits << bitPosition;
     return;
@@ -484,7 +484,7 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
   assert(bitPosition < BitWidth && (numBits + bitPosition) <= BitWidth &&
          "Illegal bit extraction");
 
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     return APInt(numBits, U.VAL >> bitPosition, /*isSigned=*/false,
                  /*implicitTrunc=*/true);
 
@@ -525,7 +525,7 @@ uint64_t APInt::extractBitsAsZExtValue(unsigned numBits,
   assert(numBits <= 64 && "Illegal bit extraction");
 
   uint64_t maskBits = maskTrailingOnes<uint64_t>(numBits);
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     return (U.VAL >> bitPosition) & maskBits;
 
   static_assert(APINT_BITS_PER_WORD >= 64,
@@ -616,7 +616,7 @@ unsigned APInt::getBitsNeeded(StringRef str, uint8_t radix) {
 }
 
 hash_code llvm::hash_value(const APInt &Arg) {
-  if (Arg.isSingleWord())
+  if (LLVM_LIKELY(Arg.isSingleWord()))
     return hash_combine(Arg.BitWidth, Arg.U.VAL);
 
   return hash_combine(
@@ -788,7 +788,7 @@ APInt APInt::byteSwap() const {
 }
 
 APInt APInt::reverseBits() const {
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     switch (BitWidth) {
     case 64:
       return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
@@ -912,7 +912,7 @@ APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
 double APInt::roundToDouble(bool isSigned) const {
   // Handle the simple case where the value is contained in one uint64_t.
   // It is wrong to optimize getWord(0) to VAL; there might be more than one word.
-  if (isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD) {
+  if (LLVM_LIKELY(isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD)) {
     if (isSigned) {
       int64_t sext = SignExtend64(getWord(0), BitWidth);
       return double(sext);
@@ -1255,7 +1255,7 @@ APInt APInt::sqrtFloor() const {
         /* 16-24 */ 4, 4, 4, 4, 4, 4, 4, 4, 4,
         /* 25-31 */ 5, 5, 5, 5, 5, 5, 5,
     };
-    return APInt(BitWidth, results[ (isSingleWord() ? U.VAL : U.pVal[0]) ]);
+    return APInt(BitWidth, results[(isSingleWord() ? U.VAL : U.pVal[0])]);
   }
 
   // If the magnitude of the value fits in less than 52 bits (the precision of
@@ -1600,7 +1600,7 @@ APInt APInt::udiv(const APInt &RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
 
   // First, deal with the easy case
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     assert(RHS.U.VAL != 0 && "Divide by zero?");
     return APInt(BitWidth, U.VAL / RHS.U.VAL);
   }
@@ -1638,7 +1638,7 @@ APInt APInt::udiv(uint64_t RHS) const {
   assert(RHS != 0 && "Divide by zero?");
 
   // First, deal with the easy case
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     return APInt(BitWidth, U.VAL / RHS);
 
   // Get some facts about the LHS words.
@@ -1691,7 +1691,7 @@ APInt APInt::sdiv(int64_t RHS) const {
 
 APInt APInt::urem(const APInt &RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     assert(RHS.U.VAL != 0 && "Remainder by zero?");
     return APInt(BitWidth, U.VAL % RHS.U.VAL);
   }
@@ -1736,7 +1736,7 @@ APInt APInt::urem(const APInt &RHS) const {
 uint64_t APInt::urem(uint64_t RHS) const {
   assert(RHS != 0 && "Remainder by zero?");
 
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     return U.VAL % RHS;
 
   // Get some facts about the LHS
@@ -1796,7 +1796,7 @@ void APInt::udivrem(const APInt &LHS, const APInt &RHS,
   unsigned BitWidth = LHS.BitWidth;
 
   // First, deal with the easy case
-  if (LHS.isSingleWord()) {
+  if (LLVM_LIKELY(LHS.isSingleWord())) {
     assert(RHS.U.VAL != 0 && "Divide by zero?");
     uint64_t QuotVal = LHS.U.VAL / RHS.U.VAL;
     uint64_t RemVal = LHS.U.VAL % RHS.U.VAL;
@@ -1867,7 +1867,7 @@ void APInt::udivrem(const APInt &LHS, uint64_t RHS, APInt &Quotient,
   unsigned BitWidth = LHS.BitWidth;
 
   // First, deal with the easy case
-  if (LHS.isSingleWord()) {
+  if (LLVM_LIKELY(LHS.isSingleWord())) {
     uint64_t QuotVal = LHS.U.VAL / RHS;
     Remainder = LHS.U.VAL % RHS;
     Quotient = APInt(BitWidth, QuotVal);
@@ -2167,7 +2167,7 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
          "Insufficient bit width");
 
   // Allocate memory if needed
-  if (isSingleWord())
+  if (LLVM_LIKELY(isSingleWord()))
     U.VAL = 0;
   else
     U.pVal = getClearedMemory(getNumWords());
@@ -2241,7 +2241,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
                                    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const char *Digits = BothDigits + (UpperCase ? 36 : 0);
 
-  if (isSingleWord()) {
+  if (LLVM_LIKELY(isSingleWord())) {
     char Buffer[65];
     char *BufPtr = std::end(Buffer);
 
