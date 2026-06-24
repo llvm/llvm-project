@@ -15,9 +15,8 @@
 ; NOZBC32: @.crctable.7 = private constant [256 x i8] c"\00\1D:'tiNS\E8\F5\D2\CF\9C\81\A6\BB\CD\D0\F7\EA\B9\A4\83\9E%8\1F\02QLkv\87\9A\BD\A0\F3\EE\C9\D4orUH\1B\06!<JWpm>#\04\19\A2\BF\98\85\D6\CB\EC\F1\13\0E)4gz]@\FB\E6\C1\DC\8F\92\B5\A8\DE\C3\E4\F9\AA\B7\90\8D6+\0C\11B_xe\94\89\AE\B3\E0\FD\DA\C7|aF[\08\152/YDc~-0\17\0A\B1\AC\8B\96\C5\D8\FF\E2&
 ; NOZBC32: @.crctable.8 = private constant [256 x i32] [i32 0, i32 4489, i32 8978, i32 12955, i32 17956, i32 22445, i32 25910, i32 29887, i32 35912, i32 40385, i32 44890, i32 48851, i32 51820, i32 56293, i32 59774, i32 63735, i32 4225, i32 264, i32 13203, i32 8730, i32 22181, i32 18220, i32 30135, i32 25662, i32 40137, i32 36160, i32 49115, i32 44626, i32 56045, i32 52068, i32 63999, i32 59510, i32 8450, i32 12427, i32 528, i32 5017, i32 26406, i32 30383, i32 17460, i32 21949, i32 44362, i32 48323, i32 36440, i32 40913, i32 60270, i32 64231, i32 51324, i32 55797, i32 12675, i32 8202, i32 4753, i32 792, i32 30631, i32 26158, i32 21685, i32 17724, i32 48587, i32 44098, i32 40665, i32 36688, i32 64495, i32 60006, i32 55549, i32 51572, i32 16900, i32 21389, i32 24854, i32 28831, i32 1056, i32 5545, i32 10034, i32 14011, i32 52812, i32 57285, i32 60766, i32 64727, i32 34920, i32 39393, i32 43898, i32 47859, i32 21125, i32 17164, i32 29079, i32 24606, i32 5281, i32 1320, i32 14259, i32 9786, i32 57037, i32 53060, i32 64991, i32 60502, i32 39145, i32 35168, i32 48123, i32 43634, i32 25350, i32 29327, i32 16404, i32 20893, i32 9506, i32 13483, i32 1584, i32 6073, i32 61262, i32 65223, i32 52316, i32 56789, i32 43370, i32 47331, i32 35448, i32 39921, i32 29575, i32 25102, i32 20629, i32 16668, i32 13731, i32 9258, i32 5809, i32 1848, i32 65487, i32 60998, i32 56541, i32 52564, i32 47595, i32 43106, i32 39673, i32 35696, i32 33800, i32 38273, i32 42778, i32 46739, i32 49708, i32 54181, i32 57662, i32 61623, i32 2112, i32 6601, i32 11090, i32 15067, i32 20068, i32 24557, i32 28022, i32 31999, i32 38025, i32 34048, i32 47003, i32 42514, i32 53933, i32 49956, i32 61887, i32 57398, i32 6337, i32 2376, i32 15315, i32 10842, i32 24293, i32 20332, i32 32247, i32 27774, i32 42250, i32 46211, i32 34328, i32 38801, i32 58158, i32 62119, i32 49212, i32 53685, i32 10562, i32 14539, i32 2640, i32 7129, i32 28518, i32 32495, i32 19572, i32 24061, i32 46475, i32 41986, i32 38553, i32 34576, i32 62383, i32 57894, i32 53437, i32 49460, i32 14787, i32 10314, i32 6865, i32 2904, i32 32743, i32 28270, i32 23797, i32 19836, i32 50700, i32 55173, i32 58654, i32 62615, i32 32808, i32 37281, i32 41786, i32 45747, i32 19012, i32 23501, i32 26966, i32 30943, i32 3168, i32 7657, i32 12146, i32 16123, i32 54925, i32 50948, i32 62879, i32 58390, i32 37033, i32 33056, i32 46011, i32 41522, i32 23237, i32 19276, i32 31191, i32 26718, i32 7393, i32 3432, i32 16371, i32 11898, i32 59150, i32 63111, i32 50204, i32 54677, i32 41258, i32 45219, i32 33336, i32 37809, i32 27462, i32 31439, i32 18516, i32 23005, i32 11618, i32 15595, i32 3696, i32 8185, i32 63375, i32 58886, i32 54429, i32 50452, i32 45483, i32 40994, i32 37561, i32 33584, i32 31687, i32 27214, i32 22741, i32 18780, i32 15843, i32 11370, i32 7921, i32 3960]
 ;.
-; ZBC32: @.crctable = private constant [256 x i8] c"\00\09\12\1B\1F\16\0D\04\05\0C\17\1E\1A\13\08\01\0A\03\18\11\15\1C\07\0E\0F\06\1D\14\10\19\02\0B\14\1D\06\0F\0B\02\19\10\11\18\03\0A\0E\07\1C\15\1E\17\0C\05\01\08\13\1A\1B\12\09\00\04\0D\16\1F\13\1A\01\08\0C\05\1E\17\16\1F\04\0D\09\00\1B\12\19\10\0B\02\06\0F\14\1D\1C\15\0E\07\03\0A\11\18\07\0E\15\1C\18\11\0A\03\02\0B\10\19\1D\14\0F\06\0D\04\1F\16\12\1B\00\09\08\01\1A\13\17\1E\05\0C\1D\14\0F\06\02\0B\10\19\18\11\0A\03\07\0E\15\1C\17\1E\05\0C\08\01\1A\13\12\1B\00\09\0D\04\1F\16\09\00\1B\12\16\1F\04\0D\0C\05\1E\17\13\1A\01\08\03\0A\11\18\1C\15\0E\07\06\0F\14\1D\19\10\0B\02\0E\07\1C\15\11\18\03\0A\0B\02\19\10\14\1D\06\0F\04\0D\16\1F\1B\12\09\00\01\08\13\1A\1E\17\0C\05\1A\13\08\01\05\0C\17\1E\1F\16\0D\04\00\09\12\1B\10\19\02\0B\0F\06\1D\14\15\1C\07\0E\0A\03\18\11"
-; ZBC32: @.crctable.1 = private constant [256 x i8] c"\00\1D:'tiNS\E8\F5\D2\CF\9C\81\A6\BB\CD\D0\F7\EA\B9\A4\83\9E%8\1F\02QLkv\87\9A\BD\A0\F3\EE\C9\D4orUH\1B\06!<JWpm>#\04\19\A2\BF\98\85\D6\CB\EC\F1\13\0E)4gz]@\FB\E6\C1\DC\8F\92\B5\A8\DE\C3\E4\F9\AA\B7\90\8D6+\0C\11B_xe\94\89\AE\B3\E0\FD\DA\C7|aF[\08\152/YDc~-0\17\0A\B1\AC\8B\96\C5\D8\FF\E2&
-; ZBC32: @.crctable.2 = private constant [256 x i32] [i32 0, i32 4489, i32 8978, i32 12955, i32 17956, i32 22445, i32 25910, i32 29887, i32 35912, i32 40385, i32 44890, i32 48851, i32 51820, i32 56293, i32 59774, i32 63735, i32 4225, i32 264, i32 13203, i32 8730, i32 22181, i32 18220, i32 30135, i32 25662, i32 40137, i32 36160, i32 49115, i32 44626, i32 56045, i32 52068, i32 63999, i32 59510, i32 8450, i32 12427, i32 528, i32 5017, i32 26406, i32 30383, i32 17460, i32 21949, i32 44362, i32 48323, i32 36440, i32 40913, i32 60270, i32 64231, i32 51324, i32 55797, i32 12675, i32 8202, i32 4753, i32 792, i32 30631, i32 26158, i32 21685, i32 17724, i32 48587, i32 44098, i32 40665, i32 36688, i32 64495, i32 60006, i32 55549, i32 51572, i32 16900, i32 21389, i32 24854, i32 28831, i32 1056, i32 5545, i32 10034, i32 14011, i32 52812, i32 57285, i32 60766, i32 64727, i32 34920, i32 39393, i32 43898, i32 47859, i32 21125, i32 17164, i32 29079, i32 24606, i32 5281, i32 1320, i32 14259, i32 9786, i32 57037, i32 53060, i32 64991, i32 60502, i32 39145, i32 35168, i32 48123, i32 43634, i32 25350, i32 29327, i32 16404, i32 20893, i32 9506, i32 13483, i32 1584, i32 6073, i32 61262, i32 65223, i32 52316, i32 56789, i32 43370, i32 47331, i32 35448, i32 39921, i32 29575, i32 25102, i32 20629, i32 16668, i32 13731, i32 9258, i32 5809, i32 1848, i32 65487, i32 60998, i32 56541, i32 52564, i32 47595, i32 43106, i32 39673, i32 35696, i32 33800, i32 38273, i32 42778, i32 46739, i32 49708, i32 54181, i32 57662, i32 61623, i32 2112, i32 6601, i32 11090, i32 15067, i32 20068, i32 24557, i32 28022, i32 31999, i32 38025, i32 34048, i32 47003, i32 42514, i32 53933, i32 49956, i32 61887, i32 57398, i32 6337, i32 2376, i32 15315, i32 10842, i32 24293, i32 20332, i32 32247, i32 27774, i32 42250, i32 46211, i32 34328, i32 38801, i32 58158, i32 62119, i32 49212, i32 53685, i32 10562, i32 14539, i32 2640, i32 7129, i32 28518, i32 32495, i32 19572, i32 24061, i32 46475, i32 41986, i32 38553, i32 34576, i32 62383, i32 57894, i32 53437, i32 49460, i32 14787, i32 10314, i32 6865, i32 2904, i32 32743, i32 28270, i32 23797, i32 19836, i32 50700, i32 55173, i32 58654, i32 62615, i32 32808, i32 37281, i32 41786, i32 45747, i32 19012, i32 23501, i32 26966, i32 30943, i32 3168, i32 7657, i32 12146, i32 16123, i32 54925, i32 50948, i32 62879, i32 58390, i32 37033, i32 33056, i32 46011, i32 41522, i32 23237, i32 19276, i32 31191, i32 26718, i32 7393, i32 3432, i32 16371, i32 11898, i32 59150, i32 63111, i32 50204, i32 54677, i32 41258, i32 45219, i32 33336, i32 37809, i32 27462, i32 31439, i32 18516, i32 23005, i32 11618, i32 15595, i32 3696, i32 8185, i32 63375, i32 58886, i32 54429, i32 50452, i32 45483, i32 40994, i32 37561, i32 33584, i32 31687, i32 27214, i32 22741, i32 18780, i32 15843, i32 11370, i32 7921, i32 3960]
+; ZBC32: @.crctable = private constant [256 x i8] c"\00\1D:'tiNS\E8\F5\D2\CF\9C\81\A6\BB\CD\D0\F7\EA\B9\A4\83\9E%8\1F\02QLkv\87\9A\BD\A0\F3\EE\C9\D4orUH\1B\06!<JWpm>#\04\19\A2\BF\98\85\D6\CB\EC\F1\13\0E)4gz]@\FB\E6\C1\DC\8F\92\B5\A8\DE\C3\E4\F9\AA\B7\90\8D6+\0C\11B_xe\94\89\AE\B3\E0\FD\DA\C7|aF[\08\152/YDc~-0\17\0A\B1\AC\8B\96\C5\D8\FF\E2&
+; ZBC32: @.crctable.1 = private constant [256 x i32] [i32 0, i32 4489, i32 8978, i32 12955, i32 17956, i32 22445, i32 25910, i32 29887, i32 35912, i32 40385, i32 44890, i32 48851, i32 51820, i32 56293, i32 59774, i32 63735, i32 4225, i32 264, i32 13203, i32 8730, i32 22181, i32 18220, i32 30135, i32 25662, i32 40137, i32 36160, i32 49115, i32 44626, i32 56045, i32 52068, i32 63999, i32 59510, i32 8450, i32 12427, i32 528, i32 5017, i32 26406, i32 30383, i32 17460, i32 21949, i32 44362, i32 48323, i32 36440, i32 40913, i32 60270, i32 64231, i32 51324, i32 55797, i32 12675, i32 8202, i32 4753, i32 792, i32 30631, i32 26158, i32 21685, i32 17724, i32 48587, i32 44098, i32 40665, i32 36688, i32 64495, i32 60006, i32 55549, i32 51572, i32 16900, i32 21389, i32 24854, i32 28831, i32 1056, i32 5545, i32 10034, i32 14011, i32 52812, i32 57285, i32 60766, i32 64727, i32 34920, i32 39393, i32 43898, i32 47859, i32 21125, i32 17164, i32 29079, i32 24606, i32 5281, i32 1320, i32 14259, i32 9786, i32 57037, i32 53060, i32 64991, i32 60502, i32 39145, i32 35168, i32 48123, i32 43634, i32 25350, i32 29327, i32 16404, i32 20893, i32 9506, i32 13483, i32 1584, i32 6073, i32 61262, i32 65223, i32 52316, i32 56789, i32 43370, i32 47331, i32 35448, i32 39921, i32 29575, i32 25102, i32 20629, i32 16668, i32 13731, i32 9258, i32 5809, i32 1848, i32 65487, i32 60998, i32 56541, i32 52564, i32 47595, i32 43106, i32 39673, i32 35696, i32 33800, i32 38273, i32 42778, i32 46739, i32 49708, i32 54181, i32 57662, i32 61623, i32 2112, i32 6601, i32 11090, i32 15067, i32 20068, i32 24557, i32 28022, i32 31999, i32 38025, i32 34048, i32 47003, i32 42514, i32 53933, i32 49956, i32 61887, i32 57398, i32 6337, i32 2376, i32 15315, i32 10842, i32 24293, i32 20332, i32 32247, i32 27774, i32 42250, i32 46211, i32 34328, i32 38801, i32 58158, i32 62119, i32 49212, i32 53685, i32 10562, i32 14539, i32 2640, i32 7129, i32 28518, i32 32495, i32 19572, i32 24061, i32 46475, i32 41986, i32 38553, i32 34576, i32 62383, i32 57894, i32 53437, i32 49460, i32 14787, i32 10314, i32 6865, i32 2904, i32 32743, i32 28270, i32 23797, i32 19836, i32 50700, i32 55173, i32 58654, i32 62615, i32 32808, i32 37281, i32 41786, i32 45747, i32 19012, i32 23501, i32 26966, i32 30943, i32 3168, i32 7657, i32 12146, i32 16123, i32 54925, i32 50948, i32 62879, i32 58390, i32 37033, i32 33056, i32 46011, i32 41522, i32 23237, i32 19276, i32 31191, i32 26718, i32 7393, i32 3432, i32 16371, i32 11898, i32 59150, i32 63111, i32 50204, i32 54677, i32 41258, i32 45219, i32 33336, i32 37809, i32 27462, i32 31439, i32 18516, i32 23005, i32 11618, i32 15595, i32 3696, i32 8185, i32 63375, i32 58886, i32 54429, i32 50452, i32 45483, i32 40994, i32 37561, i32 33584, i32 31687, i32 27214, i32 22741, i32 18780, i32 15843, i32 11370, i32 7921, i32 3960]
 ;.
 ; NOZBC64: @.crctable = private constant [256 x i16] [i16 0, i16 -16191, i16 -15999, i16 320, i16 -15615, i16 960, i16 640, i16 -15807, i16 -14847, i16 1728, i16 1920, i16 -14527, i16 1280, i16 -14911, i16 -15231, i16 1088, i16 -13311, i16 3264, i16 3456, i16 -12991, i16 3840, i16 -12351, i16 -12671, i16 3648, i16 2560, i16 -13631, i16 -13439, i16 2880, i16 -14079, i16 2496, i16 2176, i16 -14271, i16 -10239, i16 6336, i16 6528, i16 -9919, i16 6912, i16 -9279, i16 -9599, i16 6720, i16 7680, i16 -8511, i16 -8319, i16 8000, i16 -8959, i16 7616, i16 7296, i16 -9151, i16 5120, i16 -11071, i16 -10879, i16 5440, i16 -10495, i16 6080, i16 5760, i16 -10687, i16 -11775, i16 4800, i16 4992, i16 -11455, i16 4352, i16 -11839, i16 -12159, i16 4160, i16 -4095, i16 12480, i16 12672, i16 -3775, i16 13056, i16 -3135, i16 -3455, i16 12864, i16 13824, i16 -2367, i16 -2175, i16 14144, i16 -2815, i16 13760, i16 13440, i16 -3007, i16 15360, i16 -831, i16 -639, i16 15680, i16 -255, i16 16320, i16 16000, i16 -447, i16 -1535, i16 15040, i16 15232, i16 -1215, i16 14592, i16 -1599, i16 -1919, i16 14400, i16 10240, i16 -5951, i16 -5759, i16 10560, i16 -5375, i16 11200, i16 10880, i16 -5567, i16 -4607, i16 11968, i16 12160, i16 -4287, i16 11520, i16 -4671, i16 -4991, i16 11328, i16 -7167, i16 9408, i16 9600, i16 -6847, i16 9984, i16 -6207, i16 -6527, i16 9792, i16 8704, i16 -7487, i16 -7295, i16 9024, i16 -7935, i16 8640, i16 8320, i16 -8127, i16 -24575, i16 24768, i16 24960, i16 -24255, i16 25344, i16 -23615, i16 -23935, i16 25152, i16 26112, i16 -22847, i16 -22655, i16 26432, i16 -23295, i16 26048, i16 25728, i16 -23487, i16 27648, i16 -21311, i16 -21119, i16 27968, i16 -20735, i16 28608, i16 28288, i16 -20927, i16 -22015, i16 27328, i16 27520, i16 -21695, i16 26880, i16 -22079, i16 -22399, i16 26688, i16 30720, i16 -18239, i16 -18047, i16 31040, i16 -17663, i16 31680, i16 31360, i16 -17855, i16 -16895, i16 32448, i16 32640, i16 -16575, i16 32000, i16 -16959, i16 -17279, i16 31808, i16 -19455, i16 29888, i16 30080, i16 -19135, i16 30464, i16 -18495, i16 -18815, i16 30272, i16 29184, i16 -19775, i16 -19583, i16 29504, i16 -20223, i16 29120, i16 28800, i16 -20415, i16 20480, i16 -28479, i16 -28287, i16 20800, i16 -27903, i16 21440, i16 21120, i16 -28095, i16 -27135, i16 22208, i16 22400, i16 -26815, i16 21760, i16 -27199, i16 -27519, i16 21568, i16 -25599, i16 23744, i16 23936, i16 -25279, i16 24320, i16 -24639, i16 -24959, i16 24128, i16 23040, i16 -25919, i16 -25727, i16 23360, i16 -26367, i16 22976, i16 22656, i16 -26559, i16 -30719, i16 18624, i16 18816, i16 -30399, i16 19200, i16 -29759, i16 -30079, i16 19008, i16 19968, i16 -28991, i16 -28799, i16 20288, i16 -29439, i16 19904, i16 19584, i16 -29631, i16 17408, i16 -31551, i16 -31359, i16 17728, i16 -30975, i16 18368, i16 18048, i16 -31167, i16 -32255, i16 17088, i16 17280, i16 -31935, i16 16640, i16 -32319, i16 -32639, i16 16448]
 ; NOZBC64: @.crctable.1 = private constant [256 x i16] [i16 0, i16 -16191, i16 -15999, i16 320, i16 -15615, i16 960, i16 640, i16 -15807, i16 -14847, i16 1728, i16 1920, i16 -14527, i16 1280, i16 -14911, i16 -15231, i16 1088, i16 -13311, i16 3264, i16 3456, i16 -12991, i16 3840, i16 -12351, i16 -12671, i16 3648, i16 2560, i16 -13631, i16 -13439, i16 2880, i16 -14079, i16 2496, i16 2176, i16 -14271, i16 -10239, i16 6336, i16 6528, i16 -9919, i16 6912, i16 -9279, i16 -9599, i16 6720, i16 7680, i16 -8511, i16 -8319, i16 8000, i16 -8959, i16 7616, i16 7296, i16 -9151, i16 5120, i16 -11071, i16 -10879, i16 5440, i16 -10495, i16 6080, i16 5760, i16 -10687, i16 -11775, i16 4800, i16 4992, i16 -11455, i16 4352, i16 -11839, i16 -12159, i16 4160, i16 -4095, i16 12480, i16 12672, i16 -3775, i16 13056, i16 -3135, i16 -3455, i16 12864, i16 13824, i16 -2367, i16 -2175, i16 14144, i16 -2815, i16 13760, i16 13440, i16 -3007, i16 15360, i16 -831, i16 -639, i16 15680, i16 -255, i16 16320, i16 16000, i16 -447, i16 -1535, i16 15040, i16 15232, i16 -1215, i16 14592, i16 -1599, i16 -1919, i16 14400, i16 10240, i16 -5951, i16 -5759, i16 10560, i16 -5375, i16 11200, i16 10880, i16 -5567, i16 -4607, i16 11968, i16 12160, i16 -4287, i16 11520, i16 -4671, i16 -4991, i16 11328, i16 -7167, i16 9408, i16 9600, i16 -6847, i16 9984, i16 -6207, i16 -6527, i16 9792, i16 8704, i16 -7487, i16 -7295, i16 9024, i16 -7935, i16 8640, i16 8320, i16 -8127, i16 -24575, i16 24768, i16 24960, i16 -24255, i16 25344, i16 -23615, i16 -23935, i16 25152, i16 26112, i16 -22847, i16 -22655, i16 26432, i16 -23295, i16 26048, i16 25728, i16 -23487, i16 27648, i16 -21311, i16 -21119, i16 27968, i16 -20735, i16 28608, i16 28288, i16 -20927, i16 -22015, i16 27328, i16 27520, i16 -21695, i16 26880, i16 -22079, i16 -22399, i16 26688, i16 30720, i16 -18239, i16 -18047, i16 31040, i16 -17663, i16 31680, i16 31360, i16 -17855, i16 -16895, i16 32448, i16 32640, i16 -16575, i16 32000, i16 -16959, i16 -17279, i16 31808, i16 -19455, i16 29888, i16 30080, i16 -19135, i16 30464, i16 -18495, i16 -18815, i16 30272, i16 29184, i16 -19775, i16 -19583, i16 29504, i16 -20223, i16 29120, i16 28800, i16 -20415, i16 20480, i16 -28479, i16 -28287, i16 20800, i16 -27903, i16 21440, i16 21120, i16 -28095, i16 -27135, i16 22208, i16 22400, i16 -26815, i16 21760, i16 -27199, i16 -27519, i16 21568, i16 -25599, i16 23744, i16 23936, i16 -25279, i16 24320, i16 -24639, i16 -24959, i16 24128, i16 23040, i16 -25919, i16 -25727, i16 23360, i16 -26367, i16 22976, i16 22656, i16 -26559, i16 -30719, i16 18624, i16 18816, i16 -30399, i16 19200, i16 -29759, i16 -30079, i16 19008, i16 19968, i16 -28991, i16 -28799, i16 20288, i16 -29439, i16 19904, i16 19584, i16 -29631, i16 17408, i16 -31551, i16 -31359, i16 17728, i16 -30975, i16 18368, i16 18048, i16 -31167, i16 -32255, i16 17088, i16 17280, i16 -31935, i16 16640, i16 -32319, i16 -32639, i16 16448]
@@ -65,27 +64,33 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; ZBC32-LABEL: define i16 @crc16.le.tc8(
 ; ZBC32-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZBC32-NEXT:  [[ENTRY:.*]]:
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CHECKSUM]] to i32
+; ZBC32-NEXT:    [[DATA_EXT:%.*]] = zext i8 [[MSG]] to i32
+; ZBC32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC_EXT]], [[DATA_EXT]]
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA]], i32 511)
+; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[CLMUL_MU]], 255
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81923)
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_EXT]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 8
+; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; ZBC32-NEXT:    [[DATA_INDEXER:%.*]] = lshr i8 [[MSG]], [[IV_BITS]]
-; ZBC32-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; ZBC32-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_DATA_INDEXER]] to i32
-; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 255)
-; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[QUOT]], 255
-; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81922)
-; ZBC32-NEXT:    [[CRC_WIDE:%.*]] = zext i16 [[CRC2]] to i32
-; ZBC32-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i32 [[CRC_WIDE]], [[ENTRY3]]
-; ZBC32-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i32 [[CRC_WIDE_XOR]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = trunc i32 [[CRC_NEXT_WIDE]] to i16
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[DATA:%.*]] = phi i8 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_TRUNC:%.*]] = trunc i16 [[CRC]] to i8
+; ZBC32-NEXT:    [[XOR_DATA_CRC:%.*]] = xor i8 [[DATA]], [[CRC_TRUNC]]
+; ZBC32-NEXT:    [[AND_DATA_CRC:%.*]] = and i8 [[XOR_DATA_CRC]], 1
+; ZBC32-NEXT:    [[DATA_NEXT]] = lshr i8 [[DATA]], 1
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[AND_DATA_CRC]], 0
+; ZBC32-NEXT:    [[CRC_LSHR:%.*]] = lshr i16 [[CRC]], 1
+; ZBC32-NEXT:    [[XOR:%.*]] = xor i16 [[CRC_LSHR]], -24575
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_LSHR]], i16 [[XOR]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i16 @crc16.le.tc8(
@@ -161,27 +166,33 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; ZBC32-LABEL: define i16 @crc16.le.tc8.udiv(
 ; ZBC32-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
 ; ZBC32-NEXT:  [[ENTRY:.*]]:
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CHECKSUM]] to i32
+; ZBC32-NEXT:    [[DATA_EXT:%.*]] = zext i8 [[MSG]] to i32
+; ZBC32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC_EXT]], [[DATA_EXT]]
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA]], i32 511)
+; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[CLMUL_MU]], 255
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81923)
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_EXT]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 8
+; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; ZBC32-NEXT:    [[DATA_INDEXER:%.*]] = lshr i8 [[MSG]], [[IV_BITS]]
-; ZBC32-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
-; ZBC32-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_DATA_INDEXER]] to i32
-; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 255)
-; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[QUOT]], 255
-; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81922)
-; ZBC32-NEXT:    [[CRC_WIDE:%.*]] = zext i16 [[CRC2]] to i32
-; ZBC32-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i32 [[CRC_WIDE]], [[ENTRY3]]
-; ZBC32-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i32 [[CRC_WIDE_XOR]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = trunc i32 [[CRC_NEXT_WIDE]] to i16
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[DATA:%.*]] = phi i8 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_TRUNC:%.*]] = trunc i16 [[CRC]] to i8
+; ZBC32-NEXT:    [[XOR_DATA_CRC:%.*]] = xor i8 [[DATA]], [[CRC_TRUNC]]
+; ZBC32-NEXT:    [[AND_DATA_CRC:%.*]] = and i8 [[XOR_DATA_CRC]], 1
+; ZBC32-NEXT:    [[DATA_NEXT]] = udiv i8 [[DATA]], 2
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[AND_DATA_CRC]], 0
+; ZBC32-NEXT:    [[CRC_LSHR:%.*]] = udiv i16 [[CRC]], 2
+; ZBC32-NEXT:    [[XOR:%.*]] = xor i16 [[CRC_LSHR]], -24575
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_LSHR]], i16 [[XOR]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i16 @crc16.le.tc8.udiv(
@@ -258,28 +269,32 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; ZBC32-LABEL: define i16 @crc16.le.tc16(
 ; ZBC32-SAME: i16 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
 ; ZBC32-NEXT:  [[ENTRY:.*]]:
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CHECKSUM]] to i32
+; ZBC32-NEXT:    [[DATA_EXT:%.*]] = zext i16 [[MSG]] to i32
+; ZBC32-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_EXT]], [[DATA_EXT]]
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA1]], i32 114687)
+; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81923)
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_EXT]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
+; ZBC32-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; ZBC32-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i16
-; ZBC32-NEXT:    [[DATA_INDEXER:%.*]] = lshr i16 [[MSG]], [[IV_INDEXER]]
-; ZBC32-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i16 [[DATA_INDEXER]], [[CRC2]]
-; ZBC32-NEXT:    [[INDEXER_LO:%.*]] = trunc i16 [[CRC_DATA_INDEXER]] to i8
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i32
-; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 255)
-; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[QUOT]], 255
-; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81922)
-; ZBC32-NEXT:    [[CRC_WIDE:%.*]] = zext i16 [[CRC2]] to i32
-; ZBC32-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i32 [[CRC_WIDE]], [[ENTRY3]]
-; ZBC32-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i32 [[CRC_WIDE_XOR]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = trunc i32 [[CRC_NEXT_WIDE]] to i16
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[DATA:%.*]] = phi i16 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i16 [[CRC]], [[DATA]]
+; ZBC32-NEXT:    [[AND_CRC_DATA:%.*]] = and i16 [[XOR_CRC_DATA]], 1
+; ZBC32-NEXT:    [[DATA_NEXT]] = lshr i16 [[DATA]], 1
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i16 [[AND_CRC_DATA]], 0
+; ZBC32-NEXT:    [[CRC_LSHR:%.*]] = lshr i16 [[CRC]], 1
+; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i16 [[CRC_LSHR]], -24575
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_LSHR]], i16 [[CRC_XOR]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 1
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 15
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i16 @crc16.le.tc16(
@@ -355,24 +370,33 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; ZBC32-LABEL: define i8 @crc8.le.tc16(
 ; ZBC32-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) #[[ATTR0]] {
 ; ZBC32-NEXT:  [[ENTRY:.*]]:
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i8 [[CHECKSUM]] to i32
+; ZBC32-NEXT:    [[DATA_EXT:%.*]] = zext i16 [[MSG]] to i32
+; ZBC32-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_EXT]], [[DATA_EXT]]
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[XOR_CRC_DATA1]], i32 24423)
+; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[CLMUL_MU]], 65535
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 59)
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_EXT]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
+; ZBC32-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i8
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[TBL_LD:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; ZBC32-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i16
-; ZBC32-NEXT:    [[DATA_INDEXER:%.*]] = lshr i16 [[MSG]], [[IV_INDEXER]]
-; ZBC32-NEXT:    [[CRC_INDEXER_CAST:%.*]] = zext i8 [[CRC2]] to i16
-; ZBC32-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i16 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; ZBC32-NEXT:    [[INDEXER_LO:%.*]] = trunc i16 [[CRC_DATA_INDEXER]] to i8
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i32
-; ZBC32-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable, i32 [[INDEXER_EXT]]
-; ZBC32-NEXT:    [[TBL_LD]] = load i8, ptr [[TBL_PTRADD]], align 1
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[DATA:%.*]] = phi i16 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[DATA_TRUNC:%.*]] = trunc i16 [[DATA]] to i8
+; ZBC32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 [[CRC]], [[DATA_TRUNC]]
+; ZBC32-NEXT:    [[AND_CRC_DATA:%.*]] = and i8 [[XOR_CRC_DATA]], 1
+; ZBC32-NEXT:    [[DATA_NEXT]] = lshr i16 [[DATA]], 1
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[AND_CRC_DATA]], 0
+; ZBC32-NEXT:    [[CRC_LSHR:%.*]] = lshr i8 [[CRC]], 1
+; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i8 [[CRC_LSHR]], 29
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i8 [[CRC_LSHR]], i8 [[CRC_XOR]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 1
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 15
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[TBL_LD]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i8 @crc8.le.tc16(
@@ -452,24 +476,27 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; ZBC32-NEXT:    [[MSG_EXT:%.*]] = zext i8 [[MSG]] to i16
 ; ZBC32-NEXT:    [[MSG_SHL:%.*]] = shl nuw i16 [[MSG_EXT]], 8
 ; ZBC32-NEXT:    [[CRC_INIT:%.*]] = xor i16 [[MSG_SHL]], [[CHECKSUM]]
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CRC_INIT]] to i32
+; ZBC32-NEXT:    [[CRC_BE_LSHR:%.*]] = lshr i32 [[CRC_EXT]], 8
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_BE_LSHR]], i32 273)
+; ZBC32-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 8
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_LSHR]], i32 69665)
+; ZBC32-NEXT:    [[CRC_BE_SHL:%.*]] = shl i32 [[CRC_EXT]], 8
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_BE_SHL]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i32
-; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 69936)
-; ZBC32-NEXT:    [[QUOT_BE_SHIFT:%.*]] = lshr i32 [[QUOT]], 16
-; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_SHIFT]], i32 69665)
-; ZBC32-NEXT:    [[ENTRY_LO:%.*]] = trunc i32 [[ENTRY3]] to i16
-; ZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_LO]]
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_SHL:%.*]] = shl i16 [[CRC]], 1
+; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i16 [[CRC_SHL]], 4129
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp slt i16 [[CRC]], 0
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_XOR]], i16 [[CRC_SHL]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 [[IV]], 7
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i16 @crc16.be.tc8.crc.init.li(
@@ -542,24 +569,27 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; ZBC32-LABEL: define i16 @crc16.be.tc8.crc.init.arg(
 ; ZBC32-SAME: i16 [[CRC_INIT:%.*]]) #[[ATTR0]] {
 ; ZBC32-NEXT:  [[ENTRY:.*]]:
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CRC_INIT]] to i32
+; ZBC32-NEXT:    [[CRC_BE_LSHR:%.*]] = lshr i32 [[CRC_EXT]], 8
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_BE_LSHR]], i32 273)
+; ZBC32-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 8
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_LSHR]], i32 69665)
+; ZBC32-NEXT:    [[CRC_BE_SHL:%.*]] = shl i32 [[CRC_EXT]], 8
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_BE_SHL]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i32
-; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 69936)
-; ZBC32-NEXT:    [[QUOT_BE_SHIFT:%.*]] = lshr i32 [[QUOT]], 16
-; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_SHIFT]], i32 69665)
-; ZBC32-NEXT:    [[ENTRY_LO:%.*]] = trunc i32 [[ENTRY3]] to i16
-; ZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_LO]]
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_SHL:%.*]] = shl i16 [[CRC]], 1
+; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i16 [[CRC_SHL]], 4129
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp slt i16 [[CRC]], 0
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_XOR]], i16 [[CRC_SHL]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 [[IV]], 7
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i16 @crc16.be.tc8.crc.init.arg(
@@ -626,24 +656,27 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; ZBC32-LABEL: define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(
 ; ZBC32-SAME: i16 [[CRC_INIT:%.*]]) #[[ATTR0]] {
 ; ZBC32-NEXT:  [[ENTRY:.*]]:
+; ZBC32-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CRC_INIT]] to i32
+; ZBC32-NEXT:    [[CRC_BE_LSHR:%.*]] = lshr i32 [[CRC_EXT]], 8
+; ZBC32-NEXT:    [[CLMUL_MU:%.*]] = call i32 @llvm.clmul.i32(i32 [[CRC_BE_LSHR]], i32 273)
+; ZBC32-NEXT:    [[QUOT_BE_LSHR:%.*]] = lshr i32 [[CLMUL_MU]], 8
+; ZBC32-NEXT:    [[CLMUL_GP:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_LSHR]], i32 69665)
+; ZBC32-NEXT:    [[CRC_BE_SHL:%.*]] = shl i32 [[CRC_EXT]], 8
+; ZBC32-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_BE_SHL]], [[CLMUL_GP]]
+; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
 ; ZBC32-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC32-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
-; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i32
-; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 69936)
-; ZBC32-NEXT:    [[QUOT_BE_SHIFT:%.*]] = lshr i32 [[QUOT]], 16
-; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_SHIFT]], i32 69665)
-; ZBC32-NEXT:    [[ENTRY_LO:%.*]] = trunc i32 [[ENTRY3]] to i16
-; ZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_LO]]
+; ZBC32-NEXT:    [[CRC:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_SHL:%.*]] = shl i16 [[CRC]], 1
+; ZBC32-NEXT:    [[CRC_XOR:%.*]] = xor i16 [[CRC_SHL]], 4129
+; ZBC32-NEXT:    [[CHECK_SB:%.*]] = icmp sge i16 [[CRC]], 0
+; ZBC32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_SHL]], i16 [[CRC_XOR]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
-; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 [[IV]], 7
+; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC32:       [[EXIT]]:
-; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 ; ALL64-LABEL: define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(
@@ -737,7 +770,7 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; ZBC32-NEXT:    [[INNER_IV:%.*]] = phi i32 [ 0, %[[PH]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_LOOP]] ]
 ; ZBC32-NEXT:    [[CRC2:%.*]] = phi i8 [ [[CRC_INIT]], %[[PH]] ], [ [[TBL_LD:%.*]], %[[INNER_LOOP]] ]
 ; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC2]] to i32
-; ZBC32-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable.1, i32 [[INDEXER_EXT]]
+; ZBC32-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable, i32 [[INDEXER_EXT]]
 ; ZBC32-NEXT:    [[TBL_LD]] = load i8, ptr [[TBL_PTRADD]], align 1
 ; ZBC32-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i32 [[INNER_IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[INNER_IV]], 0
@@ -855,7 +888,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; ZBC32-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i32 [[DATA_INDEXER]], [[CRC2]]
 ; ZBC32-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC_DATA_INDEXER]] to i8
 ; ZBC32-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i32
-; ZBC32-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable.2, i32 [[INDEXER_EXT]]
+; ZBC32-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable.1, i32 [[INDEXER_EXT]]
 ; ZBC32-NEXT:    [[TBL_LD:%.*]] = load i32, ptr [[TBL_PTRADD]], align 4
 ; ZBC32-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i32 [[CRC2]], 8
 ; ZBC32-NEXT:    [[CRC_NEXT3]] = xor i32 [[CRC_LE_SHIFT]], [[TBL_LD]]
@@ -893,28 +926,33 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; ZBC64-LABEL: define i32 @crc32.le.tc8.data32(
 ; ZBC64-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; ZBC64-NEXT:  [[ENTRY:.*]]:
+; ZBC64-NEXT:    [[CRC_EXT:%.*]] = zext i32 [[CHECKSUM]] to i64
+; ZBC64-NEXT:    [[DATA_LE_MASK:%.*]] = and i32 [[MSG]], 255
+; ZBC64-NEXT:    [[DATA_EXT:%.*]] = zext i32 [[DATA_LE_MASK]] to i64
+; ZBC64-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i64 [[CRC_EXT]], [[DATA_EXT]]
+; ZBC64-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[XOR_CRC_DATA1]], i64 273)
+; ZBC64-NEXT:    [[QUOT_LE_MASK:%.*]] = and i64 [[CLMUL_MU]], 255
+; ZBC64-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_LE_MASK]], i64 67601)
+; ZBC64-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_EXT]], [[CLMUL_GP]]
+; ZBC64-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i64 [[XOR_CRC_MULT]], 8
+; ZBC64-NEXT:    [[CRC_NEXT2:%.*]] = trunc i64 [[CRC_LE_LSHR]] to i32
 ; ZBC64-NEXT:    br label %[[LOOP:.*]]
 ; ZBC64:       [[LOOP]]:
+; ZBC64-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC64-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
 ; ZBC64-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ZBC64-NEXT:    [[CRC2:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT4:%.*]], %[[LOOP]] ]
-; ZBC64-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
-; ZBC64-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i32
-; ZBC64-NEXT:    [[DATA_INDEXER:%.*]] = lshr i32 [[MSG]], [[IV_INDEXER]]
-; ZBC64-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i32 [[DATA_INDEXER]], [[CRC2]]
-; ZBC64-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC_DATA_INDEXER]] to i8
-; ZBC64-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i64
-; ZBC64-NEXT:    [[QUOT:%.*]] = call i64 @llvm.clmul.i64(i64 [[INDEXER_EXT]], i64 17)
-; ZBC64-NEXT:    [[QUOT_LE_MASK:%.*]] = and i64 [[QUOT]], 255
-; ZBC64-NEXT:    [[ENTRY3:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_LE_MASK]], i64 67600)
-; ZBC64-NEXT:    [[CRC_WIDE:%.*]] = zext i32 [[CRC2]] to i64
-; ZBC64-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i64 [[CRC_WIDE]], [[ENTRY3]]
-; ZBC64-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i64 [[CRC_WIDE_XOR]], 8
-; ZBC64-NEXT:    [[CRC_NEXT4]] = trunc i64 [[CRC_NEXT_WIDE]] to i32
+; ZBC64-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; ZBC64-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; ZBC64-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; ZBC64-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; ZBC64-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; ZBC64-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
 ; ZBC64-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ZBC64-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
-; ZBC64-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC64-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; ZBC64-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; ZBC64-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; ZBC64:       [[EXIT]]:
-; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT4]], %[[LOOP]] ]
+; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC64-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -940,27 +978,81 @@ exit:                                              ; preds = %loop
 }
 
 define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
-; ALL-LABEL: define i32 @crc.disabled.optsize(
-; ALL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR1:[0-9]+]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
-; ALL-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
-; ALL-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
-; ALL-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+; ALL32-LABEL: define i32 @crc.disabled.optsize(
+; ALL32-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR1:[0-9]+]] {
+; ALL32-NEXT:  [[ENTRY:.*]]:
+; ALL32-NEXT:    br label %[[LOOP:.*]]
+; ALL32:       [[LOOP]]:
+; ALL32-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ALL32-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; ALL32-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ALL32-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; ALL32-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; ALL32-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; ALL32-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; ALL32-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; ALL32-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
+; ALL32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; ALL32-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; ALL32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; ALL32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ALL32:       [[EXIT]]:
+; ALL32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
+; ALL32-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+; NOZBC-LABEL: define i32 @crc.disabled.optsize(
+; NOZBC-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR1:[0-9]+]] {
+; NOZBC-NEXT:  [[ENTRY:.*]]:
+; NOZBC-NEXT:    br label %[[LOOP:.*]]
+; NOZBC:       [[LOOP]]:
+; NOZBC-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOZBC-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOZBC-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOZBC-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; NOZBC-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; NOZBC-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; NOZBC-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; NOZBC-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; NOZBC-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
+; NOZBC-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOZBC-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; NOZBC-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; NOZBC-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOZBC:       [[EXIT]]:
+; NOZBC-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOZBC-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+; ZBC64-LABEL: define i32 @crc.disabled.optsize(
+; ZBC64-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR1:[0-9]+]] {
+; ZBC64-NEXT:  [[ENTRY:.*]]:
+; ZBC64-NEXT:    [[CRC_EXT:%.*]] = zext i32 [[CHECKSUM]] to i64
+; ZBC64-NEXT:    [[DATA_LE_MASK:%.*]] = and i32 [[MSG]], 255
+; ZBC64-NEXT:    [[DATA_EXT:%.*]] = zext i32 [[DATA_LE_MASK]] to i64
+; ZBC64-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i64 [[CRC_EXT]], [[DATA_EXT]]
+; ZBC64-NEXT:    [[CLMUL_MU:%.*]] = call i64 @llvm.clmul.i64(i64 [[XOR_CRC_DATA1]], i64 273)
+; ZBC64-NEXT:    [[QUOT_LE_MASK:%.*]] = and i64 [[CLMUL_MU]], 255
+; ZBC64-NEXT:    [[CLMUL_GP:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_LE_MASK]], i64 67601)
+; ZBC64-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i64 [[CRC_EXT]], [[CLMUL_GP]]
+; ZBC64-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i64 [[XOR_CRC_MULT]], 8
+; ZBC64-NEXT:    [[CRC_NEXT2:%.*]] = trunc i64 [[CRC_LE_LSHR]] to i32
+; ZBC64-NEXT:    br label %[[LOOP:.*]]
+; ZBC64:       [[LOOP]]:
+; ZBC64-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; ZBC64-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; ZBC64-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; ZBC64-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; ZBC64-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; ZBC64-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; ZBC64-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; ZBC64-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; ZBC64-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
+; ZBC64-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; ZBC64-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; ZBC64-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; ZBC64-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC64:       [[EXIT]]:
+; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; ZBC64-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -1097,6 +1189,4 @@ exit:
 ; ZBC64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; ALL32: {{.*}}
-; NOZBC: {{.*}}
 ; ZBC: {{.*}}

@@ -35,15 +35,20 @@ struct CRCTable : public std::array<APInt, 256> {
 #endif
 };
 
-/// The constants used to perform polynomial division with a Barrett-style
-/// reduction into two polynomial multiplications instead.
+/// The constants used to perform a Polynomial (GF(2)) Barrett Reduction as
+/// roughly specified in Intel's Fast CRC Computation white paper
+/// (https://www.researchgate.net/publication/263424619_Fast_CRC_computation).
+/// Both constants are bit-reflected across their respective widths for
+/// bit-reflected CRCs.
 struct CRCBarrettConstants {
-  // An approximation of the polynomial quotient floor(x^2w / P(x)), where P(x)
-  // is the generating polynomial and w is the CRC width.
-  APInt Reciprocal;
+  // The constant used in the first clmul operation, which is mu =
+  // floor(x^(CRCBW+DataBW) / P(x)). Bit width is DataBW+1.
+  APInt Mu;
 
-  // The generating polynomial P(x) in full, adjusted for endianness.
-  APInt Generator;
+  // The constant used in the second clmul operation, which is the generating
+  // polynomial P(x) with the implied x^CRCBW term included. Bit width is
+  // CRCBW+1.
+  APInt FullGenPoly;
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
@@ -105,10 +110,11 @@ public:
   LLVM_ABI static CRCTable genSarwateTable(const APInt &GenPoly,
                                            bool IsBigEndian);
 
-  // Auxilary entry point after analysis to generate constants for a
-  // Barrett-style reduction.
+  // Auxilary entry point after analysis to generate constants for a GF(2)
+  // Barrett Reduction.
   LLVM_ABI static CRCBarrettConstants
-  genBarrettConstants(const APInt &GenPoly, bool ByteOrderSwapped);
+  genBarrettConstants(const APInt &GenPoly, unsigned DataBW,
+                      bool ByteOrderSwapped);
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
