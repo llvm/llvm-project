@@ -1533,18 +1533,34 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // ((X << C) + Y) >>u C --> (X + (Y >>u C)) & (-1 >>u C)
-    // TODO: Consolidate with the more general transform that starts from shl
-    //       (the shifts are in the opposite order).
-    if (match(Op0,
-              m_OneUse(m_c_Add(m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))),
-                               m_Value(Y))))) {
+    auto foldShiftedAdd = [&](Value *X, Value *Y) -> Instruction * {
       Value *NewLshr = Builder.CreateLShr(Y, Op1);
       Value *NewAdd = Builder.CreateAdd(NewLshr, X);
       unsigned Op1Val = C->getLimitedValue(BitWidth);
       APInt Bits = APInt::getLowBitsSet(BitWidth, BitWidth - Op1Val);
       Constant *Mask = ConstantInt::get(Ty, Bits);
       return BinaryOperator::CreateAnd(NewAdd, Mask);
+    };
+
+    // ((X << C) + Y) >>u C --> (X + (Y >>u C)) & (-1 >>u C)
+    // TODO: Consolidate with the more general transform that starts from shl
+    //       (the shifts are in the opposite order).
+    if (match(Op0,
+              m_OneUse(m_c_Add(m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))),
+                               m_Value(Y)))))
+      return foldShiftedAdd(X, Y);
+
+    // (((X << C) | K) + Y) >>u C --> (X + ((Y + K) >>u C)) & (-1 >>u C)
+    // iff K only sets low bits that are known zero because of the shift.
+    const APInt *LowBitsC;
+    if (match(Op0,
+              m_OneUse(m_c_Add(
+                  m_OneUse(m_c_Or(m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))),
+                                  m_APInt(LowBitsC))),
+                  m_Value(Y)))) &&
+        ShAmtC < BitWidth && LowBitsC->lshr(ShAmtC).isZero()) {
+      Value *BiasedY = Builder.CreateAdd(Y, ConstantInt::get(Ty, *LowBitsC));
+      return foldShiftedAdd(X, BiasedY);
     }
 
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) &&
