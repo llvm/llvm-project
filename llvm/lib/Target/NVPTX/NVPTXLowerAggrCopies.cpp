@@ -98,7 +98,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
     }
   }
 
-  if (AggrLoads.size() == 0 && MemCalls.size() == 0) {
+  if (AggrLoads.empty() && MemCalls.empty()) {
     return false;
   }
 

@@ -1908,7 +1908,7 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
   return S->second;
 }
 
-bool NVPTXScopes::empty() const { return Scopes.size() == 0; }
+bool NVPTXScopes::empty() const { return Scopes.empty(); }
 
 #define CP_ASYNC_BULK_TENSOR_OPCODE(dir, dim, mode, is_s32, suffix)            \
   (is_s32                                                                      \

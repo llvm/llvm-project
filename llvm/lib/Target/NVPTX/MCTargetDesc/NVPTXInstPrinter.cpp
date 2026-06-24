@@ -296,7 +296,7 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  int Imm = (int)MO.getImm();
+  int Imm = static_cast<int>(MO.getImm());
   if (Modifier == "sem") {
     auto Ordering = NVPTX::Ordering(Imm);
     switch (Ordering) {
@@ -390,7 +390,7 @@ void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  int Imm = (int)MO.getImm();
+  int Imm = static_cast<int>(MO.getImm());
   if (Modifier.empty() || Modifier == "version") {
     O << Imm; // Just print out PTX version
     return;
@@ -425,7 +425,7 @@ void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   auto &Op = MI->getOperand(OpNum);
   assert(Op.isImm() && "Invalid operand");
-  uint32_t Imm = (uint32_t)Op.getImm();
+  uint32_t Imm = static_cast<uint32_t>(Op.getImm());
   if (Imm != UINT32_MAX) {
     O << ".pragma \"used_bytes_mask " << format_hex(Imm, 1) << "\";\n\t";
   }

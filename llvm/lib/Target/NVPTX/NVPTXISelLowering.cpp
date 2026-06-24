@@ -523,10 +523,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     : TargetLowering(TM, STI), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
-  // then generating calls to memset, mempcy or memmove.
-  MaxStoresPerMemset = MaxStoresPerMemsetOptSize = (unsigned)0xFFFFFFFF;
-  MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = (unsigned) 0xFFFFFFFF;
-  MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = (unsigned) 0xFFFFFFFF;
+  // than generating calls to memset, memcpy or memmove.
+  MaxStoresPerMemset = MaxStoresPerMemsetOptSize = UINT_MAX;
+  MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = UINT_MAX;
+  MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = UINT_MAX;
 
   setBooleanContents(ZeroOrNegativeOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);

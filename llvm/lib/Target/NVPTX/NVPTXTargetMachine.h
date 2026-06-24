@@ -28,7 +28,7 @@ class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
   NVPTX::DrvInterface drvInterface;
   NVPTXSubtarget Subtarget;
 
-  // Hold Strings that can be free'd all together with NVPTXTargetMachine
+  // Hold Strings that can be freed all together with NVPTXTargetMachine
   BumpPtrAllocator StrAlloc;
   UniqueStringSaver StrPool;
 

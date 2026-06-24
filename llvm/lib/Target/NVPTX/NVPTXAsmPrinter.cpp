@@ -758,7 +758,7 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
     VisitGlobalVariableForEmission(&I, Globals, GVVisited, GVVisiting);
 
   assert(GVVisited.size() == M.global_size() && "Missed a global variable");
-  assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
+  assert(GVVisiting.empty() && "Did not fully process a global variable");
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
@@ -1171,7 +1171,7 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
     if (pos)
       os << ", ";
     if (pos != nextSymbolPos) {
-      os << (unsigned int)buffer[pos];
+      os << static_cast<unsigned int>(buffer[pos]);
       ++pos;
       continue;
     }

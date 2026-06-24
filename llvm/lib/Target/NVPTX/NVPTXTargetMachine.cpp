@@ -51,7 +51,7 @@ static cl::opt<bool>
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
 
-// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
+// NVPTX IR Peephole is a new pass; this option will let us turn it off in case
 // we encounter some issues.
 static cl::opt<bool>
     DisableNVPTXIRPeephole("disable-nvptx-ir-peephole",
@@ -87,7 +87,7 @@ static cl::opt<bool> UseShortPointersOpt(
 // as good as it gets in terms of the effort we could've done, and it's
 // certainly a much better effort than what we do now.
 //
-// This early injection of the copies has potential to create undesireable
+// This early injection of the copies has potential to create undesirable
 // side-effects, so it's disabled by default, for now, until it sees more
 // testing.
 static cl::opt<bool> EarlyByValArgsCopy(
@@ -312,7 +312,7 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
 void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createSeparateConstOffsetFromGEPPass());
   addPass(createSpeculativeExecutionPass());
-  // ReassociateGEPs exposes more opportunites for SLSR. See
+  // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
   addPass(createStraightLineStrengthReducePass());
   // SeparateConstOffsetFromGEP and SLSR creates common expressions which GVN or

@@ -628,7 +628,7 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxclusterrank", *Val});
 
   const auto MaxNTID = getMaxNTID(F);
-  if (MaxNTID.size() > 0)
+  if (!MaxNTID.empty())
     LB.push_back({"maxntidx", MaxNTID[0]});
   if (MaxNTID.size() > 1)
     LB.push_back({"maxntidy", MaxNTID[1]});
