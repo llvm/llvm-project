@@ -415,7 +415,9 @@ def get_object_type(value):
     return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files, staged, whole_file, diff_common_commit):
+def compute_diff_and_extract_lines(
+    commits, files, staged, whole_file, diff_common_commit
+):
     """Calls compute_diff() followed by extract_lines()."""
     diff_process = compute_diff(commits, files, staged, diff_common_commit)
     changed_lines = extract_lines(diff_process.stdout, whole_file)
@@ -461,34 +463,28 @@ def extract_lines(patch_file, whole_file):
     zero lines of context.  The return value is a dict mapping filename to a
     list of line `Range`s."""
     matches = {}
-
-    if whole_file:
-        # Find the repository root, in case this is run in a subdirectory
-        cmd = ['git', 'rev-parse', '--show-toplevel']
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        repo_root = convert_string(p.stdout.read()).strip()
-
     for line in patch_file:
         line = convert_string(line)
         match = re.search(r"^\+\+\+\ [^/]+/(.*)", line)
         if match:
             filename = match.group(1).rstrip("\r\n\t")
             if whole_file and filename not in matches:
-                full_path = os.path.join(repo_root, filename)
-                num_lines = sum(1 for _ in open(full_path))
-                matches.setdefault(filename, []).append(Range(1, num_lines))
+                # Initialize the key for filename but ensure ranges is an empty
+                # list. This will prevent any filtering in clang_format_to_blob().
+                matches[filename] = []
                 continue
-        match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
-        if match:
-            start_line = int(match.group(1))
-            line_count = 1
-            if match.group(3):
-                line_count = int(match.group(3))
-            if line_count == 0:
+        if not whole_file:
+            match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
+            if match:
+                start_line = int(match.group(1))
                 line_count = 1
-            if start_line == 0:
-                continue
-            matches.setdefault(filename, []).append(Range(start_line, line_count))
+                if match.group(3):
+                    line_count = int(match.group(3))
+                if line_count == 0:
+                    line_count = 1
+                if start_line == 0:
+                    continue
+                matches.setdefault(filename, []).append(Range(start_line, line_count))
     return matches
 
 
