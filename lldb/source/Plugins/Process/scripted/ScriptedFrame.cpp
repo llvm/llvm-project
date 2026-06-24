@@ -300,35 +300,39 @@ void ScriptedFrame::PopulateVariableListFromInterface(
 
   // Convert what we can into a variable.
   m_variable_list_sp = std::make_shared<VariableList>();
+
   for (uint32_t i = 0, e = value_list_sp->GetSize(); i < e; ++i) {
     ValueObjectSP v = value_list_sp->GetValueObjectAtIndex(i);
     if (!v)
       continue;
 
-    VariableSP var = v->GetVariable();
-    if (!var && include_synthetic_vars) {
-      // Construct the value type as an synthetic version of what the value type
-      // is. That'll allow the user to tell the scope and the 'synthetic-ness'
-      // of the variable.
-      // Any variable we create here will be treated as a local variable.
-      lldb::ValueType vt = GetSyntheticValueType(eValueTypeVariableLocal);
+    // Ask the interface about the value type of this variable. If it doesn't
+    // specify any, use the original value type. If we encounter a variable, use
+    // a non-synthetic type unless it's overwritten.
+    std::optional<lldb::ValueType> desired_vt =
+        GetInterface()->GetValueTypeForVariable(v);
+    lldb::ValueType vt = [&] {
+      if (desired_vt)
+        return GetSyntheticValueType(*desired_vt);
+      if (v->GetVariable())
+        return v->GetValueType();
+      return GetSyntheticValueType(v->GetValueType());
+    }();
 
-      // Just make up a variable - the frame variable dumper just passes it
-      // back in to GetValueObjectForFrameVariable, so we really just need to
-      // make sure the name and type are correct. We create IDs based on
-      // value_list_sp in order to make sure they're unique.
-      var = std::make_shared<lldb_private::Variable>(
-          (lldb::user_id_t)value_list_sp->GetSize() + i,
-          v->GetName().GetCString(), v->GetName().GetCString(), nullptr, vt,
-          /*owner_scope=*/nullptr,
-          /*scope_range=*/Variable::RangeList{},
-          /*decl=*/nullptr, DWARFExpressionList{}, /*external=*/false,
-          /*artificial=*/true, /*location_is_constant_data=*/false);
-    }
+    if (IsSyntheticValueType(vt) && !include_synthetic_vars)
+      continue;
 
-    // Only append the variable if we have one (had already, or just created).
-    if (var)
-      m_variable_list_sp->AddVariable(var);
+    // Just make up a variable - the frame variable dumper just passes it
+    // back in to GetValueObjectForFrameVariable, so we really just need to
+    // make sure the name and type are correct. We create IDs based on
+    // value_list_sp in order to make sure they're unique.
+    m_variable_list_sp->AddVariable(std::make_shared<lldb_private::Variable>(
+        (lldb::user_id_t)value_list_sp->GetSize() + i,
+        v->GetName().GetCString(), v->GetName().GetCString(), nullptr, vt,
+        /*owner_scope=*/nullptr,
+        /*scope_range=*/Variable::RangeList{},
+        /*decl=*/nullptr, DWARFExpressionList{}, /*external=*/false,
+        /*artificial=*/true, /*location_is_constant_data=*/false));
   }
 }
 
