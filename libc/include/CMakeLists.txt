@@ -235,6 +235,11 @@ add_header_macro(
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
     .llvm-libc-types.struct_in6_addr
+    .llvm-libc-types.struct_ip_mreq
+    .llvm-libc-types.struct_ip_mreq_source
+    .llvm-libc-types.struct_ip_mreqn
+    .llvm-libc-types.struct_ip_msfilter
+    .llvm-libc-types.struct_ip_opts
     .llvm_libc_common_h
 )
 

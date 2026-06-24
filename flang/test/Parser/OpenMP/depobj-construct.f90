@@ -13,7 +13,7 @@ end
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> OmpDependenceKind = In
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
@@ -30,7 +30,7 @@ end
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Update -> OmpUpdateClause -> OmpTaskDependenceType -> OmpDependenceKind = Out
 
 subroutine f02
@@ -45,7 +45,7 @@ end
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
 subroutine f03
@@ -60,7 +60,7 @@ end
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Destroy ->
 
 subroutine f04

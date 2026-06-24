@@ -155,6 +155,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVPostRAExpandPseudoInsts.cpp",
     "RISCVPromoteConstant.cpp",
     "RISCVPushPopOptimizer.cpp",
+    "RISCVQCRelaxMarking.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",
     "RISCVSelectionDAGInfo.cpp",

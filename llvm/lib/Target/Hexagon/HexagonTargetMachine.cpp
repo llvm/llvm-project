@@ -199,6 +199,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGlobalSchedulerPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
+  initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
@@ -463,6 +464,7 @@ void HexagonPassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
+  addPass(createHexagonHVXSaveRemark());
 }
 
 void HexagonPassConfig::addPostRegAlloc() {

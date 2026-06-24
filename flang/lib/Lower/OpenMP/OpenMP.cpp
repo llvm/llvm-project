@@ -4514,7 +4514,25 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                       },
                       [&](const clause::DefinedOperator::DefinedOpName &opName)
                           -> std::string {
-                        return opName.v.sym()->name().ToString();
+                        // Directive side of the user-defined operator reduction
+                        // naming contract (the clause side is in
+                        // ReductionProcessor::processReductionArguments).
+                        // opName.v.sym() is the reduction symbol
+                        // "op<spelling>". Only single-declaration, single-type
+                        // reductions are supported; otherwise emit a clean
+                        // TODO.
+                        const semantics::Symbol &redSym =
+                            opName.v.sym()->GetUltimate();
+                        const auto *userDetails =
+                            redSym.detailsIf<semantics::UserReductionDetails>();
+                        if (!userDetails || typeNameList.v.size() != 1 ||
+                            userDetails->GetDeclList().size() != 1 ||
+                            userDetails->GetTypeList().size() != 1)
+                          TODO(converter.getCurrentLocation(),
+                               "OpenMP user-defined operator declare reduction "
+                               "with multiple declarations or multiple types");
+                        return ReductionProcessor::getScopedUserReductionName(
+                            converter, redSym);
                       },
                   },
                   defOp.u);
@@ -4768,18 +4786,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 namespace {
 struct MetadirectiveCandidate {
-  MetadirectiveCandidate(
-      const parser::OmpDirectiveSpecification *spec,
-      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
-      std::optional<DynamicUserCondition> dynamicCond = std::nullopt,
-      bool conditionShouldBeTrue = true)
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+                         llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+                         std::optional<semantics::omp::DynamicUserCondition>
+                             dynamicCond = std::nullopt,
+                         bool conditionShouldBeTrue = true)
       : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond),
         conditionShouldBeTrue(conditionShouldBeTrue) {}
 
   const parser::OmpDirectiveSpecification *spec = nullptr;
   llvm::omp::VariantMatchInfo vmi;
   bool isExplicit = false;
-  std::optional<DynamicUserCondition> dynamicCond;
+  std::optional<semantics::omp::DynamicUserCondition> dynamicCond;
   bool conditionShouldBeTrue = true;
 };
 } // namespace
@@ -4837,9 +4855,25 @@ static void genMetadirective(lower::AbstractConverter &converter,
       const auto &ctxSel = getContextSelector(*whenClause);
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
+      // METADIRECTIVE cannot yet honour some selector features that are
+      // otherwise accepted; reject them before building the match info.
+      switch (semantics::omp::FindUnsupportedSelectorFeature(ctxSel, semaCtx)) {
+      case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
+        TODO(converter.genLocation(clause.source),
+             "target_device selector in METADIRECTIVE");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::
+          ClauseOrExtensionProperty:
+        TODO(converter.genLocation(clause.source),
+             "clause or extension trait matching in METADIRECTIVE");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::None:
+        break;
+      }
+
       llvm::omp::VariantMatchInfo rawVMI;
-      std::optional<DynamicUserCondition> dynamicCond = makeVariantMatchInfo(
-          rawVMI, ctxSel, semaCtx, converter.genLocation(clause.source));
+      std::optional<semantics::omp::DynamicUserCondition> dynamicCond =
+          semantics::omp::MakeVariantMatchInfo(rawVMI, ctxSel, semaCtx);
 
       if (dynamicCond) {
         constexpr llvm::omp::TraitProperty dynamicConditionTrait =

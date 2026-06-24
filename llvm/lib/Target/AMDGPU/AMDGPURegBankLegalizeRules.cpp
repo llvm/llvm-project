@@ -1446,6 +1446,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
       .Uni(S64, {{Sgpr64}, {}});
 
+  addRulesForGOpcs({G_GET_ROUNDING}, Standard)
+      .Uni(S32, {{Sgpr32}, {}, LowerGetRounding});
+
+  addRulesForGOpcs({G_SET_ROUNDING}, Standard)
+      .Uni(S32, {{}, {SgprB32_ReadFirstLane}, LowerSetRounding})
+      .Div(S32, {{}, {SgprB32_ReadFirstLane}, LowerSetRounding});
+
   addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
 
   addRulesForGOpcs({G_GLOBAL_VALUE})

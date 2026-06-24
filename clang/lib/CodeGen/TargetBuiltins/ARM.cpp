@@ -6548,7 +6548,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     VTy = llvm::FixedVectorType::get(HalfTy, 4);
     llvm::Type *Tys[2] = {Ty, VTy};
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vminnmv");
-    return Builder.CreateTrunc(Ops[0], HalfTy);
   }
   case NEON::BI__builtin_neon_vminnmvq_f16: {
     Int = Intrinsic::aarch64_neon_fminnmv;

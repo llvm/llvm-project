@@ -17,7 +17,9 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <memory>
 
 using namespace clang;
 using namespace ssaf;
@@ -30,20 +32,22 @@ public:
 
   /// \return a non-null unique pointer to a UnsafeBufferUsageEntitySummary
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
-  extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx);
+  extractEntitySummary(const std::vector<const NamedDecl *> &ContributorDecls,
+                       ASTContext &Ctx);
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 } // namespace clang::ssaf
 
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
 clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
-    const NamedDecl *Contributor, ASTContext &Ctx) {
+    const std::vector<const NamedDecl *> &ContributorDecls, ASTContext &Ctx) {
   std::set<const Expr *> UnsafePointers;
-
   auto MatchAction = [&UnsafePointers, &Ctx](const DynTypedNode &Node) {
     matchUnsafePointers(Node, Ctx, UnsafePointers);
   };
-  findMatchesIn(Contributor, MatchAction);
+
+  for (const auto *Contrib : ContributorDecls)
+    findMatchesIn(Contrib, MatchAction);
 
   EntityPointerLevelSet Results;
 
@@ -70,34 +74,12 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
 
 void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     ASTContext &Ctx) {
-  std::vector<const NamedDecl *> Contributors;
-
-  findContributors(Ctx, Contributors);
-  for (auto *CD : Contributors) {
-    // Templates are skipped, but their instantiations are handled. The idea
-    // is that we can conclude facts about a template through all of its
-    // instantiations.
-    if (CD->isTemplated())
-      continue;
-
-    auto EntitySummary = extractEntitySummary(CD, Ctx);
-
-    assert(EntitySummary);
-    if (EntitySummary->empty())
-      continue;
-
-    auto ContributorId = addEntity(CD);
-
-    if (!ContributorId) {
-      logWarningFromError(makeEntityNameErr(Ctx, CD));
-      continue;
-    }
-
-    [[maybe_unused]] auto [Ignored, InsertionSucceeded] =
-        SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
-
-    assert(InsertionSucceeded && "duplicated contributor extraction");
-  }
+  extractAndAddSummaries(
+      *this, SummaryBuilder, Ctx,
+      [&](const std::vector<const NamedDecl *> &Decls) {
+        return extractEntitySummary(Decls, Ctx);
+      },
+      "UnsafeBufferUsage");
 }
 namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)

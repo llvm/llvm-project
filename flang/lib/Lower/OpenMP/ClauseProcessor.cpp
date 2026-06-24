@@ -29,6 +29,24 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+static void TodoLocators(mlir::Location loc, const omp::ObjectList &objects) {
+  for (const omp::Object &object : objects) {
+    if (auto &ref = object.ref()) {
+      auto op = GetTopLevelOperation(*ref).first;
+      if (op == evaluate::operation::Operator::Call)
+        TODO(loc, "Function call locators are not supported yet");
+    }
+    semantics::Symbol *symbol = object.sym();
+    if (symbol->test(semantics::Symbol::Flag::OmpReserved)) {
+      std::string name =
+          parser::ToLowerCaseLetters(object.sym()->name().ToString());
+      if (llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
+        TODO(loc, "Reserved locators are not supported yet");
+      }
+    }
+  }
+}
+
 using ReductionModifier =
     Fortran::lower::omp::clause::Reduction::ReductionModifier;
 
@@ -970,6 +988,8 @@ bool ClauseProcessor::processAffinity(
         auto &iteratorModifier =
             std::get<std::optional<omp::clause::Iterator>>(clause.t);
         collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+
+        TodoLocators(clauseLocation, objects);
 
         for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
@@ -1972,6 +1992,7 @@ bool ClauseProcessor::processMap(
     if (iterator)
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
+    TodoLocators(currentLocation, objects);
 
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
@@ -2007,6 +2028,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
     if (iterator)
       TODO(clauseLocation, "Iterator modifier is not supported yet");
+    TodoLocators(clauseLocation, objects);
 
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapObjects,
@@ -2052,12 +2074,9 @@ bool ClauseProcessor::processReduction(
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
         if (mod.has_value()) {
-          if (mod.value() == ReductionModifier::Task)
-            TODO(currentLocation, "Reduction modifier `task` is not supported");
-          else
-            result.reductionMod = mlir::omp::ReductionModifierAttr::get(
-                converter.getFirOpBuilder().getContext(),
-                translateReductionModifier(mod.value()));
+          result.reductionMod = mlir::omp::ReductionModifierAttr::get(
+              converter.getFirOpBuilder().getContext(),
+              translateReductionModifier(mod.value()));
         }
 
         ReductionProcessor rp;

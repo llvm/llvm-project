@@ -2551,12 +2551,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
   return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
-APValue *VarDecl::evaluateValue() const {
+const APValue *VarDecl::evaluateValue() const {
   return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
 }
 
-APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
-                                    bool IsConstantInitialization) const {
+const APValue *
+VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
   const auto *Init = getInit();
@@ -2606,10 +2607,10 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   return Result ? &Eval->Evaluated : nullptr;
 }
 
-APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
-    if (Eval->WasEvaluated)
-      return &Eval->Evaluated;
+const APValue *VarDecl::getEvaluatedValue() const {
+  if (EvaluatedStmt *Eval = getEvaluatedStmt();
+      Eval && Eval->WasEvaluated && !Eval->Evaluated.isAbsent())
+    return &Eval->Evaluated;
 
   return nullptr;
 }

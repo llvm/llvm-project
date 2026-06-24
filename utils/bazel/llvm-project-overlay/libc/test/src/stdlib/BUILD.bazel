@@ -150,10 +150,19 @@ libc_test(
     ],
 )
 
+libc_test_library(
+    name = "qsort_r_test_helper",
+    hdrs = ["QsortReentrantTest.h"],
+    deps = [
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
 libc_test(
     name = "qsort_r_test",
     srcs = ["qsort_r_test.cpp"],
     deps = [
+        ":qsort_r_test_helper",
         "//libc:qsort_r",
         "//libc:types_size_t",
     ],

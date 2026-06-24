@@ -113,6 +113,8 @@ ABI Changes in This Version
   compilers. On most targets this is not a breaking change because ``fastcc``
   and the platform C calling convention agree for ``void(ptr)``. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- Fixed incorrect struct return when single large vector (256/512-bit) used on
+  x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -1078,11 +1080,6 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
-- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
-  suppression mappings (``--warning-suppression-mappings``) now recognize version
-  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
-  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
-  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

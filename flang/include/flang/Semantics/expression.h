@@ -252,6 +252,8 @@ public:
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::StmtFunctionStmt &);
+  MaybeExpr Analyze(const parser::FunctionReference &,
+      std::optional<parser::StructureConstructor> * = nullptr);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -293,8 +295,6 @@ private:
   MaybeExpr Analyze(const parser::CharLiteralConstantSubstring &);
   MaybeExpr Analyze(const parser::SubstringInquiry &);
   MaybeExpr Analyze(const parser::ArrayConstructor &);
-  MaybeExpr Analyze(const parser::FunctionReference &,
-      std::optional<parser::StructureConstructor> * = nullptr);
   MaybeExpr Analyze(const parser::Expr::Parentheses &);
   MaybeExpr Analyze(const parser::Expr::UnaryPlus &);
   MaybeExpr Analyze(const parser::Expr::Negate &);

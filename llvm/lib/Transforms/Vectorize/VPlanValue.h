@@ -92,7 +92,7 @@ public:
   VPValue &operator=(const VPValue &) = delete;
 
   virtual ~VPValue() {
-    assert(Users.empty() && "trying to delete a VPValue with remaining users");
+    assert(user_empty() && "trying to delete a VPValue with remaining users");
   }
 
   /// \return an ID for the concrete type of this object.
@@ -113,7 +113,7 @@ public:
   void assertNotMaterialized() const;
 
   unsigned getNumUsers() const {
-    if (Users.empty())
+    if (user_empty())
       return 0;
     assertNotMaterialized();
     return Users.size();
@@ -158,10 +158,11 @@ public:
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
   }
+  bool user_empty() const { return Users.empty(); } // NOLINT
 
   /// Returns true if the value has more than one unique user.
   bool hasMoreThanOneUniqueUser() const {
-    if (getNumUsers() == 0)
+    if (user_empty())
       return false;
 
     // Check if all users match the first user.
@@ -523,7 +524,7 @@ public:
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->isDefinedBy(this) &&
              "all defined VPValues should point to the containing VPDef");
-      assert(D->getNumUsers() == 0 &&
+      assert(D->user_empty() &&
              "all defined VPValues should have no more users");
       delete D;
     }

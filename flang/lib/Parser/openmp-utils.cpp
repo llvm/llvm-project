@@ -54,16 +54,20 @@ std::optional<parser::CharBlock> GetObjectSource(
     return name->source;
   } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
     return GetLastName(*desg).source;
+  } else if (auto *locator{std::get_if<parser::OmpLocator>(&object.u)}) {
+    return common::visit( //
+        common::visitors{
+            [](const parser::OmpReservedIdentifier &x) { return x.v.source; },
+            [](const parser::FunctionReference &x) { return x.source; },
+        },
+        locator->u);
   }
   return std::nullopt;
 }
 
 const parser::OmpObject *GetArgumentObject(
     const parser::OmpArgument &argument) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    return std::get_if<parser::OmpObject>(&locator->u);
-  }
-  return nullptr;
+  return std::get_if<parser::OmpObject>(&argument.u);
 }
 
 namespace detail {

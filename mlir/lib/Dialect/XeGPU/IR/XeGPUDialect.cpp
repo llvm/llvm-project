@@ -822,8 +822,8 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   }
 
   // Per-sg view used as the base for lane_layout / lane_data / inst_data:
-  // targetShape[i] / sg_layout[i] when sg_layout is present, else
-  // targetShape itself.
+  // targetShape[i] / sg_layout[i] when sg_layout is present (and not
+  // replicated), else targetShape itself.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
   if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)

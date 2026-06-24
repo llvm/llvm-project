@@ -1430,18 +1430,19 @@ public:
 
   /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated.
-  /// Returns a pointer to the value if evaluation succeeded, 0 otherwise.
-  APValue *evaluateValue() const;
+  /// Returns a pointer to the value if evaluation succeeded, \c nullptr
+  /// otherwise.
+  const APValue *evaluateValue() const;
 
 private:
-  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
-                             bool IsConstantInitialization) const;
+  const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                                   bool IsConstantInitialization) const;
 
 public:
   /// Return the already-evaluated value of this variable's
-  /// initializer, or NULL if the value is not yet known. Returns pointer
-  /// to untyped APValue if the value could not be evaluated.
-  APValue *getEvaluatedValue() const;
+  /// initializer, or \c nullptr if the value is not yet known or couldn't be
+  /// evaluated.
+  const APValue *getEvaluatedValue() const;
 
   /// Evaluate the destruction of this variable to determine if it constitutes
   /// constant destruction.

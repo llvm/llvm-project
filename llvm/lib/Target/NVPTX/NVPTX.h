@@ -48,7 +48,7 @@ ModulePass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
-FunctionPass *createNVPTXLowerArgsPass();
+ModulePass *createNVPTXLowerArgsPass();
 FunctionPass *createNVPTXSetByValParamAlignPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
@@ -120,7 +120,7 @@ private:
 
 public:
   NVPTXLowerArgsPass(TargetMachine &TM) : TM(TM) {};
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 struct NVPTXMarkKernelPtrsGlobalPass

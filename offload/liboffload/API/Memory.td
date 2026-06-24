@@ -51,6 +51,33 @@ def olMemAlloc : Function {
   ];
 }
 
+def olMemAllocAligned : Function {
+  let desc = "Creates a memory allocation on the specified device with specified properties.";
+  let details = [
+      "All allocations through olMemAllocWithProp regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"size_t", "Alignment",
+               "alignment of the allocation im bytes. Must be non-zero and a power of two",
+               PARAM_IN>,
+    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`Alignment == 0`"
+    ]>, 
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`(Alignment & (Alignment - 1)) != 0`"
+    ]>,
+  ];
+}
+
 def olMemFree : Function {
   let desc = "Frees a memory allocation previously made by olMemAlloc.";
   let params = [

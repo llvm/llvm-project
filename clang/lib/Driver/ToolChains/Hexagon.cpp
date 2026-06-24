@@ -534,7 +534,6 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 std::string HexagonToolChain::getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const {
-  std::string InstallRelDir;
   const Driver &D = getDriver();
 
   // Locate the rest of the toolchain ...

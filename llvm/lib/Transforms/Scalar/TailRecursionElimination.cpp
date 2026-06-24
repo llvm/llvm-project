@@ -442,7 +442,7 @@ class TailRecursionEliminator {
       : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
-        OrigEntryCount(F.getEntryCount() ? F.getEntryCount()->getCount() : 0) {
+        OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
     if (BFI) {
       // The assert is meant as API documentation for the caller.
       assert((OrigEntryCount != 0 && OrigEntryBBFreq != 0) &&
@@ -771,7 +771,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
         static_cast<double>(OrigEntryBBFreq);
     auto ToSubtract =
         static_cast<uint64_t>(std::round(RelativeBBFreq * OrigEntryCount));
-    auto OldEntryCount = F.getEntryCount()->getCount();
+    auto OldEntryCount = *F.getEntryCount();
     if (OldEntryCount <= ToSubtract) {
       LLVM_DEBUG(
           errs() << "[TRE] The entrycount attributable to the recursive call, "
@@ -779,7 +779,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
                  << ", should be strictly lower than the function entry count, "
                  << OldEntryCount << "\n");
     } else {
-      F.setEntryCount(OldEntryCount - ToSubtract, F.getEntryCount()->getType());
+      F.setEntryCount(OldEntryCount - ToSubtract);
     }
   }
   return true;
@@ -992,7 +992,7 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // the lines asking for the cached result, should they be nullptr (which, in
   // the case of the PDT, is likely), updates to the trees would be missed.
   auto *BFI = (!ForceDisableBFI && UpdateFunctionEntryCount &&
-               F.getEntryCount().has_value() && F.getEntryCount()->getCount())
+               F.getEntryCount().has_value() && *F.getEntryCount())
                   ? &AM.getResult<BlockFrequencyAnalysis>(F)
                   : nullptr;
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);

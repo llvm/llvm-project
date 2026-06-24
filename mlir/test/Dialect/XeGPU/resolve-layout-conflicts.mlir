@@ -254,8 +254,7 @@ func.func @conflict_postop() {
 }
 
 // CHECK-LABEL: func.func @convert_layout
-// CHECK: %[[V0:.*]] = xegpu.convert_layout %[[CST:.*]] <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>}> : vector<32x128xf32>
-// CHECK: %[[V1:.*]] = xegpu.convert_layout %[[V0]]  <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}> : vector<32x128xf32>
+// CHECK: %[[V1:.*]] = xegpu.convert_layout %[[V0:.*]]  <{input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [4, 32]>, target_layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>}> : vector<32x128xf32>
 func.func @convert_layout() {
   %src0 = arith.constant
     {layout_result_0 = #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>}
@@ -354,10 +353,7 @@ func.func @extract_source_conflict_with_order() -> vector<16x32xf16> {
 // CHECK-LABEL: func.func @convert_layout_bridge_input_mismatch
 // CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
 // CHECK-NEXT:    %[[BRIDGE:.*]] = xegpu.convert_layout %[[V0]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
-// CHECK-SAME:      : vector<32x32xf16>
-// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[BRIDGE]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [32, 16]>}>
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [32, 16]>}>
 // CHECK-SAME:      : vector<32x32xf16>
 gpu.module @test_convert_layout_bridge {
 func.func @convert_layout_bridge_input_mismatch() {

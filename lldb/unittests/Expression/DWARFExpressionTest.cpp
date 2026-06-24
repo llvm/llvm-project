@@ -388,13 +388,13 @@ TEST(DWARFExpression, DW_OP_const) {
       Evaluate({DW_OP_const8s, 0x00, 0x11, 0x22, 0x33, 0x44, 0x42, 0x47, 0x88}),
       ExpectScalar(0x33221100));
 
-  // Don't truncate to address size for compatibility with clang (pr48087).
+  // LEB constants also push generic values, so truncate to address size.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_constu, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
-      ExpectScalar(0x01010101010101));
+      ExpectScalar(32, 0x01010101, false));
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_consts, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
-      ExpectScalar(0xffff010101010101));
+      ExpectScalar(32, 0x01010101, true));
 }
 
 TEST(DWARFExpression, DW_OP_skip) {

@@ -188,7 +188,6 @@ private:
 
   uint64_t NextSeqNo = 0;
   PendingJITDispatchResultsMap PendingJITDispatchResults;
-  std::vector<sys::DynamicLibrary> Dylibs;
 };
 
 } // end namespace orc

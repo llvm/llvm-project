@@ -10200,7 +10200,7 @@ call. The attribute accepts two optional arguments: the first argument is the
 position of the expected sentinel value, starting from the last parameter. The
 second argument describes whether the last fixed parameter is treated as a
 valid sentinel value when set to '1'.
-All arguments described above defaults to '0' when elided.
+All arguments described above default to '0' when elided.
 The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
@@ -10214,7 +10214,7 @@ The attribute is also supported with blocks and in Objective-C.
     foo("Another", "example", NULL);
     foo("Missing", "sentinel"); // Not OK
 
-    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last position
     bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
     bar(1, 2, 3, 4, NULL);      // Not OK
 

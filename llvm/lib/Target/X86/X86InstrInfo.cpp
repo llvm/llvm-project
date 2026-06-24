@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <atomic>
@@ -3479,6 +3480,17 @@ unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
     return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
                             : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
+}
+
+unsigned X86::getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
+  if (!Use64BitReg)
+    return X86::MOV32ri;
+
+  if (isUInt<32>(Imm))
+    return X86::MOV32ri64;
+  if (isInt<32>(Imm))
+    return X86::MOV64ri32;
+  return X86::MOV64ri;
 }
 
 /// Get the VPCMP immediate for the given condition.

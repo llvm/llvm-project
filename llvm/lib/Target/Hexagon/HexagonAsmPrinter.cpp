@@ -979,7 +979,8 @@ void HexagonAsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 void HexagonAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   Register AddrReg = MI.getOperand(0).getReg();
   const int64_t Type = MI.getOperand(1).getImm();
-  MachineBasicBlock::const_instr_iterator NextI = std::next(MI.getIterator());
+  [[maybe_unused]] MachineBasicBlock::const_instr_iterator NextI =
+      std::next(MI.getIterator());
   assert(NextI != MI.getParent()->instr_end() && NextI->isCall() &&
          "KCFI_CHECK not followed by a call instruction");
   assert(NextI->getOperand(0).getReg() == AddrReg &&

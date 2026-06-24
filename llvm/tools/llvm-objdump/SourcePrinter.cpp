@@ -14,16 +14,109 @@
 
 #include "SourcePrinter.h"
 #include "llvm-objdump.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "objdump"
 
 namespace llvm {
 namespace objdump {
+
+static bool sourceFileExists(StringRef Path) {
+  if (sys::fs::exists(Path) && !sys::fs::is_directory(Path))
+    return true;
+
+  return false;
+}
+
+static void normalizeSourcePath(SmallVectorImpl<char> &Path) {
+  sys::path::native(Path);
+  sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+}
+
+static std::optional<std::string> trySourcePath(StringRef Path) {
+  SmallString<256> Normalized(Path);
+  normalizeSourcePath(Normalized);
+  if (sourceFileExists(Normalized))
+    return std::string(Normalized);
+  return std::nullopt;
+}
+
+static std::optional<std::string>
+searchSourceWithDirs(StringRef FileName, ArrayRef<StringRef> SearchDirs,
+                     bool TryLiteralFirst) {
+  if (TryLiteralFirst)
+    if (auto Path = trySourcePath(FileName))
+      return Path;
+
+  StringRef PathSuffix = sys::path::relative_path(FileName);
+  StringRef BaseName = sys::path::filename(FileName);
+  for (StringRef Dir : SearchDirs) {
+    SmallString<256> Candidate(Dir);
+    sys::path::append(Candidate, PathSuffix);
+    if (auto Path = trySourcePath(Candidate))
+      return Path;
+  }
+  for (StringRef Dir : SearchDirs) {
+    SmallString<256> Candidate(Dir);
+    sys::path::append(Candidate, BaseName);
+    if (auto Path = trySourcePath(Candidate))
+      return Path;
+  }
+  return std::nullopt;
+}
+
+static std::optional<std::string>
+findSourceFilePath(StringRef FileName, ArrayRef<StringRef> SearchDirs) {
+  if (FileName.empty() || FileName == DILineInfo::BadString)
+    return std::nullopt;
+
+  if (sys::path::is_absolute_gnu(FileName))
+    return searchSourceWithDirs(FileName, SearchDirs, /*TryLiteralFirst=*/true);
+  return searchSourceWithDirs(FileName, SearchDirs, /*TryLiteralFirst=*/false);
+}
+
+static std::string applySubstitutePaths(StringRef FileName) {
+  if (SubstitutePaths.empty())
+    return FileName.str();
+
+  StringRef BaseName = sys::path::filename(FileName);
+  SmallString<256> Directory(sys::path::parent_path(FileName));
+  normalizeSourcePath(Directory);
+
+  for (const auto &[From, To] : SubstitutePaths) {
+    SmallString<256> FromPath(From);
+    normalizeSourcePath(FromPath);
+    StringRef Dir = Directory;
+    if (!Dir.starts_with(FromPath))
+      continue;
+    if (Dir.size() > FromPath.size() &&
+        !sys::path::is_separator(Dir[FromPath.size()]))
+      continue;
+
+    SmallString<256> NewDir(To);
+    StringRef Suffix = Dir.substr(FromPath.size());
+    while (!Suffix.empty() && sys::path::is_separator(Suffix.front()))
+      Suffix = Suffix.drop_front();
+    if (!Suffix.empty())
+      sys::path::append(NewDir, Suffix);
+    normalizeSourcePath(NewDir);
+
+    if (NewDir.empty())
+      return BaseName.str();
+    SmallString<256> Result(NewDir);
+    sys::path::append(Result, BaseName);
+    normalizeSourcePath(Result);
+    return std::string(Result);
+  }
+
+  return FileName.str();
+}
 
 bool InlinedFunction::liveAtAddress(object::SectionedAddress Addr) const {
   if (!Range.valid())
@@ -607,8 +700,17 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
   if (LineInfo.Source) {
     Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
   } else {
-    auto BufferOrError =
-        MemoryBuffer::getFile(LineInfo.FileName, /*IsText=*/true);
+    std::string PathToOpen = LineInfo.FileName;
+    if (!SourceDirs.empty()) {
+      SmallVector<StringRef, 8> SearchDirs;
+      for (const std::string &Dir : SourceDirs)
+        SearchDirs.push_back(Dir);
+      if (std::optional<std::string> Resolved =
+              findSourceFilePath(LineInfo.FileName, SearchDirs))
+        PathToOpen = std::move(*Resolved);
+    }
+
+    auto BufferOrError = MemoryBuffer::getFile(PathToOpen, /*IsText=*/true);
     if (!BufferOrError) {
       if (MissingSources.insert(LineInfo.FileName).second)
         reportWarning("failed to find source " + LineInfo.FileName,
@@ -653,6 +755,8 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
                       toString(ExpectedLineInfo.takeError()),
                   ObjectFilename);
   }
+  if (!objdump::SubstitutePaths.empty())
+    LineInfo.FileName = applySubstitutePaths(LineInfo.FileName);
 
   if (!objdump::Prefix.empty() &&
       sys::path::is_absolute_gnu(LineInfo.FileName)) {

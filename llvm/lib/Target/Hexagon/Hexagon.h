@@ -43,6 +43,7 @@ void initializeHexagonGenMemAbsolutePass(PassRegistry &);
 void initializeHexagonGenMuxPass(PassRegistry &);
 void initializeHexagonGlobalSchedulerPass(PassRegistry &);
 void initializeHexagonHardwareLoopsPass(PassRegistry &);
+void initializeHexagonHVXSaveRemarkPass(PassRegistry &);
 void initializeHexagonLiveVariablesPass(PassRegistry &);
 void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
 void initializeHexagonLoopAlignPass(PassRegistry &);
@@ -97,6 +98,7 @@ FunctionPass *createHexagonGenMux();
 FunctionPass *createHexagonGenPredicate();
 FunctionPass *createHexagonGlobalScheduler();
 FunctionPass *createHexagonHardwareLoops();
+FunctionPass *createHexagonHVXSaveRemark();
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createHexagonLoopAlign();

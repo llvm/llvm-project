@@ -86,7 +86,6 @@
 
 using namespace llvm;
 using namespace llvm::memprof;
-using ProfileCount = Function::ProfileCount;
 
 static cl::opt<bool>
 EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
@@ -2162,15 +2161,14 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 
 /// Update the branch metadata for cloned call instructions.
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
-                              const ProfileCount &CalleeEntryCount,
+                              const uint64_t &CalleeEntryCount,
                               const CallBase &TheCall, ProfileSummaryInfo *PSI,
                               BlockFrequencyInfo *CallerBFI) {
-  if (CalleeEntryCount.isSynthetic() || CalleeEntryCount.getCount() < 1)
+  if (CalleeEntryCount < 1)
     return;
   auto CallSiteCount =
       PSI ? PSI->getProfileCount(TheCall, CallerBFI) : std::nullopt;
-  int64_t CallCount =
-      std::min(CallSiteCount.value_or(0), CalleeEntryCount.getCount());
+  int64_t CallCount = std::min(CallSiteCount.value_or(0), CalleeEntryCount);
   updateProfileCallee(Callee, -CallCount, &VMap);
 }
 
@@ -2181,14 +2179,12 @@ void llvm::updateProfileCallee(
   if (!CalleeCount)
     return;
 
-  const uint64_t PriorEntryCount = CalleeCount->getCount();
-
   // Since CallSiteCount is an estimate, it could exceed the original callee
   // count and has to be set to 0 so guard against underflow.
   const uint64_t NewEntryCount =
-      (EntryDelta < 0 && static_cast<uint64_t>(-EntryDelta) > PriorEntryCount)
+      (EntryDelta < 0 && static_cast<uint64_t>(-EntryDelta) > *CalleeCount)
           ? 0
-          : PriorEntryCount + EntryDelta;
+          : *CalleeCount + EntryDelta;
 
   auto updateVTableProfWeight = [](CallBase *CB, const uint64_t NewEntryCount,
                                    const uint64_t PriorEntryCount) {
@@ -2199,18 +2195,18 @@ void llvm::updateProfileCallee(
 
   // During inlining ?
   if (VMap) {
-    uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
+    uint64_t CloneEntryCount = *CalleeCount - NewEntryCount;
     for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
         if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
-          CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
-          updateVTableProfWeight(CI, CloneEntryCount, PriorEntryCount);
+          CI->updateProfWeight(CloneEntryCount, *CalleeCount);
+          updateVTableProfWeight(CI, CloneEntryCount, *CalleeCount);
         }
 
       if (isa<InvokeInst>(Entry.first))
         if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
-          II->updateProfWeight(CloneEntryCount, PriorEntryCount);
-          updateVTableProfWeight(II, CloneEntryCount, PriorEntryCount);
+          II->updateProfWeight(CloneEntryCount, *CalleeCount);
+          updateVTableProfWeight(II, CloneEntryCount, *CalleeCount);
         }
     }
   }
@@ -2223,12 +2219,12 @@ void llvm::updateProfileCallee(
       if (!VMap || VMap->count(&BB))
         for (Instruction &I : BB) {
           if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-            CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-            updateVTableProfWeight(CI, NewEntryCount, PriorEntryCount);
+            CI->updateProfWeight(NewEntryCount, *CalleeCount);
+            updateVTableProfWeight(CI, NewEntryCount, *CalleeCount);
           }
           if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
-            II->updateProfWeight(NewEntryCount, PriorEntryCount);
-            updateVTableProfWeight(II, NewEntryCount, PriorEntryCount);
+            II->updateProfWeight(NewEntryCount, *CalleeCount);
+            updateVTableProfWeight(II, NewEntryCount, *CalleeCount);
           }
         }
   }

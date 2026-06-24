@@ -92,7 +92,6 @@ add_llvm_component_library(LLVMTransformUtils
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
   TriggerCrashPass.cpp
-  UnifyFunctionExitNodes.cpp
   UnifyLoopExits.cpp
   Utils.cpp
   ValueMapper.cpp

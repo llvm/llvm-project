@@ -56,8 +56,7 @@ public:
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
   LLVM_ABI static Expected<GlobPattern>
-  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {},
-         bool SlashAgnostic = false);
+  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
   /// \returns \p true if \p S matches this glob pattern
   LLVM_ABI bool match(StringRef S) const;
 
@@ -88,14 +87,12 @@ private:
   StringRef Pattern;
   size_t PrefixSize = 0;
   size_t SuffixSize = 0;
-  bool SlashAgnostic = false;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat,
-                                                    bool SlashAgnostic);
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
     /// \returns \p true if \p S matches this glob pattern
-    LLVM_ABI bool match(StringRef S, bool SlashAgnostic) const;
+    LLVM_ABI bool match(StringRef S) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
 
     // Brackets with their end position and matched bytes.

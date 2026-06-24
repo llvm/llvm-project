@@ -1025,6 +1025,14 @@ public:
 
   std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
 
+  /// Given a starting point \p Offset and a number of bytes \p MinLength,
+  /// returns the number of bytes \p MinLength + Tail such that the last
+  /// instruction in the sequence is not split apart. Returns std::nullopt if
+  /// disassembling fails. Assumes that \p Offset aligns with instruction stream
+  /// and that the instructions can be disassembled.
+  uint64_t getInstructionSequenceLength(uint64_t Offset,
+                                        uint64_t MinLength) const;
+
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
   /// be different from 0
