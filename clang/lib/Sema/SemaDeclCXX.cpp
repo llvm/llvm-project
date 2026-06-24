@@ -4801,7 +4801,6 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
   bool Dependent = CurContext->isDependentContext() &&
                    (BaseType->isDependentType() || Init->isTypeDependent());
 
-  llvm::errs() << "Dependent? " << Dependent << '\n';
   SourceRange InitRange = Init->getSourceRange();
   if (EllipsisLoc.isValid()) {
     // This is a pack expansion.
