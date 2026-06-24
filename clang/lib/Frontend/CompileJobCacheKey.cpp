@@ -18,15 +18,24 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::cas;
 using namespace llvm;
 using namespace llvm::cas;
 
-static llvm::cas::CASID createCompileJobCacheKeyForArgs(
-    ObjectStore &CAS, ArrayRef<const char *> CC1Args, ObjectRef InputRef,
-    CachingInputKind InputKind) {
+template <typename R>
+static std::optional<R> checkStore(DiagnosticsEngine &Diags, Expected<R> Ref) {
+  if (Ref)
+    return *Ref;
+  Diags.Report(diag::err_cas_store) << Ref.takeError();
+  return std::nullopt;
+}
+
+static std::optional<llvm::cas::CASID> createCompileJobCacheKeyForArgs(
+    ObjectStore &CAS, DiagnosticsEngine &Diags, ArrayRef<const char *> CC1Args,
+    ObjectRef InputRef, CachingInputKind InputKind) {
   assert(!CC1Args.empty() && StringRef(CC1Args[0]) == "-cc1");
   SmallString<256> CommandLine;
   for (StringRef Arg : CC1Args) {
@@ -46,15 +55,27 @@ static llvm::cas::CASID createCompileJobCacheKeyForArgs(
     Builder.add("object", InputRef);
     break;
   }
-  Builder.add("command-line",
-              llvm::cantFail(CAS.storeFromString({}, CommandLine)));
-  Builder.add("computation", llvm::cantFail(CAS.storeFromString({}, "-cc1")));
 
+  auto CommandLineRef = checkStore(Diags, CAS.storeFromString({}, CommandLine));
+  if (!CommandLineRef)
+    return std::nullopt;
+  auto CC1Ref = checkStore(Diags, CAS.storeFromString({}, "-cc1"));
+  if (!CC1Ref)
+    return std::nullopt;
+  auto VersionRef =
+      checkStore(Diags, CAS.storeFromString({}, getClangFullVersion()));
+  if (!VersionRef)
+    return std::nullopt;
+
+  Builder.add("command-line", *CommandLineRef);
+  Builder.add("computation", *CC1Ref);
   // FIXME: The version is maybe insufficient...
-  Builder.add("version",
-              llvm::cantFail(CAS.storeFromString({}, getClangFullVersion())));
+  Builder.add("version", *VersionRef);
 
-  return llvm::cantFail(Builder.build()).getID();
+  auto Result = checkStore(Diags, Builder.build());
+  if (!Result)
+    return std::nullopt;
+  return Result->getID();
 }
 
 static void canonicalizeForCacheKey(FrontendOptions &FrontendOpts,
@@ -168,7 +189,8 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
     return std::nullopt;
   }
 
-  return createCompileJobCacheKeyForArgs(CAS, Argv, *InputRef, InputKind);
+  return createCompileJobCacheKeyForArgs(CAS, Diags, Argv, *InputRef,
+                                         InputKind);
 }
 
 static CompileJobCachingOptions
