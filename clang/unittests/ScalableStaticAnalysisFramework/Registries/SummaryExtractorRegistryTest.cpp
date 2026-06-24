@@ -8,6 +8,7 @@
 
 #include "MockTUSummaryBuilder.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/Tooling/Tooling.h"
@@ -46,8 +47,9 @@ TEST(SummaryExtractorRegistryTest, EnumeratingRegistryEntries) {
 }
 
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
+  SSAFOptions Opts;
   TUSummary Summary = makeFakeSummary();
-  MockTUSummaryBuilder FakeBuilder(Summary);
+  MockTUSummaryBuilder FakeBuilder(Summary, Opts);
   {
     auto Consumer =
         makeTUSummaryExtractor("MockSummaryExtractor1", FakeBuilder);
@@ -60,8 +62,9 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor1) {
 }
 
 TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
+  SSAFOptions Opts;
   TUSummary Summary = makeFakeSummary();
-  MockTUSummaryBuilder FakeBuilder(Summary);
+  MockTUSummaryBuilder FakeBuilder(Summary, Opts);
   {
     auto Consumer =
         makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder);
@@ -74,8 +77,9 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
 }
 
 TEST(SummaryExtractorRegistryTest, InvokingExtractors) {
+  SSAFOptions Opts;
   TUSummary Summary = makeFakeSummary();
-  MockTUSummaryBuilder FakeBuilder(Summary);
+  MockTUSummaryBuilder FakeBuilder(Summary, Opts);
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   for (std::string Name : {"MockSummaryExtractor1", "MockSummaryExtractor2"}) {
     auto Consumer = makeTUSummaryExtractor(Name, FakeBuilder);

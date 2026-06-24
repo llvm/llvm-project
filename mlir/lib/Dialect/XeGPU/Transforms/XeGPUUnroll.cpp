@@ -969,8 +969,6 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     if (valType.isIntOrFloat()) {
       rewriter.replaceOp(op, op.getSource());
-      assert(!inputLayout.dropInstData() && !targetLayout.dropInstData() &&
-             "unexpected layout attributes for scalar type");
       return success();
     }
 
@@ -990,7 +988,7 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     Value newSource = op.getSource();
     SmallVector<Value> newOps;
-    if (inputLayout && targetLayout) {
+    if (inputLayout && targetLayout && !inputLayout.isEqualTo(targetLayout)) {
       SmallVector<Type> convertedValTypes =
           getUnrolledTypes(valueTy, *targetShape);
       SmallVector<Value> convertedValues =
