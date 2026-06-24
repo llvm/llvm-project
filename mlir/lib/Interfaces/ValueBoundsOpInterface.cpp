@@ -820,9 +820,7 @@ bool ValueBoundsConstraintSet::compare(const Variable &lhs,
     return cstr.comparePos(lhsPos, cmp, rhsPos);
   };
   ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
-  lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
-  rhsPos = cstr.populateConstraints(rhs.map, rhs.mapOperands);
-  return cstr.comparePos(lhsPos, cmp, rhsPos);
+  return cstr.populateAndCompare(lhs, cmp, rhs);
 }
 
 FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
