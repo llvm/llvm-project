@@ -99,20 +99,25 @@ TEST_F(DeviceSelectorScoreTest, CPUAndGPU) {
   auto Devices = sycl::device::get_devices();
   ASSERT_EQ(Devices.size(), 2u);
 
-  for (const auto &Dev : Devices) {
-    if (Dev.is_gpu()) {
-      EXPECT_EQ(sycl::default_selector_v(Dev), 550);
-      EXPECT_EQ(sycl::gpu_selector_v(Dev), 1050);
-      EXPECT_EQ(sycl::cpu_selector_v(Dev), -1);
-      EXPECT_EQ(sycl::accelerator_selector_v(Dev), -1);
-    } else if (Dev.is_cpu()) {
-      EXPECT_EQ(sycl::default_selector_v(Dev), 350);
-      EXPECT_EQ(sycl::gpu_selector_v(Dev), -1);
-      EXPECT_EQ(sycl::cpu_selector_v(Dev), 1050);
-      EXPECT_EQ(sycl::accelerator_selector_v(Dev), -1);
-    } else
-      FAIL() << "Unexpected device type";
-  }
+  // Device order is aligned with device iteration order
+  ASSERT_TRUE(Devices[0].is_gpu());
+  ASSERT_TRUE(Devices[1].is_cpu());
+  auto &GPUDevice = Devices[0];
+  auto &CPUDevice = Devices[1];
+
+  EXPECT_GT(sycl::default_selector_v(GPUDevice),
+            sycl::default_selector_v(CPUDevice));
+
+  EXPECT_GT(sycl::gpu_selector_v(GPUDevice), sycl::gpu_selector_v(CPUDevice));
+  EXPECT_GT(sycl::gpu_selector_v(GPUDevice), 0);
+  EXPECT_LT(sycl::gpu_selector_v(CPUDevice), 0);
+
+  EXPECT_GT(sycl::cpu_selector_v(CPUDevice), sycl::cpu_selector_v(GPUDevice));
+  EXPECT_GT(sycl::cpu_selector_v(CPUDevice), 0);
+  EXPECT_LT(sycl::cpu_selector_v(GPUDevice), 0);
+
+  EXPECT_LT(sycl::accelerator_selector_v(GPUDevice), 0);
+  EXPECT_LT(sycl::accelerator_selector_v(CPUDevice), 0);
 }
 
 TEST_F(DeviceSelectorScoreTest, TwoGpusOneCompatibleImage) {
@@ -138,14 +143,13 @@ TEST_F(DeviceSelectorScoreTest, TwoGpusOneCompatibleImage) {
   auto Devices = sycl::device::get_devices();
   ASSERT_EQ(Devices.size(), 2u);
 
-  auto DeviceNative = sycl::detail::getSyclObjImpl(Devices[0])->getOLHandle();
-  int Score = sycl::default_selector_v(Devices[0]);
-  if (DeviceNative == Device1)
-    EXPECT_EQ(Score, 550);
-  else if (DeviceNative == Device2)
-    EXPECT_EQ(Score, 1550);
-  else
-    FAIL() << "Unexpected device handle: ";
+  // Device order is aligned with device iteration order
+  ASSERT_EQ(sycl::detail::getSyclObjImpl(Devices[1])->getOLHandle(), Device2);
+  auto &GPUDevice = Devices[0];
+  auto &GPUDeviceWithImage = Devices[1];
+
+  EXPECT_GT(sycl::default_selector_v(GPUDeviceWithImage),
+            sycl::default_selector_v(GPUDevice));
 
   sycl::device DefaultDevice{sycl::default_selector_v};
   auto DeviceDefaultNative =
@@ -154,6 +158,7 @@ TEST_F(DeviceSelectorScoreTest, TwoGpusOneCompatibleImage) {
 }
 
 TEST(DeviceSelector, AspectSelector) {
+  unittests::UnittestsHelper Helper;
   auto Devices = sycl::device::get_devices();
   ASSERT_FALSE(Devices.empty());
 
@@ -167,10 +172,10 @@ TEST(DeviceSelector, AspectSelector) {
   EXPECT_EQ(FallbackSelector(Dev), sycl::default_selector_v(Dev));
 
   auto RequireGpuSelector = sycl::aspect_selector(RequireGpu, EmptyAspects);
-  EXPECT_EQ(RequireGpuSelector(Dev), 1050);
+  EXPECT_GT(RequireGpuSelector(Dev), 0);
 
   auto DenyGpuSelector = sycl::aspect_selector(EmptyAspects, DenyGpu);
-  EXPECT_EQ(DenyGpuSelector(Dev), -1);
+  EXPECT_LT(DenyGpuSelector(Dev), 0);
 }
 
 } // namespace

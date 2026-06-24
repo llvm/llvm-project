@@ -22,16 +22,19 @@ static constexpr int CPUDeviceDefaultScore = 300;
 static constexpr int AccDeviceDefaultScore = 75;
 static constexpr int RejectDeviceScore = -1;
 
+static constexpr int CompatibleImageBonus = 1000;
+static constexpr int LevelZeroBonus = 50;
+
 static int getDevicePreference(const device &Device) {
   int Score = 0;
   const auto &DeviceImpl = detail::getSyclObjImpl(Device);
 
   auto &ProgramManager = detail::ProgramAndKernelManager::getInstance();
   if (ProgramManager.hasCompatibleImage(*DeviceImpl))
-    Score += 1000;
+    Score += CompatibleImageBonus;
 
   if (DeviceImpl->getBackend() == backend::level_zero)
-    Score += 50;
+    Score += LevelZeroBonus;
 
   return Score;
 }
