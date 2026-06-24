@@ -207,6 +207,18 @@ namespace cwg2285 { // cwg2285: 4
 #endif
 } // namespace cwg2285
 
+namespace cwg2289 { // cwg2289: 4
+// Note: Clang 4 implements this DR but it set a wrong value of `__cplusplus`
+#if __cplusplus >= 201703L
+  void test() {
+    struct A { int x; } a; // #cwg2289-A
+    auto &[A] = a;
+    // since-cxx17-error@-1 {{redefinition of 'A'}}
+    //   since-cxx17-note@#cwg2289-A {{previous definition is here}}
+  }
+#endif
+} // namespace cwg2289
+
 namespace cwg2292 { // cwg2292: 9
 #if __cplusplus >= 201103L
   template<typename T> using id = T;
