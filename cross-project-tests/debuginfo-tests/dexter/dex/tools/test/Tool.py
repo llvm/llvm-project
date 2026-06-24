@@ -24,7 +24,7 @@ from dex.debugger.DebuggerControllers.ScriptDebuggerController import (
 )
 from dex.dextIR.DextIR import DextIR
 from dex.evaluation import DebuggerRunMatch
-from dex.evaluation.ExpectWriter import ScriptExpectWriter
+from dex.evaluation.ExpectRewriter import ScriptExpectRewriter
 from dex.heuristic import Heuristic
 from dex.test_script.Script import (
     DexterScript,
@@ -327,7 +327,7 @@ class Tool(TestToolBase):
             if self.context.options.use_script:
                 # Before evaluating, the script may contain "unknown" expects; if they should be rewritten, then do so
                 # first, and then use the rewritten script to evaluate.
-                script_writer = ScriptExpectWriter(self.context, steps)
+                script_writer = ScriptExpectRewriter(self.context, steps)
                 if script_writer.new_script:
                     self.context.logger.note(
                         f"Rewrote script to add {script_writer.num_successful_rewrites} expected values."

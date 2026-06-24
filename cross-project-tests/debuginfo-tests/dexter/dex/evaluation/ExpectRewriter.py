@@ -18,7 +18,7 @@ from dex.test_script.Script import DexterScript, Scope
 from dex.tools.Main import Context
 
 
-class ExpectedValueWriter:
+class ExpectedValueRewriter:
     """Given a ValueIR for an Expect, generates a complete expected value that matches that value if one can be
     provided."""
 
@@ -28,8 +28,8 @@ class ExpectedValueWriter:
         self.expected_value = expect.get_variable_result(value)
 
 
-def unique_expected_values(elements: List[ExpectedValueWriter]):
-    """Given a list of ExpectedValueWriters, and returns either a list containing the unique set of non-None expected
+def unique_expected_values(elements: List[ExpectedValueRewriter]):
+    """Given a list of ExpectedValueRewriters, and returns either a list containing the unique set of non-None expected
     values, or a single item if there is only one non-duplicated expected value in the list, or None if there are no
     valid expected values."""
 
@@ -49,8 +49,8 @@ def unique_expected_values(elements: List[ExpectedValueWriter]):
     return result
 
 
-class StepExpectWriter:
-    """Processes all active, unknown expects at a given debugger step and produces ExpectedValueWriter results for
+class StepExpectRewriter:
+    """Processes all active, unknown expects at a given debugger step and produces ExpectedValueRewriter results for
     each."""
 
     def __init__(self, step: StepIR, script: DexterScript):
@@ -62,19 +62,19 @@ class StepExpectWriter:
             for where_match in self.state_match.values()
             for expect in where_match.active_expects
         }
-        self.expect_matches: Dict[Expect, ExpectedValueWriter] = {}
+        self.expect_matches: Dict[Expect, ExpectedValueRewriter] = {}
 
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expect in active_expects and expected_value is None:
-                self.expect_matches[expect] = ExpectedValueWriter(
+                self.expect_matches[expect] = ExpectedValueRewriter(
                     expect, step.watches[expect.get_watched_expr()]
                 )
 
         script.visit_script(visit_expect=add_expected_values)
 
 
-class ScriptExpectWriter:
+class ScriptExpectRewriter:
     """Given the full output from a debugger run and a script with missing expected values, returns a script with
     filled-in expected values that match the debugger output."""
 
@@ -82,7 +82,7 @@ class ScriptExpectWriter:
         self.context = context
         self.dext_ir = dext_ir
         self.unknown_expect_rewrites: Dict[
-            Expect, List[Tuple[int, ExpectedValueWriter]]
+            Expect, List[Tuple[int, ExpectedValueRewriter]]
         ] = {}
         self.new_script: Optional[DexterScript] = None
         self.new_expected_values: Dict[Expect, Any] = {}
@@ -91,7 +91,7 @@ class ScriptExpectWriter:
         script = dext_ir.script
         assert (
             script is not None
-        ), "Cannot use ScriptExpectWriter on a non-script Dexter test."
+        ), "Cannot use ScriptExpectRewriter on a non-script Dexter test."
 
         # Collect every Expect with an unknown value into the `unknown_expect_rewrites` dict. We expect all Expects in
         # this dict to have observed values, and don't expect to rewrite any Expects outside of this dict.
@@ -99,6 +99,7 @@ class ScriptExpectWriter:
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expected_value is None:
                 self.unknown_expect_rewrites[expect] = []
+
         script.visit_script(visit_expect=collect_unknown_expects)
 
         # If there are no expects to update, then there is no rewriting to be done - exit early.
@@ -107,22 +108,24 @@ class ScriptExpectWriter:
 
         # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
         # during this run, along with the corresponding step indices.
-        self.step_writers = [StepExpectWriter(step, script) for step in dext_ir.steps]
-        for step_writer in self.step_writers:
-            step_idx = step_writer.step.step_index
-            for expect, expected_value_writer in step_writer.expect_matches.items():
+        self.step_rewriters = [
+            StepExpectRewriter(step, script) for step in dext_ir.steps
+        ]
+        for step_rewriter in self.step_rewriters:
+            step_idx = step_rewriter.step.step_index
+            for expect, expected_value_rewriter in step_rewriter.expect_matches.items():
                 self.unknown_expect_rewrites[expect].append(
-                    (step_idx, expected_value_writer)
+                    (step_idx, expected_value_rewriter)
                 )
 
         # For each unknown expect, merge the observed values into a writable "expected values" entry, which may be a
         # list or a single value.
         self.new_expected_values = {
             expect: expected_values
-            for expect, expect_writers in self.unknown_expect_rewrites.items()
+            for expect, expect_rewriters in self.unknown_expect_rewrites.items()
             if (
                 expected_values := unique_expected_values(
-                    [writer for idx, writer in expect_writers]
+                    [rewriter for idx, rewriter in expect_rewriters]
                 )
             )
             is not None
