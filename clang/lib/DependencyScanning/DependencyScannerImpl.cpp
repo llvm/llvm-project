@@ -396,6 +396,8 @@ void dependencies::initializeScanCompilerInstance(
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
   ScanInstance.setBuildingModule(false);
+  // LLVM options are not going to affect dependency scanning.
+  ScanInstance.getFrontendOpts().LLVMArgs.clear();
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
   if (!Service.getOpts().EmitWarnings)
