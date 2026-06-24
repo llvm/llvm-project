@@ -25,6 +25,7 @@ namespace clang {
 namespace format {
 
 #define LIST_TOKEN_TYPES                                                       \
+  TYPE(AccessModifierMacro)                                                    \
   TYPE(AfterPPDirective)                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
@@ -714,7 +715,8 @@ public:
   }
 
   bool isAccessSpecifierKeyword() const {
-    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private);
+    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private) ||
+           is(TT_AccessModifierMacro);
   }
 
   bool isAccessSpecifier(bool ColonRequired = true) const {
