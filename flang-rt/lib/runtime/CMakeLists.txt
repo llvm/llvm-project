@@ -13,6 +13,7 @@ set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
 # Module sources that are required by other modules
+# Compiled sequentially to ensure dependencies
 set(intrinsics_sources
   __fortran_builtins.f90
   __cuda_builtins.f90
@@ -296,49 +297,57 @@ if (FLANG_RT_FORTRAN_MODULES)
   # .mod files it depends on and therefore needs to be updated as well), inject
   # an file-level dependency via OBJECT_DEPENDS.
   if (RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND)
-  add_flangrt_library(flang_rt.mod.fortran.builtins OBJECT
-    __fortran_builtins.f90
-  )
-  set_property(SOURCE __fortran_builtins.f90 PROPERTY OBJECT_OUTPUTS "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}")
-  flang_module_target(flang_rt.mod.fortran.builtins PUBLIC)
-  add_module_barrier(flang_rt.mod.fortran.builtins.barrier flang_rt.mod.fortran.builtins)
+    # When a target depends on an object library, CMake seems to try to only build
+    # the object files that the target actual needs. If we are only interested
+    # in the module files, nothing gets built at all. To ensure that the module
+    # files are built, insert a custom target that is opaque to CMake so it cannot
+    # apply this optimization. Dependees on module files must depend on this
+    # barrier instead. An actual COMMAND (that does nothing) seems to be necessary
+    # on Windows to work.
+    set(intr_mod_deps "")
+    set(intr_mod_barriers "")
+    macro (module_dependency _srcfile)
+      set(_libname "flang_rt.mod.${_srcfile}")
+      set(_barriername "flang_rt.mod.${_srcfile}.barrier")
+      set(_objpath "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/${_srcfile}${CMAKE_Fortran_OUTPUT_EXTENSION}")
 
-  add_flangrt_library(flang_rt.mod.cuda.builtins OBJECT
-    __cuda_builtins.f90
-  )
-  set_property(SOURCE __cuda_builtins.f90 PROPERTY OBJECT_OUTPUTS "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__cuda_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}")
-  add_dependencies(flang_rt.mod.cuda.builtins flang_rt.mod.fortran.builtins.barrier)
-  set_property(SOURCE __cuda_builtins.f90
-    APPEND PROPERTY OBJECT_DEPENDS
-      "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
-  )
-  flang_module_target(flang_rt.mod.cuda.builtins PUBLIC)
-  add_module_barrier(flang_rt.mod.cuda.builtins.barrier flang_rt.mod.cuda.builtins)
+      add_flangrt_library("${_libname}" OBJECT "${_srcfile}")
+      set_property(SOURCE "${_srcfile}" PROPERTY OBJECT_OUTPUTS "${_objpath}")
+      set_property(SOURCE "${_srcfile}" APPEND PROPERTY OBJECT_DEPENDS "${intr_mod_deps}"
+      )
+      flang_module_target("${_libname}" PUBLIC)
+      if (intr_mod_barriers)
+        add_dependencies("${_libname}" ${intr_mod_barriers})
+      endif ()
+      add_module_barrier("${_barriername}" "${_libname}")
 
-  # The modules themselves
-  add_flangrt_library(flang_rt.mod OBJECT
-    ${module_sources}
-  )
-  add_dependencies(flang_rt.mod flang_rt.mod.fortran.builtins.barrier flang_rt.mod.cuda.builtins.barrier)
-  foreach(_srcfile IN LISTS module_sources)
-    set_property(SOURCE ${_srcfile}
-      APPEND PROPERTY OBJECT_DEPENDS
-        "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
-        "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__cuda_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
+      list(APPEND intr_mod_deps "${_objpath}")
+      list(APPEND intr_mod_barriers "${_barriername}")
+    endmacro ()
+
+    foreach (_srcfile IN LISTS intrinsics_sources)
+      module_dependency("${_srcfile}")
+    endforeach ()
+
+    # The modules that CMake correctly tracks dependencies of
+    add_flangrt_library(flang_rt.mod OBJECT
+      ${module_sources}
     )
-  endforeach()
-
-  flang_module_target(flang_rt.mod PUBLIC)
-  add_module_barrier(flang-rt-mod flang_rt.mod)
+    add_dependencies(flang_rt.mod ${intr_mod_barriers})
+    foreach(_srcfile IN LISTS module_sources)
+      set_property(SOURCE ${_srcfile}
+        APPEND PROPERTY OBJECT_DEPENDS "${intr_mod_deps}"
+      )
+    endforeach()
   else ()
     # Workaround not needed
     add_flangrt_library(flang_rt.mod OBJECT
       ${intrinsics_sources}
       ${module_sources}
     )
-    flang_module_target(flang_rt.mod PUBLIC)
-    add_module_barrier(flang-rt-mod flang_rt.mod)
   endif ()
+  flang_module_target(flang_rt.mod PUBLIC)
+  add_module_barrier(flang-rt-mod flang_rt.mod)
 
   if (RUNTIMES_FORTRAN_MODULES)
     set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")

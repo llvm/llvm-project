@@ -206,7 +206,7 @@ if (RUNTIMES_FORTRAN_MODULES)
   else ()
     message(STATUS "CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES: assumed to work")
   endif ()
-  set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND "${RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND}" PARENT_SCOPE)
+  #set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND "${RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND}" PARENT_SCOPE)
 
   # Always track intrinsic module dependencies; Even if not supported in the
   # current setup, at worst they are ignored.
