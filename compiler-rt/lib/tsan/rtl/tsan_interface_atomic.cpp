@@ -25,6 +25,7 @@
 #include "tsan_flags.h"
 #include "tsan_interface.h"
 #include "tsan_rtl.h"
+#include "tsan_simulate.h"
 
 using namespace __tsan;
 
@@ -534,6 +535,9 @@ ALWAYS_INLINE auto AtomicDelayImpl(morder mo, AddrType addr, Types... args) {
 template <class Op, class... Types>
 ALWAYS_INLINE auto AtomicImpl(morder mo, Types... args) {
   AtomicDelayImpl(mo, args...);
+#  if !SANITIZER_GO
+  SimulateSchedule();
+#  endif
   ThreadState *const thr = cur_thread();
   ProcessPendingSignals(thr);
   if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))

@@ -23,6 +23,7 @@
 #include "tsan_platform.h"
 #include "tsan_report.h"
 #include "tsan_rtl.h"
+#include "tsan_simulate.h"
 #include "tsan_suppressions.h"
 #include "tsan_symbolize.h"
 #include "tsan_sync.h"
@@ -717,6 +718,9 @@ bool OutputReport(ThreadState *thr, ScopedReport &srep) {
   if (flags()->halt_on_error)
     Die();
   thr->current_report = nullptr;
+#if !SANITIZER_GO
+  SimulateReportRace();
+#endif
   return true;
 }
 

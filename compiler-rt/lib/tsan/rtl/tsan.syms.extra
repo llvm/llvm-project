@@ -31,6 +31,7 @@ __tsan_create_fiber
 __tsan_destroy_fiber
 __tsan_switch_to_fiber
 __tsan_set_fiber_name
+__tsan_simulate
 __ubsan_*
 Annotate*
 WTFAnnotate*

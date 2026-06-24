@@ -168,6 +168,13 @@ void SANITIZER_CDECL __tsan_set_fiber_name(void *fiber, const char *name);
 // Do not establish a happens-before relation between fibers
 static const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
 
+// Simulation scheduler API.
+// Runs a callback repeatedly under a controlled thread scheduler that explores
+// different interleavings to expose data races and deadlocks.
+// No other threads must be running when __tsan_simulate is called.
+// Returns 0 on success, -1 on failure (race detected, deadlock, etc.).
+int SANITIZER_CDECL __tsan_simulate(void (*callback)(void *arg), void *arg);
+
 // User-provided callback invoked on TSan initialization.
 void SANITIZER_CDECL __tsan_on_initialize();
 
