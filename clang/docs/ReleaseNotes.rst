@@ -664,6 +664,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Added ``-Wstringop-overread`` to warn when ``memcpy``, ``memmove``, ``memcmp``,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+  
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -682,6 +685,7 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed an assertion when comparing a fixed point type with a ``_BitInt`` type. (#GH196948)
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
@@ -721,6 +725,9 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed ``clang::Preprocessor::recomputeCurLexerKind`` to avoid default fallback to ``CurLexerCallback = CLK_CachingLexer;``. This prevents code-completion
+  EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
+  in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 - Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
@@ -846,6 +853,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
+- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
 ------------------------
@@ -1070,11 +1078,6 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
-- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
-  suppression mappings (``--warning-suppression-mappings``) now recognize version
-  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
-  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
-  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

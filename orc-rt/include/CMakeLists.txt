@@ -15,12 +15,12 @@ set(ORC_RT_HEADERS
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/LockedAccess.h
+    orc-rt/MacroUtils.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/NativeDylibManager.h
     orc-rt/QueueingRunner.h
     orc-rt/RTTI.h
-    orc-rt/ScopeExit.h
     orc-rt/Service.h
     orc-rt/Session.h
     orc-rt/SimpleNativeMemoryMap.h
@@ -40,6 +40,7 @@ set(ORC_RT_HEADERS
     orc-rt/bind.h
     orc-rt/bit.h
     orc-rt/move_only_function.h
+    orc-rt/scope_exit.h
     orc-rt/span.h
 )
 
