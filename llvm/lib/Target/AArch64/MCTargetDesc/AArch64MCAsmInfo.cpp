@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MCAsmInfo.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -30,6 +31,19 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
     cl::desc("Choose style of NEON code to emit from AArch64 backend:"),
     cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
                clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
+
+// Helper function to check if a symbol name matches an AArch64 register name.
+// Uses the ReservedIdentifiers set populated from MCRegisterInfo.
+static bool isValidAArch64UnquotedName(const MCAsmInfo &MAI,
+                                       const StringSet<> &ReservedIdentifiers,
+                                       StringRef Name) {
+  // First check base class validation (character validity, etc.)
+  if (!MAI.MCAsmInfo::isValidUnquotedName(Name))
+    return false;
+  
+  // Check if the name conflicts with a register name
+  return !ReservedIdentifiers.contains(Name.lower());
+}
 
 const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
@@ -204,6 +218,10 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
+bool AArch64MCAsmInfoDarwin::isValidUnquotedName(StringRef Name) const {
+  return isValidAArch64UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
 AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
                                          const MCTargetOptions &Options)
     : MCAsmInfoELF(Options) {
@@ -259,6 +277,10 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
+bool AArch64MCAsmInfoELF::isValidUnquotedName(StringRef Name) const {
+  return isValidAArch64UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
     const MCTargetOptions &Options)
     : MCAsmInfoMicrosoft(Options) {
@@ -290,6 +312,10 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
+bool AArch64MCAsmInfoMicrosoftCOFF::isValidUnquotedName(StringRef Name) const {
+  return isValidAArch64UnquotedName(*this, ReservedIdentifiers, Name);
+}
+
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
     : MCAsmInfoGNUCOFF(Options) {
   InternalSymbolPrefix = ".L";
@@ -318,4 +344,8 @@ void AArch64MCAsmInfoGNUCOFF::printSpecifierExpr(
 bool AArch64MCAsmInfoGNUCOFF::evaluateAsRelocatableImpl(
     const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
   return evaluate(Expr, Res, Asm);
+}
+
+bool AArch64MCAsmInfoGNUCOFF::isValidUnquotedName(StringRef Name) const {
+  return isValidAArch64UnquotedName(*this, ReservedIdentifiers, Name);
 }
