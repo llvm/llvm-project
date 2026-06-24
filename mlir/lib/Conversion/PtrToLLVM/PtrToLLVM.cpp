@@ -453,6 +453,11 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add type conversions.
   converter.addConversion([&](ptr::PtrType type) -> Type {
+    if (auto memSpace =
+            dyn_cast<LLVM::LLVMAddrSpaceAttrInterface>(type.getMemorySpace()))
+      return LLVM::LLVMPointerType::get(type.getContext(),
+                                        memSpace.getAddressSpace());
+
     std::optional<Attribute> maybeAttr =
         converter.convertTypeAttribute(type, type.getMemorySpace());
     auto memSpace =
