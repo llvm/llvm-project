@@ -101,6 +101,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
 using namespace clang;
@@ -115,6 +116,7 @@ class HandleState {
 private:
   enum class Kind { MaybeAllocated, Allocated, Released, Escaped, Unowned } K;
   SymbolRef ErrorSym;
+
   HandleState(Kind K, SymbolRef ErrorSym) : K(K), ErrorSym(ErrorSym) {}
 
 public:
@@ -185,8 +187,8 @@ template <typename Attr> static bool hasFuchsiaUnownedAttr(const Decl *D) {
 }
 
 class FuchsiaHandleChecker
-    : public Checker<check::PostCall, check::PreCall, check::DeadSymbols,
-                     check::PointerEscape, eval::Assume> {
+    : public Checker<check::PostCall, check::PreCall, eval::Call,
+                     check::DeadSymbols, check::PointerEscape, eval::Assume> {
   BugType LeakBugType{this, "Fuchsia handle leak", "Fuchsia Handle Error",
                       /*SuppressOnSink=*/true};
   BugType DoubleReleaseBugType{this, "Fuchsia handle double release",
@@ -197,7 +199,18 @@ class FuchsiaHandleChecker
       this, "Fuchsia handle release of unowned handle", "Fuchsia Handle Error"};
 
 public:
+  using Note = std::function<std::string(BugReport &BR)>;
+  using NotesVec = SmallVector<Note, 4>;
+
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+
+  ProgramStateRef evalFunctionAttrs(const CallEvent &Call, CheckerContext &C,
+                                    ProgramStateRef State,
+                                    NotesVec &Notes) const;
+  ProgramStateRef evalArgsAttrs(const CallEvent &Call, CheckerContext &C,
+                                ProgramStateRef State, NotesVec &Notes) const;
+  bool needsEval(const CallEvent &Call) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
@@ -206,6 +219,7 @@ public:
                                      const InvalidatedSymbols &Escaped,
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
+  Note createNote(SymbolRef RetVal, std::string Message) const;
 
   ExplodedNode *reportLeaks(ArrayRef<SymbolRef> LeakedHandles,
                             CheckerContext &C, ExplodedNode *Pred) const;
@@ -271,8 +285,8 @@ private:
 
 /// Returns the symbols extracted from the argument or empty vector if it cannot
 /// be found. It is unlikely to have over 1024 symbols in one argument.
-static SmallVector<SymbolRef, 1024>
-getFuchsiaHandleSymbols(QualType QT, SVal Arg, ProgramStateRef State) {
+SmallVector<SymbolRef> getFuchsiaHandleSymbols(QualType QT, SVal Arg,
+                                               ProgramStateRef &State) {
   int PtrToHandleLevel = 0;
   while (QT->isAnyPointerType() || QT->isReferenceType()) {
     ++PtrToHandleLevel;
@@ -314,6 +328,182 @@ getFuchsiaHandleSymbols(QualType QT, SVal Arg, ProgramStateRef State) {
   return {};
 }
 
+FuchsiaHandleChecker::Note
+FuchsiaHandleChecker::createNote(SymbolRef Sym, std::string Message) const {
+  return [Sym, Message](BugReport &BR) -> std::string {
+    auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
+    if (!PathBR->getInterestingnessKind(Sym))
+      return "";
+    return Message;
+  };
+}
+
+bool FuchsiaHandleChecker::needsEval(const CallEvent &Call) const {
+  const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+
+  assert(FuncDecl && "Should have FuncDecl at this point");
+
+  if (hasFuchsiaAttr<AcquireHandleAttr>(FuncDecl) ||
+      hasFuchsiaUnownedAttr<AcquireHandleAttr>(FuncDecl))
+    return true;
+
+  for (unsigned Arg = 0; Arg < Call.getNumArgs(); ++Arg) {
+    if (Arg >= FuncDecl->getNumParams())
+      break;
+    const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
+
+    if (hasFuchsiaAttr<ReleaseHandleAttr>(PVD) ||
+        hasFuchsiaAttr<AcquireHandleAttr>(PVD) ||
+        hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD))
+      return true;
+  }
+
+  return false;
+}
+
+ProgramStateRef FuchsiaHandleChecker::evalArgsAttrs(const CallEvent &Call,
+                                                    CheckerContext &C,
+                                                    ProgramStateRef State,
+                                                    NotesVec &Notes) const {
+  const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  SymbolRef ResultSymbol = nullptr;
+
+  assert(FuncDecl && "Should have FuncDecl at this point");
+
+  if (const auto *TypeDefTy = FuncDecl->getReturnType()->getAs<TypedefType>())
+    if (TypeDefTy->getDecl()->getName() == ErrorTypeName) {
+      ResultSymbol =
+          State->getSVal(Call.getOriginExpr(), C.getLocationContext())
+              .getAsSymbol();
+      assert(ResultSymbol && "Result symbol should be there");
+    }
+
+  for (unsigned Arg = 0; Arg < Call.getNumArgs(); ++Arg) {
+    if (Arg >= FuncDecl->getNumParams())
+      break;
+    const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
+    unsigned ParamDiagIdx = PVD->getFunctionScopeIndex() + 1;
+    SmallVector<SymbolRef> Handles =
+        getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
+
+    for (SymbolRef Handle : Handles) {
+      if (hasFuchsiaAttr<ReleaseHandleAttr>(PVD)) {
+        Notes.push_back(createNote(
+            Handle,
+            llvm::formatv("Handle released through {0}{1} parameter",
+                          ParamDiagIdx, llvm::getOrdinalSuffix(ParamDiagIdx))));
+        State = State->set<HStateMap>(Handle, HandleState::getReleased());
+      } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
+        Notes.push_back(createNote(
+            Handle,
+            llvm::formatv("Handle allocated through {0}{1} parameter",
+                          ParamDiagIdx, llvm::getOrdinalSuffix(ParamDiagIdx))));
+
+        State = State->set<HStateMap>(
+            Handle, HandleState::getMaybeAllocated(ResultSymbol));
+      } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD)) {
+        Notes.push_back(createNote(
+            Handle,
+            llvm::formatv("Unowned handle allocated through {0}{1} parameter",
+                          ParamDiagIdx, llvm::getOrdinalSuffix(ParamDiagIdx))));
+        State = State->set<HStateMap>(Handle, HandleState::getUnowned());
+      }
+    }
+  }
+
+  return State;
+}
+
+ProgramStateRef FuchsiaHandleChecker::evalFunctionAttrs(const CallEvent &Call,
+                                                        CheckerContext &C,
+                                                        ProgramStateRef State,
+                                                        NotesVec &Notes) const {
+  const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  assert(FuncDecl && "Should have FuncDecl at this point");
+
+  if (!hasFuchsiaAttr<AcquireHandleAttr>(FuncDecl) &&
+      !hasFuchsiaUnownedAttr<AcquireHandleAttr>(FuncDecl))
+    return State;
+
+  SymbolRef RetSym =
+      State->getSVal(Call.getOriginExpr(), C.getLocationContext())
+          .getAsSymbol();
+  assert(RetSym && "Return symbol should be there");
+
+  if (hasFuchsiaAttr<AcquireHandleAttr>(FuncDecl)) {
+    Notes.push_back(createNote(
+        RetSym, llvm::formatv("Function '{0}' returns an open handle",
+                              FuncDecl->getDeclName())));
+    State =
+        State->set<HStateMap>(RetSym, HandleState::getMaybeAllocated(nullptr));
+  } else {
+    Notes.push_back(createNote(
+        RetSym, llvm::formatv("Function '{0}' returns an unowned handle",
+                              FuncDecl->getDeclName())));
+    State = State->set<HStateMap>(RetSym, HandleState::getUnowned());
+  }
+
+  return State;
+}
+
+bool FuchsiaHandleChecker::evalCall(const CallEvent &Call,
+                                    CheckerContext &C) const {
+  const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  // Checker depends on attributes attached to function declaration, so there is
+  // no way to proccess futher w/o declaration
+  if (!FuncDecl)
+    return false;
+
+  ProgramStateRef State = C.getState();
+
+  if (needsEval(Call)) {
+    // If return value is non-void then it's better to bind one
+    if (!FuncDecl->getReturnType()->isVoidType()) {
+      SValBuilder &SVB = C.getSValBuilder();
+      const LocationContext *LC = C.getLocationContext();
+      auto RetVal = SVB.conjureSymbolVal(
+          Call.getOriginExpr(), LC, FuncDecl->getReturnType(), C.blockCount());
+
+      State = State->BindExpr(Call.getOriginExpr(), LC, RetVal);
+    }
+
+    // If checker models a call, then body won't be inlined, so
+    // all pointers (including annotated ones) should be invalidated.
+    //
+    // This call will also create a conjured symbol for each handle symbol,
+    // which then will be obtained by getFuchsiaHandleSymbols().
+    State = Call.invalidateRegions(C.blockCount(), State);
+  } else {
+    return false;
+  }
+
+  NotesVec Notes;
+
+  State = evalFunctionAttrs(Call, C, State, Notes);
+  State = evalArgsAttrs(Call, C, State, Notes);
+
+  const NoteTag *T =
+      Notes.empty()
+          ? nullptr
+          : C.getNoteTag([this, Notes{std::move(Notes)}](
+                             PathSensitiveBugReport &BR) -> std::string {
+              if (&BR.getBugType() != &UseAfterReleaseBugType &&
+                  &BR.getBugType() != &LeakBugType &&
+                  &BR.getBugType() != &DoubleReleaseBugType &&
+                  &BR.getBugType() != &ReleaseUnownedBugType)
+                return "";
+              for (auto &Note : Notes) {
+                std::string Text = Note(BR);
+                if (!Text.empty())
+                  return Text;
+              }
+              return "";
+            });
+
+  C.addTransition(State, T);
+  return true;
+}
+
 void FuchsiaHandleChecker::checkPreCall(const CallEvent &Call,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -333,93 +523,12 @@ void FuchsiaHandleChecker::checkPreCall(const CallEvent &Call,
     if (Arg >= FuncDecl->getNumParams())
       break;
     const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
-    SmallVector<SymbolRef, 1024> Handles =
+    SmallVector<SymbolRef> Handles =
         getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
-
-    // Handled in checkPostCall.
-    if (hasFuchsiaAttr<ReleaseHandleAttr>(PVD) ||
-        hasFuchsiaAttr<AcquireHandleAttr>(PVD))
-      continue;
 
     for (SymbolRef Handle : Handles) {
       const HandleState *HState = State->get<HStateMap>(Handle);
       if (!HState || HState->isEscaped())
-        continue;
-
-      if (hasFuchsiaAttr<UseHandleAttr>(PVD) ||
-          PVD->getType()->isIntegerType()) {
-        if (HState->isReleased()) {
-          reportUseAfterFree(Handle, Call.getArgSourceRange(Arg), C);
-          return;
-        }
-      }
-    }
-  }
-  C.addTransition(State);
-}
-
-void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
-                                         CheckerContext &C) const {
-  const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-  if (!FuncDecl)
-    return;
-
-  // If we analyzed the function body, then ignore the annotations.
-  if (C.wasInlined)
-    return;
-
-  ProgramStateRef State = C.getState();
-
-  std::vector<std::function<std::string(BugReport & BR)>> Notes;
-  SymbolRef ResultSymbol = nullptr;
-  if (const auto *TypeDefTy = FuncDecl->getReturnType()->getAs<TypedefType>())
-    if (TypeDefTy->getDecl()->getName() == ErrorTypeName)
-      ResultSymbol = Call.getReturnValue().getAsSymbol();
-
-  // Function returns an open handle.
-  if (hasFuchsiaAttr<AcquireHandleAttr>(FuncDecl)) {
-    SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
-    Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
-      auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-      if (PathBR->getInterestingnessKind(RetSym)) {
-        std::string SBuf;
-        llvm::raw_string_ostream OS(SBuf);
-        OS << "Function '" << FuncDecl->getDeclName()
-           << "' returns an open handle";
-        return SBuf;
-      } else
-        return "";
-    });
-    State =
-        State->set<HStateMap>(RetSym, HandleState::getMaybeAllocated(nullptr));
-  } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(FuncDecl)) {
-    // Function returns an unowned handle
-    SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
-    Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
-      auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-      if (PathBR->getInterestingnessKind(RetSym)) {
-        std::string SBuf;
-        llvm::raw_string_ostream OS(SBuf);
-        OS << "Function '" << FuncDecl->getDeclName()
-           << "' returns an unowned handle";
-        return SBuf;
-      } else
-        return "";
-    });
-    State = State->set<HStateMap>(RetSym, HandleState::getUnowned());
-  }
-
-  for (unsigned Arg = 0; Arg < Call.getNumArgs(); ++Arg) {
-    if (Arg >= FuncDecl->getNumParams())
-      break;
-    const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
-    unsigned ParamDiagIdx = PVD->getFunctionScopeIndex() + 1;
-    SmallVector<SymbolRef, 1024> Handles =
-        getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
-
-    for (SymbolRef Handle : Handles) {
-      const HandleState *HState = State->get<HStateMap>(Handle);
-      if (HState && HState->isEscaped())
         continue;
       if (hasFuchsiaAttr<ReleaseHandleAttr>(PVD)) {
         if (HState && HState->isReleased()) {
@@ -428,49 +537,44 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         } else if (HState && HState->isUnowned()) {
           reportUnownedRelease(Handle, Call.getArgSourceRange(Arg), C);
           return;
-        } else {
-          Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
-            auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-            if (PathBR->getInterestingnessKind(Handle)) {
-              std::string SBuf;
-              llvm::raw_string_ostream OS(SBuf);
-              OS << "Handle released through " << ParamDiagIdx
-                 << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-              return SBuf;
-            } else
-              return "";
-          });
-          State = State->set<HStateMap>(Handle, HandleState::getReleased());
         }
-      } else if (hasFuchsiaAttr<AcquireHandleAttr>(PVD)) {
-        Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
-          auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-          if (PathBR->getInterestingnessKind(Handle)) {
-            std::string SBuf;
-            llvm::raw_string_ostream OS(SBuf);
-            OS << "Handle allocated through " << ParamDiagIdx
-               << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            return SBuf;
-          } else
-            return "";
-        });
-        State = State->set<HStateMap>(
-            Handle, HandleState::getMaybeAllocated(ResultSymbol));
-      } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD)) {
-        Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
-          auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
-          if (PathBR->getInterestingnessKind(Handle)) {
-            std::string SBuf;
-            llvm::raw_string_ostream OS(SBuf);
-            OS << "Unowned handle allocated through " << ParamDiagIdx
-               << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            return SBuf;
-          } else
-            return "";
-        });
-        State = State->set<HStateMap>(Handle, HandleState::getUnowned());
-      } else if (!hasFuchsiaAttr<UseHandleAttr>(PVD) &&
+      } else if (hasFuchsiaAttr<UseHandleAttr>(PVD) ||
                  PVD->getType()->isIntegerType()) {
+        if (HState && HState->isReleased()) {
+          reportUseAfterFree(Handle, Call.getArgSourceRange(Arg), C);
+          return;
+        }
+      }
+    }
+  }
+
+  C.addTransition(State);
+}
+
+void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
+                                         CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  if (!FuncDecl)
+    return;
+
+  if (C.wasInlined)
+    return;
+
+  for (unsigned Arg = 0; Arg < Call.getNumArgs(); ++Arg) {
+    if (Arg >= FuncDecl->getNumParams())
+      break;
+    const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
+    SmallVector<SymbolRef> Handles =
+        getFuchsiaHandleSymbols(PVD->getType(), Call.getArgSVal(Arg), State);
+
+    for (SymbolRef Handle : Handles) {
+      const HandleState *HState = State->get<HStateMap>(Handle);
+      if (HState && HState->isEscaped())
+        continue;
+      if (!hasFuchsiaAttr<UseHandleAttr>(PVD) &&
+          !hasFuchsiaAttr<ReleaseHandleAttr>(PVD) &&
+          PVD->getType()->isIntegerType()) {
         // Working around integer by-value escapes.
         // The by-value escape would not be captured in checkPointerEscape.
         // If the function was not analyzed (otherwise wasInlined should be
@@ -480,24 +584,8 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       }
     }
   }
-  const NoteTag *T = nullptr;
-  if (!Notes.empty()) {
-    T = C.getNoteTag([this, Notes{std::move(Notes)}](
-                         PathSensitiveBugReport &BR) -> std::string {
-      if (&BR.getBugType() != &UseAfterReleaseBugType &&
-          &BR.getBugType() != &LeakBugType &&
-          &BR.getBugType() != &DoubleReleaseBugType &&
-          &BR.getBugType() != &ReleaseUnownedBugType)
-        return "";
-      for (auto &Note : Notes) {
-        std::string Text = Note(BR);
-        if (!Text.empty())
-          return Text;
-      }
-      return "";
-    });
-  }
-  C.addTransition(State, T);
+
+  C.addTransition(State);
 }
 
 void FuchsiaHandleChecker::checkDeadSymbols(SymbolReaper &SymReaper,
@@ -581,7 +669,7 @@ ProgramStateRef FuchsiaHandleChecker::checkPointerEscape(
       if (Arg >= FuncDecl->getNumParams())
         break;
       const ParmVarDecl *PVD = FuncDecl->getParamDecl(Arg);
-      SmallVector<SymbolRef, 1024> Handles =
+      SmallVector<SymbolRef> Handles =
           getFuchsiaHandleSymbols(PVD->getType(), Call->getArgSVal(Arg), State);
       for (SymbolRef Handle : Handles) {
         if (hasFuchsiaAttr<UseHandleAttr>(PVD) ||
