@@ -31,9 +31,8 @@ constexpr const char *stringLibraryHeader = "string";
 
 IncludeOp addHeader(OpBuilder &builder, ModuleOp module, StringRef headerName) {
   StringAttr includeAttr = builder.getStringAttr(headerName);
-  return IncludeOp::create(
-      builder, module.getLoc(), includeAttr,
-      /*is_standard_include=*/builder.getUnitAttr());
+  return IncludeOp::create(builder, module.getLoc(), includeAttr,
+                           /*is_standard_include=*/builder.getUnitAttr());
 }
 
 class AddReflectionMapPass
@@ -43,7 +42,8 @@ class AddReflectionMapPass
     mlir::ModuleOp moduleOp = getOperation();
 
     RewritePatternSet patterns(&getContext());
-    populateAddReflectionMapPatterns(patterns, fieldAttrName, excludedFieldAttrs);
+    populateAddReflectionMapPatterns(patterns, fieldAttrName,
+                                     excludedFieldAttrs);
 
     walkAndApplyPatterns(moduleOp, std::move(patterns));
     bool hasMapHdr = false;
@@ -55,7 +55,7 @@ class AddReflectionMapPass
 
       if (includeOp.getIsStandardInclude()) {
         auto include = includeOp.getInclude();
-        
+
         hasMapHdr = include == mapLibraryHeader;
         hasStringHdr = include == stringLibraryHeader;
       }
@@ -82,7 +82,8 @@ public:
   AddReflectionMapClass(MLIRContext *context, StringRef attrName,
                         llvm::ArrayRef<std::string> excludedFieldAttrs)
       : OpRewritePattern<ClassOp>(context), fieldAttrName(attrName),
-        excludedFieldAttrs(excludedFieldAttrs.begin(), excludedFieldAttrs.end()) {}
+        excludedFieldAttrs(excludedFieldAttrs.begin(),
+                           excludedFieldAttrs.end()) {}
 
   LogicalResult matchAndRewrite(ClassOp classOp,
                                 PatternRewriter &rewriter) const override {
@@ -114,10 +115,9 @@ public:
       if (shouldIgnore)
         return;
 
-      fieldOp.emitError()
-          << "FieldOp must have a dictionary attribute named '"
-          << fieldAttrName << "'"
-          << "with an array containing a string attribute";
+      fieldOp.emitError() << "FieldOp must have a dictionary attribute named '"
+                          << fieldAttrName << "'"
+                          << "with an array containing a string attribute";
     });
 
     std::string reflectionMapContents;
@@ -129,28 +129,34 @@ public:
     }
     reflectionMapContents += " }";
 
-    if (FuncOp executeFunc =
-            classOp.lookupSymbol<FuncOp>("operator()"))
+    if (FuncOp executeFunc = classOp.lookupSymbol<FuncOp>("operator()"))
       rewriter.setInsertionPoint(executeFunc);
     else {
-      classOp.emitError() << "ClassOp must contain a function named 'operator()' "
-                             "to add reflection map";
+      classOp.emitError()
+          << "ClassOp must contain a function named 'operator()' "
+             "to add reflection map";
       return failure();
     }
 
     FieldOp reflectionMapField = FieldOp::create(
         rewriter, classOp.getLoc(), rewriter.getStringAttr("reflectionMap"),
-        TypeAttr::get(mapType), emitc::OpaqueAttr::get(context, reflectionMapContents));
+        TypeAttr::get(mapType),
+        emitc::OpaqueAttr::get(context, reflectionMapContents));
 
     // Create getBufferForName method
-    emitc::OpaqueType nameType = emitc::OpaqueType::get(rewriter.getContext(), "std::string");
-    emitc::OpaqueType charType = emitc::OpaqueType::get(rewriter.getContext(), "char");
-    emitc::PointerType valType = emitc::PointerType::get(rewriter.getContext(), charType);
+    emitc::OpaqueType nameType =
+        emitc::OpaqueType::get(rewriter.getContext(), "std::string");
+    emitc::OpaqueType charType =
+        emitc::OpaqueType::get(rewriter.getContext(), "char");
+    emitc::PointerType valType =
+        emitc::PointerType::get(rewriter.getContext(), charType);
     FuncOp getBufferForNameFunc = FuncOp::create(
         rewriter, reflectionMapField->getLoc(), "getBufferForName",
         FunctionType::get(rewriter.getContext(), {nameType}, {valType}));
 
-    Block *body = rewriter.createBlock(&getBufferForNameFunc.getBody(), {}, {nameType}, {reflectionMapField->getLoc()});
+    Block *body =
+        rewriter.createBlock(&getBufferForNameFunc.getBody(), {}, {nameType},
+                             {reflectionMapField->getLoc()});
     rewriter.setInsertionPointToStart(body);
     GetFieldOp mapField = GetFieldOp::create(
         rewriter, reflectionMapField->getLoc(), mapType, "reflectionMap");
@@ -158,7 +164,8 @@ public:
     MemberCallOpaqueOp lookupCall = MemberCallOpaqueOp::create(
         rewriter, reflectionMapField->getLoc(), valType, mapField.getResult(),
         "at", ArrayAttr{}, ArrayAttr{}, ValueRange{nameArg});
-    ReturnOp::create(rewriter, reflectionMapField->getLoc(), lookupCall.getResult(0));
+    ReturnOp::create(rewriter, reflectionMapField->getLoc(),
+                     lookupCall.getResult(0));
 
     return success();
   }
