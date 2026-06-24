@@ -644,6 +644,11 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
           padOp, "unimplemented: non-constant padding value");
     }
 
+    // `getConstantPaddingValue` may return a constant defined inside the
+    // `tensor.pad` region.
+    if (paddingVal.getParentBlock() == &padOp.getRegion().front())
+      rewriter.moveOpBefore(paddingVal.getDefiningOp(), padOp);
+
     ArrayRef<int64_t> sourceShape = padOp.getSourceType().getShape();
     ArrayRef<int64_t> resultShape = padOp.getResultType().getShape();
     int64_t padRank = sourceShape.size();
