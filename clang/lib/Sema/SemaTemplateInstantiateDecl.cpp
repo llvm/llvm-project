@@ -6387,8 +6387,121 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         Diag(PointOfInstantiation, diag::warn_var_template_missing)
           << Var;
         Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
+        if (getLangOpts().CPlusPlus11) {
           Diag(PointOfInstantiation, diag::note_inst_declaration_hint) << Var;
+
+          // Determine if we can suggest a generic out-of-class definition
+          // by collecting all enclosing class template declarations.
+          bool CanSuggestDefinition = false;
+          SmallVector<const ClassTemplateDecl *, 4> EnclosingCTDs;
+          const VarTemplateDecl *PatternVTD =
+              PatternDecl->getDescribedVarTemplate();
+          {
+            const DeclContext *DC = PatternDecl->getDeclContext();
+            bool Valid = true;
+            while (DC && !DC->isFileContext() && !isa<NamespaceDecl>(DC)) {
+              const auto *RD = dyn_cast<CXXRecordDecl>(DC);
+              if (!RD) {
+                Valid = false;
+                break;
+              }
+              const auto *CTD = RD->getDescribedClassTemplate();
+              if (!CTD) {
+                Valid = false;
+                break;
+              }
+              EnclosingCTDs.push_back(CTD);
+              DC = DC->getParent();
+            }
+            if (Valid && !EnclosingCTDs.empty())
+              CanSuggestDefinition = true;
+          }
+
+          unsigned NumWays = CanSuggestDefinition ? 3 : 2;
+          Diag(PointOfInstantiation, diag::note_inst_declaration_num_ways)
+              << NumWays;
+
+          // Suggest extern template declaration syntax.
+          std::string Suggestion;
+          {
+            llvm::raw_string_ostream OS(Suggestion);
+            OS << "extern template ";
+            std::string QualName;
+            llvm::raw_string_ostream NameOS(QualName);
+            Var->getNameForDiagnostic(NameOS, getPrintingPolicy(),
+                                      /*Qualified=*/true);
+            Var->getType().print(OS, getPrintingPolicy(), QualName);
+            OS << ";";
+          }
+          Diag(PointOfInstantiation,
+               diag::note_inst_declaration_extern_suggestion)
+              << Suggestion;
+
+          // Suggest explicit specialization syntax.
+          std::string SpecSuggestion;
+          {
+            llvm::raw_string_ostream OS(SpecSuggestion);
+            // Count the number of template<> prefixes needed: one for
+            // each enclosing class template specialization, plus one if
+            // the variable itself is a variable template specialization.
+            unsigned NumSpecPrefixes = 0;
+            for (const DeclContext *DC = Var->getDeclContext(); DC;
+                 DC = DC->getParent())
+              if (isa<ClassTemplateSpecializationDecl>(DC))
+                ++NumSpecPrefixes;
+            if (isa<VarTemplateSpecializationDecl>(Var))
+              ++NumSpecPrefixes;
+            for (unsigned I = 0; I < NumSpecPrefixes; ++I)
+              OS << "template <> ";
+            std::string QualName;
+            llvm::raw_string_ostream NameOS(QualName);
+            Var->getNameForDiagnostic(NameOS, getPrintingPolicy(),
+                                      /*Qualified=*/true);
+            Var->getType().print(OS, getPrintingPolicy(), QualName);
+            OS << ";";
+          }
+          Diag(PointOfInstantiation,
+               diag::note_inst_declaration_specialization_suggestion)
+              << SpecSuggestion;
+
+          // Suggest generic out-of-class definition syntax.
+          if (CanSuggestDefinition) {
+            std::string DefSuggestion;
+            {
+              llvm::raw_string_ostream OS(DefSuggestion);
+              // Print class template parameter lists (outermost to
+              // innermost). Each print() appends a trailing space.
+              for (auto It = EnclosingCTDs.rbegin(), End = EnclosingCTDs.rend();
+                   It != End; ++It)
+                (*It)->getTemplateParameters()->print(OS, getASTContext(),
+                                                      getPrintingPolicy());
+              // Print variable template parameter list if present.
+              if (PatternVTD)
+                PatternVTD->getTemplateParameters()->print(OS, getASTContext(),
+                                                           getPrintingPolicy());
+              // Build qualified name: C1<T>::C2<T1>::varName
+              std::string QualName;
+              llvm::raw_string_ostream NameOS(QualName);
+              for (auto It = EnclosingCTDs.rbegin(), End = EnclosingCTDs.rend();
+                   It != End; ++It) {
+                const auto *TPL = (*It)->getTemplateParameters();
+                NameOS << (*It)->getName() << "<";
+                for (unsigned I = 0, N = TPL->size(); I != N; ++I) {
+                  if (I > 0)
+                    NameOS << ", ";
+                  NameOS << TPL->getParam(I)->getName();
+                }
+                NameOS << ">::";
+              }
+              NameOS << PatternDecl->getName();
+              PatternDecl->getType().print(OS, getPrintingPolicy(), QualName);
+              OS << ";";
+            }
+            Diag(PointOfInstantiation,
+                 diag::note_inst_declaration_definition_suggestion)
+                << DefSuggestion;
+          }
+        }
       }
       return;
     }
