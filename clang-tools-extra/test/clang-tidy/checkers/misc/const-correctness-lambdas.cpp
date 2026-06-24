@@ -11,4 +11,8 @@ void lambdas_ignored_but_other_auto_variables_diagnosed() {
   // CHECK-FIXES: auto const i = 0;
 
   auto lambda = [] {};
+
+  int x = 0;
+  auto lambda_modifying_capture = [&x] { ++x; };
+  lambda_modifying_capture();
 }

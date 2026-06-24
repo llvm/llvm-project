@@ -30,7 +30,7 @@ int p_anonymous_global = 43;
 
 void lambdas() {
   auto Lambda = [](int i) { return i < 0; };
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'Lambda' of type '{{.*}}' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'Lambda' of type '(lambda at {{.*}})' can be declared 'const'
   // CHECK-FIXES: auto const Lambda = [](int i) { return i < 0; };
 
   auto LambdaWithMutableCallOperator = []() mutable {};
@@ -43,7 +43,7 @@ void lambdas() {
 
   int x = 0;
   auto LambdaModifyingCapture = [&x] { ++x; };
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'LambdaModifyingCapture' of type '{{.*}}' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'LambdaModifyingCapture' of type '(lambda at {{.*}})' can be declared 'const'
   // CHECK-FIXES: auto const LambdaModifyingCapture = [&x] { ++x; };
   LambdaModifyingCapture();
 }
