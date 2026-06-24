@@ -165,17 +165,16 @@ define <vscale x 2 x float> @test_different_evl_splice(ptr %ptr, i32 zeroext %ev
 define <vscale x 2 x float> @binop(ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: binop:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 260096
-; CHECK-NEXT:    fmv.w.x fa5, a2
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    addi a0, a1, -1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfadd.vf v9, v9, fa5
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v10, v8, a0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   %fadd = fadd <vscale x 2 x float> %load, splat (float 1.0)
@@ -186,22 +185,19 @@ define <vscale x 2 x float> @binop(ptr %ptr, i32 zeroext %evl) {
 define <vscale x 2 x float> @binop_nested(ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: binop_nested:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 263168
-; CHECK-NEXT:    fmv.w.x fa5, a2
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    lui a0, 263168
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    lui a0, 260096
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmul.vf v8, v8, fa5
 ; CHECK-NEXT:    fmv.w.x fa5, a0
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    addi a0, a1, -1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfadd.vf v10, v8, fa5
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v9, v9, a0
-; CHECK-NEXT:    vrgather.vv v8, v10, v9
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   %fmul = fmul <vscale x 2 x float> %load, splat (float 3.0)
@@ -213,16 +209,16 @@ define <vscale x 2 x float> @binop_nested(ptr %ptr, i32 zeroext %evl) {
 define <vscale x 2 x float> @binop_2loads(ptr %ptr1, ptr %ptr2, i32 zeroext %evl) {
 ; CHECK-LABEL: binop_2loads:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a3, a2, 2
+; CHECK-NEXT:    addi a3, a3, -4
+; CHECK-NEXT:    li a4, -4
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    addi a0, a2, -1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfadd.vv v10, v8, v10
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v9, v9, a0
-; CHECK-NEXT:    vrgather.vv v8, v10, v9
+; CHECK-NEXT:    vlse32.v v8, (a1), a4
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    vlse32.v v9, (a0), a4
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
   %load1 = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr1, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   %load2 = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr2, <vscale x 2 x i1> splat (i1 true), i32 %evl)
@@ -234,15 +230,9 @@ define <vscale x 2 x float> @binop_2loads(ptr %ptr1, ptr %ptr2, i32 zeroext %evl
 define <vscale x 2 x float> @binop_2splats(float %f1, float %f2, i32 zeroext %evl) {
 ; CHECK-LABEL: binop_2splats:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    fadd.s fa5, fa0, fa1
-; CHECK-NEXT:    addi a1, a0, -1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v9, fa5
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v10, v8, a1
-; CHECK-NEXT:    vrgather.vv v8, v9, v10
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    ret
   %splat1.head = insertelement <vscale x 2 x float> poison, float %f1, i32 0
   %splat1 = shufflevector <vscale x 2 x float> %splat1.head, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
