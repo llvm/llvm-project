@@ -557,8 +557,8 @@ public:
                  MCPhysReg RegCnt) const {
     Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
-               .addReg(RegTo)
-               .addReg(RegCnt);
+               .addReg(RegCnt)
+               .addReg(RegTo);
   }
 
   InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,
