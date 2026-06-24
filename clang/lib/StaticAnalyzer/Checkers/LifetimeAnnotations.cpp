@@ -42,8 +42,8 @@ public:
 
 } // namespace
 
-ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
-                           const MemRegion *Source) {
+static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
+                                  const MemRegion *Source) {
   LifetimeSourceSet::Factory &F =
       State->getStateManager().get_context<LifetimeSourceSet>();
 
@@ -140,10 +140,13 @@ void LifetimeAnnotations::reportDanglingBorrower(
     const LifetimeSourceSet *Sources, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
+  ExplodedNode *N = C.generateNonFatalErrorNode();
+  if (!N)
+    return;
+
   for (const MemRegion *Source : *Sources) {
     if (State->contains<DeallocatedSourceSet>(Source)) {
-      if (ExplodedNode *N = C.generateNonFatalErrorNode())
-        reportUseAfterScope(Source, N, C);
+      reportUseAfterScope(Source, N, C);
     }
   }
 }

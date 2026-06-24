@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.LifetimeAnnotations,debug.DebugLifetimeAnnotations \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.LifetimeAnnotations,debug.DebugLifetimeAnnotations \
 // RUN:   -analyzer-config cfg-lifetime=true -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.LifetimeAnnotations,debug.DebugLifetimeAnnotations \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.LifetimeAnnotations,debug.DebugLifetimeAnnotations \
 // RUN:   -analyzer-config c++-container-inlining=false -analyzer-config cfg-lifetime=true -verify %s
 
 struct A {};
