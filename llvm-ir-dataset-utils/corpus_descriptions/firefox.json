@@ -1,0 +1,23 @@
+{
+  "sources": [
+    {
+      "type": "tar",
+      "archive_url": "https://ftp.mozilla.org/pub/firefox/releases/117.0/source/firefox-117.0.source.tar.xz"
+    }
+  ],
+  "folder_name": "firefox",
+  "build_system": "manual",
+  "environment_variables": {
+    "CFLAGS": "-Xclang -fembed-bitcode=all",
+    "CXXFLAGS": "-Xclang -fembed-bitcode=all",
+    "RUSTFLAGS": "--emit=llvm-bc"
+  },
+  "commands": [
+    "echo 'ac_add_options --without-wasm-sandboxed-libraries' > mozconfig",
+    "./mach build"
+  ],
+  "raw_bc_corpus": "bitcode",
+  "license": "MPL-2.0",
+  "license_source": "manual"
+}
+

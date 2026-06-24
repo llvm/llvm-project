@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/rahulkp220/Zomato.jl",
+      "commit_sha": "9ba4dfbf1f22b38c164f2e0087558b150350ccaf"
+    }
+  ],
+  "folder_name": "Zomato",
+  "build_system": "julia",
+  "package_name": "Zomtao",
+  "license": "MIT",
+  "license_source": "manual"
+}

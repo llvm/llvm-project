@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/python/cpython",
+      "commit_sha": "d8f87cdf94a6533c5cf2d25e09e6fa3eb06720b9"
+    }
+  ],
+  "repo_name": "cpython",
+  "folder_name": "cpython",
+  "build_system": "autoconf",
+  "autoconf_flags": {},
+  "license": "PSF-2.0",
+  "license_source": "manual"
+}

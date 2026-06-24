@@ -1,0 +1,10 @@
+{
+  "sources": [],
+  "folder_name": "gmake",
+  "build_system": "spack",
+  "package_name": "gmake",
+  "package_spec": "gmake@=4.4.1%clang@=18.0.0 cflags=\"-Xclang -fembed-bitcode=all\" cxxflags=\"-Xclang -fembed-bitcode=all\" ~guile build_system=generic arch=linux-ubuntu22.04-zen2 license=\"GPL-3.0-only\"",
+  "package_hash": "urhhmbrocyrrhqn5btbiopsrrtc5ng7d",
+  "license": "GPL-3.0-only",
+  "license_source": "manual"
+}

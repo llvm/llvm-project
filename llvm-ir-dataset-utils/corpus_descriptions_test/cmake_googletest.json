@@ -1,0 +1,14 @@
+{
+	"sources": [
+		{
+			"type": "tar",
+			"archive_url": "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz"
+		}
+	],
+	"folder_name": "googletest",
+	"build_system": "cmake",
+	"cmake_flags": {},
+	"cmake_root": "./",
+	"licnese": "BSD-3-Clause",
+	"license_source": "manual"
+}

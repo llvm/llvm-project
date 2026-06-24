@@ -1,0 +1,26 @@
+{
+  "sources": [
+    {
+      "type": "tar",
+      "archive_url": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-116.0.5845.140.tar.xz"
+    }
+  ],
+  "folder_name": "chromium",
+  "build_system": "manual",
+  "environment_variables": {
+    "cc": "clang",
+    "cxx": "clang++",
+    "ar": "llvm-ar",
+    "nm": "llvm-nm",
+    "cflags": "-Wno-error=format -Wno-error=shadow",
+    "cxxflags": "-Wno-error=format -Wno-error=shadow"
+  },
+  "commands": [
+    "mkdir -p third_party/node/linux/node-linux-x64/bin",
+    "ln -s /usr/bin/node third_party/node/linux/node-linux-x64/bin/",
+    "gn gen ./out/Release --args='is_official_build=true use_thin_lto=false is_cfi=false use_cfi_icall=false use_cfi_cast=false clang_use_chrome_plugins=false clang_embed_bitcode=true is_debug=false symbol_level=0 enable_rust=false use_sysroot=false use_qt=false clang_base_path=\"/usr\" enable_nacl=false use_vaapi=false custom_toolchain=\"//build/toolchain/linux/unbundle:default\" host_toolchain=\"//build/toolchain/linux/unbundle:default\"'",
+    "ninja -C ./out/Release chrome"
+  ],
+  "license": "BSD-3-Clause",
+  "license_source": "manual"
+}

@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {
+      "type": "tar",
+      "archive_url": "https://github.com/Old-Man-Programmer/tree/archive/refs/tags/2.1.1.tar.gz"
+    }
+  ],
+  "folder_name": "tree",
+  "build_system": "manual",
+  "commands": [
+    "make CC=clang CFLAGS='-Xclang -fembed-bitcode=all' -j${jobs}"
+  ],
+  "license": "GPL-2.0-or-later",
+  "license_source": "manual"
+}
