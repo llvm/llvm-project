@@ -4,7 +4,7 @@ import re, sys
 
 def fix_string(s):
     TYPE = re.compile(
-        '\s*(i[0-9]+|float|double|x86_fp80|fp128|ppc_fp128|\[\[.*?\]\]|\[2 x \[\[[A-Z_0-9]+\]\]\]|<.*?>|{.*?}|\[[0-9]+ x .*?\]|%["a-z:A-Z0-9._]+({{.*?}})?|%{{.*?}}|{{.*?}}|\[\[.*?\]\])(\s*(\*|addrspace\(.*?\)|dereferenceable\(.*?\)|byval\(.*?\)|sret|zeroext|inreg|returned|signext|nocapture|align \d+|swiftself|swifterror|readonly|noalias|inalloca|nocapture))*\s*'
+        r'\s*(i[0-9]+|float|double|x86_fp80|fp128|ppc_fp128|\[\[.*?\]\]|\[2 x \[\[[A-Z_0-9]+\]\]\]|<.*?>|{.*?}|\[[0-9]+ x .*?\]|%["a-z:A-Z0-9._]+({{.*?}})?|%{{.*?}}|{{.*?}}|\[\[.*?\]\])(\s*(\*|addrspace\(.*?\)|dereferenceable\(.*?\)|byval\(.*?\)|sret|zeroext|inreg|returned|signext|nocapture|align \d+|swiftself|swifterror|readonly|noalias|inalloca|nocapture))*\s*'
     )
 
     counter = 0
