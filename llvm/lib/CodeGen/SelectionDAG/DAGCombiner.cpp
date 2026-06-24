@@ -11694,19 +11694,16 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       EVT BVVT = BV.getValueType();
       unsigned EltSizeInBits = BVVT.getScalarSizeInBits();
       unsigned NumElts = BVVT.getVectorNumElements();
-      EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
-      // This fold builds a zext/trunc through IntEltVT. In the last DAG combine
-      // new nodes are legalized at once, so only do it there if IntEltVT is
-      // legal. Earlier combines are legalized again later.
-      if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits &&
-          (!LegalDAG || TLI.isTypeLegal(IntEltVT))) {
+      if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits) {
         SDValue LastElt = BV.getOperand(NumElts - 1);
         assert(LastElt.getScalarValueSizeInBits() >= EltSizeInBits &&
                "Expected BUILD_VECTOR operand as wide as element type");
         LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
                                  LastElt);
-        return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
-                                  VT);
+        SDValue Ext = DAG.getZExtOrTrunc(LastElt, DL, VT);
+        APInt Mask = APInt::getLowBitsSet(VT.getSizeInBits(), EltSizeInBits);
+        return DAG.getNode(ISD::AND, DL, VT, Ext,
+                           DAG.getConstant(Mask, DL, VT));
       }
     }
   }
