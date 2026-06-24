@@ -42,9 +42,8 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *D) override {
-    if (skipForSystemHeader(D))
-      return true;
-    Contributors.insert(D);
+    if (!skipForSystemHeader(D))
+      Contributors.insert(D);
     return true;
   }
 
