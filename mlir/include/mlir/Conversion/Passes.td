@@ -189,6 +189,41 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToLUT
+//===----------------------------------------------------------------------===//
+
+def ConvertArithExtFToLUT : Pass<"convert-arith-extf-to-lut", "ModuleOp"> {
+  let summary = "Replace arith.extf from narrow float types to f32 with a memref LUT lookup";
+  let description = [{
+    Replaces each `arith.extf %v : narrowFP to f32` (scalar or vector) with a
+    lookup into a precomputed f32 global constant table indexed by the source
+    bit pattern. One table is emitted per distinct source format; values are
+    precomputed at compile time via APFloat so they match exact IEEE semantics.
+    Table size is 2^N entries for an N-bit source type (e.g. 16 for f4, 64 for
+    f6, 256 for f8).
+
+    Scalar expansion:
+      %tbl  = memref.get_global @__extf_lut_<fmt> : memref<Mxf32>
+      %iN   = arith.bitcast     %v   : fNX -> iN
+      %idx  = arith.index_castui %iN : iN  -> index
+      %res  = memref.load       %tbl[%idx] : memref<Mxf32>
+
+    Vector expansion (uses vector.gather for all lanes in one op):
+      %tbl     = memref.get_global @__extf_lut_<fmt> : memref<Mxf32>
+      %iNvec   = arith.bitcast        %v       : vector<NxFP> -> vector<NxiN>
+      %offsets = arith.extui          %iNvec   : vector<NxiN> -> vector<Nxi32>
+      %mask    = vector.constant_mask [N]      : vector<Nxi1>
+      %pass    = arith.constant       dense<0> : vector<Nxf32>
+      %res     = vector.gather        %tbl[%c0][%offsets], %mask, %pass
+
+    Supported source types: f4E2M1FN, f6E2M3FN, f6E3M2FN, f8E4M3FN, f8E5M2,
+    f8E4M3FNUZ, f8E5M2FNUZ, f8E4M3B11FNUZ, f8E3M4, f8E4M3.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
+                            "vector::VectorDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToAPFloat
 //===----------------------------------------------------------------------===//
 
