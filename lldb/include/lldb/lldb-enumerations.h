@@ -389,6 +389,8 @@ enum ValueType : uint32_t {
   eValueTypeVTable = 9,
   /// function pointer in virtual function table
   eValueTypeVTableEntry = 10,
+
+  kLastValueType = eValueTypeVTableEntry
 };
 
 /// A mask that we can use to check if the value type is synthetic or not.

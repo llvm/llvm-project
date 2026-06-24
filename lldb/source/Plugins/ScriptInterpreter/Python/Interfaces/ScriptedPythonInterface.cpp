@@ -335,9 +335,9 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
     error = Status::FromError(val.takeError());
     return std::nullopt;
   }
-  if (*val > std::numeric_limits<std::underlying_type_t<ValueType>>::max()) {
-    error =
-        Status::FromErrorStringWithFormatv("value too large (got {0})", *val);
+  if (*val == eValueTypeInvalid || *val > kLastValueType) {
+    error = Status::FromErrorStringWithFormatv(
+        "value type invalid or too large (got {0})", *val);
     return std::nullopt;
   }
 
