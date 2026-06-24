@@ -230,11 +230,48 @@ class BinOp_no_sdwa<SDPatternOperator binop> : PatFrag<
   (ops node:$lhs, node:$rhs),
   (binop node:$lhs, node:$rhs),
   [{
+    auto isSDWAOperand = [&](const SDNode *N) -> bool {
+      if (!Subtarget->hasSDWA())
+        return false;
+
+      if (N->getOpcode() == ISD::SIGN_EXTEND_INREG) {
+        EVT VT = cast<VTSDNode>(N->getOperand(1))->getVT();
+        return VT.getScalarSizeInBits() == 8 ||
+               VT.getScalarSizeInBits() == 16;
+      }
+
+      if (N->getOpcode() == ISD::AND) {
+        if (const auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+          return RHS->getZExtValue() == 0xFF ||
+                 RHS->getZExtValue() == 0xFFFF;
+      }
+
+      if (N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL) {
+        if (const auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+          return (RHS->getZExtValue() % 8) == 0;
+      }
+
+      return false;
+    };
+
     return !isSDWAOperand(Op.getOperand(0).getNode()) &&
            !isSDWAOperand(Op.getOperand(1).getNode());
   }]> {
   let GISelPredicateCode = [{
-    return true; // TODO
+    auto isSDWAOperand = [&](const MachineInstr& mi) -> bool {
+        if (!Subtarget->hasSDWA())
+                return false;
+        if (mi->getOpcode() == AMDGPU::G_SEXT_INREG) {
+            const MachineOperand &Op = mi.getOperand(1);
+            if (!Op.isImm())
+                return false;
+
+            unsigned BitWidth = Op.getImm();
+            return BitWidth == 8 || BitWidth == 16;
+        }
+        //TODO:  by @Elio
+    }
+    return isSDWAOperand(MI);
   }];
 }
 
