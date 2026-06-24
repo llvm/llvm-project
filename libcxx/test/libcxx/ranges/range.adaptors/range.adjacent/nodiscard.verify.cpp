@@ -16,8 +16,47 @@ void test() {
   int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   auto v      = range | std::views::adjacent<2>;
 
+  // [range.adjacent.view]
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v).base();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(v).base();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.begin();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).begin();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.end();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).end();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.size();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).size();
+
+  // [range.adjacent.iterator]
+
+  auto it = v.begin();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::__adjacent_view_iter_access::__get_current(it);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  *it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it[0];
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(it)[0];
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it + 0;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  0 + it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - 0;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - it;
 }

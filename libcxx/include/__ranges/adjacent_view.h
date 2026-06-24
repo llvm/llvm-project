@@ -158,14 +158,13 @@ class adjacent_view<_View, _Np>::__iterator {
   using _Base _LIBCPP_NODEBUG              = __maybe_const<_Const, _View>;
   array<iterator_t<_Base>, _Np> __current_ = array<iterator_t<_Base>, _Np>();
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __first, sentinel_t<_Base> __last) {
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(iterator_t<_Base> __first, sentinel_t<_Base> __last) {
     __current_[0] = __first;
     for (size_t __i = 1; __i < _Np; ++__i) {
       __current_[__i] = ranges::next(__current_[__i - 1], 1, __last);
     }
   }
 
-  [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__as_sentinel, iterator_t<_Base> __first, iterator_t<_Base> __last) {
     if constexpr (!bidirectional_range<_Base>) {
       __current_.fill(__last);
@@ -376,8 +375,8 @@ public:
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>> 
-  operator-(const __sentinel & __y, const __iterator<_OtherConst>& __x) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
+  operator-(const __sentinel& __y, const __iterator<_OtherConst>& __x) {
     return __y.__end_ - __x.__current_.back();
   }
 };
