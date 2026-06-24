@@ -182,14 +182,9 @@ define i8 @not_udiv_dividend_known_smaller_than_constant_divisor2(i1 %b) {
   ret i8 %r
 }
 
-; This would require computing known bits on both x and y. Is it worth doing?
-
 define i32 @udiv_dividend_known_smaller_than_divisor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_dividend_known_smaller_than_divisor(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 250
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 251
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[AND]], [[OR]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 0
 ;
   %and = and i32 %x, 250
   %or = or i32 %y, 251
@@ -668,3 +663,57 @@ define i8 @sdiv_mul_nuw(i8 %x) {
   %b = sdiv i8 %a, 24
   ret i8 %b
 }
+
+; urem folds to dividend when dividend < divisor (both variable with known bits).
+define i32 @urem_dividend_known_smaller_than_divisor(i32 %x, i32 %y) {
+; CHECK-LABEL: @urem_dividend_known_smaller_than_divisor(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 250
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %and = and i32 %x, 250
+  %or = or i32 %y, 251
+  %rem = urem i32 %and, %or
+  ret i32 %rem
+}
+
+; udiv folds to 0 when range metadata on both non-constant operands proves dividend < divisor.
+define i32 @udiv_both_nonconst_range_metadata() {
+; CHECK-LABEL: @udiv_both_nonconst_range_metadata(
+; CHECK-NEXT:    [[DIVIDEND:%.*]] = call i32 @external(), !range [[RNG0]]
+; CHECK-NEXT:    [[DIVISOR:%.*]] = call i32 @external(), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    ret i32 0
+;
+  %dividend = call i32 @external(), !range !0   ; [0, 3)
+  %divisor  = call i32 @external(), !range !1   ; [3, 100)
+  %div = udiv i32 %dividend, %divisor
+  ret i32 %div
+}
+
+; sdiv folds to 0 when range metadata on both non-constant operands proves |dividend| < |divisor|.
+define i32 @sdiv_both_nonconst_range_metadata() {
+; CHECK-LABEL: @sdiv_both_nonconst_range_metadata(
+; CHECK-NEXT:    [[DIVIDEND:%.*]] = call i32 @external(), !range [[RNG0]]
+; CHECK-NEXT:    [[DIVISOR:%.*]] = call i32 @external(), !range [[RNG1]]
+; CHECK-NEXT:    ret i32 0
+;
+  %dividend = call i32 @external(), !range !0   ; [0, 3)
+  %divisor  = call i32 @external(), !range !1   ; [3, 100)
+  %div = sdiv i32 %dividend, %divisor
+  ret i32 %div
+}
+
+; Negative test: dividend can equal the minimum of the divisor range, so no fold.
+define i32 @not_udiv_both_nonconst_range_metadata() {
+; CHECK-LABEL: @not_udiv_both_nonconst_range_metadata(
+; CHECK-NEXT:    [[DIVIDEND:%.*]] = call i32 @external(), !range [[RNG1]]
+; CHECK-NEXT:    [[DIVISOR:%.*]] = call i32 @external(), !range [[RNG1]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[DIVIDEND]], [[DIVISOR]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %dividend = call i32 @external(), !range !1   ; [3, 100) - can be >= divisor
+  %divisor  = call i32 @external(), !range !1   ; [3, 100)
+  %div = udiv i32 %dividend, %divisor
+  ret i32 %div
+}
+
+!1 = !{i32 3, i32 100}
