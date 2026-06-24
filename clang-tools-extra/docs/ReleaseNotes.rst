@@ -525,6 +525,10 @@ Changes in existing checks
   a false positive when a base class has a forward declaration before its
   definition.
 
+- Improved :doc:`cppcoreguidelines-owning-memory
+  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to detect ``new``
+  expressions through implicit casts (e.g., ``C* x = new D``).
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
   warning on builtins with custom type checking (e.g., type-generic builtins
