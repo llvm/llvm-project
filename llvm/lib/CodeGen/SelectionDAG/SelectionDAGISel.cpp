@@ -3306,6 +3306,9 @@ struct MatchScope {
 
   /// HasChainNodesMatched - True if the ChainNodesMatched list is non-empty.
   bool HasChainNodesMatched;
+
+  /// For OPC_Scope2, a nonzero fail index points directly at the final child.
+  bool IsTwoChildScope;
 };
 
 /// \A DAG update listener to keep the matching state
@@ -3488,17 +3491,23 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       MatcherIndex = OpcodeOffset[N.getOpcode()];
     LLVM_DEBUG(dbgs() << "  Initial Opcode index to " << MatcherIndex << "\n");
 
-  } else if (MatcherTable[0] == OPC_SwitchOpcode) {
+  } else if (MatcherTable[0] == OPC_SwitchOpcode ||
+             MatcherTable[0] == OPC_SwitchOpcode2) {
     // Otherwise, the table isn't computed, but the state machine does start
-    // with an OPC_SwitchOpcode instruction.  Populate the table now, since this
-    // is the first time we're selecting an instruction.
+    // with an opcode switch. Populate the table now, since this is the first
+    // time we're selecting an instruction.
+    bool IsTwoCase = MatcherTable[0] == OPC_SwitchOpcode2;
     size_t Idx = 1;
-    while (true) {
+    for (unsigned Case = 0;; ++Case) {
       // Get the size of this case.
-      unsigned CaseSize = MatcherTable[Idx++];
-      if (CaseSize & 128)
-        CaseSize = GetVBR(CaseSize, MatcherTable, Idx);
-      if (CaseSize == 0) break;
+      unsigned CaseSize = 0;
+      if (!IsTwoCase || Case == 0) {
+        CaseSize = MatcherTable[Idx++];
+        if (CaseSize & 128)
+          CaseSize = GetVBR(CaseSize, MatcherTable, Idx);
+        if (CaseSize == 0)
+          break;
+      }
 
       // Get the opcode, add the index to the table.
       uint16_t Opc = MatcherTable[Idx++];
@@ -3506,6 +3515,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (Opc >= OpcodeOffset.size())
         OpcodeOffset.resize((Opc+1)*2);
       OpcodeOffset[Opc] = Idx;
+
+      if (IsTwoCase && Case == 1)
+        break;
       Idx += CaseSize;
     }
 
@@ -3522,6 +3534,50 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     BuiltinOpcodes Opcode =
         static_cast<BuiltinOpcodes>(MatcherTable[MatcherIndex++]);
     switch (Opcode) {
+    case OPC_Scope2: {
+      unsigned NumToSkip = MatcherTable[MatcherIndex++];
+      if (NumToSkip & 128)
+        NumToSkip = GetVBR(NumToSkip, MatcherTable, MatcherIndex);
+      size_t FinalChildIndex = MatcherIndex + NumToSkip;
+
+      size_t MatcherIndexOfPredicate = MatcherIndex;
+      (void)MatcherIndexOfPredicate;
+      bool Result;
+      MatcherIndex = IsPredicateKnownToFail(MatcherTable, MatcherIndex, N,
+                                            Result, *this, RecordedNodes);
+      bool MatchingFinalChild = false;
+      if (Result) {
+        LLVM_DEBUG(
+            dbgs() << "  Skipped scope entry (due to false predicate) at "
+                   << "index " << MatcherIndexOfPredicate << ", continuing at "
+                   << FinalChildIndex << "\n");
+        ++NumDAGIselRetries;
+
+        MatcherIndex = FinalChildIndex;
+        MatcherIndexOfPredicate = MatcherIndex;
+        MatcherIndex = IsPredicateKnownToFail(MatcherTable, MatcherIndex, N,
+                                              Result, *this, RecordedNodes);
+        if (Result) {
+          LLVM_DEBUG(dbgs()
+                     << "  Skipped final scope entry (due to false predicate) "
+                     << "at index " << MatcherIndexOfPredicate << "\n");
+          ++NumDAGIselRetries;
+          break;
+        }
+        MatchingFinalChild = true;
+      }
+
+      MatchScope &NewEntry = MatchScopes.emplace_back();
+      NewEntry.FailIndex = MatchingFinalChild ? 0 : FinalChildIndex;
+      NewEntry.NodeStack.append(NodeStack.begin(), NodeStack.end());
+      NewEntry.NumRecordedNodes = RecordedNodes.size();
+      NewEntry.NumMatchedMemRefs = MatchedMemRefs.size();
+      NewEntry.InputChain = InputChain;
+      NewEntry.InputGlue = InputGlue;
+      NewEntry.HasChainNodesMatched = !ChainNodesMatched.empty();
+      NewEntry.IsTwoChildScope = true;
+      continue;
+    }
     case OPC_Scope: {
       // Okay, the semantics of this operation are that we should push a scope
       // then evaluate the first child.  However, pushing a scope only to have
@@ -3578,6 +3634,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       NewEntry.InputChain = InputChain;
       NewEntry.InputGlue = InputGlue;
       NewEntry.HasChainNodesMatched = !ChainNodesMatched.empty();
+      NewEntry.IsTwoChildScope = false;
       continue;
     }
     case OPC_RecordNode: {
@@ -3797,6 +3854,29 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
 
+    case OPC_SwitchOpcode2: {
+      unsigned CurNodeOpcode = N.getOpcode();
+      unsigned SwitchStart = MatcherIndex - 1;
+      (void)SwitchStart;
+
+      unsigned CaseSize = MatcherTable[MatcherIndex++];
+      if (CaseSize & 128)
+        CaseSize = GetVBR(CaseSize, MatcherTable, MatcherIndex);
+      uint16_t Opc = MatcherTable[MatcherIndex++];
+      Opc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
+      if (CurNodeOpcode != Opc) {
+        MatcherIndex += CaseSize;
+        Opc = MatcherTable[MatcherIndex++];
+        Opc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
+        if (CurNodeOpcode != Opc)
+          break;
+      }
+
+      LLVM_DEBUG(dbgs() << "  OpcodeSwitch from " << SwitchStart << " to "
+                        << MatcherIndex << "\n");
+      continue;
+    }
+
     case OPC_SwitchOpcode: {
       unsigned CurNodeOpcode = N.getOpcode();
       unsigned SwitchStart = MatcherIndex-1; (void)SwitchStart;
@@ -3825,6 +3905,31 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // Otherwise, execute the case we found.
       LLVM_DEBUG(dbgs() << "  OpcodeSwitch from " << SwitchStart << " to "
                         << MatcherIndex << "\n");
+      continue;
+    }
+
+    case OPC_SwitchType2: {
+      MVT CurNodeVT = N.getSimpleValueType();
+      unsigned SwitchStart = MatcherIndex - 1;
+      (void)SwitchStart;
+
+      unsigned CaseSize = MatcherTable[MatcherIndex++];
+      if (CaseSize & 128)
+        CaseSize = GetVBR(CaseSize, MatcherTable, MatcherIndex);
+      MVT CaseVT = getSimpleVT(MatcherTable, MatcherIndex);
+      if (CaseVT == MVT::iPTR)
+        CaseVT = TLI->getPointerTy(CurDAG->getDataLayout());
+      if (CurNodeVT != CaseVT) {
+        MatcherIndex += CaseSize;
+        CaseVT = getSimpleVT(MatcherTable, MatcherIndex);
+        if (CaseVT == MVT::iPTR)
+          CaseVT = TLI->getPointerTy(CurDAG->getDataLayout());
+        if (CurNodeVT != CaseVT)
+          break;
+      }
+
+      LLVM_DEBUG(dbgs() << "  TypeSwitch[" << CurNodeVT << "] from "
+                        << SwitchStart << " to " << MatcherIndex << '\n');
       continue;
     }
 
@@ -4557,6 +4662,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       InputGlue = LastScope.InputGlue;
       if (!LastScope.HasChainNodesMatched)
         ChainNodesMatched.clear();
+
+      if (LastScope.IsTwoChildScope) {
+        if (LastScope.FailIndex == 0) {
+          MatchScopes.pop_back();
+          continue;
+        }
+        LastScope.FailIndex = 0;
+        break;
+      }
 
       // Check to see what the offset is at the new MatcherIndex.  If it is zero
       // we have reached the end of this scope, otherwise we have another child

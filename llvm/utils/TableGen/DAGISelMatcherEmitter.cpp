@@ -390,23 +390,28 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
 
   ++OpcodeCounts[N->getKind()];
   switch (N->getKind()) {
-  // The Scope matcher has its kind, a series of child size + child,
-  // and a trailing zero.
+  // The Scope matcher has its kind, a series of child size + child, and a
+  // trailing zero. The two-child form omits the second size and trailing zero.
   case Matcher::Scope: {
     ScopeMatcher *SM = cast<ScopeMatcher>(N);
+    bool IsTwoChild = SM->getNumChildren() == 2;
     unsigned Size = 1; // Count the kind.
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
       const unsigned ChildSize = SizeMatcherList(SM->getChild(i), OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       SM->getChild(i).setSize(ChildSize);
-      Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
+      if (!IsTwoChild || i == 0)
+        Size += GetVBRSize(ChildSize);
+      Size += ChildSize;
     }
-    ++Size; // Count the zero sentinel.
+    if (!IsTwoChild)
+      ++Size; // Count the zero sentinel.
     return Size;
   }
 
   // SwitchOpcode and SwitchType have their kind, a series of child size +
-  // opcode/type + child, and a trailing zero.
+  // opcode/type + child, and a trailing zero. The two-case forms omit the
+  // second size and trailing zero.
   case Matcher::SwitchOpcode:
   case Matcher::SwitchType: {
     unsigned Size = 1; // Count the kind.
@@ -415,6 +420,7 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
       NumCases = SOM->getNumCases();
     else
       NumCases = cast<SwitchTypeMatcher>(N)->getNumCases();
+    bool IsTwoCase = NumCases == 2;
     for (unsigned i = 0, e = NumCases; i != e; ++i) {
       MatcherList *Child;
       if (SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N)) {
@@ -429,9 +435,12 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
       const unsigned ChildSize = SizeMatcherList(*Child, OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
       Child->setSize(ChildSize);
-      Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
+      if (!IsTwoCase || i == 0)
+        Size += GetVBRSize(ChildSize);
+      Size += ChildSize;
     }
-    ++Size; // Count the zero sentinel.
+    if (!IsTwoCase)
+      ++Size; // Count the zero sentinel.
     return Size;
   }
 
@@ -532,9 +541,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
   switch (N->getKind()) {
   case Matcher::Scope: {
     const ScopeMatcher *SM = cast<ScopeMatcher>(N);
+    bool IsTwoChild = SM->getNumChildren() == 2;
     unsigned StartIdx = CurrentIdx;
 
-    OS << "OPC_Scope";
+    OS << (IsTwoChild ? "OPC_Scope2" : "OPC_Scope");
     if (!OmitComments)
       OS << " /*" << SM->getNumChildren() << " children */";
     OS << ", ";
@@ -542,7 +552,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
     // Emit all of the children.
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
-      if (i != 0) {
+      if ((!IsTwoChild || i == 0) && i != 0) {
         if (!OmitComments) {
           OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
           OS.indent(Indent) << "/*Scope*/ ";
@@ -553,10 +563,12 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
       const MatcherList &Child = SM->getChild(i);
       unsigned ChildSize = Child.getSize();
-      CurrentIdx += EmitVBRValue(ChildSize, OS);
-      if (!OmitComments)
-        OS << " // ->" << CurrentIdx + ChildSize;
-      OS << '\n';
+      if (!IsTwoChild || i == 0) {
+        CurrentIdx += EmitVBRValue(ChildSize, OS);
+        if (!OmitComments)
+          OS << " // ->" << CurrentIdx + ChildSize;
+        OS << '\n';
+      }
 
       ChildSize = EmitMatcherList(Child, Indent + 1, CurrentIdx, OS);
       assert(ChildSize == Child.getSize() &&
@@ -564,14 +576,17 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       CurrentIdx += ChildSize;
     }
 
-    // Emit a zero as a sentinel indicating end of 'Scope'.
-    if (!OmitComments)
-      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
-    OS.indent(Indent) << "0,";
-    if (!OmitComments)
-      OS << " // End of Scope";
-    OS << '\n';
-    return CurrentIdx - StartIdx + 1;
+    if (!IsTwoChild) {
+      // Emit a zero as a sentinel indicating end of 'Scope'.
+      if (!OmitComments)
+        OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+      OS.indent(Indent) << "0,";
+      if (!OmitComments)
+        OS << " // End of Scope";
+      OS << '\n';
+      ++CurrentIdx;
+    }
+    return CurrentIdx - StartIdx;
   }
 
   case Matcher::RecordNode:
@@ -687,19 +702,21 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
     unsigned NumCases;
     if (const SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N)) {
-      OS << "OPC_SwitchOpcode ";
       NumCases = SOM->getNumCases();
+      OS << (NumCases == 2 ? "OPC_SwitchOpcode2 " : "OPC_SwitchOpcode ");
     } else {
-      OS << "OPC_SwitchType ";
       NumCases = cast<SwitchTypeMatcher>(N)->getNumCases();
+      OS << (NumCases == 2 ? "OPC_SwitchType2 " : "OPC_SwitchType ");
     }
+    bool IsTwoCase = NumCases == 2;
 
     if (!OmitComments)
       OS << "/*" << NumCases << " cases */";
     OS << ", ";
     ++CurrentIdx;
 
-    // For each case we emit the size, then the opcode, then the matcher.
+    // For each case we emit the size, then the opcode/type and matcher. The
+    // final case of the two-case form omits its size.
     for (unsigned i = 0, e = NumCases; i != e; ++i) {
       const MatcherList *Child;
       unsigned IdxSize;
@@ -724,13 +741,16 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       }
 
       unsigned ChildSize = Child->getSize();
-      CurrentIdx += EmitVBRValue(ChildSize, OS) + IdxSize;
-      OS << ' ';
+      if (!IsTwoCase || i == 0) {
+        CurrentIdx += EmitVBRValue(ChildSize, OS);
+        OS << ' ';
+      }
+      CurrentIdx += IdxSize;
       if (const SwitchOpcodeMatcher *SOM = dyn_cast<SwitchOpcodeMatcher>(N))
         OS << "TARGET_VAL(" << SOM->getCaseOpcode(i).getEnumName() << "),";
       else
         emitMVT(cast<SwitchTypeMatcher>(N)->getCaseType(i), OS);
-      if (!OmitComments)
+      if (!OmitComments && (!IsTwoCase || i == 0))
         OS << " // ->" << CurrentIdx + ChildSize;
       OS << '\n';
 
@@ -740,16 +760,18 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       CurrentIdx += ChildSize;
     }
 
-    // Emit the final zero to terminate the switch.
-    if (!OmitComments)
-      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
-    OS.indent(Indent) << "0,";
-    if (!OmitComments)
-      OS << (isa<SwitchOpcodeMatcher>(N) ? " // EndSwitchOpcode"
-                                         : " // EndSwitchType");
-
-    OS << '\n';
-    return CurrentIdx - StartIdx + 1;
+    if (!IsTwoCase) {
+      // Emit the final zero to terminate the switch.
+      if (!OmitComments)
+        OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+      OS.indent(Indent) << "0,";
+      if (!OmitComments)
+        OS << (isa<SwitchOpcodeMatcher>(N) ? " // EndSwitchOpcode"
+                                           : " // EndSwitchType");
+      OS << '\n';
+      ++CurrentIdx;
+    }
+    return CurrentIdx - StartIdx;
   }
 
   case Matcher::CheckType: {

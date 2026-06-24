@@ -201,7 +201,7 @@ include "Common/RegClassByHwModeCommon.td"
 
 
 // ISEL-SDAG: MatcherTable
-// ISEL-SDAG: OPC_SwitchOpcode /*2 cases */, {{[0-9]+}}, TARGET_VAL(ISD::STORE),
+// ISEL-SDAG: OPC_SwitchOpcode2 /*2 cases */, {{[0-9]+}}, TARGET_VAL(ISD::STORE),
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'st' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $val
@@ -214,7 +214,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
 // ISEL-SDAG-NEXT:     2/*#Ops*/, /*OperandList*/1, // Ops = #1 #2
 
-// ISEL-SDAG: /*SwitchOpcode*/ {{[0-9]+}}, TARGET_VAL(ISD::LOAD),
+// ISEL-SDAG: /*SwitchOpcode*/ TARGET_VAL(ISD::LOAD),
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'ld' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $src

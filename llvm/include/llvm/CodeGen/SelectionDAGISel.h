@@ -145,6 +145,8 @@ public:
   // Opcodes used by the DAG state machine:
   enum BuiltinOpcodes {
     OPC_Scope,
+    // Two-child scope with no second child size or zero sentinel.
+    OPC_Scope2,
     OPC_RecordNode,
     OPC_RecordChild0,
     OPC_RecordChild1,
@@ -203,6 +205,8 @@ public:
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
+    // Two-case opcode switch with no second case size or zero sentinel.
+    OPC_SwitchOpcode2,
     OPC_CheckType,
     // Space-optimized forms that implicitly encode VT.
     OPC_CheckTypeI32,
@@ -213,6 +217,8 @@ public:
     OPC_CheckTypeRes,
     OPC_CheckTypeResByHwMode,
     OPC_SwitchType,
+    // Two-case type switch with no second case size or zero sentinel.
+    OPC_SwitchType2,
     OPC_CheckChild0Type,
     OPC_CheckChild1Type,
     OPC_CheckChild2Type,
