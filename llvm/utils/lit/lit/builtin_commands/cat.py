@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import getopt
 import sys
 from io import StringIO
+from typing import BinaryIO, cast
 
 
-def convertToCaretAndMNotation(data):
+def convertToCaretAndMNotation(data: str | bytes) -> bytes:
     newdata = StringIO()
     if isinstance(data, str):
         data = bytearray(data.encode())
@@ -26,7 +29,7 @@ def convertToCaretAndMNotation(data):
     return newdata.getvalue().encode()
 
 
-def main(argv):
+def main(argv: list[str]) -> None:
     arguments = argv[1:]
     short_options = "v"
     long_options = ["show-nonprinting"]
@@ -44,7 +47,7 @@ def main(argv):
 
     writer = getattr(sys.stdout, "buffer", None)
     if writer is None:
-        writer = sys.stdout
+        writer = cast(BinaryIO, sys.stdout)
         if sys.platform == "win32":
             import os, msvcrt
 
@@ -54,27 +57,30 @@ def main(argv):
         sys.exit(0)
     for filename in filenames:
         try:
-            contents = None
+            contents: str | bytes | None = None
             is_text = False
             try:
                 if sys.platform != "win32":
-                    fileToCat = open(filename, "r")
-                    contents = fileToCat.read()
+                    with open(filename, "r") as textFile:
+                        contents = textFile.read()
                     is_text = True
             except:
                 pass
 
             if contents is None:
-                fileToCat = open(filename, "rb")
-                contents = fileToCat.read()
+                with open(filename, "rb") as binFile:
+                    contents = binFile.read()
 
             if show_nonprinting:
-                contents = convertToCaretAndMNotation(contents)
+                output = convertToCaretAndMNotation(contents)
             elif is_text:
-                contents = contents.encode()
-            writer.write(contents)
+                assert isinstance(contents, str)
+                output = contents.encode()
+            else:
+                assert isinstance(contents, bytes)
+                output = contents
+            writer.write(output)
             sys.stdout.flush()
-            fileToCat.close()
         except IOError as error:
             sys.stderr.write(str(error))
             sys.exit(1)
