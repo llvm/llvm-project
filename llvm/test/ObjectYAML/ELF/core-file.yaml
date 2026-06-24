@@ -1,0 +1,146 @@
+# Test that yaml2obj can create ELF core files with program header Content
+# and that obj2yaml can round-trip them back to YAML.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --file-header --program-headers %t | FileCheck -check-prefix=OBJ %s
+# RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
+# RUN: obj2yaml %t | yaml2obj - -o %t2
+# RUN: cmp %t %t2
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_CORE
+  Machine:         EM_X86_64
+  EShEntSize:      0x0
+  EShNum:          0x0
+ProgramHeaders:
+  - Type:            PT_NOTE
+    Align:           0x4
+    MemSize:         0x0
+    Offset:          0x120
+    Content:         040000000800000001000000434F524500000000DEADBEEF11223344
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    VAddr:           0x1000
+    PAddr:           0x0
+    Align:           0x4
+    Offset:          0x13C
+    Content:         '0102030405060708090A0B0C0D0E0F10'
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_W ]
+    VAddr:           0x2000
+    PAddr:           0x0
+    Align:           0x4
+    FileSize:        0x0
+    MemSize:         0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_R, PF_X ]
+    VAddr:           0x3000
+    PAddr:           0x0
+    Align:           0x4
+    Offset:          0x14C
+    Content:         AABBCCDD
+Sections:
+  - Type:            SectionHeaderTable
+    NoHeaders:       true
+
+#      OBJ: ElfHeader {
+#      OBJ:   Type: Core (0x4)
+#      OBJ:   Machine: EM_X86_64 (0x3E)
+#      OBJ:   SectionHeaderOffset: 0x0
+#      OBJ:   ProgramHeaderCount: 4
+#      OBJ:   SectionHeaderEntrySize: 0
+#      OBJ:   SectionHeaderCount: 0
+#      OBJ: }
+#      OBJ: ProgramHeaders [
+#      OBJ:   ProgramHeader {
+#      OBJ:     Type: PT_NOTE (0x4)
+# OBJ-NEXT:     Offset: 0x120
+# OBJ-NEXT:     VirtualAddress: 0x0
+# OBJ-NEXT:     PhysicalAddress: 0x0
+# OBJ-NEXT:     FileSize: 28
+# OBJ-NEXT:     MemSize: 0
+# OBJ-NEXT:     Flags [ (0x0)
+# OBJ-NEXT:     ]
+# OBJ-NEXT:     Alignment: 4
+# OBJ-NEXT:   }
+#      OBJ:   ProgramHeader {
+#      OBJ:     Type: PT_LOAD (0x1)
+# OBJ-NEXT:     Offset: 0x13C
+# OBJ-NEXT:     VirtualAddress: 0x1000
+# OBJ-NEXT:     PhysicalAddress: 0x0
+# OBJ-NEXT:     FileSize: 16
+# OBJ-NEXT:     MemSize: 16
+# OBJ-NEXT:     Flags [ (0x4)
+# OBJ-NEXT:       PF_R (0x4)
+# OBJ-NEXT:     ]
+# OBJ-NEXT:     Alignment: 4
+# OBJ-NEXT:   }
+#      OBJ:   ProgramHeader {
+#      OBJ:     Type: PT_LOAD (0x1)
+# OBJ-NEXT:     Offset: 0x0
+# OBJ-NEXT:     VirtualAddress: 0x2000
+# OBJ-NEXT:     PhysicalAddress: 0x0
+# OBJ-NEXT:     FileSize: 0
+# OBJ-NEXT:     MemSize: 4096
+# OBJ-NEXT:     Flags [ (0x6)
+# OBJ-NEXT:       PF_R (0x4)
+# OBJ-NEXT:       PF_W (0x2)
+# OBJ-NEXT:     ]
+# OBJ-NEXT:     Alignment: 4
+# OBJ-NEXT:   }
+#      OBJ:   ProgramHeader {
+#      OBJ:     Type: PT_LOAD (0x1)
+# OBJ-NEXT:     Offset: 0x14C
+# OBJ-NEXT:     VirtualAddress: 0x3000
+# OBJ-NEXT:     PhysicalAddress: 0x0
+# OBJ-NEXT:     FileSize: 4
+# OBJ-NEXT:     MemSize: 4
+# OBJ-NEXT:     Flags [ (0x5)
+# OBJ-NEXT:       PF_R (0x4)
+# OBJ-NEXT:       PF_X (0x1)
+# OBJ-NEXT:     ]
+# OBJ-NEXT:     Alignment: 4
+# OBJ-NEXT:   }
+# OBJ-NEXT: ]
+
+# YAML:      FileHeader:
+# YAML-NEXT:   Class:           ELFCLASS64
+# YAML-NEXT:   Data:            ELFDATA2LSB
+# YAML-NEXT:   Type:            ET_CORE
+# YAML-NEXT:   Machine:         EM_X86_64
+# YAML-NEXT:   EShEntSize:      0x0
+# YAML-NEXT: ProgramHeaders:
+# YAML-NEXT:   - Type:            PT_NOTE
+# YAML-NEXT:     Align:           0x4
+# YAML-NEXT:     MemSize:         0x0
+# YAML-NEXT:     Offset:          0x120
+# YAML-NEXT:     Content:         040000000800000001000000434F524500000000DEADBEEF11223344
+# YAML-NEXT:   - Type:            PT_LOAD
+# YAML-NEXT:     Flags:           [ PF_R ]
+# YAML-NEXT:     VAddr:           0x1000
+# YAML-NEXT:     PAddr:           0x0
+# YAML-NEXT:     Align:           0x4
+# YAML-NEXT:     Offset:          0x13C
+# YAML-NEXT:     Content:         0102030405060708090A0B0C0D0E0F10
+# YAML-NEXT:   - Type:            PT_LOAD
+# YAML-NEXT:     Flags:           [ PF_W, PF_R ]
+# YAML-NEXT:     VAddr:           0x2000
+# YAML-NEXT:     PAddr:           0x0
+# YAML-NEXT:     Align:           0x4
+# YAML-NEXT:     FileSize:        0x0
+# YAML-NEXT:     MemSize:         0x1000
+# YAML-NEXT:     Offset:          0x0
+# YAML-NEXT:   - Type:            PT_LOAD
+# YAML-NEXT:     Flags:           [ PF_X, PF_R ]
+# YAML-NEXT:     VAddr:           0x3000
+# YAML-NEXT:     PAddr:           0x0
+# YAML-NEXT:     Align:           0x4
+# YAML-NEXT:     Offset:          0x14C
+# YAML-NEXT:     Content:         AABBCCDD
+# YAML-NEXT: Sections:
+# YAML-NEXT:   - Type:            SectionHeaderTable
+# YAML-NEXT:     NoHeaders:       true

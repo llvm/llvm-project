@@ -240,6 +240,8 @@ template <class ELFT> class ELFState {
   void initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
                               ContiguousBlobAccumulator &CBA,
                               ELFYAML::Section *YAMLSec);
+  void writeProgramHeaderContent(std::vector<Elf_Phdr> &PHeaders,
+                                 ContiguousBlobAccumulator &CBA);
   void setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                               std::vector<Elf_Shdr> &SHeaders);
 
@@ -419,10 +421,38 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
                     "DWARF output");
       ImplicitSections.insert(StringRef(SecName).copy(StringAlloc));
     }
-  // TODO: Only create the .strtab here if any symbols have been requested.
-  ImplicitSections.insert(".strtab");
-  if (!SecHdrTable || !SecHdrTable->NoHeaders.value_or(false))
-    ImplicitSections.insert(SectionHeaderStringTableName);
+  // Check if there are any real sections (not just SectionHeaderTable or the
+  // implicit SHT_NULL section at index 0).
+  bool HasRealSections = llvm::any_of(Doc.Chunks, [](const auto &C) {
+    if (isa<ELFYAML::SectionHeaderTable>(C.get()))
+      return false;
+    if (auto *Sec = dyn_cast<ELFYAML::Section>(C.get()))
+      return !Sec->IsImplicit;
+    return true;
+  });
+
+  // Don't create implicit string table sections when there are no real
+  // sections (e.g., core files with only program header content). When there
+  // are real sections, .strtab is still needed even with NoHeaders.
+  // Also check that all program headers use Content (not section references),
+  // there are no symbols, and no DWARF data that would need sections.
+  bool AllPhdrsHaveContent =
+      !Doc.ProgramHeaders.empty() &&
+      llvm::all_of(Doc.ProgramHeaders, [](const ELFYAML::ProgramHeader &PH) {
+        return PH.Content.has_value() || (!PH.FirstSec && !PH.LastSec);
+      });
+  bool NoSectionDataNeeded =
+      !HasRealSections && !Doc.Symbols && !Doc.DynamicSymbols && !Doc.DWARF;
+  bool SuppressImplicitSections =
+      NoSectionDataNeeded &&
+      (AllPhdrsHaveContent ||
+       (SecHdrTable && SecHdrTable->NoHeaders.value_or(false)));
+  if (!SuppressImplicitSections) {
+    // TODO: Only create the .strtab here if any symbols have been requested.
+    ImplicitSections.insert(".strtab");
+    if (!SecHdrTable || !SecHdrTable->NoHeaders.value_or(false))
+      ImplicitSections.insert(SectionHeaderStringTableName);
+  }
 
   // Insert placeholders for implicit sections that are not
   // defined explicitly in YAML.
@@ -456,9 +486,15 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
 
   // Insert the section header table implicitly at the end, when it is not
   // explicitly defined.
-  if (!SecHdrTable)
-    Doc.Chunks.push_back(
-        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/true));
+  if (!SecHdrTable) {
+    auto ImplicitSHT =
+        std::make_unique<ELFYAML::SectionHeaderTable>(/*IsImplicit=*/true);
+    // When all data lives in program header Content and there are no real
+    // sections, suppress section header generation.
+    if (SuppressImplicitSections)
+      ImplicitSHT->NoHeaders = true;
+    Doc.Chunks.push_back(std::move(ImplicitSHT));
+  }
 }
 
 template <class ELFT>
@@ -1175,11 +1211,45 @@ ELFState<ELFT>::getPhdrFragments(const ELFYAML::ProgramHeader &Phdr,
 }
 
 template <class ELFT>
+void ELFState<ELFT>::writeProgramHeaderContent(
+    std::vector<Elf_Phdr> &PHeaders, ContiguousBlobAccumulator &CBA) {
+  uint32_t PhdrIdx = 0;
+  for (auto &YamlPhdr : Doc.ProgramHeaders) {
+    Elf_Phdr &PHeader = PHeaders[PhdrIdx++];
+    if (!YamlPhdr.Content)
+      continue;
+
+    uint64_t ContentSize = YamlPhdr.Content->binary_size();
+    // Pad to the explicit offset if specified, otherwise use current position.
+    if (YamlPhdr.Offset) {
+      uint64_t CurrentOffset = CBA.getOffset();
+      if (*YamlPhdr.Offset >= CurrentOffset)
+        CBA.writeZeros(*YamlPhdr.Offset - CurrentOffset);
+    }
+    uint64_t Offset = CBA.getOffset();
+    CBA.writeAsBinary(*YamlPhdr.Content);
+
+    PHeader.p_offset = YamlPhdr.Offset ? uint64_t(*YamlPhdr.Offset) : Offset;
+    PHeader.p_filesz =
+        YamlPhdr.FileSize ? uint64_t(*YamlPhdr.FileSize) : ContentSize;
+    PHeader.p_memsz = YamlPhdr.MemSize ? uint64_t(*YamlPhdr.MemSize)
+                                       : PHeader.p_filesz;
+    PHeader.p_align = YamlPhdr.Align ? uint64_t(*YamlPhdr.Align) : 1;
+  }
+}
+
+template <class ELFT>
 void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                                             std::vector<Elf_Shdr> &SHeaders) {
   uint32_t PhdrIdx = 0;
   for (auto &YamlPhdr : Doc.ProgramHeaders) {
     Elf_Phdr &PHeader = PHeaders[PhdrIdx++];
+
+    // Program headers with Content were already handled by
+    // writeProgramHeaderContent().
+    if (YamlPhdr.Content)
+      continue;
+
     std::vector<Fragment> Fragments = getPhdrFragments(YamlPhdr, SHeaders);
     if (!llvm::is_sorted(Fragments, [](const Fragment &A, const Fragment &B) {
           return A.Offset < B.Offset;
@@ -2120,10 +2190,14 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   // option to change this limitation.
   ContiguousBlobAccumulator CBA(SectionContentBeginOffset, MaxSize);
 
+  // Write raw Content for program headers before section content so that
+  // the content ends up at the expected file offsets (e.g., core files).
+  State.writeProgramHeaderContent(PHeaders, CBA);
+
   std::vector<Elf_Shdr> SHeaders;
   State.initSectionHeaders(SHeaders, CBA);
 
-  // Now we can decide segment offsets.
+  // Now we can decide segment offsets for section-based program headers.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
   // Override section fields, if requested. This needs to happen after program
