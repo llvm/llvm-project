@@ -818,8 +818,7 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
       return *ExpandedPredicates.insert(CE).first;
     }
 
-    if (auto TID = Ctx.getTargetInfo().getTargetID())
-      P = TID->find(N) == 0;
+    P = TI.isProcessorName(N);
   } else {
     Expr *Arg = CE->getArg(0);
     if (!Arg || Arg->getType() != Ctx.BuiltinFnTy) {
