@@ -7646,6 +7646,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::FRAMEADDR:
+    return LowerFRAMEADDR(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
@@ -8766,6 +8768,26 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
                               getRegClassFor(VT, Op.getNode()->isDivergent()));
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
+}
+
+SDValue SITargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+  if (Op.getConstantOperandVal(0) != 0)
+    return DAG.getConstant(0, DL, VT);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+  Register FrameReg = TRI->getFrameRegister(MF);
+
+  // Entry functions without a reserved FP have scratch base 0. Setting
+  // FrameAddressIsTaken here would force hasFP with FP_REG still unset.
+  if (MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() && !FrameReg)
+    return DAG.getConstant(0, DL, VT);
+
+  MF.getFrameInfo().setFrameAddressIsTaken(true);
+  FrameReg = TRI->getFrameRegister(MF);
+  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameReg, VT);
 }
 
 SDValue SITargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
