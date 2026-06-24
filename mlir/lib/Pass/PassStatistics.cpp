@@ -138,27 +138,26 @@ static void printResultsAsPipeline(raw_ostream &os, OpPassManager &pm) {
 #endif
 }
 
-static void printStatistics(OpPassManager &pm, PassDisplayMode displayMode) {
-  auto os = llvm::CreateInfoOutputFile();
-
+static void printStatistics(OpPassManager &pm, raw_ostream &os,
+                            PassDisplayMode displayMode) {
   // Print the stats header.
-  *os << "===" << std::string(73, '-') << "===\n";
+  os << "===" << std::string(73, '-') << "===\n";
   // Figure out how many spaces for the description name.
   unsigned padding = (80 - kPassStatsDescription.size()) / 2;
-  os->indent(padding) << kPassStatsDescription << '\n';
-  *os << "===" << std::string(73, '-') << "===\n";
+  os.indent(padding) << kPassStatsDescription << '\n';
+  os << "===" << std::string(73, '-') << "===\n";
 
   // Defer to a specialized printer for each display mode.
   switch (displayMode) {
   case PassDisplayMode::List:
-    printResultsAsList(*os, pm);
+    printResultsAsList(os, pm);
     break;
   case PassDisplayMode::Pipeline:
-    printResultsAsPipeline(*os, pm);
+    printResultsAsPipeline(os, pm);
     break;
   }
-  *os << "\n";
-  os->flush();
+  os << "\n";
+  os.flush();
 }
 
 //===----------------------------------------------------------------------===//
@@ -242,8 +241,13 @@ static void prepareStatistics(OpPassManager &pm) {
 
 /// Dump the statistics of the passes within this pass manager.
 void PassManager::dumpStatistics() {
+  auto os = llvm::CreateInfoOutputFile();
+  dumpStatistics(*os, passStatisticsMode.value());
+}
+
+void PassManager::dumpStatistics(raw_ostream &os, PassDisplayMode displayMode) {
   prepareStatistics(*this);
-  printStatistics(*this, *passStatisticsMode);
+  printStatistics(*this, os, displayMode);
 }
 
 /// Dump the statistics for each pass after running.

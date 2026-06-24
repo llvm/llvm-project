@@ -463,6 +463,8 @@ public:
   void
   enableStatistics(PassDisplayMode displayMode = PassDisplayMode::Pipeline);
 
+  void dumpStatistics(raw_ostream &os, PassDisplayMode displayMode);
+
 private:
   /// Dump the statistics of the passes within this pass manager.
   void dumpStatistics();

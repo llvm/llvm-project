@@ -380,4 +380,48 @@ TEST(PassManagerTest, PassInitialization) {
   EXPECT_TRUE(succeeded(pm.run(module.get())));
 }
 
+struct IncrementStatisticsPass
+    : public PassWrapper<IncrementStatisticsPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(IncrementStatisticsPass)
+
+  IncrementStatisticsPass() {};
+  IncrementStatisticsPass(const IncrementStatisticsPass &other) {}
+
+  void runOnOperation() override {
+    testStat1++;
+    testStat2 += 5;
+    testStat3 = 10;
+  }
+
+  std::unique_ptr<mlir::Pass> clonePass() const override {
+    return std::make_unique<IncrementStatisticsPass>();
+  }
+
+private:
+  Pass::Statistic testStat1{this, "test-stat-1", "Test1"};
+  Pass::Statistic testStat2{this, "test-stat-2", "Test2"};
+  Pass::Statistic testStat3{this, "test-stat-3", "Test3"};
+};
+
+TEST(PassManagerTest, StatisticsPrint) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
+
+  auto pm = PassManager::on<ModuleOp>(&context);
+  pm.addPass(std::make_unique<IncrementStatisticsPass>());
+  LogicalResult result = pm.run(module.get());
+  EXPECT_TRUE(succeeded(result));
+
+  std::string statistics;
+  llvm::raw_string_ostream os(statistics);
+
+  pm.dumpStatistics(os, PassDisplayMode::List);
+
+  EXPECT_NE(statistics.find("1 test-stat-1"), std::string::npos);
+  EXPECT_NE(statistics.find("5 test-stat-2"), std::string::npos);
+  EXPECT_NE(statistics.find("10 test-stat-3"), std::string::npos);
+}
+
 } // namespace
