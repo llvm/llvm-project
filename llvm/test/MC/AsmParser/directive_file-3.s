@@ -18,7 +18,8 @@ f1:
 
 // CHECK-DEBUG:  Sections:
 // CHECK-DEBUG:  - Name:            .text
-// CHECK-DEBUG:  - Name:            .debug_info
 // CHECK-DEBUG:  - Name:            .rel.debug_info
 // CHECK-DEBUG:    Info:            .debug_info
 // CHECK-DEBUG:  Symbols:
+// CHECK-DEBUG:  DWARF:
+// CHECK-DEBUG:    debug_info:
