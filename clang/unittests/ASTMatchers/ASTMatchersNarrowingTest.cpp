@@ -2570,6 +2570,28 @@ TEST_P(ASTMatchersTest, IsDelegatingConstructor) {
       cxxConstructorDecl(isDelegatingConstructor(), parameterCountIs(1))));
 }
 
+TEST_P(ASTMatchersTest, MatchesString) {
+  StatementMatcher Literal = stringLiteral(matchesString("foo.*"));
+  EXPECT_TRUE(matches("const char* a = \"foo\";", Literal));
+  EXPECT_TRUE(matches("const char* b = \"foobar\";", Literal));
+  EXPECT_TRUE(matches("const char* b = \"fo\"\"obar\";", Literal));
+  EXPECT_TRUE(notMatches("const char* c = \"bar\";", Literal));
+  // test embedded nulls
+  StatementMatcher Literal2 = stringLiteral(matchesString("bar"));
+  EXPECT_TRUE(matches("const char* b = \"foo\\0bar\";", Literal2));
+  EXPECT_TRUE(notMatches("const char* b = \"foo\\0b\\0ar\";", Literal2));
+}
+
+TEST(MatchesString, MatchesStringPrefixed) {
+  StatementMatcher Literal = stringLiteral(matchesString("foo.*"));
+  EXPECT_TRUE(matchesConditionally("const char16_t* a = u\"foo\";", Literal,
+                                   false, {"-std=c++11"}));
+  EXPECT_TRUE(matchesConditionally("const char32_t* a = U\"foo\";", Literal,
+                                   false, {"-std=c++11"}));
+  EXPECT_TRUE(matchesConditionally("const wchar_t* a = L\"foo\";", Literal,
+                                   false, {"-std=c++11"}));
+}
+
 TEST_P(ASTMatchersTest, HasSize) {
   StatementMatcher Literal = stringLiteral(hasSize(4));
   EXPECT_TRUE(matches("const char *s = \"abcd\";", Literal));

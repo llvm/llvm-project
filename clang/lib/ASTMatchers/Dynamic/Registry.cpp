@@ -125,6 +125,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_REGEX_MATCHER(isExpansionInFileMatching);
   REGISTER_REGEX_MATCHER(matchesName);
   REGISTER_REGEX_MATCHER(matchesSelector);
+  REGISTER_REGEX_MATCHER(matchesString);
 
   REGISTER_MATCHER(accessSpecDecl);
   REGISTER_MATCHER(addrLabelExpr);
