@@ -141,10 +141,11 @@ static cl::opt<unsigned> UnrollMaxUpperBound(
     cl::desc(
         "The max of trip count upper bound that is considered in unrolling"));
 
-static cl::opt<unsigned> UnrollMaxUpperBoundWithEarlyExits(
-    "unroll-max-upperbound-with-early-exits", cl::Hidden,
+static cl::opt<unsigned> UnrollMaxUpperBoundUnknownTripCount(
+    "unroll-max-upperbound-unknown-trip-count", cl::Hidden,
     cl::desc("The max of trip count upper bound that is considered in "
-             "unrolling loops that may exit before reaching the bound"));
+             "unrolling loops whose exact trip count is unknown (only a "
+             "conservative maximum is known)"));
 
 static cl::opt<unsigned> PragmaUnrollThreshold(
     "pragma-unroll-threshold", cl::init(16 * 1024), cl::Hidden,
@@ -210,7 +211,9 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.DefaultUnrollRuntimeCount = 8;
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.MaxUpperBound = UnrollMaxUpperBound;
-  UP.MaxUpperBoundWithEarlyExits = UP.MaxUpperBound;
+  // 0 means the unknown-exact-trip-count limit is disabled; a target (or the
+  // -unroll-max-upperbound-unknown-trip-count option) opts in by setting it.
+  UP.MaxUpperBoundUnknownTripCount = 0;
   UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
   UP.BEInsns = 2;
   UP.Partial = false;
@@ -251,12 +254,10 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.MaxPercentThresholdBoost = UnrollMaxPercentThresholdBoost;
   if (UnrollMaxCount.getNumOccurrences() > 0)
     UP.MaxCount = UnrollMaxCount;
-  if (UnrollMaxUpperBound.getNumOccurrences() > 0) {
+  if (UnrollMaxUpperBound.getNumOccurrences() > 0)
     UP.MaxUpperBound = UnrollMaxUpperBound;
-    UP.MaxUpperBoundWithEarlyExits = UP.MaxUpperBound;
-  }
-  if (UnrollMaxUpperBoundWithEarlyExits.getNumOccurrences() > 0)
-    UP.MaxUpperBoundWithEarlyExits = UnrollMaxUpperBoundWithEarlyExits;
+  if (UnrollMaxUpperBoundUnknownTripCount.getNumOccurrences() > 0)
+    UP.MaxUpperBoundUnknownTripCount = UnrollMaxUpperBoundUnknownTripCount;
   if (UnrollFullMaxCount.getNumOccurrences() > 0)
     UP.FullUnrollMaxCount = UnrollFullMaxCount;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
@@ -1107,6 +1108,24 @@ unsigned llvm::computeUnrollCount(
       return *UnrollFactor;
   }
 
+  // A loop can have a known small maximum trip count while SCEV still cannot
+  // form an exact backedge count (getBackedgeTakenCount stays
+  // SCEVCouldNotCompute) - typically a data-dependent exit, e.g. shifting a
+  // value until it reaches zero. Unrolling such a loop replaces one
+  // well-predicted backedge with several rarely-taken exit branches - costing
+  // branch-predictor capacity and code size - while the data-dependent exit
+  // limits the usual unroll benefit. A target can therefore set
+  // MaxUpperBoundUnknownTripCount to hold these loops to a lower unroll bound
+  // than MaxUpperBound; the bounded and runtime routes below apply it.
+  //
+  // The check is off by default (a 0 limit skips it) and only applies to
+  // upper-bound unrolling (UP.UpperBound); MaxOrZero and multi-exit loops are
+  // excluded, and UP.Force overrides it.
+  const bool ApplyUnknownTripCountLimit =
+      UP.MaxUpperBoundUnknownTripCount && UP.UpperBound && !UP.Force &&
+      L->getExitingBlock() && !MaxOrZero &&
+      isa<SCEVCouldNotCompute>(SE.getBackedgeTakenCount(L));
+
   // 4th priority is bounded unrolling.
   // We can unroll by the upper bound amount if it's generally allowed or if
   // we know that the loop is executed either the upper bound or zero times.
@@ -1121,7 +1140,9 @@ unsigned llvm::computeUnrollCount(
   // found it unprofitable, we'll never chose to bounded unroll.
   LLVM_DEBUG(dbgs().indent(1) << "Trying upper-bound unroll...\n");
   unsigned UpperBoundLimit =
-      MaxOrZero ? UP.MaxUpperBound : UP.MaxUpperBoundWithEarlyExits;
+      ApplyUnknownTripCountLimit
+          ? std::min(UP.MaxUpperBound, UP.MaxUpperBoundUnknownTripCount)
+          : UP.MaxUpperBound;
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UpperBoundLimit) {
     if (auto UnrollFactor =
@@ -1167,6 +1188,16 @@ unsigned llvm::computeUnrollCount(
                                 << MaxTripCount << " is small (<= "
                                 << UP.MaxUpperBound << ") and not forced.\n");
     return 0;
+  }
+
+  // Also skip runtime unrolling when the exact trip count is unknown. That path
+  // may clamp the unroll count to the max trip count, effectively fully
+  // unrolling the loop.
+  if (MaxTripCount && ApplyUnknownTripCountLimit) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Not runtime unrolling: max trip count " << MaxTripCount
+               << " has an unknown exact value, and not forced.\n");
+    return;
   }
 
   // Check if the runtime trip count is too small when profile is available.
