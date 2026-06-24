@@ -179,6 +179,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
+   :doc:`bugprone-unsafe-api-functions-calls <bugprone/unsafe-api-functions-calls>`,
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`bugprone-unsafe-to-allow-exceptions <bugprone/unsafe-to-allow-exceptions>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
