@@ -71,6 +71,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonGenPredicate.cpp",
     "HexagonGlobalRegion.cpp",
     "HexagonGlobalScheduler.cpp",
+    "HexagonHVXSaveRemark.cpp",
     "HexagonHardwareLoops.cpp",
     "HexagonHazardRecognizer.cpp",
     "HexagonISelDAGToDAG.cpp",
