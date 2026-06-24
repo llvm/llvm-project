@@ -6093,15 +6093,12 @@ class ParenListExpr final
   /// The location of the left and right parentheses.
   SourceLocation LParenLoc, RParenLoc;
 
-  /// The number of comma locations stored after the expression list.
-  unsigned NumCommas;
-
   size_t numTrailingObjects(OverloadToken<Stmt *>) const {
     return getNumExprs();
   }
 
   size_t numTrailingObjects(OverloadToken<SourceLocation>) const {
-    return NumCommas;
+    return getNumCommas();
   }
 
   /// Build a paren list.
@@ -6109,21 +6106,20 @@ class ParenListExpr final
                 SourceLocation RParenLoc, ArrayRef<SourceLocation> CommaLocs);
 
   /// Build an empty paren list.
-  ParenListExpr(EmptyShell Empty, unsigned NumExprs, unsigned NumCommas);
+  ParenListExpr(EmptyShell Empty, unsigned NumExprs);
 
 public:
   /// Create a paren list.
   static ParenListExpr *Create(const ASTContext &Ctx, SourceLocation LParenLoc,
                                ArrayRef<Expr *> Exprs, SourceLocation RParenLoc,
-                               ArrayRef<SourceLocation> CommaLocs = {});
+                               ArrayRef<SourceLocation> CommaLocs);
 
   /// Create an empty paren list.
-  static ParenListExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumExprs,
-                                    unsigned NumCommas = 0);
+  static ParenListExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumExprs);
 
   /// Return the number of expressions in this paren list.
   unsigned getNumExprs() const { return ParenListExprBits.NumExprs; }
-  unsigned getNumCommas() const { return NumCommas; }
+  unsigned getNumCommas() const { return getNumExprs() ? getNumExprs() - 1 : 0; }
 
   Expr *getExpr(unsigned Init) {
     assert(Init < getNumExprs() && "Initializer access out of range!");

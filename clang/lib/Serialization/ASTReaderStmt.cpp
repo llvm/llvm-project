@@ -751,14 +751,9 @@ void ASTStmtReader::VisitParenListExpr(ParenListExpr *E) {
     E->getTrailingObjects<Stmt *>()[I] = Record.readSubStmt();
   E->LParenLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
-  if (Record.getIdx() < Record.size()) {
-    unsigned NumCommas = Record.readInt();
-    assert((NumCommas == E->getNumCommas()) && "Wrong NumCommas!");
-    for (unsigned I = 0; I != NumCommas; ++I)
-      E->getTrailingObjects<SourceLocation>()[I] = readSourceLocation();
-  } else {
-    assert(E->getNumCommas() == 0 && "missing comma locations");
-  }
+  unsigned NumCommas = E->getNumCommas();
+  for (unsigned I = 0; I != NumCommas; ++I)
+    E->getTrailingObjects<SourceLocation>()[I] = readSourceLocation();
 }
 
 void ASTStmtReader::VisitUnaryOperator(UnaryOperator *E) {
@@ -3313,13 +3308,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_PAREN_LIST: {
       unsigned NumExprs = Record[ASTStmtReader::NumExprFields];
-      unsigned NumCommas = 0;
-      unsigned CommaCountIdx = ASTStmtReader::NumExprFields + 1 + NumExprs + 2;
-      if (Record.size() > CommaCountIdx)
-        NumCommas = Record[CommaCountIdx];
       S = ParenListExpr::CreateEmpty(Context,
-                                     /* NumExprs=*/NumExprs,
-                                     /* NumCommas=*/NumCommas);
+                                     /* NumExprs=*/NumExprs);
       break;
     }
 

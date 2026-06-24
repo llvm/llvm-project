@@ -847,7 +847,6 @@ void ASTStmtWriter::VisitParenListExpr(ParenListExpr *E) {
     Record.AddStmt(SubStmt);
   Record.AddSourceLocation(E->getLParenLoc());
   Record.AddSourceLocation(E->getRParenLoc());
-  Record.push_back(E->getNumCommas());
   for (SourceLocation CommaLoc : E->getCommaLocs())
     Record.AddSourceLocation(CommaLoc);
   Code = serialization::EXPR_PAREN_LIST;

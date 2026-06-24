@@ -4229,6 +4229,10 @@ private:
   /// [C++0x]   braced-init-list
   /// \endverbatim
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
+                           llvm::function_ref<void()> ExpressionStarts,
+                           bool FailImmediatelyOnInvalidExpr,
+                           SmallVectorImpl<SourceLocation> &CommaLocs);
+  bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false);
@@ -4243,7 +4247,7 @@ private:
   /// \endverbatim
   bool ParseSimpleExpressionList(
       SmallVectorImpl<Expr *> &Exprs,
-      SmallVectorImpl<SourceLocation> *CommaLocs = nullptr);
+      SmallVectorImpl<SourceLocation> &CommaLocs);
 
   /// This parses the unit that starts with a '(' token, based on what is
   /// allowed by ExprType. The actual thing parsed is returned in ExprType. If

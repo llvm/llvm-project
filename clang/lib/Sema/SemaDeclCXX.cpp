@@ -4334,7 +4334,10 @@ Sema::ActOnMemInitializer(Decl *ConstructorD,
                           ArrayRef<Expr *> Args,
                           SourceLocation RParenLoc,
                           SourceLocation EllipsisLoc) {
-  Expr *List = ParenListExpr::Create(Context, LParenLoc, Args, RParenLoc);
+  SmallVector<SourceLocation, 4> CommaLocs(
+      Args.empty() ? 0 : Args.size() - 1, SourceLocation());
+  Expr *List =
+      ParenListExpr::Create(Context, LParenLoc, Args, RParenLoc, CommaLocs);
   return BuildMemInitializer(ConstructorD, S, SS, MemberOrBase, TemplateTypeTy,
                              DS, IdLoc, List, EllipsisLoc);
 }

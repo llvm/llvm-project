@@ -8349,7 +8349,7 @@ Sema::MaybeConvertParenListExprToParenExpr(Scope *S, Expr *OrigExpr) {
   for (unsigned i = 1, e = E->getNumExprs(); i != e && !Result.isInvalid();
        ++i) {
     SourceLocation CommaLoc =
-        i - 1 < CommaLocs.size() ? CommaLocs[i - 1] : E->getLParenLoc();
+        CommaLocs[i - 1].isValid() ? CommaLocs[i - 1] : E->getLParenLoc();
     Result = ActOnBinOp(S, CommaLoc, tok::comma, Result.get(), E->getExpr(i));
   }
 

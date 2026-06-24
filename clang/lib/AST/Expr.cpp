@@ -4963,18 +4963,17 @@ ParenListExpr::ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
                              SourceLocation RParenLoc,
                              ArrayRef<SourceLocation> CommaLocs)
     : Expr(ParenListExprClass, QualType(), VK_PRValue, OK_Ordinary),
-      LParenLoc(LParenLoc), RParenLoc(RParenLoc), NumCommas(CommaLocs.size()) {
-  assert((CommaLocs.empty() || CommaLocs.size() + 1 == Exprs.size()) &&
-         "wrong number of comma locations for paren list");
+      LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
   ParenListExprBits.NumExprs = Exprs.size();
+  assert(CommaLocs.size() == getNumCommas() &&
+         "wrong number of comma locations for paren list");
   llvm::copy(Exprs, getTrailingObjects<Stmt *>());
   llvm::copy(CommaLocs, getTrailingObjects<SourceLocation>());
   setDependence(computeDependence(this));
 }
 
-ParenListExpr::ParenListExpr(EmptyShell Empty, unsigned NumExprs,
-                             unsigned NumCommas)
-    : Expr(ParenListExprClass, Empty), NumCommas(NumCommas) {
+ParenListExpr::ParenListExpr(EmptyShell Empty, unsigned NumExprs)
+    : Expr(ParenListExprClass, Empty) {
   ParenListExprBits.NumExprs = NumExprs;
 }
 
@@ -4983,19 +4982,20 @@ ParenListExpr *ParenListExpr::Create(const ASTContext &Ctx,
                                      ArrayRef<Expr *> Exprs,
                                      SourceLocation RParenLoc,
                                      ArrayRef<SourceLocation> CommaLocs) {
+  unsigned NumCommas = Exprs.empty() ? 0 : Exprs.size() - 1;
   void *Mem = Ctx.Allocate(
-      totalSizeToAlloc<Stmt *, SourceLocation>(Exprs.size(), CommaLocs.size()),
+      totalSizeToAlloc<Stmt *, SourceLocation>(Exprs.size(), NumCommas),
       alignof(ParenListExpr));
   return new (Mem) ParenListExpr(LParenLoc, Exprs, RParenLoc, CommaLocs);
 }
 
 ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
-                                          unsigned NumExprs,
-                                          unsigned NumCommas) {
+                                          unsigned NumExprs) {
+  unsigned NumCommas = NumExprs ? NumExprs - 1 : 0;
   void *Mem = Ctx.Allocate(
       totalSizeToAlloc<Stmt *, SourceLocation>(NumExprs, NumCommas),
       alignof(ParenListExpr));
-  return new (Mem) ParenListExpr(EmptyShell(), NumExprs, NumCommas);
+  return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 
 /// Certain overflow-dependent code patterns can have their integer overflow
