@@ -299,16 +299,29 @@ void EJit::recordInitError(int code, const std::string &message,
 
 bool EJit::activate(const std::string &periodName, uint8_t cellIdx) {
 #ifdef EJIT_SRE_TASKPOOL
-  // Taskpool build: a registered lifecycle updates the legacy time-window state
-  // AND the SwitchController (kept consistent; setEnabled bumps the version
-  // only when the enabled bit actually flips). A name that is a registered
-  // period but not a JIT lifecycle still drives the legacy time-window state
-  // only. A name that is neither is unknown -> clean error, no state change.
+  // Taskpool build: a registered lifecycle updates the time-window activation
+  // state AND the SwitchController (kept consistent; setEnabled bumps the
+  // version only when the enabled bit actually flips). A name that is a
+  // registered period but not a JIT lifecycle still drives the legacy
+  // time-window state only. A name that is neither is unknown -> clean error,
+  // no state change.
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
   if (dt != kEJitInvalidDimType) {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+    // Cross-core: activation is a SHARED fact. Write the shared enabled/version
+    // (visible to the owner worker, which compiles on a different core). The
+    // owner-private runtimeState_ is NOT the JIT gate's source of truth here —
+    // in an owner!=producer split the owner never calls activate_all, so its
+    // private state would be empty and every compile would be gated out. The
+    // shared SwitchController defaults to active; setEnabled(true) is a no-op
+    // until a prior deactivate flipped the bit.
+    if (EJitSharedTaskPool *sp = sharedTaskPool())
+      sp->setInstanceEnabled(dt, cellIdx, /*enabled=*/true);
+#else
     runtimeState_->activate(periodName, cellIdx);
     if (EJitTaskPool *tp = taskPool())
       tp->switchController().setEnabled(dt, cellIdx, /*wantOn=*/true);
+#endif
     return true;
   }
   if (!runtimeState_->getRegistry().getArrays(periodName))
@@ -325,9 +338,20 @@ bool EJit::deactivate(const std::string &periodName, uint8_t cellIdx) {
 #ifdef EJIT_SRE_TASKPOOL
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
   if (dt != kEJitInvalidDimType) {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+    // Cross-core: deactivation writes the shared enabled/version. The version
+    // bump drives the three-layer lazy invalidation (producer early-reject,
+    // worker checkpoint discard, cache-lookup version-mismatch miss) — see
+    // shared compileOrGet / runCompile / cacheLookup. invalidateByPeriod below
+    // still drains the per-instance LRU; the shared POD cache is invalidated by
+    // version alone.
+    if (EJitSharedTaskPool *sp = sharedTaskPool())
+      sp->setInstanceEnabled(dt, cellIdx, /*enabled=*/false);
+#else
     runtimeState_->deactivate(periodName, cellIdx);
     if (EJitTaskPool *tp = taskPool())
       tp->switchController().setEnabled(dt, cellIdx, /*wantOn=*/false);
+#endif
     return true;
   }
   if (!runtimeState_->getRegistry().getArrays(periodName))
@@ -368,9 +392,14 @@ bool EJit::activateArray(const std::string &periodName, void *arrayPtr,
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
   if (dt == kEJitInvalidDimType)
     return false;
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  if (EJitSharedTaskPool *sp = sharedTaskPool())
+    sp->setInstanceEnabled(dt, cellIdx, /*enabled=*/true);
+#else
   runtimeState_->activateArray(arrayPtr, cellIdx);
   if (EJitTaskPool *tp = taskPool())
     tp->switchController().setEnabled(dt, cellIdx, /*wantOn=*/true);
+#endif
   return true;
 #else
   runtimeState_->activateArray(arrayPtr, cellIdx);
@@ -395,9 +424,14 @@ bool EJit::deactivateArray(const std::string &periodName, void *arrayPtr,
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
   if (dt == kEJitInvalidDimType)
     return false;
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  if (EJitSharedTaskPool *sp = sharedTaskPool())
+    sp->setInstanceEnabled(dt, cellIdx, /*enabled=*/false);
+#else
   runtimeState_->deactivateArray(arrayPtr, cellIdx);
   if (EJitTaskPool *tp = taskPool())
     tp->switchController().setEnabled(dt, cellIdx, /*wantOn=*/false);
+#endif
   return true;
 #else
   runtimeState_->deactivateArray(arrayPtr, cellIdx);
@@ -409,10 +443,16 @@ bool EJit::activateAll(const std::string &periodName) {
 #ifdef EJIT_SRE_TASKPOOL
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
   if (dt != kEJitInvalidDimType) {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+    if (EJitSharedTaskPool *sp = sharedTaskPool())
+      for (uint32_t i = 0; i < EJitSwitchController::MAX_INSTANCES; ++i)
+        sp->setInstanceEnabled(dt, i, /*enabled=*/true);
+#else
     runtimeState_->activateAll(periodName);
     if (EJitTaskPool *tp = taskPool())
       for (uint32_t i = 0; i < EJitSwitchController::MAX_INSTANCES; ++i)
         tp->switchController().setEnabled(dt, i, /*wantOn=*/true);
+#endif
     return true;
   }
   if (!runtimeState_->getRegistry().getArrays(periodName))
@@ -429,10 +469,16 @@ bool EJit::deactivateAll(const std::string &periodName) {
 #ifdef EJIT_SRE_TASKPOOL
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
   if (dt != kEJitInvalidDimType) {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+    if (EJitSharedTaskPool *sp = sharedTaskPool())
+      for (uint32_t i = 0; i < EJitSwitchController::MAX_INSTANCES; ++i)
+        sp->setInstanceEnabled(dt, i, /*enabled=*/false);
+#else
     runtimeState_->deactivateAll(periodName);
     if (EJitTaskPool *tp = taskPool())
       for (uint32_t i = 0; i < EJitSwitchController::MAX_INSTANCES; ++i)
         tp->switchController().setEnabled(dt, i, /*wantOn=*/false);
+#endif
     return true;
   }
   if (!runtimeState_->getRegistry().getArrays(periodName))
@@ -446,6 +492,18 @@ bool EJit::deactivateAll(const std::string &periodName) {
 }
 
 bool EJit::isActive(const std::string &periodName, uint8_t cellIdx) const {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  // Cross-core: a registered lifecycle's activation lives in the shared
+  // enabled bit (the producer's ejit_activate writes it). Query that, not the
+  // owner-private runtimeState_, so ejit_is_active returns the same fact the
+  // producer sees and the worker gates on. A non-lifecycle period name (a
+  // plain period array without a dimType) still consults the private state.
+  uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
+  if (dt != kEJitInvalidDimType) {
+    if (const EJitSharedTaskPool *sp = sharedTaskPool())
+      return sp->isInstanceActive(dt, cellIdx);
+  }
+#endif
   return runtimeState_->isActive(periodName, cellIdx);
 }
 
@@ -616,6 +674,9 @@ EJitTaskPool *EJit::taskPool() {
 
 #ifdef EJIT_SRE_SHARED_TASKPOOL
 EJitSharedTaskPool *EJit::sharedTaskPool() {
+  return compileDriver_ ? compileDriver_->sharedTaskPool() : nullptr;
+}
+const EJitSharedTaskPool *EJit::sharedTaskPool() const {
   return compileDriver_ ? compileDriver_->sharedTaskPool() : nullptr;
 }
 #endif

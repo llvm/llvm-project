@@ -221,6 +221,11 @@ public:
                                   uint32_t numDims, void *fallback);
   void releaseRead(uint32_t bucketIndex);
   bool setInstanceEnabled(uint32_t dimType, uint32_t instanceId, bool enabled);
+  /// Query the shared activation bit for a lifecycle instance — the read
+  /// counterpart of setInstanceEnabled, and the single cross-core source of
+  /// truth the compile gate (compileCold) and ejit_is_active consult. Returns
+  /// false for an out-of-range dimType/instanceId (never reads out of bounds).
+  bool isInstanceActive(uint32_t dimType, uint32_t instanceId) const;
 
   //--- consumer path (worker / test) -----------------------------------------
   bool pollOne();

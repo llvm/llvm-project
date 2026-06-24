@@ -83,6 +83,7 @@ public:
   /// When EJIT_SRE_SHARED_TASKPOOL is built, the taskpool C ABI binds here
   /// instead of the per-instance taskPool_.
   EJitSharedTaskPool *sharedTaskPool() { return &sharedPool_; }
+  const EJitSharedTaskPool *sharedTaskPool() const { return &sharedPool_; }
 
   /// Run owner election over the shared state and, if this core becomes the
   /// owner, start the ONE shared worker. Returns false on a clean init failure

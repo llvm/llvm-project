@@ -123,6 +123,7 @@ public:
   /// Access the cross-core shared taskpool (the taskpool C ABI binds here in a
   /// shared build). May be null if the compile driver was not constructed.
   EJitSharedTaskPool *sharedTaskPool();
+  const EJitSharedTaskPool *sharedTaskPool() const;
 #endif
 
 private:

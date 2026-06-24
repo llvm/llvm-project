@@ -69,6 +69,15 @@ bool EJitSharedTaskPool::isInstanceEnabled(uint32_t dimType,
   return state_->enabled[dimType][instanceId].loadRelaxed() != 0;
 }
 
+bool EJitSharedTaskPool::isInstanceActive(uint32_t dimType,
+                                          uint32_t instanceId) const {
+  // Public read counterpart of setInstanceEnabled. The compile gate
+  // (compileCold) and ejit_is_active consult THIS shared bit, not an
+  // owner-private copy, so producer (activate) and worker (compile) see the
+  // same cross-core fact.
+  return isInstanceEnabled(dimType, instanceId);
+}
+
 uint32_t EJitSharedTaskPool::instanceVersion(uint32_t dimType,
                                              uint32_t instanceId) const {
   if (dimType >= kEJitSharedDimTypes || instanceId >= kEJitSharedInstances)
