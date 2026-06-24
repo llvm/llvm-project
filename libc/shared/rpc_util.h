@@ -334,7 +334,7 @@ RPC_ATTRS auto apply(F &&f, tuple<Ts...> &t) {
 RPC_ATTRS void sleep_briefly() {
 #if __has_builtin(__nvvm_reflect)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700)
-    asm("nanosleep.u32 64;" ::: "memory");
+    __nvvm_nanosleep(64);
 #elif __has_builtin(__builtin_amdgcn_s_sleep)
   __builtin_amdgcn_s_sleep(2);
 #elif __has_builtin(__builtin_ia32_pause)
