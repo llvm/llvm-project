@@ -988,12 +988,12 @@ mlir::Value getDescriptorWithNewBaseAddress(fir::FirOpBuilder &builder,
                                             mlir::Location loc, mlir::Value box,
                                             mlir::Value newAddr);
 
-/// Generate a index-based runtime disjointness check.
+/// Generate a index-based disjointness check.
 std::optional<mlir::Value>
 genIndexBasedDisjointnessCheck(mlir::Location loc, fir::FirOpBuilder &builder,
                                mlir::Value lhsRef, mlir::Value rhsRef);
 
-/// Generate a address-based runtime disjointness check.
+/// Generate a address-based disjointness check.
 std::optional<mlir::Value>
 genAddressBasedDisjointnessCheck(mlir::Location loc, fir::FirOpBuilder &builder,
                                  mlir::Value lhsRef, mlir::Value rhsRef);
