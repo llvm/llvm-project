@@ -39,38 +39,43 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
   return 8;    // unit length: 4 bytes, version: 2 bytes, padding: 2 bytes.
 }
 
-// Read the next (attribute, form) pair from an abbreviation declaration.
-// DW_FORM_implicit_const is the only form that stores an extra value -- an
-// SLEB128 -- in the abbreviation declaration itself; consume it here so the
-// (attribute, form) walk stays aligned with the rest of the table.
-// return True if can keep going- Name or Form is not 0
+// Read the next (attribute, form) pair into Name and Form, also consuming the
+// inline DW_FORM_implicit_const value when present. Returns false on the
+// terminating (0, 0) pair.
 static bool readAbbrevAttribute(const DataExtractor &AbbrevData,
-                                uint64_t *Offset, uint64_t &Name,
-                                dwarf::Form &Form) {
-  Name = AbbrevData.getULEB128(Offset);
+                                uint64_t *Offset, dwarf::Attribute &Name,
+                                dwarf::Form &Form, int64_t &ImplicitConst) {
+  Name = static_cast<dwarf::Attribute>(AbbrevData.getULEB128(Offset));
   Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(Offset));
+  ImplicitConst = 0;
   if (Form == dwarf::DW_FORM_implicit_const)
-    AbbrevData.getSLEB128(Offset);
-  if (Name != 0 || Form != 0)
-    return true;
-  return false;
+    ImplicitConst = AbbrevData.getSLEB128(Offset);
+  return Name != 0 || Form != 0;
 }
 
-static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
+static Expected<uint64_t> getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
   uint64_t Offset = 0;
   DataExtractor AbbrevData(Abbrev, true);
-  while (AbbrevData.getULEB128(&Offset) != AbbrCode) {
+  while (AbbrevData.isValidOffset(Offset)) {
+    uint64_t Code = AbbrevData.getULEB128(&Offset);
+    if (Code == AbbrCode)
+      return Offset;
+    // A zero abbreviation code marks the end of the abbreviation table.
+    if (Code == 0)
+      break;
     // Tag
     AbbrevData.getULEB128(&Offset);
     // DW_CHILDREN
     AbbrevData.getU8(&Offset);
-    // Attributes
-    uint64_t Name;
+    // Attribute specifications, terminated by a (0, 0) pair.
+    dwarf::Attribute Name;
     dwarf::Form Form;
-    while (readAbbrevAttribute(AbbrevData, &Offset, Name, Form))
+    int64_t ImplicitConst;
+    while (readAbbrevAttribute(AbbrevData, &Offset, Name, Form, ImplicitConst))
       ;
   }
-  return Offset;
+  return make_error<DWPError>("abbrev code " + utostr(AbbrCode) +
+                              " not found in abbrev section");
 }
 
 static Expected<const char *>
@@ -126,15 +131,20 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
 
   uint32_t AbbrCode = InfoData.getULEB128(&Offset);
   DataExtractor AbbrevData(Abbrev, true);
-  uint64_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
+  Expected<uint64_t> AbbrevOffsetOrErr = getCUAbbrev(Abbrev, AbbrCode);
+  if (!AbbrevOffsetOrErr)
+    return AbbrevOffsetOrErr.takeError();
+  uint64_t AbbrevOffset = *AbbrevOffsetOrErr;
   auto Tag = static_cast<dwarf::Tag>(AbbrevData.getULEB128(&AbbrevOffset));
   if (Tag != dwarf::DW_TAG_compile_unit)
     return make_error<DWPError>("top level DIE is not a compile unit");
   // DW_CHILDREN
   AbbrevData.getU8(&AbbrevOffset);
-  uint64_t Name;
+  dwarf::Attribute Name;
   dwarf::Form Form;
-  while (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form)) {
+  int64_t ImplicitConst;
+  while (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form,
+                             ImplicitConst)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
       Expected<const char *> EName = getIndexedString(
@@ -154,7 +164,9 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      Header.Signature = InfoData.getU64(&Offset);
+      Header.Signature = Form == dwarf::DW_FORM_implicit_const
+                             ? static_cast<uint64_t>(ImplicitConst)
+                             : InfoData.getU64(&Offset);
       break;
     default:
       DWARFFormValue::skipValue(
