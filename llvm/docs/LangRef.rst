@@ -1358,10 +1358,11 @@ Currently, only the following parameter attributes are defined:
     values.
 
     The byval type argument indicates the in-memory value type. Note that
-    the hidden copy is interpreted as loading from the pointee and storing
-    back into the copy in the specified type instead of a call to memcpy.
-    In this case, the padding between field types of a struct type remains
-    uninitialized.
+    the hidden copy is interpreted as a call to memcpy with the allocation
+    size of the specified type, instead of loading from the pointee and
+    storing back into the copy in the type. In this case, the padding between
+    field types of a struct type is still copied, since it may be a part of
+    another active member of a union type.
 
     The byval attribute also supports specifying an alignment with the
     ``align`` attribute. It indicates the alignment of the stack slot to
