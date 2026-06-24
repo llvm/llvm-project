@@ -2093,30 +2093,32 @@ static unsigned estimateElementCount(ElementCount VF,
   return EstimatedVF;
 }
 
-/// Returns true iff \p CI has a library vector variant usable at \p VF: a
-/// mapping with matching VF, masked if required, whose vector function is
-/// declared in the module. Such variants are priced by
-/// VPWidenCallRecipe::computeCost rather than by scalarization.
+/// Returns the vector library variant function of \p CI usable at \p VF,
+/// respecting \p MaskRequired, or nullptr if none is found: a mapping with
+/// matching VF, masked if required, whose vector function is declared in the
+/// module.
+static Function *getVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
+                                            bool MaskRequired,
+                                            const TargetLibraryInfo *TLI) {
+  if (!TLI || CI.isNoBuiltin())
+    return nullptr;
+  for (const VFInfo &Info : VFDatabase::getMappings(CI))
+    if (Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()))
+      if (Function *F = CI.getModule()->getFunction(Info.VectorName))
+        return F;
+  return nullptr;
+}
+
+/// Returns true iff \p CI has a library vector variant usable at \p VF.
 static bool hasVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
                                        bool MaskRequired,
                                        const TargetLibraryInfo *TLI) {
-  if (!TLI || CI.isNoBuiltin())
-    return false;
-  return any_of(VFDatabase::getMappings(CI), [&](const VFInfo &Info) {
-    return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
-           CI.getModule()->getFunction(Info.VectorName);
-  });
+  return getVectorLibraryVariantFor(CI, VF, MaskRequired, TLI) != nullptr;
 }
 
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                               ElementCount VF) const {
-  // Vector library variants are priced by VPWidenCallRecipe::computeCost and
-  // should not reach this function.
-  assert((VF.isScalar() ||
-          !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI)) &&
-         "getVectorCallCost does not price vector library variants");
-
   Type *RetTy = CI->getType();
   SmallVector<Type *, 4> Tys;
   for (auto &ArgOp : CI->args())
@@ -2132,10 +2134,18 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                              : ScalarCallCost * VF.getKnownMinValue() +
                                    getScalarizationOverhead(CI, VF);
 
-  if (getVectorIntrinsicIDForCall(CI, TLI)) {
-    InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
-    return std::min(Cost, IntrinsicCost);
-  }
+  // The call may be vectorized at this VF, via a vector intrinsic or a vector
+  // library variant.
+  if (getVectorIntrinsicIDForCall(CI, TLI))
+    Cost = std::min(Cost, getVectorIntrinsicCost(CI, VF));
+
+  if (Function *Variant =
+          getVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI))
+    Cost = std::min(Cost,
+                    TTI.getCallInstrCost(
+                        /*F=*/nullptr, Variant->getReturnType(),
+                        Variant->getFunctionType()->params(), Config.CostKind));
+
   return Cost;
 }
 

@@ -131,6 +131,8 @@ public:
   void Enter(const parser::OpenMPCriticalConstruct &);
   void Enter(const parser::OpenMPAtomicConstruct &);
 
+  void Enter(const parser::OmpLocator &x);
+  void Enter(const parser::OmpClauseList &);
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
 
@@ -366,6 +368,7 @@ private:
       const parser::OmpClause &initClause);
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+  void CheckTempDescriptorMappings();
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -387,6 +390,17 @@ private:
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
+
+  // Mapping of directive-name-modifier constituents to the sources of the
+  // IF clauses that referenced them. If there was no modifier, the entire
+  // directive is assumed to be listed.
+  std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
+
+  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
+  // and symbols mapped in TARGET EXIT DATA within the current function scope.
+  // Used to warn about potential issues with mapping temporary descriptors.
+  std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
+  std::set<const Symbol *> tempDescriptorExitMaps_;
 
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into

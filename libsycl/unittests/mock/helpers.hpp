@@ -65,6 +65,10 @@ template <class T> void releaseDummyHandle(T Handle) {
   delete DummyHandlePtr;
 }
 
+template <typename... HandleT> void releaseDummyHandles(HandleT... Handles) {
+  (releaseDummyHandle(Handles), ...);
+}
+
 class MockLiboffload {
 public:
   MockLiboffload() { initDefault(); }
