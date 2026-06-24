@@ -9020,6 +9020,131 @@ static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
   return nullptr;
 }
 
+/// Fold equality/inequality compares against floating min/max-like select
+/// patterns.
+///
+/// This handles:
+///   fcmp oeq/ueq/one/une (select (fcmp Pred X, K), X, K), C
+///   fcmp oeq/ueq/one/une (select (fcmp Pred X, K), K, X), C
+///
+/// when the select is recognized as an fmaxnum/fminnum-like operation and one
+/// operand is the constant bound K. The result can be expressed as a
+/// direct comparison against X based on the relation between C and K:
+///
+///   fmaxnum-like:
+///     C > K  -> X == C
+///     C == K -> X <= K
+///
+///   fminnum-like:
+///     C < K  -> X == C
+///     C == K -> X >= K
+///
+static Instruction *foldFCmpEqWithMinMaxLikeSelect(FCmpInst &I,
+                                                   Instruction *LHSI,
+                                                   Constant *RHSC,
+                                                   InstCombinerImpl &CI) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+
+  // Currently handles only equality predicates.
+  if (!I.isEquality())
+    return nullptr;
+
+  bool Invert = false;
+  if (Pred != FCmpInst::FCMP_OEQ && Pred != FCmpInst::FCMP_UEQ) {
+    Invert = true;
+    Pred = I.getInversePredicate();
+  }
+
+  const APFloat *C;
+  if (!match(RHSC, m_APFloat(C)))
+    return nullptr;
+
+  Value *X;
+  Constant *CmpBoundC;
+  bool IsMax;
+
+  if (match(LHSI, m_OrdOrUnordFMax(m_Value(X), m_Constant(CmpBoundC))))
+    IsMax = true;
+  else if (match(LHSI, m_OrdOrUnordFMin(m_Value(X), m_Constant(CmpBoundC))))
+    IsMax = false;
+  else
+    return nullptr;
+
+  auto *SI = cast<SelectInst>(LHSI);
+
+  // Handling both scalar ConstantFP and splat vector constants.
+  const APFloat *CmpBoundAP;
+  if (!match(CmpBoundC, m_APFloat(CmpBoundAP)))
+    return nullptr;
+
+  // Determine NaN behavior from the IR structure of the select.
+  //
+  // For an ordered inner predicate (NaN -> false -> selects FalseVal):
+  //   NaN(X) returns the constant iff the constant is the FalseVal.
+  // For an unordered inner predicate (NaN -> true -> selects TrueVal):
+  //   NaN(X) returns the constant iff the constant is the TrueVal.
+  //
+  // In both cases: NaNReturnsConst = (PredIsOrdered != ConstIsTV).
+  auto *FcmpCond = cast<FCmpInst>(SI->getCondition());
+  bool PredIsOrdered = CmpInst::isOrdered(FcmpCond->getPredicate());
+  bool ConstIsTV = SI->getTrueValue() == CmpBoundC;
+  bool NaNReturnsConst = PredIsOrdered != ConstIsTV;
+
+  const SimplifyQuery Q = CI.getSimplifyQuery().getWithInstruction(&I);
+  bool Ordered = FCmpInst::isOrdered(Pred);
+  FCmpInst::Predicate NewPred;
+  APFloat::cmpResult CmpVsBound = C->compare(*CmpBoundAP);
+
+  if (IsMax) {
+    // max(X, K) == C:
+    //
+    // C > K  -> X == C
+    // C == K -> X <= K
+
+    if (CmpVsBound == APFloat::cmpGreaterThan)
+      NewPred = Ordered ? FCmpInst::FCMP_OEQ : FCmpInst::FCMP_UEQ;
+    else if (CmpVsBound == APFloat::cmpEqual)
+      NewPred = Ordered ? FCmpInst::FCMP_OLE : FCmpInst::FCMP_ULE;
+    else
+      return nullptr;
+  } else {
+    // min(X, K) == C:
+    //
+    // C < K  -> X == C
+    // C == K -> X >= K
+
+    if (CmpVsBound == APFloat::cmpLessThan)
+      NewPred = Ordered ? FCmpInst::FCMP_OEQ : FCmpInst::FCMP_UEQ;
+    else if (CmpVsBound == APFloat::cmpEqual)
+      NewPred = Ordered ? FCmpInst::FCMP_OGE : FCmpInst::FCMP_UGE;
+    else
+      return nullptr;
+  }
+
+  // When the select maps NaN to the bound constant or X is known non-NaN,
+  // choose the appropriate ordered/unordered predicate variant that preserves
+  // the original comparison semantics.
+  if (NaNReturnsConst || SI->getFastMathFlags().noNaNs() ||
+      FcmpCond->hasNoNaNs() || isKnownNeverNaN(X, Q)) {
+    if (CmpVsBound == APFloat::cmpEqual)
+      NewPred = FCmpInst::getUnorderedPredicate(NewPred);
+    else
+      NewPred = FCmpInst::getOrderedPredicate(NewPred);
+  }
+
+  if (Invert)
+    NewPred = FCmpInst::getInversePredicate(NewPred);
+
+  auto *NewCmp = new FCmpInst(NewPred, X, RHSC);
+  FastMathFlags FMF = FcmpCond->getFastMathFlags();
+  if (C->isNaN())
+    FMF.setNoNaNs(false);
+  if (C->isInfinity())
+    FMF.setNoInfs(false);
+  NewCmp->setFastMathFlags(FMF);
+  return NewCmp;
+}
+
 /// Returns true if a select that implements a min/max is redundant and
 /// select result can be replaced with its non-constant operand, e.g.,
 ///   select ( (si/ui-to-fp A) <= C ), C, (si/ui-to-fp A)
@@ -9222,6 +9347,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;
+      if (LHSI->hasOneUse())
+        if (Instruction *NV =
+                foldFCmpEqWithMinMaxLikeSelect(I, LHSI, RHSC, *this))
+          return NV;
       break;
     case Instruction::FSub:
       if (LHSI->hasOneUse())
